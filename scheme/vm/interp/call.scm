@@ -115,8 +115,9 @@
 					      return-pointer-offset)
 				    stack-arg-count))))
 
-; Call a template instead of a procedure.  This is currently only used for
-; stringing together the initialization code made by the static linker.
+; Call a template instead of a procedure.  This is currently used for
+; stringing together code for top-level forms and doing the same thing for
+; the initialization code made by the static linker.
 ;
 ; call-template <return-offset> <template-index> <index-within-template> <nargs>
 
@@ -132,7 +133,7 @@
 		   (code-vector-ref code (- (code-vector-length code) 3))))
 	   (goto run-body
 		 code
-		 6
+		 2
 		 template
 		 (code-vector-ref16 code (- (code-vector-length code) 2))))
 	  (else
