@@ -15,6 +15,10 @@
 
 ; Converting between ports and channels.
 
+; Note that fileno is Unix only.  The VM doesn't use these two
+; anymore.  If it ever does again, it will be necessary to rewrite
+; their definitions.
+
 (define input-port->channel
   (external "fileno" (=> (input-port) integer)))
 
