@@ -118,7 +118,7 @@
 ;;--------------------
 ;; labels
 
-(define *bc-make-labels* (make-fluid 'unassigned-bc-pc-labels))
+(define *bc-make-labels* (make-fluid '()))
 
 (define (add-pc! pc attribution)
   (set-fluid! *bc-make-labels*

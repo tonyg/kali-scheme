@@ -33,11 +33,7 @@
            (code (if template
                      (template-code template)
                      template-or-code)))
-      (parse-template-code 
-       template code level
-       (make-attribution disasm-init-template disasm-attribute-literal 
-                         disasm-table disasm-make-label disasm-at-label))))
-
+      (parse-template-code template code level disasm-attribution)))
 
 (define (disasm-init-template level template p-args push-template? push-env?)
   (if (template-name template)
@@ -70,6 +66,10 @@
                                  (print-opcode-args args)
                                  (display #\))
                                  level)))
+
+(define disasm-attribution
+  (make-attribution disasm-init-template disasm-attribute-literal 
+                    disasm-table disasm-make-label disasm-at-label))
 
 (define-syntax define-disasm
   (syntax-rules ()
@@ -245,6 +245,15 @@
 
 (define-disasm stack-shuffle! display-shuffle)
 (define-disasm big-stack-shuffle! display-shuffle)
+
+(define (write-instruction code template pc level write-sub-templates?)
+  ;; An in the previous version, WRITE-SUB-TEMPLATES? is ignored and
+  ;; sub templates are never written.
+  (call-with-values 
+   (lambda ()
+     (parse-instruction template code pc level disasm-attribution))
+   (lambda (len level)
+     (+ pc len))))
 
 ;------------------------------
 (define (print-opcode opcode pc level)    
