@@ -6,7 +6,7 @@
 ;  (close <port>) -> whatever
 ;
 ; Input ports
-;  (byte <port> <read?> <count>) -> <byte> ...
+;  (byte <port> <read?>) -> <byte>
 ;  (char <port> <read?>) -> <char>
 ;  (block <port> <buffer> <start> <count>) -> <byte count>
 ;  (ready? <port>) -> <boolean>
