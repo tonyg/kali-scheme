@@ -13,31 +13,6 @@
 (define *source-file-name* "")
 
 
-; This is used to generate file lists that are "included" in "makefiles."
-
-(define (write-file-names target . stuff)
-  (call-with-output-file target
-    (lambda (port)
-      (display "Writing ") (display target) (newline)
-      (display "#### This file was generated automatically. ####"
-	       port)
-      (newline port)
-      (let ((mumble (lambda (name filenames)
-		      (newline port)
-		      (display name port)
-		      (display " = " port)
-		      (for-each (lambda (filename)
-				  (display filename port)
-				  (display " " port))
-				filenames)
-		      (newline port))))
-	(do ((stuff stuff (cddr stuff)))
-	    ((null? stuff))
-	  (mumble (car stuff) (cadr stuff)))
-	;(mumble 'all-files (reverse *all-files*))
-	))))
-
-
 ; --------------------
 
 ; Structures are views into packages.
