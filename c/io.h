@@ -1,3 +1,8 @@
+/* Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees.
+   See file COPYING. */
+
+#include <stdio.h>
+
 extern FILE	*ps_open_input_file(char *, long *);
 extern FILE	*ps_open_output_file(char *, long *);
 extern long	ps_close(FILE *);
