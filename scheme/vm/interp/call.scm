@@ -83,8 +83,8 @@
               (goto find-and-call-interrupt-handler))
              (else
               (loop (s48-invoke-native-continuation
-                     (+ (address->integer (pop-continuation-from-stack))
-                        -2))))))
+                     (address->integer (pop-continuation-from-stack))
+                     -2)))))
       ((3)
        (goto return-values s48-*native-protocol* null 0))
       ((4)
@@ -678,8 +678,9 @@
 (define (native-return protocol-skip)
   (goto post-native-dispatch
 	(s48-invoke-native-continuation
-	  (+ (address->integer (pop-continuation-from-stack))
-	     protocol-skip))))
+         (address->integer (pop-continuation-from-stack))
+         protocol-skip)))
+        
 
 ; The continuation wants a fixed number of arguments.  We pop the current
 ; continuation, move the stack arguments down to the new stack top, push

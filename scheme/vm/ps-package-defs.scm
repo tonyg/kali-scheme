@@ -30,7 +30,7 @@
     (define s48-call-native-procedure
       (external "s48_call_native_procedure" (=> (integer integer) integer)))
     (define s48-invoke-native-continuation
-      (external "s48_invoke_native_continuation" (=> (integer) integer)))
+      (external "s48_invoke_native_continuation" (=> (integer integer) integer)))
     (define s48-native-return
       (external "((long)&s48_native_return)" integer))
 

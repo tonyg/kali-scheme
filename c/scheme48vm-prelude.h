@@ -28,7 +28,7 @@ extern s48_value	s48_extended_vm(long, s48_value),
  */
 
 extern long		s48_call_native_procedure(long, long),
-			s48_invoke_native_continuation(long);
+			s48_invoke_native_continuation(long, long);
 
 /*
  * The following are hand-written macro versions of procedures
