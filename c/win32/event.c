@@ -290,6 +290,7 @@ s48_add_ready_fd(long fd, bool is_input, long chars_processed)
   if (data->status == FD_READY)
     return (TRUE); /* fd is already ready */
 
+  data->status = FD_READY;
   addque(data, &ready);
 
   return TRUE;
