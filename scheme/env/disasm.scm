@@ -270,7 +270,8 @@
   (let ((spec (car spec.arg))
         (arg (cdr spec.arg)))
     (case spec
-      ((nargs byte literal two-bytes index small-index)
+      ((byte two-bytes nargs two-byte-nargs literal index two-byte-index
+             stack-index two-byte-stack-index)
        (write arg))
       ((offset)
        (write `(=> ,arg)))
