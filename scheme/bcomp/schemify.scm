@@ -58,7 +58,10 @@
     (if env
 	(name->qualified (node-form node)
 			 env)
-	(desyntaxify (node-form node)))))
+	(let ((form (node-form node)))
+          (if (or #f (node? form))
+              (schemify-node form env)
+              (desyntaxify form))))))
 
 (define-schemifier 'quote syntax-type
   (lambda (node env)
