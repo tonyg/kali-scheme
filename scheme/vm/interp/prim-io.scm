@@ -127,7 +127,9 @@
 			       (get-error-string status key))
 	      (goto return
 		    (cond (eof? eof-object)
-			  (pending? false)
+			  (pending?
+			   (set-channel-os-status! channel true)
+			   false)
 			  (else
 			   (enter-fixnum got))))))
 	(raise-exception wrong-type-argument 0
@@ -162,7 +164,9 @@
 			       (get-error-string status key))
 	      (goto return
 		    (if pending?
-			false
+			(begin
+			  (set-channel-os-status! channel true)
+			  false)
 			(enter-fixnum got)))))
 	(raise-exception wrong-type-argument 0
 			 channel

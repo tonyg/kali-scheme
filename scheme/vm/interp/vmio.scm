@@ -133,7 +133,7 @@
 	((false? (vector-ref *vm-channels* os-index))
 	 (let ((old-index (extract-fixnum (channel-os-index channel))))
 	   (if (vm-eq? (channel-os-status channel)
-		       true)
+		       true) ; operation pending
 	       (enqueue-channel! old-index (channel-abort old-index) false))
 	   (vector-set! *vm-channels* old-index false)
 	   (vector-set! *vm-channels* os-index channel)
@@ -169,7 +169,7 @@
 (define (close-channel! channel)
   (let ((os-index (extract-fixnum (channel-os-index channel))))
     (if (vm-eq? (channel-os-status channel)
-		true)
+		true) ; operation pending
 	(enqueue-channel! os-index (channel-abort os-index) false))
     (let ((status (if (or (= input-status (channel-status channel))
 			  (= special-input-status (channel-status channel)))
