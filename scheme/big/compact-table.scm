@@ -61,10 +61,6 @@
 	     (bingo-block-alist '()))
 
     (let ((block (get-block)))
-      (if (< (length block) block-size)
-	  (begin
-	    (write block) 
-	    (newline)))
       (cond
        ((null? block)
 	(values (list->vector (reverse reverse-indices))
