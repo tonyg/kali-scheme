@@ -89,7 +89,7 @@
       (c-define "S48_~A    (S48_MISC_IMMEDIATE(~D))" name i)))
   (newline)
   (c-define "S48_UNSAFE_ENTER_CHAR(c) (S48_CHAR | ((c) << 8))")
-  (c-define "S48_UNSAFE_EXTRACT_CHAR(x) ((x) >> 8)")
+  (c-define "S48_UNSAFE_EXTRACT_CHAR(x) ((unsigned char)((x) >> 8))")
   (c-define "S48_CHAR_P(x) ((((long) (x)) & 0xff) == S48_CHAR)"))
 
 (define (stob-stuff stob-list stob-data)
