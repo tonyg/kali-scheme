@@ -1035,7 +1035,7 @@
 (define-interface interfaces-interface
   (export make-simple-interface
 	  make-compound-interface
-	  make-modified-interface
+	  make-modified-interface-maker
 	  note-reference-to-interface!
 	  interface-ref
 	  interface-member?

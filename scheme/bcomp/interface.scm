@@ -129,8 +129,11 @@
 ;----------------
 ; Modified interfaces.
 ;
-; We return a new interface that is INTERFACE modified by COMMANDS.  Commands
-; are:
+; We return a procedure that uses COMMANDS to modify any interface it is
+; passed.  We parse the commands first so that errors are detected before
+; the structure that exports the modified interace is installed anywhere.
+;
+; Commands are:
 ;  (prefix <symbol>)
 ;      Add <symbol> to the beginning of every name in INTERFACE.
 ;  (expose <symbol> ...)
@@ -149,18 +152,19 @@
 ;  ((expose bar) (prefix foo:))
 ; does not allow any names to be seen.
 
-(define (make-modified-interface interface commands)
+(define (make-modified-interface-maker commands)
   (if (and (proper-list? commands)
 	   (every okay-command? commands))
       (mvlet (((alist hidden default)
 	         (process-commands commands)))
-	(let ((lookup (make-lookup alist hidden default interface))
-	      (walker (if default
-			  (make-default-walker alist hidden default interface)
-			  (make-alist-walker alist interface))))
-	  (let ((int (make-interface lookup walker #f)))
-	    (note-reference-to-interface! interface int)
-	    int)))
+	(lambda (interface)
+	  (let ((lookup (make-lookup alist hidden default interface))
+		(walker (if default
+			    (make-default-walker alist hidden default interface)
+			    (make-alist-walker alist interface))))
+	    (let ((int (make-interface lookup walker #f)))
+	      (note-reference-to-interface! interface int)
+	      int))))
       (error "badly-formed structure modifiers" commands)))
 
 ; We process COMMANDS and compute three values:

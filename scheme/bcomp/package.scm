@@ -64,13 +64,15 @@
     struct))
 
 ; Make a structure by using COMMANDS to modify the STRUCTURE's interface.
+; We parse the commands first so that errors are detected before the new
+; structure is installed anywhere.
 
 (define (make-modified-structure structure commands)
-  (let ((new-struct (make-structure (structure-package structure)
-				    (lambda ()
-				      (make-modified-interface
-				        (structure-interface structure)
-					commands)))))
+  (let* ((interface-maker (make-modified-interface-maker commands))
+	 (new-struct (make-structure (structure-package structure)
+				     (lambda ()
+				       (interface-maker
+				         (structure-interface structure))))))
     (if (structure-unstable? structure)
 	(add-to-population! new-struct (structure-clients structure)))
     new-struct))

@@ -479,10 +479,17 @@ line.  The command processor's prompt consists of the name of the
 current package followed by a greater-than ({\tt>}).
 
 \begin{description}
-\item \code{,open \arbno{\cvar{struct-name}}} \\
-    The {\tt,open} command opens a new structure in the current
+\item \code{,open \arbno{\cvar{structure}}} \\
+    The {\tt,open} command opens new structures in the current
     package, as if the package's definition's {\tt open} clause
-    had listed \cvar{struct-name}.
+    had listed \cvar{structure}.
+    As with {\tt open} clauses the visible names can be modified,
+    as in
+\begin{example}
+,open (subset foo (bar baz))
+\end{example}
+    which only makes the \code{bar} and \code{baz} bindings from
+    structure \code{foo} visible.
 
 \item \code{,config} \\
     The {\tt,config} command sets the command processor's current
