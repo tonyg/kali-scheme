@@ -54,6 +54,22 @@
                     (lp (+ i 1) (parse-template literal state attribution))
                     (lp (+ i 1) ((attribution-template-literal attribution) literal i state))))))))
 
+(define (byte-code? x)
+  (let ((code (template-code (coerce-to-template x))))
+    (define (byte-code-protocol? protocol)
+      (or (<= protocol maximum-stack-args)
+          (= protocol two-byte-nargs-protocol)
+          (= protocol two-byte-nargs+list-protocol)
+          (= protocol ignore-values-protocol)
+          (= protocol call-with-values-protocol)
+          (= protocol args+nargs-protocol)
+          (= protocol nary-dispatch-protocol)
+          (and (= protocol big-stack-protocol)
+               (byte-code-protocol? 
+                (code-vector-ref code (- (code-vector-length code) 3))))))
+    (byte-code-protocol? (code-vector-ref code 1))))
+    
+
 (define (parse-template-code tem code state attribution)
   (with-template 
    tem code state attribution

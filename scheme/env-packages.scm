@@ -299,7 +299,8 @@
   (files (env shadow)))     ;Exception handler to support package system
 
 (define-interface parse-bytecode-interface
-  (export parse-template
+  (export byte-code?
+          parse-template
           parse-template-code
           parse-instruction
           parse-protocol
