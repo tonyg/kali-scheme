@@ -19,6 +19,7 @@ $vm -i $initial -a batch <<EOF
 ,load =scheme48/env-packages.scm
 ,load =scheme48/more-packages.scm
 ,load =scheme48/posix/packages.scm
+,load =scheme48/srfi/packages.scm
 (ensure-loaded command-processor)
 (ensure-loaded usual-commands)
 ,go ((*structure-ref command 'command-processor)
