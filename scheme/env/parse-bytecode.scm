@@ -337,7 +337,7 @@
 (define (arg-spec-size spec pc code)
   (case spec
     ((byte nargs stack-index index literal stob) 1)
-    ((two-bytes two-byte-narg two-byte-stack-index two-byte-index offset offset-) 2)
+    ((two-bytes two-byte-nargs two-byte-stack-index two-byte-index offset offset-) 2)
     ((env-data) (error "env-data in arg-spec-size"))
     ((protocol) (error "protocol in arg-spec-size"))
     ((moves-data)
