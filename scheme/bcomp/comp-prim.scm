@@ -584,7 +584,7 @@
 				"returning no arguments where one is expected"
 				(string-append "returning "
 					       (number->string nargs)
-					       "arguments where one is expected"))
+					       " arguments where one is expected"))
 			    (schemify node)))
 	    (else
 	     (error "unknown compiler continuation for VALUES" cont)))))
