@@ -92,7 +92,7 @@
   (begin
     (define available-srfis
       '(srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
-	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17 srfi-23
+	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17 srfi-23 srfi-25
 	srfi-27 srfi-31 srfi-42))
 
     ; Some SRFI's redefine Scheme variables.
@@ -259,6 +259,16 @@
 
 (define-structure srfi-23 (export error)
   (open (subset signals (error))))
+
+(define-interface srfi-25-interface
+  (export array? make-array shape array array-rank
+	  array-start array-end array-ref array-set! share-array))
+
+(define-structure srfi-25 srfi-25-interface
+  (open scheme
+	define-record-types
+	(subset signals (error)))
+  (files srfi-25))
 
 (define-interface srfi-27-interface
   (export random-integer

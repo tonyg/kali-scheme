@@ -480,7 +480,7 @@
 	    ; SRFI packages
 	    srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
 	    srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
-	    srfi-23 srfi-27
+	    srfi-23 srfi-25 srfi-27
 	    srfi-31
 	    srfi-42
 	    )
