@@ -79,6 +79,9 @@
   (external "ps_write_fd"
 	    (=> (integer address integer) integer boolean integer)))
 
+(define channel-buffer-size
+  (external "ps_io_buffer_size" (=> () integer)))
+
 (define channel-abort
   (external "ps_abort_fd_op" (=> (integer) integer)))
 

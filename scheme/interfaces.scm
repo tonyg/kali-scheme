@@ -55,6 +55,7 @@
 (define-interface primitives-interface
   (export add-finalizer!
 	  call-external-value
+	  channel-buffer-size
 	  checked-record-ref
 	  checked-record-set!
 	  collect			;,collect command
@@ -178,6 +179,7 @@
 	  channel-ready?
 	  channel-maybe-read
 	  channel-maybe-write
+	  channel-buffer-size
 	  channel-abort
 
 	  open-channels-list))
@@ -565,6 +567,7 @@
   (export channel-maybe-commit-and-read
 	  channel-maybe-commit-and-write
 	  channel-maybe-commit-and-close
+	  channel-buffer-size
 	  channel-write
 
 	  initialize-channel-i/o!       ;scheduler

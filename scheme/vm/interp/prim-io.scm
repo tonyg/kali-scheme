@@ -185,6 +185,11 @@
 
 ;----------------
 
+;; random stuff
+(define-primitive channel-buffer-size ()
+  (lambda ()
+    (goto return-fixnum (channel-buffer-size))))
+
 (define-primitive channel-abort (channel->)
   (lambda (channel)
     (goto return (vm-channel-abort channel))))

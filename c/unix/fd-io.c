@@ -199,6 +199,12 @@ ps_write_fd(long fd_as_long, char *buffer, long max, psbool *pending, long *stat
 }
 
 long
+ps_io_buffer_size(void)
+{
+  return 4096;
+}
+
+long
 ps_abort_fd_op(long fd_as_long)
 {
   int fd = (int)fd_as_long;

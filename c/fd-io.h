@@ -16,3 +16,5 @@ extern long ps_write_fd(long fd_as_long, char *buf_as_long, long max,
 			psbool *pending, long *status);
 
 extern long ps_abort_fd_op(long fd_as_long);
+
+extern long ps_io_buffer_size(void);

@@ -354,7 +354,7 @@
 
 ;----------------
 
-(define default-buffer-size 4096)  ; should get this from the system
+(define (default-buffer-size) (channel-buffer-size))
 
 ;----------------
 ; Code to periodically flush output ports.

@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 26")
+(define architecture-version "Vanilla 27")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -205,6 +205,7 @@
   (close-channel 1)
   (channel-maybe-read 5)
   (channel-maybe-write 4)
+  (channel-buffer-size)
   (channel-ready? 1)
   (channel-abort 1)             ; stop channel operation
   (open-channels-list)		; return a list of the open channels

@@ -438,6 +438,7 @@
 	  channel-ready?
 	  channel-read-block
 	  channel-write-block
+	  channel-buffer-size
 	  channel-abort
 	  ))
 

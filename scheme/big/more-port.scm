@@ -72,7 +72,7 @@
   (if (input-port? port)
       (make-buffered-input-port tracking-input-port-handler
 				(make-port-location port)
-				(make-byte-vector default-buffer-size 0)
+				(make-byte-vector (default-buffer-size) 0)
 				0
 				0)
       (call-error "not an input port" make-tracking-input-port port)))
@@ -140,9 +140,9 @@
   (if (output-port? port)
       (make-buffered-output-port tracking-output-port-handler
 				 (make-port-location port)
-				 (make-byte-vector default-buffer-size 0)
+				 (make-byte-vector (default-buffer-size) 0)
 				 0
-				 default-buffer-size)
+				 (default-buffer-size))
       (call-error "not an output port" make-tracking-output-port port)))
 
 (define (fresh-line port)
@@ -193,9 +193,9 @@
 (define (make-string-output-port)
   (make-buffered-output-port string-output-port-handler
 			     (list #f)
-			     (make-byte-vector default-buffer-size 0)
+			     (make-byte-vector (default-buffer-size) 0)
 			     0
-			     default-buffer-size))
+			     (default-buffer-size)))
 
 ; Concatenates all of the buffers into single string.
 ; Could use a proposal...

@@ -107,7 +107,7 @@
 	     
 (define (real-input-channel->port channel maybe-buffer-size closer)
   (let ((buffer-size (if (null? maybe-buffer-size)
-			 default-buffer-size
+			 (channel-buffer-size)
 			 (car maybe-buffer-size))))
     (if (>= 0 buffer-size)
 	(call-error "invalid buffer size"
@@ -211,7 +211,7 @@
 
 (define (real-output-channel->port channel maybe-buffer-size closer)
   (let ((buffer-size (if (null? maybe-buffer-size)
-			 default-buffer-size
+			 (channel-buffer-size)
 			 (car maybe-buffer-size))))
     (if  (or (not (integer? buffer-size))
 	     (< buffer-size 0)
@@ -236,7 +236,7 @@
 (define (maybe-open-file filename option close-silently? coercion)
   (let ((channel (open-channel filename option close-silently?)))
     (if channel
-	(coercion channel default-buffer-size)
+	(coercion channel (channel-buffer-size))
 	#f)))
   
 ; And then all of RnRS's file opening procedures.

@@ -104,6 +104,8 @@
 (define (channel-write-block channel start count)
   (values count #f (write-block (channel->port channel) start count)))
 
+(define (channel-buffer-size) 4096)
+
 (define (channel-abort channel)
   (set! *pending-channels* (delq channel *pending-channels*))
   0)
