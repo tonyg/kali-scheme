@@ -79,6 +79,16 @@
               <File Id="COPYING" Name="COPYING" LongName="COPYING" DiskId="1"
                 src="COPYING" Vital="yes" />
 
+              <!-- install null files to make sure the generated files get uninstalled again -->
+              <File Id="Scheme48Image"
+                    Name="SCHEME48.IMA" LongName="scheme48.image"
+                    src="build/dummy"
+                    DiskId="1" Vital="yes" />
+              <File Id="Scheme48BAT"
+                    Name="scheme48.bat" LongName="scheme48.bat"
+                    src="build/dummy"
+                    DiskId="1" Vital="yes" />
+
             </Component>
 
             <?include scheme48-files.wxi ?>
@@ -111,6 +121,13 @@
                       Name="BUILD-~1.BAT" LongName="build-usual-image.bat"
                       src="build/build-usual-image.bat"
                       DiskId="1" Vital="yes" />
+
+                <!--- install a null file so it will be deleted again by rollback and uninstall -->
+                <File Id="build_usual_image.input"
+                      Name="BUILD-~1.INP" LongName="build-usual-image.input"
+                      src="build/dummy"
+                      DiskId="1" Vital="yes" />
+
                 <File Id="generate_go.bat"
                       Name="GENERA~1.BAT" LongName="generate-go.bat"
                       src="build/generate-go.bat"
@@ -168,8 +185,12 @@
 
     <!-- schedule the building of scheme48.image -->
     <InstallExecuteSequence>
-      <Custom Action="build_usual_image" After="InstallFinalize"><![CDATA[INSTALLMODE <> "Remove"]]></Custom>
-      <Custom Action="generate_go" After="InstallFinalize"><![CDATA[INSTALLMODE <> "Remove"]]></Custom>
+      <Custom Action="build_usual_image" After="InstallFinalize">
+        <![CDATA[(NOT Installed) OR (INSTALLMODE = "Repair")]]>
+       </Custom>
+      <Custom Action="generate_go" After="InstallFinalize">
+        <![CDATA[(NOT Installed) OR (INSTALLMODE = "Repair")]]>
+      </Custom>
     </InstallExecuteSequence>
 
     <!--
