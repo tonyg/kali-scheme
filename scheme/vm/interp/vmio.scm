@@ -77,6 +77,7 @@
   (let ((vm-channel (make-channel status
 				  (enter-string name key)
 				  (enter-fixnum channel)
+				  false    ; close-silently?
 				  false    ; next
 				  false    ; os-status
 				  key)))
@@ -89,7 +90,7 @@
 ; Make a new channel.  The os-index is used to handle I/O-completion interrupts
 ; so we have to ensure that there is at most one channel using each index.
 
-(define (make-registered-channel mode id os-index key)
+(define (make-registered-channel mode id os-index close-silently? key)
   (cond ((not (or (< os-index *number-of-channels*)
 		  (add-more-channels os-index)))
 	 (values false (enum exception out-of-memory)))
@@ -97,6 +98,7 @@
 	 (let ((channel (make-channel (enter-fixnum mode)
 				      id
 				      (enter-fixnum os-index)
+				      close-silently?
 				      false   ; next
 				      false   ; os-status
 				      key)))
@@ -114,6 +116,7 @@
       (make-registered-channel (extract-fixnum mode)
 			       id
 			       os-index
+			       false
 			       (ensure-space channel-size))
     (if (channel? channel)
 	channel
@@ -337,6 +340,11 @@
 	(id (channel-id channel)))
     (if (error? status)
 	(channel-close-error status (channel-os-index channel) id))
+    (if (= false (channel-close-silently? channel))
+	(notify-channel-closed channel))))
+
+(define (notify-channel-closed channel)
+  (let ((id (channel-id channel)))
     (write-error-string "Channel closed: ")
     (if (fixnum? id)
 	(write-error-integer (extract-fixnum id))
@@ -344,4 +352,3 @@
     (write-error-string " ")
     (write-error-integer (extract-fixnum (channel-os-index channel)))
     (write-error-newline)))
-

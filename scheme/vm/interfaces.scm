@@ -225,11 +225,12 @@
 	  shared-binding-next set-shared-binding-next!
 
 	  channel? channel-size make-channel
-	  channel-status    set-channel-status!
-	  channel-id        set-channel-id!
-	  channel-os-index  set-channel-os-index!
-	  channel-next      set-channel-next!
-	  channel-os-status set-channel-os-status!
+	  channel-status          set-channel-status!
+	  channel-id              set-channel-id!
+	  channel-os-index        set-channel-os-index!
+	  channel-close-silently? set-channel-close-silently?!
+	  channel-next            set-channel-next!
+	  channel-os-status       set-channel-os-status!
 	  
 	  port? port-size make-port
 	  port-handler

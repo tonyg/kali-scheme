@@ -195,7 +195,7 @@
   ((immutable? make-immutable!) 1)
 
   ;; channels (unbuffered, non-blocking I/O)
-  (open-channel 2)
+  (open-channel 3)
   (close-channel 1)
   (channel-maybe-read 5)
   (channel-maybe-write 4)
@@ -521,6 +521,7 @@
     (channel channel? #f
       (channel-status)
       (channel-id)
-      (channel-os-index))
+      (channel-os-index)
+      (channel-close-silently?))
     ))
 

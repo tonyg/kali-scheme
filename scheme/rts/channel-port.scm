@@ -212,39 +212,47 @@
 
 ; First a generic procedure to do the work.
 
-(define (maybe-open-file filename option coercion)
-  (let ((channel (open-channel filename option)))
+(define (maybe-open-file filename option close-silently? coercion)
+  (let ((channel (open-channel filename option close-silently?)))
     (if channel
 	(coercion channel default-buffer-size)
 	#f)))
   
 ; And then all of RnRS's file opening procedures.
 
-(define (open-input-file string)
+(define (really-open-input-file string close-silently?)
   (if (string? string)
       (or (maybe-open-file string
 			   (enum channel-status-option input)
+			   close-silently?
 			   input-channel->port)
 	  (error "can't open for input" string))
       (call-error "invalid argument" open-input-file string)))
 
-(define (open-output-file string)
+(define (open-input-file string)
+  (really-open-input-file string  #f))
+
+(define (really-open-output-file string close-silently?)
   (if (string? string)
       (or (maybe-open-file string
 			   (enum channel-status-option output)
+			   close-silently?
 			   output-channel->port)
 	  (error "can't open for output" string))
       (call-error "invalid argument" open-output-file string)))
 
+(define (open-output-file string)
+  (really-open-output-file string #f))
+
 (define (call-with-input-file string proc)
-  (let* ((port (open-input-file string))
+  (let* ((port (really-open-input-file string #t))
          (results (call-with-values (lambda () (proc port))
 				    list)))
     (close-input-port port)
     (apply values results)))
 
 (define (call-with-output-file string proc)
-  (let* ((port (open-output-file string))
+  (let* ((port (really-open-output-file string #t))
          (results (call-with-values (lambda () (proc port))
 				    list)))
     (close-output-port port)

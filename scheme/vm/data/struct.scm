@@ -32,9 +32,10 @@
 (define-shared-primitive-data-type channel #f #f
   make-channel                           		; hidden from RTS
   (;; these setters are hidden from the RTS
-   (channel-status    set-channel-status!)
-   (channel-id        set-channel-id!)
-   (channel-os-index  set-channel-os-index!))
+   (channel-status          set-channel-status!)
+   (channel-id              set-channel-id!)
+   (channel-os-index        set-channel-os-index!)
+   (channel-close-silently? set-channel-close-silently?!))
   ;; none of these are visible to the RTS
   (channel-next      set-channel-next!)
   (channel-os-status set-channel-os-status!))

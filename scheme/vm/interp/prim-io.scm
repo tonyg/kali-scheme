@@ -28,9 +28,9 @@
 
 ; Check SPEC type and then call OPEN-CHANNEL.
 
-(define-consing-primitive open-channel (any-> fixnum->)
+(define-consing-primitive open-channel (any-> fixnum-> any->)
   (lambda (ignore) (+ channel-size error-string-size))
-  (lambda (spec mode key)
+  (lambda (spec mode close-silently? key)
     (let* ((lose (lambda (reason)
 		   (raise-exception* reason 0 spec (enter-fixnum mode))))
 	   (os-lose (lambda (status)
@@ -40,7 +40,7 @@
 				       (get-error-string status key))))
 	   (win (lambda (index)
 		  (receive (channel reason)
-		      (make-registered-channel mode spec index key)
+		      (make-registered-channel mode spec index close-silently? key)
 		    (cond ((false? channel)
 			   (if (vm-string? spec)
 			       (close-channel-index! index spec mode))
