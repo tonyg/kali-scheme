@@ -3,9 +3,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
 #include "scheme48vm.h"
 #include "scheme48heap.h"
+#include "scheme48image.h"
 
 extern long s48_get_file_size(unsigned char *);
 
@@ -34,7 +34,6 @@ extern void	s48_sysdep_init(void);
 extern void	s48_initialize_external_modules(void);
 
 char *s48_object_file;   /* specified via a command line argument */
-char *s48_reloc_file;    /* dynamic loading will set this */
 
 int
 s48_main(argc, argv)
@@ -45,9 +44,7 @@ s48_main(argc, argv)
   long stack_size = DEFAULT_STACK_SIZE;  /* in numbers of cells */
   int errors = 0;
   long return_value;
-  int heap_okay;
   void *stack;
-  long image_file_size;
   int warn_undefined_imported_bindings_p = 1;
 
 #if defined(STATIC_AREAS)
@@ -61,7 +58,7 @@ s48_main(argc, argv)
   long vm_argc = 0;
   char *me = *argv;		/* Save program name. */
 
-  s48_object_file = s48_reloc_file = NULL;
+  s48_object_file = NULL;
 
   argv++; argc--;		/* Skip program name. */
 
@@ -156,10 +153,6 @@ Options: -h <total heap size in words>\n\
     s48_warn_about_undefined_imported_bindings();
   
   return_value = s48_call_startup_procedure(argv, vm_argc);
-
-  if (s48_reloc_file != NULL)
-    if (0 != unlink(s48_reloc_file))
-      fprintf(stderr, "unable to delete file %s\n", s48_reloc_file);
 
   return(return_value);
 }
