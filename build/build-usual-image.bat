@@ -17,6 +17,8 @@ echo ,load =scheme48/packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/more-interfaces.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/link-packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/env-packages.scm >> %srcdir%\build\build-usual-image.input
+echo ,load =scheme48/sort/interfaces.scm >> %srcdir%\build\build-usual-image.input
+echo ,load =scheme48/sort/packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/more-packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/posix/packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/srfi/packages.scm >> %srcdir%\build\build-usual-image.input
@@ -27,7 +29,7 @@ echo      (structure-package usual-commands) >> %srcdir%\build\build-usual-image
 echo      (list "batch")) >> %srcdir%\build\build-usual-image.input
 echo (ensure-loaded usual-features) >> %srcdir%\build\build-usual-image.input
 echo ,structure more-structures more-structures-interface >> %srcdir%\build\build-usual-image.input
-echo ,in debuginfo (read-debug-info "%srcdir%/build/initial.debug") >> %srcdir%\build\build-usual-image.input
+echo ,in debuginfo (read-debug-info "%srcdir_cooked%/build/initial.debug") >> %srcdir%\build\build-usual-image.input
 echo ,keep maps source files >> %srcdir%\build\build-usual-image.input
 echo ,translate =scheme48/ "%lib%/" >> %srcdir%\build\build-usual-image.input
 echo ,build ((*structure-ref package-commands-internal >> %srcdir%\build\build-usual-image.input
