@@ -18,4 +18,4 @@ echo (flatload initial-structures) >> build\build-initial-image.input
 echo (load "build/initial.scm") >> build\build-initial-image.input
 echo (link-initial-system) >> build\build-initial-image.input
 
-%runnable% -h 6000000 < build\build-initial-image.input
+%runnable% -h 8000000 < build\build-initial-image.input
