@@ -255,6 +255,7 @@
 	      (punt))))
 	  (lambda ()
 	    (open-channel (thing->file-name-byte-string file-name)
+			  file-name
 			  option close-silently?)))))
     (if (channel? thing)
 	(coercion thing (channel-buffer-size))

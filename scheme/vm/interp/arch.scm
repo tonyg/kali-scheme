@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 31")
+(define architecture-version "Vanilla 32")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -202,7 +202,7 @@
   ((immutable? make-immutable! make-mutable!) 1)
 
   ;; channels (unbuffered, non-blocking I/O)
-  (open-channel 3)
+  (open-channel 4)
   (close-channel 1)
   (channel-maybe-read 5)
   (channel-maybe-write 4)

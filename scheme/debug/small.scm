@@ -6,6 +6,7 @@
   (set! *error-channel* error-channel)
   (set-exception-handlers! exception-handlers)
   (let* ((ch (open-channel "small-test.image"
+			   "small-test.image"
 			   (enum open-channel-option input-file)
 			   #f))
 	 (out (output-channel->port out-channel))

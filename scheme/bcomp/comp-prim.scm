@@ -115,7 +115,7 @@
      ,(proc (string-type string-type) boolean-type))
     (open-channel
      ;; Can return #f
-     ,(proc (string-type exact-integer-type boolean-type) value-type))
+     ,(proc (string-type value-type exact-integer-type boolean-type) value-type))
     (cons
      ,(proc (value-type value-type) pair-type))
     (intern
