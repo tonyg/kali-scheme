@@ -232,7 +232,8 @@
 	   :structure)))
 
 (define-interface low-structures-interface
-  (export ((ascii
+  (export ((all-operators
+	    ascii
 	    bitwise
 	    byte-vectors
 	    cells
