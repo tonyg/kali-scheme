@@ -401,7 +401,7 @@
     (sequentially (lambda-protocol 1 #f #f)
                   (instruction (enum op current-cont))
 		  (instruction (enum op push))
-		  (instruction (enum op stack-ref 1))
+		  (instruction (enum op stack-ref) 1)
                   (call-instruction 1 #f))))	; one argument, no return label
 
 ; (call-with-values producer consumer)
