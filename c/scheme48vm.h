@@ -59,13 +59,15 @@ extern s48_value	s48_set_channel_os_index(s48_value, long);
 extern s48_value	s48_really_add_channel(s48_value, s48_value, long);
 
 /* external allocation and GC roots */
+extern void		s48_gc_root(void);
 extern s48_value	s48_allocate_stob(long type, long size);
 extern void		s48_push_gc_rootsB(char *, long);
 extern bool		s48_pop_gc_rootsB(void);
 extern char *		s48_set_gc_roots_baseB(void);
 extern bool		s48_release_gc_roots_baseB(char *);
 extern void		s48_register_gc_rootB(char *marker);
-extern void		s48_reset_external_rootsB();
+extern void		s48_reset_external_rootsB(void);
+extern void		s48_post_gc_cleanup(void);
 
 /* for native code */
 extern void		s48_copy_stack_into_heap();
