@@ -363,12 +363,6 @@
   (open scheme-level-2 interfaces packages meta-types sort bindings)
   (files (env list-interface)))
 
-; Structure & Interpretation compatibility
-
-(define-structure sicp sicp-interface
-  (open scheme-level-2 signals tables)
-  (files (misc sicp)))
-
 ; red-black balanced binary search trees
 
 (define-structure search-trees search-trees-interface

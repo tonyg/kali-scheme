@@ -470,8 +470,3 @@
 	  placeholder-value
 	  placeholder-set!))
 
-(define-interface sicp-interface
-  (export and or (sequence :syntax)
-	  mapcar mapc 1+ -1+ t nil atom? print princ prin1 error
-	  (cons-stream :syntax) head tail the-empty-stream empty-stream?
-	  explode implode get put))

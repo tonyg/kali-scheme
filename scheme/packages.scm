@@ -444,7 +444,6 @@
 	    receiving
 	    reduce
 	    search-trees
-	    sicp
 	    sockets
 
 	    delete-neighbor-duplicates
