@@ -26,265 +26,186 @@
   (really-disassemble (coerce-to-template-or-code obj) 0)
   (newline))
 
-; Instruction loop.  WRITE-INSTRUCTION returns the new program counter.
-
 (define (really-disassemble template-or-code level)
-  (let* ((template (if (template? template-or-code)
-		       template-or-code
-		       #f))
-	 (code (if template
-		   (template-code template)
-		   template-or-code)))
-    (if (and template
-	     (template-name template))
-	(write (template-name template)))
-    (let ((length (template-code-length code)))
-      (let loop ((pc (display-entry-protocol code level)))
-	(if (< pc length)
-	    (loop (write-instruction code template pc level #t)))))))
+    (let* ((template (if (template? template-or-code)
+                         template-or-code
+                         #f))
+           (code (if template
+                     (template-code template)
+                     template-or-code)))
+      (parse-template-code 
+       template code level
+       (make-attribution disasm-init-template disasm-attribute-literal 
+                         disasm-table disasm-make-label disasm-at-label))))
 
-; The protocol used for procedures that require extra stack space uses three
-; bytes at the end of the code vector.
 
-(define (template-code-length code)
-  (if (and (= (enum op protocol)
-	      (code-vector-ref code 0))
-	   (= big-stack-protocol
-	      (code-vector-ref code 1)))
-      (- (code-vector-length code) 3)
-      (code-vector-length code)))
+(define (disasm-init-template level template p-args push-template? push-env?)
+  (if (template-name template)
+      (write (template-name template)))
+  (print-opcode (enum op protocol) 0 level)
+  (show-protocol p-args 0)
+  (if (or push-template? push-env?)
+      (begin
+        (display " (push")
+        (if push-env?
+            (display " env"))
+        (if push-template?
+            (display " template"))
+        (display #\))))
+  (display #\))
+  level)
 
-; Write out the intstruction at PC in TEMPLATE.  LEVEL is the nesting depth
-; of TEMPLATE.  If WRITE-SUB-TEMPLATES? is false we don't write out any
-; templates found.
-;
-; Special handling is required for the few instructions that do not use a
-; fixed number of code-stream arguments.
+(define (disasm-attribute-literal literal index level)
+  level)
 
-(define (write-instruction code template pc level write-sub-templates?)
-  (let* ((opcode (code-vector-ref code pc)))
-    (show-opcode code pc level)
-    (let ((pc (cond ((= opcode (enum op computed-goto))
- 		     (display-computed-goto pc code))
- 		    ((= opcode (enum op make-flat-env))
- 		     (display-flat-env (+ pc 1) code level write-sub-templates?
-				       1 code-vector-ref))
- 		    ((= opcode (enum op make-big-flat-env))
- 		     (display-flat-env (+ pc 1) code level write-sub-templates?
-				       2 get-offset))
-		    ((= opcode (enum op protocol))
-		     (display-protocol (code-vector-ref code (+ pc 1)) pc code))
-		    ((= opcode (enum op cont-data))
-		     (display-cont-data pc code)
-		     (+ pc (get-offset code (+ pc 1))))
-		    ((or (= opcode (enum op global))
-			 (= opcode (enum op set-global!)))
-		     (display-global-reference pc code template))
- 		    (else
- 		     (print-opcode-args opcode pc code)))))
-      (display #\))
-      pc)))
+(define (disasm-make-label target-pc)
+  target-pc)
 
-(define (show-opcode code pc level)    
-  (newline-indent (* level 3))
-  (write-pc pc)
-  (display " (")
-  (write (enumerand->name (code-vector-ref code pc) op)))
+(define (disasm-at-label label level)
+  level)
 
-(define (display-global-reference pc code template)
-  (let ((loc (if template
-		 (template-ref template (get-offset code (+ pc 3)))
-		 #f)))
-    (print-opcode-args (code-vector-ref code pc) pc code)
+(define disasm-table (make-opcode-table
+                               (lambda (opcode template level pc . args)
+                                 (print-opcode opcode pc level)
+                                 (print-opcode-args args)
+                                 (display #\))
+                                 level)))
+
+(define-syntax define-disasm
+  (syntax-rules ()
+    ((define-disasm inst disasm)
+     (opcode-table-set! disasm-table (enum op inst) disasm))))
+
+;------------------------------
+(define-disasm protocol
+  (lambda (opcode template level pc p-args)
+    (print-opcode opcode pc level)
+    (show-protocol (cdr p-args) pc)
+    (display #\))
+    level))
+
+(define (show-protocol p-args pc)
+  (let ((protocol (car p-args)))
     (display #\space)
+    (cond ((<= protocol maximum-stack-args)
+           (display protocol))
+          ((= protocol two-byte-nargs-protocol)
+           (display (cadr p-args)))
+          ((= protocol two-byte-nargs+list-protocol)
+           (display (cadr p-args))
+           (display " +"))
+          ((= protocol ignore-values-protocol)
+           (display "discard all values"))
+          ((= protocol call-with-values-protocol)
+           (display "call-with-values")
+           (let ((target-pc (cadr p-args)))
+             (if (not (= pc target-pc))
+                 (begin
+                   (display #\space)
+                   (write `(=> ,(cadr p-args)))))))
+          ((= protocol args+nargs-protocol)
+           (display "args+nargs ")
+           (display (cadr p-args))
+           (display "+"))
+          ((= protocol nary-dispatch-protocol)
+           (display "nary-dispatch")
+           (for-each display-dispatch (cdr p-args) (list 0 1 2 "3+")))
+          ((= protocol big-stack-protocol)
+           (apply
+            (lambda (real-attribution stack-size)
+              (display "big-stack")
+              (show-protocol real-attribution pc)
+              (display #\space)
+              (display stack-size))
+            (cdr p-args)))
+          (else
+           (error "unknown protocol" protocol)))))
+
+(define (display-dispatch target-pc tag)
+  (if target-pc
+      (begin
+        (display #\space)
+        (display (list tag '=> target-pc)))))
+
+;------------------------------
+(define-disasm global
+  (lambda (opcode template level pc index-to-template index-within-template)
+    (print-opcode opcode pc level)
+    (print-opcode-args (list index-to-template index-within-template))
+    (display #\space)
+    (display-global-reference template (cdr index-within-template))
+    (display #\))
+    level))
+
+(define-disasm set-global!
+  (lambda (opcode template level pc index-to-template index-within-template)
+    (print-opcode opcode pc level)
+    (print-opcode-args (list index-to-template index-within-template))
+    (display #\space)
+    (display-global-reference template (cdr index-within-template))
+    (display #\))
+    level))    
+
+(define (display-global-reference template index)
+  (let ((loc (if template
+		 (template-ref template index)
+		 #f)))
     (cond ((location? loc)
 	   (write (or (location-name loc)
 		      `(location ,(location-id loc)))))
 	  (else
 	   (display #\')
-	   (write loc)))
-    (+ pc 5)))
+	   (write loc)))))
 
-; Write out all of the branches of a computed goto.
 
-(define (display-computed-goto start-pc code)
-  (display #\space)
-  (let ((count (code-vector-ref code (+ start-pc 1))))
-    (write count)
-    (do ((pc (+ start-pc 2) (+ pc 2))
-	 (count count (- count 1)))
-	((= count 0) pc)
-      (display #\space)
-      (write `(=> ,(+ start-pc (get-offset code pc) 2))))))
-
-; (enum op make-[big-]flat-env)
-; number of vars
-; number of closures
-; [offset of template in frame
-;  offsets of templates in template]
-; number of variables in frame (size)
-; offsets of vars in frame
-; [offset of env in frame
-;  number of vars in env
-;  offsets of vars in level]*
-
-(define (display-flat-env pc code level write-subs? size fetch)
-  (let ((total-count (fetch code pc))
-	(closure-count (fetch code (+ pc size))))
+;------------------------------
+(define (disasm-make-flat-env opcode template level pc env-data-arg)
+  (let ((env-data (cdr env-data-arg)))
+    (print-opcode opcode pc level)
     (display #\space)
-    (write total-count)
+    (write (env-data-total-count env-data))
     (display #\space)
-    (write closure-count)
-    (let* ((pc (if (< 0 closure-count)
-		   (begin
-		     (display-flat-env-closures closure-count
-						(+ pc size size)
-						code
-						level write-subs?
-						size fetch)
-		     (+ pc
-			(* 2 size)		; counts
-			size			; template offset
-			(* closure-count size))); subtemplates
-		   (+ pc (* 2 size))))		; counts
-	   (frame-count (fetch code pc))
-	   (pc (+ pc size)))
-      (display #\space)
-      (display (get-offsets code pc size fetch frame-count))
-      (let ((pc (+ pc (* frame-count size)))
-	    (count (+ closure-count frame-count)))
-	(let loop ((pc pc) (count count))
-	  (if (< count total-count)
-	      (let* ((env (fetch code pc))
-		     (count-here (fetch code (+ pc size)))
-		     (indexes (get-offsets code 
-					   (+ pc size size) 
-					   size 
-					   fetch 
-					   count-here)))
-		(display #\space)
-		(display #\()
-		(display env)
-		(display " => ")
-		(display indexes)
-		(display #\))
-		(loop (+ pc (* (+ 2 count-here) size))
-		      (+ count count-here)))
-	      pc))))))
+    (let ((closure-offsets (env-data-closure-offsets env-data)))
+      (if closure-offsets
+          (begin
+            (write (- (length closure-offsets) 1))
+            (display-flat-env-closures closure-offsets))
+          (write 0)))
 
-(define (get-offsets code pc size fetch count)
-  (do ((pc pc (+ pc size))
-       (i 0 (+ i 1))
-       (r '() (cons (fetch code pc) r)))
-      ((= i count)
-       (reverse r))))
-
-(define (display-flat-env-closures count pc code level write-subs? size fetch)
-  (display " (closures from ")
-  (display (fetch code pc))
-  (display #\:)
-  (do ((i 0 (+ i 1))
-       (pc (+ pc size) (+ pc size)))
-      ((= i count))
     (display #\space)
-    (display (fetch code pc)))
-  (display #\)))
-;    (if write-subs?
-;	(begin
-;	  (newline-indent (* (+ level 1) 3))
-;	  (really-disassemble (template-ref template (get-offset code pc))
-;			      (+ level 1))))
-    
+    (display (env-data-frame-offsets env-data))
 
-;----------------------------------------------------------------
-(define (display-entry-protocol code level)
-  (if (not (= (code-vector-ref code 0)
-	      (enum op protocol)))
-      (error "entry point has no protocol" code))
-  (show-opcode code 0 level)
-  (let ((size (display-protocol (code-vector-ref code 1) 0 code)))
-    (display (vector-ref '#(""
-			    " (push env)"
-			    " (push template)"
-			    " (push env template)")
-			 (code-vector-ref code size))) 
+    (for-each (lambda (env-offset)
+                (display #\space)
+                (display #\()
+                (display (car env-offset))
+                (display " => ")
+                (display (cdr env-offset))
+                (display #\)))
+              (env-data-env-offsets env-data))
     (display #\))
-    (+ size 1)))
+    level))
 
-; Display a protocol, returning the number of bytes of instruction stream that
-; were consumed.
+(define (display-flat-env-closures closure-offsets)
+  (display " (closures from ")
+  (display (car closure-offsets))
+  (display #\:)
+  (for-each (lambda (offset)
+              (display #\space)
+              (display offset))
+            (cdr closure-offsets))
+  (display #\)))
 
-(define (display-protocol protocol pc code)
-  (display #\space)
-  (+ pc (cond ((<= protocol maximum-stack-args)
-	       (display protocol)
-	       2)
-	      ((= protocol two-byte-nargs-protocol)
-	       (display (get-offset code (+ pc 2)))
-	       4)
-	      ((= protocol two-byte-nargs+list-protocol)
-	       (display (get-offset code (+ pc 2)))
-	       (display " +")
-	       4)
-	      ((= protocol ignore-values-protocol)
-	       (display "discard all values")
-	       2)
-	      ((= protocol call-with-values-protocol)
-	       (display "call-with-values")
-	       (let ((offset (get-offset code (+ pc 2))))
-		 (if (not (= offset 0))
-		     (begin
-		       (display #\space)
-		       (write `(=> ,(+ pc offset))))))
-	       4)
-	      ((= protocol args+nargs-protocol)
-	       (display "args+nargs ")
-	       (display (code-vector-ref code (+ pc 2)))
-	       (display "+")
-	       3)
-	      ((= protocol nary-dispatch-protocol)
-	       (display "nary-dispatch")
-	       (do ((i 0 (+ i 1)))
-		   ((= i 4))
-		 (display-dispatch code pc (+ 3 i) i))
-	       (display-dispatch code pc 2 "3+")
-	       6)
-	      ((= protocol big-stack-protocol)
-	       (display "big-stack")
-	       (let ((size (display-protocol
-			     (code-vector-ref code
-					      (- (code-vector-length code)
-						 3))
-			     pc
-			     code)))
-		 (display #\space)
-		 (display (get-offset code
-				      (- (code-vector-length code) 2)))
-		 size))
-	      (else
-	       (error "unknown protocol" protocol)))))
+(define-disasm make-flat-env disasm-make-flat-env)
+(define-disasm make-big-flat-env disasm-make-flat-env)
 
-; pc -> (enum op cont-data)
-; size = gc-mask-size + 8
-; gc mask ...
-; offset = pc + size
-; gc mask size (1 byte)
-; frame size
+;------------------------------
 
-(define (display-cont-data pc code)
-  (let* ((size (get-offset code (+ pc 1)))
-	 (gc-mask-size (code-vector-ref code (- (+ pc size) 3)))
-	 (gc-mask-start (+ pc 3))
-	 (gc-mask-bytes
-	  (let loop ((i (- gc-mask-size 1)) (r '()))
-	    (if (>= i 0)
-		(loop (- i 1)
-		      (cons (code-vector-ref code (+ gc-mask-start i)) r))
-		r)))
-	 (gc-mask (bytes->bits gc-mask-bytes)))
+(define (display-cont-data cont-data)
+  (let ((gc-mask (bytes->bits (cont-data-mask-bytes cont-data))))
     (write-char #\space)
-    (display (list (get-offset code (- (+ pc size) 2))))
-    (if (zero? gc-mask-size)
+    (display (list (cont-data-depth cont-data)))
+    (if (zero? (cont-data-gc-mask-size cont-data))
 	(display " all-live"))
     (let loop ((mask gc-mask) (i 0))
       (if (not (zero? mask))
@@ -302,107 +223,62 @@
 	(loop (+ (arithmetic-shift n 8) (car l))
 	      (cdr l)))))
 
-(define (display-dispatch code pc index tag)
-  (let ((offset (code-vector-ref code (+ pc index))))
-    (if (not (= offset 0))
-	(begin
-	  (display #\space)
-	  (display (list tag '=> (+ pc offset)))))))
+(define-disasm cont-data
+  (lambda (opcode template level pc cont-data-arg)
+    (print-opcode opcode pc level)
+    (display-cont-data (cdr cont-data-arg))
+    (display #\))
+    level))
+;------------------------------
+(define (display-shuffle opcode template level pc moves-data)
+  (print-opcode opcode pc level)
+  (write-char #\space)
+  (let ((moves (cdr moves-data)))
+    (display (length moves))
+    (for-each (lambda (move)
+                (write-char #\space)
+                (display (list (car move) (cdr move))))
+              moves)
+    (write-char #\))
+    level))    
+
+(define-disasm stack-shuffle! display-shuffle)
+(define-disasm big-stack-shuffle! display-shuffle)
+
+;------------------------------
+(define (print-opcode opcode pc level)    
+  (newline-indent (* level 3))
+  (write-pc pc)
+  (display " (")
+  (write (enumerand->name opcode op)))
 
 ; Generic opcode argument printer.
 
-(define (print-opcode-args op start-pc code)
-  (let ((specs (vector-ref opcode-arg-specs op)))
-    (let loop ((specs specs) (pc (+ start-pc 1)))
-      (cond ((or (null? specs)
- 		 (= 0 (arg-spec-size (car specs) pc code)))
-  	     pc)
-  	    ((eq? (car specs) 'junk)  ; avoid printing a space
-	     (loop (cdr specs) (+ pc 1)))
-	    (else
-  	     (display #\space)
-  	     (print-opcode-arg specs pc start-pc code)
- 	     (loop (cdr specs) (+ pc (arg-spec-size (car specs) pc code))))))))
-  
-; The number of bytes required by an argument.
+(define (print-opcode-args args)
+  (for-each (lambda (arg)
+              (display #\space)
+              (print-opcode-arg arg))
+            args))
 
-(define (arg-spec-size spec pc code)
-  (case spec
-    ((nargs byte stob literal) 1)
-    ((offset offset- index small-index two-bytes) 2)
-    ((moves-data)
-     (let ((n-moves (code-vector-ref code pc)))
-       (+ 1 (* 2 n-moves))))
-    ((big-moves-data)
-     (let ((n-moves (code-vector-ref code pc)))
-       (+ 2 (* 4 n-moves))))
-    (else 0)))
+; Print out the particular type of argument.  
 
-; Print out the particular type of argument.
+; This works only for the generic argument types, the special types
+; are handled by the instruction disassemblers themselves
 
-(define (print-opcode-arg specs pc start-pc code)
-  (case (car specs)
-    ((nargs byte)
-     (write (code-vector-ref code pc)))
-    ((literal)
-     (write (- (code-vector-ref code pc) 128)))
-    ((two-bytes)
-     (write (get-offset code pc)))
-    ((index)
-     (write (get-offset code pc)))
-    ((small-index)
-     (write (code-vector-ref code pc)))
-    ((offset)
-     (write `(=> ,(+ start-pc (get-offset code pc)))))
-    ((offset-)
-     (write `(=> ,(- start-pc (get-offset code pc)))))
-    ((stob)
-     (write (enumerand->name (code-vector-ref code pc) stob)))
-    ((env-data)
-     (let ((nobjects (code-vector-ref code pc)))
-       (let loop ((offset (+ pc 1)) (n nobjects))
- 	 (cond ((not (zero? n))
- 		(display (list (code-vector-ref code offset)
- 			       (code-vector-ref code (+ offset 1))))
- 		(if (not (= n 1))
- 		    (write-char #\space))
- 		(loop (+ offset 2) (- n 1)))))))
-    ((moves-data)
-     (let ((n-moves (code-vector-ref code pc)))
-       (display n-moves)
-       (write-char #\space)
-       (let loop ((offset (+ pc 1))
-		  (n n-moves))
-	 (cond ((not (zero? n))
-		(display (list (code-vector-ref code offset)
-			       (code-vector-ref code (+ offset 1))))
-		(if (not (= n 1))
-		    (write-char #\space))
-		(loop (+ offset 2) (- n 1)))))))
-    ((big-moves-data)
-     (let ((n-moves (get-offset code pc)))
-       (display n-moves)
-       (write-char #\space)
-       (let loop ((offset (+ pc 2))
-		  (n n-moves))
-	 (cond ((not (zero? n))
-		(display (list (get-offset code offset)
-			       (get-offset code (+ offset 2))))
-		(if (not (= n 1))
-		    (write-char #\space))
-		(loop (+ offset 4) (- n 1)))))))))
-
-;(define (write-literal-thing thing level write-templates?)
-;  (cond ((location? thing)
-;         (write (or (location-name thing)
-;                    `(location ,(location-id thing)))))
-;        ((not (template? thing))
-;         (display #\')
-;         (write thing))
-;        (write-templates?
-;         (really-disassemble thing (+ level 1)))
-;        (else
-;         (display "..."))))
+(define (print-opcode-arg spec.arg)
+  (let ((spec (car spec.arg))
+        (arg (cdr spec.arg)))
+    (case spec
+      ((nargs byte literal two-bytes index small-index)
+       (write arg))
+      ((offset)
+       (write `(=> ,arg)))
+      ((offset-)
+       (write `(=> ,arg)))
+      ((stob)
+       (write (enumerand->name arg stob)))
+      (else
+       (error "unknown arg spec" spec)))))
 
 ;----------------
 ; Utilities.
@@ -419,13 +295,6 @@
 	     (continuation-code obj)))
 	(else
 	 (error "expected a procedure or continuation" obj))))
-
-; Fetch the two-byte value at PC in CODE.
-
-(define (get-offset code pc)
-  (+ (* (code-vector-ref code pc)
-	byte-limit)
-     (code-vector-ref code (+ pc 1))))
 
 ; Indenting and aligning the program counter.
 

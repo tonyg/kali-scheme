@@ -324,17 +324,18 @@
 (define-structures ((disassembler
 		       (export disassemble write-instruction))
 		    (disassemble-commands disassemble-commands-interface))
-  (open scheme-level-2
+    (open scheme-level-2
         command-processor       ; define-command
 	command-state		; focus-object
 	disclosers              ; template-name
         enumerated              ; enumerand->name
         disclosers              ; location-name
+        parse-bytecode
 	evaluation		; eval
         templates
         continuations
         locations
-        code-vectors
+        define-record-types
 	bitwise
         closures
         architecture
