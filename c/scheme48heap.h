@@ -13,6 +13,7 @@ extern void	s48_register_static_areas(unsigned char, long *, long *,
 /* heap interface */
 extern long	s48_available(void);
 extern long	s48_heap_size(void);
+extern long	s48_find_all(long);
 extern long	s48_find_allint(long);
 extern long	s48_find_all_records(long);
 
