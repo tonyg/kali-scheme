@@ -503,7 +503,7 @@
 (define (terminate-thread! thread)
   (let ((interrupts (set-enabled-interrupts! no-interrupts)))
     (clear-thread-cell! thread)
-    (interrupt-thread thread terminate-current-thread)))
+    (interrupt-thread thread (lambda _ (terminate-current-thread)))))
 
 ;----------------
 ; Make THREAD execute PROC the next time it is run.  The thread's own
