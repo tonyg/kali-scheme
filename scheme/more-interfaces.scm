@@ -462,6 +462,25 @@
 (define-interface compact-tables-interface
   (export compute-compact-table))
 
+(define-interface inversion-lists-interface
+  (export make-empty-inversion-list
+	  inversion-list?
+	  inversion-list-member?
+	  inversion-list-complement
+	  inversion-list-union inversion-list-intersection
+	  inversion-list-difference
+	  number->inversion-list numbers->inversion-list
+	  range->inversion-list ranges->inversion-list
+	  inversion-list-adjoin inversion-list-remove
+	  inversion-list-size
+	  inversion-list-copy
+	  inversion-list=?
+	  inversion-list-hash
+	  inversion-list-fold/done?
+	  inversion-list-cursor?
+	  inversion-list-cursor inversion-list-cursor-at-end?
+	  inversion-list-cursor-next inversion-list-cursor-ref))
+
 (define-interface mask-types-interface
   (export make-mask-type
 	  mask-type?

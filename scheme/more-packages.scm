@@ -197,6 +197,13 @@
   (open scheme)
   (files (big compact-table)))
 
+(define-structure inversion-lists inversion-lists-interface
+  (open scheme
+	bitwise
+	define-record-types
+	signals)
+  (files (big inversion-list)))
+
 (define-structure receiving (export (receive :syntax))
   (open scheme-level-2)
   (files (big receive)))

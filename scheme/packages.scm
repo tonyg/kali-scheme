@@ -439,6 +439,7 @@
 	    formats
 	    inspector
 	    inspector-internal
+	    inversion-lists
 	    list-interfaces
 	    load-dynamic-externals
 	    locks
