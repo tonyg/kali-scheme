@@ -109,30 +109,27 @@
 	   (push (enter-fixnum *enabled-interrupts*))
 	   3))
 	((eq? pending-interrupt (enum interrupt os-signal))
-	 (push *os-signal-type*)
-	 (push *os-signal-argument*)
-	 (set! *os-signal-type* false)
-	 (set! *os-signal-argument* false)
+	 (push (vm-car *os-signal-list*))
+	 (set! *os-signal-list* (vm-cdr *os-signal-list*))
+	 (if (not (vm-eq? *os-signal-list* null))
+	     (note-interrupt! (enum interrupt os-signal)))
 	 (push (enter-fixnum *enabled-interrupts*))
-	 3)
+	 2)
 	(else
 	 (push (enter-fixnum *enabled-interrupts*))
 	 1)))
 
 ; Called from outside when an os-signal event is returned.
 
-(define (s48-set-os-signal type argument)
-  (set! *os-signal-type* type)
-  (set! *os-signal-argument* argument))
+(define (s48-set-os-signals signal-list)
+  (set! *os-signal-list* (vm-append! *os-signal-list* signal-list)))
 
-(define *os-signal-type* false)
-(define *os-signal-argument* false)
+(define *os-signal-list* null)
 
 ; Called from outside to initialize a new process.
 
 (define (s48-reset-interrupts!)
-  (set! *os-signal-type* false)
-  (set! *os-signal-argument* false)
+  (set! *os-signal-list* null)
   (set! *enabled-interrupts* 0)
   (set! *pending-interrupts* 0)
   (set! s48-*pending-interrupt?* #f))
