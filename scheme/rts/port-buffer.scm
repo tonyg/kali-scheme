@@ -300,7 +300,8 @@
 	  copy-count)
 	(begin
 	  (provisional-set-port-index! port 0)
-	  (provisional-set-port-limit! port 0)))))
+	  (provisional-set-port-limit! port 0)
+	  #f))))
 
 ;----------------------------------------------------------------
 ; Buffered output ports
