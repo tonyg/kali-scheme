@@ -110,7 +110,8 @@
       '((srfi-1 map for-each member assoc)
 	(srfi-5 let)
 	(srfi-13 string->list string-copy string-fill!)
-	(srfi-17 set!)))
+	(srfi-17 set!)
+	(srfi-45 force delay)))
     )
 
   (files srfi-7))
