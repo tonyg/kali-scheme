@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 25")
+(define architecture-version "Vanilla 26")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -266,6 +266,8 @@
   ;;      = 1 -> get port from dynamic environment
   ((read-char peek-char) byte 1 0)
   (write-char byte 2 1)
+  
+  (os-error-message 1)
 
   ;; For writing informative messages when debugging
   (message 1)

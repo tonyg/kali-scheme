@@ -82,6 +82,7 @@
 	  make-template
 	  make-weak-pointer
 	  memory-status			;interrupts
+	  os-error-message
 	  record
 	  record-length
 	  record-ref

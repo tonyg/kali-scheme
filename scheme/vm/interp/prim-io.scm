@@ -197,7 +197,7 @@
 
 ; Copying error strings into the heap.
 
-(define max-error-string-length 256)
+(define max-error-string-length 512)
 
 (define error-string-size (vm-string-size max-error-string-length))
 
@@ -302,6 +302,11 @@
 		(else
 		 (loop (vm-cdr env)))))
 	(error "current thread is not a record"))))
+
+(define-consing-primitive os-error-message (fixnum->)
+  (lambda (ignore) error-string-size)
+  (lambda (status key)
+    (goto return (get-error-string status key))))
 
 ;----------------
 ; A poor man's WRITE for use in debugging.
