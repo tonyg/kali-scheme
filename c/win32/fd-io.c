@@ -1567,9 +1567,6 @@ s48_connect(s48_value channel,
    * ####Note that this blocks.
    */
 
-  /* #### Note that getaddrinfo probably doesn't work on anything
-   *  prior to Windows XP.
-   */
   {
       struct addrinfo hints;
       int status;
