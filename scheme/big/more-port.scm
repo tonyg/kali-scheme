@@ -276,23 +276,18 @@
 			       proc))
 
 (define byte-sink-output-port-handler
-  (make-port-handler
+  (make-unbuffered-output-port-handler 
    (lambda (proc)
      (list 'byte-sink-output-port))
    make-output-port-closed!
-   (lambda (port byte)
-     ((port-data port) byte))
-   (lambda (port ch)
-     'lose) ; ####
    (lambda (port buffer start count)
      (let ((proc (port-data port)))
        (do ((i 0 (+ i 1)))
 	   ((= i count))
-	 (proc (byte-vector-ref buffer (+ start i))))))
+	 (proc (byte-vector-ref buffer (+ start i)))))
+     count)
    (lambda (port)		; ready?
-     #t)
-   (lambda (port error-if-closed?)		; force output
-     (unspecific))))
+     #t)))
 
 ; Call PROC on a port that will transfer COUNT bytes to PORT and
 ; then quit.
