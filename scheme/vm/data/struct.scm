@@ -174,6 +174,13 @@
     (string-set! string i (ascii->char (vm-string-ref vm-string i)))) 
   (unspecific))
 
+(define (copy-vm-string-chars! from from-index to to-index count)
+  (copy-memory! (address+ (address-after-header from)
+			  (* from-index bytes-per-scalar-value-unit))
+		(address+ (address-after-header to)
+			  (* to-index bytes-per-scalar-value-unit))
+		(* count bytes-per-scalar-value-unit)))
+
 ; This depends on our having 0 bytes at the end of strings.
 
 ; We should really be doing the NUL termination here, but

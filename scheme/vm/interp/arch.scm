@@ -193,6 +193,7 @@
   (string-length 1)
   (string-ref 2)
   (string-set! 3)
+  (copy-string-chars! 5)
 
   (intern 1)
                      

@@ -102,10 +102,9 @@
 
 (define (string-copy s)
   (let* ((z (string-length s))
-	 (copy (make-string z #\space)))
-    (do ((i 0 (+ 1 i)))
-	((>= i z) copy)
-      (string-set! copy i (string-ref s i)))))
+	 (copy (make-string z)))
+    (copy-string-chars! s 0 copy 0 z)
+    copy))
 
 ; The symbol table
 

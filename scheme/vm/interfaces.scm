@@ -280,6 +280,7 @@
 	  vm-string-ref vm-string-set!
 	  enter-string enter-string+gc extract-low-string
 	  vm-string=? vm-string-hash
+	  copy-vm-string-chars!
 	  write-vm-string
 	  copy-string-to-vm-string/latin-1!
 	  copy-vm-string-to-string/latin-1!

@@ -197,6 +197,25 @@
 			       enter-fixnum)))
   (define-primitive make-byte-vector (fixnum-> fixnum->) proc))
 
+(define-primitive copy-string-chars! (string-> fixnum-> string-> fixnum-> fixnum->)
+  (lambda (from from-index to to-index count)
+    (cond ((not (and (okay-copy-string? from from-index count)
+		     (okay-copy-string? to   to-index   count)
+		     (not (immutable? to))
+		     (<= 0 count)))
+	   (raise-exception wrong-type-argument 0
+			    from (enter-fixnum from-index)
+			    to (enter-fixnum to-index)
+			    (enter-fixnum count)))
+	  (else
+	   (copy-vm-string-chars! from from-index to to-index count)
+	   (goto continue-with-value unspecific-value 0)))))
+
+(define (okay-copy-string? s index count)
+  (and (<= 0 index)
+       (<= (+ index count)
+	   (vm-string-length s))))
+
 ; Locations & mutability
 
 (define-primitive location-defined? (location->)
