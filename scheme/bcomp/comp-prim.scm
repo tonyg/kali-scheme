@@ -134,7 +134,9 @@
     ((= opcode op-count))
   (let ((arg-specs (vector-ref opcode-arg-specs opcode))
         (name (enumerand->name opcode op)))
-    (cond ((memq name '(call-external-value return-from-interrupt return)))
+    (cond ((memq name '(call-external-value
+			return-from-interrupt return
+			binary-comparison-reduce2)))
           ((null? arg-specs)
            (let ((type (proc () value-type)))
              (define-compiler-primitive name type
