@@ -116,7 +116,8 @@
     (let loop ((retry? #f))
       (disable-interrupts!)
       (let ((output-channel (real-socket-connect channel
-						 host-name
+						 (host-name->byte-string
+						  (thing->host-name host-name))
 						 port-number
 						 retry?)))
 	(cond ((channel? output-channel)
@@ -197,6 +198,25 @@
 (define (close-socket-output-channel channel)
   (close-socket-half channel #f)
   (close-channel channel))
+
+;----------------
+
+; Mike has no clue if this is right---supposedly, the host name format
+; is being extended to cover non-ASCII, and the encoding should be
+; fixed, but I don't know what it is.
+
+(define-string/bytes-type host-name :host-name
+  host-name?
+  
+  string-encoding-length encode-string
+  string-decoding-length decode-string
+
+  thing->host-name
+  string->host-name
+  byte-vector->host-name
+  
+  host-name->string
+  host-name->byte-vector host-name->byte-string)
 
 ;----------------
 ; The C calls we use.  These are in c/unix/socket.c.

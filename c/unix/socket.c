@@ -301,8 +301,7 @@ s48_connect(s48_value channel,
   S48_CHECK_CHANNEL(channel);
   socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
 
-  S48_CHECK_STRING(machine);
-  machine_name = S48_UNSAFE_EXTRACT_BYTE_VECTOR(machine);
+  machine_name = s48_extract_byte_vector(machine);
   
   S48_CHECK_FIXNUM(port);
   port_number = S48_UNSAFE_EXTRACT_FIXNUM(port);

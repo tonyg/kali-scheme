@@ -1598,8 +1598,7 @@ s48_connect(s48_value channel,
   callback_data = &(stream_descriptor->callback_data);
   socket = stream_descriptor->socket_data.socket;
 
-  S48_CHECK_STRING(machine);
-  machine_name = S48_UNSAFE_EXTRACT_STRING(machine);
+  machine_name = s48_extract_byte_vector(machine);
   
   S48_CHECK_FIXNUM(port);
   port_number = (unsigned short)S48_UNSAFE_EXTRACT_FIXNUM(port);
