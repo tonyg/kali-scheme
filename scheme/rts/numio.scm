@@ -121,6 +121,14 @@
 			     #f)	;inexact
 			    ((char=? (string-ref string pos) #\#)
 			     #f)
+			    ((and (= radix 10)
+				  (case (char-downcase (string-ref string pos))
+				    ;; One day, we have to include #\s #\f #\d #\l.
+				    ;; We don't now because STRING->FLOAT actually does the
+				    ;; wrong thing for these currently, so we'd rather barf.
+				    ((#\e) #t)
+				    (else #f)))
+			     #f)
 			    (else (loop (+ pos 1))))))))))))
 
 (define-generic really-string->number &really-string->number)
