@@ -246,7 +246,9 @@
 (define (enqueue-channel! index status)
   (let ((channel (os-index->channel index)))
     (set-channel-os-status! channel (enter-fixnum status))
-    (cond ((not (false? (channel-next channel))) ; already queued (how?)
+    (cond ((or (not (false? (channel-next channel))) ; already queued (how?)
+	       (eq? channel *pending-channels-head*) ; first and only
+	       (eq? channel *pending-channels-tail*)); last (i.e. no next)
 	   (unspecific))  ; for the type checker
 	  ((false? *pending-channels-head*)
 	   (set! *pending-channels-head* channel)
@@ -276,6 +278,10 @@
 			  (extract-fixnum (channel-os-index channel)))))
 	  ((vm-eq? channel head)
 	   (dequeue-channel!)
+	   (if (false? *pending-channels-head*)
+	       (pending-interrupts-remove!
+		(interrupt-bit
+		 (enum interrupt i/o-completion))))
 	   (channel-os-status channel))
 	  (else
 	   (let loop ((ch (channel-next head)) (prev head))

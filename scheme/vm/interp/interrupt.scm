@@ -131,7 +131,7 @@
 (define (s48-reset-interrupts!)
   (set! *os-signal-list* null)
   (set! *enabled-interrupts* 0)
-  (set! *pending-interrupts* 0)
+  (pending-interrupts-clear!)
   (set! s48-*pending-interrupt?* #f))
 
 ;(define-opcode poll
@@ -165,12 +165,12 @@
 (define-primitive wait (fixnum-> boolean->)
   (lambda (max-wait minutes?)
     (if (and (not (pending-interrupt?))
-	     (= 0 *pending-interrupts*))
+	     (pending-interrupts-empty?))
 	(wait-for-event max-wait minutes?))
     (goto return-unspecific 0)))
 
 ; The players:
-;   *pending-interrupts*      A bit mask of pending interrupts
+;   pending-interrupts-X      A bit mask of pending interrupts
 ;   *enabled-interrupts*      A bit mask of enabled interrupts
 ;   s48-*pending-interrupt?*  True if either an event or interrupt is pending
 ;   s48-*pending-events?*     True if an event is pending
@@ -209,7 +209,7 @@
 ; flag while an event is pending.
 
 (define (real-pending-interrupt?)
-  (cond ((= 0 (bitwise-and *pending-interrupts*
+  (cond ((= 0 (bitwise-and (pending-interrupts-mask)
 			   *enabled-interrupts*))
 	 (clear-interrupt-flag!)
 	 (if s48-*pending-events?*
@@ -226,17 +226,14 @@
 ; is currently pending.
 
 (define (note-interrupt! interrupt)
-  (set! *pending-interrupts*
-	(bitwise-ior *pending-interrupts* (interrupt-bit interrupt)))
+  (pending-interrupts-add! (interrupt-bit interrupt))
   (update-pending-interrupts))
 
 ; Remove INTERRUPT from the set of pending interrupts, then recheck for pending
 ; interrupts; INTERRUPT may have been the only one.
 
 (define (clear-interrupt! interrupt)
-  (set! *pending-interrupts*
-	(bitwise-and *pending-interrupts*
-		     (bitwise-not (interrupt-bit interrupt))))
+  (pending-interrupts-remove! (interrupt-bit interrupt))
   (update-pending-interrupts))
 
 ; Install a new set of enabled interrupts.  As usual we have to recheck for
@@ -261,13 +258,12 @@
 ; are about to be disabled.
 
 (define (get-highest-priority-interrupt!)
-  (let ((n (bitwise-and *pending-interrupts* *enabled-interrupts*)))
+  (let ((n (bitwise-and (pending-interrupts-mask) *enabled-interrupts*)))
     (let loop ((i 0) (m 1))
       (cond ((= 0 (bitwise-and n m))
 	     (loop (+ i 1) (* m 2)))
 	    (else
-	     (set! *pending-interrupts*
-		   (bitwise-and *pending-interrupts* (bitwise-not m)))
+	     (pending-interrupts-remove! m)
 	     i)))))
 
 ; Process any pending OS events.  PROCESS-EVENT returns a mask of any interrupts
@@ -277,9 +273,7 @@
   (let loop ()
     (receive (type channel status)
 	(get-next-event)
-      (set! *pending-interrupts*
-	    (bitwise-ior (process-event type channel status)
-			 *pending-interrupts*))
+      (pending-interrupts-add! (process-event type channel status))
       (if (not (eq? type (enum events no-event)))
 	  (loop)))))
 

@@ -96,6 +96,7 @@
 		    (interpreter-internal interpreter-internal-interface))
   (open prescheme ps-receive vm-utilities vm-architecture enum-case
 	events
+	pending-interrupts
 	memory data stob struct allocation vmio
 	return-codes
 	gc-roots gc gc-util
@@ -108,6 +109,39 @@
 	 (interp interrupt))
   ;(optimize auto-integrate)
   )
+
+(define-structure pending-interrupts (export pending-interrupts-empty?
+					     pending-interrupts-remove!
+					     pending-interrupts-add!
+					     pending-interrupts-clear!
+					     pending-interrupts-mask
+					     interrupt-bit)
+  (open prescheme)
+  (begin
+    (define *pending-interrupts*)	; bitmask of pending interrupts
+					     
+    (define (pending-interrupts-add! interrupt-bit)
+      (set! *pending-interrupts*
+	    (bitwise-ior *pending-interrupts* interrupt-bit)))
+
+    (define (pending-interrupts-remove! interrupt-bit)
+      (set! *pending-interrupts*
+	    (bitwise-and *pending-interrupts*
+			 (bitwise-not interrupt-bit))))
+    (define (pending-interrupts-clear!)
+      (set! *pending-interrupts* 0))
+    
+    (define (pending-interrupts-empty?)
+      (= *pending-interrupts* 0))
+
+    (define (pending-interrupts-mask)
+      *pending-interrupts*)
+
+    ; Return a bitmask for INTERRUPT.
+
+    (define (interrupt-bit interrupt)
+      (shift-left 1 interrupt))
+    ))
 
 ; Assorted additional opcodes
 
@@ -169,6 +203,7 @@
 (define-structure vmio vmio-interface
   (open prescheme ps-receive channel-io vm-utilities
 	data stob struct allocation memory
+	pending-interrupts
 	vm-architecture)	;port-status
   ;(optimize auto-integrate)
   (files (interp vmio)))

@@ -30,7 +30,6 @@
 ; Interrupts
 
 (define *enabled-interrupts*)	; bitmask of enabled interrupts
-(define *pending-interrupts*)	; bitmask of pending interrupts
 (define s48-*pending-interrupt?*) ; true if an interrupt is pending
 
 (define *interrupted-template*) ; template in place when the most recent
@@ -70,7 +69,7 @@
   (shared-set! *finalizer-alist*    null)
   (set! *finalize-these*	    null)
 
-  (set! *pending-interrupts* 0)
+  (pending-interrupts-clear!)
   (set! s48-*pending-interrupt?* #f)
   (set! *os-signal-list* null)
   (set! *interrupted-template* false)
