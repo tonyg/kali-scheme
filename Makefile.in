@@ -177,7 +177,7 @@ ASM_INITIALIZERS =
 
 # SRFI rules
 
-SRFI_OBJECTS = c/srfi-27.c
+SRFI_OBJECTS = c/srfi-27.o
 SRFI_INITIALIZERS = s48_init_srfi_27
 
 # End of SRFI rules
