@@ -102,7 +102,7 @@
 
   (current-cont)	         ; copy *cont* to *val*, use WITH-CONTINUATION
 			         ; to use copied continuation
-  (cont-data      cont-data)	 ; offset of next instruction; never executed
+  (cont-data      cont-data)	 ; continuation data; never executed
 
   ;; Different ways to call procedures
   (call     offset nargs 1 +)    ; last argument is the procedure to call,
