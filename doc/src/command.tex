@@ -106,7 +106,11 @@ Whenever moving to an existing level, either by sending
 \item \code{,load \cvar{filename \ldots}}\\
     Loads the named Scheme source file(s).
     Easier to type than \code{(load "\cvar{filename}")} because you don't have to
-    shift to type the parentheses or quote marks.  Also, it works in
+    shift to type the parentheses or quote marks.  
+    (However, it is still possible to specify a filename as a Scheme
+    string literal, with quote marks---you'll need this for filenames
+    containing whitespace.)
+    Also, it works in
     any package, unlike \code{(load "\cvar{filename}")}, which will work only
     work in packages in which the variable \code{load} is defined appropriately.
 

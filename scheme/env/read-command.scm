@@ -142,7 +142,7 @@
       (d port)
       (case d
 	((filename)
-	 (read-string port char-whitespace?))
+	 (read-filename port))
 	((expression form)
 	 (read-form port))
 	((name)
@@ -157,6 +157,14 @@
 	       (read-command-error port "invalid selection command" x))))
 	(else
 	 (error "invalid argument description" d)))))
+
+
+(define (read-filename port)
+  (let ((c (peek-char port)))
+    (if (and (char? c)
+	     (char=? (peek-char port) #\"))
+	(read port)
+	(read-string port char-whitespace?))))
 
 (define-condition-type 'read-command-error '(error))
 (define read-command-error? (condition-predicate 'read-command-error))
