@@ -103,7 +103,7 @@
 	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
 	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	srfi-31 srfi-37
-	srfi-42))
+	srfi-42 srfi-45))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -398,3 +398,14 @@
   (open scheme
 	srfi-23)
   (files srfi-42))
+
+
+; SRFI-45: Primitives for Expressing Iterative Lazy Algorithms
+
+(define-interface srfi-45-interface
+  (export (lazy :syntax) force (delay :syntax)))
+
+(define-structure srfi-45 srfi-45-interface
+  (open scheme
+	define-record-types)
+  (files srfi-45))

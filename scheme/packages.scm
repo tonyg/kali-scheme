@@ -510,7 +510,7 @@
 	    srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
 	    srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	    srfi-31 srfi-37
-	    srfi-42
+	    srfi-42 srfi-45
 
             libscheme48
 	    )
