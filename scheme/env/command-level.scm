@@ -491,7 +491,7 @@
     (if repl-thread
 	(begin 
 	  (set-command-level-repl-thread! level #f)
-	  (terminate-level-thread repl-thread level)))))
+	  (terminate-thread! repl-thread)))))
 
 (define-upcall (push-command-level-upcall condition inspecting?
 					  thread dynamic-env)
