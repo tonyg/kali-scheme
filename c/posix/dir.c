@@ -353,10 +353,24 @@ posix_file_stuff(s48_value op, s48_value arg0, s48_value arg1)
 static s48_value
 enter_time(time_t time)
 {
-  s48_value	sch_time;
+  s48_value	sch_time = S48_UNSPECIFIC;
+  s48_value	temp = S48_UNSPECIFIC;
+  S48_DECLARE_GC_PROTECT(2);
+
+  S48_GC_PROTECT_2(sch_time, temp);
 
   sch_time = s48_make_record(posix_time_type_binding);
-  S48_UNSAFE_RECORD_SET(sch_time, 0, s48_enter_integer(time));
+
+  /* Stashing the time value into temp before handing tit off to
+     S48_UNSAFE_RECORD_SET is necessary because its evaluation may
+     cause GC; that GC could destroy the temporary holding the value
+     of sch_time. */
+
+  temp = s48_enter_integer(time);
+  S48_UNSAFE_RECORD_SET(sch_time, 0, temp);
+
+  S48_GC_UNPROTECT();
+
   return sch_time;
 }
 
@@ -483,9 +497,10 @@ posix_file_info(s48_value svname,
   int		status;
   s48_value	scm_mode = S48_FALSE;
   s48_value	info = S48_FALSE;
-  S48_DECLARE_GC_PROTECT(4);
+  s48_value	temp = S48_UNSPECIFIC;
+  S48_DECLARE_GC_PROTECT(5);
 
-  S48_GC_PROTECT_4(svname, mode_enum, scm_mode, info);
+  S48_GC_PROTECT_5(svname, mode_enum, scm_mode, info, temp);
 
   if (S48_CHANNEL_P(svname)) {
     RETRY_OR_RAISE_NEG(status,
@@ -511,18 +526,33 @@ posix_file_info(s48_value svname,
 			    S_ISSOCK(sbuf.st_mode) ? 6 :
 			    7);
 
+  /* Stashing the various field values into temp before handing them
+     off to S48_UNSAFE_RECORD_SET is necessary because their
+     evaluation may cause GC; that GC could destroy the temporary
+     holding the value of info. */
+
   S48_UNSAFE_RECORD_SET(info, 0, svname);
   S48_UNSAFE_RECORD_SET(info, 1, scm_mode);
-  S48_UNSAFE_RECORD_SET(info, 2, s48_enter_integer(sbuf.st_dev));
-  S48_UNSAFE_RECORD_SET(info, 3, s48_enter_integer(sbuf.st_ino));
-  S48_UNSAFE_RECORD_SET(info, 4, enter_mode(sbuf.st_mode));
-  S48_UNSAFE_RECORD_SET(info, 5, s48_enter_integer(sbuf.st_nlink));
-  S48_UNSAFE_RECORD_SET(info, 6, s48_enter_uid(sbuf.st_uid));
-  S48_UNSAFE_RECORD_SET(info, 7, s48_enter_gid(sbuf.st_gid));
-  S48_UNSAFE_RECORD_SET(info, 8, s48_enter_integer(sbuf.st_size));
-  S48_UNSAFE_RECORD_SET(info, 9,  enter_time(sbuf.st_atime));
-  S48_UNSAFE_RECORD_SET(info, 10,  enter_time(sbuf.st_mtime));
-  S48_UNSAFE_RECORD_SET(info, 11, enter_time(sbuf.st_ctime));
+  temp = s48_enter_integer(sbuf.st_dev);
+  S48_UNSAFE_RECORD_SET(info, 2, temp);
+  temp = s48_enter_integer(sbuf.st_ino);
+  S48_UNSAFE_RECORD_SET(info, 3, temp);
+  temp = enter_mode(sbuf.st_mode);
+  S48_UNSAFE_RECORD_SET(info, 4, temp);
+  temp = s48_enter_integer(sbuf.st_nlink);
+  S48_UNSAFE_RECORD_SET(info, 5, temp);
+  temp = s48_enter_uid(sbuf.st_uid);
+  S48_UNSAFE_RECORD_SET(info, 6, temp);
+  temp = s48_enter_gid(sbuf.st_gid);
+  S48_UNSAFE_RECORD_SET(info, 7, temp);
+  temp = s48_enter_integer(sbuf.st_size);
+  S48_UNSAFE_RECORD_SET(info, 8, temp);
+  temp = enter_time(sbuf.st_atime);
+  S48_UNSAFE_RECORD_SET(info, 9, temp);
+  temp = enter_time(sbuf.st_mtime);
+  S48_UNSAFE_RECORD_SET(info, 10, temp);
+  temp = enter_time(sbuf.st_ctime);
+  S48_UNSAFE_RECORD_SET(info, 11, temp);
 
   S48_GC_UNPROTECT();
 
