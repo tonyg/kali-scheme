@@ -28,7 +28,7 @@
 (define (char->integer c) (char->scalar-value c))
 (define (integer->char n) (scalar-value->char n))
 
-(define ascii-limit 256)		;for reader
+(define ascii-limit 128)
 ; space, horizontal tab, line feed (= newline), vertical tab, form feed, and
 ; carriage return
 (define ascii-whitespaces '(32 9 10 11 12 13))
