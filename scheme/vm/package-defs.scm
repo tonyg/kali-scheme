@@ -65,6 +65,17 @@
     (define-integer-or-floanum-comparison s48-integer-or-floanum-> integer> flonum>)
     (define-integer-or-floanum-comparison s48-integer-or-floanum-<= integer<= flonum<=)
     (define-integer-or-floanum-comparison s48-integer-or-floanum->= integer>= flonum>=)
+
+    (define (s48-integer-bitwise-not x)
+      (integer-bitwise-not x))
+    (define (s48-integer-bit-count x)
+      (integer-bit-count x))
+    (define (s48-integer-bitwise-and x y)
+      (integer-bitwise-and x y))
+    (define (s48-integer-bitwise-ior x y)
+      (integer-bitwise-ior x y))
+    (define (s48-integer-bitwise-xor x y)
+      (integer-bitwise-xor x y))
     ))
 
 ; Byte code architecture.

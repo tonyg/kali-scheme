@@ -642,4 +642,9 @@
 	  s48-integer-or-floanum->
 	  s48-integer-or-floanum-<=
 	  s48-integer-or-floanum->=
+	  s48-integer-bitwise-not
+	  s48-integer-bit-count
+	  s48-integer-bitwise-and
+	  s48-integer-bitwise-ior
+	  s48-integer-bitwise-xor
 	  ))
