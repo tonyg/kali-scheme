@@ -250,13 +250,19 @@
 (define-structure srfi-14 srfi-14-interface
   (open scheme-level-2
 	bitwise
-	byte-vectors (subset primitives (copy-bytes!))
+	unicode
+	byte-vectors
+	(subset primitives (copy-bytes! unspecific))
+	inversion-lists
 	srfi-9
-	(modify ascii (rename (char->ascii %char->latin1)
-			      (ascii->char %latin1->char)))
+	variable-argument-lists
+	(subset big-util (partition-list))
 	(subset features (make-immutable!))
-	(subset signals (error)))
-  (files srfi-14))
+	(subset signals (call-error)))
+  (optimize auto-integrate)
+  (files srfi-14
+	 srfi-14-base-char-sets ; auto-generated
+	 srfi-14-char-sets))
 
 ; SRFI-15 - withdrawn
 

@@ -607,8 +607,8 @@ scheme/debug/mini1.image: $(VM) scheme/debug/mini.image
 
 
 # --------------------
-# Generate unicode-info.scm from UnicodeData.txt
-# Get UnicodeData.txt from http://www.unicode.org
+# Generate unicode-info.scm and srfi-14-base-char-set.scm from UnicodeData.txt
+# Get fresh UnicodeData.txt from http://www.unicode.org.
 
 scheme/env/unicode-info.scm: build/UnicodeData.txt			\
 	scheme/link/unicode-data.scm 					\
@@ -621,7 +621,7 @@ scheme/env/unicode-info.scm: build/UnicodeData.txt			\
 		echo ',open (subset srfi-13 (string-index)) (subset srfi-1 (find)) srfi-23';	\
 		echo ',load scheme/big/compact-table.scm scheme/env/unicode-category.scm';	\
 		echo ',load scheme/link/unicode-data.scm';					\
-		echo "(create-unicode-tables \"build/UnicodeData.txt\" \"$@\")"			\
+		echo "(create-unicode-tables \"build/UnicodeData.txt\" \"scheme/env/unicode-info.scm\" \"scheme/srfi/srfi-14-base-char-sets.scm\")"		\
 	) | $(RUNNABLE) -h 6000000
 
 # --------------------
