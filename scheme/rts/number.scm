@@ -65,7 +65,8 @@
 ; Exponentiation.
 
 (define (expt x n)
-  (if (and (integer? n) (exact? n))
+  (if (and (integer? n) (exact? n)
+	   (integer? x) (exact? x))
       (if (>= n 0)
 	  (raise-to-integer-power x n)
 	  (/ 1 (raise-to-integer-power x (- 0 n))))
