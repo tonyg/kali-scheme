@@ -568,7 +568,9 @@
   (goto continue 2))
 
 (define-opcode push-n
-  (add-cells-to-stack! (code-offset 0))
+  (do ((n (code-offset 0) (- n 1)))
+      ((= 0 n))
+    (push false))
   (goto continue 2))
 
 (define-opcode stack-ref
