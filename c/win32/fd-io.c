@@ -959,13 +959,6 @@ ps_write_fd(long fd, char *buffer, long max, bool *pending, long *status)
   stream_descriptor_t* stream_descriptor = &(stream_descriptors[fd]);
   callback_data_t* callback_data = &(stream_descriptor->callback_data);
 
-
-  if (!s48_add_pending_fd(fd, FALSE))
-    {
-      *status = 4711; //#### out of memory, need symbolic constant
-      return 0;
-    }
-
   maybe_grow_callback_data_buffer(callback_data, (size_t)max);
 
   memcpy(callback_data->buffer, buffer, (size_t)max);
@@ -985,7 +978,11 @@ ps_write_fd(long fd, char *buffer, long max, bool *pending, long *status)
 			(LPOVERLAPPED)callback_data,
 			write_completed))
 	  {
-	    // success
+	    if (!s48_add_pending_fd(fd, FALSE))
+	      {
+		*status = 4711; //#### out of memory, need symbolic constant
+		return 0;
+	      }
 	    *pending = TRUE;
 	    *status = NO_ERRORS;
 	    // ####should check GetLastError anyway according to MS docs
@@ -1006,9 +1003,14 @@ ps_write_fd(long fd, char *buffer, long max, bool *pending, long *status)
 	thread_data->callback_thread = s48_main_thread;
 	thread_data->callback = write_callback;
 	ReleaseSemaphore(thread_data->check_semaphore, 1, NULL);
+	if (!s48_add_pending_fd(fd, FALSE))
+	  {
+	    *status = 4711; //#### out of memory, need symbolic constant
+	    return 0;
+	  }
 	*pending = TRUE;
 	*status = NO_ERRORS;
-	break;
+	return 0; /* the thread needs to do the work */
       }
     case STREAM_SOCKET:
       {
@@ -1036,6 +1038,11 @@ ps_write_fd(long fd, char *buffer, long max, bool *pending, long *status)
 	    | (WSAGetLastError() == WSA_IO_PENDING))
 	  {
 	    /* success */
+	    if (!s48_add_pending_fd(fd, FALSE))
+	      {
+		*status = 4711; //#### out of memory, need symbolic constant
+		return 0;
+	      }
 	    *pending = TRUE;
 	    *status = NO_ERRORS;
 	  }
