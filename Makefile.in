@@ -131,13 +131,15 @@ posix_dir = c/posix
 
 $(posix_dir)/user.o     $(posix_dir)/regexp.o	\
 $(posix_dir)/proc-env.o $(posix_dir)/io.o:	\
-	c/scheme48.h $(posix_dir)/posix.h
+	c/scheme48.h c/c-mods.h $(posix_dir)/posix.h
 
 $(posix_dir)/proc.o:	\
-	c/scheme48.h c/event.h $(posix_dir)/posix.h $(posix_dir)/s48_signals.h
+	c/scheme48.h c/c-mods.h \
+	c/event.h $(posix_dir)/posix.h $(posix_dir)/s48_signals.h
 
 $(posix_dir)/dir.o:	\
-  c/scheme48.h c/scheme48heap.h c/event.h c/fd-io.h $(posix_dir)/posix.h
+  c/scheme48.h c/scheme48heap.h c/c-mods.h \
+  c/event.h c/fd-io.h $(posix_dir)/posix.h
 
 POSIX_OBJECTS = $(posix_dir)/user.o     $(posix_dir)/regexp.o	\
                 $(posix_dir)/proc-env.o $(posix_dir)/proc.o	\
@@ -227,19 +229,23 @@ c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
 
 c/scheme48vm.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
 			c/scheme48image.h c/bignum.h c/event.h \
-			c/io.h c/fd-io.h c/scheme48vm-prelude.h
+			c/io.h c/fd-io.h \
+			c/scheme48vm-prelude.h c/c-mods.h
 c/scheme48heap.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h c/event.h \
 			c/io.h c/fd-io.h
 c/scheme48read-image.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h
 c/scheme48write-image.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h
 c/bignum.o: c/bignum.h c/bignumint.h c/scheme48.h
 c/extension.o: c/sysdep.h $(FAKEHS) c/scheme48.h c/scheme48vm.h
-c/external.o: c/sysdep.h $(FAKEHS) c/scheme48.h
+c/external.o: c/sysdep.h $(FAKEHS) c/scheme48.h c/c-mods.h
 c/unix/sysexits.o: c/sysdep.h $(FAKEHS) c/scheme48.h
-c/unix/event.o: c/sysdep.h $(FAKEHS) c/scheme48vm.h c/scheme48heap.h \
-			c/event.h c/fd-io.h
-c/unix/fd-io.o: c/sysdep.h $(FAKEHS) c/scheme48vm.h c/scheme48heap.h \
-			c/event.h c/fd-io.h
+c/unix/event.o: c/sysdep.h $(FAKEHS) c/c-mods.h \
+			c/scheme48vm.h c/scheme48heap.h \
+			c/event.h c/fd-io.h \
+			c/c-mods.h
+c/unix/fd-io.o: c/sysdep.h $(FAKEHS) c/c-mods.h \
+			c/scheme48vm.h c/scheme48heap.h \
+			c/event.h c/fd-io.h 
 c/unix/misc.o: c/sysdep.h $(FAKEHS)
 c/unix/io.o: c/io.h
 c/script-interpreter.o: c/sysdep.h $(FAKEHS) c/script-interpreter.c
