@@ -169,7 +169,10 @@
 	  ))
 
 (define-structure posix-processes posix-processes-interface
-  (open scheme define-record-types finite-types external-calls
+  (open scheme
+	define-record-types finite-types
+	reinitializers
+	external-calls
 	interrupts
 	placeholders
 	weak

@@ -355,6 +355,14 @@
         low-level)              ; flush-the-symbol-table!, vector-unassigned?
   (files (env traverse)))
 
+; Reinitializing upon image resumption
+
+(define-structure reinitializers reinitializers-interface
+  (open scheme-level-2
+	define-record-types
+	(subset record-types (define-record-resumer)))
+  (files (big reinitializer)))
+
 ; Space analyzer
 
 (define-structure spatial (export space vector-space record-space)

@@ -431,23 +431,6 @@
 	       (loop)))))))
 
 ;----------------
-; A record type whose only purpose is to run some code when we start up an
-; image.
-
-(define-record-type reinitializer :reinitializer
-  (make-reinitializer thunk)
-  reinitializer?
-  (thunk reinitializer-thunk))
-
-(define-record-discloser :reinitializer
-  (lambda (r)
-    (list 'reinitializer (reinitializer-thunk r))))
-
-(define-record-resumer :reinitializer
-  (lambda (r)
-    ((reinitializer-thunk r))))
-    
-;----------------
 ; Returns the weak-pointers in WEAKS that still have values.  No copying is done
 ; if all have values.
 
@@ -471,6 +454,5 @@
 
 ; ... and on later startups.
 
-(define signal-reinitializer
-  (make-reinitializer initialize-signals))
+(define-reinitializer signal-reinitializer initialize-signals)
 

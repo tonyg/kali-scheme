@@ -460,6 +460,7 @@
 	    sort
 
 	    sparse-vectors
+	    reinitializers
 	    spatial
 	    strong
 	    traverse

@@ -453,6 +453,9 @@
   (export (define-record-type :syntax)
 	  define-record-discloser))
 
+(define-interface reinitializers-interface
+  (export (define-reinitializer :syntax)))
+
 (define-interface locks-interface
   (export lock?
 	  make-lock
