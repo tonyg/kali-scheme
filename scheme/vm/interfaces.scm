@@ -634,4 +634,5 @@
 	  s48-set-native-protocol!
 	  s48-copy-stack-into-heap
 	  check-stack
+	  s48-make-blank-return-code
 	  ))

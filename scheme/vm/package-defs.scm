@@ -16,7 +16,8 @@
 	io-opcodes
 	external-gc-roots
 	proposal-opcodes
-	read-image)
+	read-image
+	return-codes)
   (files (interp resume))
   (begin
     (define (s48-disable-interrupts!)
@@ -134,14 +135,37 @@
 ; format.
 
 (define-structure return-codes (export make-return-code
+				       s48-make-blank-return-code
 				       return-code-size
 				       return-code-pc)
   (open prescheme vm-architecture struct)
   (begin
     (define return-code-pc 11)
-    (define return-code-count 14)
-    (define (make-return-code protocol opcode size key)
-      (let ((code (make-code-vector return-code-count key)))
+
+    ;; Number of entries of the code vector
+    (define blank-return-code-count 13)
+    (define (make-return-code-count opcode-count)
+      (+ blank-return-code-count opcode-count))
+    (define first-opcode-index 13)
+
+    ;; value for VM
+    (define return-code-count (make-return-code-count 1))
+
+    ;; Size in bytes of the return code trame
+    (define (make-return-code-size return-code-count)
+      (code-vector-size return-code-count))
+
+    ;; value for VM
+    (define return-code-size (make-return-code-size return-code-count))
+    
+    ;; procedure for VM
+    (define (make-return-code protocol opcode frame-size key)
+      (let ((blank-return-code (make-blank-return-code protocol frame-size 1 key)))
+	(code-vector-set! blank-return-code first-opcode-index opcode)
+	blank-return-code))
+
+    (define (make-blank-return-code protocol frame-size opcode-count key)
+      (let ((code (make-code-vector (make-return-code-count opcode-count) key)))
 	; A whole lot of stuff to make the GC and disassembler happy.
 	(code-vector-set! code 0 (enum op protocol))
 	(code-vector-set! code 1 0)	; no arguments       - for disassembler
@@ -152,13 +176,19 @@
 	(code-vector-set! code 6 0)		; high byte of offset
 	(code-vector-set! code 7 return-code-pc); low byte of offset
 	(code-vector-set! code 8 0)		; GC mask - all pointers
-	(code-vector-set! code 9 (high-byte size))
-	(code-vector-set! code 10 (low-byte size))
+	(code-vector-set! code 9 (high-byte frame-size))
+	(code-vector-set! code 10 (low-byte frame-size))
 	(code-vector-set! code 11 (enum op protocol))
 	(code-vector-set! code 12 protocol)
-	(code-vector-set! code 13 opcode)
 	code))
-    (define return-code-size (code-vector-size return-code-count))
+
+    (define (s48-make-blank-return-code protocol frame-size opcode-count)
+      (make-blank-return-code protocol 
+			      frame-size 
+			      opcode-count
+			      (ensure-space (make-return-code-size 
+					     (make-return-code-count opcode-count)))))
+
     (define (high-byte n)
       (low-byte (arithmetic-shift-right n 8)))
     (define (low-byte n)
