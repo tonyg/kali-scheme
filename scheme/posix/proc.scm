@@ -111,7 +111,7 @@
   (if (and (process-id? p1)
 	   (process-id? p2))
       (eq? p1 p2)
-      (call-error process-id=? (list p1 p2))))
+      (call-error "argument type error" process-id=? p1 p2)))
 
 ; We need to make these in the outside world.
 (define-exported-binding "posix-process-id-type" :process-id)

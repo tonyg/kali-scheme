@@ -230,7 +230,7 @@
 	      (<= stuff #o7777))
 	 (really-make-file-mode stuff))
 	(else
-	 (call-error integer->file-mode stuff))))
+	 (call-error "argument type error" integer->file-mode stuff))))
 
 ; Arithmetic
 

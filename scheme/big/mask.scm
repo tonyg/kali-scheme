@@ -56,14 +56,14 @@
   (if (mask-type? type)
       (eq? (mask-type mask)
 	   type)
-      (call-error mask-has-type? (list mask type))))
+      (call-error "argument is not a mask" mask-has-type? mask type)))
 
 (define (integer->mask type integer)
   (if (and (mask-type? type)
 	   (integer? integer)
 	   (<= 0 integer))	; no infinite masks
       (make-mask type integer)
-      (call-error integer->mask (list type integer))))
+      (call-error "argument type error" integer->mask type integer)))
 
 (define (list->mask type things)
   (make-mask type (list->integer type things)))
@@ -132,7 +132,7 @@
 		 (apply bitwise-op
 			(mask->integer mask)
 			(map mask->integer more-masks)))
-      (call-error mask-op (cons mask more-masks))))
+      (apply call-error "argument is not a mask" mask-op mask more-masks)))
 			
 ; Subtraction
 

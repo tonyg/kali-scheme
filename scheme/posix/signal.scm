@@ -97,7 +97,7 @@
 
 (define (name->signal name)
   (if (not (symbol? name))
-      (call-error name->signal (list name))
+      (call-error "argument not a symbol" name->signal name)
       (let loop ((i 0))
 	(cond ((= i (vector-length named-signals))
 	       #f)
@@ -168,7 +168,7 @@
 	((unnamed-signal? x)
 	 #f)
 	(else
-	 (call-error signal-name (list x)))))
+	 (call-error "argument not a signal" signal-name x))))
 
 (define (signal-os-number x)
   (cond ((named-signal? x)
@@ -176,7 +176,7 @@
 	((unnamed-signal? x)
 	 (unnamed-signal-os-number x))
 	(else
-	 (call-error signal-os-number (list x)))))
+	 (call-error "argument not a signal" signal-os-number x))))
 
 (define (signal-queues x)
   (cond ((named-signal? x)
@@ -184,7 +184,7 @@
 	((unnamed-signal? x)
 	 (unnamed-signal-queues x))
 	(else
-	 (call-error signal-queues (list x)))))
+	 (call-error "argument not a signal" signal-queues x))))
 
 (define (set-signal-queues! x qs)
   (cond ((named-signal? x)
@@ -192,7 +192,7 @@
 	((unnamed-signal? x)
 	 (set-unnamed-signal-queues! x qs))
 	(else
-	 (call-error set-signal-queues! (list x qs)))))
+	 (call-error "argument not a signal" set-signal-queues! x qs))))
 
 (define (clean-signal-queues x)
   (let* ((old (signal-queues x))
