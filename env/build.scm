@@ -59,8 +59,7 @@
 	   (display-condition c port)
 	   (halt 1))
 	  ((warning? c)
-	   (display-condition c port)
-	   (unspecific))		;Proceed
+	   (display-condition c port))		;Proceed
 	  ((interrupt? c)
 	   ;; (and ... (= (cadr c) interrupt/keyboard)) ?
 	   (halt 2))

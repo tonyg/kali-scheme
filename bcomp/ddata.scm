@@ -1,3 +1,5 @@
+; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+
 
 ; Stuff moved from segment.scm  6/5/93
 

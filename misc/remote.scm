@@ -1,3 +1,5 @@
+; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+
 
 ; ,load-config =scheme48/alt/packages.scm
 ; ,open remote
@@ -14,12 +16,11 @@
 
 (define (note-structure-locations! s)
   (let ((p (structure-package s)))
-    (for-each (lambda (item)
-		(let ((name (signature-item-name item))
-		      (type (signature-item-type item)))
-		  (if (not (eq? type 'syntax))
-		      (note-location! (package-lookup-location p name #f)))))
-	      (signature-items (structure-signature s)))))
+    (for-each-binding (lambda (name type binding)
+			(if (and (pair? binding)
+				 (not (eq? type 'syntax)))
+			    (note-location! (cdr binding))))
+		      s)))
 
 (note-structure-locations! scheme-level-2)
 

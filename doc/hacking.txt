@@ -220,3 +220,71 @@ cool> ,inspect (lambda (x) x)
 inspect: 
 inspect: q
 cool> 
+
+
+
+(define (z s)
+  (define (show-type name static)
+    (write name)
+    (display "	: ")
+    (write (static-type static))
+    (newline))
+  (if (package? s)
+      (for-each-definition (lambda (name static loc)
+			     (show-type name static))
+			   s)
+      (signature-walk (lambda (name type)
+			(show-type name
+				   (car (structure-lookup
+					 s name #t))))
+		      (structure-signature s))))
+
+; ,open expander syntactic packages reconstruction
+
+(define (e x)
+  (let ((p (interaction-environment)))
+    (let ((node (expand-form x p)))
+      (write (node-type node (package->environment p)))
+      (newline)
+      (eval node p))))
+
+
+
+> (define hunk3 (lap hunk3
+		     0 (check-nargs= 3)
+		     2 (pop)
+		     3 (make-stored-object 3 0)
+		     6 (return)))
+> (hunk3 1  2 3)
+'(1 . 2)
+> (define cxr (lap cxr
+		   0 (check-nargs= 2)
+		   2 (pop)
+		   3 (stored-object-indexed-ref 0)
+		   5 (return)))
+> (cxr (hunk3 1  2 3) 2)
+3
+> 
+
+
+(define-syntax %cons
+  (lambda (e r c)
+    (let ((n (cadr e))
+	  (kind (caddr e)))
+      `(,(r 'lap) (%cons ,n ,kind)
+		  (check-nargs= ,n)
+		  (pop)
+		  (make-stored-object ,n ,kind)
+		  (return)))))
+
+
+(define (& x)
+  (or (node-ref x 'uid)
+      (begin (set! *n* (+ *n* 1))
+	     (node-set! x 'uid *n*)
+	     *n*))
+  x)
+
+(define (uid n) (node-ref (& n) 'uid))
+
+(define *n* 0)

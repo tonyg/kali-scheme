@@ -3,14 +3,14 @@
 
 ; Some signatures.  Order of presentation is a bit random.
 
-; Procedures that are compiler primitives, but also belong to Scheme.
-
-(define-signature scheme-primitives-signature
-  (export (begin syntax)
-	  (if syntax) (lambda syntax) (quote syntax)
-	  (set! syntax)
-	  (define syntax) (define-syntax syntax)
-	  ;; let-syntax letrec-syntax  -- not yet implemented
+(define-signature scheme-level-0-signature
+  (export ((if begin lambda letrec quote set!
+	       define define-syntax let-syntax)
+	   syntax)
+	  ;; letrec-syntax  -- not yet implemented
+	  
+	  ;; The basic derived expression types.
+	  ((and cond do let let* or) syntax)
 
 	  apply
 
@@ -41,7 +41,16 @@
 	  string=?
 
 	  ;; New in Revised^5 Scheme
-	  values call-with-values))
+	  values call-with-values
+
+	  ;; Things aren't primitive at the VM level, but they have
+	  ;; to be defined using VM primitives.
+	  string-copy
+	  string->symbol
+	  procedure?
+	  integer->char char->integer
+	  close-output-port close-input-port
+	  open-input-file open-output-file))
 
 ; Miscellaneous primitives.
 
@@ -126,41 +135,24 @@
   (export force-output
 	  immutable?
 	  make-immutable!
-	  string-hash
-	  unspecific))
+	  string-hash))
 
 
 ; Another hodge-podge.
 
 (define-signature low-level-signature
-  (export halt				;exception.scm
-
-	  ;; Things re-exported by scheme-level-1
-	  string-copy
-	  string->symbol
-	  procedure?
-	  integer->char char->integer
-	  close-output-port close-input-port
-	  open-input-file open-output-file
-
-	  ;; VM primitives that we re-export to modules that don't
-	  ;; want to open the PRIMITIVES package.
-	  unassigned			;LETREC macro
-	  unspecific			;base.scm, util.scm
-	  signal-condition error	;signal.scm
-
+  (export vector-unassigned?		; inspector
 	  flush-the-symbol-table!	;build.scm
 	  maybe-open-input-file		;mobot system
-	  maybe-open-output-file
-	  (structure-ref syntax)	;re-exported by defpackage
-	  (%file-name% syntax)))
+	  maybe-open-output-file))
 
 (define-signature vm-exposure-signature
   (export invoke-closure		;eval
 	  primitive-catch))		;shadowing, start, command
 
 (define-signature escapes-signature
-  (export primitive-cwcc with-continuation))
+  (export primitive-cwcc
+	  with-continuation))
 
 (define-signature ascii-signature
   (export ascii->char
@@ -172,13 +164,7 @@
 ; Level 1: The rest of Scheme except for I/O.
 
 (define-signature scheme-level-1-adds-signature
-  (export (and syntax) (case syntax) (cond syntax)
-	  (do syntax) (let syntax) (let* syntax) (or syntax)
-	  (delay syntax)
-	  (quasiquote syntax)
-	  (letrec syntax)		;Hmm.
-	  (syntax-rules syntax)
-
+  (export ((case delay quasiquote syntax-rules) syntax)
 	  <= > >=
 	  abs
 	  append  assoc assq assv
@@ -222,18 +208,20 @@
 	  zero?))
 
 (define-signature scheme-level-1-signature
-  (compound-signature scheme-primitives-signature
+  (compound-signature scheme-level-0-signature
 		      scheme-level-1-adds-signature))
 
 (define-signature util-signature
   (export any
 	  every
 	  filter
+	  last
 	  posq
 	  posv
 	  position
 	  reduce			;command.scm
-	  sublist))
+	  sublist
+	  unspecific))
 
 ; Level 2 consists of harder things built on level 1.
 
@@ -390,6 +378,16 @@
   (compound-signature scheme-level-1-signature
 		      scheme-level-2-adds-signature))
 
+(define-signature scheme-adds-signature
+  (export eval load
+	  interaction-environment
+	  scheme-report-environment))
+
+(define-signature scheme-signature
+  (compound-signature scheme-level-2-signature
+		      scheme-adds-signature))
+
+
 ; Stuff that comes for free with level 2.
 
 (define-signature scheme-level-2-internal-signature
@@ -427,10 +425,6 @@
 	  population->list
 	  walk-population))
 
-(define-signature shadowing-signature
-  (export shadow-location!))
-
-
 (define-signature filenames-signature
   (export namestring *scheme-file-type* *load-file-type*
 	  file-name-directory
@@ -450,16 +444,56 @@
 	  table-walk))
 
 (define-signature usual-macros-signature
-  (export for-each-usual-macro
-	  usual-transform-procedure
-	  find-free-names-in-syntax-rules))  ;link/reify.scm
+  (export usual-transform))
+
+(define-signature meta-types-signature
+  (export syntax-type
+	  any-values-type
+	  undeclared-type
+
+	  make-some-values-type
+	  some-values-type?
+	  some-values-type-components
+	  some-values-type        ; (some-values-type T1 ... Tn)
+
+	  value-type
+
+	  procedure-type
+	  procedure-type-domain
+	  procedure-type-codomain
+	  procedure-type?
+	  fixed-arity-procedure-type?
+	  procedure-type-argument-types
+	  procedure-type-arity
+	  any-procedure-type
+	  (proc syntax)
+
+	  variable-type
+	  variable-type?
+	  variable-value-type
+
+	  compatible-types?
+	  compatible-type-lists?
+
+	  boolean-type
+	  char-type
+	  number-type
+	  pair-type
+	  unspecific-type
+	  usual-variable-type))
 
 (define-signature syntactic-signature
   (export $source-file-name
-	  define-lhs
-	  define-rhs 
-	  define?
+	  binding?
+	  binding-place
+	  clobber-binding!
+	  binding-static
+	  binding-type
+	  binding-transform
+	  make-binding
 	  desyntaxify
+	  forget-integration
+	  impose-type
 	  literal?
 	  generate-name			;package.scm, for accesses
 	  generated-env
@@ -467,125 +501,178 @@
 	  generated-parent-name
 	  generated?
 	  get-operator
-	  make-compilator-table
-	  make-define
+	  make-operator-table
 	  make-transform
+	  maybe-transform-call
 	  n-ary?
 	  name->symbol
 	  name-hash			;package.scm
 	  name?				;assem.scm
-	  normalize-definition		;scan.scm
 	  normalize-formals
 	  number-of-required-args
 	  operator-name
+	  operator-table-ref
+	  operator-define!
+	  operator-lookup
 	  operator-transform
 	  operator-type
 	  operator-uid
 	  operator?
 	  operators-table		;config.scm
+	  process-syntax
 	  set-operator-transform!
 	  same-denotation?		;for redefinition messages
 	  syntax?
-	  transform
-	  transform-env transform-aux-names transform-source ;link/reify.scm
+	  transform-env transform-aux-names ;link/reify.scm
+	  transform-source transform-id   ;link/reify.scm
 	  transform-type
 	  transform?
-	  unbound?))
+	  unbound?
+	  schemify))
 
-; Things used in reification code
-(define-signature packages-1-signature
-  (export initialize-reified-package!
-	  make-simple-package		;start.scm
+(define-signature nodes-signature
+  (export classify
+	  make-node
+	  ;; name-node-binding
+	  node?
+	  node-operator
+	  node-operator-id
+	  node-form
+	  node-ref
+	  node-set!
+	  node-predicate
+	  make-similar-node
+	  scan-body
+	  lookup
+	  bind
+	  bind1
+	  bind-evaluator-for-syntax))
+
+
+; Signatures.
+
+(define-signature signatures-signature
+  (export make-compound-signature
 	  make-simple-signature
-	  make-structure
-	  package-define!
-	  package-define-location!
-	  package-ensure-defined!
-	  package-lookup
-	  set-package-name!
-	  structure-name
-	  structure-package
-	  transform-for-structure-ref))
-
-(define-signature packages-2-signature	;Much too big.
-  (export $note-undefined
-	  check-structure
-	  package-integrate?
-	  flush-location-names
-	  for-each-definition
-	  location-name
-	  location-name-table
-	  location-package-name
-	  make-compound-signature
-	  make-package
-	  new-location-uid
-	  new-package-uid
-	  noting-undefined-variables
-	  package-accesses
-	  package-check-assigned
-	  package-check-variable
-	  package-clauses
-	  package-find-location		;env.scm
-	  package-file-name		;scan.scm (scan-package)
-	  package-for-syntax
-	  package-evaluator
-	  package-loaded?		;load-package.scm
-	  package-lookup-location	;segment.scm
-	  package-name			;command.scm
-	  package-name-table		;debuginfo.scm
-	  package-opens
-	  package-open!
-	  package-system-sentinel	;command.scm
-	  package-uid			;eval.scm
-	  package-unstable?		;pacman.scm
-	  package?			;command.scm
-	  probe-package
-	  reinitialize-package!
-	  reset-packages-state!
-	  set-package-integrate?!	;debug.scm
-	  set-package-loaded?!		;load-package.scm
-	  set-shadow-action!		;eval.scm
-	  signature-item-name
-	  signature-item-type
-	  signature-items
+	  note-reference-to-signature!
 	  signature-ref
-	  structure?
-	  structure-signature
-	  unbound?     ;re-exported from syntactic
-	  undefined-exports
-	  undefined-variables
-	  verify-later!
-	  verify-package))		;for debugging package system
+	  signature?
+	  signature-clients
+	  for-each-declaration))
+
+
+; Packages.
 
 (define-signature packages-signature
-  (compound-signature packages-1-signature
-		      packages-2-signature))
+  (export make-package
+	  make-simple-package		;start.scm
+	  make-structure
+	  package-define!
+	  package-lookup
+	  package?			;command.scm
+	  structure-lookup		;env.scm
+	  generic-lookup		;inline.scm
+	  package-lookup-type		;reify.scm
+	  structure-signature		;config.scm
+	  package->environment
+	  structure?
+	  package-uid			;reifier
+	  make-new-location		;ctop.scm
+	  package-note-caching
+	  structure-package))
+
+(define-signature packages-internal-signature
+  (export package-loaded?		;env/load-package.scm
+	  set-package-loaded?!		;env/load-package.scm
+	  package-name
+	  set-package-name!		;env/pacman.scm
+	  flush-location-names
+	  package-name-table		;debuginfo
+	  location-info-table		;debuginfo, disclosers
+	  package-unstable?		;env/pacman.scm
+	  package-integrate?		;env/debug.scm
+	  package-get
+	  package-put!
+
+	  ;; For linker
+	  initialize-reified-package!	;reify.scm
+
+	  ;; For scanner
+	  for-each-export
+	  package-accesses
+	  package-clauses
+	  package-evaluator
+	  package-file-name
+	  package-for-syntax
+	  package-opens
+	  set-package-integrate?!
+	  structure-name
+
+	  ;; For package mutation
+	  for-each-definition
+	  set-package-opens!
+	  set-structure-signature!
+	  set-package-opens-thunk!
+	  structure-clients
+	  package-opens-thunk
+	  package-opens-really
+	  structure-signature-really
+	  make-new-location
+	  $get-location
+	  set-package-get-location!
+	  initialize-structure!
+	  initialize-package!
+
+	  package-cached
+	  package-definitions
+	  package-clients))
 
 (define-signature scan-signature
   (export scan-forms
 	  scan-file
-	  scan-body
 	  scan-structures		;load-package.scm, link/link.scm
 	  scan-package
 	  set-optimizer!
-	  $note-file-package))
+	  $note-file-package
+	  noting-undefined-variables
+	  $note-undefined		;env/command.scm
+	  note-undefined!))
+
+(define-signature segments-signature
+  (export attach-label
+	  byte-limit
+	  empty-segment
+	  instruction
+	  instruction-using-label
+	  instruction-with-literal
+	  instruction-with-location
+	  instruction-with-template
+	  make-label
+	  note-environment
+	  note-source-code
+	  segment->template
+	  segment-size
+	  sequentially))
 
 (define-signature compiler-signature
-  (export clookup-assigned      	;assem.scm
-	  clookup-variable		;assem.scm
+  (export compile
 	  compile-and-run-file		;for LOAD
 	  compile-and-run-forms		;for EVAL
+	  compile-and-run-scanned-forms ;for eval.scm / ensure-loaded
 	  compile-file			;link/link.scm
 	  compile-form			;link/link.scm
 	  compile-scanned-forms		;link/link.scm
+	  make-startup-procedure	;link/link.scm
+	  package-undefineds		; env/pedit.scm
+	  package-undefined-but-assigneds
+	  location-for-reference
+	  ;; (*type-check?* (variable boolean))
 	  define-compilator		;assem.scm
 	  deliver-value			;assem.scm
-	  instruction			;assem.scm
-	  instruction-with-literal	;assem.scm
-	  instruction-with-template	;assem.scm
-	  make-startup-procedure	;link/link.scm
-	  segment-size			;assem.scm
-	  sequentially))		;assem.scm
+	  get-location			;assem.scm
+	  environment-level		;assem.scm
+	  bind-vars			;assem.scm
+	  ))
 
 (define-signature debug-data-signature
   (export debug-data-env-maps
@@ -610,7 +697,7 @@
 	  with-fresh-compiler-state))  ;for linker
 
 (define-signature evaluation-signature
-  (export eval load eval-from-file))
+  (export eval load eval-from-file eval-scanned-forms))
 
 (define-signature environments-signature  ;cheesy
   (export *structure-ref
@@ -624,31 +711,38 @@
 	  set-scheme-report-environment!
 	  with-interaction-environment))
 
-(define-signature scheme-adds-signature
-  (export eval load
-	  interaction-environment
-	  scheme-report-environment))
-	  
-
-(define-signature scheme-signature
-  (compound-signature scheme-level-2-signature
-		      scheme-adds-signature))
-
-
 (define-signature defpackage-signature
-  (export (define-package syntax)
-	  (define-signature syntax)
-	  (define-structure syntax)
-	  (define-module syntax)
-	  (define-syntax syntax)
-	  (compound-signature syntax)
-	  (export syntax)
-	  (begin syntax)
-	  (letrec syntax)		;because of compiler bug
-	  (structure-ref syntax)	;mumble
-	  make-compiler-base
+  (export ((define-package 
+	    define-signature
+	    define-structure
+	    define-module
+	    define-syntax
+	    ;; compound-signature
+	    ;; export
+	    begin)
+	   syntax)
 	  signature-of
-	  init-defpackage!))
+	  init-defpackage!
+	  set-verify-later!))
+
+(define-signature types-signature
+  (export (syntax type)
+	  (any-values type)
+	  some-values			; (some-values T1 ... Tn)
+	  (value type)
+	  (variable (proc (type) type))         ; (variable T)
+	  (procedure (proc (type type) type))   ; (procedure T1 T2)
+	  (proc syntax)			; (proc (T1 ... Tn) T)
+
+	  ((boolean
+	    number
+	    pair
+	    unspecific
+	    char
+	    structure)		;etc. etc.
+	   type)
+
+	  type))		;Holy stratification, Batman!
 
 
 ; VM architecture
@@ -676,30 +770,21 @@
 
 
 (define-signature inline-signature
-  (export make-procedure-for-inline-transform
-	  really-make-procedure-for-inline-transform
-	  name->extrinsic extrinsic->name extrinsic?
-	  operator->oplet oplet->operator oplet?  ;Ugh
+  (export inline-transform
+	  name->qualified qualified->name qualified?
 	  substitute))
 
 ; Bindings needed by the form composed by REIFY-STRUCTURES.
 
 (define-signature for-reification-signature
   (compound-signature
-    packages-1-signature
+    packages-signature
     (export ;; From usual-macros
-	    usual-transform-procedure
+	    usual-transform
 	    ;; From syntactic
 	    get-operator
 	    make-transform
 	    ;; From inline
-	    make-procedure-for-inline-transform
-	    ;; From Scheme
-	    cons
-	    lambda
-	    let
-	    quote
-	    vector
-	    vector-ref)))
+	    inline-transform)))
 
 ;(define-signature command-signature ...)  -- moved to more-signatures.scm

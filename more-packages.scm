@@ -1,4 +1,4 @@
- ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; More and more packages.  Some of these get loaded into the initial
@@ -8,17 +8,20 @@
 
 (define-module (make-command scheme)
   (define-package ((command command-signature))
-    (open scheme
+    (open scheme		; eval
 	  record table fluids signals
 	  condition handle
 	  reading		; gobble-line, with-sharp-sharp
 	  display-conditions	; display-condition
-	  packages		; for prompt string, etc.
+	  packages		; package?
+	  packages-internal	; package-name, package-uid
 	  environments		; with-interaction-environment
-	  features		; unspecific
+	  util			; unspecific
+	  scan			; $note-undefined, noting-undefined-variables
+	  features		; force-output
 	  interrupts		; set-enabled-interrupts!
 	  vm-exposure		; primitive-catch
-	  locations)		; for ## kludge
+	  syntactic)		; for ## kludge
     (files (env version-info)
 	   (env command)
 	   (env read-command)))
@@ -39,8 +42,7 @@
 	filenames		; translate
 	display-conditions	; display-condition
 	evaluation		; package-for-load, eval
-	write-images
-	features)		; unspecific
+	write-images)
   (files (env build)))
 
 ; Package commands.
@@ -49,7 +51,10 @@
   (open scheme
 	command
 	signals
+	scan			; noting-undefined-variables
 	packages		; for creating a user package
+	packages-internal	; set-package-integrate?!, etc.
+	package-mutation	; package-system-sentinel
 	environments		; *structure-ref, etc.
 	ensures-loaded		; ensure-loaded
 	fluids)
@@ -68,15 +73,25 @@
 	locations
 	code-vectors
 	closures
-	packages		; location-name
+	packages-internal	; location-info-table
 	debug-data		; template-names
 	enumerated		; enumerand->name
 	weak			; weak-pointer?
 	generics
 	template continuation
 	architecture)
-  (files (env disclosers)	;Make error messages be more informative
-	 ))
+  (files (env disclosers)))
+
+; For printing procedures with their names, etc.
+
+(define-package ((debuginfo debuginfo-signature))
+  (open scheme-level-2
+	table
+	debug-data
+	packages
+	packages-internal
+	syntactic)
+  (files (env debuginfo)))
 
 ; Most of the debugging commands.
 
@@ -94,10 +109,12 @@
 	filenames		; translate
 	debug-data		; template-name
 	packages		; flush-location-names, package-integrate?
+	packages-internal	; ?
 	continuation		; continuation-template
 	architecture		; op/global, etc.
 	interrupts		; all-interrupts, set-enabled-interrupts!
 	vm-exposure		; fluid-let suppression kludge - fix later
+	exception		; continuation-preview
 	table
 	syntactic		; for ,bound? command
 	scan			; $note-file-package
@@ -118,8 +135,9 @@
 	continuation
 	syntactic		; desyntaxify
 	record-internal
-	low-level		; unassigned
+	low-level		; vector-unassigned?
 	locations
+	signals			; error
 	;; table  - not yet.
 	weak
 	util			; sublist
@@ -127,15 +145,34 @@
 	display-conditions)	; limited-write
   (files (env inspect)))
 
-; Load database of procedure names 'n' stuff.
 
-(define-package ((debuginfo debuginfo-signature))
+; Package and signature mutation.
+
+(define-package ((package-mutation package-mutation-signature))
   (open scheme-level-2
-	table
-	debug-data
+	shadowing		; shadow-location!
+	compiler		; package-undefineds
 	packages
-	syntactic)
-  (files (env debuginfo)))
+	signatures
+	syntactic
+	packages-internal
+	defpackage		; set-verify-later!
+	locations
+	disclosers		; location-info
+	handle
+	table fluids weak signals)
+  (files (env pedit)))
+
+; The following hooks the compiler up with an exception handler for
+; unbound variables.
+
+(define-package ((shadowing (export shadow-location!)))
+  (open scheme-level-1
+	vm-exposure		;primitive-catch
+	continuation template locations code-vectors
+	exception signals
+	architecture)	;(enum op global)
+  (files (rts shadow)))     ;Exception handler to support package system
 
 
 ; Disassembler
@@ -146,7 +183,7 @@
 	command			; define-command
 	debug-data		; template-name, byte-limit
 	enumerated		; enumerand->name
-	packages		; location-name
+	disclosers		; location-name
 	template
 	continuation
 	locations
@@ -158,14 +195,26 @@
 
 ; Assembler.
 
-(define-package ((assembler (export (lap syntax))))
-  (open scheme-level-2 compiler architecture
-	signals				;error
-	enumerated			;name->enumerand
+(define-package ((assembling (export )))
+  (open scheme-level-2 compiler segments architecture
+	syntactic		;lookup
+	meta-types		;value-type
+	template		; for Richard's version
+	signals			;error
+	enumerated		;name->enumerand
 	code-vectors
-	locations)			;location?
-  (specials lap)
+	locations)		;location?
   (files (env assem)))
+
+(define-package ((assembler (export (lap syntax))))
+  ;; Open the assembling structure to make sure it gets loaded.
+  ;; (Ensure-loaded neglects to examine the package for syntax.)
+  (open scheme-level-2 assembling)
+  (for-syntax (open scheme-level-2 syntactic meta-types assembling))
+  (begin
+    (define-syntax lap
+      (lambda (e r c)
+	(make-node (get-operator 'lap syntax-type) e)))))
 
 
 ; Large integers and rational and complex numbers.
@@ -201,62 +250,23 @@
 	number-i/o)		;really-number->string
   (files (rts recnum)))
 
-
-; Static linker.  Doesn't work very well this way (debug info is
-; screwed up), so it's probably better to continue using linker.image
-; instead.
-
-(define-package ((linker linker-signature))
-  (open scheme table compiler write-images debuginfo
-	signals			;error
-	util			;sublist
-	packages
-	scan
-	filenames
-	debug-data		;with-fresh-compiler-state
-	locations
-	syntactic		;$source-file-name
-	fluids
-	reification)
-  (files (link link)))
-
-(define-package ((reification (export reify-structures)))
-  (open scheme-level-2 table record
-	signals			;error
-	packages
-	usual-macros		;find-free-names-in-syntax-rules
-	syntactic		;name-hash, etc.
-	locations
-	features		;force-output
-	util			;filter
-	inline)			;name->extrinsic
-  (files (link reify)))
-
-(define-package ((analysis (export alpha-forms analyze-forms)))
-  (open scheme
-	syntactic packages scan inline
-	signals
-	locations
-	features		;force-output
-	table
-	fluids
-	util)
-  (files (opt node)
-	 (opt alpha)
-	 (opt analyze)))
-
-(define-package ((linker-etc (export ))) ;dummy for flatload-package
-  (open linker defpackage analysis))
+(define-package ((floatnum (export )))	;No exports
+  (open scheme-level-2
+	extended-number-support
+	generics signals
+	primitives)             ;vm-extension
+  (files (rts floatnum)))
 
 (define-package ((define-record-types define-record-types-signature))
   (open scheme-level-1 record)
   (files (rts jar-defrecord)))
 
 
-; Various Big Scheme things
+; --------------------
+; Big Scheme
 
 (define-package ((queues queue-signature))
-  (open scheme-level-1 define-record-types signals)
+  (open scheme-level-1 bummed-define-record-types signals)
   (files (big queue))
   (optimize auto-integrate))
 
@@ -310,19 +320,30 @@
   (open scheme-level-2)
   (files (big destructure)))
 
+(define-package ((general-tables general-tables-signature))
+  (open scheme-level-2 record define-record-types signals structure-refs)
+  (access features) ; string-hash
+  (files (big general-table)))
+
+(define-package ((arrays arrays-signature))
+  (open scheme-level-2 defrecord signals)
+  (files (big array)))
+
+
 (define-package ((big-scheme big-scheme-signature))
   (open extended-ports		;Exports input-port? and output-port?
-	scheme-level-2 formats queues table sort defrecord
+	scheme-level-2 formats queues sort defrecord
 	pp enumerated
 	bitwise
 	ascii
 	bigbit
-	debugging		; for breakpoint	
+	general-tables
 	structure-refs		; for structure-ref
 	bigbit
 	destructuring)
-  (access signals)		; for error
-  (files (big rk-util)
+  (access signals		; for error
+	  debugging)		; for breakpoint	
+  (files (big big-util)
 	 (big receive)))
 
 ; Externals
@@ -330,8 +351,9 @@
 (define-package ((externals externals-signature))
   (open scheme-level-2 handle exception table
 	primitives
-	architecture			;stob
-	condition)			;exception-arguments
+	architecture		;stob
+	condition		;exception-arguments
+	ascii code-vectors)
   (files (big external)))
 
 ; Rudimentary object dump and restore
@@ -345,7 +367,7 @@
 	locations		;make-undefined-location
 	closures
         code-vectors		;code vectors
-	;; features ?
+	fluids
 	ascii
 	bitwise
         generics		;disclose
@@ -357,7 +379,7 @@
 (define-package ((threads threads-signature))
   (open scheme-level-1
 	wind			; still needed?
-	define-record-types queues fluids
+	bummed-define-record-types queues fluids
 	interrupts		;interrupt-handlers, one-second
 	escapes			;primitive-cwcc
 	fluids-internal		;get-dynamic-state, etc.
@@ -392,7 +414,10 @@
   (open scheme-level-2
 	primitives		; ?
 	queues table
-	low-level)		; flush-the-symbol-table!
+	bitwise locations closures code-vectors
+	debug-data		; foo
+	features		; string-hash
+	low-level)		; flush-the-symbol-table!, vector-unassigned?
   (files (env traverse)))
 
 ; Structure & Interpretation compatibility
@@ -414,10 +439,11 @@
 
 
 
-; Stuff to load into standard image.
+; Stuff to load into initial.image to make scheme48.image.
 
 (define-package ((usual-features (export )))  ;No exports
-  (open disclosers
+  (open expander     ;Allow (optimize expand)
+	disclosers
 	command
 	package-commands
 	build
@@ -433,37 +459,48 @@
 ; visible in the command processor's config package.
 
 (define-signature more-structures-signature
-  (export more-structures
-	  usual-features
-	  analysis
-	  assembler
-	  bigbit
-	  bignum ratnum recnum
-	  build
-	  command
-	  debugging
-	  debuginfo
-	  define-record-types
-	  destructuring
-	  disassembler
-	  disclosers
-	  dump/restore
-	  extended-number-support
-	  extended-ports
-	  externals
-	  formats defrecord
-	  inspector
-	  linker
-	  linker-etc
-	  more-threads
-	  package-commands
-	  pp
-	  queues
-	  random
-	  reification
-	  sicp
-	  sockets
-	  sort
-	  threads
-	  traverse
-	  big-scheme))
+  (export ((more-structures
+	    usual-features
+	    analysis
+	    arrays
+	    assembler
+	    assembling
+	    general-tables
+	    bigbit
+	    bignum ratnum recnum floatnum
+	    build
+	    command
+	    debugging
+	    define-record-types
+	    destructuring
+	    disassembler
+	    disclosers
+	    dump/restore
+	    extended-number-support
+	    extended-ports
+	    externals
+	    formats defrecord
+	    inspector
+	    more-threads
+	    package-commands
+	    package-mutation
+	    pp
+	    queues
+	    random
+	    sicp
+	    sockets
+	    sort
+	    threads
+	    traverse
+	    big-scheme
+	    ;; From link-packages.scm:
+	    analysis
+	    debuginfo
+	    expander
+	    flatloading
+	    linker
+	    link-config
+	    reification  ;?
+	    shadowing
+	    )
+	   structure)))

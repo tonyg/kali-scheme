@@ -5,7 +5,7 @@
 ; Bitwise operators written in vanilla Scheme.
 ; Written for clarity and simplicity, not for speed.
 
-; No need to use these in Scheme48 since Scheme48's virtual machine
+; No need to use these in Scheme 48 since Scheme 48's virtual machine
 ; provides fast machine-level implementations.
 
 

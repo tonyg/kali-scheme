@@ -5,7 +5,6 @@
 ; Simple code analysis to determine whether it's a good idea to
 ; in-line calls to a given procedure.
 
-
 ; Hook into the byte code compiler.
 
 (set-optimizer! 'auto-integrate
@@ -15,14 +14,15 @@
     (display "Analyzing... ") (force-output (current-output-port))
     (let* ((names '())
 	   (stuff
-	    (map (lambda (filename+forms)
-		   (let ((filename (car filename+forms))
-			 (forms (cdr filename+forms)))
+	    (map (lambda (filename+nodes)
+		   (let ((filename (car filename+nodes))
+			 (nodes (cdr filename+nodes)))
 		     (let-fluid $source-file-name filename
 		       (lambda ()
-			 (set! names (append (analyze-forms forms p) names))
-			 (cons filename forms)))))
-		 (alpha-stuff stuff p))))
+			 (set! names
+			       (append (analyze-forms nodes p) names))
+			 (cons filename nodes)))))
+		 stuff)))
       (cond ((not (null? names))
 	     (newline)
 	     (display "Calls will be compiled in line: ")
@@ -32,249 +32,295 @@
       (newline)
       stuff)))
 
-(define (analyze-forms scanned-forms p)
+(define (analyze-forms scanned-nodes p)
   (let ((inlines '()))
-    (for-each (lambda (form)
-		(let ((lhs (analyze-form form p)))
+    (for-each (lambda (node)
+		(let ((lhs (analyze-form node p)))
 		  (if lhs
 		      (set! inlines (cons lhs inlines)))))
-	      scanned-forms)
+	      scanned-nodes)
     inlines))
 
-(define (analyze-form form p)
-  (if (define? form)
-      (let ((lhs (define-lhs form))
-	    (rhs (define-rhs form)))
-	(if (and (when-lose "assigned" lhs
-			    (not (variable-ever-assigned? p lhs)))
-		 (inlinable-rhs? rhs p lhs))
-	    (begin (package-define! p lhs
-				    (make-inline-transform rhs p lhs))
-		   lhs)
-	    #f))
+(define (analyze-form node p)		;Return LHS iff calls will be inlined.
+  (if (define-node? node)
+      (let ((form (node-form node)))
+	(let ((lhs (cadr form))
+	      (rhs (caddr form)))
+	  (let ((type (package-lookup-type p lhs)))
+	    (if (variable-type? type)
+		(require "not assigned" lhs #f)
+		(let ((method (inlinable-rhs? rhs type p lhs)))
+		  (if method
+		      (begin (package-define! p lhs method)
+			     (if (transform? method)
+				 lhs
+				 #f))
+		      #f))))))
       #f))
 
-(define (inlinable-rhs? exp p id)
-  (cond ((pair? exp)
-	 (and (when-lose "not lambda" (list id (car exp))
-		(eq? (car exp) operator/lambda))
-	      (simple-lambda? exp id p)))
-	((when-lose "non-symbol rhs" (list exp id)
-	   (symbol? exp))
-	 ;; TO DO: extend to generated names
-	 (and (when-lose "rhs assigned" (list id exp)
-		(not (variable-ever-assigned? p exp)))
-	      (when-lose "not definitely procedure" (list id exp)
-		(let ((probe (package-lookup p exp)))
-		  (or (operator? probe)
-		      (transform? probe)
-		      (eq? probe 'procedure))))))
+(define define-node? (node-predicate 'define))
+(define lambda-node? (node-predicate 'lambda))
+(define name-node? (node-predicate 'name))
+(define loophole-node? (node-predicate 'loophole))
+
+
+(define (inlinable-rhs? node type p lhs)
+  (cond ((lambda-node? node)
+	 (if (simple-lambda? node lhs p)
+	     (make-inline-transform node type p lhs)
+	     #f))
+	((name-node? node)
+	 (let ((name (node-form node)))
+	   (if (and (require "symbol rhs" (list lhs name)
+		      (symbol? name))
+		    (require "rhs unassigned" (list lhs name)
+		      (not (variable-type? (package-lookup-type p name))))
+		    (require "definitely procedure" (list lhs name)
+		      (procedure-type? (package-lookup-type p name))))
+	       (make-inline-transform node type p lhs)
+	       #f)))
+	((loophole-node? node)
+	 (inlinable-rhs? (caddr (node-form node)) type p lhs))
+	((primitive-procedure-node? node)
+	 (get-operator (cadr (node-form node))))
 	(else #f)))
 
-(define (simple-lambda? exp id p)
-  (let ((locals (lambda-locals exp)))
-    (and (when-lose "n-ary" id
-	   (not (n-ary? (lambda-formals exp))))
-	 (when-lose "count" id
-	   (every (lambda (local)
-		    (and (= (local-assignment-count local) 0)
-			 (= (local-reference-count local) 1)))
-		  locals))
-	 (when-lose "analysis" id
-	   (analyze (lambda-body exp) ret p)))))
+(define primitive-procedure-node? (node-predicate 'primitive-procedure))
 
-(define (when-lose reason id x)
-  (if (and *debug?* (not x))
-      (begin (write id)
-	     (display " lost because of ")
-	     (display reason)
-	     (newline)))
-  x)
 
-(define *debug?* #f)
+; We elect to integrate a procedure definition when
+;  1. The procedure in not n-ary,
+;  2. Every parameter is used exactly once and not assigned, and
+;  3. The analysis phase says that the body is acceptable (see below). 
 
+(define (simple-lambda? node id p)
+  (let* ((exp (node-form node))
+	 (formals (cadr exp))
+	 (body (caddr exp))
+	 (var-nodes (node-ref node 'var-nodes)))
+    (and (require "not n-ary" id
+	   (not (n-ary? formals)))
+	 (require "unique references" id
+	   (every (lambda (var-node)
+		    (let ((lexical (node-ref var-node 'lexical)))
+		      (and (= (lexical-reference-count lexical) 1)
+			   (= (lexical-assignment-count lexical) 0))))
+		  var-nodes))
+	 (require "good analysis" id
+	   (simple? (caddr exp)
+		    (bind formals
+			  (map (lambda (name)
+				 (make-node operator/name name))
+			       formals)
+			  (package->environment p))
+		    ret)))))
+
+(define operator/name (get-operator 'name 'leaf))
 
 ; --------------------
+; SIMPLE? takes an alpha-converted expression and returns either
+;  - #f, meaning that the procedure in which the expression occurs
+;    has no chance of being fully inlinable, so we might as well give up,
+;  - #t, if there's no problem, or
+;  - 'empty, if there's no problem AND there are no lexical variable
+;    references at or below this node.
+; Foul situations are:
+;  - complex quotations (we don't want to make multiple copies of them)
+;  - a LAMBDA occurs (too much overhead, presumably)
+;  - a call that is not to a primitive and not a tail call
+
+
 ; Main dispatch for analyzer
 
-(define (analyze exp ret? p)
-  (if (pair? exp)
-      (let ((op (car exp)))
-	(cond ((operator? op)
-	       ((get-analyzer op) exp ret? p))
-	      ((name? op)
-	       (let ((probe (package-lookup p (car exp))))
-		 (if (transform? probe)
-		     (analyze (transform probe exp (lambda (name)
-						     (probe-package p name)))
-			      ret? p)
-		     (analyze-call exp ret? p))))
-	      (else
-	       (analyze-call exp ret? p))))
-      nil-analysis))
+(define (simple? node env ret?)
+  ((operator-table-ref analyzers (node-operator-id node))
+   (node-form node)
+   env ret?))
 
-(define (analyze-random exp ret? p)
-  ;; Primop.
-  (reduce (lambda (arg analysis)
-	    (cons-analysis (analyze arg no-ret p)
-			   analysis))
-	  nil-analysis
-	  (cdr exp)))
-
-(define nil-analysis '())
-
-(define cons-analysis
-  (lambda (a1 a2)
-    (if (and a1 a2) (append a1 a2) #f)))
-
-(define foul-analysis #f)
+(define (simple-list? exp-list env)
+  (if (null? exp-list)
+      'empty
+      (let ((s1 (simple? (car exp-list) env no-ret)))
+	(if (eq? s1 'empty)
+	    (simple-list? (cdr exp-list) env)
+	    (if s1
+		(and (simple-list? (cdr exp-list) env)
+		     #t)
+		#f)))))
 
 
 ; Particular operators
 
 (define analyzers
-  (make-compilator-table (lambda (exp ret? p) (analyze-random exp ret? p))))
+  (make-operator-table (lambda (exp env ret?)
+			 (simple-list? (cdr exp) env))))
 
-(define define-analyzer (car analyzers))
+(define (define-analyzer name proc)
+  (operator-define! analyzers name proc))
 
-(define get-analyzer (cdr analyzers))
+(define-analyzer 'literal
+  (lambda (exp env ret?)
+    (if (require "repeatable literal" #f
+	  (simple-literal? exp))
+	'empty
+	#f)))
 
-(define-analyzer 'local 'syntax		;local
-  (lambda (exp ret? p) (list exp)))
+(define-analyzer 'name
+  (lambda (exp env ret?)
+    ;; (if (node-ref node 'lexical) #t 'empty)
+    ;;   ... (not (generated? exp)) ugh ...
+    #t))
 
-(define-analyzer 'quote 'syntax
-  (lambda (exp ret? p)
-    (if (when-lose "hairy quotation" #f
-	 (acceptable-literal? (quotation-value exp)))
-	nil-analysis
-	foul-analysis)))
+(define-analyzer 'quote
+  (lambda (exp env ret?)
+    (if (require "repeatable quotation" #f
+	  (simple-literal? (cadr exp)))
+	'empty
+	#f)))
 
-(define-analyzer 'lambda 'syntax
-  (lambda (exp ret? p) foul-analysis))
+(define-analyzer 'lambda
+  (lambda (exp env ret?) #f))
 
-(define-analyzer 'set! 'syntax
-  (lambda (exp ret? p) foul-analysis))
+(define-analyzer 'letrec
+  (lambda (exp env ret?) #f))
 
-(define-analyzer 'if 'syntax
-  (lambda (exp ret? p)
-    (cons-analysis (analyze (if-test exp) no-ret p)
-		   (let ((a1 (analyze (if-con exp) ret? p))
-			 (a2 (analyze (if-alt exp) ret? p)))
-		     (if (and a1 a2
-			      (every (lambda (a)
-				       (memq a a2))
-				     a1))
-			 a1
-			 foul-analysis)))))
+(define-analyzer 'set!
+  (lambda (exp env ret?)
+    (simple? (caddr exp) env no-ret)))
 
-(define-analyzer 'begin 'syntax
-  (lambda (exp ret? p)
-    (cons-analysis (analyze (begin-first exp) no-ret p)
-		   (analyze (begin-second exp) ret? p))))
+(define-analyzer 'loophole
+  (lambda (exp env ret?)
+    (simple? (caddr exp) env ret?)))
 
-(define-analyzer 'call 'syntax
-  (lambda (exp ret? p)
-    (analyze-call (cdr exp) ret? p)))
+; Can't always fully in-line things like (lambda (a b c) (if a b c))
 
-(define (analyze-call proc+args ret? p)
-  (let ((proc (car proc+args)))
-    (if (when-lose "non-local non-tail call" proc
-	  (or ret?			;tail calls are ok
-	      (local? proc)))		;so are calls to arguments
-	(reduce (lambda (arg analysis)
-		  (cons-analysis (analyze arg no-ret p)
-				 analysis))
-		nil-analysis
-		proc+args)
-	foul-analysis)))
+(define-analyzer 'if
+  (lambda (exp env ret?)
+    (and (eq? (simple? (caddr exp) env ret?) 'empty)
+	 (eq? (simple? (cadddr exp) env ret?) 'empty)
+	 (simple? (cadr exp) env no-ret))))
+
+(define-analyzer 'begin
+  (lambda (exp env ret?)
+    (let loop ((exps (cdr exp)))
+      (if (null? (cdr exps))
+	  (if (simple? (car exps) env ret?) #t #f)
+	  (and (simple? (car exps) env no-ret)
+	       (loop (cdr exps)))))))
+
+(define-analyzer 'call
+  (lambda (exp env ret?)
+    ;; Retry transforming calls in hopes of finding procedures that
+    ;; have become integrable as a result of the ongoing analysis of
+    ;; this package.
+    (let ((proc (car exp)))
+      (if (name-node? proc)
+	  (let* ((node (make-node (get-operator 'call) exp))
+		 (new-node (maybe-transform-call proc node env)))
+	    (if (eq? new-node node)
+		(really-simple-call? exp env ret?)
+		(simple? (expand new-node env) env ret?)))
+	  (really-simple-call? exp env ret?)))))
+
+(define (really-simple-call? exp env ret?)
+  (let ((proc (car exp)))
+    (and (require "non-local non-tail call" proc
+	   (or (and ret? (simple? proc env no-ret))	;tail calls are ok
+	       (lexical-node? proc)))		;so are calls to arguments
+	 (simple-list? exp env))))
+
+(define (lexical-node? node)
+  (not (node-ref node 'binding)))
 
 (define no-ret #f)
 
 (define ret #t)
 
-(define (acceptable-literal? x) ;Things that TRANSPORT won't copy.
+(define (simple-literal? x) ;Things that TRANSPORT won't copy.
   (or (integer? x)
       (boolean? x)
       (null? x)
       (char? x)
-      (name? x)))
+      (symbol? x)))
 
 
-
-; Once we know that we want something to be inlined, this stuff
+; --------------------
+; Once we know that we want something to be inlined, the following things
 ; actually makes use of the fact.  For procedures for which all
 ; arguments can be substituted unconditionally, we make a transform
-; (a macro, practically) that performs the subtitution.
+; (a macro, really) that performs the subtitution.
 
-(define (make-inline-transform exp p name)
-  (let ((free (free-top-level-variables exp)))
-    (make-transform (really-make-procedure-for-inline-transform exp)
+(define (make-inline-transform node type p name)
+  (let* ((free (free-top-level-variables node))
+	 (form (make-substitution-template node p free))
+	 (aux-names (map (lambda (free)
+			   (do ((free free (generated-parent-name free)))
+			       ((not (generated? free)) free)))
+			 free)))
+    (make-transform (inline-transform form aux-names)
 		    p			;env ?
-		    'procedure
-		    free
-		    `(make-procedure-for-inline-transform
-			',(make-substitution-template exp p free)
-			the-package)
+		    type
+		    `(inline-transform ',form ',aux-names)
 		    name)))
 
-(define (make-substitution-template exp p free)
-  (schemify exp
-	 (map (lambda (free) (cons free (name->extrinsic free p)))
-	      free)))
+; Create something that can be passed to SUBSTITUTE.  Must be valid as
+; a quotation.
 
-; This must return an S-expression containing no operators, generated
-; names, or procedures.  Assumes that the expression is the output of
-; alpha-conversion.
+(define (make-substitution-template node p free)
+  (let ((env (package->environment p)))
+    (clean-node node
+		(map (lambda (free)
+		       (cons free (name->qualified free env)))
+		     free))))
 
-(define (schemify exp env)
-  (cond ((pair? exp)
-	 (let ((op (car exp)))
-	   (cond ((eq? op operator/quote)
-		  (let ((val (desyntaxify (quotation-value exp))))
-		    (if (literal? val)
-			val		;+++
-			`(,oplet/quote ,val))))
-		 ((eq? op operator/local)
-		  (schemify-lookup env (local-name exp)))
-		 ((eq? op operator/lambda)
-		  (schemify-lambda exp env))
-		 (else
-		  (map (lambda (exp)
-			 (schemify exp env))
-		       exp)))))
-	((operator? exp)		;ugh
-	 (operator->oplet exp))
-	((name? exp)
-	 (schemify-lookup env exp))
-	(else exp)))
+; This routine is obligated to return an S-expression.
+; It's better not to rely on the constantcy of node id's, so 
+; the output language is a sort of quasi-Scheme.  Any form that's a list
+; has an operator name in its car.
 
-; Lambda must be special-cased because (1) the formals may be an
-; improper list containing generated names, and (2) the body contains
-; a bogus quoted contant that mustn't be handed to desyntaxify.
+(define (clean-node node env)
+  (cond ((name-node? node)
+	 (clean-lookup env (node-form node)))
+	((quote-node? node)
+	 `(quote ,(cadr (node-form node))))
+	((lambda-node? node)
+	 (clean-lambda node env))
+	((call-node? node)
+	 (cons 'call
+	       (map (lambda (node) (clean-node node env))
+		    (node-form node))))
+	;; LETREC had better not occur, since we ain't prepared for it
+	((pair? (node-form node))
+	 (cons (operator-name (node-operator node))
+	       (map (lambda (subnode)
+		      (clean-node subnode env))
+		    (cdr (node-form node)))))
+	(else (node-form node))))	;literal
 
-(define (schemify-lambda exp env)
-  (let* ((formals (lambda-formals exp))
-	 (names (normalize-formals formals))
-	 (new-env (append (map (lambda (name)
-				 (cons name (unused-name env name)))
-			       names)
-			  env)))
-    `(,oplet/lambda ,(let recur ((foo formals))
-		       (cond ((name? foo) (schemify-lookup new-env foo))
-			     ((pair? foo)
-			      (cons (recur (car foo))
-				    (recur (cdr foo))))
-			     (else foo)))
-       ,(schemify (lambda-body exp) new-env))))
+(define quote-node? (node-predicate 'quote))
+(define call-node? (node-predicate 'call))
 
-(define (schemify-lookup env name)
-  (let ((probe (assq name env)))
-    (if probe
-	(cdr probe)
-	(begin (warn "name not found in environment" name)
-	       name))))
+
+(define (clean-lambda node env)
+  (let* ((exp (node-form node))
+	 (formals (cadr exp))
+	 (env (append (map (lambda (name)
+			     (cons name
+				   (unused-name env name)))
+			   (normalize-formals formals))
+		      env)))
+    `(lambda ,(let recur ((foo formals))
+		(cond ((name? foo) (clean-lookup env foo))
+		      ((pair? foo)
+		       (cons (recur (car foo))
+			     (recur (cdr foo))))
+		      (else foo)))
+       ,(clean-node (caddr exp) env))))
+
+(define (clean-lookup env name)
+  (cdr (assq name env)))		;Must be there.
   
-; I know that this is extremely pedantic.
+; I'm aware that this is extremely pedantic.
 
 (define (unused-name env name)
   (let ((sym (if (generated? name)
@@ -287,31 +333,42 @@
 	((not (assq name env)) name))))
       
 
-(define oplet/quote (operator->oplet operator/quote))
-(define oplet/lambda (operator->oplet operator/lambda))
+(define (free-top-level-variables node)
+  (let recur ((node node) (vars '()))
+    (cond ((quote-node? node) vars)
+	  ((name-node? node)
+	   (if (node-ref node 'binding)
+	       (let ((var (node-form node)))
+		 (if (memq var vars) vars (cons var vars)))
+	       vars))
+	  ;; lambda, letrec shouldn't occur
+	  (else
+	   (let ((form (node-form node)))
+	     (if (pair? form)
+		 (reduce (lambda (node vars)
+			   (if (node? node)
+			       (recur node vars)
+			       vars))
+			 vars
+			 (if (call-node? node)
+			     form
+			     (cdr form)))
+		 vars))))))
 
-(define (quotation? obj)
-  (and (pair? obj)
-       (eq? (car obj) 'quote)))
 
+; --------------------
+; debugging hack
 
+(define (require reason id x)
+  (if (and *debug?* (not x))
+      (begin (write id)
+	     (display " lost because ")
+	     (display reason)
+	     (display " failed")
+	     (newline)))
+  x)
 
-
-; This actually also throws in the locals that are SET!, but that's
-; harmless (I think).
-
-(define (free-top-level-variables exp)
-  (let recur ((exp exp) (vars '()))
-    (cond ((pair? exp)
-	   (let ((op (car exp)))
-	     (cond ((eq? op operator/quote) vars)
-		   ((eq? op operator/local) vars)
-		   ((eq? op operator/lambda)
-		    (recur (lambda-body exp) vars))
-		   (else
-		    (reduce recur vars exp)))))
-	  ((name? exp) (if (memq exp vars) vars (cons exp vars)))
-	  (else vars))))
+(define *debug?* #f)
 
 
 ; --------------------

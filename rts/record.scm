@@ -35,7 +35,7 @@
 (define (record-field-index rt name)
   (let loop ((names (record-type-field-names rt))
 	     (i 1))
-    (cond ((null? names) (error "unknown field index"
+    (cond ((null? names) (error "unknown field"
 				(record-type-identification rt)
 				name))
 	  ((eq? name (car names))
@@ -109,4 +109,4 @@
 		 (record-type-identification obj)))
 	  ((record-type? (record-type obj))
 	   (disclose-record obj))
-	  (else '(record)))))
+	  (else (fail)))))

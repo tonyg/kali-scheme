@@ -4,11 +4,11 @@
 ; The byte code compiler's assembly phase.
 
 (define make-segment cons)
-(define segment-size car)
+(define segment-size car);number of bytes that will be taken in the code vector
 (define segment-emitter cdr)
 
 (define (segment->template segment name pc-in-parent)
-  (let* ((cv (make-code-vector (segment-size segment) op/trap))
+  (let* ((cv (make-code-vector (segment-size segment) 0))
 	 (astate (make-astate cv))
 	 (parent-data (fluid $debug-data))
 	 (name (if (if (name? name)
@@ -24,64 +24,58 @@
 	  (set-debug-data-env-maps! debug-data maps)
 	  (segment-data->template cv
 				  (debug-data->info debug-data)
-				  (astate-literals astate)))))))
+				  (reverse (astate-literals astate))))))))
 
 (define (segment-data->template cv debug-data literals)
   (let ((template (make-template (+ template-overhead (length literals)) 0)))
     (set-template-code! template cv)
     (set-template-info! template debug-data)
     (do ((lits literals (cdr lits))
-	 (i 2 (+ i 1)))
+	 (i template-overhead (+ i 1)))
 	((null? lits) template)
       (template-set! template i (car lits)))))
 
+
 ; "astate" is short for "assembly state"
 
+(define-record-type assembly-state type/assembly-state
+  (make-assembly-state cv pc count lits)
+  (cv    astate-code-vector)
+  (pc    astate-pc    set-astate-pc!)
+  (count astate-count set-astate-count!)
+  (lits  astate-literals  set-astate-literals!))
+
 (define (make-astate cv)
-  (let ((pc 0)
-	(count 0)
-	(lits '()))
+  (make-assembly-state cv 0 template-overhead '()))
 
-    (define (emit-byte! byte)
-      (code-vector-set! cv pc byte)
-      (set! pc (+ pc 1)))
+(define (emit-byte! a byte)
+  (code-vector-set! (astate-code-vector a) (astate-pc a) byte)
+  (set-astate-pc! a (+ (astate-pc a) 1)))
 
-    (define (emit-literal! thing)
-      (emit-byte!
-       (let ((probe (position thing lits)))
-	 (if probe
-	     ;; +++  Eliminate duplicate entries.
-	     ;; Not necessary, just a modest space saver [how much?].
-	     ;; Measurably slows down compilation.
-	     (+ 1 (- count probe))
-	     (begin
-	       (if (>= count byte-limit)
-		   (error "compiler bug: too many literals"
-			  thing))
-	       (set! lits (cons thing lits))
-	       (set! count (+ count 1))
-	       (+ 1 count))))))
+(define (emit-literal! a thing)
+  (emit-byte! a
+	      (let ((probe (position thing (astate-literals a)))
+		    (count (astate-count a)))
+		(if probe
+		    ;; +++  Eliminate duplicate entries.
+		    ;; Not necessary, just a modest space saver [how much?].
+		    ;; Measurably slows down compilation.
+		    ;; when 1 thing, lits = (x), count = 3, probe = 0, want 2
+		    (- (- count probe) 1)
+		    (begin
+		      (if (>= count byte-limit)
+			  (error "compiler bug: too many literals"
+				 thing))
+		      (set-astate-literals! a (cons thing (astate-literals a)))
+		      (set-astate-count! a (+ count 1))
+		      count)))))
 
-    (define (get-literals) (reverse lits))
-
-    (define (get-pc) pc)
-
-    (vector emit-byte! emit-literal! get-literals get-pc)))
-
-(define (emit-byte! astate byte)
-  ((vector-ref astate 0) byte))
-
-(define (emit-literal! astate thing)
-  ((vector-ref astate 1) thing))
-
-(define (astate-literals astate)
-  ((vector-ref astate 2)))
-
-(define (astate-pc astate)
-  ((vector-ref astate 3)))
 
 (define (emit-segment! astate segment)
   ((segment-emitter segment) astate))
+
+
+; Segment constructors
 
 (define empty-segment
   (make-segment 0 (lambda (astate) #f)))
@@ -117,22 +111,13 @@
 
 ; So are locations.
 
-(define (instruction-with-variable opcode name den assign?)
+(define (instruction-with-location opcode thunk)
   (make-segment 2
 		(lambda (astate)
 		  (emit-byte! astate opcode)
-		  (emit-location! astate name den assign?))))
-
-; Name is ignored for now, but is passed in because it will eventually
-; be needed for separate compilation.  The name (possibly generated)
-; will have to be written to the object file so that it can be looked
-; up when the object file is loaded relative to some existing
-; environment.
-
-(define (emit-location! astate name den assign?)
-  ;; Should have different entries depending on what the lookup path was.
-  (emit-literal! astate
-		 (package-lookup-location (car den) (cdr den) assign?)))
+		  ;; But: there really ought to be multiple entries
+		  ;; depending on how the name is qualified.  
+		  (emit-literal! astate (thunk)))))
 
 
 ; Templates for inferior closures are also obtained from the
@@ -147,27 +132,52 @@
 						    name
 						    (astate-pc astate))))))
 
-; 
+; Labels.  Each label maintains a list of pairs (instr . origin).
+; Instr is the index of the first of two bytes that will hold the jump
+; target offset, and the offset stored will be (- jump-target origin).
 
-(define (instruction-with-offset opcode offset)
-  (instruction opcode
-	       (quotient offset byte-limit)
-	       (remainder offset byte-limit)))
+(define (make-label) (list #f))
 
-(define (instruction-with-offset&byte opcode offset byte)
-  (instruction opcode
-	       (quotient offset byte-limit)
-	       (remainder offset byte-limit)
-	       byte))
+(define (instruction-using-label opcode label . rest)
+  (let ((segment (apply instruction opcode 0 0 rest)))
+    (make-segment (segment-size segment)
+		  (lambda (astate)
+		    (let ((instr (+ (astate-pc astate) 1)))
+		      (emit-segment! astate segment)
+		      (if (car label)
+			  (warn "backward jumps not supported")
+			  (set-cdr! label
+				    (cons (cons instr (astate-pc astate))
+					  (cdr label)))))))))
+
+(define (attach-label label segment)
+  (make-segment
+     (segment-size segment)
+     (lambda (astate)
+       (let ((pc (astate-pc astate))
+	     (cv (astate-code-vector astate)))
+	 (for-each (lambda (instr+origin)
+		     (let ((instr (car instr+origin))
+			   (origin (cdr instr+origin)))
+		       (let ((offset (- pc origin)))
+			 (code-vector-set! cv instr
+					   (quotient offset byte-limit))
+			 (code-vector-set! cv (+ instr 1)
+					   (remainder offset byte-limit)))))
+		   (cdr label))
+	 (set-car! label pc)
+	 (emit-segment! astate segment)))))
+
+; byte-limit is larger than the largest value that will fit in one opcode
+; byte.
 
 (define byte-limit (expt 2 bits-used-per-byte))
 
 
-(define $debug-data (make-fluid #f))
-
-
 ; Special segments for maintaining debugging information.  Not
 ; essential for proper functioning of compiler.
+
+(define $debug-data (make-fluid #f))
 
 ; Keep track of source code at continuations.
 
@@ -179,7 +189,7 @@
 		      (let ((dd (fluid $debug-data)))
 			(set-debug-data-source!
 			 dd
-			 (cons (cons (astate-pc astate) (desyntaxify info))
+			 (cons (cons (astate-pc astate) info)
 			       (debug-data-source dd))))))
       segment))
 

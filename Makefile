@@ -1,17 +1,17 @@
-# Scheme48 Makefile
+# Scheme 48 Makefile
 # Last updated May 1993 by JAR
 # More documentation in file INSTALL
 
 # To change the set of features included in the standard image, edit
 # the definition of usual-features in more-packages.scm.
 
-# If you want to install scheme48 somewhere, set BIN, LIB, and MAN as
+# If you want to install Scheme 48 somewhere, set BIN, LIB, and MAN as
 # appropriate for your site.  RUNNABLE is what the command by which
-# you invoke scheme48 will be called.  LIB is the directory tree in
+# you invoke Scheme 48 will be called.  LIB is the directory tree in
 # which files are sought when doing ,load-package of one of the
 # "more-packages" (big/pp.scm, etc.; see more-packages.scm).
 
-# If you definitely won't be installing scheme48, you should set LIB
+# If you definitely won't be installing Scheme 48, you should set LIB
 # to the directory that contains this Makefile.  This will make the
 # ,load-package command work for the "extra" packages defined in
 # more-packages.scm. 
@@ -20,7 +20,7 @@ BIN = /usr/local/bin
 LIB = /usr/local/lib/scheme48
 MAN = /usr/local/man/man1
 
-# You might want to change RUNNABLE to "scheme48"
+# You might want to change RUNNABLE to "s48"
 RUNNABLE = scheme48
 
 # -N is needed to allow dynamic loading (at least on a DEC MIPS)
@@ -36,7 +36,7 @@ INSTALL_METHOD = install_method_2
 DISTDIR = /users/ftp/pub/jar
 
 # The static linker can use a lot of space.
-BIG_HEAP = -h 3000000
+BIG_HEAP = -h 4000000
 
 
 ###
@@ -54,14 +54,14 @@ OBJFILES = main.o unix.o dynload.o error.o extension.o scheme48vm.o
 # Linker:
 
 # You gots your choice here; the linker can be run in just about any
-# Scheme implementation.  It doesn't matter a whole lot unless the
-# implementation you would have used is broken or unavailable.
-# LINKER_RUNNABLE = $(RUNNABLE) requires you to have a "scheme48"
-# (i.e. $(RUNNABLE)) command (as you would if you had already done
-# "make install").  Using ./$(VM) -i ./$(IMAGE) can be bad if you're
-# making changes that might break the system.  You can run the linker
-# in a different Scheme implementation; e.g. see the rule for
-# link/linker-in-lucid, below.
+# Scheme implementation.  It doesn't matter a whole lot which one you
+# use unless of course the implementation that you would have used is
+# broken or unavailable.  LINKER_RUNNABLE = $(RUNNABLE) requires you
+# to already have a "scheme48" (i.e. $(RUNNABLE)) command (as you
+# would if you had already done "make install").  Using ./$(VM) -i
+# ./$(IMAGE) can be bad if you're making changes that might break the
+# system.  You can run the linker in a Scheme other than Scheme 48;
+# see e.g. the rule for link/linker-in-lucid, below.
 
 #LINKER_RUNNABLE = ./$(VM) -i ./$(IMAGE)
 LINKER_IMAGE = link/linker.image
@@ -70,6 +70,9 @@ START_LINKER_RUNNABLE = echo ,batch; echo ,bench on;
 # or,
 LINKER_RUNNABLE = $(RUNNABLE)
 # and the other two as above
+
+# Temporary while debugging version 0.22 (10/11/93)
+#LINKER_RUNNABLE = ../0.21/scheme48vm -i ../0.21/scheme48.image
 
 # or,
 #LINKER_RUNNABLE = ./$(VM) -i initial.image
@@ -111,24 +114,23 @@ extension.o: extension.c scheme48.h
 # that "make" can use for its purposes.
 # You can actually feed these forms to any Scheme implementation.
 # It doesn't have to be the LINKER_RUNNABLE.
+# The line "(define syntactic 0) (define table 0)" exists only to suppress
+# an annoying "undefined" warning for some forward references.
 
 filenames.make: rts-packages.scm alt-packages.scm comp-packages.scm \
-	   more-packages.scm
-	($(START_LINKER_RUNNABLE)                    \
-	 echo "(load \"alt/flatload.scm\")" ;	     \
-	 echo "(load \"env/defpackage.scm\")" ;      \
-	 echo "(load-configuration \"rts-packages.scm\")" ;  \
-	 echo "(load-configuration \"comp-packages.scm\")" ; \
-	 echo "(load-configuration \"more-packages.scm\")" ; \
-	 echo "(define i-f (package-all-filenames initial-system))" ; \
-	 echo "(define u-f \
-	         (setdiff (package-all-filenames usual-features) i-f))" ; \
-	 echo "(load-configuration \"alt-packages.scm\")" ; \
-         echo "(inhibit-usual-structures!)"; \
-	 echo "(define q-f (package-all-filenames linker-etc #t))" ; \
-	 echo "(write-package-filenames \"filenames.make\"    \
-		 'initial-files i-f 'usual-files u-f	      \
-	         'linker-files q-f)") \
+	   initial-packages.scm link-packages.scm more-packages.scm
+	($(START_LINKER_RUNNABLE)                       \
+	 echo ,load alt/config.scm alt/flatload.scm ;   \
+	 echo "(load \"bcomp/defpackage.scm\")" ;       \
+	 echo "(load-configuration \"packages.scm\")" ; \
+	 echo "(define syntactic 0) (define table 0)" ; \
+	 echo "(flatload linker-structures)" ; \
+	 echo "(define q-f (all-file-names link-config))" ; \
+	 echo "(flatload usual-structures)" ; \
+	 echo "(define i-f (all-file-names initial-system))" ; \
+	 echo "(define u-f (all-file-names usual-features initial-system))" ; \
+	 echo "(write-file-names \"filenames.make\"    \
+		 'initial-files i-f 'usual-files u-f 'linker-files q-f)") \
 	| $(LINKER_RUNNABLE)
 include filenames.make
 
@@ -136,28 +138,27 @@ include filenames.make
 # across an incompatible change in VM data representations.
 # The ,bench command here turns benchmark mode on.
 
-#	 echo ,open features ascii bitwise signals record handle ; \
-#	 echo ,open code-vectors ; \
+#	 echo ,open features ;  echo ,open ascii ;   \
+#	 echo ,open bitwise ;   echo ,open signals ; \
+#	 echo ,open record ;    echo ,open handle ;  \
 
 link/linker.image: $(linker-files)
 	(echo ,batch ; echo ,bench on ;              \
-	 echo ,open features ;  echo ,open ascii ;   \
-	 echo ,open bitwise ;   echo ,open signals ; \
-	 echo ,open record ;    echo ,open handle ;  \
+	 echo ,open features ascii bitwise signals record handle ; \
+	 echo ,open code-vectors ; \
 	 echo ,load $(linker-files) ;		     \
 	 echo ,load alt/init-defpackage.scm ;        \
-	 echo "(reset-packages-state!)" ;	     \
 	 echo ,dump link/linker.image)		     \
 	| $(LINKER_RUNNABLE)
 
-# The initial Scheme48 heap image is built by the linker.  It
+# The initial Scheme 48 heap image is built by the linker.  It
 # contains Scheme, the byte-code compiler, and a minimal
 # command processor, and no debugging environment to speak of.
 
 initial.image: \
-    $(LINKER_IMAGE) $(CONFIG_FILES) $(initial-files) scripts.scm
+    $(LINKER_IMAGE) $(CONFIG_FILES) $(initial-files) initial.scm
 	($(START_LINKER_RUNNABLE)               \
-	 echo "(load \"scripts.scm\")" ;  \
+	 echo "(load \"initial.scm\")" ;  \
 	 echo "(link-initial-system)")   \
 	| $(LINKER_RUNNABLE) $(BIG_HEAP) -i $(LINKER_IMAGE)
 
@@ -174,17 +175,19 @@ initial.image: \
 $(IMAGE): $(VM) more-signatures.scm more-packages.scm $(usual-files) \
 	  initial.debug
 	(echo ,load env/init-defpackage.scm ; \
-	 echo "((structure-ref filenames set-translation!)           \
+	 echo "((*structure-ref filenames 'set-translation!)         \
 	        \"=scheme48/\" \"./\")" ;			     \
-	 echo ,load more-signatures.scm =scheme48/more-packages.scm ; \
+	 echo ,load more-signatures.scm =scheme48/link-packages.scm ; \
+	 echo ,load =scheme48/more-packages.scm ; \
 	 echo "(ensure-loaded package-commands)" ;		     \
-	 echo ",go ((structure-ref command command-processor) \"batch\")" ; \
+	 echo ",go ((*structure-ref command 'command-processor) \"batch\")" ; \
 	 echo "(ensure-loaded usual-features)" ;		     \
 	 echo ,structure more-structures more-structures-signature ; \
 	 echo ,in debuginfo "(read-debug-info \"initial.debug\")" ;  \
 	 echo ,keep maps source files ;				     \
 	 echo ,translate =scheme48/ $(LIB)/  ;			     \
-	 echo ,build "((structure-ref package-commands new-command-processor) \
+	 echo ,build "((*structure-ref package-commands		     \
+				       'new-command-processor)	     \
 		       \"(made by $$USER on `date`)\"		     \
 		       built-in-structures more-structures)" $(IMAGE) ) \
 	| ./$(VM) -i initial.image
@@ -247,7 +250,7 @@ install: $(VM) $(INSTALL_METHOD) $(RUNNABLE).1 install_misc
 	  then $(CP) $(RUNNABLE).1 $(MAN)/; chmod +r $(MAN)/$(RUNNABLE).1; \
           else echo "No man directory, not installing man page" ; fi
 
-install_misc: $(LIB) $(LIB)/rts $(LIB)/env $(LIB)/big $(LIB)/opt $(LIB)/misc
+install_misc: $(LIB)/rts $(LIB)/env $(LIB)/big $(LIB)/opt $(LIB)/misc
 	$(CP) env/*.scm $(LIB)/env/
 	$(CP) big/*.scm $(LIB)/big/
 	$(CP) opt/*.scm $(LIB)/opt/
@@ -255,15 +258,15 @@ install_misc: $(LIB) $(LIB)/rts $(LIB)/env $(LIB)/big $(LIB)/opt $(LIB)/misc
 	$(CP) rts/*num.scm $(LIB)/rts/
 	$(CP) misc/*.scm $(LIB)/misc/
 $(LIB)/rts:
-	mkdir $(LIB)/rts
+	mkdir -p $(LIB)/rts
 $(LIB)/env:
-	mkdir $(LIB)/env
+	mkdir -p $(LIB)/env
 $(LIB)/opt:
-	mkdir $(LIB)/opt
+	mkdir -p $(LIB)/opt
 $(LIB)/big:
-	mkdir $(LIB)/big
+	mkdir -p $(LIB)/big
 $(LIB)/misc:
-	mkdir $(LIB)/misc
+	mkdir -p $(LIB)/misc
 $(LIB):
 	mkdir $(LIB)
 
@@ -274,7 +277,7 @@ $(LIB):
 # because it's more efficient, less sensitive to wired file names, and
 # is a generally cool hack, but due to a bug ("limitation") in the
 # Unix implementations I know about, it fails if that first #! line is
-# more than about 32 characters, and for Scheme48 it almost certainly
+# more than about 32 characters, and for Scheme 48 it almost certainly
 # will be.  So, method 2 is the default.
 
 install_method_1: $(IMAGE)
@@ -308,15 +311,15 @@ link/linker-in-lucid: link/lucid-script.lisp $(linker-files) \
 
 debug/medium.image: $(LINKER_IMAGE) $(CONFIG_FILES) $(medium-files)
 	($(START_LINKER_RUNNABLE) \
-	 echo "(load \"scripts.scm\")";  \
+	 echo "(load \"initial.scm\")";  \
 	 echo "(load-configuration \"debug-packages.scm\")";  \
 	 echo "(link-medium-system)") \
 	| $(LINKER_RUNNABLE) $(BIG_HEAP) -i $(LINKER_IMAGE)
 
 debug/little.image: \
-    $(LINKER_IMAGE) $(CONFIG_FILES) debug-packages.scm scripts.scm
+    $(LINKER_IMAGE) $(CONFIG_FILES) debug-packages.scm initial.scm
 	($(START_LINKER_RUNNABLE)               \
-	 echo "(load \"scripts.scm\")" ;  \
+	 echo "(load \"initial.scm\")" ;  \
 	 echo "(load-configuration \"debug-packages.scm\")" ; \
 	 echo "(link-little-system)")   \
 	| time $(LINKER_RUNNABLE) $(BIG_HEAP) -i $(LINKER_IMAGE)

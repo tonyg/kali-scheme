@@ -45,7 +45,7 @@
    (lambda (restore)
      (let ((value (thunk)))
        (restore)
-       value)))))
+       value))))
 
 
 ; (all-values a) returns a list of all the possible values of the

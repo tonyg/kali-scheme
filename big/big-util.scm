@@ -16,7 +16,9 @@
   ((structure-ref signals error)
    (apply format (cons #f (cons format-string args)))))
 
-;(define breakpoint (package-ref debugging breakpoint))
+(define (breakpoint format-string . args)
+  ((structure-ref debugging breakpoint) 
+   (apply format (cons #f (cons format-string args)))))
 
 ; For macro expanders
 

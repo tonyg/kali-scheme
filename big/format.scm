@@ -28,9 +28,9 @@
 
 (define (format port string . args)
   (cond ((not port)
-	 (let ((port (make-string-output-port)))
-	   (real-format port string args)
-	   (string-output-port-output port)))
+ 	 (call-with-string-output-port
+  	   (lambda (port)
+  	     (real-format port string args))))
 	((eq? port #t)
 	 (real-format (current-output-port) string args))
 	((output-port? port)

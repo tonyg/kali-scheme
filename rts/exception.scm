@@ -22,9 +22,6 @@
 (define exception-handlers
   (make-vector op-count signal-exception))
 
-(define (initialize-exceptions!)
-  (set-exception-handler! usual-exception-handler))
-
 
 ; TRAP is the same as SIGNAL-CONDITION.
 
@@ -58,14 +55,53 @@
     thunk))
 
 (define $condition-handlers
-  (let ((interrupt/keyboard (enum interrupt keyboard)))
-    (make-fluid (list (lambda (condition punt)
-			(cond ((error? condition) (halt 123))
-			      ((and (interrupt? condition)
-				    (= (cadr condition) interrupt/keyboard))
-			       (halt 2))
-			      (else (unspecific)))))))) ;proceed
+  (make-fluid #f))
 
+
+(define (initialize-exceptions! thunk)
+  (call-with-current-continuation
+    (lambda (k)
+      (set-fluid! $condition-handlers
+		  (list (last-resort-condition-handler k)))
+      (set-exception-handler! usual-exception-handler)
+      (thunk))))
+
+(define (last-resort-condition-handler halt)
+  (let ((interrupt/keyboard (enum interrupt keyboard))
+	(losing? #f))
+    (lambda (condition punt)
+      (cond ((error? condition)
+	     (primitive-catch
+	       (lambda (c)
+		 (if (not losing?)
+		     (begin (set! losing? #t)
+			    (report-utter-lossage condition c)))
+		 (halt 123))))
+	    ((and (interrupt? condition)
+		  (= (cadr condition) interrupt/keyboard))
+	     (halt 2))
+	    (else (unspecific))))))	;proceed
+
+; This will print a list of template id's, which you can look up in
+; initial.debug to get some idea of what was going on.
+
+(define (report-utter-lossage condition c)
+  (let ((out (error-output-port)))
+    (if out
+	(begin
+	  (if (exception? condition)
+	      (begin
+		(write-string (number->string (exception-opcode condition))
+			      out)
+		(write-string " / " out)))
+	  (for-each (lambda (id+pc)
+		      (if (number? (car id+pc))
+			  (write-string (number->string
+					 (car id+pc))
+					out))
+		      (write-string " <- " out))
+		    (continuation-preview c))
+	  (newline out)))))
 
 
 ; ERROR is a compiler primitive, but if it weren't, it could be

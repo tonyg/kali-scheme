@@ -5,38 +5,41 @@
 ; Accessing packages
 
 (define (environment-ref package name)
-  (let ((probe (package-lookup package name)))
-    (if probe
-	(if (syntax? probe)
-	    (error "attempt to reference syntax as variable" name package)
-	    (let ((loc (package-find-location package name #f)))
-	      (if loc
-		  (if (location-assigned? loc)
-		      (contents loc)
-		      (error "unassigned variable" name package))
-		  (error (if (or (operator? probe) (transform? probe))
-			     "in-line procedure not reified as a value"
-			     "denotation/location inconsistency")
-			 name package probe loc))))
-	(error "unbound variable" name package))))
+  (let ((binding (package-lookup package name)))
+    (if (unbound? binding)
+	(error "unbound variable" name package)
+	(contents-carefully binding package name))))
 
 (define (environment-set! package name value)
-  (let ((probe (package-lookup package name)))
-    (if probe
-	(if (syntax? probe)
-	    (error "(set! <syntax> ...)" name package value)
-	    (set-contents! (package-find-location package name #t) value))
-	(error "attempt to assign an unbound variable" name package value))))
+  (let ((binding (package-lookup package name)))
+    (if (unbound? binding)
+	(error "unbound variable" name package)
+	(if (not (variable-type? (binding-type binding)))
+	    (error "invalid assignment" name package value)
+	    (set-contents! (binding-place binding) value)))))
 
 (define (environment-define! package name value)
-  (set-contents! (package-ensure-defined! package name) value))
-
-
+  (set-contents! (package-define! package name usual-variable-type) value))
 
 (define (*structure-ref struct name)
-  (if (not (signature-ref (structure-signature struct) name))
-      (error "structure-ref: name not exported" struct name))
-  (environment-ref (structure-package struct) name))
+  (let ((binding (structure-lookup struct name #f)))
+    (cond ((unbound? binding)
+	   (error "structure-ref: name not exported" struct name))
+	  (else (contents-carefully binding struct name)))))
+
+(define (contents-carefully binding env name)
+  (if (and (binding? binding)
+	   (location? (binding-place binding)))
+      (if (eq? (binding-type binding) syntax-type)
+	  (error "attempt to reference syntax as variable" name env)
+	  (let ((loc (binding-place binding)))
+	    (if (location-defined? loc)
+		(if (location-assigned? loc)
+		    (contents loc)
+		    (error "unassigned variable" name env))
+		(error "unbound variable" name env))))
+      (error "peculiar binding" name env)))
+
 
 
 ; Interaction environment

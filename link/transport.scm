@@ -18,9 +18,9 @@
 ;   booleans
 ;   characters
 
-; Convert THING to Scheme48's representation and return it.
-; Locations and symbols may have multiple references in the image.
-; Their transported addresses are kept in a table.
+; Convert THING to the Scheme 48 virtual machine's representation and
+; return it.  Locations and symbols may have multiple references in
+; the image.  Their transported addresses are kept in a table.
 
 (define (transport thing)
   (let transport ((thing thing))

@@ -48,7 +48,7 @@
 	(else (dump-random obj write-char depth))))
 
 (define (restore read-char)
-  (let ((type (read-char)))
+  (let ((type (restore-type read-char)))
     ((vector-ref restorers (char->ascii type)) type read-char)))
     
 (define restorers
@@ -243,7 +243,11 @@
 		 type/location
 		 type/undefined-location)
 	     write-char)
-  (dump-number (location-id obj) write-char))
+  (dump-number (location->uid obj) write-char))
+
+(define (location->uid obj)
+  (or ((fluid $dump-index) obj)
+      (location-id obj)))
 
 (define-restorer! type/location
   (lambda (c read-char)
@@ -256,7 +260,8 @@
     (uid->location (restore-number read-char) #f)))
 
 (define (uid->location uid define?)
-  (let ((loc (or (table-ref uid->location-table uid)
+  (let ((loc (or ((fluid $restore-index) uid define?)
+		 (table-ref uid->location-table uid)
 		 (let ((loc (make-undefined-location uid)))
 		   (note-location! loc)
 		   loc))))
@@ -264,6 +269,7 @@
 	     (not (location-defined? loc)))
 	(set-location-defined?! loc #t))
     loc))
+(define $restore-index (make-fluid (lambda (uid define?) #f)))
 
 (define uid->location-table (make-table))
 
@@ -272,12 +278,14 @@
 	      (location-id den)
 	      den))
 
+(define $dump-index (make-fluid (lambda (loc) #f)))
+
 ; For simulation purposes, it's better for location uid's not to
-; conflict with any that might be in the base Scheme48 system.  (In the
-; real server system there isn't any base Scheme48 system, so there's
+; conflict with any that might be in the base Scheme 48 system.  (In the
+; real server system there isn't any base Scheme 48 system, so there's
 ; no danger of conflict.)
 
-(define location-uid-origin 5000)
+; (define location-uid-origin 5000)
 
 
 ; Closure
@@ -370,19 +378,19 @@
 
 (define *unspecific* (if #f #f)) ;foo
 
-(define (integer->digit-char n)
-  (ascii->char (+ n (if (< n 10) ascii-zero a-minus-ten))))
-
-(define (digit-char->integer c)
-  (cond ((char-numeric? c)
-	 (- (char->ascii c) ascii-zero))
-	((char=? c #\#) 0)
-	(else
-	 (- (char->ascii (char-downcase c)) a-minus-ten))))
-
-(define ascii-zero (char->ascii #\0))
-
-(define a-minus-ten (- (char->integer #\a) 10))
+;(define (integer->digit-char n)
+;  (ascii->char (+ n (if (< n 10) ascii-zero a-minus-ten))))
+;
+;(define (digit-char->integer c)
+;  (cond ((char-numeric? c)
+;         (- (char->ascii c) ascii-zero))
+;        ((char=? c #\#) 0)
+;        (else
+;         (- (char->ascii (char-downcase c)) a-minus-ten))))
+;
+;(define ascii-zero (char->ascii #\0))
+;
+;(define a-minus-ten (- (char->integer #\a) 10))
 
 ; These modified from s48/boot/transport.scm
 

@@ -1,6 +1,7 @@
 ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
+; --------------------
 ; DISCLOSE methods
 
 (define-method disclose-methods (make-family 'closure 0)
@@ -9,7 +10,18 @@
 	(let ((id (template-id (closure-template obj)))
 	      (name (template-print-name (closure-template obj))))
 	  (if name
-	      (list 'procedure id name)
+	      (list 'procedure
+		    id
+		    ;; A heuristic that sometimes loses.
+		    (if (and (pair? name)
+			     (eq? (car name) '#t) ;Curried
+			     (vector? (closure-env obj)))
+			(error-form
+			  (if (null? (cdddr name))
+			      (caddr name)
+			      (cdddr name))
+			  (reverse (cdr (vector->list (closure-env obj)))))
+			name))
 	      (list 'procedure id)))
 	(fail))))
 
@@ -55,7 +67,6 @@
 	(fail))))
 
 
-
 (define (template-print-name tem)
   (make-print-name (template-names tem)))
 
@@ -79,7 +90,29 @@
 	    (car names)
 	    (loop (cdr names))))))
 
+; --------------------
+; Location names
 
+(define (location-info loc)
+  (let ((id (location-id loc)))
+    (if (integer? id)
+	(table-ref location-info-table id)
+	#f)))
+
+(define (location-name loc)
+  (let ((probe (location-info loc)))
+    (if probe
+	(car probe)
+	#f)))
+
+(define (location-package-name loc)
+  (let ((probe (location-info loc)))
+    (if probe
+	(table-ref package-name-table (cdr probe))
+	#f)))
+
+
+; --------------------
 ; Condition disclosers
 
 (define-default-method disclose-condition-methods
@@ -236,6 +269,7 @@
 	(list 'error (cadr c) (error-form (caddr c) (cdddr c)))
 	(fail))))
 
+; --------------------
 ; Utilities
 
 (define (error-form proc args)

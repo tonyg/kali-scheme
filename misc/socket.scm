@@ -1,5 +1,7 @@
+; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
-; Using sockets from Scheme48.
+
+; Using sockets from Scheme 48.
 
 ; Server.  To make your program be a server, do
 ;  (call-with-values socket-server

@@ -24,7 +24,7 @@
 ; RBP -- Right Binding Power (the stickiness to the right)
 ;
 
-; Mods for Scheme48 by J Rees 6-14-90
+; Mods for Scheme 48 by J Rees 6-14-90
 
 ; From: <gjc@mitech.com>
 ;

@@ -15,15 +15,8 @@
 		      (apply proc rename compare (cdr exp)))
 		    aux-names)))
 
-(define (usual-transform-procedure name) ;For package reification.
-  (car (table-ref the-usual-transforms name)))
-
-(define (for-each-usual-macro proc)
-  (table-walk (lambda (name proc+names)
-		(proc name
-		      (car proc+names)
-		      (cdr proc+names)))
-	      the-usual-transforms))
+(define (usual-transform name)
+  (table-ref the-usual-transforms name))
 
 ;
 
@@ -37,7 +30,7 @@
                                ; quoted structure
   '(if and))
 
-; Tortuously crafted so as to avoid dependency on the (unspecific)
+; Tortuously crafted so as to avoid dependency on any (unspecific)
 ; procedure.
 
 (define-usual-macro 'cond
@@ -116,22 +109,6 @@
 			 (,(rename 'let*) ,(cdr specs) ,@body))))
   '(let let*))
 
-; (reverse specs) in order to try to catch unportabilities
-
-(define-usual-macro 'letrec
-  (lambda (rename compare . (specs . body))
-    (let ((unassigned `(,(rename 'unassigned)))
-	  (%lambda (rename 'lambda))
-	  (%set! (rename 'set!)))
-      `((,%lambda ,(map car specs)
-		  ,@(map (lambda (spec) `(,%set! ,@spec)) (reverse specs))
-		  ((,%lambda () ,@body)))  ;allow internal defines
-	,@(map (lambda (spec)
-		 spec			;ignored
-		 unassigned)
-	       specs))))
-  '(lambda set! unassigned))
-
 (define-usual-macro 'or
   (lambda (rename compare . disjuncts)
     (cond ((null? disjuncts) #f)  ;not '#f
@@ -165,13 +142,6 @@
 			  ,@(cdr clause)))
 		      clauses)))))
   '(let cond eqv? memv quote))
-
-; DELAY needs auxiliary MAKE-PROMISE.
-
-(define-usual-macro 'delay
-  (lambda (rename compare . (thing))
-    `(,(rename 'make-promise) (,(rename 'lambda) () ,thing)))
-  '(make-promise lambda))
 
 
 ; Quasiquote
@@ -251,16 +221,3 @@
 
     (expand-quasiquote x 0))
   '(append cons list->vector quasiquote unquote unquote-splicing))
-
-
-; Magical Scheme48 internal things.
-
-(define-usual-macro 'structure-ref
-  (lambda (rename compare struct name)
-    `(,struct structure-ref ,name))
-  '())
-
-(define-usual-macro '%file-name%
-  (lambda (rename compare)
-    `(,(rename 'quote) ,(fluid $source-file-name)))
-  '(quote))

@@ -7,11 +7,12 @@
 ; seems wrong somehow, but I haven't thought of a better way to do it
 ; yet.
 
-(init-defpackage! #f
-		  (lambda ()
-		    (let ((env (interaction-environment)))
+(let ((eval (let ((env (interaction-environment)))
+	      (lambda (form p)
+		;; Ignore p !
+		(eval form env)))))
+  (init-defpackage! eval
+		    (lambda ()
 		      (delay (make-simple-package '()
-						  (lambda (form p)
-						    ;; Ignore p !
-						    (eval form env))
+						  eval
 						  (delay #f))))))

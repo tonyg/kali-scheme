@@ -28,8 +28,10 @@
 
 (define procedure? closure?)
 
-(define (invoke-closure thunk-closure . args)
-  (apply thunk-closure args))
+(define (invoke-closure closure . args)
+  (apply (loophole (procedure any-values any-values)
+		   closure)
+	 args))
 
 
 ; Similarly, there are "true" continuations and there are VM
@@ -43,7 +45,12 @@
 ; using the same data type.  The following is the only part of the
 ; system that should know this fact.
 
-(define primitive-cwcc primitive-catch)
+(define (primitive-cwcc p)
+  (primitive-catch (lambda (cont)
+		     (p (loophole escape cont))))) ;?
+
+; (define (??? esc thunk)
+;   (with-continuation (loophole continuation esc) thunk))
 
 
 ; These two procedures are part of the location abstraction.
@@ -55,6 +62,9 @@
 
 (define (location-assigned? loc)
   (if (eq? (contents loc) (unassigned)) #f #t)) ;NOT is undefined
+
+(define (vector-unassigned? v i)
+  (eq? (vector-ref v i) (unassigned)))
 
 
 ; STRING-COPY is here because it's needed by STRING->SYMBOL.
@@ -90,7 +100,7 @@
   (set! *the-symbol-table* #f))
 
 (define (restore-the-symbol-table!)
-  (set! *the-symbol-table* (make-vector 512 '()))
+  (set! *the-symbol-table* (make-vector 1024 '()))
   (find-all-symbols *the-symbol-table*))
 
 (restore-the-symbol-table!)
@@ -114,9 +124,3 @@
 
 (define close-input-port  close-port)
 (define close-output-port close-port)
-
-
-; HALT is for the exception system to call when all else fails.
-
-(define (halt n)
-  (with-continuation #f (lambda () n)))

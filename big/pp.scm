@@ -2,15 +2,11 @@
 
 ;;;; A pretty-printer
 
-; This is NOT in the spirit of the rest of the Scheme48 system -- it's
-; too hairy.  It also has some unexploited internal generality.  It
-; really ought to be rewritten.  In addition, it seems to be buggy!
-; (It sometimes prints unnecessarily wide lines.)  What a drag.
-; But sometimes it's better than no pretty printer at all.
-
-;   :enable
-;   :load misc/pp.scm
-;   :disable
+; This isn't exactly in the spirit of the rest of the Scheme 48
+; system.  It's too hairy, and it has unexploited internal generality.
+; It really ought to be rewritten.  In addition, it seems to be buggy
+; -- it sometimes prints unnecessarily wide lines.  Usually it's
+; better than no pretty printer at all, so we tolerate it.
 
 ; From: ramsdell@linus.mitre.org
 ; Date:  Wed, 12 Sep 1990 05:14:49 PDT

@@ -38,14 +38,17 @@ typedef int scheme_value;
 #define STOBTYPE_PAIR 0
 #define STOBTYPE_VECTOR 2
 #define STOBTYPE_STRING 15
+#define STOB_OF_TYPE_P(x, type) (STOBP(x) && STOB_TYPE(x) == (type))
 
-#define pairp(x) (STOBP(x) && STOB_TYPE(x) == STOBTYPE_PAIR)
-#define stringp(x) (STOBP(x) && STOB_TYPE(x) == STOBTYPE_STRING)
+#define pairp(x) STOB_OF_TYPE_P((x), STOBTYPE_PAIR)
 #define car(x) STOB_REF(x, 0) /* cf. vm/struct.scm */
 #define cdr(x) STOB_REF(x, 1) /* cf. vm/struct.scm */
+#define vectorp(x) STOB_OF_TYPE_P((x), STOBTYPE_VECTOR)
 #define vector_length(x) STOB_LLENGTH(x)
 #define vector_ref(x, i) STOB_REF(x, i)
 #define byte_vector_length(x)  STOB_BLENGTH(x)
 #define byte_vector_ref(x, i)  (ADDRESS_AFTER_HEADER(x, unsigned char)[i])
+#define stringp(x) STOB_OF_TYPE_P((x), STOBTYPE_STRING)
 #define string_length(x)  STOB_BLENGTH(x)
 #define string_ref(x, i)  (ADDRESS_AFTER_HEADER(x, char)[i])
+#define extract_string(x)  ADDRESS_AFTER_HEADER(x, char)

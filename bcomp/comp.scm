@@ -8,99 +8,152 @@
 
 ; This is a two-phase compiler.  The first phase does macro expansion,
 ; variable resolution, and instruction selection, and computes the
-; necessary size for the code vector.  The second phase (assembly) then
-; creates the code vector, "template" (literals vector), and debugging
-; data.
+; size of the code vector.  The second phase (assembly) creates the
+; code vector, "template" (literals vector), and debugging data
+; structures.
 
 ; The output of the first phase (the COMPILE- and INSTRUCTION-
 ; routines) and the input to the second phase (SEGMENT->TEMPLATE) is a
 ; "segment."  A segment is a pair (size . proc) where size is the size
 ; of the code segment in bytes, and proc is a procedure that during
-; phase 2 will store the appropriate bytes into the code vector.
+; phase 2 will store the segment's bytes into the code vector.
 
-; A "cenv" is a compile-time representation of what the lexical
-; variable environment will look like at run time.
+; A "cenv" maps lexical variables to <level, offset> pairs.  Level is
+; the variable's distance from the root of the environment; 0 means
+; outermost level, and higher numbers mean deeper lexical levels.  The
+; offset is the position of the variable within its level's
+; environment vector.
 
 ; Optimizations are marked with +++, and may be flushed if desired.
+
+
+(define (compile-top exp cenv depth cont)
+  (compile exp (initial-cenv cenv) depth cont))
 
 
 ; Main dispatch for compiling a single expression.
 
 (define (compile exp cenv depth cont)
-  (cond ((name? exp)
-         (compile-variable exp cenv depth cont))
-	((pair? exp)
-	 (cond ((name? (car exp))
-		(let ((op (clookup cenv (car exp))))
-		  (cond ((operator? op)
-			 ((get-compilator op) exp cenv depth cont))
-			((transform? op)
-			 (compile (transform op exp (lambda (name)
-						      (probe-cenv cenv name)))
-				  cenv depth cont))
-			(else
-			 (compile-unknown-call exp cenv depth cont)))))
-	       ((operator? (car exp))  ;Provision for 2-pass compiler
-	        ((get-compilator (car exp)) exp cenv depth cont))
-	       (else
-		(compile-call exp cenv depth cont))))
-        ((literal? exp)
-         (compile-literal exp depth cont))
-        ((location? exp)  ;Provision for 2-pass compiler, etc. (?)
-         (compile-location exp depth cont))
-        (else
-	 (generate-trap cont "invalid expression" exp))))
-
-(define (compile-variable exp cenv depth cont)
-  (let ((den (clookup-variable cenv exp)))
-    (if (env-ref? den)
-	(let ((back (env-ref-back den cenv))
-	      (over (env-ref-over den)))
-	  (deliver-value (case back
-			   ((0) (instruction op/local0 over)) ;+++
-			   ((1) (instruction op/local1 over)) ;+++
-			   ((2) (instruction op/local2 over)) ;+++
-			   (else (instruction op/local back over)))
-			 cont))
-	(deliver-value (instruction-with-variable op/global exp den #f)
-		       cont))))
-
-(define (compile-literal obj depth cont)
-  (if (eq? obj #f)
-      ;; +++ kludge for bootstrap from Schemes that don't distinguish #f/()
-      (deliver-value (instruction op/false) cont)
-      (compile-constant obj depth cont)))
+  (let* ((node (classify exp cenv))
+	 (node (if *type-check?*
+		   (type-check node cenv)
+		   node)))
+    ((operator-table-ref compilators (node-operator-id node))
+     node
+     cenv
+     depth
+     cont)))
+(define *type-check?* #t) ;for compiler timings
 
 
-; Defining and using special operators.
+; Specialists
 
 (define compilators
-  (make-compilator-table (lambda (form cenv depth cont)
-			   (generate-trap cont
-					  "not valid in expression context"
-					  form))))
+  (make-operator-table (lambda (node cenv depth cont)
+			 (generate-trap cont
+					"not valid in expression context"
+					(schemify node)))
+		       (lambda (frob)  ;for let-syntax, with-aliases, etc.
+			 (lambda (node cenv depth cont)
+			   (call-with-values (lambda () (frob node cenv))
+			     (lambda (form cenv)
+			       (compile form cenv depth cont)))))))
 
-(define define-compilator (car compilators))
-(define get-compilator (cdr compilators))
+(define (define-compilator name proc)
+  (operator-define! compilators name proc))
 
+(define-compilator 'literal
+  (lambda (node cenv depth cont)
+    (let ((obj (node-form node)))
+      (if (eq? obj #f)
+	  ;; +++ hack for bootstrap from Schemes that don't distinguish #f/()
+	  (deliver-value (instruction op/false) cont)
+	  (compile-constant obj depth cont)))))
 
-; The special operators.
-
-(define-compilator 'quote 'syntax
-  (lambda (exp cenv depth cont)
-    cenv ;ignored
-    (let ((obj (cadr exp)))
-      (compile-constant obj depth cont))))
+(define-compilator '(quote syntax)
+  (lambda (node cenv depth cont)
+    (let ((exp (node-form node)))
+      cenv				;ignored
+      (let ((obj (cadr exp)))
+	(compile-constant obj depth cont)))))
 
 (define (compile-constant obj depth cont)
   (if (ignore-values-cont? cont)
       empty-segment			;+++ dead code
-      (deliver-value (instruction-with-literal op/literal (desyntaxify obj))
+      (deliver-value (instruction-with-literal op/literal obj)
 		     cont)))
 
-(define-compilator 'begin 'syntax
-  (lambda (exp cenv depth cont)
-    (compile-begin (cdr exp) cenv depth cont)))
+; Variable reference
+
+(define-compilator 'name
+  (lambda (node cenv depth cont)
+    (let* ((binding (name-node-binding node cenv))
+	   (name (node-form node)))
+      (deliver-value (if (and (binding? binding)
+			      (pair? (binding-place binding)))
+			 (let* ((level+over (binding-place binding))
+				(back (- (environment-level cenv)
+					 (car level+over)))
+				(over (cdr level+over)))
+			   (case back
+			     ((0) (instruction op/local0 over)) ;+++
+			     ((1) (instruction op/local1 over)) ;+++
+			     ((2) (instruction op/local2 over)) ;+++
+			     (else (instruction op/local back over))))
+			 (instruction-with-location
+			        op/global
+				(get-location binding cenv name value-type)))
+		     cont))))
+
+; Assignment
+
+(define-compilator '(set! syntax)
+  (lambda (node cenv depth cont)
+    (let* ((exp (node-form node))
+	   (lhs-node (classify (cadr exp) cenv))
+	   (name (node-form lhs-node))
+	   ;; Error if not a name node...
+	   (binding (name-node-binding lhs-node cenv)))
+      (sequentially
+       (compile (caddr exp) cenv depth (named-cont name))
+       (deliver-value
+	(if (and (binding? binding) (pair? (binding-place binding)))
+	    (let ((level+over (binding-place binding)))
+	      (instruction op/set-local!
+			   (- (environment-level cenv) (car level+over))
+			   (cdr level+over)))
+	    (instruction-with-location op/set-global!
+	      (get-location binding cenv name usual-variable-type)))
+	cont)))))
+
+; Conditional
+
+(define-compilator '(if syntax)
+  (lambda (node cenv depth cont)
+    (let ((exp (node-form node))
+	  (alt-label (make-label))
+	  (join-label (make-label))
+	  (join-segment empty-segment))
+      (sequentially
+       ;; Test
+       (compile (cadr exp) cenv depth (fall-through-cont node 1))
+       (instruction-using-label op/jump-if-false alt-label)
+       ;; Consequent
+       (compile (caddr exp) cenv depth cont)
+       (if (fall-through-cont? cont)
+	   (instruction-using-label op/jump join-label)
+	   empty-segment)
+       ;; Alternate
+       (attach-label alt-label
+		     (compile (cadddr exp) cenv depth cont))
+       (attach-label join-label
+		     join-segment)))))
+
+
+(define-compilator '(begin syntax)
+  (lambda (node cenv depth cont)
+    (let ((exp (node-form node)))
+      (compile-begin (cdr exp) cenv depth cont))))
 
 (define (compile-begin exp-list cenv depth cont)
   (if (null? exp-list)
@@ -116,113 +169,78 @@
 		 depth
 		 cont))))))
 
-(define-compilator 'set! 'syntax
-  (lambda (exp cenv depth cont)
-    (let ((name (cadr exp))
-          (val (caddr exp)))
-      (sequentially
-       (compile val cenv depth (named-cont name))
-       (deliver-value
-	(let ((den (clookup-assigned cenv name)))
-	  (cond ((env-ref? den)
-		 (instruction op/set-local!
-			      (env-ref-back den cenv)
-			      (env-ref-over den)))
-		(else
-		 (instruction-with-variable op/set-global! name den #t))))
-	cont)))))
-
-(define-compilator 'if 'syntax
-  (lambda (exp cenv depth cont)
-    (let* ((alt-segment
-            (if (null? (cdddr exp))
-		(deliver-value (instruction op/unspecific) cont)
-		(compile (cadddr exp) cenv depth cont)))
-           (con-segment
-            (sequentially
-             (compile (caddr exp) cenv depth cont)
-             (if (fall-through-cont? cont)
-                 (instruction-with-offset op/jump
-					  (segment-size alt-segment))
-                 empty-segment))))  ;+++ Eliminate dead code.
-      (sequentially
-       (compile (cadr exp) cenv depth (fall-through-cont exp 1))
-       (instruction-with-offset op/jump-if-false (segment-size con-segment))
-       con-segment
-       alt-segment))))
-
 
 ; Compile a call
 
-(define (compile-call exp cenv depth cont)
-  (let ((proc-exp (car exp))
-	(args (cdr exp)))
-    (if (and (lambda-expression? proc-exp cenv)
-	     (acceptable-arguments? (cadr proc-exp) args))
-	(compile-redex proc-exp args cenv depth cont) ;+++ don't cons a closure
-	(compile-unknown-call exp cenv depth cont))))
+(define (compile-call node cenv depth cont)
+  (let* ((exp (node-form node))
+	 (proc-node (car exp)))
+    (if (and (lambda-node? proc-node)
+	     (let ((formals (cadr (node-form proc-node))))
+	       ((if (n-ary? formals) >= =)
+		(length (cdr exp))
+		(number-of-required-args formals))))
+	(compile-redex proc-node (cdr exp) cenv depth cont)
+	(let ((new-node (maybe-transform-call proc-node node cenv)))
+	  (if (eq? new-node node)
+	      (compile-unknown-call node cenv depth cont)
+	      (compile new-node cenv depth cont))))))
 
-(define (lambda-expression? exp cenv)
-  (and (pair? exp)
-       (if (name? (car exp))
-	   (eq? (clookup cenv (car exp))
-		operator/lambda)
-	   ;; Hack for 2-pass compiler
-	   (eq? (car exp) operator/lambda))))
-
-(define operator/lambda (get-operator 'lambda 'syntax))
-
-(define (acceptable-arguments? formals args)
-  (let ((want-nargs (number-of-required-args formals))
-	(have-nargs (length args)))
-    (if (if (n-ary? formals)
-	    (>= have-nargs want-nargs)
-	    (= have-nargs want-nargs))
-	#t
-	(begin (warn "wrong number of arguments in ((lambda ...) ...)"
-		     formals args)))))
+(define-compilator 'call compile-call)
 
 
-; A redex is a call of the form ((lambda (x1 ... xn) body ...) e1 ... en),
-; otherwise known as a "let".
+; A redex is a call of the form ((lambda (x1 ... xn) body ...) e1 ... en).
 
-(define (compile-redex proc-exp args cenv depth cont)
-  (let ((formals (cadr proc-exp)))
-    (maybe-push-continuation
-      (sequentially 
-        (push-all-with-names args formals cenv 0)
-	(compile-lambda-code formals (cddr proc-exp) cenv (cont-name cont)))
-      depth
-      cont)))
+(define lambda-node? (node-predicate 'lambda))
 
-(define (compile-unknown-call exp cenv depth cont)
-  (let ((call (sequentially (push-arguments exp cenv 0)
-			    (compile (car exp)
-				     cenv
-				     (length (cdr exp))
-				     (fall-through-cont exp 0))
-			    (instruction op/call (length (cdr exp))))))
-    (maybe-push-continuation call depth cont)))
+(define (compile-redex proc-node args cenv depth cont)
+  (let* ((proc-exp (node-form proc-node))
+	 (formals (cadr proc-exp))
+	 (body (cddr proc-exp)))
+    (if (null? formals)
+	(compile-body body cenv depth cont) ;+++
+	(maybe-push-continuation
+	 (sequentially 
+	  (push-all-with-names args formals cenv 0)
+	  (compile-lambda-code formals body cenv (cont-name cont)))
+	 depth
+	 cont))))
+
+; Compile a call to a computed procedure.
+
+(define (compile-unknown-call node cenv depth cont)
+  (let ((exp (node-form node)))
+    (let ((call (sequentially (push-arguments node cenv 0)
+			      (compile (car exp)
+				       cenv
+				       (length (cdr exp))
+				       (fall-through-cont (schemify node) 0))
+			      (instruction op/call (length (cdr exp))))))
+      (maybe-push-continuation call depth cont))))
 
 (define (maybe-push-continuation code depth cont)
   (if (return-cont? cont) 
       code
-      (sequentially (instruction-with-offset&byte op/make-cont
-						  (segment-size code)
-						  depth)
-		    (note-source-code (cont-source-info cont)
-				      code)
-		    (cont-segment cont))))
+      (let ((label (make-label)))
+	(sequentially (instruction-using-label op/make-cont
+					       label
+					       depth)
+		      (note-source-code (cont-source-info cont)
+					code)
+		      (attach-label label
+				    (cont-segment cont))))))
 
 ; Continuation is implicitly fall-through.
 
-(define (push-arguments exp cenv depth)
-  (let recur ((args (cdr exp)) (depth depth) (i 1))
-    (if (null? args)
-	empty-segment
-	(sequentially (compile (car args) cenv depth (fall-through-cont exp i))
-		      (instruction op/push)
-		      (recur (cdr args) (+ depth 1) (+ i 1))))))
+(define (push-arguments node cenv depth)
+  (let ((exp (schemify node)))
+    (let recur ((args (cdr (node-form node))) (depth depth) (i 1))
+      (if (null? args)
+	  empty-segment
+	  (sequentially (compile (car args) cenv depth
+				 (fall-through-cont exp i))
+			(instruction op/push)
+			(recur (cdr args) (+ depth 1) (+ i 1)))))))
 
 (define (push-all-with-names exp-list names cenv depth)
   (if (null? exp-list)
@@ -231,20 +249,24 @@
 			     cenv depth
 			     (named-cont (car names)))
 		    (instruction op/push)
-                    (push-all-with-names (cdr exp-list) (cdr names)
-					 cenv (+ depth 1)))))
-
+                    (push-all-with-names (cdr exp-list)
+					 (cdr names)
+					 cenv
+					 (+ depth 1)))))
+     
 ; OK, now that you've got all that under your belt, here's LAMBDA.
 
-(define-compilator 'lambda 'syntax
-  (lambda (exp cenv depth cont)
-    (deliver-value
-      (instruction-with-template op/closure
-				 (compile-lambda exp cenv)
-				 (cont-name cont))
-      cont)))
+(define-compilator '(lambda syntax)
+  (lambda (node cenv depth cont)
+    (let ((exp (node-form node))
+	  (name (cont-name cont)))
+      (deliver-value
+       (instruction-with-template op/closure
+				  (compile-lambda exp cenv (if name #t #f))
+				  name)
+       cont))))
 
-(define (compile-lambda exp cenv)
+(define (compile-lambda exp cenv body-name)
   (let* ((formals (cadr exp))
 	 (nargs (number-of-required-args formals)))
     (sequentially
@@ -254,7 +276,7 @@
 	     (instruction op/check-nargs>= nargs)
 	     empty-segment)		;+++ (lambda x ...) needs no check
 	 (instruction op/check-nargs= nargs))
-     (compile-lambda-code formals (cddr exp) cenv #f))))
+     (compile-lambda-code formals (cddr exp) cenv body-name))))
 
 ; name isn't the name of the procedure, it's the name to be given to
 ; the value that the procedure will return.
@@ -265,6 +287,7 @@
 		    cenv
 		    0
 		    (return-cont name))
+      ;; (if (node-ref node 'no-inferior-lambdas) ...)
       (sequentially
        (let ((nargs (number-of-required-args formals)))
 	 (if (n-ary? formals)
@@ -274,7 +297,7 @@
 	      (instruction op/make-env (+ nargs 1)))
 	     (instruction op/make-env nargs)))
        (let* ((vars (normalize-formals formals))
-	      (cenv (bind-vars vars cenv)))
+	      (cenv (bind-vars (reverse vars) cenv)))
 	 (note-environment
 	  vars
 	  (compile-body body
@@ -282,24 +305,59 @@
 			0
 			(return-cont name)))))))
 
+(define compile-letrec
+  (let ((operator/lambda     (get-operator 'lambda 'syntax))
+	(operator/set!	     (get-operator 'set! 'syntax))
+	(operator/unassigned (get-operator 'unassigned)))
+    (lambda (node cenv depth cont)
+      ;; (if (node-ref node 'pure-letrec) ...)
+      (let* ((exp (node-form node))
+	     (specs (cadr exp))
+	     (body (cddr exp)))
+	(compile-redex (make-node operator/lambda
+				  `(lambda ,(map car specs)
+				     ,@(map (lambda (spec)
+					      (make-node operator/set!
+							 `(set! ,@spec)))
+					    specs)
+				     (,(make-node operator/lambda
+						  `(lambda () ,@body)))))
+		       (map (lambda (spec)
+			      (make-node operator/unassigned
+					 `(unassigned)))
+			    specs)
+		       cenv depth cont)))))
 
-; Utility to produce something for code that contained a compile-time
-; error.
+(define-compilator '(letrec syntax) compile-letrec)
 
-(define (generate-trap cont . stuff)
-  (apply warn stuff)
-  (sequentially (instruction-with-literal op/literal (cons 'error stuff))
-		(deliver-value (instruction op/trap)
-			       cont)))
+; --------------------
+; Deal with internal defines (ugh)
 
-; Continuations
+(define (compile-body body cenv depth cont)
+  (scan-body body
+	     cenv
+	     (lambda (defs exps)
+	       (if (null? defs)
+		   (compile-begin exps cenv depth cont)
+		   (compile-letrec
+			(make-node operator/letrec
+				   `(letrec ,(map (lambda (node)
+						    (cdr (node-form node)))
+						  defs)
+				      ,@exps))
+			cenv depth cont)))))
+
+(define operator/letrec (get-operator 'letrec))
+
+; --------------------
+; Compile-time continuations
 ;
-; A (compile-time) continuation is a pair (jump . name).  Jump is a
-; segment; this will be either the empty segment, meaning that we will
-; fall into subsequent instructions, or a short instruction that is
-; guaranteed not to fall through.
-;
-; If there is a name, then the value delivered to subsequent
+; A compile-time continuation is a pair (segment . name).  Segment is
+; one of the following:
+;   a return instruction - invoke the current full continuation.
+;   empty-segment - fall through to subsequent instructions.
+;   an ignore-values instruction - ignore values, then fall through.
+; If name is non-#f, then the value delivered to subsequent
 ; instructions will be assigned to a variable.  If the value being
 ; assigned is a lambda, we can give that lambda that name, for
 ; debugging purposes.
@@ -355,26 +413,51 @@
   (make-cont empty-segment name))
 
 (define (cont-name cont)
-  (if (name? (cont-source-info cont))
-      (cont-source-info cont)
-      #f))
+  (if (pair? (cont-source-info cont))
+      #f
+      (cont-source-info cont)))
+
+; --------------------
+; Compile-time environments
+
+(define (bind-vars names cenv)
+  (let ((level (+ (environment-level cenv) 1)))
+    (lambda (name)
+      (if (eq? name *level-key*)
+	  level
+	  (let loop ((over 1) (names names))
+	    (cond ((null? names)
+		   (lookup cenv name))
+		  ((eq? name (car names))
+		   (make-binding usual-variable-type
+				 (cons level over)))
+		  (else (loop (+ over 1) (cdr names)))))))))
+
+(define (initial-cenv cenv)
+  (bind1 *level-key* -1 cenv))
+
+(define (environment-level cenv)
+  (lookup cenv *level-key*))
+
+(define *level-key* (string->symbol "Lexical nesting level"))
+
+; Find lookup result that was cached by classifier
+
+(define (name-node-binding node cenv)
+  (or (node-ref node 'binding)
+      (node-form node)))  ; = (lookup cenv (node-form node))
 
 
+; --------------------
+; Utilities
 
-; Deal with internal defines (ugh)
+; Produce something for source code that contains a compile-time error.
 
-(define (compile-body body cenv depth cont)
-  (scan-body
-      body
-      (lambda (name) (probe-cenv cenv name)) ;probe
-      (lambda (name) (clookup cenv name))
-      (lambda (defs exps)
-	(if (null? defs)
-	    (compile-begin exps cenv depth cont)
-	    ;; *** not hygienic ***
-	    (compile `(letrec ,(map cdr defs) ,@exps)
-		     cenv depth cont)))))
-
+(define (generate-trap cont . stuff)
+  (apply warn stuff)
+  (sequentially (instruction-with-literal op/literal (cons 'error stuff))
+		(deliver-value (instruction op/trap)
+			       cont)))
 
 ; Make a segment smaller, if it seems necessary, by introducing an
 ; extra template.  A segment is "too big" if it accesses more literals
@@ -418,70 +501,6 @@
 (define large-segment-size (* byte-limit 2))
 
 
-; For two-pass compiler...
-
-(define-compilator 'local 'syntax
-  (lambda (exp cenv depth cont)
-    (compile-variable (cadr exp) cenv depth cont)))
-
-(define-compilator 'call 'syntax
-  (lambda (exp cenv depth cont)
-    (compile-call (cdr exp) cenv depth cont)))
-
-; For ##
-
-(define (compile-location den depth cont)
-  (deliver-value (instruction-with-literal op/global den)
-		 cont))
-
-
-; --------------------
-; Compile-time environments
-
-;        clookup : env * name -> denotation
-;
-;        denotation = location + operator + transform + package + (back * over)
-
-(define (env-ref? den)  ;Asked of something returned by clookup-variable
-  (integer? (car den)))
-
-(define (env-ref-back den cenv) (car den))
-(define (env-ref-over den) (cdr den))
-
-(define (bind-vars names cenv)
-  (cons  (reverse names) cenv))
-
-; Look up a name in a compile-time environment.
-; Four version: for comparison in macros; for operator position; for variable
-; reference; and for variable assignment.
-
-(define (probe-cenv cenv name)
-  (really-clookup cenv name probe-package))
-
-(define (clookup cenv name)
-  (really-clookup cenv name package-lookup))
-
-(define (clookup-variable cenv name)
-  (really-clookup cenv name package-check-variable))
-
-(define (clookup-assigned cenv name)
-  (really-clookup cenv name package-check-assigned))
-
-
-(define (really-clookup cenv name p-lookup)
-  (let next-rib ((cenv cenv)
-		 (back 0))
-    (if (pair? cenv)
-	(let loop ((rib (car cenv)) (over 1))
-	  (cond ((null? rib)
-		 (next-rib (cdr cenv) (+ back 1))) ;Not here, try outer env.
-		((eq? name (car rib))
-		 (cons back over))
-		(else (loop (cdr rib) (+ over 1)))))
-	(p-lookup cenv name))))
-
-
-
 (define op/call (enum op call))
 (define op/check-nargs= (enum op check-nargs=))
 (define op/check-nargs>= (enum op check-nargs>=))
@@ -505,3 +524,49 @@
 (define op/set-local! (enum op set-local!))
 (define op/trap (enum op trap))
 (define op/unspecific (enum op unspecific))
+
+
+
+; --------------------
+; Type checking.  This only handles calls; special forms have their
+; own checks.
+
+(define (type-check node cenv)
+  (let ((form (node-form node)))
+    (if (and (pair? form)
+	     (node? (car form)))
+	(let ((proc-type (node-type (car form) cenv)))
+	  (if (eq? proc-type syntax-type)
+	      node
+	      (let ((args (cdr form)))
+		;; or (map (lambda (arg) (classify arg cenv)) (cdr form))
+		(if (fixed-arity-procedure-type? proc-type)
+		    (if (= (procedure-type-arity proc-type) (length args))
+			(if (not (compatible-type-lists?
+				  (map (lambda (arg) (node-type arg cenv))
+				       args)
+				  (procedure-type-argument-types proc-type)))
+			    (report-type-error "argument type error"
+					       node proc-type))
+			(report-type-error "wrong number of arguments"
+					   node proc-type))
+		    (if (not (compatible-types? proc-type any-procedure-type))
+			;; Could also check args for one-valuedness.
+			(report-type-error "non-procedure in operator position"
+					   node proc-type)))
+		;; (make-similar-node node (cons (car form) args))
+		node)))
+	node)))
+
+(define (report-type-error message node proc-type)
+  (warn message
+	(schemify node)
+	`(procedure: ,proc-type))
+  #f)
+
+
+; Type system loophole
+
+(define-compilator '(loophole syntax)
+  (lambda (node cenv depth cont)
+    (compile (caddr (node-form node)) cenv depth cont)))

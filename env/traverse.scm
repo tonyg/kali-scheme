@@ -10,12 +10,14 @@
 
 
 (define *mark-table* #f)
+(define *interesting-table* #f)
 
 (define *traverse-count* 0)
 
 (define (start-over)		
   (flush-the-symbol-table!)
   (set! *mark-table* (make-table hash))
+  (set! *interesting-table* (make-table))
   (set! *traverse-count* 0))
 
 (define (traverse-depth-first obj)
@@ -24,9 +26,9 @@
     (if (stored? obj)
 	(if (not (table-ref *mark-table* obj))
 	    (let ((tag (visit obj parent parent-tag)))
-	      (for-each (lambda (child)
-			  (recur child obj tag))
-			(subobjects obj)))))))
+	      (for-each-subobject (lambda (child)
+				    (recur child obj tag))
+				  obj))))))
 
 (define (traverse-breadth-first obj)
   (start-over)
@@ -43,15 +45,16 @@
 	  (let* ((parent+tag (dequeue queue))
 		 (parent (car parent+tag))
 		 (parent-tag (cdr parent+tag)))
-	    (for-each (lambda (obj)
-			(deal-with obj parent parent-tag))
-		      (subobjects parent))
+	    (for-each-subobject (lambda (obj)
+				  (deal-with obj parent parent-tag))
+				parent)
 	    (loop))))))
 
 (define (visit obj parent parent-tag)
   (table-set! *mark-table* obj parent)
   (if (interesting? obj)
       (let ((tag *traverse-count*))
+	(table-set! *interesting-table* tag obj)
 	(set! *traverse-count* (+ *traverse-count* 1))
 	(write tag) (display " ")
 	(write (list parent-tag))
@@ -60,14 +63,28 @@
       parent-tag))
 
 (define (trail obj)
-  (let ((probe (table-ref *mark-table* obj)))
-    (if probe
-	(trail probe))
-    (if (not (vector? obj))
-	(begin (write obj)
-	       (newline)))))
+  (let loop ((obj (if (integer? obj)
+		      (table-ref *interesting-table* obj)
+		      obj)))
+    (let ((probe (table-ref *mark-table* obj)))
+      (if probe
+	  (loop probe))
+      (if (not (vector? obj))
+	  (begin (write obj)
+		 (newline))))))
 
-(define interesting? procedure?)
+(define (interesting? obj)
+  (and (closure? obj)
+       (let ((info (template-info (closure-template obj))))
+	 (if (integer? info)
+	     (> info first-interesting-template-info)
+	     #t))))
+
+(define (template-info tem) (template-ref tem 1))
+
+(define first-interesting-template-info
+  (template-info (closure-template read))) ;foo
+  
 ;(define (interesting? obj)
 ;  (if (pair? obj)
 ;      #f
@@ -75,44 +92,61 @@
 ;          #f
 ;          #t)))
 	  
-    
-(define (subobjects obj)
-  (cond ((pair? obj) (list (car obj) (cdr obj)))
-	((symbol? obj) (list (symbol->string obj)))
-	((vector? obj) (vector->list obj))
-	((closure? obj) (list (closure-template obj) (closure-env obj)))
-	((location? obj) (list (location-id obj) (contents obj)))
-	((record? obj) (record->list obj))
-	((continuation? obj) (continuation->list obj))
-	((template? obj) (template->list obj))
-	((extended-number? obj) (extended-number->list obj))
-	(else '())))
+(define (for-each-subobject proc obj)
+  (cond ((pair? obj)
+	 (proc (car obj))
+	 (proc (cdr obj)))
+	((symbol? obj)
+	 (proc (symbol->string obj)))
+	((vector? obj)
+	 (vector-for-each proc obj))
+	((closure? obj)
+	 (proc (closure-template obj))
+	 (proc (closure-env obj)))
+	((location? obj)
+	 (proc (location-id obj))
+	 (if (and (location-defined? obj)
+		  (location-assigned? obj))
+	     (proc (contents obj))))
+	((record? obj)
+	 (cond ((eq? obj *mark-table*)	;or (debug-data-table)
+		(display "skipping mark table") (newline))
+	       ((eq? obj *interesting-table*)
+		(display "skipping interesting table") (newline))
+	       (else
+		(record-for-each proc obj))))
+	((continuation? obj)
+	 (continuation-for-each proc obj))
+	((template? obj)
+	 (template-for-each proc obj))
+	((extended-number? obj)
+	 (extended-number-for-each proc obj))))
 
 
-(define (record->list v)
-  (let ((z (record-length v)))
-    (do ((i (- z 1) (- i 1))
-         (l '() (cons (record-ref v i) l)))
-        ((< i 0) l))))
+(define (vector-for-each proc v)
+  (let ((z (vector-length v)))
+    (do ((i (- z 1) (- i 1)))
+	((< i 0) #f)
+      (if (not (vector-unassigned? v i))
+	  (proc (vector-ref v i))))))
 
-(define (continuation->list v)
-  (let ((z (continuation-length v)))
-    (do ((i (- z 1) (- i 1))
-         (l '() (cons (continuation-ref v i) l)))
-        ((< i 0) l))))
+(define-syntax define-for-each
+  (syntax-rules ()
+    ((define-for-each foo-for-each foo-length foo-ref)
+     (define (foo-for-each proc v)
+       (let ((z (foo-length v)))
+	 (do ((i (- z 1) (- i 1)))
+	     ((< i 0) #f)
+	   (proc (foo-ref v i))))))))
 
-(define (template->list v)
-  (let ((z (template-length v)))
-    (do ((i (- z 1) (- i 1))
-         (l '() (cons (template-ref v i) l)))
-        ((< i 0) l))))
-
-(define (extended-number->list v)
-  (let ((z (extended-number-length v)))
-    (do ((i (- z 1) (- i 1))
-         (l '() (cons (extended-number-ref v i) l)))
-        ((< i 0) l))))
-
+(define-for-each record-for-each
+  record-length record-ref)
+(define-for-each continuation-for-each
+  continuation-length continuation-ref)
+(define-for-each template-for-each
+  template-length template-ref)
+(define-for-each extended-number-for-each
+  extended-number-length extended-number-ref)
 
 
 (define (quick-hash obj n)

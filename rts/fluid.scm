@@ -42,9 +42,10 @@
 (define (with-dynamic-env env thunk)
   (let ((saved-env (get-dynamic-env)))
     (set-dynamic-env! env)
+    (set! env #f)			;For GC and debugger
     (call-with-values
 	;; thunk
-	(let ((x thunk)) (set! thunk #f) x) ;For better GC's!
+	(let ((x thunk)) (set! thunk #f) x) ;For GC
       (lambda results
 	(set-dynamic-env! saved-env)
 	(apply values results)))))

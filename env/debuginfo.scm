@@ -3,7 +3,7 @@
 
 ; Reading/writing debugging info
 
-(define (write-debug-info file)
+(define (write-debug-info location-info file)
   (call-with-output-file file
     (lambda (port)
 
@@ -17,7 +17,7 @@
 			   table)
 	       (write '- port) (newline port))))
 	(write-table package-name-table "Package uid -> name")
-	(write-table location-name-table "Location uid -> (name . package)"))
+	(write-table location-info "Location uid -> (name . package-uid)"))
 
       (display "; Template uid -> name, parent, pc in parent, env maps" port)
       (newline port)
@@ -59,7 +59,7 @@
 			      ;;       (max *location-uid* (+ (car z) 1)))
 			      (loop))))))))
 	(read-table package-name-table)
-	(read-table location-name-table))
+	(read-table location-info-table))
 
       (let loop ()
 	(let ((z (read port)))

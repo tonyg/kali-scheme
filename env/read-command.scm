@@ -62,12 +62,9 @@
 ; output.
 
 (define (read-form port)
-  (let ((sharp-sharp (focus-object))
-	(loc (make-undefined-location 'sharp-sharp)))
-    (set-location-defined?! loc #t)
-    (set-contents! loc sharp-sharp)
-    (with-sharp-sharp loc
-      (lambda () (read port)))))
+  (with-sharp-sharp (make-node (get-operator 'literal 'leaf)
+			       (focus-object))
+    (lambda () (read port))))
 
 ; Read a command line:  <name> <arg> ... <newline>
 

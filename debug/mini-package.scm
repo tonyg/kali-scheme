@@ -51,9 +51,6 @@
 (define (package-define! p name op)
   ((p '%%define-operator%%) name op))
 
-(define (package-define-location! p name loc)
-  ((p '%%define-location%%) name loc))
-
 (define (probe-package p name) name)
 
 (define (package-lookup p name)
@@ -66,7 +63,7 @@
 
 ; Structures
 
-(define (make-structure name signature package)
+(define (make-structure package signature name)
   (let ((lookup (package '%%lookup%%))
 	(names (map (lambda (x) (if (pair? x) (cadr x) x)) signature)))
     (cons name

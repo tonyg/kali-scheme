@@ -61,6 +61,56 @@
 	  get-structure
 	  get-package))
 
+(define-signature debuginfo-signature
+  (export read-debug-info
+	  write-debug-info))
+
+(define-signature disclosers-signature
+  (export make-print-name
+	  template-file-name
+	  value->expression
+	  error-form
+	  location-info
+	  location-name))
+
+(define-signature package-mutation-signature
+  (export package-system-sentinel	;env/command.scm
+	  package-open!			;env/debug.scm
+	  ))
+
+(define-signature packages-cruft-signature
+  (export 
+	  assume-denotation
+	  ;; new-location-uid    ;?
+	  signature-ref
+	  structure-signature
+	  verify-package		;for debugging the package system
+	  ))
+
+
+; --------------------
+; Linker
+
+(define-signature linker-signature
+  (export link-simple-system
+	  link-reified-system
+	  link-semireified-system
+	  (struct-list syntax)
+	  compile-structures))
+
+(define-signature expander-signature
+  (export expand-forms
+	  expand-form
+	  expand-stuff
+	  expand
+	  lexical-reference-count
+	  lexical-operator-count
+	  lexical-assignment-count))
+
+
+; --------------------
+; Extended numbers: bignums, ratnums, etc.
+
 (define-signature extended-number-support-signature
   (export make-extended-number-type
 	  extended-number-constructor
@@ -93,41 +143,18 @@
 	  string->number-table))
 
 
-(define-signature debuginfo-signature
-  (export read-debug-info
-	  write-debug-info))
-
-; Copied from signatures.scm.
-(define-signature define-record-types-signature
-  (export (define-record-type syntax)
-	  define-record-discloser))
+; --------------------
+; Big Scheme
 
 (define-signature defrecord-signature  ;The competition.
   (export (define-record-type syntax)
 	  define-record-discloser))
-
-(define-signature linker-signature
-  (export link-simple-system
-	  link-reified-system
-	  link-semireified-system
-	  struct-list
-	  check-package
-	  compile-structures
-	  load-configuration))
-
-
-(define-signature disclosers-signature
-  (export make-print-name
-	  template-file-name
-	  value->expression
-	  error-form))
 
 (define-signature externals-signature
   (export get-external
 	  lookup-all-externals
 	  external-call
 	  null-terminate))
-
 
 (define-signature queue-signature
   (export make-queue enqueue dequeue queue-empty?
@@ -161,21 +188,39 @@
 (define-signature dump/restore-signature
   (export dump
 	  restore
-	  note-location!))
-
-(define-signature sicp-signature
-  (export and or (sequence syntax)
-	  mapcar mapc 1+ -1+ t nil atom? print princ prin1 error
-	  (cons-stream syntax) head tail the-empty-stream empty-stream?
-	  explode implode get put))
+	  note-location!
+	  $dump-index
+	  $restore-index))
 
 (define-signature extended-ports-signature
   (export make-tracking-input-port make-tracking-output-port
-	  make-string-input-port make-string-output-port
-	  string-output-port-output
+	  make-string-input-port
+	  call-with-string-output-port
 	  write-one-line
 	  current-row current-column fresh-line
 	  input-port? output-port?))
+
+(define-signature general-tables-signature
+  (export make-table
+	  make-string-table
+	  make-symbol-table
+	  make-integer-table
+	  make-table-maker
+	  table?
+	  table-ref
+	  table-set!
+	  table-walk))
+
+
+(define-signature arrays-signature
+  (export make-array		; <initial-value> <bound1> ...
+	  array-shape		; <array>
+	  array-ref		; <array> <index1> ...
+	  array-set!		; <array> <value> <index1> ...
+	  make-shared-array	; <array> <linear-map> <bound1> ...
+	  copy-array		; <array>
+	  array->vector		; <array>
+	  array))		; <bounds> . <elements>
 
 (define-signature big-scheme-signature
   (compound-signature
@@ -186,6 +231,7 @@
       defrecord-signature
       extended-ports-signature
       queue-signature
+      general-tables-signature
       (export concatenate-symbol
 	      error breakpoint
 	      atom? null-list? neq? n=
@@ -199,3 +245,17 @@
 	      format
 	      sort-list sort-list!
 	      p pretty-print)))
+
+; --------------------
+; Miscellaneous
+
+; Copied from signatures.scm.
+(define-signature define-record-types-signature
+  (export (define-record-type syntax)
+	  define-record-discloser))
+
+(define-signature sicp-signature
+  (export and or (sequence syntax)
+	  mapcar mapc 1+ -1+ t nil atom? print princ prin1 error
+	  (cons-stream syntax) head tail the-empty-stream empty-stream?
+	  explode implode get put))

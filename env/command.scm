@@ -154,10 +154,11 @@
 	      (let ((condition (command-level-condition level)))
 		(if condition
 		    (display-condition condition (command-output)))
-		(if (and (not (= (enabled-interrupts) all-interrupts))
-			 (not (interrupt? condition)))
-		    (begin (write-line "(Enabling interrupts)"
-				       (command-output))
+		(if (not (= (enabled-interrupts) all-interrupts))
+		    (begin (if (not (and (interrupt? condition)
+					 (= (caddr condition) all-interrupts)))
+			       (write-line "(Enabling interrupts)"
+					   (command-output)))
 			   (set-enabled-interrupts! all-interrupts))))
 	      (let loop ()
 		(let ((command (read-command-carefully (command-prompt)
@@ -458,11 +459,6 @@
 
 (define (top-command-level)
   (last (fluid $command-levels)))
-
-(define (last x)
-  (if (null? (cdr x))
-      (car x)
-      (last (cdr x))))
 
 (define (error-form proc args)
   (cons proc (map value->expression args)))

@@ -1,0 +1,148 @@
+
+			   The Type System
+			    JAR 20 July 93
+
+Scheme 48 has a rudimentary type system.  It main purpose is to
+generate compile-time diagnostics, especially wrong number of
+arguments warnings.  Currently you don't get much checking beyond this
+unless you're compiling a package that has an (OPTIMIZE EXPAND) or
+(OPTIMIZE AUTO-INTEGRATE) clause in its definition.
+
+Semantics
+---------
+
+The dynamic semantics of typing in this system is as follows:
+
+  If E is an expression, then E : T, i.e. E has type T, means that at
+  run time the value (or values) computed by expression E will always
+  be of dynamic type T.
+
+  E : (PROCEDURE T1 T2) means that in a call to a value of E, if the
+  argument sequence has any type other than T1, then there exists an
+  order of call argument evaluation (while executing the definition of
+  the procedure) such that the call will "go wrong" (provoke a type
+  error) at run time.  If the argument sequence does have type T1,
+  then the call might or might not go wrong, and any return value(s)
+  will have type T2.
+  
+Type lattice
+------------
+
+There is some subtyping in this type system, but not as much as in
+Common Lisp.  The type lattice is like this: ("under" and "<=" mean
+"is a subtype of")
+
+   - There are no bottom or top elements.
+
+   - The types SYNTAX, ANY-VALUES, DEFINITION, and TYPE are
+     incomparable and maximal.
+
+   - Under type ANY-VALUES are the types (SOME-VALUES T1 ... Tn),
+     where T1 ... Tn are under VALUE.
+
+   - (SOME-VALUES T) is the same as T.
+
+   - Two SOME-VALUES types are comparable only when they have the same
+     arity.  SOME-VALUES is a covariant (monotonic) type constructor,
+     meaning that if T1 <= T1', ..., Tn <= Tn', then (SOME-VALUES T1
+     ... Tn) <= (SOME-VALUES T1' ... Tn').
+
+   - Under type VALUE are the base types (including NUMBER, CHAR,
+     BOOLEAN, PAIR, etc.) and procedure types.
+
+   - Procedure types are of the form (PROCEDURE T1 T2) where T1 and T2
+     are both at or under ANY-VALUES in the lattice.  Procedure types
+     are comparable to each other in the usual way: if T1' <= T1 and
+     T2 <= T2' then (PROCEDURE T1 T2) <= (PROCEDURE T1' T2').
+
+   - The (VARIABLE T) types are not comparable to each other, but each
+     is <= its type T, which must be <= VALUE.
+
+   - Because variables may be dereferenced, the types (VARIABLE T)
+     where T <= VALUE are also under VALUE.  This is rather odd and
+     may change in the future.
+
+The subtype relation is implemented by the procedure COMPATIBLE-TYPES?
+(in bcomp/mtypes.scm).  If (COMPATIBLE-TYPES? T1 T2) is 'definitely,
+then T1 <= T2.
+
+Fixed-arity procedure types (PROCEDURE (SOME-VALUES T1 ... TN) T) are
+so frequent that the abbreviated syntax (PROC (T1 ... Tn) T) is
+defined to mean the same thing.
+
+Typing rules
+------------
+
+The typing rules (such as they are) are captured to some extent by the
+code in bcomp/recon.scm.  The code may be more complete than the
+following summary.
+
+If a name is bound to a macro or special operator, then an occurrence
+of that name has type SYNTAX.
+
+Definitions have type DEFINITION.  (Perhaps they ought to have type
+(EXPORT (name type)).)
+
+All expressions have type ANY-VALUES.
+
+If E1 ... En have types T1 ... Tn with Ti <= VALUE, then
+the expression (VALUES E1 ... En) has type (SOME-VALUES T1 ... Tn).
+
+LAMBDA-expressions have type (PROCEDURE ANY-VALUES ANY-VALUES).  If
+the semantic rule for procedure types described above holds, then the
+LAMBDA-expression may be found to have a more specific type.  The
+implementation in recon.scm finds some of these, but of course not all
+of them.
+
+There rules for literals and (begin ...) expressions are pretty much
+what you'd expect.  Actually it's assumed that a (begin ...) will
+actually execute all the way through; clearly this won't be the case
+if there's a throw out of the middle.
+
+Some primitive procedures have their own special rules.  Values was
+mentioned above; call-with-values and primitive-catch are others.
+
+The construct (loophole T E) is considered to have type T no matter
+what type E has.  The provides a primitive sort of static abstract
+data type facility.  For example, record types defined using
+DEFINE-RECORD-TYPE (bummed-jar-defrecord.scm) are established as new
+base types.
+
+Module system
+-------------
+
+The rules for signatures and structures are not yet very well worked
+out.
+
+A signature has the form (EXPORT (<name> <type>) ...).
+
+Signatures are types.  The type of a structure is its signature.
+(Compare with Pebble's "declarations" and "bindings".)
+
+Distinct signatures are not comparable (yet).
+
+If a form S has type (EXPORT ... (name T) ...), then the form
+(STRUCTURE-REF S name) has type T.  Note that T can be SYNTAX.
+
+When a package is loaded or otherwise compiled, the type of each
+exported name is checked (cf. scan-structures in bcomp/scan.scm).
+
+<explain the role of the expander in type checking... compile-call
+doesn't do much checking if the arguments aren't expanded...>
+
+Future work
+-----------
+
+There probably ought to be dependent sums and products and/or
+universal and existential types.  In particular, it would be nice to
+be able to get static checking for abstract types, even if they're not
+implemented using records.
+
+Type constructors (like STREAM-OF or COMPUTATION-OF) would be nice.
+
+There are many loose ends in the implementation.  For example, type
+and type constructor names aren't always lexically scoped; sometimes
+their scope is global.  Packages that open the LOOPHOLES structure
+(which exports LOOPHOLE) don't always open TYPES (which would be a bad
+idea given the way TYPES is currently defined); the LOOPHOLE works in
+spite of that.

@@ -3,155 +3,140 @@
 
 ; Substitution
 
-(define (make-procedure-for-inline-transform tem p)
-  (really-make-procedure-for-inline-transform
-   (invert-substitution-template tem p)))
+(define (inline-transform form aux-names)
+  (cons
+   (if (and (pair? form)
+	    (eq? (car form) 'lambda))
+       (let ((formals (cadr form))
+	     (body (caddr form)))
+	 (lambda (e r c)
+	   (let ((args (cdr e)))
+	     (if (= (length formals) (length args))
+		 (substitute body (make-substitution r formals args))
+		 (begin (warn "wrong number of arguments to in-line procedure"
+			      e)
+			e)))))
+       (lambda (e r c)
+	 (cons (substitute form r)
+	       (cdr e))))
+   aux-names))
 
-(define (really-make-procedure-for-inline-transform exp)
-  (if (pair? exp)  ;lambda-expression
-      (let ((formals (cadr exp))
-	    (body (cddr exp)))
-	(lambda (e r c)
-	  (let ((args (cdr e)))
-	    (if (= (length formals) (length args))
-		(cons operator/begin
-		      (substitute-list body
-				       (extend-substitution r formals args)))
-		(syntax-error "wrong number of arguments to in-line procedure"
-			      e)))))
-      (lambda (e r c)
-	(cons (substitute exp r)
-	      (cdr e)))))
-
-(define (extend-substitution r formals args)
+(define (make-substitution r formals args)
   (let ((subs (map cons formals args)))
     (lambda (name)
       (let ((probe (assq name subs)))
 	(if probe
 	    (cdr probe)
-	    (r name))))))
+	    (if (generated? name)
+		name			;TEMPORARY KLUDGE.
+		(r name)))))))
 
 
 ; Substitute into an expression.
 
-(define (substitute exp r)
-  (cond ((pair? exp)
-	 (let ((op (car exp)))
-	   (cond ((eq? op operator/quote)
-		  exp)
-		 ((eq? op operator/local)
-		  (r (cadr exp)))
-		 ((eq? op operator/lambda)
-		  (let ((formals (cadr exp)))
-		    `(,op ,formals
-			  ,@(substitute-list (cddr exp)
-					     ;; Should gensym!
-					     (extend-substitution r
-								  formals
-								  formals)))))
-		 (else
-		  (substitute-list exp r)))))
-	((symbol? exp)
-	 (r exp))
-	;; ((generated? exp) ...)
-	(else exp)))
-
-(define (substitute-list exps r)
-  (map (lambda (exp) (substitute exp r)) exps))
-
-
-
-; An inverse to the optimizer's MAKE-SUBSTITUTION-TEMPLATE.  This
-; exists only for the reifier.  Damned close to what alpha-conversion
-; does, however.
-
-(define (invert-substitution-template tem p)
-  (cond ((pair? tem)
-	 (let ((op (invert-substitution-template (car tem) p)))
-	   (cond ((eq? op operator/quote)
-		  `(,op ,(cadr tem)))
-		 ((eq? op operator/lambda)
-		  (let ((formals (cadr tem))
-			(body (caddr tem)))
-		    `(,op ,formals
-			,(invert-substitution-template body p))))
-		 (else
-		  (cons op
-			(map (lambda (tem)
-			       (invert-substitution-template tem p))
-			     (cdr tem)))))))
-	((oplet? tem)			;ugh
-	 (oplet->operator tem))
-	((extrinsic? tem)
-	 (extrinsic->name tem p))
-	(else tem)))
-
-(define operator/quote  (get-operator 'quote 'syntax))
-(define operator/lambda (get-operator 'lambda 'syntax))
-(define operator/local (get-operator 'local 'syntax))
-(define operator/begin (get-operator 'begin 'syntax))
+(define (substitute form r)
+  (cond ((symbol? form)
+	 (r form)
+;         (let ((foo (r form)))
+;           (if (name? foo)
+;               (make-node (get-operator 'name) foo)
+;               foo))
+	 )
+	((qualified? form)
+	 ;; (make-node (get-operator 'name) ...)
+	 (qualified->name form r))
+	((pair? form)
+	 (case (car form)
+	   ((quote) (make-node (get-operator 'quote) form))
+	   ((lambda) (error "lambda substitution NYI" form))
+	   ((call)
+	    ;; ? (make-node (get-operator 'call) ...)
+	    (map (lambda (form) (substitute form r))
+		 (cdr form)))
+	   (else
+	    (let ((keyword (car form)))
+	      (make-node (get-operator keyword)
+			 (cons keyword
+			       (map (lambda (form) (substitute form r))
+				    (cdr form))))))))
+	(else
+	 (make-node (get-operator 'literal) form))))
 
 
-(define (oplet? exp)
-  (and (vector? exp)
-       (= (vector-length exp) 3)
-       (eq? (vector-ref exp 0) 'op)))
+; --------------------
+; Qualified names provide a read/print representation for generated names.
+; A qualified name has the form
+;
+;   (qualified <symbol-or-qualified> <symbol>)
+;
 
-(define (oplet->operator exp)
-  (get-operator (vector-ref exp 1) (vector-ref exp 2)))
+(define (qualified? thing)
+  (and (pair? thing)
+       (eq? (car thing) 'qualified)))
 
-(define (operator->oplet exp)
-  (vector 'op (operator-name exp) (operator-type exp)))
+(define (qualified->name q r)
+  (let recur ((q q))
+    (if (qualified? q)
+	(let ((name (recur (cadr q))))
+	  (generate-name (caddr q)
+			 (get-qualified-env (generated-env name)
+					    (generated-symbol name))
+			 name))
+	(r q))))
+
+(define (get-qualified-env env parent)
+  (let ((binding (generic-lookup env parent)))
+    (if (binding? binding)
+	(let ((s (binding-static (generic-lookup env parent))))
+	  (cond ((transform? s) (transform-env s))
+		((structure? s) s)
+		(else (error "invalid qualified reference"
+			     env parent s))))
+	(error "invalid qualified reference"
+	       env parent binding))))
+
+; As an optimization, we elide intermediate steps in the lookup path
+; if possible.  E.g. instead of
+;     (qualified (qualified (qualified define-record-type define-accessors)
+;			    define-accessor)
+;		 record-ref)
+; we can do
+;     (qualified define-record-type record-ref)
+
+(define (name->qualified name env)
+  (if (generated? name)
+      `(qualified
+	,(let ((symbol (generated-symbol name)))
+	   (name->qualified
+	    (let loop ((name name))
+	      (let ((parent (generated-parent-name name)))
+		(if (generated? parent)
+		    (let ((gparent (generated-parent-name parent)))
+		      (if (same-denotation? (qlookup env parent symbol)
+					    (qlookup env gparent symbol))
+			  (loop parent)	;Win!
+			  (begin (signal 'note
+					 "elision lost"
+					 parent symbol)
+				 parent)))
+		    parent)))
+	    env))
+	,(generated-symbol name))
+      name))
+
+(define (qlookup env parent symbol)
+  (let ((binding (generic-lookup env parent)))
+    (generic-lookup (transform-env (binding-static binding)) symbol)))
 
 
-; Extrinsics provide a read/print representation for generated names.
+; cf. packages.scm
 
-(define (extrinsic? exp)
-  (and (vector? exp)
-       (= (vector-length exp) 2)
-       (eq? (vector-ref exp 0) 'extrinsic)))
-
-(define (extrinsic->name extrinsic p)
-  (let ((path (vector-ref extrinsic 1)))
-    (do ((path (cdr path) (cdr path))
-	 (p p (let ((t (package-lookup p (car path))))
-		(if (transform? t)
-		    (transform-env t)
-		    (error "invalid extrinsic specifier" extrinsic t))))
-	 (name (car path)
-	       (generate-name (car path)
-			      p
-			      name)))
-	((null? path)
-	 name))))
-
-(define (name->extrinsic name p)
-  (do ((path '()
-	     (cons (generated-symbol name)
-		   (if (eq? (generated-env name) p)
-		       (cdr path)		;+++
-		       path)))
-       (name name (generated-parent-name name))
-       (p p (generated-env name)))
-      ((symbol? name)
-       (if (null? path)
-	   name
-	   (let ((x (vector 'extrinsic (cons name path))))
-	     (if *extrinsic-debug?*
-		 (begin (display "Extrinsic: ")
-			(write-extrinsic x (current-output-port))
-			(newline)))
-	     x)))))
-
-(define *extrinsic-debug?* #t)
-
-(define (write-extrinsic x port)
-  (do ((path (vector-ref x 1) (cdr path)))
-      ((null? (cdr path)) (write (car path) port))
-    (write (car path) port)
-    (display #\#)))
-
-;(define (write-with-extrinsics obj port)
-;  (if (extrinsic? obj)
-;      (write-extrinsic obj port)
-;      (recurring-write obj port write-with-extrinsics)))
+(define (generic-lookup env name)
+  (cond ((package? env)
+	 (package-lookup env name))
+	((structure? env)
+	 (structure-lookup env name #t))
+	((procedure? env)
+	 (lookup env name))
+	(else
+	 (error "invalid environment" env name))))

@@ -1,3 +1,5 @@
+; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+
 
 ; This definition of define-syntax is appropriate for Scheme-to-C.
 
@@ -195,7 +197,7 @@
 
   c ;ignored
 
-  ;; Kludge for Scheme48 linker.
+  ;; Kludge for Scheme 48 static linker.
   ;; `(cons ,(make-transformer rules)
   ;;          ',(find-free-names-in-syntax-rules subkeywords rules))
 

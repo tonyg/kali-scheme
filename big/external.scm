@@ -6,7 +6,7 @@
 ; The entry points for this code are:
 ;
 ; (GET-EXTERNAL string)    returns an external pointer
-; (LOOKUP-ALL-EXTERNALS)   looks up all externals in the currently job;
+; (LOOKUP-ALL-EXTERNALS)   looks up new values for all external pointers;
 ;                          ideally this should be called automatically
 ;                          on startup
 

@@ -148,9 +148,6 @@ Debugging commands:
     Stop tracing calls to the named procedure or procedures.
     With no argument, stop tracing all calls to all procedures.
 
- ,undefined
-    List all the variables that have been mentioned but are not defined.
-
  ,condition
     The ,condition command selects and displays the condition object
     describing the error or interrupt that initiated the current
@@ -245,7 +242,7 @@ document.
 Editing
 
 We recommend running Scheme 48 under Gnu Emacs using the cmuscheme48
-command package.  This is in the Scheme48 distribution's emacs/
+command package.  This is in the Scheme 48 distribution's emacs/
 subdirectory.  It is a variant of the "cmuscheme" interface, which
 comes to us courtesy of Olin Shivers, formerly of CMU.  You might want
 to put the following in your emacs init file (.emacs):

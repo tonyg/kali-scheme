@@ -213,7 +213,7 @@
 (define (rib-values env)
   (let ((z (vector-length env)))
     (do ((i 1 (+ i 1))
-	 (l '() (cons (if (eq? (vector-ref env i) (unassigned))
+	 (l '() (cons (if (vector-unassigned? env i)
 			  'unassigned
 			  (vector-ref env i))
 		      l)))

@@ -6,7 +6,7 @@
 
 ;;;; WRITE
 
-; To use this with some Scheme other than Scheme48, do the following:
+; To use this with some Scheme other than Scheme 48, do the following:
 ;  1. Copy the definition of output-port-option from port.scm
 ;  2. Define write-string as appropriate (as a write-char loop)
 ;  3. (define (disclose x) #f)
@@ -96,7 +96,7 @@
 
 ; The vector case goes last just so that this version of WRITE can be
 ; used in Scheme implementations in which records, ports, or
-; procedures are represented as vectors.  (Scheme48 doesn't have this
+; procedures are represented as vectors.  (Scheme 48 doesn't have this
 ; property.)
 
 (define (write-other obj port recur)
@@ -109,11 +109,11 @@
 			  (recur x))
 			(cdr l))
 	      (write-string "}" port)))
-	((procedure? obj) (write-string "#{Procedure}" port))
 	((input-port? obj)  (write-string "#{Input-port}" port))
 	((output-port? obj) (write-string "#{Output-port}" port))
 	((eof-object? obj) (write-string "#{End-of-file}" port))
 	((vector? obj) (write-vector obj port recur))
+	((procedure? obj) (write-string "#{Procedure}" port))
 	((eq? obj (if #f #f)) (write-string "#{Unspecific}" port))
 	(else
 	 (write-string "#{Random object}" port))))

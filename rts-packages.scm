@@ -3,42 +3,40 @@
 
 ; Package definitions for runtime system (without compiler).
 
-; Assumes signatures.scm.
+; Assumes signature definitions in signatures.scm.
 
-(define-structure all-primitives (make-compiler-base))
-
-; Subsets of the all-primitives package:
-
-(define-package ((scheme-primitives scheme-primitives-signature)
+(define-package ((scheme-level-0 scheme-level-0-signature)
 		 (primitives primitives-signature)
 		 (bitwise bitwise-signature)
 		 (closures closures-signature)
 		 (code-vectors code-vectors-signature)
 		 (features features-signature)
-		 (write-images (export write-image)))  ;for linker
-  (open all-primitives))
+		 (write-images (export write-image))  ;for linker
+		 (source-file-names (export %file-name%))
+		 (loopholes (export (loophole syntax)))
 
-(define-package ((low-level low-level-signature)
+		 (low-level low-level-signature)
 		 (escapes escapes-signature)
 		 (vm-exposure vm-exposure-signature)
 		 (ascii ascii-signature)
 		 (locations locations-signature)
+		 (signals signals-signature)
 		 (silly (export really-string->symbol reverse-list->string))
-		 (structure-refs (export structure-ref)))
-  (open all-primitives)
-  (usual-transforms)
-  (files (rts low))
+		 (structure-refs (export (structure-ref syntax))))
+  (define-all-operators)		; Primitive Scheme, in the LSC paper
+  (usual-transforms and cond do let let* or)
+  (files (rts low)
+	 (rts signal))
   (optimize auto-integrate))
 
-; --- Use of all-primitives package prohibited beyond this point.
 
-
-; "Level 1"
+; "Level 1" - all the easy things.  There is no dependence on any
+; low-level or unusual primitives.
 
 (define-package ((scheme-level-1 scheme-level-1-signature)
 		 (util util-signature))
-  (open scheme-primitives low-level ascii)
-  (usual-transforms)
+  (open scheme-level-0 ascii signals)
+  (usual-transforms case delay quasiquote syntax-rules)
   (files (rts base)
 	 (rts util)
 	 (rts number)
@@ -47,11 +45,6 @@
 
 
 ; "Level 2"
-
-(define-package ((signals signals-signature))
-  (open scheme-level-1 low-level)
-  (files (rts signal))
-  (optimize auto-integrate))
 
 (define-package ((generics generics-signature))
   (open scheme-level-1 signals)
@@ -68,7 +61,7 @@
   (optimize auto-integrate))
 
 (define-package ((bummed-define-record-types define-record-types-signature))
-  (open scheme-level-1 record record-internal)
+  (open scheme-level-1 record record-internal loopholes)
   (files (rts bummed-jar-defrecord)))
 
 (define-package ((fluids fluids-signature)
@@ -87,7 +80,8 @@
 (define-package ((port port-signature))
   (open scheme-level-1 signals fluids wind
 	primitives)	;write-string, force-output
-  (files (rts port)))
+  (files (rts port))
+  (optimize auto-integrate))
 
 (define-package ((enumerated enumerated-signature))
   (open scheme-level-1 signals)
@@ -121,13 +115,15 @@
 	wind		  ;CWCC
 	util		  ;reduce used in xprim.scm
 	generics
-	low-level	  ;halt
+	;; low-level	  ;halt
+	vm-exposure	  ;primitive-catch
 	template	  ;template-code
 	continuation	  ;continuation-pc, etc.
 	template	  ;template-info
 	locations	  ;location?, location-id
 	closures	  ;closure-template
-	architecture)
+	architecture
+	number-i/o)       ; number->string, for backtrace
   (files (rts exception)  ; Needs generic, arch
 	 (rts xprim)))	  ; Needs arch, exception.  Support (+ x y z), etc.
 
@@ -176,17 +172,6 @@
 
 
 
-; This hooks the compiler up with an exception handler for unbound variables.
-
-(define-package ((shadowing shadowing-signature))
-  (open scheme-level-1
-	vm-exposure		;primitive-catch
-	continuation template locations code-vectors
-	exception signals
-	architecture)	;(enum op global)
-  (files (rts shadow)))     ;Exception handler to support package system
-
-
 ; Weak pointers & populations
 
 (define-package ((weak weak-signature))
@@ -194,3 +179,13 @@
 	primitives)	;Open primitives instead of loading (alt weak)
   (files ;;(alt weak)   ;Only needed if VM's weak pointers are buggy
 	 (rts population)))
+
+
+; Utility for displaying error messages
+
+(define-package ((display-conditions display-conditions-signature))
+  (open scheme-level-2
+	writing
+	generics
+	handle)			;ignore-errors
+  (files (env dispcond)))

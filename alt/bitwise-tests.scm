@@ -1,3 +1,5 @@
+; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+
 
 ; Lost: (ARITHMETIC-SHIFT 5 27) => -402653184 [wanted 671088640.]
 ; Lost: (ARITHMETIC-SHIFT 5 28) => 268435456 [wanted 1342177280.]

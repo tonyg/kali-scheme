@@ -1,7 +1,7 @@
 ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
-; Scheme48's data representations for writing images
+; Scheme 48's data representations, for writing heap images.
 ; Defines things needed by TRANSPORT (which is called by WRITE-IMAGE, which
 ; is called by the static linker).
 ; Adapted from vm/util.scm and vm/data.scm.

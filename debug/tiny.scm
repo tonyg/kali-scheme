@@ -3,11 +3,16 @@
 ; Tiny image test system
 
 ;(initialize-defpackage! ?? ??)
-;(define-structure base (make-compiler-base))
 ;(define-package ((tiny-system (export start)))
-;  (open base)
-;  (files (debug tiny)))
+;  (define-all-operators)
+;  (files (debug tiny))
+;  (optimize auto-integrate))
 ;(link-simple-system '(debug tiny) 'start tiny-system)
+
+(define (foo x) (lambda (y)
+		  (if y
+		      'foo
+		      (begin (set! x 13) 'bar))))
 
 (define (start arg in out)
   (write-string "Hello " out)
@@ -15,4 +20,8 @@
       (write-string arg out))
   (write-char #\newline out)
   (force-output out)
+  (lambda ()
+    (+ 1 2 3)
+    ((foo 1) 4 5))
   0)
+

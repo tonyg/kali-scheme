@@ -112,8 +112,8 @@
 
 (define (write-literal-thing thing level write-templates?)
   (cond ((location? thing)
-	 (write `(location ,(or (location-name thing)
-				(location-id thing)))))
+	 (write (or (location-name thing)
+		    `(location ,(location-id thing)))))
 	((not (template? thing))
 	 (display #\')
 	 (write thing))

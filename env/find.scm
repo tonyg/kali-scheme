@@ -1,3 +1,5 @@
+; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+
 
 ; work in progress
 
@@ -25,16 +27,14 @@
 (define (for-each-binding proc p)
   (let ((table (make-table)))
     (for-each-definition
-      (lambda (name den)
+      (lambda (name binding)
 	(table-set! table name #t)
-	(proc name den))
+	(proc name ...))
       p)
     (for-each (lambda (s)
-		(for-each (lambda (item)
-			    (let ((name (signature-item-name item)))
-			      (if (not (table-ref table name))
-				  (proc name
-					(package-lookup (structure-package s)
-							name)))))
-			  (signature-items (structure-signature s))))
+		(for-each-export
+		     (lambda (name type binding)
+		       (if (not (table-ref table name))
+			   (proc name binding)))
+		     s))
 	      (package-opens p))))

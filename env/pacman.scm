@@ -16,7 +16,7 @@
   (user-context-modifier 'user-environment))
 
 
-(define-command 'in "<struct-name> [<form>]"
+(define-command 'in "<struct> [<form>]"
   "go to package, or run single form in package"
   '(name &opt form)
   (lambda (name form)
@@ -25,22 +25,15 @@
 		    (get-package name))
       form)))
 
-(define-command 'new-package "<name> <struct> ..." "make a new package"
-  '(name &rest name)
-  (lambda (name . opens)
-    (let* ((c (config-package))
-	   ;; Not quite right, don't we want to delay evaluation of the
-	   ;; opens? ...
-	   (structs (map get-structure
-			 (append opens '(scheme))))
-	   (p (make-simple-package structs
-				   eval
-				   (environment-for-syntax-promise)
-				   name)))
+(define-command 'new-package "" "make and enter a new package"
+  '()
+  (lambda ()
+    (let ((p (make-simple-package (list (get-structure 'scheme))
+				  eval
+				  (environment-for-syntax-promise)
+				  '*unnamed*)))
       (set-package-integrate?! p
 			       (package-integrate? (environment-for-commands)))
-      (environment-define! c name p)
-      (for-each ensure-loaded-query structs)
       (set-environment-for-commands! p))))
 
 
@@ -51,19 +44,19 @@
 
 ; load-package
 
-(define-command 'load-package "<struct-name>" "load package's files"
+(define-command 'load-package "<struct>" "load package's files"
   '(name)
   (lambda (name)
     (ensure-loaded (get-structure name))))
 
-(define-command 'reload-package "<struct-name>" "load package's files again"
+(define-command 'reload-package "<struct>" "load package's files again"
   '(name)
   (lambda (name)
     (let ((s (get-structure name)))
       (set-package-loaded?! (structure-package s) #f)
       (ensure-loaded s))))
 
-(define-command 'load-into "<struct-name> <filename> ..."
+(define-command 'load-into "<struct> <filename> ..."
   "load source file(s) into given package"
   '(name &rest filename)
   (lambda (name . filenames)
@@ -88,11 +81,14 @@
 (define-command 'structure "<name> <sig>" "create new structure"
   '(name expression)
   (lambda (name sig-expression)
-    (let ((c (config-package)))
+    (let* ((c (config-package))
+	   (p (environment-for-commands)))
       (environment-define! c name
-	(make-structure name
-			(evaluate sig-expression c)
-			(environment-for-commands))))))
+			   (make-structure p
+					   (lambda ()
+					     (evaluate sig-expression c))
+					   name))
+      (set-package-name! p name))))
 
 
 (define-command 'open "<struct> ..." "open a structure"
@@ -110,7 +106,8 @@
 	      names)))
 
 (define (ensure-loaded-query struct)
-  (cond ((package-loaded? (structure-package struct))
+  (cond ((or (package-loaded? (structure-package struct))
+	     (null? (package-clauses (structure-package struct))))
 	 #t)
 	((y-or-n? (string-append "Load structure "
 				 (symbol->string
@@ -121,7 +118,8 @@
 	(else #f)))
 
 
-(define-command 'for-syntax "[<form>]" "current package's package for syntax"
+(define-command 'for-syntax "[<form>]"
+  "go to current package's package for syntax"
   '(&opt form)
   (lambda (form)
     (in-package (package-for-syntax (environment-for-commands))
@@ -135,7 +133,7 @@
   (lambda (form)
     (in-package (user-environment) form)))
 
-(define-command 'user-package-is "<struct-name>" "designate package for ,user"
+(define-command 'user-package-is "<struct>" "designate package for ,user"
   '(name)
   (lambda (name)
     (set-user-environment! (get-package name))))
@@ -151,7 +149,7 @@
   (lambda (form)
     (in-package (config-package) form)))
 
-(define-command 'config-package-is "<struct-name>"
+(define-command 'config-package-is "<struct>"
   "designate configuration package"
   '(name)
   (lambda (name)
@@ -247,14 +245,15 @@
 
 ; Configuration package
 
-(define (make-config-package name user built-in-structures
-			     more-structures)
-  (let* ((defpackage (*structure-ref built-in-structures 'defpackage))
+(define (make-config-package name user built-in more-structures)
+  (let* ((defpackage (*structure-ref built-in 'defpackage))
+	 (types (*structure-ref built-in 'types))
 	 (for-syntax (package-for-syntax user))
 	 (config-package
 	  (make-simple-package (cons defpackage
-				     (append more-structures
-					     (list built-in-structures)))
+				     (cons types
+					   (append more-structures
+						   (list built-in))))
 			       eval
 			       (trivial-delay for-syntax)
 			       name)))

@@ -85,6 +85,8 @@
 
 (define (eval-from-file forms p filename)
   (for-each (lambda (form) (eval form p)) forms))
+(define (eval-scanned-forms forms p filename)
+  (for-each (lambda (form) (eval form p)) forms))
 
 
 ; Interaction environment

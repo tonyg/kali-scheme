@@ -9,95 +9,107 @@
 ; Programs
 
 (define (run-forms forms p file)
-  (let ((forms (scan-forms forms p file))
-	(env (package->environment p)))
-    (if (not (null? forms))
+  (let ((nodes (scan-forms forms p file)))
+    (if (not (null? nodes))
 	(let-fluid $source-file-name file
 	  (lambda ()
-	    (do ((forms forms (cdr forms)))
-		((null? (cdr forms))
-		 (run-processed-form (car forms) env))
-	      (run-processed-form (car forms) env)))))))
+	    (let ((env (package->environment p)))
+	      (do ((nodes nodes (cdr nodes)))
+		  ((null? (cdr nodes))
+		   (run-processed-form (car nodes) env))
+		(run-processed-form (car nodes) env))))))))
 
-(define (run-processed-form form p)
-  (if (define? form)
-      (set-contents! (package-ensure-defined! p (define-lhs form))
-		     (run (define-rhs form) p))
-      (run form p)))
+(define (run-processed-form node env)
+  (if (define-node? node)
+      (let* ((form (node-form node))
+	     (loc (cdr (env (cadr form))))
+	     (value (run (caddr form) env)))
+	(set-location-defined?! loc #t)
+	(set-contents! loc value))
+      (run node env)))
 
-(define operator/define (get-operator 'define 'syntax))
+(define define-node? (node-predicate 'define))
 
 
 ; Main dispatch for a single expression.
 
 (define (run exp env)
-  (cond ((name? exp)
-	 (run-variable exp env))
-	((pair? exp)
-	 (cond ((name? (car exp))
-		(let ((den (lookup env (car exp))))
-		  (cond ((operator? den)
-			 ((interpreter-for-operator den) exp env))
-			((transform? den)
-			 (run (transform den exp (lambda (name)
-						   (probe-env env name)))
-			      env))
-			(else
-			 (run-call exp env)))))
-	       ((operator? (car exp))  ;Provision for 2-pass compiler
-	        ((interpreter-for-operator (car exp)) exp env))
-	       (else
-		(run-call exp env))))
-        ((literal? exp) exp)
-        ((location? exp) (contents exp))
-        (else (error "invalid expression" exp))))
+  (let ((node (classify exp env)))
+    ((operator-table-ref interpreters (node-operator-id node)) node env)))
 
-(define (run-variable exp env)
-  (let ((probe (lookup-variable env exp)))
-    (if (location? probe)
-	(contents probe)
-	(environment-ref (car probe) (cdr probe)))))
+(define interpreters
+  (make-operator-table (lambda (node env)
+			 (run-call (node-form node) env))))
+
+(define (define-interpreter name proc)
+  (operator-define! interpreters name proc))
+
+(define-interpreter 'name
+  (lambda (node env)
+    (let ((binding (name-node-binding node env)))
+      (cond ((binding? binding)		;(type . location)
+	     (if (and (compatible-types? (binding-type binding) 'value)
+		      (location? (binding-place binding)))
+		 (let ((loc (cdr binding)))
+		   (if (location-defined? loc)
+		       (if (location-assigned? loc)
+			   (contents loc)
+			   (error "unassigned variable" (schemify node)))
+		       (error "uninitialized variable" (schemify node))))
+		 (error "invalid variable reference" (schemify node))))
+	    ((unbound? binding)
+	     (error "unbound variable" (schemify node)))
+	    (else
+	     (error "peculiar binding" node binding))))))
+
+(define (name-node-binding node env)
+  (or (node-ref node 'binding)
+      (lookup env (node-form node))))
+
+(define-interpreter 'literal
+  (lambda (node env)
+    (node-form node)))
+
+(define-interpreter 'call
+  (lambda (node env)
+    (run-call (node-form node) env)))
 
 (define (run-call exp env)
-  (let ((proc (run (car exp) env))) ;Doing this first aids debugging
+  (let ((proc (run (car exp) env)))	;Doing this first aids debugging
     (apply proc
 	   (map (lambda (arg-exp)
 		  (run arg-exp env))
 		(cdr exp)))))
 
+(define-interpreter '(quote syntax)
+  (lambda (node env)
+    (cadr (node-form node))))
 
-; Special operators
+(define-interpreter '(lambda syntax)
+  (lambda (node env)
+    (let ((exp (node-form node)))
+      (make-interpreted-closure (cadr exp) (cddr exp) env))))
 
-(define interpreters
-  (make-compilator-table (lambda (form env)
-			   (run-call form env))))
-
-(define define-interpreter (car interpreters))
-(define interpreter-for-operator (cdr interpreters))
-
-(define-interpreter 'quote 'syntax
-  (lambda (exp env) (desyntaxify (cadr exp))))
-
-(define-interpreter 'lambda 'syntax
-  (lambda (exp env)
-    (lambda args
-      (run-body (cddr exp) (bind (cadr exp) args env)))))
+(define (make-interpreted-closure formals body env)
+  (lambda args
+    (run-body body (bind-vars formals args env))))
 
 (define (run-body body env)
   (scan-body
       body
-      (lambda (name) (probe-env env name))
-      (lambda (name) (lookup env name))
+      env
       (lambda (defs exps)
 	(if (null? defs)
 	    (run-begin exps env)
-	    ;; *** not hygienic ***
-	    (run `(letrec ,(map cdr defs) ,@exps)
-		 env)))))
+	    (run-letrec (map (lambda (def) (cdr (node-form def))) defs)
+			exps
+			env)))))
 
-(define-interpreter 'begin 'syntax
-  (lambda (exp env)
-    (run-begin (cdr exp) env)))
+
+(define-interpreter '(begin syntax)
+  (lambda (node env)
+    (let ((exp (node-form node)))
+      (run-begin (cdr exp) env))))
 
 (define (run-begin exp-list env)
   (if (null? exp-list)
@@ -108,51 +120,78 @@
 	    (begin (run (car exp-list) env)
 		   (loop (cdr exp-list)))))))
 
-(define-interpreter 'set! 'syntax
-  (lambda (exp env)
-    (let ((probe (lookup-assigned env (cadr exp)))
-	  (val (run (caddr exp) env)))
-      (if (location? probe)
-	  (set-contents! probe val)
-	  (environment-set! (car probe) (cdr probe) val)))))
+(define-interpreter '(set! syntax)
+  (lambda (node env)
+    (let* ((exp (node-form node))
+	   (probe (name-node-binding (classify (cadr exp) env) env)))
+      (cond ((and (binding? probe)
+		  (location? (cdr probe)))
+	     (if (and (location-defined? (binding-place probe))
+		      (variable-type? (binding-type probe)))
+		 (set-contents! (cdr probe) (run (caddr exp) env))
+		 (error "invalid assignment" (schemify node))))
+	    ((unbound? probe) (error "unbound variable" exp))
+	    (else (error "peculiar assignment" exp))))))
 
-(define-interpreter 'if 'syntax
-  (lambda (exp env)
-    (if (null? (cdddr exp))
-	(if (run (cadr exp) env)
-	    (run (caddr exp) env)) ;hack
-	(if (run (cadr exp) env)
-	    (run (caddr exp) env)
-	    (run (cadddr exp) env)))))
+(define-interpreter '(if syntax)
+  (lambda (node env)
+    (let ((exp (node-form node)))
+      (if (null? (cdddr exp))
+	  (if (run (cadr exp) env)
+	      (run (caddr exp) env))	;hack
+	  (if (run (cadr exp) env)
+	      (run (caddr exp) env)
+	      (run (cadddr exp) env))))))
 
-(let ((bad (lambda (form env)
-	     (error "not valid in expression context" form))))
-  (define-interpreter 'define 'syntax bad)
-  (define-interpreter 'define-syntax 'syntax bad))
+; (reverse specs) in order to try to catch unportabilities
+
+(define-interpreter '(letrec syntax)
+  (lambda (node env)
+    (let ((exp (node-form node)))
+      (run-letrec (cadr exp) (cddr exp) env))))
+
+(define (run-letrec specs body env)
+  (let* ((bindings (map (lambda (spec)
+			  (make-binding usual-variable-type
+					(make-undefined-location (car spec))))
+			specs))
+	 (env (bind (map car specs)
+		    bindings
+		    env)))
+    (for-each (lambda (binding val)
+		(set-location-defined?! (cdr binding) #t)
+		(set-contents! (cdr binding) val))
+	      bindings
+	      (map (lambda (spec) (run (cadr spec) env)) specs))
+    (run-body body env)))
+
+
+(let ((bad (lambda (node env)
+	     (error "not valid in expression context" (node-form node)))))
+  (define-interpreter '(define syntax) bad)
+  (define-interpreter '(define-syntax syntax) bad))
 
 
 ; Primitive procedures
 
-;(define-interpreter 'primitive-procedure 'syntax
-;  (lambda (expr env)
-;    (or (table-ref primitive-procedures (cadr expr))
-;        (lambda args
-;          (error "unimplemented primitive procedure" expr)))))
+(define-interpreter '(primitive-procedure syntax)
+  (lambda (node env)
+    (let ((name (cadr (node-form node))))
+      (or (table-ref primitive-procedures name)
+	  (lambda args
+	    (error "unimplemented primitive procedure" name))))))
 
-(define-interpreter 'unassigned 'procedure
-  (lambda (expr env)
-    (check-nargs= expr 0)
-    *unassigned*))
-
-(define *unassigned* (list '*unassigned*))  ;For LETREC
-
-(define-interpreter 'unspecific 'procedure
-  (lambda (expr env) (if #f #f)))	;For COND
+(define primitive-procedures (make-table))
 
 (define (define-a-primitive name proc)
-  (define-interpreter name 'procedure
-    (lambda (expr env)
-      (apply proc (map (lambda (arg) (run arg env)) (cdr expr))))))
+  (table-set! primitive-procedures name proc)
+  (define-interpreter name
+    (lambda (node env)
+      (apply proc (map (lambda (arg) (run arg env))
+		       (cdr (node-form node)))))))
+
+(define-a-primitive 'unspecific
+  (lambda () (if #f #f)))		;For COND
 
 (define-syntax define-some-primitives
   (syntax-rules ()
@@ -160,58 +199,35 @@
      (begin (define-a-primitive 'name name) ...))))
 
 (define-some-primitives
+  + - * quotient remainder = <
   eq? car cdr cons
-  vector-ref pair?)
+  pair?
+  vector? vector-ref string? string-ref
+  symbol?
+  char<? char=?)
 
-(define (check-nargs= expr n)
-  (if (not (= (length (cdr expr)) n))
-      (error "wrong number of arguments to primitive" expr n)))
 
-
+; --------------------
 ; Environments
 
-(define (package->environment p) p) ;?
-
-(define (lookup env name)
-  (really-lookup env name package-lookup))
-
-(define (probe-env env name)
-  (really-lookup env name probe-package))
-
-
-(define (lookup-variable env name)
-  (really-lookup env name cons))
-
-(define (lookup-assigned env name)
-  (really-lookup env name cons))
-
-(define (really-lookup env name p-lookup)
-  (if (procedure? env)
-      (env name p-lookup)
-      (p-lookup env name)))
-
-(define (bind1 name arg env)
+(define (bind-var name arg env)
   (let ((loc (make-undefined-location name)))
     (set-location-defined?! loc #t)
-    (if (not (eq? arg *unassigned*))	;Hack for letrec
-	(set-contents! loc arg))
-    (lambda (a-name p-lookup)
-      (if (eq? a-name name)
-	  loc
-	  (really-lookup env a-name p-lookup)))))
+    (set-contents! loc arg)
+    (bind1 name (make-binding usual-variable-type loc) env)))
 
-(define (bind names args env)
+(define (bind-vars names args env)
   (cond ((null? names)
 	 (if (null? args)
 	     env
 	     (error "too many arguments" args)))
 	((not (pair? names))
-	 (bind1 names args env))
+	 (bind-var names args env))
 	((null? args)
 	 (error "too few arguments" names))
 	(else
-	 (bind1 (car names) (car args)
-		(bind (cdr names) (cdr args) env)))))
+	 (bind-var (car names) (car args)
+		   (bind-vars (cdr names) (cdr args) env)))))
 
 
 ; LOAD  (copied from mini-eval.scm)
@@ -233,5 +249,8 @@
 	  (newline out))))))
 
 
-(define (eval-from-file forms p file)	;Scheme48 thing
+(define (eval-from-file forms p file)	;Scheme 48 internal thing
   (run-forms forms p file))
+
+
+; (scan-structures (list s) (lambda (p) #t) (lambda (stuff) #f))

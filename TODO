@@ -17,6 +17,7 @@ Run-time system bugs:
         (define (foo x) `(a ,x))
 	(define cons list)
 	(foo 1) => (a (1 ()))
+    (> 1 2 3) generates a warning at compile time, but shouldn't
 
 Revised^5 Scheme compliance:
     Implement let-syntax and letrec-syntax.
@@ -24,13 +25,16 @@ Revised^5 Scheme compliance:
       SYNTAX-RULES.
 
 Programming environment:
+    Better error checking for macro & special form syntax (CLASSIFY ?).
     Help system:
       - Implement hierarchical help, a la gdb.
       - Fuller on-line documentation, a la gdb.
       - ,from-file command shouldn't be listed.
     Error recovery.  Can do better than ,proceed.  LOAD should set up
       restart continuations.
-    Better error checking for macro & special form syntax (CLASSIFY ?).
+    Types in scheme-signature (and elsewhere) aren't as tight as they
+      could be.
+    Shouldn't produce multiple wrong number of arguments warnings.
     LET continuation "pessimization" to retain the environment longer.
     Make sure that the disassembler and assembler are inverses of one
       another.  Disassembler should generate S-expression first, and then
@@ -56,7 +60,7 @@ Performance:
     More compact representation for debugging data?
     Leaf procedure compilation (RK's rts/no-leaf-env.scm): if no
       continuations or lambdas, skip the make-env and access locals
-      using stack-ref.  Expacted to gain us about 6% in speed.
+      using stack-ref.  Expected to gain us about 6% in speed.
     Optimize loops somehow (maybe using call-template opcode and/or
       opportunistic compilation).
     CAML light has good documentation and patches for optimizing the
@@ -68,6 +72,8 @@ Performance:
     Native code compiler...
 
 Big Scheme features:
+    Trouble: threads package gets warning when loaded
+      "Extrinsic: with-interrupts-inhibited#with-interrupts"
     Floating point.
     How about deleting entries from tables?
     Non-blocking I/O for threads.  I think access to Unix select() might
@@ -93,9 +99,6 @@ Module system features:
     Check for cycles in structure inheritance.
     Similarly for ,load-package and ,reload-package.
     An ,access command, similar to ,open.
-    There should be a define-package clause (for-syntax <clause>*).
-      E.g. (for-syntax (open scheme my-utilities)
-		       (files more-crud)).
     Make structure-ref work with syntax and packages.  E.g.
       ((structure-ref scheme cond) ...)
     Deal with package system state better (for linker).  Maybe each
@@ -121,13 +124,14 @@ Documentation:
     How to use the static linker.
     Techniques for debugging the runtime system (debug/for-debugging.scm).
     Threads, fluids, records, tables.
+    File name translation and the ,translate command.
 
 Cleanup:
     The Makefile ends up doing
         ... | ./scheme48vm -i ./scheme48.image -i link/linker.image
       to run the linker.  This seems wrong somehow.
-    Rename table -> tables, port -> ports, continuations, conditions,
-      exception, records, templates, etc.
+    Rename structures table -> tables, port -> ports, continuations,
+      conditions, exception, records, templates, etc.
     debug/mini-package.scm doesn't define INITIALIZE-REIFIED-PACKAGE!.
       This is why the mini-system (see debug-packages.scm) doesn't work.
     The package reification stuff is way too complicated, and it's
@@ -138,10 +142,6 @@ Cleanup:
       changed to (make-structure package signature [name-option]).
     Combine condition, signals, and handle into a single structure?
     Package code is pretty ugly.  Figure out how to simplify it.
-    Write a simpler implementation of the package system, one that
-      doesn't handle signature and open-list mutations.
-    package.scm shouldn't be calling contents, set-contents!,
-      location-assigned?.  Sanitize this somehow.
     Figure out a better way to implement ##.
     Rename "unassigned" to "uninitialized".
     Write a program that will automagically generate scheme48.h from

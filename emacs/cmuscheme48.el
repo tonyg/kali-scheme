@@ -70,6 +70,7 @@ and switch to the process buffer."
   (comint-check-source file-name) ; Check to see if buffer needs saved.
   (setq scheme-prev-l/c-dir/file (cons (file-name-directory    file-name)
 				       (file-name-nondirectory file-name)))
-  (comint-send-string (scheme-proc) (concat ",load "
-					    file-name
-					    "\n")))
+  (comint-send-string (scheme-proc)
+		      (concat ",load "
+			      (enough-scheme-file-name file-name)
+			      "\n")))

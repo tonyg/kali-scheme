@@ -19,7 +19,8 @@
 		 `(,make-resumer-exp
 		   (lambda ()
 		     ,(reify-structures some
-					(lambda (loc) loc)))))
+					(lambda (loc) loc)
+					`(lambda (loc) loc)))))
 	       filename))
 
 
@@ -33,11 +34,13 @@
     (link-system (append structs (map cdr some))
 		 (lambda ()
 		   (set! loser
-			 (reify-structures some
-				  (lambda (loc)
-				    (let ((id (location-id loc)))
-				      (table-set! locs id loc)
-				      id))))
+			 (reify-structures
+			  	some
+				(lambda (loc)
+				  (let ((id (location-id loc)))
+				    (table-set! locs id loc)
+				    id))
+				`location-from-id))
 		   `(,make-resumer-exp
 		     ',(let ((l '()))
 			 (table-walk (lambda (id loc)
@@ -65,52 +68,72 @@
 (define (link-system structs make-resumer filename)
   (with-fresh-compiler-state
    (lambda ()
-     (let* ((thunks (compile-structures structs))
-	    (p (make-simple-package structs eval #f))
-	    (r
-	     (noting-undefined-variables p
-	       (lambda ()
-		 (compile-form (make-resumer) p)))))
-       (check-package p)
-       (write-image-file (make-startup-procedure thunks r)
-			 (namestring filename #f 'image))
-       (write-debug-info (namestring filename #f 'debug))))))
+     (set! *loser* #f)
+     (let* ((location-info (make-table))
+	    (generator (make-location-generator location-info
+						(if *debug-linker?* 4000 0)))
+	    (thunks (compile-structures structs
+					generator
+					package->environment))
+	    (p (make-simple-package structs #f #f))
+	    (r (noting-undefined-variables p
+		 (lambda ()
+		   (set-package-get-location! p generator)
+		   (compile-form (make-resumer) p)))))
+       (let ((startup (make-closure 
+		       (make-startup-procedure thunks r)
+		       0)))
+	 (if *debug-linker?* (set! *loser* startup))
+	 (write-image-file startup
+			   (namestring filename #f 'image)))
+       (write-debug-info location-info
+			 (namestring filename #f 'debug))))))
+(define *loser* #f)
+(define *debug-linker?* #f)
 
 ;
 
-(define (compile-structures structs)
-  (let ((thunks '()))
+(define (compile-structures structs generator package->env)
+  (let ((thunks '())
+	(out (current-output-port)))
     (scan-structures
 	   structs
-	   (lambda (p) #t)
-	   (lambda (stuff p) ;stuff = pair (file . (form1 form2 ...))
-	     (set-package-integrate?! p #t)
-	     (noting-undefined-variables p
-	       (lambda ()
-		 (for-each (lambda (file+forms)
-			     (set! thunks
-				   (cons (compile-scanned-forms
-					  (cdr file+forms)
-					  p
-					  (car file+forms)
-					  (current-output-port))
-					 thunks)))
-			   stuff)))))
+	   (lambda (p)
+	     (set-package-get-location! p generator)
+	     #t)
+	   (lambda (stuff p)  ;stuff = pair (file . (node1 node2 ...))
+	     (for-each (lambda (file+forms)
+			 (set! thunks
+			       (cons (compile-scanned-forms (cdr file+forms)
+							    p
+							    (car file+forms)
+							    out
+							    (package->env p))
+				     thunks)))
+		       stuff)))
     (reverse thunks)))
+
+; Locations in new image will have their own sequence of unique id's.
+
+(define (make-location-generator location-info start)
+
+  (let ((*location-uid* start))
+
+    (define (make-new-location p name)
+      (let ((uid *location-uid*))
+	(set! *location-uid* (+ *location-uid* 1))
+	(table-set! location-info uid
+		    (cons (name->symbol name) (package-uid p))) ;?
+	(make-undefined-location uid)))
+
+    make-new-location))
 
 
 (define (write-image-file start filename)
   (write-image filename
 	       start
-	       "This is a heap image file made by the Scheme48 linker."))
+	       "This heap image was made by the Scheme 48 linker."))
 
-
-
-(define (check-package p)
-  (let ((names (undefined-variables p)))
-    (if (not (null? names))
-	(begin (display "Undefined: ") 
-	       (write names) (newline)))))
 
 
 ; Handy utility for making arguments to link-reified-system
@@ -118,9 +141,3 @@
 (define-syntax struct-list
   (syntax-rules ()
     ((struct-list name ...) (list (cons 'name name) ...))))
-
-; Mumble.
-
-(define (load-configuration filename)
-  (let-fluid $source-file-name filename
-    (lambda () (load filename))))

@@ -14,9 +14,12 @@
 
 (define-usual-macro 'syntax-rules
   (lambda (r c subkeywords . rules)
-    (process-rules rules subkeywords r c))
+    ;; Pair of the procedure and list of auxiliary names
+    `(,(r 'cons)
+      ,(process-rules rules subkeywords r c)
+      (,(r 'quote) ,(find-free-names-in-syntax-rules subkeywords rules))))
   '(append and car cdr cond cons else eq? equal? lambda let let* map
-	   pair? quote))
+	   pair? quote values))
 
 
 (define (process-rules rules subkeywords r c)
@@ -115,22 +118,22 @@
 
   ; Generate code to compose the output expression according to template
 
-  (define (process-template template rank env)
+  (define (process-template template dim env)
     (cond ((name? template)
 	   (let ((probe (assq template env)))
 	     (if probe
-		 (if (<= (cdr probe) rank)
+		 (if (<= (cdr probe) dim)
 		     template
-		     (syntax-error "template rank error (too few ...'s?)"
+		     (syntax-error "template dimension error (too few ...'s?)"
 				   template))
 		 `(,%rename ',template))))
 	  ((segment-template? template)
 	   (let ((vars
-		  (free-meta-variables (car template) (+ rank 1) env '())))
+		  (free-meta-variables (car template) (+ dim 1) env '())))
 	     (if (null? vars)
 		 (syntax-error "too many ...'s" template)
 		 (let* ((x (process-template (car template)
-					     (+ rank 1)
+					     (+ dim 1)
 					     env))
 			(gen (if (equal? (list x) vars)
 				 x	;+++
@@ -139,50 +142,46 @@
 		   (if (null? (cddr template))
 		       gen		;+++
 		       `(,%append ,gen ,(process-template (cddr template)
-							  rank env)))))))
+							  dim env)))))))
 	  ((pair? template)
-	   `(,%cons ,(process-template (car template) rank env)
-		    ,(process-template (cdr template) rank env)))
+	   `(,%cons ,(process-template (car template) dim env)
+		    ,(process-template (cdr template) dim env)))
 	  (else `(,%quote ,template))))
 
-  ; Return an association list of (var . rank)
+  ; Return an association list of (var . dim)
 
-  (define (meta-variables pattern rank vars)
+  (define (meta-variables pattern dim vars)
     (cond ((name? pattern)
 	   (if (memq pattern subkeywords)
 	       vars
-	       (cons (cons pattern rank) vars)))
+	       (cons (cons pattern dim) vars)))
 	  ((segment-pattern? pattern)
-	   (meta-variables (car pattern) (+ rank 1) vars))
+	   (meta-variables (car pattern) (+ dim 1) vars))
 	  ((pair? pattern)
-	   (meta-variables (car pattern) rank
-			   (meta-variables (cdr pattern) rank vars)))
+	   (meta-variables (car pattern) dim
+			   (meta-variables (cdr pattern) dim vars)))
 	  (else vars)))
 
-  ; Return a list of meta-variables of given higher rank
+  ; Return a list of meta-variables of given higher dim
 
-  (define (free-meta-variables template rank env free)
+  (define (free-meta-variables template dim env free)
     (cond ((name? template)
 	   (if (and (not (memq template free))
 		    (let ((probe (assq template env)))
-		      (and probe (>= (cdr probe) rank))))
+		      (and probe (>= (cdr probe) dim))))
 	       (cons template free)
 	       free))
 	  ((segment-template? template)
 	   (free-meta-variables (car template)
-				rank env
+				dim env
 				(free-meta-variables (cddr template)
-						     rank env free)))
+						     dim env free)))
 	  ((pair? template)
 	   (free-meta-variables (car template)
-				rank env
+				dim env
 				(free-meta-variables (cdr template)
-						     rank env free)))
+						     dim env free)))
 	  (else free)))
-
-  ;; Kludge for Scheme48 linker.
-  ;; `(,%cons ,(make-transformer rules)
-  ;;          ',(find-free-names-in-syntax-rules subkeywords rules))
 
   (make-transformer rules))
 
@@ -212,7 +211,7 @@
 
 
 
-; The following is used by Scheme48's static linker.
+; The following is used by Scheme 48's static linker.
 
 (define (find-free-names-in-syntax-rules subkeywords rules)
 

@@ -13,9 +13,12 @@
 ; preview  -- show continuations
 
 (define (preview)
-  (display-preview (command-continuation) (command-output)))
+  (display-preview ;; (continuation-preview (command-continuation))
+		   (command-continuation)
+		   (command-output)))
 
 (define (display-preview c port)
+  ;; (for-each (lambda (id+pc) ...) preview)
   (if (continuation? c)
       (begin
 	(if (not (fluid-let-continuation? c))
@@ -60,11 +63,14 @@
 	(throw-to-command-level
 	     level
 	     (lambda ()
-	       (let ((interrupts (command-level-interrupts level)))
-		 (if (and (not (= interrupts all-interrupts))
-			  (not (interrupt? condition)))
-		     (write-line "(Disabling interrupts)" (command-output)))
-		 (set-enabled-interrupts! interrupts))
+	       (let ((interrupts (enabled-interrupts))
+		     (new-interrupts (command-level-interrupts level)))
+		 (if (not (= new-interrupts interrupts))
+		     (begin (if (not (and (interrupt? condition)
+					  (= (caddr condition) interrupts)))
+				(write-line "(Disabling interrupts)"
+					    (command-output)))
+			    (set-enabled-interrupts! new-interrupts))))
 	       (apply values vals)))
 	(write-line "No way to proceed from here." (command-output)))))
 
@@ -181,11 +187,11 @@
 		    (package-integrate? (environment-for-commands)))
 		  (lambda (b)
 		    (set-package-integrate?! (environment-for-commands) b))
-		  "compile some definitions in line"))
+		  "compile some calls in line"))
 
 ; Break on warnings
 
-(define-command 'break-on-warnings "" "treat warnings like errors"
+(define-command 'break-on-warnings "" "treat warnings as errors"
   syntax-for-toggle
   (toggle-command break-on-warnings?
 		  set-break-on-warnings?!
@@ -273,17 +279,17 @@
 
 ; Undefined (this is sort of pointless now that NOTING-UNDEFINED-VARIABLES
 ; exists)
-
-(define (show-undefined-variables)
-  (let ((out (command-output))
-	(undef (undefined-variables (environment-for-commands))))
-    (if (not (null? undef))
-	(begin (display "Undefined: " out)
-	       (write undef out)
-	       (newline out)))))
-
-(define-command 'undefined "" "list undefined variables"
-  '() show-undefined-variables)
+;
+;(define (show-undefined-variables)
+;  (let ((out (command-output))
+;        (undef (undefined-variables (environment-for-commands))))
+;    (if (not (null? undef))
+;        (begin (display "Undefined: " out)
+;               (write undef out)
+;               (newline out)))))
+;
+;(define-command 'undefined "" "list undefined variables"
+;  '() show-undefined-variables)
 
 
 
@@ -330,8 +336,11 @@
 	       (env (cadddr probe)))
 	  (if (eq? (environment-ref env name) traced)
 	      (environment-set! env name proc)
-	      (write-line "Value changed since ,trace; not restoring it."
-			  (command-output)))
+	      (let ((out (command-output)))
+		(display "Value of " out)
+		(write name out)
+		(display " changed since ,trace; not restoring it." out)
+		(newline out)))
 	  (set-fluid! $traced
 		      (filter (lambda (x)
 				(not (eq? (car x) name)))
@@ -342,29 +351,35 @@
   (lambda args
     (apply-traced proc name args)))
 
+(define *trace-depth* 8)
 (define (apply-traced proc name args)
   (let ((port (command-output)))
-    (let-fluids $write-length 6
-		$write-depth 5
-      (lambda ()
-	(display "[Enter " port)
-	(write-carefully (error-form name args) port)
-	(newline port)))
-    (call-with-values (lambda ()
-			(apply proc args))
-      (lambda results
-	(let-fluids $write-length 6
-		    $write-depth 5
-	  (lambda ()
-	    (display " Leave " port)
-	    (write-carefully name port)
-	    (for-each (lambda (result)
-			(display " " port)
-			(write-carefully (value->expression result) port))
-		      results)
-	    (display "]" port)
-	    (newline port)))
-	(apply values results)))))
+    (dynamic-wind
+     (lambda ()
+       (display "[" port))
+     (lambda ()
+       (let-fluids $write-length *trace-depth*
+	 $write-depth *trace-depth*
+	 (lambda ()
+	   (display "Enter " port)
+	   (write-carefully (error-form name args) port)
+	   (newline port)))
+       (call-with-values (lambda ()
+			   (apply proc args))
+	 (lambda results
+	   (let-fluids $write-length *trace-depth*
+	     $write-depth (- *trace-depth* 1)
+	     (lambda ()
+	       (display " Leave " port)
+	       (write-carefully name port)
+	       (for-each (lambda (result)
+			   (display " " port)
+			   (write-carefully (value->expression result) port))
+			 results)))
+	   (apply values results))))
+     (lambda ()
+       (display "]" port)
+       (newline port)))))
 
 ; Timer stuff.
 
@@ -447,7 +462,8 @@
 	      (newline port)
 	      (display "Changing default package for file " port)
 	      (display filename port)
-	      (display " from " port)
+	      (display " from" port)
+	      (newline port)
 	      (write (cdr probe) port)
 	      (display " to " port)
 	      (write env port)
@@ -511,17 +527,6 @@
   '(&opt expression)
   (lambda (exp)
     (let ((exp (or exp (focus-object)))
-	  (env (environment-for-commands))
-	  (lose (lambda () (write-line "?" (command-output)))))
-      (if (and (pair? exp) (name? (car exp)))
-	  (let ((op (package-lookup env (car exp))))
-	    (if (transform? op)
-		(let ((new (desyntaxify
-			    (transform op exp (lambda (name)
-						(probe-package env name))))))
-		  (if (eq? exp new)
-		      (lose)
-		      (set-focus-object! new)))		; pp
-		(lose)))
-	  (lose)))))
-
+	  (env (environment-for-commands)))
+      (set-focus-object!
+           (schemify (classify exp (package->environment env)))))))

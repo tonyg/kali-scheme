@@ -1,11 +1,11 @@
 ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
-; Writing out a Scheme48 image
+; Writing out a Scheme 48 image
 
 ; From GC.SCM
 
-;  (%write-string "This is a Scheme48 heap image file." port)
+;  (%write-string "This is a Scheme 48 heap image file." port)
 ;  (%newline port)
 ;  (%write-page port)
 ;  (%newline port)

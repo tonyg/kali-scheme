@@ -4,8 +4,6 @@
 ; This file contains things that tie together the compiler and the
 ; run-time system.
 
-(set-shadow-action! shadow-location!)	;Compiler hook
-
 
 ; EVAL
 
@@ -25,23 +23,31 @@
 	       (car package-option))))
     (with-interaction-environment p
       (lambda ()
-	(compile-and-run-file filename
-			      p
-			      (lambda (template)
-				(invoke-template template p))
-			      (current-output-port))))))
+	(noting-undefined-variables p
+	  (lambda ()
+	    (compile-and-run-file filename
+				  p
+				  (lambda (template)
+				    (invoke-template template p))
+				  (current-output-port))))))))
 
 ; Evaluate forms as if they came from the given file.
 
 (define (eval-from-file forms p filename)
   (with-interaction-environment p
     (lambda ()
-      (compile-and-run-forms forms
-			     p
-			     filename
-			     (lambda (template)
-			       (invoke-template template p))
-			     (current-output-port)))))
+      (noting-undefined-variables p
+	(lambda ()
+	  (compile-and-run-forms forms p filename
+				 (lambda (template)
+				   (invoke-template template p))
+				 (current-output-port)))))))
+
+(define (eval-scanned-forms forms p filename)
+  (compile-and-run-scanned-forms forms p filename
+				 (lambda (template)
+				   (invoke-template template p))
+				 (current-output-port)))
 
 (define (invoke-template template p)
   (invoke-closure (make-closure template (package-uid p))))

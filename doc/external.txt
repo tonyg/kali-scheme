@@ -19,7 +19,7 @@ automatically on startup.
 (EXTERNAL-CALL external arg1 arg2 ...)
 Calls the external value, passing it the number of arguments (as a long),
 and a pointer to a C array containing the rest of the arguments (also
-a long).  Don't mess with the array, it is really the Scheme48 argument
+a long).  Don't mess with the array, it is really the Scheme 48 argument
 stack.  The arguments are probably in reverse order, I can't remember.
 
 The file dynload.c contains the function s48_dynamic_load which can

@@ -197,16 +197,18 @@
 (define (string-output-port-output port)
   (let* ((data (extensible-output-port-local-data port))
 	 (strings (string-output-port-data-strings data))
-	 (index (string-output-port-data-index data))
-	 (total (+ index (* (length (cdr strings))
-			    string-port-string-length)))
-	 (result (make-string total #\space)))
-    (do ((i 0 (+ i string-port-string-length))
-	 (s (reverse (cdr strings)) (cdr s)))
-	((null? s)
-	 (string-insert result (car strings) i index))
-      (string-insert result (car s) i string-port-string-length))
-    result))
+	 (index (string-output-port-data-index data)))
+    (if (null? strings)
+	""
+	(let* ((total (+ index (* (length (cdr strings))
+				  string-port-string-length)))
+	       (result (make-string total #\space)))
+	  (do ((i 0 (+ i string-port-string-length))
+	       (s (reverse (cdr strings)) (cdr s)))
+	      ((null? s)
+	       (string-insert result (car strings) i index))
+	    (string-insert result (car s) i string-port-string-length))
+	  result))))
 
 ; Copy the first COUNT characters from FROM to TO, putting them from START
 ; onwards.
@@ -250,6 +252,11 @@
      (port-location-column (string-output-port-data-location data)))
    (lambda (data)
      (port-location-row (string-output-port-data-location data)))))
+
+(define (call-with-string-output-port proc)
+  (let ((port (make-string-output-port)))
+    (proc port)
+    (string-output-port-output port)))
 
 ;------------------------------------------------------------------------------
 ; Output ports from a single character writer

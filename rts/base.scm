@@ -132,7 +132,7 @@
 (define (mem pred)
   (lambda (obj l)
     (let loop ((l l))
-      (cond ((eq? '() l) #f)    ;(null? l)
+      (cond ((null? l) #f)
 	    ((pred obj (car l)) l)
 	    (else (loop (cdr l)))))))
 
@@ -154,8 +154,8 @@
 ; Bummed version.  Pretend that you didn't see this.
 
 (define (assq x l)
-  (cond ((eq? '() l) #f)
-	((eq? x (car (car l))) (car l))
+  (cond ((null? l) #f)
+	((eq? x (caar l)) (car l))
 	(else (assq x (cdr l)))))
 
 (define (list? l)			;New in R4RS
@@ -360,6 +360,10 @@
 
 
 ; Promises.
+
+(define-syntax delay
+  (syntax-rules ()
+    ((delay ?exp) (make-promise (lambda () ?exp)))))
 
 (define (make-promise thunk-then-result)
   (let ((already-run? #f))

@@ -86,11 +86,11 @@
 
 
 
-
+; --------------------
 ; S-expression interpreter
 
 (define-package ((run evaluation-signature))
-  (open scheme-level-2 syntactic packages scan
+  (open scheme-level-2 syntactic packages scan types
 	environments
 	signals
 	locations
@@ -111,19 +111,7 @@
 (define (link-medium-system)		;cf. scripts.scm
   (let* ((scheme medium-scheme)
 	 (initial-structures
-	  (struct-list scheme signals
-		       ;; Things needed by the command processor
-		       packages
-		       record table fluids
-		       condition handle
-		       reading 
-		       display-conditions
-		       wind
-		       util
-		       environments
-		       features
-		       filenames
-		       exception)))
+	  (struct-list scheme signals packages)))
     (link-reified-system initial-structures
 			 '(debug medium)
 			 `(start ',(map car initial-structures))

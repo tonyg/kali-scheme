@@ -18,7 +18,7 @@ output *(long *)($ & ~3)
 echo \nenv = \ 
 output *(long *)(($ & ~3) + 12)
 echo \ncount = \ 
-print *(long *)(($ & ~3) - 4) >> 9
+output *(long *)(($ & ~3) - 4) >> 10
 echo \n
 end
 #

@@ -1,6 +1,9 @@
 ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
+; Assumes: bitwise code-vectors features ascii signals
+
+
 (define-syntax define-vm-syntax
   (lambda (form rename compare)
     (let ((pattern (cadr form))
@@ -13,10 +16,10 @@
 ; Byte vectors
 
 (define (make-byte-vector size)
-  ((access-scheme48 'make-code-vector) size 0))
-(define byte-vector-length (access-scheme48 'code-vector-length))
-(define byte-vector-ref    (access-scheme48 'code-vector-ref))
-(define byte-vector-set!   (access-scheme48 'code-vector-set!))
+  ((structure-ref code-vectors make-code-vector) size 0))
+(define byte-vector-length (structure-ref code-vectors code-vector-length))
+(define byte-vector-ref    (structure-ref code-vectors code-vector-ref))
+(define byte-vector-set!   (structure-ref code-vectors code-vector-set!))
 
 (define (signed-byte-vector-ref bvec i)
   (let ((x (byte-vector-ref bvec i)))
@@ -51,25 +54,13 @@
          bytev)
       (byte-vector-word-set! bytev i value))))
 
-(define ashl (access-scheme48 'arithmetic-shift))
-(define ashr (lambda (n i) (ashl n (- 0 i))))
-
-(define bitwise-not (access-scheme48 'bitwise-not))
-(define bitwise-and (access-scheme48 'bitwise-and))
-(define bitwise-ior (access-scheme48 'bitwise-ior))
-(define bitwise-xor (access-scheme48 'bitwise-xor))
-
-(define force-output (access-scheme48 'force-output))
+(define ashl arithmetic-shift)
+(define ashr (lambda (n i) (arithmetic-shift n (- 0 i))))
 
 ; 32 bits per machine word minus Scheme48's two tag bits
 (define useful-bits-per-word 30)
 
-(define char->ascii (access-scheme48 'char->ascii))
-(define ascii->char (access-scheme48 'ascii->char))
-
-(define write-string (access-scheme48 'write-string))
-
-(define error (access-scheme48 'error))
+(define write-string display)
 
 (define (read-block port bytev start-addr count)
   (do ((i 0 (+ i 1)))

@@ -46,11 +46,14 @@
   (primitive-cwcc
     (lambda (cont)
       (let ((env (get-dynamic-env)))
-	(proc (lambda results
-		(travel-to-point! (get-dynamic-point) (env-dynamic-point env))
-		(set-dynamic-env! env)
-		(with-continuation cont
-		  (lambda () (apply values results)))))))))
+	(proc (continuation->procedure cont env)))))) ;don't close over proc
+
+(define (continuation->procedure cont env)
+  (lambda results
+    (travel-to-point! (get-dynamic-point) (env-dynamic-point env))
+    (set-dynamic-env! env)
+    (with-continuation cont
+      (lambda () (apply values results)))))
 
 ; Point in state space = <depth, in, out, dynamic-env, parent>
 ; dynamic-env = dynamic environment for execution of the in and out thunks

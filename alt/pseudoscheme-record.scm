@@ -1,3 +1,5 @@
+; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+
 
 (define make-record-type   #'scheme-translator::make-record-type)
 (define record-constructor #'scheme-translator::record-constructor)

@@ -4,7 +4,9 @@
 
 ; This is file util.scm.
 
-;;;; Dinky utilities
+;;;; Utilities
+
+(define (unspecific) (if #f #f))
 
 (define (reduce cons nil list)		;used by length, append, etc.
   (if (null? list)
@@ -53,3 +55,8 @@
 	(if (= end 0)
 	    '()
 	    (cons (car l) (recur (cdr l) (- end 1)))))))
+
+(define (last x)
+  (if (null? (cdr x))
+      (car x)
+      (last (cdr x))))

@@ -1,3 +1,5 @@
+; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+
 
 
 ; The DEFINE-PACKAGE macro expands into code containing the form
@@ -7,5 +9,7 @@
 ; work.  This may also work in other circumstance as well, but I'm not
 ; saying anything about that.
 
-(define (%file-name%) (fluid $source-file-name))
+(define-syntax %file-name%
+  (syntax-rules ()
+    ((%file-name%) (fluid $source-file-name))))
 

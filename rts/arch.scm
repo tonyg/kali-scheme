@@ -16,7 +16,7 @@
 
 ; Bytecodes: for compiler and interpreter
 
-; instruction specifiation is 
+; Instruction specification is 
 ; (op . args)
 ; OP may be a name or a list of names
 ; ARGS are
@@ -25,9 +25,9 @@
 ;  index     - a byte indexing into the current template
 ;  offset    - two bytes giving an offset into the current instruction stream
 ;  stob      - a byte specifying a type for a stored object
-;  0 1 2 ... - the number of non-instruction-stream arguments (some instructions
-;              take a variable number of arguments, the first number is the
-;              argument count implemented by the VM)
+;  0 1 2 ... - the number of non-instruction-stream arguments (some
+;              instructions take a variable number of arguments; the first
+;	       number is the argument count implemented by the VM)
 ; +          - any number of additional arguments are allowed
 
 (define-syntax define-instruction-set
@@ -75,7 +75,7 @@
 			         ; op-code is used internally by the VM)
 
   ;; five different ways to call procedures
-  (call               nargs 1 +) ; last argument it the procedure to call
+  (call               nargs 1 +) ; last argument is the procedure to call
   (move-args-and-call nargs 1 +) ; same, move args to just above *cont* first
   (apply              nargs 1 +) ; last argument is a list of additional 
 				 ; arguments, second to last is procedure to

@@ -2,6 +2,49 @@
 
 New features
 
+7/20/p3  Features:
+	   Type system.  See doc/types.txt.
+
+7/4/93   Features:
+           New define-package clause (for-syntax <clause>*).
+	     E.g. (define-package ((my-package ...))
+		    (open ...)
+		    (for-syntax (open scheme my-utilities)
+			        (files more-crud-for-syntax))
+                    ...)
+           A file name to package map is now used by the emacs
+	     interface.  Whenever you load a file, or zap from a file that
+	     hasn't been previously loaded or zapped, the package in
+	     which forms are being evaluated is remembered in a table.
+	     The next time you zap some forms from the same file, they
+	     will be evaluated in that package.
+	     Sometimes you may get an association you don't want.  In that
+	     situation, you can use the ,forget command to delete an
+	     entry in the table.
+           A new ,push command goes to a deeper level.
+	   Experimental "command preferred" command processor mode: if
+	     you give the command ",form-preferred off", commands will
+	     be "preferred" to forms, meaning that you don't need to
+	     type a comma before giving a command.  To see the value
+	     of a variable FOO you have to say (begin foo).
+           Experimental "no levels" command processor mode: if you
+	     give the command ",levels off", then an error will not
+	     push a new command level.  If you want to ignore an
+	     error, you don't need to take any action - further
+	     evaluations will happen at top level.  If you want to
+	     enter the inspector or get a preview, you can issue these
+	     commands or a ,push command immediately after the error
+	     occurs (more precisely, any time until the focus object
+	     is set by some other command).
+	   All of the mode-control commands (batch, bench,
+	     break-on-warnings, form-preferred, and levels) take
+	     an optional argument.  When no argument is given, they
+	     will toggle the corresponding mode.  With an argument of
+	     ON or OFF, they turn the mode on or off.
+           The ,flush and ,keep commands have been made more flexible
+	     and verbose.
+
+
 6/18/93  Incompatible changes:
 	   The access-scheme48 procedure has gone away.  Use ,open
 	     or the module system instead.

@@ -32,7 +32,7 @@
 	    (let ((bar (cdr probe)))
 	      (let loop2 ((frobs (cdr bar)))
 		(if (eq? frobs '())	;(null? frobs)
-		    (car bar)		;replacement
+		    (maybe-replace-location (car bar) p-uid)
 		    (if (memv p-uid (car (car frobs)))
 			(maybe-replace-location (cdr (car frobs)) p-uid)
 			(loop2 (cdr frobs))))))
