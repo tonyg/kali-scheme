@@ -44,7 +44,16 @@
 (define-vector-data-type vector #t)
 (define-vector-data-type record)
 (define-vector-data-type extended-number)
-(define-vector-data-type bignum)
+
+(define make-bignum  (stob-maker (enum stob byte-vector) make-b-vector))
+(define bignum?       (stob-predicate (enum stob bignum)))
+(define bignum-length b-vector-length)
+(define bignum-ref    b-vector-ref)
+(define bignum-set!   b-vector-set!)
+(define (bignum-size len)
+  (+ stob-overhead (bytes->cells len)))
+
+
 (define-vector-data-type continuation)
 (define-vector-data-type template)
 

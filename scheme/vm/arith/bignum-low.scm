@@ -2,8 +2,8 @@
 
 ; fixnum-as-bignum-length - the maximum bignum digits required to hold a fixnum
 ; From struct.scm:
-;   bignum-length - usual length operator, gives number of descriptors
-;   bignum-size - space to hold a bignum of N descriptors
+;   bignum-length - usual length operator, gives number of bytes
+;   bignum-size - space to hold a bignum of N bytes
 ; Defined here:
 ;   bignum-digits - number of digits in a bignum
 ;   bignum-digits->size - space to hold a bignum of N digits
@@ -12,10 +12,10 @@
 ; The first word in a bignum is used as a header by the C code.
 
 (define (bignum-digits bignum)
-  (- (bignum-length bignum) 1))
+  (- (bytes->cells (bignum-length bignum)) 1))
 
 (define (bignum-digits->size n)
-  (bignum-size (+ n 1)))
+  (bignum-size (cells->bytes (+ n 1))))
 
 (define bignum-digit-bits 30)		; BIGNUM_DIGIT_LENGTH in bignumint.h
 
@@ -50,7 +50,7 @@
 			   (bignum-digits->size 1)))    ; -1
   (external-bignum-make-cached-constants))
   
-(define *bignum-preallocation-key*)
+(define *bignum-preallocation-key* 0)
 
 (define (set-bignum-preallocation-key! key)
   (if (checking-preallocation?)
