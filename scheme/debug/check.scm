@@ -45,6 +45,8 @@
 (in 'test3 '(run (test "shadowing" = 20 (z))))
 (in 'test1 '(run (test "shadowing" = 10 (z))))
 
+(config '(load "=scheme48/misc/packages.scm"))
+
 (config '(run 
 (define-structure foo (export)
   (open scheme testing
@@ -253,8 +255,6 @@
     (obtain-lock l1)
     (obtain-lock l2)
     (test "placeholders" = r 23)))
-
-(test "explode" equal? 'ab3 (implode (explode 'ab3)))
 
 (test "get/put" equal? 'a (begin (put 'foo 'prop 'a)
 				 (get 'foo 'prop)))

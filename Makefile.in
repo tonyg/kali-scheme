@@ -388,9 +388,8 @@ distclean: clean
 check:	$(VM) $(IMAGE) scheme/debug/check.scm
 	(								\
 		echo ',batch';						\
-		echo ',translate =scheme48 scheme';			\
-		echo ',config ,load scheme/debug/test.scm';		\
-		echo ',exec ,load scheme/debug/check.scm';		\
+		echo ',config ,load =scheme48/debug/test.scm';		\
+		echo ',exec ,load =scheme48/debug/check.scm';		\
 		echo ',exec (done)'					\
 	) | ./$(VM) -i $(IMAGE)
 
