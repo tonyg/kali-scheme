@@ -418,7 +418,6 @@
 	  filter filter! filter-map partition-list partition-list!
 	  remove-duplicates delq delq! delete
 	  reverse!
-	  copy-string
 	  string->immutable-string
 	  ))
 

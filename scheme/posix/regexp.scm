@@ -69,7 +69,7 @@
 					 regexp-option-index)))
     (if (and (string? pattern)
 	     (pair? options))
-	(let* ((pattern (immutable-copy-string pattern))
+	(let* ((pattern (string->immutable-string pattern))
 	       (regexp (apply really-make-regexp pattern #f options)))
 	  (add-finalizer! regexp free-compiled-regexp)
 	  regexp)

@@ -184,16 +184,10 @@
 
 ; Copying strings.
 
-(define (copy-string string)
-  (let* ((length (string-length string))
-	 (new (make-string length #\?)))
-    (copy-bytes! string 0 new 0 length)
-    new))
-
 (define (string->immutable-string string)
   (if (immutable? string)
       string
-      (let ((copy (copy-string string)))
+      (let ((copy (string-copy string)))
 	(make-immutable! copy)
 	copy)))
 

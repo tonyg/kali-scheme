@@ -87,7 +87,6 @@
 		    (posix-users posix-users-interface))
   (open scheme define-record-types finite-types
 	external-calls
-	external-util
 	bitwise			;for manipulating protection masks
 	signals			;call-error
 	posix-file-options
@@ -237,8 +236,8 @@
 (define-structures ((posix-regexps posix-regexps-interface)
 		    (posix-regexps-internal (export make-match)))
   (open scheme define-record-types finite-types external-calls
-	signals
-	external-util)
+	(subset big-util (string->immutable-string))
+	signals)
   (files regexp))
 
 (define-interface regexps-interface
@@ -308,22 +307,3 @@
 	posix-users
 	posix-regexps))
 
-(define-structure external-util (export immutable-copy-string)
-  (open scheme
-	primitives	;copy-bytes!
-	features)	;immutable? make-immutable!
-  (begin
-    (define (immutable-copy-string string)
-      (if (immutable? string)
-	  string
-	  (let ((copy (copy-string string)))
-	    (make-immutable! copy)
-	    copy)))
-
-    ; Why isn't this available elsewhere?
-
-    (define (copy-string string)
-      (let* ((length (string-length string))
-	     (new (make-string length #\?)))
-	(copy-bytes! string 0 new 0 length)
-	new))))
