@@ -21,7 +21,6 @@
 
 char *s48_expand_file_name (char *name, char *buffer, int buffer_len)
 {
-#define ENV_NAME_SIZE 256
   char *drive = NULL, *path = NULL, *dir = NULL;
   int dir_len;
   int name_len = strlen(name);
@@ -33,26 +32,19 @@ char *s48_expand_file_name (char *name, char *buffer, int buffer_len)
        * I have no idea if it will have trailing \ for a subdirectory.
        */
       path  = getenv("HOMEPATH");
-      name += 2;
+      name += 1;
       name_len -= 2;
     }
   else if ((name_len >= 3) && (name[0] == '%'))
     {
       char *pos = strchr(name + 2, '%');
-      if (pos) /* #### uh oh #### */
+      if (pos)
 	{
-	  if ((pos - name) + 1 > ENV_NAME_SIZE)
-	    {
-	      fprintf(stderr,
-		      "\ns48_expand_file_name: environment variable longer than %d characters\n",
-		      ENV_NAME_SIZE - 2);
-	      return NULL;
-	    }
+	  *pos = '\0';
+	  dir = getenv(name+1);
+	  name = pos + 1;
+	  name_len -= (pos - name) + 1;
 	}
-      *pos = '\0';
-      dir = getenv(name+1);
-      name = pos + 1;
-      name_len -= (pos - name) + 1;
     }
 
   if ((drive && path) || dir)
