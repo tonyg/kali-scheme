@@ -43,12 +43,10 @@ The structure \code{external-calls} has
 The others are in 
  \code{dynamic-externals}, which has the functions for dynamic loading and
  name lookup from
-\texonly{Section~\ref{dynamic-externals},}
-\htmlonly{the section on \link{Dynamic Loading}{dynamic-externals},}
+Section~\ref{dynamic-externals},
  and \code{shared-bindings}, which has the additional shared-binding functions
  described in
-\texonly{Section~\ref{more-shared-bindings}.}
-\htmlonly{the section on the \link{complete shared-binding interface}{more-shared-bindings}.}
+section~\ref{more-shared-bindings}.
 
 \subsection{C naming conventions}
 
@@ -80,8 +78,7 @@ The garbage collector may run whenever an object is allocated in the heap.
 C variables whose values are Scheme~48 objects and which are live across
  heap allocation calls need to be registered with
  the
-\link{garbage collector}
-[garbage collector.  See section~\Ref{} for more information]{gc}.
+garbage collector.  See section~\ref{gc} for more information.
 
 \section{Shared bindings}
 \label{sec:shared-bindings}
@@ -143,7 +140,7 @@ s48\_define\_exported\_binding("\cvar{name}",
  exports it.
 Note that \code{s48\_enter\_pointer} allocates space in the Scheme heap
  and might trigger a 
- \link{garbage collection}[; see Section~\ref{gc}]{gc}.
+garbage collection; see Section~\ref{gc}.
 
 \begin{protos}
 \syntaxprotonoresult{import-definition}{ \cvar{name}}
@@ -171,7 +168,7 @@ There are a number of other Scheme functions related to shared bindings;
 \proto{shared-binding?}{ x}{boolean}
 \proto{shared-binding-name}{ shared-binding}{string}
 \proto{shared-binding-is-import?}{ shared-binding}{boolean}
-\protonoresult{shared-binding-set!}{ shared-binding value}
+\protonoresultnoindex{shared-binding-set!}{ shared-binding value}\mainschindex{shared-binding-set"!}
 \protonoresult{define-imported-binding}{ string value}
 \protonoresult{lookup-exported-binding}{ string}
 \protonoresult{undefine-imported-binding}{ string}{}
@@ -216,8 +213,7 @@ For \code{call-imported-binding} the function argument must be an
 For \code{call-external} the function argument must be an external
  bound in the current process
  (see
-\texonly{Section~\ref{dynamic-externals}).}
-\htmlonly{the section on \link{Dynamic Loading}{dynamic-externals}).}
+section~\ref{dynamic-externals}).
 For \code{call-external-value} \cvar{value} must be a byte vector
  whose contents is a pointer to a C function and \cvar{name} should be
  a string naming the function.
@@ -345,8 +341,7 @@ The following two functions can be used to update the values of
 An external whose value is a C procedure can be called using
  \code{call-external}.
 See
-\texonly{Section~\ref{sec:external-call}}
-\htmlonly{the section on \link{calling C functions from Scheme}{sec:external-call}}
+section~\ref{sec:external-call}
 for more information.
 
 In some versions of Unix retrieving a value from the current
@@ -423,8 +418,7 @@ The `extract' ones convert from Scheme to C and the `enter's go the other
  \code{s48\_extract\_string} and \code{s48\_extract\_byte\_vector} return
  pointers to the actual
  storage used by the string or byte vector.
- These pointers are valid only until the next
- \link{garbage collection}[; see Section~\ref{gc}]{gc}.
+ These pointers are valid only until the next; see Section~\ref{gc}.
 
 The second argument to \code{s48\_enter\_byte\_vector} is the length of
  byte vector.

@@ -59,10 +59,7 @@ The usual definition of the \code{s48} or \code{scheme48} command is actually a
 specifying the development environment heap image and a
  \code{-o \cvar{vm-executable}} specifying the location of the virtual-machine
  executable (the executable is needed for loading external code on some
- versions of Unix; see section~\ref{dynamic-externals}
- \link*{for more information}
- [for more information]
- {dynamic-externals}).
+ versions of Unix; see section~\ref{dynamic-externals} for more information).
 The file \code{go} in the Scheme~48 installation source directory is an example
  of such a shell script.
 
@@ -74,9 +71,7 @@ The command processor acts as both a read-eval-print loop, reading
  expressions, evaluating them, and printing the results, and as
  an interactive debugger and data inspector.
 See Chapter~\ref{chapter:command-processor} for
-\link*{a description of the command processor}
-[a description of the command processor]
-{chapter:command-processor}.
+a description of the command processor.
 
 \section{Editing}
 
@@ -152,7 +147,7 @@ The disassembler can also be invoked on continuations and templates.
 This section gives a brief description of modules and related entities.
 For detailed information, including a description of the module
  configuration language, see 
-\link*{the module chapter}[chapter~\Ref]{chapter:modules}.
+chapter \ref{chapter:modules}.
 
 % JAR says: this paragraph is muddy.
 
@@ -197,7 +192,7 @@ The \code{begin} clause contains source code.
 \end{example}
 
 Cells could also have been implemented using the
-\link*{record facility}[record facility described in section~\Ref]{records}
+record facility described in section~\ref{records}
  and available in structure \code{define-record-type}.
 \begin{example}
 (define-structure cells (export make-cell
@@ -217,8 +212,7 @@ The command interpreter is always operating within a particular package.
 Initially this is a package in which only the standard Scheme bindings
  are visible.
 The bindings of other structures can be made visible by using the 
-\link*{\code{,open} command}
-[\code{,open} command described in section~\Ref{} below]{module-command-guide}.
+\code{,open} command described in section~\ref{module-command-guide} below.
 
 Note that this initial package does not include the configuration language.
 Module code needs to be evaluated in the configuration package, which can
@@ -257,7 +251,7 @@ When loading a utility, the message "Note: optional optimizer not
 invoked" is innocuous.  Feel free to ignore it.
 
 See also the package system documentation, in
- \link*{the module chapter}[chapter~\Ref]{chapter:modules}.
+chapter~\ref{chapter:modules}.
 
 Not all of the the libraries available in Scheme~48 are described in this
  manual.

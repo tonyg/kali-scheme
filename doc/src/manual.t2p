@@ -1,0 +1,119 @@
+% This file is based on the tex2page macros needed to process
+% the scsh LaTeX document by Dorai Sitaram.
+% Copy (or link) this file alongside manual.tex and run
+%
+% tex2page manual
+
+\input css.t2p
+\htmlmathstyle{no-image}
+
+\let\pagebreak\relax
+
+\let\small\relax
+
+%\let\PRIMtableofcontents\tableofcontents
+%\def\tableofcontents{\chapter*{Contents}\PRIMtableofcontents}
+
+\def\subtitle#1{\def\savesubtitle{#1}}
+
+\def\maketitle{
+\subject{\TIIPtitle}
+{\bf \hr}
+\rightline{\savesubtitle}
+\bigskip\bigskip
+\bigskip\bigskip
+{\bf\TIIPauthor}
+{\bf\hr}
+}
+
+\let\PRIMdocument\document
+
+\def\document{\PRIMdocument
+
+\let\ttchars\relax
+\let\ttt\tt
+
+%\def\~{\rawhtml~\endrawhtml}
+\def\~{\char`\~}
+\def\cd#1{{\tt\def\\{\char`\\}\defcsactive\${\char`\$}\defcsactive\~{\char`\~}\defcsactive\&{\char`\&}#1}}
+\def\cddollar{\undefcsactive\$}
+\def\cdmath{\undefcsactive\$}
+\def\codeallowbreaks{\relax}
+\def\defvarx#1#2{\index{#1}\leftline{{\tt #1} \qquad #2}}
+
+\let\PRIMflushright\flushright
+
+\def\flushright{\PRIMflushright\TIIPtabularborder=0 }
+
+\let\PRIMfigure\figure
+\let\PRIMendfigure\endfigure
+
+\def\figure{\par\hrule\PRIMfigure}
+\def\endfigure{\PRIMendfigure\hrule\par}
+
+\let\PRIMtable\table
+\let\PRIMendtable\endtable
+
+\def\table{\par\hrule\PRIMtable}
+\def\endtable{\PRIMendtable\hrule\par}
+
+\imgdef\vdots{\bf.\par.\par.}
+
+%\evalh{
+%
+%(define all-blanks?
+%  (lambda (s)
+%    (andmap
+%      char-whitespace?
+%      (string->list s))))
+%
+%}
+%
+%
+%\def\spaceifnotempty{\evalh{
+%
+%(let ((x (ungroup (get-token))))
+%  (unless (all-blanks? x)
+%    (emit #\space)))
+%
+%}}
+
+\def\spaceifnotempty#1{%
+  \def\TEMP{#1}%
+  \ifx\TEMP\empty\else\ \fi}
+
+\def\dfnix#1#2#3#4#5{\index{#5}\leftline{{\tt(#1\spaceifnotempty{#2}{\it#2})} \quad $\longrightarrow$ \quad {\it #3} \qquad (#4)}}
+
+%\def\ex#1{{\tt #1}}
+%\let\ex\texttt
+\def\l#1{lambda (#1)}
+\def\lx#1{lambda {#1}}
+%\def\notenum#1{}
+%\def\project#1{}
+%\def\var#1{{\it #1\/}}
+%\let\var\textit
+%\def\vari#1#2{\mbox{{\it #1\/}\undefcsactive\$$_{#2}$}}
+%\def\vari#1#2{\textit{#1}$_{#2}$}
+
+\renewenvironment{boxedfigure}{\def\srecomment#1{\\#1\\}%
+\begin{figure}\pagestyle}{\end{figure}}
+
+\def\setupcode{\tt%
+\def\\{\char`\\}%
+\defcsactive\${\$}%
+\def\evalto{==> }%
+\defcsactive\%{\%}\obeywhitespace}
+
+\newenvironment{codebox}{\begin{tableplain}\bgroup\setupcode\GOBBLEOPTARG}
+{\egroup\end{tableplain}}
+
+\renewenvironment{exampletable}{%
+\def\header#1{\\\leftline{#1}\\}%
+\def\splitline#1#2{\\\leftline{#1}\\\leftline{#2}}%
+\begin{tabular}{}}{\end{tabular}}
+
+\renewenvironment{inset}{\begin{quote}}{\end{quote}}
+\renewenvironment{leftinset}{\begin{quote}}{\end{quote}}
+\renewenvironment{tightinset}{\begin{quote}}{\end{quote}}
+\renewenvironment{tightleftinset}{\begin{quote}}{\end{quote}}
+}

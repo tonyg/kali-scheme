@@ -200,9 +200,11 @@ The following lists the names of the POSIX signals.
 The following lists the names of the non-POSIX signals that the system is
  currently aware of.
 \begin{center}
-\W\begin{tabular}{ll}
-\T\setlongtables
-\T\begin{longtable}{ll}
+\texonly
+\setlongtables
+\begin{longtable}{ll}
+\endtexonly
+\htmlonly\begin{tabular}{ll}\endhtmlonly
 \code{trap  } & trace or breakpoint trap \\
 \code{iot   } & IOT trap - a synonym for ABRT \\
 \code{emt   } & \\
@@ -221,8 +223,8 @@ The following lists the names of the non-POSIX signals that the system is
 \code{lost  } & File lock lost \\
 \code{winch } & Window resize signal            (4.3 BSD, Sun) \\
 \code{unused} & Unused signal \\
-\W\end{tabular}
-\T\end{longtable}
+\texonly\end{longtable}\endtexonly
+\htmlonly\end{tabular}\endhtmlonly
 \end{center}
 
 \subsection{Sending signals}
@@ -247,8 +249,8 @@ When the Scheme process receives a signal that signal is added to the
 \proto{make-signal-queue}{ signals}{signal-queue}
 \proto{signal-queue?}{ x}{boolean}
 \proto{signal-queue-monitored-signals}{ signal-queue}{list of signals}
-\proto{dequeue-signal!}{ signal-queue}{signal}
-\proto{maybe-dequeue-signal!}{ queue-queue}{signal or {\tt \#f}}
+\protonoindex{dequeue-signal!}{ signal-queue}{signal}\mainschindex{dequeue-signal"!}
+\protonoindex{maybe-dequeue-signal!}{ signal-queue}{signal or {\tt \#f}}\mainschindex{maybe-dequeue-signal"!}
 \end{protos}
 \noindent
 \code{Make-signal-queue} returns a new signal-queue that will monitor
@@ -275,8 +277,8 @@ A work around is to create a thread that sleeps for a long time, which
 \end{example}
 
 \begin{protos}
-\protonoresult{add-signal-queue-signal!}{ signal-queue signal}
-\protonoresult{remove-signal-queue-signal!}{ signal-queue signal}
+\protonoresultnoindex{add-signal-queue-signal!}{ signal-queue signal}\mainschindex{add-signal-queue-signal"!}
+\protonoresultnoindex{remove-signal-queue-signal!}{ signal-queue signal}\mainschindex{remove-signal-queue-signal"!}
 \end{protos}
 \noindent
 These two procedures can be used to add or remove signals from a
@@ -305,13 +307,13 @@ See section~\ref{processes} for operations on process ids.
 \begin{protos}
 \proto{get-user-id}{}{ user-id}
 \proto{get-effective-user-id}{}{ user-id}
-\protonoresult{set-user-id!}{ user-id}
+\protonoresultnoindex{set-user-id!}{ user-id}\mainschindex{set-user-id"!}
 \end{protos}
 
 \begin{protos}
 \proto{get-group-id}{}{ group-id}
 \proto{get-effective-group-id}{}{ group-id}
-\protonoresult{set-group-id!}{ group-id}
+\protonoresultnoindex{set-group-id!}{ group-id}\mainschindex{set-group-id"!}
 \end{protos}
 \noindent
 Every process has both the original and effective user id and group id.
@@ -454,7 +456,7 @@ This is the obvious utility; it returns a list of the names in directory
 
 \begin{protos}
 \proto{working-directory}{}{string}
-\protonoresult{set-working-directory!}{ string}
+\protonoresultnoindex{set-working-directory!}{ string}\mainschindex{set-working-directory"!}
 \end{protos}
 \noindent
 These return and set the working directory.
@@ -534,7 +536,7 @@ You can use \code{set-i/o-flags!} to make an output port blocking, for
 The Scheme~48 runtime code may get confused if an I/O operation blocks.
 
 \begin{protos}
-\protonoresult{set-file-creation-mask!}{ file-mode}
+\protonoresultnoindex{set-file-creation-mask!}{ file-mode}\mainschindex{set-file-creation-mask"!}
 \end{protos}
 \noindent
 Sets the file creation mask to be \cvar{file-mode}.
@@ -907,7 +909,7 @@ If any existing port uses the file descriptor passed to \code{dup2}, that
 
 \begin{protos}
 \proto{close-on-exec?}{ port}{boolean}
-\protonoresult{set-close-on-exec?!}{ port boolean}
+\protonoresultnoindex{set-close-on-exec?!}{ port boolean}\mainschindex{set-close-on-exec?"!}
 \end{protos}
 \noindent
 \code{Close-on-exec?} returns true if \code{port} will be closed
@@ -920,7 +922,7 @@ If any existing port uses the file descriptor passed to \code{dup2}, that
 
 \begin{protos}
 \proto{i/o-flags}{ port}{file-options}
-\protonoresult{set-i/o-flags!}{ port file-options}
+\protonoresultnoindex{set-i/o-flags!}{ port file-options}\mainschindex{set-i/o-flags"!}
 \end{protos}
 \noindent
 These two procedures read and write various options for \code{port}.
@@ -1026,13 +1028,13 @@ The following table lists the Scheme procedures that correspond to
  particular C procedures.
 Not all of the Scheme procedures listed are part of the POSIX interface.
 
-\W\begin{tabular}{ll}
-\T\setlongtables
-\T\begin{longtable}{ll}
+\texonly\setlongtables
+\begin{longtable}{ll}\endtexonly
+\htmlonly\begin{tabular}{ll}\endhtmlonly
 C procedure & Scheme procedure(s) \\
-\T\endfirsthead
-\T C procedure & Scheme procedure(s) \\
-\T\endhead
+\endfirsthead
+ C procedure & Scheme procedure(s) \\
+\endhead
 \code{access}&\code{accessible?}\\
 \code{chdir}&\code{set-working-directory!}\\
 \code{close}&\code{close-input-port, close-output-port,}\\
@@ -1108,8 +1110,8 @@ C procedure & Scheme procedure(s) \\
 %pathconf, fpathconf \\
 %lseek \\
 %fsync \\
-\W\end{tabular}
-\T\end{longtable}
+\texonly\end{longtable}\endtexonly
+\htmlonly\end{tabular}\endhtmlonly
 
 %%% Local Variables: 
 %%% mode: latex

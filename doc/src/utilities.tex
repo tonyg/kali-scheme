@@ -6,11 +6,9 @@
 \chapter{Libraries}
 
 Use the
-\link*{\code{,open} command}
-[\code{,open} command (section~\Ref{})]{module-command-guide}
+\code{,open} command (section~\ref{module-command-guide})
  or
-\link*{the module language}
-[the module language (chapter~\Ref)]{module-guide}
+the module language (chapter~\ref{module-guide})
  to open the structures described below.
 
 \section{General utilities}
@@ -82,7 +80,7 @@ the first element for which \var{predicate} is true.
 
 \begin{protos}
 \proto{filter}{ predicate list}{list}
-\proto{filter!}{ predicate list}{list}
+\protonoindex{filter!}{ predicate list}{list}\mainschindex{filter"!}
 \end{protos}
 Returns a list containing all of the elements of \var{list} for which
 \var{predicate} is true.  The order of the elements is preserved.
@@ -97,7 +95,7 @@ applying \var{procedure} instead of elements of \var{list}.  \code{(filter-map \
 
 \begin{protos}
 \proto{partition-list}{ predicate list}{list list}
-\proto{partition-list!}{ predicate list}{list list}
+\protonoindex{partition-list!}{ predicate list}{list list}\mainschindex{partition-list"!}
 \end{protos}
 The first return value contains those elements \var{list} for which
 \var{predicate} is true, the second contains the remaining elements.
@@ -112,7 +110,7 @@ instance of each element is preserved.
 
 \begin{protos}
 \proto{delq}{ value list}{list}
-\proto{delq!}{ value list}{list}
+\protonoindex{delq!}{ value list}{list}\mainschindex{delq"!}
 \proto{delete}{ predicate list}{list}
 \end{protos}
 All three of these return \var{list} with some elements removed.
@@ -123,7 +121,7 @@ all elements for which \var{predicate} is true.  Both \code{delq} and
 won't modify it.
 
 \begin{protos}
-\proto{reverse!}{ list}{list}
+\protonoindex{reverse!}{ list}{list}\mainschindex{reverse"!}
 \end{protos}
 Destructively reverses \var{list}.
 
@@ -163,7 +161,7 @@ These are in the structure \code{ascii}.
 \noindent
 These are identical to \code{char->integer} and \code{integer->char} except that
  they use the
-\link{ASCII encoding}[ASCII encoding (appendix~\Ref)]{ascii-chart}.
+ASCII encoding (appendix~\ref{ascii-chart}).
 
 \begin{protos}
 \constproto{ascii-limit}{integer}
@@ -217,7 +215,7 @@ They are in the structure \code{byte-vectors}.
 \proto{byte-vector}{ b \ldots}{byte-vector}
 \proto{byte-vector-length}{ byte-vector}{integer}
 \proto{byte-vector-ref}{ byte-vector k}{integer}
-\protonoresult{byte-vector-set!}{ byte-vector k b}
+\protonoresultnoindex{byte-vector-set!}{ byte-vector k b}\mainschindex{byte-vector-set"!}
 \end{protos}
 
 \section{Sparse vectors}
@@ -230,7 +228,7 @@ entries in a tree.  They are in the structure \code{sparse-vectors}.
 \begin{protos}
 \proto{make-sparse-vector}{}{sparse-vector}
 \proto{sparse-vector-ref}{ sparse-vector k}{value}
-\protonoresult{sparse-vector-set!}{ sparse-vector k value}
+\protonoresultnoindex{sparse-vector-set!}{ sparse-vector k value}\mainschindex{sparse-vector-set"!}
 \proto{sparse-vector->list}{ sparse-vector}{list}
 \end{protos}
 %
@@ -259,7 +257,7 @@ The system uses these to hold the values of lexical variables that
 \proto{cell?}{ value}{boolean}
 \proto{make-cell}{ value}{cell}
 \proto{cell-ref}{ cell}{value}
-\protonoresult{cell-set!}{ cell value}
+\protonoresultnoindex{cell-set!}{ cell value}\mainschindex{cell-set"!}
 \end{protos}
 
 \section{Queues}
@@ -271,8 +269,8 @@ The procedures are in structure \code{queues}.
 \proto{make-queue}{}{queue}
 \proto{queue?}{ value}{boolean}
 \proto{queue-empty?}{ queue}{boolean}
-\protonoresult{enqueue!}{ queue value}
-\proto{dequeue!}{ queue}{value}
+\protonoresultnoindex{enqueue!}{ queue value}\mainschindex{enqueue"!}
+\protonoindex{dequeue!}{ queue}{value}\mainschindex{dequeue"!}
 \end{protos}
 \noindent 
 \code{Make-queue} creates an empty queue, \code{queue?} is a predicate for
@@ -283,7 +281,7 @@ The procedures are in structure \code{queues}.
 \proto{queue-length}{ queue}{integer}
 \proto{queue->list}{ queue}{values}
 \proto{list->queue}{ values}{queue}
-\proto{delete-from-queue!}{ queue value}{boolean}
+\protonoindex{delete-from-queue!}{ queue value}{boolean}\mainschindex{delete-from-queue"!}
 \end{protos}
 \noindent
 \code{Queue-length} returns the number of values in \var{queue}.
@@ -334,7 +332,7 @@ Returns \code{\#t} if \cvar{value} is an array.
 
 \begin{protos}
 \proto{array-ref}{ array index$_0$ \ldots}{value}
-\protonoresult{array-set!}{ array value index$_0$ \ldots}
+\protonoresultnoindex{array-set!}{ array value index$_0$ \ldots}\mainschindex{array-set"!}
 \proto{array->vector}{ array}{vector}
 \proto{array-dimensions}{ array}{list}
 \end{protos}
@@ -458,9 +456,7 @@ The print method can be modified using \code{define-record-discloser}:
  will cause the result of \code{(kons 1 2)} to print as
  \code{\#\{Pare 1 2\}}.
 
-\link*{\code{Define-record-resumer}}
- [\code{Define-record-resumer} (section~\Ref{})]
- {sec:hibernation}
+\code{Define-record-resumer} (section~\ref{sec:hibernation})
  can be used to control how records are stored in heap images.
 
 \subsection{Low-level access to records}
@@ -480,7 +476,7 @@ These procedures are in the structure \code{records}.
 \proto{record-length}{ record}{integer}
 \proto{record-type}{ record}{value}
 \proto{record-ref}{ record i}{value}
-\protonoresult{record-set!}{ record i value}
+\protonoresultnoindex{record-set!}{ record i value}\mainschindex{record-set"!}
 \end{protos}
 \noindent
 These the same as the standard \code{vector-} procedures except that they
@@ -532,9 +528,7 @@ These procedures construct the usual record-manipulating procedures.
  and
  \code{define-record-resumer}
  (re-exported by
- \link*{\code{external-calls}}
-       [\code{external-calls} (section~\Ref{})]
-       {sec:hibernation}).
+ \code{external-calls} (section~\ref{sec:hibernation})).
 
 The procedures described in this section can be used to define new
  record-type-defining macros.
@@ -764,7 +758,7 @@ All but a finite number of those values are \code{\#f}.
 \proto{make-string-table}{}{string-table}
 \proto{make-integer-table}{}{integer-table}
 \proto{make-table-maker}{ compare-proc hash-proc}{procedure}
-\protonoresult{make-table-immutable!}{ table}
+\protonoresultnoindex{make-table-immutable!}{ table}\mainschindex{make-table-immutable"!}
 \end{protos}
 \noindent
 The first four functions listed make various kinds of tables.
@@ -791,7 +785,7 @@ For example, \code{make-integer-table} could be defined
 \begin{protos}
 \proto{table?}{ value}{boolean}
 \proto{table-ref}{ table key}{value or {\tt \#f}}
-\protonoresult{table-set!}{ table key value}
+\protonoresultnoindex{table-set!}{ table key value}\mainschindex{table-set"!}
 \protonoresult{table-walk}{ procedure table}
 \end{protos}
 \noindent
@@ -1561,9 +1555,9 @@ of a vector's elements. If a \code{start} parameter or
 \code{start}/\code{end} parameter pair is given to such a
 procedure, they must be exact, non-negative integers, such that
 %
-\begin{displaymath}
+\[
     0 \leq \var{start} \leq \var{end} \leq \code{(vector-length \var{vector})}
-\end{displaymath}
+\]
 %
 where \var{vector} is the related vector parameter. If not specified,
 they default to 0 and the length of the vector, respectively. They are
@@ -1641,9 +1635,9 @@ In the procedures specified below,
 \item \code{Start} and \code{end} parameters are exact, non-negative integers that 
   serve as vector indices selecting a subrange of some associated vector.
   When specified, they must satisfy the relation
-  \begin{displaymath}
+  \[
     0 \leq \var{start} \leq \var{end} \leq \code{(vector-length \var{vector})}
-  \end{displaymath}
+  \]
   where \var{vector} is the associated vector.
 \end{itemize}
 %
@@ -1670,19 +1664,19 @@ i.e., what they do to the data (sort, stable sort, merge, and so forth).
 \begin{protos}
   \proto{list-sorted?}{ $<$ list}{boolean} 
   \proto{list-merge}{ $<$ list$_1$ list$_2$}{list}
-  \proto{list-merge!}{ $<$ list$_1$ list$_2$}{list}
+  \protonoindex{list-merge!}{ $<$ list$_1$ list$_2$}{list}\mainschindex{list-merge"!}
   \proto{list-sort}{ $<$ lis}{list}
-  \proto{list-sort!}{ $<$ lis}{list}
+  \protonoindex{list-sort!}{ $<$ lis}{list}\mainschindex{list-sort"!}
   \proto{list-stable-sort}{  $<$ list}{list}
-  \proto{list-stable-sort!}{ $<$ list}{list}
+  \protonoindex{list-stable-sort!}{ $<$ list}{list}\mainschindex{list-stable-sort"!}
   \proto{list-delete-neighbor-dups}{  $=$ list}{list}
   \proto{vector-sorted?}{ $<$ v [start [end]]}{boolean}
   \proto{vector-merge}{ $<$ v$_1$ v$_2$ [start$1$ [end$1$ [start$2$ [end$2$]]]]}{vector}
-  \protonoresult{vector-merge!}{ $<$ v v$_1$ v$_2$ [start [start$1$ [end$1$ [start$2$ [end$2$]]]]]}
+  \protonoresultnoindex{vector-merge!}{ $<$ v v$_1$ v$_2$ [start [start$1$ [end$1$ [start$2$ [end$2$]]]]]}\mainschindex{vector-merge"!}
   \proto{vector-sort}{ $<$ v [start [end]]}{vector}
-  \protonoresult{vector-sort!}{ $<$ v [start [end]]}
+  \protonoresultnoindex{vector-sort!}{ $<$ v [start [end]]}\mainschindex{vector-sort"!}
   \proto{vector-stable-sort}{ $<$ v [start [end]]}{vector}
-  \protonoresult{vector-stable-sort!}{ $<$ v [start [end]]}
+  \protonoresultnoindex{vector-stable-sort!}{ $<$ v [start [end]]}\mainschindex{vector-stable-sort"!}
   \proto{vector-delete-neighbor-dups}{ $=$ v [start [end]]}{vector}
 \end{protos}
 
@@ -1841,9 +1835,9 @@ arguments restrict \code{vector-sorted?} to the indicated subvector.
 %
 \begin{protos}
   \proto{list-merge-sort}{ $<$ list}{list}
-  \proto{list-merge-sort!}{ $<$ list}{list}
+  \protonoindex{list-merge-sort!}{ $<$ list}{list}\mainschindex{list-merge-sort"!}
   \proto{list-merge}{ list$_1$ $<$ list$_2$}{list}
-  \proto{list-merge!}{ list$_1$ $<$ list$_2$}{list}
+  \protonoindex{list-merge!}{ list$_1$ $<$ list$_2$}{list}\mainschindex{list-merge"!}
 \end{protos}
 %
 The sort procedures sort their data using a list merge sort, which is
@@ -1864,9 +1858,9 @@ list.
 
 \begin{protos}
   \proto{vector-merge-sort}{ $<$ vector [start [end [temp]]]}{vector}
-  \protonoresult{vector-merge-sort!}{ $<$ vector [start [end [temp]]]}
+  \protonoresultnoindex{vector-merge-sort!}{ $<$ vector [start [end [temp]]]}\mainschindex{vector-merge-sort"!}
   \proto{vector-merge}{ $<$ vector$_1$ vector$_2$ [start$_1$ [end$_1$ [start$_2$ [end$_2$]]]]}{vector}
-  \protonoresult{vector-merge!}{ $<$ vector vector$_1$ vector$_2$ [start [start$_1$ [end$_1$ [start$_2$ [end$_2$]]]]]}
+  \protonoresultnoindex{vector-merge!}{ $<$ vector vector$_1$ vector$_2$ [start [start$_1$ [end$_1$ [start$_2$ [end$_2$]]]]]}\mainschindex{vector-merge"!}
 \end{protos}
 %
 The sort procedures sort their data using vector merge sort, which is
@@ -1913,7 +1907,7 @@ may not overlap either source subvector
 
 \begin{protos}
 \proto{vector-heap-sort}{ $<$ vector [start [end]]}{vector}
-\protonoresult{vector-heap-sort!}{ $<$ vector [start [end]]}
+\protonoresultnoindex{vector-heap-sort!}{ $<$ vector [start [end]]}\mainschindex{vector-heap-sort"!}
 \end{protos}
 %
 These procedures sort their data using heap sort, 
@@ -1970,7 +1964,7 @@ which is not a stable sorting algorithm.
 
 \begin{protos}
 \proto{vector-insert-sort}{ $<$ vector [start [end]]}{vector}
-\protonoresult{vector-insert-sort!}{ $<$ vector [start [end]]}
+\protonoresultnoindex{vector-insert-sort!}{ $<$ vector [start [end]]}\mainschindex{vector-insert-sort"!}
 \end{protos}
 %
 These procedures stably sort their data using insertion sort.
@@ -1986,9 +1980,9 @@ These procedures stably sort their data using insertion sort.
 
 \begin{protos}
   \proto{list-delete-neighbor-dups}{ $=$ list}{list}
-  \proto{list-delete-neighbor-dups!}{ $=$ list}{list}
+  \protonoindex{list-delete-neighbor-dups!}{ $=$ list}{list}\mainschindex{list-delete-neighbor-dups"!}
   \proto{vector-delete-neighbor-dups}{ $=$ vector [start [end]]}{vector}
-  \proto{vector-delete-neighbor-dups!}{ $=$ vector [start [end]]}{end$'$}
+  \protonoindex{vector-delete-neighbor-dups!}{ $=$ vector [start [end]]}{end$'$}\mainschindex{vector-delete-neighbor-dups}
 \end{protos}
 %
 These procedures delete adjacent duplicate elements from a list or
@@ -2096,13 +2090,13 @@ procedure \var{compare-proc}. \var{Compare-proc} compares its
 parameter to the search key, and returns an
 exact integer whose sign indicates its relationship to the search key.
 %
-\begin{displaymath}
+\[
   \begin{array}{rclcrcl}
       (\var{compare-proc}~x) &<& 0& \Rightarrow&  x &<& \var{search-key}\\
       (\var{compare-proc}~x) &=& 0& \Rightarrow&  x &=& \var{search-key}\\
       (\var{compare-proc}~x) &>& 0& \Rightarrow&  x &>& \var{search-key}
   \end{array}
-\end{displaymath}
+\]
 
 \begin{example}
 (vector-binary-search3 (lambda (elt) (- (car elt) 4))
@@ -2247,9 +2241,8 @@ These perform the indicated operations on character sets.
 
 The following character sets are predefined:
 \begin{center}
-\W\begin{tabular}{ll}
-\T\setlongtables
-\T\begin{longtable}{ll}
+\texonly\begin{longtable}{ll}\endtexonly
+\htmlonly\begin{tabular}{ll}\endhtmlonly
  \code{lower-case} &   \code{(set "abcdefghijklmnopqrstuvwxyz")} \\
  \code{upper-case} &   \code{(set "ABCDEFGHIJKLMNOPQRSTUVWXYZ")} \\
  \code{alphabetic} &   \code{(union lower-case upper-case)} \\
@@ -2265,8 +2258,8 @@ The following character sets are predefined:
  \code{whitespace} &
       \code{(union (set \#}\verb2\2\code{space) (ascii-range 9 13))} \\
  \code{hexdigit} &     \code{(set "0123456789abcdefABCDEF")} \\
-\W\end{tabular}
-\T\end{longtable}
+\texonly\end{longtable}\endtexonly
+\htmlonly\end{tabular}\endhtmlonly
 \end{center}
 \noindent The above are taken from the default locale in POSIX.
 The characters in \code{whitespace} are \cvar{space}, \cvar{tab},
@@ -2450,9 +2443,8 @@ The matching procedures will ignore any characters following an
 `SRFI' stands for `Scheme Request For Implementation'.
 An SRFI is a description of an extension to standard Scheme.
 Draft and final SRFI documents, a FAQ, and other information about SRFIs
- can be found at the
-\xlink{SRFI web site}[ at \code{http://srfi.schemers.org}]
-{http://srfi.schemers.org}.
+ can be found at
+\urlhd{http://srfi.schemers.org}{the SRFI web site}{\code{http://srfi.schemers.org}}.
 
 Scheme~48 includes implementations of the following (final) SRFIs:
 \begin{itemize}
@@ -2512,10 +2504,6 @@ test> x
 10
 test> 
 \end{example}
-
-%\W \chapter*{Index}
-%\W \htmlprintindex
-%\T \input{doc.ind}
 
 %%% Local Variables: 
 %%% mode: latex

@@ -1,18 +1,3 @@
-
-%\htmltitle{Another Module System for Scheme}
-%
-%\begin{center}
-%{\Large\bf Another Module System for Scheme}
-%
-%\T\vspace{2ex}
-%Jonathan Rees \\
-%3 January 1993 (updated 15 January 1994)
-%\end{center}
-%
-%\T\vspace{3ex}}
-%
-%\W\begin{abstract}
-
 \chapter{Module system}
 \label{chapter:modules}
 
@@ -32,8 +17,6 @@ application programs.
 Unlike the Common Lisp package system, the module system described
 here controls the mapping of names to denotations, not the
 mapping of strings to symbols.
-
-%\W\end{abstract}
 
 \section{Introduction}
 
@@ -102,48 +85,66 @@ become so by {\tt scheme} (or an equivalent structure) being opened.
 
 The configuration language consists of top-level defining forms for
  modules and interfaces.
-\T{Its syntax is given in figure~\ref{module-language-figure}.}
-\W{Its syntax is as follows:}
+Its syntax is given in figure~\ref{module-language-figure}.
 
-\T\setbox0\hbox{\goesto}
-\T\newcommand{\altz}{\hbox to 1\wd0{\hfil\alt}}
-\W\newcommand{\altz}{\goesto}
+\texonly\setbox0\hbox{\goesto}\endtexonly
+\texonly\newcommand{\altz}{\hbox to 1\wd0{\hfil\alt}}\endtexonly
+\htmlonly\newcommand{\altz}{\goesto}\endhtmlonly
 
 \begin{figure}[htb]
-\begin{tabbing}
-   \syn{configuration} \=\goesto{}~\arbno{\syn{definition}} \\
-   \syn{definition} \=\goesto{}~
+
+  \begin{tabular}{l}
+   \syn{configuration} \goesto{}~\arbno{\syn{definition}} \\
+
+   \begin{tabular}{rl}
+   \syn{definition} \goesto{} &
       \tt(define-structure \syn{name} \syn{interface}
           \arbno{\syn{clause}}) \\
-        \>\altz{}~ \tt(define-structures (\arbno{(\syn{name} \syn{interface})})
+        \altz{} & \tt(define-structures (\arbno{(\syn{name} \syn{interface})})
           \arbno{\syn{clause}}) \\
-        \>\altz{}~ \tt(define-interface \syn{name} \syn{interface}) \\
-        \>\altz{}~ \tt(define-syntax \syn{name} \syn{transformer-spec}) \\
-   \syn{clause} \=\goesto{}~ \tt(open \arbno{\syn{structure}}) \\
-        \>\altz{}~ \tt(access \arbno{\syn{name}}) \\
-        \>\altz{}~ \tt(begin \syn{program}) \\
-        \>\altz{}~ \tt(files \arbno{\syn{filespec}}) \\
-        \>\altz{}~ \tt(optimize \arbno{\syn{optimize-spec}}) \\
-        \>\altz{}~ \tt(for-syntax \arbno{\syn{clause}}) \\
-   \syn{interface} \=\goesto{}~ \tt(export \arbno{\syn{item}}) \\
-        \>\altz{}~ \syn{name} \\
-        \>\altz{}~ \tt(compound-interface \arbno{\syn{interface}}) \\
-   \syn{item} \=\goesto{}~ \syn{name} \\
-        \>\altz{}~ \tt(\syn{name} \syn{type}) \\
-        \>\altz{}~ \tt((\arbno{\syn{name}}) \syn{type}) \\
-   \syn{structure} \=\goesto{}~ \syn{name} \\
-        \>\altz{}~ \tt(modify \syn{structure} \arbno{\syn{modifier}}) \\
-        \>\altz{}~ \tt(subset \syn{structure} (\arbno{\syn{name}})) \\
-        \>\altz{}~ \tt(with-prefix \syn{structure} \syn{name}) \\
-   \syn{modifier} \=\goesto{}~ \tt(expose \arbno{\syn{name}}) \\
-        \>\altz{}~ \tt(hide \arbno{\syn{name}}) \\
-        \>\altz{}~ \tt(rename \arbno{(\syn{name}$_0$ \syn{name}$_1$)}) \\
-        \>\altz{}~ \tt(alias \arbno{(\syn{name}$_0$ \syn{name}$_1$)}) \\
-        \>\altz{}~ \tt(prefix \syn{name}) \\
-\end{tabbing}
-\caption{The configuration language.}
-\end{figure}
+        \altz{} & \tt(define-interface \syn{name} \syn{interface}) \\
+        \altz{} & \tt(define-syntax \syn{name} \syn{transformer-spec})
+   \end{tabular}
+   \\
+   \begin{tabular}{rl}
+   \syn{clause} \goesto{} & \tt(open \arbno{\syn{structure}}) \\
+        \altz{} & \tt(access \arbno{\syn{name}}) \\
+        \altz{} & \tt(begin \syn{program}) \\
+        \altz{} & \tt(files \arbno{\syn{filespec}}) \\
+        \altz{} & \tt(optimize \arbno{\syn{optimize-spec}}) \\
+        \altz{} & \tt(for-syntax \arbno{\syn{clause}})
+   \end{tabular}
+   \\
+   \begin{tabular}{rl}
+   \syn{interface} \goesto{} &  \tt(export \arbno{\syn{item}}) \\
+        \altz{} & \syn{name} \\
+        \altz{} & \tt(compound-interface \arbno{\syn{interface}})
+   \end{tabular}
+   \\
+   \begin{tabular}{rl}
+   \syn{item} \goesto{}~ \syn{name} \\
+        \altz{} & \tt(\syn{name} \syn{type}) \\
+        \altz{} & \tt((\arbno{\syn{name}}) \syn{type})
+   \end{tabular}
+   \\
+   \begin{tabular}{rl}
+   \syn{structure} \goesto{} & \syn{name} \\
+        \altz{} & \tt(modify \syn{structure} \arbno{\syn{modifier}}) \\
+        \altz{} & \tt(subset \syn{structure} (\arbno{\syn{name}})) \\
+        \altz{} & \tt(with-prefix \syn{structure} \syn{name})
+   \end{tabular}
+   \\
+   \begin{tabular}{rl}
+   \syn{modifier} \goesto{} & \tt(expose \arbno{\syn{name}}) \\
+        \altz{} & \tt(hide \arbno{\syn{name}}) \\
+        \altz{} & \tt(rename \arbno{(\syn{name}$_0$ \syn{name}$_1$)}) \\
+        \altz{} & \tt(alias \arbno{(\syn{name}$_0$ \syn{name}$_1$)}) \\
+        \altz{} & \tt(prefix \syn{name})
+   \end{tabular}
+ \end{tabular}
+ \caption{The configuration language.}
 \label{module-language-figure}
+\end{figure}
 
 A \codemainindex{{define-structure}} form introduces a binding of a name to a
 structure.  A structure is a view on an underlying package which is
@@ -341,15 +342,16 @@ defining modules that are intended to be instantiated multiple times.
 But these are pretty kludgey --- for example, compiled code isn't
 shared between the instantiations --- so we won't describe them yet.
 If you must know, figure it out from the following grammar.
-\begin{tabbing}
-\qquad
-   \syn{definition} \=\goesto{}~
-      \tt(d\=\tt efine-module (\syn{name} \arbno{(\syn{name} \syn{interface})}) \\
-       \>  \>\arbno{\syn{definition}} \\
-       \>  \>\syn{name}\tt) \\
-        \>\altz{}~ \tt(define \syn{name}
-                        (\syn{name} \arbno{\syn{name}}))
-\end{tabbing}
+%
+\begin{center}
+\begin{tabular}{rl}
+    \qquad \syn{definition} \goesto{} &
+    \tt(define-module (\syn{name} \arbno{(\syn{name} \syn{interface})}) \\
+    &\qquad \arbno{\syn{definition}} \\
+    &\qquad \syn{name}\tt) \\
+    \altz{} & \tt(define \syn{name} (\syn{name} \arbno{\syn{name}}))
+\end{tabular}
+\end{center}
 % JAR says: Different instantiations of of a module may see different
 % definitions of macros and inlines.
 
@@ -511,7 +513,7 @@ current package followed by a greater-than ({\tt>}).
     package for use by the {\tt,config} command and resolution of
     \cvar{struct-name}s for other commands such as {\tt,in} and
     {\tt,open}.  See
-    \link*{below}[Section~\Ref]{config-packages}
+    section~\ref{config-packages}
     for information on making new configuration packages.
 
 \item \code{,in \cvar{struct-name}} \\

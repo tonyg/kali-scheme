@@ -1,20 +1,10 @@
-\newcommand{\xsubsection}[1]{%
-\texonly{\subsection{#1}}%
-\htmlonly{\strong{#1}\\}%
-}
+\newcommand{\evalsto}{$\rightarrow$}
 
-\newcommand{\evalsto}{%
-\texonly{$\rightarrow$}%
-\htmlonly{\code{->}}%
-}
-
-\newcommand{\cvar}[1]{%
-\texonly{{\rm\em{#1}}}%
-\htmlonly{\code{\var{#1}}}%
-}
+\newcommand{\cvar}[1]{\textrm{\textit{#1}}}
 
 %%%%%%%%%%%%%%%% Latex prototypes
-\texonly{
+\texonly
+
 \newenvironment{protos}{\list{$\bullet$}
 {\leftmargin1.2em\rightmargin0pt\itemsep0pt\parsep0pt\partopsep-2pt}}
 {\endlist}
@@ -71,11 +61,13 @@
 
 \newcommand{\constprotonoindex}[2]{\pconstproto{{#1}}{{#2}}}
 
-}
+\endtexonly
+
 %%%%%%%%%%%%%%%% end of Latex proto definitions
 
 %%%%%%%%%%%%%%%% HTML prototypes
-\htmlonly{
+\htmlonly
+
 \newenvironment{protos}{\begin{itemize}}{\end{itemize}}
 
 % The following is for prototypes that have return types.
@@ -98,7 +90,7 @@
 \mainschindex{{#1}}}%
 
 \newcommand{\pconstproto}[2]{%
-\item\noindent\prototagstart\code{{#1}}\prototag{{#2}}}
+\item\noindent\code{{#1}}\prototag{{#2}}}
 
 % Variable prototype
 \newcommand{\constproto}[2]{\pconstproto{{#1}}{{#2}}\mainschindex{{#1}}}
@@ -109,28 +101,21 @@
 \item\noindent\code{{#1}}}
 
 \newcommand{\cgcproto}[1]{%
-\item\noindent\prototagstart\code{{#1}}\prototag{(may GC)}}
+\item\noindent\code{{#1}}\prototag{may GC}}
 
 \newcommand{\syntaxprotonoresult}[2]{%
 \syntaxprotonoresultnoindex{{#1}}{{#2}}\mainschindex{{#1}}}
 
 \newcommand{\syntaxprotonoresultnoindex}[2]{%
-\item\noindent\prototagstart\code{({#1}{#2})}\prototag{syntax}}
+\item\noindent\code{({#1}{#2})}\prototag{syntax}}
 
 \newcommand{\protoresult}[1]{%
 \\{}\noindent\code{\ \ \ \ -->~{\it{#1}}}}
 
 \newcommand{\syntaxproto}[3]{%
-\item\noindent\prototagstart\code{({#1}{#2})~-->~{\var{#3}}}\prototag{syntax}}
+\item\noindent\code{({#1}{#2})~-->~{\var{#3}}}\prototag{syntax}}
 
-\newcommand{\prototagstart}{%
-\begin{rawhtml}<table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td>\end{rawhtml}}
+\newcommand{\prototag}[1]{\hfill\hbox{(#1)}}
 
-\newcommand{\prototag}[1]{%
-\begin{rawhtml}</td> <td align=right>\end{rawhtml}%
-{#1}%
-\begin{rawhtml}</td></tr></table>\end{rawhtml}}
-
-}
+\endhtmlonly
 %%%%%%%%%%%%%%%% end of HTML proto definitions

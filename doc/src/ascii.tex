@@ -1,5 +1,5 @@
 
-\T\appendix
+\appendix
 \chapter{ASCII character encoding}
 \label{ascii-chart}
 
@@ -12,22 +12,21 @@ The ASCII encoding forms the first half of ISO-8859-1 (Latin1) which in
  turn forms the first page of ISO 10646 (Unicode).
 
 The Scheme~48 procedures
-\link{\code{char->ascii}}{ascii-procedures}
+\code{char->ascii}
  and
-\link{\code{ascii->char}}{ascii-procedures}
-\T (section~\ref{ascii-procedures})
- give access to the ASCII encoding.
+\code{ascii->char} (section \ref{ascii-procedures})
+give access to the ASCII encoding.
 
 % Could also show named Scheme characters (#\space etc.) and C escapes.
 
-\T{\small
-\W\begin{tabular}{rrllrrll}
-\T\setlongtables
-\T\begin{longtable}{rrllrrll}
+{\small
+\texonly\setlongtables
+\begin{longtable}{rrllrrll}\endtexonly
+\htmlonly\begin{tabular}{rrllrrll}\endhtmlonly
 n$_{10}$ & n$_{16}$ & & Unicode name & n$_{10}$ & n$_{16}$ & & Unicode name \\
-\T\endfirsthead
-\T n$_{10}$ & n$_{16}$ & & Unicode name & n$_{10}$ & n$_{16}$ & & Unicode name \\
-\T\endhead
+\endfirsthead
+ n$_{10}$ & n$_{16}$ & & Unicode name & n$_{10}$ & n$_{16}$ & & Unicode name \\
+\endhead
 \code{0} & \code{0} & NUL & null & \code{64} & \code{40} & \verb|@| & commercial at \\
 \code{1} & \code{1} & SOH & start of heading & \code{65} & \code{41} & \verb|A| & latin capital letter a \\
 \code{2} & \code{2} & STX & start of text & \code{66} & \code{42} & \verb|B| & latin capital letter b \\
@@ -92,9 +91,9 @@ n$_{10}$ & n$_{16}$ & & Unicode name & n$_{10}$ & n$_{16}$ & & Unicode name \\
 \code{61} & \code{3D} & \verb|=| & equals sign & \code{125} & \code{7D} & \verb|}| & right curly bracket \\
 \code{62} & \code{3E} & \verb|>| & greater-than sign & \code{126} & \code{7E} & \verb|~| & tilde \\
 \code{63} & \code{3F} & \verb|?| & question mark & \code{127} & \code{7F} & DEL & delete \\
-\W\end{tabular}
-\T\end{longtable}
-\T}
+\texonly\end{longtable}\endtexonly
+\htmlonly\end{tabular}\endhtmlonly
+}
 
 %%% Local Variables: 
 %%% mode: latex

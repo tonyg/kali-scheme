@@ -6,7 +6,7 @@ This chapter details Scheme~48's command processor, which incorporates
 At the \code{>} prompt, you can type either a Scheme form
  (expression or definition) or a command beginning with a comma.
 In
-\link*{inspection mode}[inspection mode (see section~\Ref)]{inspector}
+inspection mode (see section~\ref{inspector})
  the prompt changes to \code{:} and commands
  no longer need to be preceded by a comma; input beginning with
  a letter or digit is assumed to be a command, not an expression.
@@ -129,11 +129,9 @@ Whenever moving to an existing level, either by sending
 There are many commands related to modules.
 Only the most commonly used module commands are described here;
  documentation for the
- rest can be found in \link*{the module chapter}[section~\Ref]{module-commands}.
+ rest can be found in section~\ref{module-commands}.
 There is also
-\link*{a brief description of modules, structures, and packages}
-[a brief description of modules, structures, and packages in section~\Ref]
-{module-guide} below.
+a brief description of modules, structures, and packages in section~\ref{module-guide} below.
 
 \begin{description}
 \item \code{,open \cvar{structure \ldots}}\\
@@ -185,9 +183,7 @@ If no \cvar{command} is given, the \code{config} package becomes the
     (or a list of them, if \cvar{exp} returns multiple results)
     the new focus object.
     The \code{,run} command is useful when writing
-    \link*{command programs}
-    [command programs, which are described in section~\Ref{} below]
-    {command-programs}.
+    command programs, which are described in section~\ref{command-programs} below.
 
 \item \code{,trace \cvar{name} \ldots}\\
     Start tracing calls to the named procedure or procedures.
@@ -218,7 +214,6 @@ If no \cvar{command} is given, the \code{config} package becomes the
     prints `\code{Not bound}'.
  
 \item \code{,expand \cvar{form}}
-\T\vspace{-1em}
 \item \code{,expand-all \cvar{form}}\\
     Show macro expansion of \cvar{form}, if any.
     \code{,expand} performs a single macro expansion while
@@ -280,9 +275,7 @@ The switches are as follows:
 \item \code{inspect-focus-value}\\
     Enable or disable `inspection' mode, which is used for inspecting
     data structures and continuations.
-    \link*{Inspection mode is desribed below}
-    [Inspection mode is described in section~\Ref]
-    {inspector}.
+    Inspection mode is described in section~\ref{inspector}.
 
 \item \code{break-on-warnings}\\
     Enter a new command level when a warning is produced, just as
@@ -318,7 +311,7 @@ This controls whether or not the compiler is allowed to substitute
 When \code{inline-values} mode is on,
 some Scheme procedures will be substituted in-line; when it is off,
 none will.
-\link*{The performance section}[Section~\Ref]{section:performance}
+Section~\ref{section:performance}
 has more information.
 
 \end{description}
@@ -499,7 +492,7 @@ The file \code{scheme/vm/load-vm.scm} in the source directory contains an
     image file, but if an error occurs, the error message may be less
     helpful.  Doing \code{,flush source maps} before loading any programs
     used in the image will make it still smaller.
-    See \link*{the description of \code{flush}}[section~\Ref]{resource-commands}
+    See section~\ref{resource-commands}
     for more information.
 
 \end{description}
@@ -517,7 +510,6 @@ The file \code{scheme/vm/load-vm.scm} in the source directory contains an
     before and after the collection.
 
 \item \code{,keep \cvar{kind}}
-\T\vspace{-1em}
 \item \code{,flush \cvar{kind}}\\
     These control the amount of debugging information retained after
     compiling procedures.  This information can consume a fair amount
@@ -584,9 +576,7 @@ The following commands are useful when debugging multithreaded programs:
 %    The optional \cvar{name} is used for printing and debugging.
 %
 %\item \code{,suspend [\cvar{exp}]}
-%\T\vspace{-1em}
 %\item \code{,continue [\cvar{exp}]}
-%\T\vspace{-1em}
 %\item \code{,kill [\cvar{exp}]}\\
 %    Suspend, unsuspend, and terminate a thread, respectively.
 %    Suspended threads are not run until unsuspended, terminated

@@ -60,8 +60,8 @@ integer assigned by the thread system.
 The following bindings are part of the \code{threads-internal} structure:
 %
 \begin{protos}
-\protonoresult{terminate-thread!}{ thread}
-\protonoresult{kill-thread!}{ thread}
+\protonoresultnoindex{terminate-thread!}{ thread}\mainschindex{terminate-thread"!}
+\protonoresultnoindex{kill-thread!}{ thread}\mainschindex{kill-thread"!}
 \end{protos}
 %
 \code{Terminate-thread!} unwinds the thread
@@ -76,7 +76,7 @@ terminates.  \code{Kill-thread!} causes the thread associated with
 
 Debugging multithreaded programs can be difficult.
 
-As described \link*{here}[in section~\Ref]{command-threads}, when any thread signals an
+As described in section~\ref{command-threads}, when any thread signals an
  error, Scheme~48 stops running all of the threads at that command level.
  
  The following procedure (exported by the structure
@@ -140,9 +140,9 @@ The verifications and subsequent writes to memory are performed atomically
 
 \begin{protos}
 \proto{call-ensuring-atomicity}{ thunk}{value \ldots}
-\protonoresult{call-ensuring-atomicity!}{ thunk}
+\protonoresultnoindex{call-ensuring-atomicity!}{ thunk}\mainschindex{call-ensuring-atomicity"!}
 \syntaxproto{ensure-atomicity}{ \cvar{exp} \ldots}{value \ldots}
-\syntaxprotonoresult{ensure-atomicity!}{ \cvar{exp} \ldots}
+\syntaxprotonoresultnoindex{ensure-atomicity!}{ \cvar{exp} \ldots}\mainschindex{ensure-atomicity"!}
 \end{protos}
 \noindent
 If there is a proposal in place 
@@ -165,16 +165,16 @@ This process repeats, with a new proposal on each iteration, until
 \begin{protos}
 \proto{provisional-car}{ pair}{value}
 \proto{provisional-cdr}{ pair}{value}
-\protonoresult{provisional-set-car!}{ pair value}
-\protonoresult{provisional-set-cdr!}{ pair value}
+\protonoresultnoindex{provisional-set-car!}{ pair value}\mainschindex{provisional-set-car"!}
+\protonoresultnoindex{provisional-set-cdr!}{ pair value}\mainschindex{provisional-set-cdr"!}
 \proto{provisional-cell-ref}{ cell}{value}
-\protonoresult{provisional-cell-set!}{ cell value}
+\protonoresultnoindex{provisional-cell-set!}{ cell value}\mainschindex{provisional-cell-set"!}
 \proto{provisional-vector-ref}{ vector i}{value}
-\protonoresult{provisional-vector-set!}{ vector i value}
+\protonoresultnoindex{provisional-vector-set!}{ vector i value}\mainschindex{provisional-vector-set"!}
 \proto{provisional-string-ref}{ vector i}{char}
-\protonoresult{provisional-string-set!}{ vector i char}
+\protonoresultnoindex{provisional-string-set!}{ vector i char}\mainschindex{provisional-string-set"!}
 \proto{provisional-byte-vector-ref}{ vector i}{k}
-\protonoresult{provisional-byte-vector-set!}{ vector i k}
+\protonoresultnoindex{provisional-byte-vector-set!}{ vector i k}\mainschindex{provisional-byte-vector-set"!}
 \end{protos}
 \noindent
 These are all logging versions of their Scheme counterparts.
@@ -196,7 +196,7 @@ The following implementation of a simple counter may not function properly
 Here is the same procedure using a proposal to ensure that each
  increment operation happens atomically.
 The value of the counter is kept in a
- \link*{cell}[cell (see section~\Ref]{cells}
+cell (see section~\ref{cells})
  to allow the use of
  logging operations.
 \begin{example}
@@ -243,9 +243,9 @@ If the optional list of field tags is present then only those fields will
 
 \begin{protos}
 \proto{call-atomically}{ thunk}{value(s)}
-\protonoresult{call-atomically!}{ thunk}
+\protonoresultnoindex{call-atomically!}{ thunk}\mainschindex{call-atomically"!}
 \syntaxproto{atomically}{ \cvar{exp} \ldots}{value(s)}
-\syntaxprotonoresult{atomically!}{ \cvar{exp} \ldots}
+\syntaxprotonoresultnoindex{atomically!}{ \cvar{exp} \ldots}\mainschindex{atomically"!}
 \end{protos}
 \noindent
 \code{Call-atomically} and \code{call-atomically!} are identical
@@ -280,7 +280,7 @@ mechanism.  They are defined in the \code{low-proposals} structure.
 \proto{maybe-commit}{}{boolean}
 \proto{make-proposal}{}{proposal}
 \proto{current-proposal}{}{proposal}
-\protonoresult{set-current-proposal!}{ proposal}
+\protonoresultnoindex{set-current-proposal!}{ proposal}\mainschindex{set-current-proposal"!}
 \end{protos}
 \noindent
 \code{Maybe-commit} verifies that any reads logged in the current proposal are
@@ -316,12 +316,12 @@ implementations of this concept.
 \proto{make-condvar}{}{condvar}
 \proto{make-condvar}{ id}{condvar}
 \proto{condvar?}{ thing}{boolean}
-\protonoresult{set-condvar-has-value?!}{ condvar boolean}
+\protonoresultnoindex{set-condvar-has-value?!}{ condvar boolean}\mainschindex{set-condvar-has-value?"!}
 \proto{condvar-has-value?}{ condvar}{boolean}
-\protonoresult{set-condvar-value!}{ condvar value}
+\protonoresultnoindex{set-condvar-value!}{ condvar value}\mainschindex{set-condvar-value"!}
 \proto{condvar-value}{ condvar}{value}
 \proto{maybe-commit-and-wait-for-condvar}{ condvar}{boolean}
-\proto{maybe-commit-and-set-condvar!}{ condvar value}{boolean}
+\protonoindex{maybe-commit-and-set-condvar!}{ condvar value}{boolean}\mainschindex{maybe-commit-and-set-condvar"!}
 \end{protos}
 %
 \code{Make-condvar} creates a condition variable.  (The optional
@@ -411,7 +411,7 @@ extracts it from placeholder, blocking if necessary.
 \proto{make-placeholder}{}{placeholder}
 \proto{make-placeholder}{ id}{placeholder}
 \proto{placeholder?}{ thing}{boolean}
-\protonoresult{placeholder-set!}{ placeholder value}
+\protonoresultnoindex{placeholder-set!}{ placeholder value}\mainschindex{placeholder-set"!}
 \proto{placeholder-value}{ placeholder}{value}
 \end{protos}
 %
@@ -444,7 +444,7 @@ cell is cleared when the thread is woken up.
 %
 \begin{protos}
 \proto{thread-queue-empty?}{ thread-queue}{boolean}
-\proto{maybe-dequeue-thread!}{ thread-queue}{boolean}
+\protonoindex{maybe-dequeue-thread!}{ thread-queue}{boolean}\mainschindex{maybe-dequeue-thread"!}
 \end{protos}
 %
 \code{Thread-queue-empty?} atomically checks whether the
@@ -636,7 +636,7 @@ placeholders prints it out if present.)  (This is the same as the CML
 placeholders.
 %
 \begin{protos}
-\protonoresult{placeholder-set!}{ placeholder value}
+\protonoresultnoindex{placeholder-set!}{ placeholder value}\mainschindex{placeholder-set"!}
 \end{protos}
 %
 \code{Placeholder-set!} places a value into a placeholder.  Doing this
@@ -677,7 +677,7 @@ it out if present.)  (This is the same as the CML \code{mVar}
 function.)  \code{Jar?} is the predicate for jars.
 
 \begin{protos}
-\protonoresult{jar-put!}{ jar value}
+\protonoresultnoindex{jar-put!}{ jar value}\mainschindex{jar-put"!}
 \end{protos}
 %
 \code{Jar-put!} places a value into a jar if it is empty.  Applying
@@ -721,9 +721,8 @@ the \code{time} structure.  (This is the same as the CML
 The following table lists the Scheme names that correspond to
 particular CML names.
 
-\W\begin{tabular}{ll}
-\T\setlongtables
-\T\begin{longtable}{ll}
+\texonly\begin{longtable}{ll}\endtexonly
+\htmlonly\begin{tabular}{ll}\endhtmlonly
   CML name & Scheme name\\\hline
   \multicolumn{2}{c}{\code{rendezvous}}\\
   \code{never} & \code{never-rv}\\
@@ -753,8 +752,9 @@ particular CML names.
   \multicolumn{2}{c}{\code{rendezvous-time}}\\
   \code{timeOutEvt} & \code{after-time-rv}\\
   \code{atTimeEvt} & \code{at-real-time-rv}
-\W\end{tabular}
-\T\end{longtable}
+\texonly\end{longtable}\endtexonly
+\htmlonly\end{tabular}\endhtmlonly
+
 
 %%% Local Variables: 
 %%% mode: latex

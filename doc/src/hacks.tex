@@ -1,15 +1,10 @@
-\W\newcommand{\langle}{<}
-\W\newcommand{\rangle}{>}
-\W\newcommand{\Longrightarrow}{==>}
-\W\newcommand{\Rightarrow}{=>}
-
 \newcommand{\meta}[1]{{\noindent\mbox{\textrm{$\langle$#1$\rangle$}}}}
 \newcommand{\hyper}[1]{\meta{#1}}
 \newcommand{\hyperi}[1]{\hyper{#1$_1$}}
 \newcommand{\hyperii}[1]{\hyper{#1$_2$}}
 \newcommand{\hyperj}[1]{\hyper{#1$_i$}}
 \newcommand{\hypern}[1]{\hyper{#1$_n$}}
-\renewcommand{\var}[1]{\noindent\mbox{\textnormal{\textit{#1}}}}
+\newcommand{\var}[1]{\noindent\mbox{\textnormal{\textit{#1}}}}
 \newcommand{\vari}[1]{\var{#1$_1$}}
 \newcommand{\varii}[1]{\var{#1$_2$}}
 \newcommand{\variii}[1]{\var{#1$_3$}}
@@ -17,37 +12,31 @@
 \newcommand{\varj}[1]{\var{#1$_j$}}
 \newcommand{\varn}[1]{\var{#1$_n$}}
 
-\W\newcommand{\frenchspacing}{}
-\W\newcommand{\textnormal}[1]{#1}
-
 \newcommand{\defining}[1]{{\emph{#1}}}
 
 \newcommand{\exprtype}{syntax}
 
-\W\newcommand{\unskip}{}
-\W\newcommand{\textrm}[1]{#1}
+\newcommand{\dotsfoo}{\ldots\texonly{\thinspace}\endtexonly}
 
-\newcommand{\dotsfoo}{\ldots\texonly{\thinspace}}
+\let\code=\texttt
 
 \newcommand{\goesto}{%
-\texonly{\hbox{$\longrightarrow$}}%
-\htmlonly{\code{-->}}%
+\texonly{\hbox{$\longrightarrow$}}\endtexonly%
+\htmlonly{\code{-->}}\endhtmlonly%
 }
 
 \newcommand{\xform}{%
-\texonly{\hbox{$\Longrightarrow$}}%
-\htmlonly{\code{--->}}%
+\texonly{\hbox{$\Longrightarrow$}}\endtexonly%
+\htmlonly{\code{--->}}\endhtmlonly%
 }
 
 \newcommand{\arbno}[1]{{{#1}$^*$}}
 \newcommand{\hack}{Scheme~48}
 
-\T\newcommand{\alt}{$\vert$}
-\W\newcommand{\alt}{|}
+\newcommand{\alt}{$\vert$}
 
-\T\newcommand{\ok}{\discretionary{}{}{}}
-\W\newcommand{\ok}{}
+\newcommand{\ok}{\discretionary{}{}{}}
 
-\T\newcommand{\syn}[1]{{\noindent\mbox{\textrm{$\langle$#1$\rangle$}}}}
-\W\newcommand{\syn}[1]{{\noindent\mbox{$\langle$#1$\rangle$}}}
+\newcommand{\syn}[1]{{\noindent\mbox{\textrm{$\langle$#1$\rangle$}}}}
 
+\newenvironment{example}{\begin{alltt}}{\end{alltt}}

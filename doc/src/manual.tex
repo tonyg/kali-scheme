@@ -1,66 +1,58 @@
 % Scheme 48 documentation
 
-\documentclass[twoside,11pt]{report}
-\usepackage{hyperlatex}
+\documentclass[twoside]{report}
+\usepackage{tex2page}
 
-\T\usepackage{longtable}
-\T\usepackage{myindex}
-\T\usepackage{palatino}
-\W\include{latex-index}
+\usepackage{longtable}
+\usepackage{alltt}
+\usepackage{makeidx}
+\usepackage{matter}
 
-\T\textwidth5.7in
-\T\textheight8.9in
-\T\oddsidemargin10pt\evensidemargin20pt
-%\T\advance\textwidth by 4em
+\input{myindex}
+\input{proto}
+\input{hacks}
 
 \makeindex
 
-\W\include{my-sequential}
-\include{proto}
-\include{hacks}
+% \includeonly{module}
 
-%\includeonly{posix}
-
-% Make a few big HTML files, and not a lot of small ones.
-\setcounter{htmldepth}{3}
-
-% Put the html code in its own directory.
-\htmldirectory{manual}
-
-% Set the html base name.
-\htmlname{s48manual}
-
-% Add sections to main menu
-\setcounter{htmlautomenu}{2}
-
-% White background
-\htmlattributes{BODY}{BGCOLOR="#ffffff"}
-
-\htmltitle{Scheme 48 Manual}
-
-% Suppress navigation panel for first page.
-\htmlpanel{0}
+\let\url\relax
+\input{pdfcond}
+\ifpdf
+\usepackage[pdftex,hyperindex,
+     pdftitle={The Incomplete Scheme 48 Reference Manual},
+     pdfauthor={Richard Kelsey, Jonathan Rees, Mike Sperber}
+     colorlinks=true,linkcolor=blue,pagecolor=blue,urlcolor=blue,
+     pdfstartview=FitH,pdfview=FitH]{hyperref}
+\usepackage{thumbpdf}
+\usepackage{tocbibind}
+\else
+\usepackage[dvipdfm,hyperindex,hypertex,
+     pdftitle={The Incomplete Scheme 48 Reference Manual},
+     pdfauthor={Richard Kelsey, Jonathan Rees, Mike Sperber}
+     colorlinks=true,linkcolor=blue,pagecolor=blue,urlcolor=blue,
+     pdfstartview=FitH,pdfview=FitH]{hyperref}
+\fi
+\endtexonly
 
 %%% End preamble
 
 \begin{document}
+\frontmatter
 \label{top_node}
 
-\T\sloppy    % Tells TeX not to worry too much about line breaks.
-
+\texonly
 \title{{\large The Incomplete} \\ Scheme 48 Reference Manual \\
  {\large for release \input{version-number}}}
-%         December 25, 1994
+\endtexonly
+\htmlonly
+\title{The Incomplete Scheme 48 Reference Manual for release \input{version-number}}
+\endhtmlonly
 \author{Richard Kelsey \and Jonathan Rees \and Mike Sperber}
 \date{}
-%\date{October 31, 1995}
-
-\T\cleardoublepage\pagenumbering{roman}
 
 \maketitle
 
-% For some reason the tabbing doesn't work here in html mode.
-\texonly{
 \begin{verse}
 A line may take us hours, yet if it does not seem a moment's thought \\
 All our stitching and unstitching has been as nought.
@@ -70,20 +62,6 @@ A line may take us hours, yet if it does not seem\= \kill
 \> Yeats \\
 \> {\em Adam's Curse}
 \end{tabbing}
-}
-
-\htmlonly{
-\begin{center}
-\begin{tabbing}
-A line may take us hours, yet if it does not seem\= a moment's thought \\
-All our stitching and unstitching has been as nought. \\
-\> Yeats \\
-\> {\em Adam's Curse}
-\end{tabbing}
-\end{center}
-}
-
-\htmlpanel{1}
 
 \chapter*{Acknowledgements}
 
@@ -91,13 +69,13 @@ Thanks to Scheme~48's users for their suggestions, bug reports,
   and forbearance.
 Thanks also to Deborah Tatar for providing the Yeats quotation.
 
-\T\tableofcontents
+\tableofcontents
 
-\T\cleardoublepage\pagenumbering{arabic}\setcounter{page}{1}
+\texonly
+\cleardoublepage\pagenumbering{arabic}\setcounter{page}{1}
+\endtexonly
 
-\setcounter{htmlautomenu}{1}
-
-
+\mainmatter
 \include{intro}
 \include{user-guide}
 \include{command}
@@ -109,23 +87,7 @@ Thanks also to Deborah Tatar for providing the Yeats quotation.
 \include{ascii}
 \include{bibliography}
 
-\texonly{
-\begin{myindex}
-\addtocounter{chapter}{1}
-\addcontentsline{toc}{chapter}{\protect\numberline{\thechapter}{Index}}
-
-The principal entry for each term, procedure, or keyword is listed
-first, separated from the other entries by a semicolon.
-
-\bigskip
-
-\input{index}
-\end{myindex}
-}
-
-\htmlonly{
-\chapter*{Index}
-\htmlprintindex
-}
+\backmatter
+\printindex
 
 \end{document}    

@@ -1,0 +1,16 @@
+%&latex -*- latex -*-
+% Implement the \frontmatter, \mainmatter, and \backmatter macros,
+% so I can use them in reports, not just books.
+
+\newif\if@mainmatter \@mainmattertrue
+
+\newcommand\frontmatter{%
+	\cleardoublepage\@mainmatterfalse\pagenumbering{roman}}
+
+\newcommand\mainmatter{%
+	\cleardoublepage\@mainmattertrue%
+	\pagenumbering{arabic}\setcounter{page}{1}}
+
+\newcommand\backmatter{%
+	\if@openright\cleardoublepage\else\clearpage\fi%
+	\@mainmatterfalse}
