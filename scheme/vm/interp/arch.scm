@@ -91,10 +91,10 @@
   (big-stack-ref  two-byte-stack-index)
   (stack-set!     stack-index 1) ; *val* to index'th element of stack
   (big-stack-set! two-byte-stack-index 1)
-  (stack-indirect stack-index two-byte-index)     ; first is index into stack, second is index
+  (stack-indirect stack-index index)     ; first is index into stack, second is index
 			  	 ; into what you find there
-  (push+stack-indirect stack-index two-byte-index) ; preceded by a push
-  (stack-indirect+push stack-index two-byte-index) ; followed by a push
+  (push+stack-indirect stack-index index) ; preceded by a push
+  (stack-indirect+push stack-index index) ; followed by a push
   (big-stack-indirect two-byte-stack-index two-byte-index)
 
   (stack-shuffle! moves-data)	 ; shuffle stack elements around
@@ -175,14 +175,14 @@
 
   (make-stored-object byte stob)
   (closed-make-stored-object stob)	; size pushed on stack
-  (stored-object-ref  stob two-byte-index 1)
-  (stored-object-set! stob two-byte-index byte 2)	; byte0 is the offset, byte1 = 0
+  (stored-object-ref  stob index 1)
+  (stored-object-set! stob index byte 2)	; byte = 0
   					; means not to log in the proposal
 
   (make-vector-object stob 2)			; size + init
   ; If the byte = 0 then do not log in the current proposal
-  (stored-object-indexed-ref  stob two-byte-index 2)	; vector + offset
-  (stored-object-indexed-set! stob two-byte-index 3)	; vector + offset + value
+  (stored-object-indexed-ref  stob index 2)	; vector + offset
+  (stored-object-indexed-set! stob index 3)	; vector + offset + value
 
   (make-byte-vector 2)
   (byte-vector-length 1)
@@ -213,7 +213,7 @@
   (current-proposal)
   (set-current-proposal! 1)
   (maybe-commit)
-  (stored-object-logging-ref stob two-byte-index 1)
+  (stored-object-logging-ref stob index 1)
   (copy-bytes! byte 5)		; byte = 0 -> don't log
   (byte-vector-logging-ref 2)
   (byte-vector-logging-set! 3)
@@ -255,8 +255,8 @@
   (assq 2)
   (unassigned-check 1)
   ; If the byte = 0 then do not log in the current proposal
-  (checked-record-ref two-byte-index 3)
-  (checked-record-set! two-byte-index 4)
+  (checked-record-ref index 3)
+  (checked-record-set! index 4)
 
   ;; ports (buffered I/O) - these are all unnecessary
   ;; byte = 0 -> port is supplied
