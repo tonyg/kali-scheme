@@ -137,20 +137,19 @@
 ; PERFORM-APPLICATION-WITH-REST-LIST do the work.
     
 (define-opcode apply
-  (let ((list-args (pop)))
+  (let ((list-args (pop))
+	(stack-nargs (code-offset 2)))
     (receive (okay? length)
 	(okay-argument-list list-args)
-      (cond (okay?
-	     (let ((stack-nargs (code-offset 2)))
-	       (maybe-make-continuation stack-nargs)
-	       (goto perform-application-with-rest-list
-		     stack-nargs
-		     list-args
-		     length)))
-	    (else
-	     (push list-args)
-	     (let ((args (pop-args->list*+gc null (+ (code-offset 0) 1))))
-	       (raise-exception wrong-type-argument -1 *val* args)))))))
+      (if okay?
+	  (begin
+	    (maybe-make-continuation stack-nargs)
+	    (goto perform-application-with-rest-list
+		  stack-nargs
+		  list-args
+		  length))
+	  (let ((args (pop-args->list*+gc list-args stack-nargs)))
+	    (raise-exception wrong-type-argument -1 *val* args))))))
 
 ; This is only used for the closed-compiled version of APPLY.
 ;
@@ -171,23 +170,19 @@
 
 (define-opcode closed-apply
   (let* ((nargs (extract-fixnum (pop)))
-	 (stack-nargs (extract-fixnum (pop)))
-	 (proc (stack-ref stack-nargs)))
+	 (stack-nargs (extract-fixnum (pop))))
+    (set! *val* (stack-ref stack-nargs))	; proc in *VAL*
     (move-args-above-cont! nargs)
     (receive (okay? stack-arg-count list-args list-arg-count)
 	(get-closed-apply-args nargs stack-nargs)
       (if okay?
 	  (begin
-	    (set! *val* proc)
 	    (goto perform-application-with-rest-list
 		  stack-arg-count
 		  list-args
 		  list-arg-count))
-	  (begin
-	    (push list-args)
-	    (let* ((args (pop-args->list*+gc null (+ stack-arg-count 1)))
-		   (proc (pop)))
-	      (raise-exception wrong-type-argument -1 proc args)))))))
+	  (let ((args (pop-args->list*+gc list-args stack-arg-count)))
+	    (raise-exception wrong-type-argument -1 *val* args))))))
 
 ; Stack = arg0 arg1 ... argN rest-list
 ; This needs to get the last argument, which is either argN or the last
@@ -275,22 +270,27 @@
 	(enum exception wrong-number-of-arguments)
 	stack-arg-count list-args list-arg-count))
 
-; Used by RAISE which can't raise an exception when an error occurs.
+; The main protocol-matching function takes as an argument a token indicating
+; if the called-value is a handler and if so, what kind.  A non-negative value
+; is the opcode whose exception handler is begin called.  -1 means that the
+; procedure is not a handler.  Any other negative value indicates that the
+; procedure is an interrupt handler.  The interrupt is (- -2 token).
 
-(define *losing-opcode* 0)
-
-; We clobber the code pointer so that protocol errors in calls to handlers do
-; not end up in infinite loops.
+(define not-a-handler -1)
 
 (define (call-exception-handler stack-arg-count opcode)
-  (set! *code-pointer* (integer->address 0))
-  (set! *losing-opcode* opcode)
-  (goto plain-protocol-match stack-arg-count))
-
+  (goto real-protocol-match
+	stack-arg-count
+	null
+	0
+	opcode))
+  
 (define (call-interrupt-handler stack-arg-count interrupt)
-  (set! *code-pointer* (integer->address 0))
-  (set! *losing-opcode* (- interrupt))
-  (goto plain-protocol-match stack-arg-count))
+  (goto real-protocol-match
+	stack-arg-count
+	null
+	0
+	(- -2 interrupt)))
 
 ; Check that the arguments match those needed by *VAL*, which is a closure,
 ; moving arguments to or from the stack if necessary, and ensure that there
@@ -298,23 +298,40 @@
 ; is created.
 
 (define (plain-protocol-match stack-arg-count)
-  (goto list-protocol-match stack-arg-count null 0))
+  (goto real-protocol-match stack-arg-count null 0 not-a-handler))
 
 (define (list-protocol-match stack-arg-count list-args list-arg-count)
+  (goto real-protocol-match
+	stack-arg-count
+	list-args
+	list-arg-count
+	not-a-handler))
+
+(define (real-protocol-match stack-arg-count
+			     list-args
+			     list-arg-count
+			     handler-tag)
   (let ((code (template-code (closure-template *val*)))
 	(total-arg-count (+ stack-arg-count list-arg-count))
-	(lose (lambda ()
-		(goto wrong-nargs
-		      stack-arg-count list-args list-arg-count))))
+  	(lose (lambda ()
+		(cond ((= handler-tag not-a-handler)
+		       (goto wrong-nargs
+			     stack-arg-count list-args list-arg-count))
+		      ((<= 0 handler-tag)
+		       (error "wrong number of arguments to exception handler"
+			      handler-tag))
+		      (else
+		       (error "wrong number of arguments to interrupt handler"
+			      (- -2 handler-tag)))))))
     (assert (= (enum op protocol)
-	       (code-vector-ref code 0)))
+  	       (code-vector-ref code 0)))
     (let loop ((protocol (code-vector-ref code 1))
-	       (stack-space default-stack-space)
-	       (native? #f))
+  	       (stack-space default-stack-space)
+  	       (native? #f))
       (let ((win (lambda (skip stack-arg-count)
-		   (if native?
-		       (goto call-native-code *val* skip stack-arg-count)
-		       (goto run-body code
+  		   (if native?
+  		       (goto call-native-code *val* skip stack-arg-count)
+  		       (goto run-body code
 			              skip
 				      (closure-template *val*)
 			              stack-space)))))
@@ -407,28 +424,11 @@
 
 (define (application-exception exception
 			       stack-arg-count list-args list-arg-count)
-  (cond ((not (address= *code-pointer* (integer->address 0)))
-	 (let ((args (pop-args->list*+gc (copy-list*+gc list-args list-arg-count)
-					 stack-arg-count)))
-	   (raise-exception* exception -1 *val* args))) ; no next opcode
-	((< 0 *losing-opcode*)
-	 (error "wrong number of arguments to exception handler"
-		*losing-opcode*))
-	(else
-	 (error "wrong number of arguments to interrupt handler"
-		(- *losing-opcode*)))))
+  (let ((args (pop-args->list*+gc (copy-list*+gc list-args list-arg-count)
+				  stack-arg-count)))
+    (raise-exception* exception -1 *val* args))) ; no next opcode
 
-;(define (application-exception exception stack-arg-count list-args list-arg-count)
-;  (if (vm-eq? *template* *val*)
-;      (error "wrong number of arguments to exception handler"
-;             *losing-opcode*)
-;      (let ((args (pop-args->list* (copy-list* list-args list-arg-count)
-;                                   stack-arg-count)))
-;        (push (enter-fixnum (current-opcode)))
-;        (push (enter-fixnum exception))
-;        (push *val*)
-;        (push args)
-;        (goto raise 2))))
+;----------------------------------------------------------------
 
 (define (run-body-with-default-space code used template)
   (real-run-body-with-default-space code used (+ used 1) template))

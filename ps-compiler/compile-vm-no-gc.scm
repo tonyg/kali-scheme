@@ -21,7 +21,7 @@
 	   '(no-copy (interpreter interpret
 				  application-exception
 				  handle-interrupt
-				  list-protocol-match
+				  real-protocol-match
 				  raise
 				  uuo)
 		     (vm s48-restart)))))

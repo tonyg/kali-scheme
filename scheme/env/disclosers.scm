@@ -210,8 +210,25 @@
 		    (map value->expression (cons (car args) (cadr args)))))))
   (define-exception-discloser (enum op call) disc)
   (define-exception-discloser (enum op tail-call) disc)
-  (define-exception-discloser (enum op big-call) disc)
-  (define-exception-discloser (enum op with-continuation) disc)
+  (define-exception-discloser (enum op big-call) disc))
+
+(let ((disc (lambda (opcode reason args)
+	      (list 'error
+		    (case reason
+		      ((bad-procedure)
+		       "with-continuation passed a non-procedure")
+		      ((wrong-number-of-arguments)
+		       "with-continuation passed a non-nullary procedure")
+		      (else
+		       (string-append "with-continuation: "
+				      (symbol->string reason))))
+		    (value->expression (car args))))))
+  (define-exception-discloser (enum op with-continuation) disc))
+
+(let ((disc (lambda (opcode reason args)
+	      (list 'error
+		    (symbol->string reason)
+		    (cons 'apply (map value->expression args))))))
   (define-exception-discloser (enum op apply) disc)
   (define-exception-discloser (enum op closed-apply) disc))
 
