@@ -31,6 +31,7 @@ extern void	s48_collect();
 extern long	s48_trace_value(long);
 extern long	s48_trace_locationsB(char *, char *);
 extern long	s48_trace_stob_contentsB(long);
+extern long	s48_trace_continuation_contentsB(char *, char *, long);
 extern char	s48_extantP(long);
 extern long	s48_gc_count(void);
 

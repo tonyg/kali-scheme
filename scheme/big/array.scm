@@ -1,6 +1,4 @@
 ; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
-; copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
-
 
 ; (make-array <initial-value> <bound1> ...)
 ; (array-shape <array>)

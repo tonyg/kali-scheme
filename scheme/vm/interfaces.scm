@@ -128,7 +128,8 @@
           s48-trace-value
 	  s48-trace-locations!
 	  s48-trace-stob-contents!
-
+	  s48-trace-continuation-contents!
+	  
 	  s48-extant?
 
 	  s48-gc-count
@@ -258,10 +259,9 @@
 
 	  continuation? continuation-size make-continuation continuation-length
 	  continuation-ref continuation-set!
-	  continuation-cont     set-continuation-cont!
-	  continuation-pc       set-continuation-pc!
-	  continuation-template set-continuation-template!
-	  continuation-env      set-continuation-env!
+	  continuation-cont set-continuation-cont!
+	  continuation-pc   set-continuation-pc!
+	  continuation-code set-continuation-code!
 	  continuation-cells
 
 	  code-vector? code-vector-size make-code-vector code-vector-length
@@ -270,9 +270,6 @@
 	  template? template-size make-template template-length
 	  template-ref template-set!
 	  template-code template-name
-	  make-template-containing-ops
-	  make-template-containing-six-ops
-	  op-template-size
 
 	  vm-string? vm-string-size vm-make-string vm-string-length
 	  vm-string-ref vm-string-set!
@@ -313,29 +310,29 @@
 	  vm-channel-abort
 	  ))
 
-(define-interface environment-interface
-  (export current-env set-current-env!
-	  env-ref env-set! env-parent env-back
-	  pop-args-into-env
-          heap-env-space pop-args-into-heap-env
-	  current-env-size preserve-current-env
-
-	  *env*
-	  ))
+;(define-interface environment-interface
+;  (export current-env set-current-env!
+;          env-ref env-set! env-parent env-back
+;          pop-args-into-env
+;          heap-env-space pop-args-into-heap-env
+;          current-env-size preserve-current-env
+;          ))
 
 (define-interface stack-interface
   (export initialize-stack+gc
 
 	  reset-stack-pointer stack-size
 	  push pop stack-ref stack-set!
+	  add-cells-to-stack!
 
           ensure-stack-space!
 	  ensure-default-procedure-space!
 
-	  push-continuation-on-stack
+	  make-continuation-on-stack
+	  push-continuation!
+	  push-adlib-continuation!
+	  push-exception-continuation!
 	  pop-continuation-from-stack
-	  pop-native-continuation-from-stack
-	  push-exception-data
 	  pop-exception-data
 
 	  set-current-continuation!
@@ -346,24 +343,28 @@
 	  copy-continuation-from-heap!
 
 	  current-continuation-code-pointer
+	  shrink-and-reset-continuation!
 	  current-continuation-ref
-
-	  trace-stack
 
 	  pointer-to-stack-arguments
 	  move-stack-arguments!
 	  move-args-above-cont!
-	  arguments-on-stack
 	  pointer-to-stack-arguments  ; for calling external procedures
 	  remove-stack-arguments
+	  remove-current-frame
 
 	  report-continuation-uids
 
 	  s48-copy-stack-into-heap
 
+	  interrupt-flag-set?
+	  clear-interrupt-flag!
+	  set-interrupt-flag!
+
 	  *cont*
 	  *stack*
-	  *stack-limit*
+	  s48-*stack-limit*
+	  check-stack
 	  ))
 
 (define-interface external-interface
@@ -516,7 +517,7 @@
 
 	  ((raise-exception raise-exception*) :syntax)
 	  raise
-	  push-exception-continuation!
+	  push-exception-setup!
 
 	  any-> string-> boolean-> fixnum-> vm-integer-> char->
 	  vector-> code-vector-> 
@@ -558,7 +559,6 @@
 	  s48-*native-protocol*
 	  s48-set-native-protocol!
 	  
-	  *template*
 	  *code-pointer*
 	  *val*
 	  ))
@@ -621,14 +621,13 @@
 	  s48-reset-external-roots!
 
 	  ; for native code access
-	  *template*
 	  *code-pointer*
-	  *env*
 	  *val*
 	  *cont*
 	  *stack*
-	  *stack-limit*
+	  s48-*stack-limit*
 	  s48-*native-protocol*
 	  s48-set-native-protocol!
 	  s48-copy-stack-into-heap
+	  check-stack
 	  ))

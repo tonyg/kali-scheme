@@ -9,7 +9,7 @@
         vm-architecture
 	bitwise                 ; arithmetic-shift
 	signals)                ; error
-  (files disasm))
+  (files (util disasm)))
 
 ; Independent byte-code compiler for testing (from Michael Sperber).
 

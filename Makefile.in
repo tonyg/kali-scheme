@@ -164,8 +164,13 @@ LOOKUP_INITIALIZERS = 	s48_init_external_lookup
 # End of lookup rules
 # Native-code glue rules
 
-ASM_OBJECTS = c/glue.o c/asm-glue.o
-ASM_INITIALIZERS = 	s48_init_asm_glue
+ASM_OBJECTS = c/fake/glue.o
+ASM_INITIALIZERS =
+
+# Real definitions to be used when a. native code works and b. it is supported
+# on the machine we're compiling on
+#ASM_OBJECTS = c/glue.o c/asm-glue.o
+#ASM_INITIALIZERS =	s48_init_asm_glue
 
 # End of native-code glue rules
 # End of external rules
@@ -329,7 +334,7 @@ image: $(INITIAL)
 	$(MAKE) $(IMAGE)
 
 tags:
-	etags scheme/vm/arch.scm scheme/rts/*.scm scheme/bcomp/*.scm \
+	etags scheme/vm/interp/arch.scm scheme/rts/*.scm scheme/bcomp/*.scm \
 	scheme/*.scm scheme/env/*.scm scheme/big/*.scm scheme/link/*.scm \
 	scheme/opt/*.scm scheme/debug/*.scm scheme/misc/*.scm
 
@@ -348,7 +353,7 @@ DISTFILES = README COPYING INSTALL configure				\
 		build/build-external-modules				\
 		c/*.[ch] c/*/*.[ch] c/scheme48.h.in			\
 		emacs/*.el gdbinit					\
-		scheme/*.scm scheme/*/*.scm				\
+		scheme/*.scm scheme/*/*.scm scheme/vm/*/*.scm		\
 		ps-compiler/minor-version-number			\
 		ps-compiler/doc/node.txt ps-compiler/doc/todo.txt	\
 		ps-compiler/*.scm ps-compiler/*/*.scm			\
@@ -356,7 +361,7 @@ DISTFILES = README COPYING INSTALL configure				\
 		ps-compiler/prescheme/test/*.scm			\
 		c/sysdep.h.in
 
-distname = $(RUNNABLE)-0.`cat build/minor-version-number`
+distname = $(RUNNABLE)-1.`cat build/minor-version-number`
 
 dist: build/initial.image
 	distname=$(distname) &&						\
@@ -385,7 +390,7 @@ inc:
 	expr `cat $$f` + 1 >$$f.tmp &&					\
 	mv $$f.tmp $$f &&						\
 	cp $$f doc/src/version-number.tex &&				\
-	echo '(define version-info "0.'`cat $$f`'")'			\
+	echo '(define version-info "1.'`cat $$f`'")'			\
 		>scheme/env/version-info.scm
 
 
@@ -531,32 +536,32 @@ scheme/debug/mini1.image: $(VM) scheme/debug/mini.image
 # --------------------
 # Generate scheme48.h from VM sources
 
-c/scheme48.h: c/scheme48.h.in scheme/vm/arch.scm scheme/vm/data.scm \
-	    scheme/link/generate-c-header.scm
-	(echo ',bench';								\
-		echo ',batch';							\
-		echo ',load-package big-scheme';				\
-		echo ',open big-scheme';					\
-		echo ',load scheme/link/generate-c-header.scm';			\
-		echo "(make-c-header-file \"$@\"				\
-					  \"$(srcdir)/c/scheme48.h.in\"		\
-					  \"$(srcdir)/scheme/vm/arch.scm\"	\
-					  \"$(srcdir)/scheme/vm/data.scm\"   	\
-					  \"$(srcdir)/scheme/rts/record.scm\")"	\
+c/scheme48.h: c/scheme48.h.in scheme/vm/interp/arch.scm 		\
+		scheme/vm/data/data.scm scheme/link/generate-c-header.scm
+	(echo ',bench';							\
+		echo ',batch';						\
+		echo ',load-package big-scheme';			\
+		echo ',open big-scheme';				\
+		echo ',load scheme/link/generate-c-header.scm';		\
+		echo "(make-c-header-file \"$@\"			\
+			  \"$(srcdir)/c/scheme48.h.in\"			\
+			  \"$(srcdir)/scheme/vm/interp/arch.scm\"	\
+			  \"$(srcdir)/scheme/vm/data/data.scm\"		\
+			  \"$(srcdir)/scheme/rts/record.scm\")"		\
 	) | $(RUNNABLE)
 
 # An old version of the above for legacy code.
 
-c/old-scheme48.h: scheme/vm/arch.scm scheme/vm/data.scm \
+c/old-scheme48.h: scheme/vm/interp/arch.scm scheme/vm/data/data.scm \
 	    scheme/link/generate-old-c-header.scm
-	(echo ',bench';								\
-		echo ',batch';							\
-		echo ',load-package big-scheme';				\
-		echo ',open big-scheme';					\
-		echo ',load scheme/link/generate-old-c-header.scm';		\
-		echo "(make-c-header-file \"$@\"				\
-					  \"$(srcdir)/scheme/vm/arch.scm\"	\
-					  \"$(srcdir)/scheme/vm/data.scm\")"   	\
+	(echo ',bench';							\
+		echo ',batch';						\
+		echo ',load-package big-scheme';			\
+		echo ',open big-scheme';				\
+		echo ',load scheme/link/generate-old-c-header.scm';	\
+		echo "(make-c-header-file \"$@\"			\
+			  \"$(srcdir)/scheme/vm/interp/arch.scm\"	\
+			  \"$(srcdir)/scheme/vm/data/data.scm\")"   	\
 	) | $(RUNNABLE)
 
 # Generate vm (scheme48vm.c and scheme48heap.c) from VM sources.

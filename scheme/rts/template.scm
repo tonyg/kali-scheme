@@ -18,10 +18,12 @@
 ;(define template-ref vector-ref)
 ;(define template-set! vector-set!)
 
-(define template-overhead 2)
+(define template-overhead 3)
 
-(define (template-code tem) (template-ref tem 0))
-(define (template-info tem) (template-ref tem 1))
-(define (set-template-code! tem cv)   (template-set! tem 0 cv))
-(define (set-template-info! tem info) (template-set! tem 1 info))
+(define (template-code       tem) (template-ref tem 0))
+(define (template-info       tem) (template-ref tem 1))
+(define (template-package-id tem) (template-ref tem 2))
+(define (set-template-code!       tem cv)   (template-set! tem 0 cv))
+(define (set-template-info!       tem info) (template-set! tem 1 info))
+(define (set-template-package-id! tem id)   (template-set! tem 2 id))
 

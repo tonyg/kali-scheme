@@ -351,7 +351,8 @@
 (define (command-level-wait level terminating?)
   (lambda ()
     (cond ((< 0 (counter-value (command-level-thread-counter level)))
-	   (wait))
+	   (wait)
+	   #t)
 	  (terminating?
 	   #f)
 	  ((exit-status)

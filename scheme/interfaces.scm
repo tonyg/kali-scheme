@@ -294,7 +294,8 @@
 ; Another hodge-podge.
 
 (define-interface low-level-interface
-  (export vector-unassigned?))		;inspector
+  (export vector-unassigned?		;inspector
+	  cell-unassigned?))		;disclosers
 
 (define-interface vm-exposure-interface
   (export invoke-closure		;eval
@@ -720,10 +721,9 @@
   (export continuation-arg
 	  continuation-arg-count
 	  continuation-cont
-	  continuation-env
 	  continuation-pc
+	  continuation-code
 	  continuation-template
-	  continuation-parent
 	  continuation?
 	  :continuation
 
@@ -734,11 +734,13 @@
   (export make-template
 	  template-code
 	  template-info
+	  template-package-id
 	  template-length
 	  template-ref
 	  template-overhead
 	  set-template-code!
 	  set-template-info!
+	  set-template-package-id!
 	  template-set!
 	  template?))
 
@@ -758,7 +760,6 @@
 	  translate
 	  set-translation!
 	  translations))
-
 
 ; Things for the compiler.
 
@@ -962,21 +963,22 @@
 
 (define-interface segments-interface
   (export attach-label
+	  label-reference optional-label-reference
 	  byte-limit two-byte-limit
 	  high-byte low-byte
 	  empty-segment
 	  instruction
 	  instruction-using-label
-	  instruction-with-literal
-	  instruction-with-location
-	  template
+	  using-optional-label
 	  computed-goto-instruction
+	  continuation-data
 	  make-label
 	  note-environment
 	  note-source-code
-	  segment->template  ;plan
+	  segment->template
 	  segment-size
-	  sequentially))
+	  sequentially
+	  with-package-key))
 
 (define-interface compiler-interface
   (export compile-forms
@@ -985,6 +987,17 @@
 	  define-compilator		;assem.scm
 	  deliver-value			;assem.scm
 	  ))
+
+(define-interface frames-interface
+  (export make-frame
+	  frame-size
+	  frame-literals
+	  frame-debug-data
+	  template-offset
+	  environment-offset
+	  depth-check!
+	  literal->index
+	  binding->index))
 
 (define-interface primops-interface
   (export define-compiler-primitive
@@ -1003,7 +1016,6 @@
 	  debug-data-env-shape
 	  debug-data-name
 	  debug-data-parent
-	  debug-data-pc-in-parent
 	  debug-data-source
 	  debug-data-uid
 	  debug-data?

@@ -8,11 +8,10 @@
     (continuation-ref c index)))
 
 (define continuation-cont          (make-ref continuation-cont-index))
+(define real-continuation-code     (make-ref continuation-code-index))
 (define real-continuation-pc       (make-ref continuation-pc-index))
-(define real-continuation-template (make-ref continuation-template-index))
-(define continuation-env           (make-ref continuation-env-index))
 (define exception-cont-pc          (make-ref exception-cont-pc-index))
-(define exception-cont-template    (make-ref exception-cont-template-index))
+(define exception-cont-code        (make-ref exception-cont-code-index))
 
 ; This one is exported
 (define exception-continuation-exception
@@ -22,66 +21,71 @@
 
 (define (exception-continuation? thing)
   (and (continuation? thing)
-       (= 3 (real-continuation-pc thing))
-       (let ((code (template-code (real-continuation-template thing))))
+       (= 11 (real-continuation-pc thing))
+       (let ((code (real-continuation-code thing)))
 	 (and (= 1				; one return value
-		 (code-vector-ref code 4))
+		 (code-vector-ref code 12))
 	      (= (enum op return-from-exception)
-		 (code-vector-ref code 5))))))
+		 (code-vector-ref code 13))))))
+
+(define (call-with-values-continuation? thing)
+  (and (continuation? thing)
+       (= 11 (real-continuation-pc thing))
+       (= call-with-values-protocol
+	  (code-vector-ref (real-continuation-code thing)
+			   12))))
 
 (define (continuation-pc c)
   (if (exception-continuation? c)
       (exception-cont-pc c)
       (real-continuation-pc c)))
 
-(define (continuation-template c)
+(define (continuation-code c)
   (if (exception-continuation? c)
-      (exception-cont-template c)
-      (real-continuation-template c)))
+      (exception-cont-code c)
+      (real-continuation-code c)))
+
+; This finds the template if it is in the continuation.  Not all continuations
+; have templates.
+
+(define (continuation-template c)
+  (if (and (call-with-values-continuation? c)
+           (closure? (continuation-arg c 0)))
+      (closure-template (continuation-arg c 0))
+      (let loop ((i 0))
+	(if (= i (continuation-length c))
+	    #f
+	    (let ((value (continuation-ref c i)))
+	      (if (and (template? value)
+		       (eq? (template-code value)
+			    (continuation-code c)))
+		  value
+		  (loop (+ i 1))))))))
 
 ; Accessing the saved operand stack.
 
 (define (continuation-arg c i)
-  (continuation-ref c (+ (if (exception-continuation? c)
+  (continuation-ref c (+ continuation-cells
+			 (if (exception-continuation? c)
 			     exception-continuation-cells
-			     continuation-cells)
+			     0)
 			 i)))
 
 (define (continuation-arg-count c)
   (- (continuation-length c)
-     (if (exception-continuation? c)
-	 exception-continuation-cells
-	 continuation-cells)))
+     (+ continuation-cells
+	(if (exception-continuation? c)
+	    exception-continuation-cells
+	    0))))
 
 (define-simple-type :continuation (:value) continuation?)
 
 (define-method &disclose ((obj :continuation))
-  (if (exception-continuation? obj)
-      (list 'exception-continuation
-	    `(pc ,(exception-cont-pc obj))
-	    (template-info (exception-cont-template obj)))
-      (list 'continuation
-	    `(pc ,(continuation-pc obj))
-	    (template-info (continuation-template obj)))))
-
-; If (continuation-cont A) = B, then ignore B if the following are all true:
-;   1. (continuation-template B) = (continuation-template A)
-;   2. (continuation-pc B) > (continuation-pc A)
-;   3. (continuation-env B) = (continuation-env A)
-;                             or some parent of (continuation-env A)
-;
-; I don't think this is foolproof, but I have so far been unable to
-; contrive a situation in which it fails.  I think a double recursion of a 
-; procedure of no arguments is required, at the very least.
-
-(define (continuation-parent a)
-  (let ((b (continuation-cont a)))
-    (if (and (continuation? b)
-	     (eq? (continuation-template a) (continuation-template b))
-	     (< (continuation-pc a) (continuation-pc b))
-	     (let loop ((env (continuation-env a)))
-	       (or (eq? env (continuation-env b))
-		   (and (vector? env)
-			(loop (vector-ref env 0))))))
-	(continuation-parent b)
-	b)))
+  (list (if (exception-continuation? obj)
+	    'exception-continuation
+	    'continuation)
+	`(pc ,(continuation-pc obj))
+	(let ((template (continuation-template obj)))
+	  (if template
+	      (template-info template)
+	      #f))))

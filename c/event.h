@@ -27,7 +27,7 @@ extern long s48_current_time;
  */
 #define	NOTE_EVENT					\
 	do {						\
-		s48_Spending_eventsPS = 1;		\
-		s48_Spending_interruptPS = 1;		\
+             s48_Spending_eventsPS = 1;			\
+             s48_Sstack_limitS = (((char *) -1));	\
 	} while (0)
 

@@ -2,17 +2,19 @@
 ; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ;Need to fix the byte-code compiler to make jump etc. offsets from the
-;beginning of the instruction.
-
-; This is file interp.scm.
+;beginning of the instruction.  (Later: why?)
 
 ; Interpreter state
 
-(define *template*)		; current template
 (define *code-pointer*)		; pointer to next instruction byte
 (define *val*)			; last value produced
 (define *exception-handlers*)	; vector of procedures, one per opcode
 (define *interrupt-handlers*)	; vector of procedures, one per interrupt type
+
+; These are set when calls or returns occur.  We use them to figure out what
+; the current program counter is.
+(define *last-code-called*)
+(define *last-code-pointer-resumed*)
 
 ; Two registers used only by the RTS (except for one hack; see GET-CURRENT-PORT
 ; in prim-io.scm).
@@ -34,8 +36,9 @@
 (define *interrupted-template*) ; template in place when the most recent
 				; interrupt occured - for profiling
 
-(define *interrupt-template*)	; used to return from interrupts
-(define *exception-template*)	; used to mark exception continuations
+(define *interrupt-return-code*)	; used to return from interrupts
+(define *exception-return-code*)	; used to mark exception continuations
+(define *call-with-values-return-code*)	; for call-with-values opcode
 
 ; These are referred to from other modules.
 
@@ -56,9 +59,8 @@
 
 (define (clear-registers)
   (reset-stack-pointer false)
-  (set-current-env! unspecific-value)
-  (set-template! *interrupt-template*          ; has to be some template
-		 (enter-fixnum 0))
+  (set-code-pointer! *interrupt-return-code* 0)
+  (set! *last-code-pointer-resumed* *code-pointer*)
   (set! *val*                unspecific-value)
   (set! *current-thread*     null)
   (shared-set! *session-data*       null)
@@ -83,16 +85,21 @@
 
 (add-gc-root!
   (lambda ()
-    (set! *saved-pc* (current-pc))    ; headers may be busted here...
+    ; headers may be busted here...
+    (receive (code pc)
+	(current-code+pc)
+      (set! *saved-pc* pc)
+      (set! *last-code-called* (s48-trace-value code)))
 
-    (set! *template*             (s48-trace-value *template*))
-    (set! *val*                  (s48-trace-value *val*))
-    (set! *current-thread*       (s48-trace-value *current-thread*))
-    (set! *interrupt-template*   (s48-trace-value *interrupt-template*))
-    (set! *exception-template*   (s48-trace-value *exception-template*))
-    (set! *interrupted-template* (s48-trace-value *interrupted-template*))
-    (set! *os-signal-type*       (s48-trace-value *os-signal-type*))
-    (set! *os-signal-argument*   (s48-trace-value *os-signal-argument*))
+    (set! *val*                   (s48-trace-value *val*))
+    (set! *current-thread*        (s48-trace-value *current-thread*))
+    (set! *interrupt-return-code* (s48-trace-value *interrupt-return-code*))
+    (set! *exception-return-code* (s48-trace-value *exception-return-code*))
+    (set! *call-with-values-return-code*
+	  (s48-trace-value *call-with-values-return-code*))
+    (set! *interrupted-template*  (s48-trace-value *interrupted-template*))
+    (set! *os-signal-type*        (s48-trace-value *os-signal-type*))
+    (set! *os-signal-argument*    (s48-trace-value *os-signal-argument*))
 
     (shared-set! *session-data*
 		 (s48-trace-value (shared-ref *session-data*)))
@@ -106,14 +113,13 @@
     (trace-finalizer-alist!)
     
     ; These could be moved to the appropriate modules.
-    (set-current-env! (s48-trace-value (current-env)))
     (trace-io s48-trace-value)
-    (trace-channel-names s48-trace-value)
-    (trace-stack s48-trace-locations! s48-trace-stob-contents! s48-trace-value)))
+    (trace-channel-names s48-trace-value)))
 
 (add-post-gc-cleanup!
   (lambda ()
-    (set-template! *template* *saved-pc*)
+    (set-code-pointer! *last-code-called* *saved-pc*)
+    (set! *last-code-pointer-resumed* *code-pointer*)
     (partition-finalizer-alist!)
     (close-untraced-channels! s48-extant? s48-trace-value)
     (note-interrupt! (enum interrupt post-gc))))
@@ -176,20 +182,56 @@
 
 ;----------------
 
-(define (set-template! tem pc)
-  (set! *template* tem)
-  (set-code-pointer! (template-code tem) (extract-fixnum pc)))
-
 (define (set-code-pointer! code pc)
-  (set! *code-pointer* (address+ (address-after-header code) pc)))
+;  (if (= code 100384375)
+;      (breakpoint "set-code-pointer!"))
+  (set! *last-code-called* code)
+  (set! *code-pointer* (code+pc->code-pointer code pc)))
 
-(define (code-pointer->pc pointer template)
-  (enter-fixnum (address-difference
-		  pointer
-		  (address-after-header (template-code template)))))
+(define (code+pc->code-pointer code pc)
+  (address+ (address-after-header code) pc))
 
-(define (current-pc)
-  (code-pointer->pc *code-pointer* *template*))
+(define (code-pointer->pc code pointer)
+  (address-difference pointer
+		      (address-after-header code)))
+
+(define (within-code? code-pointer code)
+  (let ((start (address-after-header code)))
+    (and (address<= start code-pointer)
+	 (address< code-pointer
+		   (address+ start 
+			     (safe-byte-vector-length code))))))
+
+; This has to operate with broken hearts.
+
+(define (safe-byte-vector-length code)
+  (let ((header (stob-header code)))
+    (if (stob? header)
+	(safe-byte-vector-length header)
+	(code-vector-length code))))
+
+(define (current-code-vector)
+  (if (within-code? *code-pointer* *last-code-called*)
+      *last-code-called*
+      (let ((code (code-pointer->code *last-code-pointer-resumed*)))
+	(if (within-code? *code-pointer* code)
+	    code
+	    (error "VM error: unable to locate current code vector")))))
+
+(define (code-pointer->code code-pointer)
+  (let ((pc (fetch-two-bytes (address- code-pointer 5))))
+    (address->stob-descriptor (address- code-pointer pc))))
+
+; Silly utility that should be elsewhere.
+
+(define (fetch-two-bytes pointer)
+  (+ (shift-left (fetch-byte pointer) 8)
+     (fetch-byte (address+ pointer 1))))
+
+(define (current-code+pc)
+  (let ((code (current-code-vector)))
+    (values code
+	    (code-pointer->pc code *code-pointer*))))
 
 ; These two templates are used when pushing continuations for calls to
 ; interrupt and exception handlers.  The continuation data gives zero
@@ -197,23 +239,22 @@
 ; is in the continuation just below the saved registers.
 
 (define (initialize-interpreter+gc)          ;Used only at startup
-  (let ((key (ensure-space (* 2 (op-template-size 6)))))
-    (set! *interrupt-template*
-	  (make-template-containing-six-ops (enum op cont-data)
-					    0
-					    0
-					    (enum op protocol)
-					    ignore-values-protocol
-					    (enum op return-from-interrupt)
-					    key))
-    (set! *exception-template*
-	  (make-template-containing-six-ops (enum op cont-data)
-					    0
-					    0
-					    (enum op protocol)
-					    1	; want exactly one return value
-					    (enum op return-from-exception)
-					    key))))
+  (let ((key (ensure-space (* 3 return-code-size))))
+    (set! *interrupt-return-code*
+	  (make-return-code ignore-values-protocol
+			    (enum op return-from-interrupt)
+			    #xFFFF		; escape value
+			    key))
+    (set! *exception-return-code*
+	  (make-return-code 1	; want exactly one return value
+			    (enum op return-from-exception)
+			    #xFFFF		; escape value
+			    key))
+    (set! *call-with-values-return-code*
+	  (make-return-code call-with-values-protocol
+			    0			; opcode is not used
+			    1
+			    key))))
 
 ; Users of the above templates have to skip over the continuation data.
 (define continuation-data-size 3)
@@ -221,14 +262,9 @@
 ;----------------
 ; Continuations
 
-(define (push-continuation! code-pointer)
-  (push-continuation-on-stack *template* code-pointer))
-
 (define (pop-continuation!)
-  (pop-continuation-from-stack
-    (lambda (template code-pointer)
-      (set! *code-pointer* code-pointer)
-      (set! *template* template))))
+  (set! *code-pointer* (pop-continuation-from-stack))
+  (set! *last-code-pointer-resumed* *code-pointer*))
   
 ;----------------
 ; Instruction stream access
@@ -241,8 +277,9 @@
 	       (code-byte (+ index 1))
 	       bits-used-per-byte))
 
-(define (get-literal index)
-  (template-ref *template* (code-offset index)))
+(define (get-literal code-index)
+  (template-ref (stack-ref (code-offset code-index))
+		(code-offset (+ code-index 2))))
 
 ; Return the current op-code.  CODE-ARGS is the number of argument bytes that
 ; have been used.
@@ -258,7 +295,10 @@
 
 (define (interpret code-pointer)
 ;  (if (and trace-instructions? (> *i* *bad-count*))
-;      (write-instruction *template* (extract-fixnum (current-pc)) 1 #f))
+;      (receive (code pc)
+;          (current-code+pc)
+;        (write-instruction code pc 1 #f)
+;        (check-stack)))
 ;  (set! *i* (+ *i* 1))
   ((vector-ref opcode-dispatch (fetch-byte code-pointer))))
 
@@ -269,19 +309,6 @@
 (define (continue-with-value value bytes-used)
   (set! *val* value)
   (goto continue bytes-used))
-
-;----------------
-; Opcodes
-
-(define (uuo)
-  (raise-exception unimplemented-instruction 0))
-
-(define opcode-dispatch (make-vector op-count uuo))
-
-(define-syntax define-opcode
-  (syntax-rules ()
-    ((define-opcode op-name body ...)
-     (vector-set! opcode-dispatch (enum op op-name) (lambda () body ...)))))
 
 ;----------------
 ; Exception syntax
@@ -308,9 +335,24 @@
   (syntax-rules ()
     ((raise-exception* why byte-args arg1 ...)
      (begin
-       (push-exception-continuation! why (+ byte-args 1)) ; add 1 for the opcode
+       (push-exception-setup! why (+ byte-args 1)) ; add 1 for the opcode
        (push arg1) ...
        (goto raise (count-exception-args arg1 ...))))))
+
+;----------------
+; Opcodes
+
+(define (uuo)
+  (raise-exception unimplemented-instruction
+		   0
+		   (enter-fixnum (fetch-byte *code-pointer*))))
+
+(define opcode-dispatch (make-vector op-count uuo))
+
+(define-syntax define-opcode
+  (syntax-rules ()
+    ((define-opcode op-name body ...)
+     (vector-set! opcode-dispatch (enum op op-name) (lambda () body ...)))))
 
 ;----------------
 ; Exceptions
@@ -337,29 +379,32 @@
 ; to the next instruction when returning.  The exception is saved in the
 ; continuation for use in debugging.
 
-(define (push-exception-continuation! exception instruction-size)
-  (let ((opcode (current-opcode)))
-    (push-exception-data *template*
-			 (current-pc)
-			 (enter-fixnum exception)
-			 (enter-fixnum instruction-size))
-    (set-template! *exception-template* (enter-fixnum continuation-data-size))
-    (push-continuation! *code-pointer*)
-    (push (enter-fixnum opcode))
-    (push (enter-fixnum exception))))
+(define (push-exception-setup! exception instruction-size)
+;  (breakpoint "exception continuation")
+  (receive (code pc)
+      (current-code+pc)
+    (push-exception-continuation! (code+pc->code-pointer *exception-return-code*
+							 return-code-pc)
+				  (enter-fixnum pc)
+				  code
+				  (enter-fixnum exception)
+				  (enter-fixnum instruction-size)))
+  (push (enter-fixnum (current-opcode)))
+  (push (enter-fixnum exception)))
 
 (define-opcode return-from-exception
-  (receive (pc template exception size)
+  (receive (pc code exception size)
       (pop-exception-data)
-    (set-template! template (enter-fixnum (+ (extract-fixnum pc)
-					     (extract-fixnum size))))
+    (set-code-pointer! code
+		       (+ (extract-fixnum pc)
+			  (extract-fixnum size)))
     (goto interpret *code-pointer*)))
 
-;(define no-exceptions? #t)
+(define no-exceptions? #f)
 
 (define (raise nargs)
 ;  (let ((opcode (enumerand->name (extract-fixnum (stack-ref (+ nargs 1))) op))
-;	(why (enumerand->name (extract-fixnum (stack-ref nargs)) exception)))
+;        (why (enumerand->name (extract-fixnum (stack-ref nargs)) exception)))
 ;    (if (and no-exceptions?
 ;             (not (and (eq? 'write-char opcode)
 ;                       (eq? 'buffer-full/empty why))))
@@ -367,15 +412,17 @@
   ;; try to be helpful when all collapses
   (let* ((opcode (extract-fixnum (stack-ref (+ nargs 1))))
 	 (lose (lambda (message)
-		(let ((why (extract-fixnum (stack-ref nargs))))
-		  (write-string "Template UIDs: " (current-error-port))
-		  (report-continuation-uids *template* (current-error-port))
-		  (newline (current-error-port))
-		  (if (and (eq? why (enum exception undefined-global))
-			   (fixnum? (location-id (stack-ref (- nargs 1)))))
-		      (error message opcode why
-			     (extract-fixnum (location-id (stack-ref (- nargs 1)))))
-		      (error message opcode why)))))
+		 (write-string "Template UIDs: " (current-error-port))
+		 (report-continuation-uids (current-code-vector)
+					   (current-error-port))
+		 (newline (current-error-port))
+		 (let ((why (extract-fixnum (stack-ref nargs))))
+		   (if (and (eq? why (enum exception undefined-global))
+			    (fixnum? (location-id (stack-ref (- nargs 1)))))
+		       (error message opcode why
+			      (extract-fixnum
+			       (location-id (stack-ref (- nargs 1)))))
+		       (error message opcode why)))))
 	 (handlers (shared-ref *exception-handlers*)))
     (if (not (vm-vector? handlers))
 	(lose "exception-handlers is not a vector"))
@@ -385,95 +432,85 @@
     (goto call-exception-handler (+ nargs 2) opcode)))
 
 ;----------------
-; Literals
-; Loaded from *template* into *val*, using either a one-byte or two-byte index.
+; Literals and local variables.
+; Loaded from the stack, template, or environment into *val*, with the
+; template or environment obtained from the stack.
 
-(define-opcode literal    ;Load a literal into *val*.
+(define-opcode stack-indirect
   (goto continue-with-value
-	(get-literal 0)
-	2)) ; offset
+	(d-vector-ref (stack-ref (code-byte 0))
+		      (code-byte 1))
+	2))
 
-(define-opcode small-literal
-  (goto continue-with-value
-	(template-ref *template* (code-byte 0))
-	2)) ; byte + wasted byte
-
-;----------------
-; Environment creation
-;  The MAKE-ENV instruction adds a env to the local environment.
-; It pops values off the stack and stores them into the new env.
-
-(define-opcode make-env
-  (pop-args-into-env (code-offset 0))
-  (goto continue 2)) ; offset
-
-; Local variable access and assignment
-
-(define-opcode local      ;Load value of a local.
-  (goto finish-local (env-back (current-env) (code-byte 0)) 1))
-
-(define-opcode local0
-  (goto finish-local (current-env) 0))
-
-(define-opcode push-local0
+(define-opcode push+stack-indirect
   (push *val*)
-  (goto finish-local (current-env) 1))
+  (goto continue-with-value
+	(d-vector-ref (stack-ref (code-byte 0))
+		      (code-byte 1))
+	2))
 
-(define-opcode local0-push
-  (set! *val* (env-ref (current-env) (code-byte 0)))
-  (if (not (vm-eq? *val* unassigned-marker))
-      (begin
-	(push *val*)
-	(goto continue 2))
-      (raise-exception unassigned-local 2)))
+(define-opcode stack-indirect+push
+  (push (d-vector-ref (stack-ref (code-byte 0))
+		      (code-byte 1)))
+  (goto continue 2))
 
-(define-opcode local1
-  (goto finish-local (env-parent (current-env)) 0))
+(define-opcode big-stack-indirect
+  (goto continue-with-value
+	(d-vector-ref (stack-ref (code-offset 0))
+		      (code-offset 2))
+	4))
 
-(define-opcode local2
-  (goto finish-local (env-parent (env-parent (current-env))) 0))
+(define-opcode unassigned-check
+  (if (vm-eq? *val* unassigned-marker)
+      (raise-exception unassigned-local 0)
+      (goto continue 0)))
 
-(define (finish-local env arg-count)
-  (set! *val* (env-ref env (code-byte arg-count)))
-  (if (not (vm-eq? *val* unassigned-marker))
-      (goto continue (+ arg-count 1))
-      (raise-exception unassigned-local (+ arg-count 1))))
+(define-opcode integer-literal
+  (goto continue-with-value
+	(integer-literal 0)
+	1))
 
-(define-opcode big-local
-  (let ((back (code-offset 0)))
-    (set! *val* (env-ref (env-back (current-env) back)
-			 (code-offset 2)))
-    (if (not (vm-eq? *val* unassigned-marker))
-	(goto continue 4) ; byte + offset
-	(raise-exception unassigned-local 4))))
+(define-opcode push+integer-literal
+  (push *val*)
+  (goto continue-with-value
+	(integer-literal 0)
+	1))
 
-(define-opcode set-local!
-  (let ((back (code-offset 0)))
-    (env-set! (env-back (current-env) back)
-              (code-offset 2)
-              *val*)
-    (set! *val* unspecific-value)
-    (goto continue 4))) ; byte + offset
+(define-opcode integer-literal+push
+  (push (integer-literal 0))
+  (goto continue 1))
+
+; PreScheme does not have a SIGNED-BYTE-REF so we bias the value by 128.
+
+(define (integer-literal offset)
+  (enter-fixnum (- (code-byte offset)
+		   128)))
 
 ;----------------
 ; Global variable access
 
 (define-opcode global        ;Load a global variable.
-  (let ((location (get-literal 0)))
+  (let* ((template (stack-ref (code-offset 0)))
+	 (index (code-offset 2))
+	 (location (template-ref template index)))
     (set! *val* (contents location))
     (if (undefined? *val*)           ;unbound or unassigned
-	(raise-exception undefined-global 2 location)
-	(goto continue 2)))) ; offset
+	(raise-exception undefined-global 4
+			 location template (enter-fixnum index))
+	(goto continue 4))))
 
 (define-opcode set-global!
-  (let ((location (get-literal 0)))
+  (let* ((template (stack-ref (code-offset 0)))
+	 (index (code-offset 2))
+	 (location (template-ref template index)))
     (cond ((vm-eq? (contents location) unbound-marker)
-           (raise-exception undefined-global 2 location *val*))
+	   (raise-exception undefined-global 4
+			    location template (enter-fixnum index) *val*))
           (else
            (set-contents! location *val*)
 	   (goto continue-with-value
 		 unspecific-value
-		 2))))) ; offset
+		 4)))))
 
 ;----------------
 ; Stack operation
@@ -482,113 +519,140 @@
   (push *val*)
   (goto continue 0))
 
+(define-opcode push-false
+  (push false)
+  (goto continue 0))
+
 (define-opcode pop	;Pop *val* from the stack.
   (goto continue-with-value
 	(pop)
 	0))
+
+(define-opcode pop-n
+  (add-cells-to-stack! (- (code-offset 0)))
+  (goto continue 2))
 
 (define-opcode stack-ref
   (goto continue-with-value
 	(stack-ref (code-byte 0))
 	1))
 
+(define-opcode big-stack-ref
+  (goto continue-with-value
+	(stack-ref (code-offset 0))
+	2))
+
+(define-opcode push+stack-ref
+  (push *val*)
+  (goto continue-with-value
+	(stack-ref (code-byte 0))
+	1))
+
+(define-opcode stack-ref+push
+  (push (stack-ref (code-byte 0)))
+  (goto continue 1))
+
 (define-opcode stack-set!
   (stack-set! (code-byte 0) *val*)
   (goto continue 1))
 
+(define-opcode big-stack-set!
+  (stack-set! (code-offset 0) *val*)
+  (goto continue 2))
+
 ;----------------
 ; LAMBDA
 
-(define-opcode closure
-  (receive (env key)
-      (if (= 0 (code-byte 2))
-	  (let ((key (ensure-space (+ closure-size (current-env-size)))))
-	    (values (preserve-current-env key) key))
-	  (let ((key (ensure-space closure-size)))
-	    (values *val* key)))
-    (goto continue-with-value
-	  (make-closure (get-literal 0) env key)
-	  3)))
+; No longer used.
+;(define-opcode closure
+;  (receive (env key)
+;      (if (= 0 (code-byte 2))
+;          (let ((key (ensure-space (+ closure-size (current-env-size)))))
+;            (values (preserve-current-env key) key))
+;          (let ((key (ensure-space closure-size)))
+;            (values *val* key)))
+;    (goto continue-with-value
+;          (make-closure (get-literal 0) env key)
+;	  3)))
 
-; This makes recursive closures.  *VAL* should be an environment (a vector).
-; The first slot in *VAL* is replaced with a vector containing COUNT closures
-; that have *VAL* as their environment.  The first slot of the new vector has
-; the old first slot of *VAL*.  The closures that are created are also added
-; to *ENV*.
-
-(define-opcode letrec-closures
-  (let* ((count (code-offset 0))
-	 (key (ensure-space (+ (vm-vector-size (+ count 1))
-			       (* count closure-size))))
-	 (vector (vm-make-vector (+ count 1) key)))
-    (do ((i 1 (+ i 1)))
-	((< count i))
-      (let ((closure (make-closure (get-literal (* i 2)) *val* key)))
-	(vm-vector-set! vector i closure)
-	(push closure)))
-    (vm-vector-set! vector 0 (vm-vector-ref *val* 0))
-    (vm-vector-set! *val* 0 vector)
-    (pop-args-into-env count)
-    (goto continue (* (+ count 1) 2))))
-
-; There are two versions of this, one with one-byte size and offsets and the
-; other with two-byte size and offsets.
-;
 ; (enum op make-[big-]flat-env)
-; use *val* as first element?
-; number of vars (one or two bytes)
-; depth of first level
-; number of vars in level
-; (one or two byte) offsets of vars in level
-; delta of depth of second level
-; ...
-
-; We have two versions of this, one where the offsets are one byte and
-; one where they are two bytes.
+; number of values
+; number of closures
+; [offset of template in frame
+;  offsets of templates in template]
+; number of variables in frame (size)
+; offsets of vars in frame
+; [offset of env in frame
+;  number of vars in env
+;  offsets of vars in level]*
+;
+; All numbers and offsets are one byte for make-flat-env and two bytes for
+; make-big-flat-env.
 
 (define (flat-env-maker size fetch)
-  (lambda ()
-    (let* ((total-count (fetch 1))
-	   (new-env (vm-make-vector total-count
-				    (ensure-space
-				      (vm-vector-size total-count))))
-	   (start-i (if (= 0 (code-byte 0))
-			0
-			(begin
-			  (vm-vector-set! new-env 0 *val*)
-			  1))))
-      (let loop ((i start-i)
-		 (offset (+ 1 size))		; use-*val* and count
-		 (env (current-env)))
-	(if (= i total-count)
-	    (goto continue-with-value
-		  new-env
-		  offset)
-	    (let ((env (env-back env (code-byte offset)))
-		  (count (fetch (+ offset 1))))
-	      (do ((count count (- count 1))
-		   (i i (+ i 1))
-		   (offset (+ offset 1 size)	; env-back and count
-			   (+ offset size)))
-		  ((= count 0)
-		   (loop i offset env))
-		(vm-vector-set! new-env
-				i
-				(vm-vector-ref env (fetch offset))))))))))
+  (define (make-env)
+    (let* ((total-count (fetch 0))
+	   (closures (fetch size))
+	   (key (ensure-space (+ (vm-vector-size total-count)
+				 (* closures closure-size))))
+	   (new-env (vm-make-vector total-count key)))
+;      (format #t "[flat env with ~D values]~%" total-count)
+      (goto continue-with-value
+	    new-env
+	    (if (= closures 0)
+		(fill-env new-env 0 (+ size size) total-count)
+		(make-closures new-env closures key total-count)))))
+
+  (define (make-closures new-env count key total-count)
+;    (format #t "[making ~D closures]~%" count)
+    (let* ((offset (+ size size))
+	   (template (stack-ref (fetch offset))))
+      (do ((count count (- count 1))
+	   (i 0 (+ i 1))
+	   (offset (+ offset size) (+ offset size)))
+	  ((= count 0)
+	   (fill-env new-env i offset total-count))
+	(vm-vector-set! new-env
+			i
+			(make-closure (template-ref template (fetch offset))
+				      new-env
+				      key)))))
+
+  (define (fill-env new-env i offset total-count)
+    (do ((count (fetch offset) (- count 1))
+	 (i i (+ i 1))
+	 (offset (+ offset size) (+ offset size)))
+	((= count 0)
+	 (if (< i total-count)
+	     (finish-env new-env i offset total-count)
+	     offset))
+      (vm-vector-set! new-env i (stack-ref (fetch offset)))))
+
+  (define (finish-env new-env i offset total-count)
+    (let loop ((i i)
+	       (offset offset))
+      (if (= i total-count)
+	  offset
+	  (let ((env (stack-ref (fetch offset)))
+		(count (fetch (+ offset size))))
+;	    (format #t "[getting ~D more values from ~D]~%"
+;		    count
+;		    (fetch offset))
+	    (do ((count count (- count 1))
+		 (i i (+ i 1))
+		 (offset (+ offset size size) (+ offset size)))
+		((= count 0)
+		 (loop i offset))
+	      (vm-vector-set! new-env
+			      i
+			      (vm-vector-ref env (fetch offset))))))))
+  make-env)
 
 (let ((one-byte-maker (flat-env-maker 1 code-byte)))
   (define-opcode make-flat-env (one-byte-maker)))
 
 (let ((two-byte-maker (flat-env-maker 2 code-offset)))
   (define-opcode make-big-flat-env (two-byte-maker)))
-
-;----------------
-; Continuation creation
-
-(define-opcode make-cont   ;Start a non-tail call.
-  (push-continuation! (address+ *code-pointer*
-				(code-offset 0)))
-  (goto continue 2))
 
 ;----------------
 ; Preserve the current continuation and put it in *val*.
@@ -617,12 +681,21 @@
 	(else
 	 (goto continue 2))))
 
-; Unconditional jump
+; Unconditional jumps
 
 (define-opcode jump
   (set! *code-pointer*
 	(address+ *code-pointer*
 		  (code-offset 0)))
+  (goto interpret *code-pointer*))
+
+; Same thing except the other way.  The bytecode compiler does not make use
+; of this (it compiles all loops as calls).
+
+(define-opcode jump-back
+  (set! *code-pointer*
+        (address- *code-pointer*
+                  (code-offset 0)))
   (goto interpret *code-pointer*))
 
 ; Computed goto

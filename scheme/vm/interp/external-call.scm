@@ -66,7 +66,7 @@
 ; of arguments pushed here, plus the procedure.
 
 (define (s48-setup-external-exception why nargs)
-  (push-exception-continuation! why 1)		; 1 = one-byte instruction
+  (push-exception-setup! why 1)		; 1 = one-byte instruction
   (if (< 10 nargs)
       (error "too many arguments from external exception"))
   (set! *external-exception-nargs* nargs)

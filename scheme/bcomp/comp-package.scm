@@ -78,8 +78,8 @@
     (walk-primops (lambda (name type primop)
 		    (environment-define! env name type primop)
 		    (set! procs
-			  (cons (make-define-primitive-node name env)
-				procs))))
+		          (cons (make-define-primitive-node name env)
+		                procs))))
     procs))
 
 (define (make-define-primitive-node name env)

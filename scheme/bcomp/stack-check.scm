@@ -101,7 +101,7 @@
 	((= (code-vector-ref code-vector i)
 	    (enum op cont-data))
 	 (continue code-vector
-		   (+ i 3)		; how do I know this?
+		   (+ i 4)		; how do I know this?
 		   maximum
 		   jumps))
 	(else

@@ -364,7 +364,8 @@
 
 (define (run-thread thread return-values)
 ;  (debug-message "[Running " (thread-name thread)
-;		 " " (thread-uid thread) "]")
+;                 " " (thread-uid thread) " on "
+;                 (length return-values) " values]")
   (set-current-thread! thread)
   (set-thread-current-task! thread #f)
   (with-continuation (thread-continuation thread)

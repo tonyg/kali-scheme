@@ -19,11 +19,10 @@
 	(write-table package-name-table "Package uid -> name")
 	(write-table location-info "Location uid -> (name . package-uid)"))
 
-      (display "; Template uid -> name, parent, pc in parent, env maps" port)
+      (display "; Template uid -> name, parent, env maps" port)
       (newline port)
       (table-walk (lambda (id data)
-		    ;; Fields: (uid name parent pc-in-parent
-		    ;;	        env-maps source)
+		    ;; Fields: (uid name parent env-maps source)
 		    (write (list id
 				 (let ((name (debug-data-name data)))
 				   (if (generated? name)
@@ -34,7 +33,6 @@
 				   (if (debug-data? p)
 				       (debug-data-uid p)
 				       p))
-				 (debug-data-pc-in-parent data)
 				 (debug-data-env-maps data)
 				 ;; Don't retain source code, right?
 				 )

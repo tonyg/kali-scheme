@@ -12,11 +12,12 @@
 	     "../scheme/vm/shared-interfaces.scm"
              "../scheme/vm/ps-package-defs.scm"
              "../scheme/vm/package-defs.scm"
-             "../scheme/vm/alt-vm-package-defs.scm")
+	     "../scheme/vm/alt-vm-package-defs.scm")
            's48-heap-init
            "../scheme/vm/scheme48heap.c"
            '(header "#include \"scheme48vm.h\"")
            ;'(copy (heap walk-over-type-in-area))
+	   '(no-copy (gc s48-trace-locations!))
            '(integrate (real-copy-object s48-trace-locations!)))))
 
 (in 'prescheme-compiler
@@ -26,8 +27,8 @@
 	     "../scheme/vm/shared-interfaces.scm"
              "../scheme/vm/ps-package-defs.scm"
              "../scheme/vm/package-defs.scm"
-             "../scheme/vm/alt-vm-package-defs.scm"
-             "../scheme/vm/alt-gc-package-defs.scm")
+             "../scheme/vm/alt-gc-package-defs.scm"
+             "../scheme/vm/alt-vm-package-defs.scm")
            's48-read-image-init
            "../scheme/vm/scheme48read-image.c"
            '(header "#include \"scheme48vm.h\"")
@@ -39,9 +40,8 @@
 	   '("../scheme/vm/interfaces.scm"
 	     "../scheme/vm/shared-interfaces.scm"
 	     "../scheme/vm/ps-package-defs.scm"
-	     "../scheme/vm/package-defs.scm"
-	     "../scheme/vm/alt-vm-package-defs.scm"
-	     "../scheme/vm/alt-gc-package-defs.scm")
+             "../scheme/vm/package-defs.scm"
+	     "../scheme/vm/alt-vm-package-defs.scm")
 	   's48-write-image-init
 	   "../scheme/vm/scheme48write-image.c"
 	   '(header "#include \"scheme48vm.h\"")

@@ -62,7 +62,7 @@
       (lambda ()
 	(primitive-cwcc
 	 (lambda (top)
-	   (set! *top-continuation* (continuation-parent top))
+	   (set! *top-continuation* (continuation-cont top))
 	   (set! *hits* 0)
 	   (set! *conts* '())
 	   (set! *templates* '())
@@ -147,9 +147,9 @@
 	(set-car! p (+ (car p) 1)))))
 
 (define (add-cont-data! cont)
-  (let loop ((cont (continuation-parent cont)))
+  (let loop ((cont (continuation-cont cont)))
     (if (and (okay-cont? cont)
-	     (okay-cont? (continuation-parent cont)))
+	     (okay-cont? (continuation-cont cont)))
 	(let* ((template (continuation-template cont))
 	       (p (table-ref *cont-counts* template)))
 	  (if (not p)
@@ -157,7 +157,7 @@
 			  template
 			  (cons 1 '()))
 	      (set-car! p (+ (car p) 1)))
-	  (loop (continuation-parent cont))))))
+	  (loop (continuation-cont cont))))))
 
 (define (gather-template-table-data table)
   (let ((counts '()))

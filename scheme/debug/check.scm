@@ -48,7 +48,7 @@
 (config '(run 
 (define-structure foo (export)
   (open scheme testing
-	assembler
+	;assembler
 	code-vectors
 	ports
 	queues
@@ -169,7 +169,7 @@
 	    (string->number "-12")
 	    (string->number "-12" 8)))
 
-(test "lap" equal? #f ((lap #f () (protocol 0) (false) (return))))
+;(test "lap" equal? #f ((lap #f () (protocol 0) (false) (return))))
 (let ((q (make-queue)))
   (enqueue! q 'a)
   (test "q" eq? 'a (dequeue! q)))

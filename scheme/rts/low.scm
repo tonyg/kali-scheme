@@ -55,6 +55,8 @@
 
 
 ; These two procedures are part of the location abstraction.
+; We don't let UNASSIGNED escape because use of the value it returns can
+; be confusing.  Here we just test it against other values.
 
 (define (make-undefined-location id)
   (let ((loc (make-location id #f)))
@@ -68,11 +70,15 @@
 	   #f
 	   #t)))
 
+; Used by the cell discloser
+
+(define (cell-unassigned? cell)
+  (eq? (cell-ref cell) (unassigned)))
+
 ; Used by the inspector.
 
 (define (vector-unassigned? v i)
   (eq? (vector-ref v i) (unassigned)))
-
 
 ; STRING-COPY is here because it's needed by STRING->SYMBOL.
 

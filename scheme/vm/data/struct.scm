@@ -74,39 +74,11 @@
   continuation-cont-index)
 (define-cont-field continuation-pc set-continuation-pc!
   continuation-pc-index)
-(define-cont-field continuation-template set-continuation-template!
-  continuation-template-index)
-(define-cont-field continuation-env set-continuation-env!
-  continuation-env-index)
+(define-cont-field continuation-code set-continuation-code!
+  continuation-code-index)
 
 (define (template-code tem) (template-ref tem 0))
 (define (template-name tem) (template-ref tem 1))
-
-; The VM needs a few templates for various obscure purposes.
-
-(define (make-template-containing-ops op0 op1 key)
-  (let ((temp (make-template 2 key))
-        (code (make-code-vector 2 key)))
-    (template-set! temp 0 code)
-    (code-vector-set! code 0 op0)
-    (code-vector-set! code 1 op1)
-    temp))
-
-(define (make-template-containing-six-ops op0 op1 op2 op3 op4 op5 key)
-  (let ((temp (make-template 2 key))
-        (code (make-code-vector 6 key)))
-    (template-set! temp 0 code)
-    (code-vector-set! code 0 op0)
-    (code-vector-set! code 1 op1)
-    (code-vector-set! code 2 op2)
-    (code-vector-set! code 3 op3)
-    (code-vector-set! code 4 op4)
-    (code-vector-set! code 5 op5)
-    temp))
-
-(define (op-template-size op-count)
-  (+ (template-size 2)
-     (code-vector-size op-count)))
 
 ; Code vectors
 

@@ -52,7 +52,7 @@
 ; Same as in rts-packages.scm:
 (define-structure architecture vm-architecture-interface
   (open scheme-level-1 signals enumerated)
-  (files (vm arch)))
+  (files (vm/interp arch)))
 
 (define-structure define-record-types define-record-types-interface
   (open scheme-level-1 records)

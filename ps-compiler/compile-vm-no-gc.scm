@@ -16,7 +16,8 @@
 	   's48-init
 	   "../scheme/vm/scheme48vm.c"
 	   '(header "#include \"scheme48vm-prelude.h\"")
-	   '(copy (interpreter push-continuation-on-stack))
+	   '(copy (interpreter pop-continuation-from-stack
+			       env-and-template-setup))
 	   '(no-copy (interpreter interpret
 				  application-exception
 				  handle-interrupt

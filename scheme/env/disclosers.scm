@@ -39,7 +39,9 @@
                     '())))))
 
 (define-method &disclose ((obj :cell))
-  (cons 'cell '()))
+  (if (cell-unassigned? obj)
+      (list 'uninitialized-cell)
+      (list 'cell)))
 
 (define-method &disclose ((obj :continuation))
   (list (if (exception-continuation? obj)
@@ -47,7 +49,10 @@
 	    'continuation)
 	(list 'pc (continuation-pc obj))
 	(let ((tem (continuation-template obj)))
-	  (or (template-print-name tem) (template-id tem)))))
+	  (if tem
+	      (or (template-print-name tem)
+		  (template-id tem))
+	      '?))))
   
 (define-method &disclose ((obj :code-vector))
   (list 'byte-vector (code-vector-length obj))
@@ -186,13 +191,10 @@
   (define-exception-discloser (enum op global) disc)
   (define-exception-discloser (enum op set-global!) disc))
 
-(let ((disc (lambda (opcode reason args)
-	      (list 'error
-		    "LETREC variable used before its value has been produced"))))
-  (define-exception-discloser (enum op local0) disc)
-  (define-exception-discloser (enum op local1) disc)
-  (define-exception-discloser (enum op local2) disc)
-  (define-exception-discloser (enum op big-local) disc))
+(define-exception-discloser (enum op unassigned-check)
+  (lambda (opcode reason args)
+    (list 'error
+	  "LETREC variable used before its value has been produced")))
 
 (let ((disc (lambda (opcode reason args)
 	      (list 'error
@@ -207,6 +209,7 @@
 		       (symbol->string reason)))
 		    (map value->expression (cons (car args) (cadr args)))))))
   (define-exception-discloser (enum op call) disc)
+  (define-exception-discloser (enum op tail-call) disc)
   (define-exception-discloser (enum op big-call) disc)
   (define-exception-discloser (enum op with-continuation) disc)
   (define-exception-discloser (enum op apply) disc)
@@ -325,7 +328,7 @@
   (let ((probe (template-debug-data tem)))
     (if probe
 	(debug-data-name probe)
-	#f)))
+	'?)))
 
 (define (template-names tem)
   (debug-data-names (template-info tem)))

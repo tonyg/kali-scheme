@@ -5,13 +5,14 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 23")
+(define architecture-version "Vanilla 24")
 
 ; Things that the VM and the runtime system both need to know.
 
 (define bits-used-per-byte 8)
 
 (define byte-limit (expt 2 bits-used-per-byte))
+(define two-byte-limit (* byte-limit byte-limit))
 
 ; Bytecodes: for compiler and interpreter
 
@@ -19,19 +20,20 @@
 ; (op . args)
 ; OP may be a name or a list of names
 ; ARGS are
-;  nargs     - a byte
-;  byte      - a byte
-;  junk	     - a byte that is ignored (e.g. when a peephole optimization merges
-;              two instructions into a single, shorter one)
-;  two-bytes - two bytes
-;  index       - a two byte index into the current template
-;  small-index - a one byte index into the current template
-;  offset    - two bytes giving an offset into the current instruction stream
-;  stob      - a byte specifying a type for a stored object
-;  0 1 2 ... - the number of non-instruction-stream arguments (some
-;              instructions take a variable number of arguments; the first
-;              number is the argument count implemented by the VM)
-;  +         - any number of additional arguments are allowed
+;  nargs        - a byte
+;  byte         - a byte
+;  two-bytes    - two bytes
+;  literal      - a one-byte value
+;  index        - a two byte index into the current template or environment
+;  small-index  - a one byte index into the current template or environment
+;  offset       - two bytes giving an offset into the current instruction stream
+;  stob         - a byte specifying a type for a stored object
+;  env-data     - environment specification with one-byte values
+;  big-env-data - environment specification with two-byte values
+;  0 1 2 ...    - the number of non-instruction-stream arguments (some
+;                 instructions take a variable number of arguments; the first
+;                 number is the argument count implemented by the VM)
+;  +            - any number of additional arguments are allowed
 
 (define-syntax define-instruction-set
   (lambda (form rename compare)
@@ -56,38 +58,45 @@
   (protocol       protocol)      ; first opcode in a procedure, never actually
 				 ; executed
 
-  (make-env       two-bytes)     ; cons an environment
+  (integer-literal      literal) ; optimization for one-byte integers (also
+				 ; used in the closed-compiled +, *)
+  (push+integer-literal literal) ; preceded by a push
+  (integer-literal+push literal) ; followed by a push
 
-  (literal        index)         ; value to *val*, two-byte index
-  (small-literal  small-index)   ; value to *val*, one-byte index
-  (local          byte byte)     ; back and over
-  ((local0 local1 local2)
-   byte)		         ; back encoded into op-code for efficiency
-  (big-local      two-bytes two-bytes)   ; same, but counts are two bytes
-  (set-local!     two-bytes two-bytes 1) ; back over value, counts are two bytes
-  (global         index)         ; value to *val*
-  (set-global!    index 1)
-  (closure        index byte)    ; byte = 0 -> use environment in *env*
-                                 ; byte = 1 -> use environment in *val*
-  (letrec-closures letrec-data)  ; add closures to the current env
+  (global         index index)   ; first is template, second within template
+  (set-global!    index index 1) ; first is template, second within template
+
   (make-flat-env  env-data)      ; make new environment from env-data
   (make-big-flat-env big-env-data) ; same, but with two-byte size and offsets
-  (push 1)		         ; push *val* onto stack
-  (local0-push    byte junk 1)   ; common combination
-  (push-local0    junk byte 1)   ; another common combination	 
-  (pop)			         ; pop top of stack into *val*
-  (stack-ref      byte)	         ; index'th element of stack into *val*
-  (stack-set!     byte 1)        ; *val* to index'th element of stack
 
-  (make-cont      offset)        ; save state in *cont*
+  (push 1)		         ; push *val* onto stack
+  (push-false)			 ; a common combination
+  (pop)			         ; pop top of stack into *val*
+  (pop-n	  two-bytes)     ; remove the top N values from the stack
+				 ; leaving *val* unchanged
+  (stack-ref      byte)	         ; index'th element of stack into *val*
+  (push+stack-ref byte)	         ; preceded by a push
+  (stack-ref+push byte)	         ; followed by a push
+  (big-stack-ref  two-bytes)
+  (stack-set!     byte 1)        ; *val* to index'th element of stack
+  (big-stack-set! two-bytes 1)
+  (stack-indirect byte byte)     ; first is index into stack, second is index
+			  	 ; into what you find there
+  (push+stack-indirect byte byte) ; preceded by a push
+  (stack-indirect+push byte byte) ; followed by a push
+  (big-stack-indirect two-bytes two-bytes)
+
   (current-cont)	         ; copy *cont* to *val*, use WITH-CONTINUATION
 			         ; to use copied continuation
-  (cont-data      two-bytes)     ; continuation size, never executed
+  (cont-data      offset)	 ; offset of next instruction; never executed
 
-  ;; Five different ways to call procedures
-  (call     nargs     1 +)       ; last argument is the procedure to call
-  (big-call two-bytes 1 +)       ; ditto, nargs count is two bytes
-  (apply    two-bytes 2 +)       ; last argument is procedure to call, second to
+  ;; Different ways to call procedures
+  (call     offset nargs 1 +)    ; last argument is the procedure to call,
+				 ; offset is to return pointer
+  (tail-call nargs 1 +)          ; same, no return pointer, moves arguments
+  (big-call offset two-bytes 1 +) ; ditto, nargs counts are two bytes
+  (poll offset)			 ; offset is for continuation-pc if interrupt
+  (apply offset two-bytes 2 +)   ; last argument is procedure to call, second to
 				 ; last is a list of additional arguments, next
                                  ; two bytes are the number of stack arguments
   (closed-apply 2 +)		 ; arguments are as for Scheme's APPLY, with
@@ -100,14 +109,15 @@
   (values two-bytes +)		 ; values are on stack, count is next two bytes
   (closed-values +)		 ; values are on stack, count is pushed on stack
 
-  ;; Five different ways to jump
+  ;; Six different ways to jump
   (goto-template index)		 ; jump to another template (*EXP*)
 				 ; does not poll for interrupts
-  (call-template index nargs)	 ; call a template instead of a procedure
+  (call-template offset index index nargs)
+				 ; call a template instead of a procedure
 				 ; nargs is needed for interrupt handling
-  				 ; Current VM only handles the zero-arg case.
   (jump-if-false offset 1)	 ; boolean in *val*
   (jump          offset)
+  (jump-back     offset)	 ; same, but subtract the offset
   (computed-goto byte offset 1)	 ; jump using delta specified by *val*
 				 ; defaults to instruction after deltas (*EXP*)
 
@@ -228,6 +238,7 @@
   (string=? 2)
   (reverse-list->string 2)
   (assq 2)
+  (unassigned-check 1)
   ; If the byte = 0 then do not log in the current proposal
   (checked-record-ref byte 3)
   (checked-record-set! byte 4)
@@ -280,6 +291,7 @@
    os-error
    gc-protection-mismatch
    no-current-proposal
+   native-code-not-supported
    ))
 
 ; Used by (READ-CHAR) and (WRITE-CHAR) to get the appropriate ports from
@@ -335,10 +347,11 @@
 
 (define args+nargs-protocol (next-protocol))
 
-; Followed by four bytes: the offsets of code for the 0, 1, 2, and 3+ arg cases.
+; Followed by four bytes: the offsets of code for the 3+, 0, 1, and 2 arg cases.
 ; A zero indicates that the primitive doesn't accept that number of arguments.
 ; If there are fewer than three arguments they are all on the stack.  In the
-; 3+ case this is the same as args+nargs above.
+; 3+ case the setup is the same as args+nargs above (it's first so that it can
+; share code in the VM with args+nargs).
 
 (define nary-dispatch-protocol (next-protocol))
 
@@ -369,29 +382,27 @@
 
 (define default-stack-space 64)
 
-(define environment-stack-size 2)   ; header + superior environment
-(define continuation-stack-size 5)  ; header + continuation + template +
-                                    ;  pc + env
+(define continuation-stack-size 4)  ; header + continuation + pc + code
 
 (define available-stack-space 8000) ; how much stack space is available for
                                     ; any one procedure
 
 ; The number of values that the VM adds to continuations.
-(define continuation-cells 4)
+(define continuation-cells 3)
 
 ; Offsets of saved registers in continuations
-(define continuation-pc-index       0)
-(define continuation-cont-index     1)
-(define continuation-template-index 2)
-(define continuation-env-index      3)
+(define continuation-pc-index   0)
+(define continuation-code-index 1)
+(define continuation-cont-index 2)
 
 ; The number of additional values that the VM adds to exception continuations.
 (define exception-continuation-cells 5)
 
-; Offsets of saved registers in exception continuations
+; Offsets of saved registers in exception continuations.  Size must come
+; first because the VM expects it there.
 (define exception-cont-size-index             (+ continuation-cells 0))
 (define exception-cont-pc-index               (+ continuation-cells 1))
-(define exception-cont-template-index         (+ continuation-cells 2))
+(define exception-cont-code-index             (+ continuation-cells 2))
 (define exception-cont-exception-index        (+ continuation-cells 3))
 (define exception-cont-instruction-size-index (+ continuation-cells 4))
 

@@ -102,5 +102,5 @@
   (table-set! (debug-data-table) (debug-data-uid dd) dd))
 
 
-(define (new-debug-data name parent pc-in-parent)
-  (make-debug-data (new-template-uid) name parent pc-in-parent '() '()))
+(define (new-debug-data name parent)
+  (make-debug-data (new-template-uid) name parent '() '()))

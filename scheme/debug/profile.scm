@@ -42,7 +42,7 @@
     (let ((z (get-counts table k1)))
       (set-car! z (+ (car z) 1))
       (set-cdr! z (+ (cdr z) 1)))
-    (do ((k (continuation-parent k1) (continuation-parent k)))
+    (do ((k (continuation-cont k1) (continuation-cont k)))
 	((or (not (continuation? k))
 	     (eq? (continuation-template k) k0-template)))
       (let ((z (get-counts table k)))

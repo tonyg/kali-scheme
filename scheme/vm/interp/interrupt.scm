@@ -23,25 +23,63 @@
 
 ; Save the current interpreter state and call an interrupt handler.
 
-(define (handle-interrupt stack-arg-count)
+(define (handle-interrupt)
   (push *val*)
-  (push *template*)
-  (push (current-pc))
+  (receive (code pc)
+      (current-code+pc)
+    (push code)
+    (push (enter-fixnum pc)))
+  (push-interrupt-state)
+  (push-adlib-continuation! (code+pc->code-pointer *interrupt-return-code*
+						   return-code-pc))
+  (goto find-and-call-interrupt-handler))
+
+; We now have three places interrupts are caught:
+;  - during a byte-code call
+;  - during a native-code call
+;  - during a native-code poll
+; The two native calls can be done using the same method.  Argh.  We need
+; to save the proposal and enabled interrupts and still end up with a template
+; on top of the stack.  Just make a return pointer with two extra pointer
+; slots at the top.  The native-dispatch code pops the code pointer and
+; template, pushes the extra state, and then ... .  No.  The simple thing
+; to do is have the native code make one continuation and then we push a
+; second, byte-coded one on top.  It's ugly no matter what.
+
+; Ditto, except that we are going to return to the current continuation instead
+; of continuating with the current template.
+
+(define (push-native-interrupt-continuation)
+  (push-interrupt-state)
+  (push native-interrupt-continuation-descriptors)
+  (push-continuation! (code+pc->code-pointer *interrupt-return-code*
+					     return-code-pc)))
+
+(define interrupt-state-descriptors 2)
+
+(define native-interrupt-continuation-descriptors
+  (enter-fixnum (+ 1		; this number
+		   interrupt-state-descriptors)))
+
+(define (push-interrupt-state)
   (push (current-proposal))
-  (push (enter-fixnum *enabled-interrupts*))
-  (push (enter-fixnum (+ stack-arg-count continuation-cells 6)))
   (set-current-proposal! false)
-  (set-template! *interrupt-template* (enter-fixnum continuation-data-size))
-  (push-continuation! *code-pointer*)
+  (push (enter-fixnum *enabled-interrupts*)))
+
+(define (s48-pop-interrupt-state)
+  (set-enabled-interrupts! (extract-fixnum (pop)))
+  (set-current-proposal! (pop)))
+
+(define (find-and-call-interrupt-handler)
   (let* ((pending-interrupt (get-highest-priority-interrupt!))
 	 (arg-count (push-interrupt-args pending-interrupt))
 	 (handlers (shared-ref *interrupt-handlers*)))
     (if (not (vm-vector? handlers))
 	(error "interrupt handler is not a vector"))
-    (set-enabled-interrupts! 0)
     (set! *val* (vm-vector-ref handlers pending-interrupt))
     (if (not (closure? *val*))
 	(error "interrupt handler is not a closure" pending-interrupt))
+    (set-enabled-interrupts! 0)
     (goto call-interrupt-handler arg-count pending-interrupt)))
 
 ; Push the correct arguments for each type of interrupt.
@@ -99,16 +137,29 @@
   (set! *pending-interrupts* 0)
   (set! s48-*pending-interrupt?* #f))
 
+;(define-opcode poll
+;  (if (and (interrupt-flag-set?)
+;           (pending-interrupt?))
+;      (begin
+;        (push-simple-continuation! (address+ *code-pointer*
+;                                             (code-offset 0)))
+;        (push-native-interrupt-continuation)
+;        (goto find-and-call-interrupt-handler))
+;      (goto continue 2)))
+	    
 ; Return from a call to an interrupt handler.
 
 (define-opcode return-from-interrupt
-  (pop)					; removed size
-  (set-enabled-interrupts! (extract-fixnum (pop)))
-  (set-current-proposal! (pop))
-  (let ((pc (pop)))
-    (set-template! (pop) pc))
-  (set! *val* (pop))
-  (goto interpret *code-pointer*))
+  (let ((byte? (not (fixnum= (pop)
+			     native-interrupt-continuation-descriptors))))
+    (s48-pop-interrupt-state)
+    (cond (byte?
+	   (let ((pc (pop)))
+	     (set-code-pointer! (pop) (extract-fixnum pc)))
+	   (set! *val* (pop))
+	   (goto interpret *code-pointer*))
+	  (else
+	   (goto return-values 0 null 0)))))
 
 ; Do nothing much until something happens.  To avoid race conditions this
 ; opcode is called with all interrupts disabled, so it has to return if
@@ -116,7 +167,8 @@
 
 (define-primitive wait (fixnum-> boolean->)
   (lambda (max-wait minutes?)
-    (if (not (any-pending-interrupts?))
+    (if (and (not (pending-interrupt?))
+	     (= 0 *pending-interrupts*))
 	(wait-for-event max-wait minutes?))
     (goto return-unspecific 0)))
 
@@ -143,27 +195,35 @@
 
 (define (s48-note-event)
   (set! s48-*pending-events?* #t)       ; order required by non-atomicity
-  (set! s48-*pending-interrupt?* #t))
+  (set-interrupt-flag!))
 
-; The polling procedure.  If *PENDING-INTERRUPT* then either there is a
-; pending OS event or there is really a pending interrupt.  CHECK-EVENTS
-; ends with a call to PENDING-INTERRUPT? (we don't call it here because
-; we want this procedure to be small so that it will compiled in-line).
+; Called when the interrupt flag is set, so either an event or interrupt is
+; waiting (or both).  We process any events and then see if is an interrupt.
 
 (define (pending-interrupt?)
-  (cond ((not s48-*pending-interrupt?*)
+  (if s48-*pending-events?*
+      (begin
+	(set! s48-*pending-events?* #f)
+	(process-events)))
+  (real-pending-interrupt?))
+
+; Check for a pending interrupt, clearing the interrupt flag if there is
+; none.  This and S48-NOTE-EVENT cooperate to avoid clearing the interrupt
+; flag while an event is pending.
+
+(define (real-pending-interrupt?)
+  (cond ((= 0 (bitwise-and *pending-interrupts*
+			   *enabled-interrupts*))
+	 (clear-interrupt-flag!)
+	 (if s48-*pending-events?*
+	     (set-interrupt-flag!))
 	 #f)
-	(s48-*pending-events?*
-	 (set! s48-*pending-events?* #f)
-	 (check-events))  ; ends with call to PENDING-INTERRUPT?
 	(else
 	 #t)))
 
-; Same, except we include disabled interrupts.
-
-(define (any-pending-interrupts?)
-  (or (pending-interrupt?)
-      (not (= 0 *pending-interrupts*))))
+(define (update-pending-interrupts)
+  (if (real-pending-interrupt?)
+      (set-interrupt-flag!)))
 
 ; Add INTERRUPT to the set of pending interrupts, then check to see if it
 ; is currently pending.
@@ -171,7 +231,7 @@
 (define (note-interrupt! interrupt)
   (set! *pending-interrupts*
 	(bitwise-ior *pending-interrupts* (interrupt-bit interrupt)))
-  (check-for-enabled-interrupt!))
+  (update-pending-interrupts))
 
 ; Remove INTERRUPT from the set of pending interrupts, then recheck for pending
 ; interrupts; INTERRUPT may have been the only one.
@@ -180,14 +240,14 @@
   (set! *pending-interrupts*
 	(bitwise-and *pending-interrupts*
 		     (bitwise-not (interrupt-bit interrupt))))
-  (check-for-enabled-interrupt!))
+  (update-pending-interrupts))
 
 ; Install a new set of enabled interrupts.  As usual we have to recheck for
 ; enabled interrupts.
 
 (define (set-enabled-interrupts! enabled)
   (set! *enabled-interrupts* enabled)
-  (check-for-enabled-interrupt!))
+  (update-pending-interrupts))
 
 ; Disable all interrupts.
 
@@ -199,17 +259,6 @@
 
 (define (enable-interrupts!)
   (set-enabled-interrupts! -1))
-
-; Whenever *PENDING-INTERRUPTS* or *ENABLED-INTERRUPTS* changes we have to
-; set S48-*PENDING-INTERRUPT?* to the correct value.
-
-(define (check-for-enabled-interrupt!)
-  (if (= 0 (bitwise-and *pending-interrupts* *enabled-interrupts*))
-      (begin
-	(set! s48-*pending-interrupt?* #f)  ; Done first to avoid a race condition.
-	(if s48-*pending-events?*
-	    (set! s48-*pending-interrupt?* #t)))
-      (set! s48-*pending-interrupt?* #t)))
 
 ; We don't need to mess with S48-*PENDING-INTERRUPT?* because all interrupts
 ; are about to be disabled.
@@ -227,25 +276,24 @@
 ; Process any pending OS events.  PROCESS-EVENT returns a mask of any interrupts
 ; that have just occured.
 
-(define (check-events)
-  (receive (type channel status)
-      (get-next-event)
-    (set! *pending-interrupts*
-	  (bitwise-ior (process-event type channel status)
-		       *pending-interrupts*))
-    (if (eq? type (enum events no-event))
-	(begin
-	  (check-for-enabled-interrupt!)
-	  (pending-interrupt?))
-	(check-events))))
+(define (process-events)
+  (let loop ()
+    (receive (type channel status)
+	(get-next-event)
+      (set! *pending-interrupts*
+	    (bitwise-ior (process-event type channel status)
+			 *pending-interrupts*))
+      (if (not (eq? type (enum events no-event)))
+	  (loop)))))
 
 ; Do whatever processing the event requires.
 
 (define (process-event event channel status)
   (cond ((eq? event (enum events alarm-event))
 	 ;; Save the interrupted template for use by profilers.
-	 (if (false? *interrupted-template*)
-	     (set! *interrupted-template* *template*))
+	 ;; Except that we have no more templates and no more profiler.
+	 ;(if (false? *interrupted-template*)
+	 ;    (set! *interrupted-template* *template*))
 	 (interrupt-bit (enum interrupt alarm)))
 	((eq? event (enum events keyboard-interrupt-event))
 	 (interrupt-bit (enum interrupt keyboard)))

@@ -118,27 +118,25 @@
 	 (bcomp state))
   (optimize auto-integrate))
 
-; Determining stack usage.
-
-(define-structure stack-check (export maximum-stack-use)
-  (open scheme-level-2 architecture code-vectors signals)
-  (files (bcomp stack-check))
-  (optimize auto-integrate))
+; Determining stack usage.  No longer used.
+;
+;(define-structure stack-check (export maximum-stack-use)
+;  (open scheme-level-2 architecture code-vectors signals)
+;  (files (bcomp stack-check))
+;  (optimize auto-integrate))
 
 ; Compiler back end
 
 (define-structure segments segments-interface
-  (open scheme-level-2 util tables fluids signals cells
+  (open scheme-level-2 util tables signals fluids
 	define-record-types
 	code-vectors
 	templates
 	architecture
 	features		;make-immutable!
 	debug-data debug-data-internal
-	thingies
-	stack-check)
-  (files ; (bcomp state)
-	 (bcomp segment))
+	frames)
+  (files (bcomp segment))
   (optimize auto-integrate))
 
 ; Primops
@@ -164,9 +162,10 @@
 ; The compiler itself.
 
 (define-structure compiler compiler-interface
-  (open scheme-level-2 util fluids signals
+  (open scheme-level-2 util signals
 	features		;force-output
 	enumerated		;enumerand->name
+	ascii
 	architecture
 	meta-types names bindings
 	transforms
@@ -175,11 +174,24 @@
 	segments
 	debug-data-internal	; keep-source-code?
 	flat-environments
+	frames
 	reconstruction)
   (files (bcomp comp-exp)
 	 (bcomp comp-lambda)
 	 (bcomp comp-prim)
 	 (bcomp comp))
+  (optimize auto-integrate))
+
+(define-structure frames frames-interface
+  (open scheme-level-2
+	define-record-types
+	names
+	architecture			; two-byte-limit
+	templates			; template-overhead
+	debug-data-internal		; new-debug-data
+	signals				; error
+	thingies)
+  (files (bcomp frame))
   (optimize auto-integrate))
 
 ;----------------
@@ -194,14 +206,14 @@
   (files (bcomp read-form)))
 
 ;----------------
-; Optional compiler pass.
+; Live-variable analysis for closures.
 
 (define-structure flat-environments (export flatten-form)
   (open scheme-level-2 nodes signals
 	optimizer primops
 	util			;every
 	var-utilities)
-  (files (opt flatten)))
+  (files (bcomp flatten)))
 
 ;----------------
 ; Module system

@@ -48,9 +48,12 @@
 
 % Syntax prototypes
 
-\newcommand{\syntaxprotonoresult}[2]{\item\noindent\unskip%
+\newcommand{\syntaxprotonoresultnoindex}[2]{\item\noindent\unskip%
 \hbox{\spaceskip=0.5em\code{(\hbox{#1}{#2})}}\hfill\penalty 0%
 \hbox{ }\nobreak\hfill\hbox{\rm syntax}}
+
+\newcommand{\syntaxprotonoresult}[2]{%
+\syntaxprotonoresultnoindex{{#1}}{{#2}}\mainschindex{{#1}}}
 
 \newcommand{\syntaxproto}[3]{\item\noindent\unskip%
 \hbox{\spaceskip=0.5em\code{(\hbox{#1}{#2})}} {$\rightarrow$} {\it#3}%
@@ -109,6 +112,9 @@
 \item\noindent\prototagstart\code{{#1}}\prototag{(may GC)}}
 
 \newcommand{\syntaxprotonoresult}[2]{%
+\syntaxprotonoresultnoindex{{#1}}{{#2}}\mainschindex{{#1}}}
+
+\newcommand{\syntaxprotonoresultnoindex}[2]{%
 \item\noindent\prototagstart\code{({#1}{#2})}\prototag{syntax}}
 
 \newcommand{\protoresult}[1]{%

@@ -55,6 +55,9 @@
       (external "s48_trace_locationsB" (=> (address address) null)))
     (define s48-trace-stob-contents!
       (external "s48_trace_stob_contentsB" (=> (integer) null)))
+    (define s48-trace-continuation-contents!
+      (external "s48_trace_continuation_contentsB"
+		(=> (address address integer) null)))
     (define s48-extant?
       (external "s48_extantP" (=> (integer) boolean)))
     (define s48-gc-count

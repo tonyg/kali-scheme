@@ -112,15 +112,15 @@
   (define (next-thread)
     (if (thread-queue-empty? runnable)
 	(call-with-values
-	 get-next-event!
-	 (lambda (event . data)
-	   (cond ((not (eq? event (enum event-type no-event)))
-		  (asynchronous-event-handler event data)
-		  (next-thread))
-		 ((wait)
-		  (next-thread))
-		 (else
-		  (values #f 0)))))   ; scheduler quits
+	  get-next-event!
+	  (lambda (event . data)
+	    (cond ((not (eq? event (enum event-type no-event)))
+		   (asynchronous-event-handler event data)
+		   (next-thread))
+		  ((wait)
+		   (next-thread))
+		  (else
+		   (values #f 0)))))
 	(values (dequeue-thread! runnable)
 		quantum)))
 

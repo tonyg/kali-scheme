@@ -5,4 +5,4 @@
 
 (define-structures ((vm-architecture (export stob-data)))
   (open scheme enumerated)
-  (files arch))
+  (files (interp arch)))

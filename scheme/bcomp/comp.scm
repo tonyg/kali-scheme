@@ -6,104 +6,91 @@
 ; This is written in a somewhat odd fashion to make sure that the forms are
 ; not retained once they have been compiled.
 
-;(define (compile-forms forms name)
-;  (if (null? forms)
-;      (segment->template (sequentially
-;                           (instruction (enum op protocol) 0)
-;                           (deliver-value (instruction (enum op unspecific))
-;                                          (return-cont #f)))
-;                         name
-;                         #f             ;pc-in-segment
-;                         #f)            ;debug data
-;      (really-compile-forms forms
-;                            (instruction (enum op protocol) 0)
-;                            name)))
-;      
-;(define (really-compile-forms forms segment name)
-;  (if (null? (cdr forms))
-;      (segment->template (sequentially segment
-;                                       (compile-form (car forms)
-;                                                     (return-cont #f)))
-;                         name
-;                         #f             ;pc-in-segment
-;                         #f)            ;debug data
-;      (really-compile-forms (cdr forms)
-;                            (sequentially segment
-;                                          (compile-form (car forms)
-;                                                        an-ignore-values-cont))
-;                            name)))
+(define (compile-forms forms name package-key)
+  (with-package-key package-key
+    (lambda ()
+      (if (null? forms)
+	  (segment->template (sequentially
+			      (instruction (enum op protocol) 0 #b10)
+			      (deliver-value (instruction (enum op unspecific))
+					     (return-cont #f)))
+			     (make-frame #f name 0 #f #f))
+	  (compile-forms-loop (reverse forms)
+			      name
+			      #f)))))			;next template
 
-(define (compile-forms forms name env-key)
-  (if (null? forms)
-      (segment->template (sequentially
-                           (instruction (enum op protocol) 0)
-                           (deliver-value (instruction (enum op unspecific))
-                                          (return-cont #f)))
-                         name
-                         #f             ;pc-in-segment
-                         #f)            ;debug data
-      (compile-forms-loop (reverse forms)
-			  name
-			  env-key
-			  #f)))
-
-(define (compile-forms-loop forms name env-key next)
+(define (compile-forms-loop forms name next)
   (if (null? forms)
       next
       (compile-forms-loop (cdr forms)
 			  name
-			  env-key
-			  (compile-form (car forms) name env-key next))))
+			  (compile-form (car forms) name next))))
 
 ; Compile a single top-level form, returning a template.  NEXT is either #F or
 ; a template; if it is a template we jump to it after FORM.
+; Stack has zero args, no env, template.
   
-(define (compile-form form name env-key next)
-  (segment->template
-    (let-fluid $env-key env-key
-      (lambda ()
-	(sequentially
- 	 (instruction (enum op protocol) 0)
-	 (let ((node (flatten-form (force-node form))))  ; could flatten here
-	   (cond ((define-node? node)
-		  (sequentially
-		   (compile-definition node an-ignore-values-cont)
+(define (compile-form form name next)
+  (let ((frame (make-frame #f name 0 #f #t)))
+    (segment->template
+      (sequentially
+        (instruction (enum op protocol) 0 #b10)	; template, no env
+	(let ((node (flatten-form (force-node form))))
+	  (cond ((define-node? node)
+		 (sequentially
+		   (compile-definition node frame an-ignore-values-cont)
 		   (if next
-		       (instruction-with-literal (enum op call-template)
-						 next
-						 0)
+		       (call-template-inst next #f 0 1 frame)
 		       (instruction (enum op values) 0 0))))
-		 (next
-		  (sequentially
-		   (compile-expression node 0 an-ignore-values-cont)
-		   (instruction-with-literal (enum op call-template)
-					     next
-					     0)))
-		 (else
-		  (compile-expression node 0 (return-cont #f))))))))
-    name
-    #f		;pc-in-segment
-    #f))	;debug data
+		(next
+		 (sequentially
+		   (compile-expression node 1 frame an-ignore-values-cont)
+		   (call-template-inst next #f 0 1 frame)))
+		(else
+		 (compile-expression node 1 frame (return-cont #f))))))
+      frame)))
+
+(define (call-template-inst template label nargs depth frame)
+  (let ((offset (template-offset frame depth))
+	(index (literal->index frame template)))
+    (using-optional-label (enum op call-template)
+			  label
+			  (high-byte offset)
+			  (low-byte offset)
+			  (high-byte index)
+			  (low-byte index)
+			  nargs)))
+
+(define (template-call template depth frame cont)
+  (receive (before depth label after)
+      (push-continuation depth frame cont #f)
+    (sequentially before
+		  (call-template-inst template label 0 depth frame)
+		  after)))
 
 (define define-node? (node-predicate 'define syntax-type))
-
-(define $env-key (make-fluid #f))
 
 ; Definitions must be treated differently from assignments: we must
 ; use SET-CONTENTS! instead of SET-GLOBAL! because the SET-GLOBAL!
 ; instruction traps if an attempt is made to store into an undefined
 ; location.
+;
+; Called with a stack depth of one (the template).
 
-(define (compile-definition node cont)
+(define (compile-definition node frame cont)
   (let* ((form (node-form node))
 	 (name (cadr form)))
-    (sequentially (instruction-with-location (enum op literal)
-					     (node-ref name 'binding)
-					     (node-form name)
-					     value-type)
-		  (instruction (enum op push))
+    (sequentially (stack-indirect-instruction
+		    (template-offset frame 1)
+		    (binding->index frame
+				    (node-ref name 'binding)
+				    (node-form name)
+				    value-type))
+		  (begin (depth-check! frame 2)
+			 (instruction (enum op push)))
 		  (compile-expression (caddr form)
-				      1
+				      2			; stack depth
+				      frame
 				      (named-cont (node-form name)))
 		  (deliver-value
 		   (instruction (enum op stored-object-set!)
@@ -129,39 +116,40 @@
 ; the startup procedure).
 
 (define (make-startup-procedure inits resumer)
-  (let ((nargs 5))
+  (let ((nargs 5)
+	(frame (make-frame #f		; no parent
+			   #f		; no name
+			   5		; args on stack
+			   #f		; drop environment
+			   #t)))	; keep template
     (append-templates inits
 		      nargs
+		      frame
 		      (sequentially
-		        (maybe-push-continuation
-			  (instruction-with-literal (enum op call-template)
-						    resumer
-						    0)
-			  nargs
-			  (fall-through-cont #f #f))
-			(instruction (enum op call) nargs)))))
+		        (template-call resumer
+				       (+ nargs 1)	; args + template
+				       frame
+				       (fall-through-cont #f #f))
+			(instruction (enum op pop-n) 0 1) ; remove template
+			(instruction (enum op tail-call) nargs)))))
 
 ; Return a template that accepts NARGS arguments, invokes TEMPLATES in turn,
 ; and then calls template FINAL on the arguments.
 
-(define (append-templates templates nargs final)
+(define (append-templates templates nargs frame final)
   (segment->template
     (sequentially
-      (instruction (enum op protocol) nargs)
+      (instruction (enum op protocol) nargs #b10)	; push template
       (reduce (lambda (template seg)
 		(sequentially
-		  (maybe-push-continuation
-		    (instruction-with-literal (enum op call-template)
-					      template
-					      0)
-		    nargs
-		    an-ignore-values-cont)
+		  (template-call template
+				 (+ nargs 1)		; arguments + template
+				 frame
+				 an-ignore-values-cont)
 		  seg))
 	      final
 	      templates))
-    #f		; no name
-    #f		; pc-in-segment = #f
-    #f))	; no debug data
+    frame))
 
 (define an-ignore-values-cont (ignore-values-cont #f #f))
 

@@ -3,7 +3,7 @@
 
 (define-structures ((vm-utilities vm-utilities-interface))
   (open prescheme)
-  (files vm-utilities)
+  (files (util vm-utilities))
   (begin
 ;    (define-syntax assert
 ;      (lambda (exp rename compare)
@@ -16,7 +16,7 @@
 (define-structures ((external external-interface))
   (open scheme bitwise ps-memory)
   (for-syntax (open scheme signals)) ; for error
-  (files external))
+  (files (util external)))
 
 (define-structures ((channel-io channel-interface)
 		    (events event-interface))
@@ -26,7 +26,7 @@
 		                (expose open-input-file open-output-file
 					close-input-port close-output-port
 					errors)))
-  (files s48-channel))
+  (files (util s48-channel)))
 
 ; The number of usable bits in a small integer.
 

@@ -114,6 +114,9 @@ A logged read is valid if, at the time of the commit, the location contains
  the value then).
 If a proposal has an invalid read then the effort to commit fails no change
  is made to the value of any location.
+The verifications and subsequent writes to memory are performed atomically
+ with respect to other proposal commit attempts.
+% Explain better.  Add an example?
 
 \begin{protos}
 \proto{ensure-atomicity}{ thunk}{value(s)}

@@ -91,15 +91,18 @@
 		  (set-command-results! (list (focus-object)))))))
 	((d)
 	 (if (continuation? (focus-object))
-	     (new-selection (continuation-parent (focus-object)))
+	     (new-selection (continuation-cont (focus-object)))
 	     (write-line "Can't go down from a non-continuation."
 			 (command-output))))
 	((template)
 	 (let ((template (coerce-to-template (focus-object))))
 	   (if template
 	       (new-selection template)
-	       (write-line "Not a procedure or a continuation."
-			   (command-output)))))
+	       (write-line
+		 (if (continuation? (focus-object))
+		     "Unable to locate a template in this continuation."
+		     "Not a procedure or a continuation.")
+		 (command-output)))))
 	(else
 	 (error "bad selection command" name)))))
 

@@ -20,7 +20,7 @@ extern s48_value	s48_Sextension_valueS;
 /* interrupts */
 extern void		s48_note_event(void);
 extern char		s48_Spending_eventsPS;
-extern char		s48_Spending_interruptPS;
+extern char *		s48_Sstack_limitS;
 extern void		s48_disable_interruptsB(void);
 extern void		s48_enable_interruptsB(void);
 extern void		s48_set_os_signal(s48_value type, s48_value argument);
@@ -68,3 +68,12 @@ extern void		s48_reset_external_rootsB();
 
 /* for native code */
 extern void		s48_copy_stack_into_heap();
+
+/* variables for native code (the names need to be fixed) */
+extern s48_value	StemplateS;
+extern char *		Scode_pointerS;
+extern char *		ScontS;
+extern char *		SstackS;
+extern s48_value	SenvS;
+extern s48_value	SvalS;
+extern long	        s48_Snative_protocolS;

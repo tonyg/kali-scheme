@@ -64,10 +64,10 @@
   ;(vector key val others)
   (cons (cons key val) others))
 
-; This abstraction is violated at times.
-(define entry-value cdr)
-(define entry-key car)
-(define set-entry-value! set-cdr!)
+; This abstraction is violated at times.  Eta-converted to get inlining.
+(define (entry-value x) (cdr x))
+(define (entry-key   x) (car x))
+(define (set-entry-value! x v) (set-cdr! x v))
 
 ; ENTRIES is known to contain ENTRY.
 

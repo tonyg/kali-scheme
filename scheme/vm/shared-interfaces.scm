@@ -5,7 +5,7 @@
 (define-interface vm-architecture-interface
   (export architecture-version
           (enum :syntax) ;so you don't have to remember to open enumerated
-	  bits-used-per-byte byte-limit
+	  bits-used-per-byte byte-limit two-byte-limit
 	  (interrupt :syntax)
 	  interrupt-count
 	  (memory-status-option :syntax)
@@ -35,20 +35,18 @@
 	  native-protocol-mask
 
 	  default-stack-space
-	  environment-stack-size
 	  continuation-stack-size
 	  available-stack-space
 
 	  continuation-cells
 	  continuation-cont-index
 	  continuation-pc-index
-	  continuation-template-index
-	  continuation-env-index
+	  continuation-code-index
 	  
           exception-continuation-cells
 	  exception-cont-size-index
 	  exception-cont-pc-index
-	  exception-cont-template-index
+	  exception-cont-code-index
 	  exception-cont-exception-index
 	  exception-cont-instruction-size-index
 	  ))

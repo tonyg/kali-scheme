@@ -3,7 +3,7 @@
 
 (define-structures ((vm-utilities vm-utilities-interface))
   (open prescheme)
-  (files vm-utilities)
+  (files (util vm-utilities))
   (begin
     (define-syntax assert
       (lambda (exp rename compare)
@@ -104,7 +104,7 @@
 (define-structures ((channel-io channel-interface)
 		    (events event-interface))
   (open prescheme)
-  (files ps-channel))
+  (files (data ps-channel)))
 
 ; The number of usable bits in a small integer.
 

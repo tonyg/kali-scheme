@@ -100,7 +100,6 @@
 	command-state
 	menus			; write-line
         conditions handle
-        low-level               ; flush-the-symbol-tables!
         usual-resumer
         filenames               ; translate
         display-conditions      ; display-condition
@@ -156,6 +155,7 @@
         enumerated              ; enumerand->name
         weak                    ; weak-pointer?
 	i/o                     ; disclose-port
+	low-level		; cell-unassigned?
         templates continuations channels
         architecture)
   (files (env disclosers)))
@@ -177,8 +177,7 @@
 ; Most of the debugging commands.
 
 (define-structures ((debugging		;additional exports in future
-		     (export breakpoint
-			     continuation-parent))
+		      (export breakpoint))
 		    (debug-commands debug-commands-interface))
   (open scheme-level-2
         command-processor       ; define-command, etc.
@@ -193,7 +192,7 @@
         evaluation              ; eval-from-file, eval
         environments            ; environment-define! (for ,trace)
         conditions              ; define-condition-type
-        filenames               ; set-translation!
+        (subset filenames       (set-translation!))
         disclosers              ; template-name, debug-data-names
         packages                ; flush-location-names, package-integrate?
         packages-internal       ; [set-]package-integrate?[!], flush-location-names
@@ -211,7 +210,7 @@
 	(modify filenames       (prefix filenames:)
 		                (expose translate))
 	(modify syntactic       (prefix syntactic:)
-		                (expose expand-form))
+		                (expose expand expand-form))
         (modify primitives      (prefix primitives:)
 		                (expose collect time memory-status)))
   (files (env debug)))
@@ -290,6 +289,7 @@
         vm-exposure             ;primitive-catch
         continuations templates locations code-vectors
         exceptions signals
+	debug-messages
         architecture)   ;(enum op global)
   (files (env shadow)))     ;Exception handler to support package system
 

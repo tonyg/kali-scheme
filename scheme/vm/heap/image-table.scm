@@ -32,7 +32,7 @@
 
 (define (make-table)
   (let ((keys (make-vector (+ initial-table-size 1) 0)))
-    (vector-fill! keys (+ initial-table-size 1) 0)
+    (vector+length-fill! keys (+ initial-table-size 1) 0)
     (really-make-table keys
 		       (make-vector initial-table-size (null-pointer))
 		       0
@@ -88,7 +88,9 @@
 	     (set-table-values! table new-values)
 	     (set-table-size!   table new-size)
 	     (set-table-count!  table 0)
-	     (vector-fill! new-keys (+ new-size 1) 0) ; MAKE-VECTOR doesn't fill
+	     (vector+length-fill! new-keys	 ; MAKE-VECTOR doesn't fill
+				  (+ new-size 1)
+				  0)
 	     (do ((i 0 (+ i 1)))
 		 ((= i old-size))
 	       (let ((key (vector-ref old-keys i)))
@@ -153,12 +155,4 @@
 		    (null-pointer)))
       (null-pointer)))
 
-;----------------------------------------------------------------
-; Mindless utility.
-
-(define (vector-fill! vector count value)
-  (do ((i 0 (+ i 1)))
-      ((= i count))
-    (vector-set! vector i value))
-  (unspecific))
 

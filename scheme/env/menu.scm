@@ -140,27 +140,61 @@
 	  (else
 	   (loop (cdr fast) (+ len 1) (cdr slow) #f)))))
 
-; Continuation menus have the both the saved operand stack and the
-; save environment, for which names may be available.
+; Some values in the operand stack are vectors that represent either the
+; saved environment or a newly created one for recursive procedures.
+; The debug data has names for some values in the stack and for those
+; in the environments.
 
 (define (prepare-continuation-menu thing)
-  (let ((next (continuation-parent thing)))
-    `(,@(let recur ((c thing))
-	  (if (eq? c next)
-	      '()
-	      (let ((z (continuation-arg-count c)))
-		(do ((i (- z 1) (- i 1))
-		     (l (recur (continuation-cont c))
-			(cons (list #f (continuation-arg c i))
-			      l)))
-		    ((< i 0) l)))))
-      ,@(prepare-environment-menu
-	  (continuation-env thing)
-	  (debug-data-env-shape (continuation-debug-data thing)
-				(continuation-pc thing))))))
+  (let ((shape (debug-data-env-shape (continuation-debug-data thing)
+				     (continuation-pc thing)))
+	(args (do ((i 0 (+ i 1))
+		   (v '() (cons (continuation-arg thing i) v)))
+		  ((= i (continuation-arg-count thing))
+		   v))))
+    (extend-cont-menu 0 args shape '())))
+
+(define (extend-cont-menu i args shape menu)
+  (cond ((null? args)
+	 menu)
+	((assq i shape)
+	 => (lambda (names)
+	      (extend-cont-menu-with-names (cdr names) i args shape menu)))
+	(else
+	 (extend-cont-menu (+ i 1)
+			   (cdr args)
+			   shape
+			   (cons (list #f (car args))
+				 menu)))))
+
+(define (extend-cont-menu-with-names names i args shape menu)
+  (cond ((null? names)
+	 (extend-cont-menu i args shape menu))
+	((pair? (car names))
+	 (let ((values (car args)))
+	   (do ((ns (car names) (cdr ns))
+		(j 0 (+ j 1))
+		(menu menu (cons (list (car ns) (vector-ref values j))
+				 menu)))
+	       ((null? ns)
+		(extend-cont-menu-with-names (cdr names)
+					     (+ i 1)
+					     (cdr args)
+					     shape
+					     menu)))))
+	(else
+	 (extend-cont-menu-with-names (cdr names)
+				      (+ i 1)
+				      (cdr args)
+				      shape
+				      (cons (list (car names) (car args))
+					    menu)))))
 
 (define (continuation-debug-data thing)
-  (template-debug-data (continuation-template thing)))
+  (let ((template (continuation-template thing)))
+    (if template
+	(template-debug-data template)
+	#f)))
 
 ; Records that have record types get printed with the names of the fields.
 
@@ -242,7 +276,7 @@
 	 (values))
 	((exception-continuation? thing)
 	 (let ((next (continuation-cont thing)))
-	   (if (not (eq? next (continuation-parent thing)))
+	   (if (not (eq? next (continuation-cont thing)))
 	       (maybe-display-source next #t))))
 	(else
 	 (let ((dd (continuation-debug-data thing)))
@@ -255,26 +289,26 @@
 ; Show the source code for a continuation, if we have it.
 
 (define (display-source-info info exception?)
-  (if (pair? info)
-      (let ((o-port (command-output))
-	    (i (car info))
-	    (exp (cdr info)))
-	(if (and (integer? i) (list? exp))
-	    (begin
-	      (display (if exception?
-			   "Next call is "
-			   "Waiting for ")
-		       o-port)
-	      (limited-write (list-ref exp i) o-port
-			     *write-depth* *write-length*)
-	      (newline o-port)
-	      (display "  in " o-port)
-	      (limited-write (append (sublist exp 0 i)
-				     (list '^^^)
-				     (list-tail exp (+ i 1)))
-			     o-port
-			     *write-depth* *write-length*)
-	      (newline o-port))))))
+  (let ((o-port (command-output)))
+    (if (pair? info)
+	(let ((exp (car info)))
+	  (display (if exception?
+		       "Next call is "
+		       "Waiting for ")
+		   o-port)
+	  (limited-write exp o-port *write-depth* *write-length*)
+	  (newline o-port)
+	  (if (and (pair? (cdr info))
+		   (integer? (cadr info)))
+	      (let ((i (cadr info))
+		    (parent (cddr info)))
+		(display "  in " o-port)
+		(limited-write (append (sublist parent 0 i)
+				       (list '^^^)
+				       (list-tail parent (+ i 1)))
+			       o-port
+			       *write-depth* *write-length*)
+		(newline o-port)))))))
 
 ;----------------
 ; Selection commands

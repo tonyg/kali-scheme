@@ -6,6 +6,9 @@
 ; be added for them.  The second pass adds a list of free variables to each
 ; non-call-position LAMBDA node.  We don't need the free list for LET's.
 
+; The optimizer pass is here for upwards compatibility.  The compiler uses
+; it whether or not a module requests it.
+
 (set-optimizer! 'flat-environments
   (lambda (forms package)
     (map (lambda (form)
@@ -192,7 +195,7 @@
 
 (define (flatten-impure-letrec vars vals body free)
   (for-each (lambda (var)
-	      (node-set! var 'assigned #t))
+	      (node-set! var 'assigned 'maybe))
 	    vars)
   (let ((vals (flatten-list vals free))
 	(body (flatten-node body free)))
@@ -303,7 +306,15 @@
 		    (make-node (get-operator 'unassigned)
 			       '(unassigned))))
 
+; LETREC-bound cells need an additional check.
+
 (define (make-cell-ref var)
+  (if (eq? 'maybe (node-ref var 'assigned))
+      (make-primop-call (unassigned-check-primop)
+			(really-make-cell-ref var))
+      (really-make-cell-ref var)))
+
+(define (really-make-cell-ref var)
   (make-primop-call (cell-ref-primop) var))
 
 (define (make-cell-set! var value)
@@ -348,6 +359,7 @@
 (define-primop make-cell-primop make-cell temp0)
 (define-primop cell-ref-primop  cell-ref  temp1)
 (define-primop cell-set!-primop cell-set! temp2)
+(define-primop unassigned-check-primop unassigned-check temp3)
 
 ;----------------
 ; Set operations on lists.

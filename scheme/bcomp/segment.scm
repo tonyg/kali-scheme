@@ -1,119 +1,80 @@
 ; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-
 ; The byte code compiler's assembly phase.
 
 (define make-segment cons)
 (define segment-size car);number of bytes that will be taken in the code vector
 (define segment-emitter cdr)
 
-(define (segment->template segment name pc-in-parent parent-data)
-  (let* ((cv (make-code-vector (segment-size segment) 0))
-	 (astate (make-astate cv))
-	 (name (if (if (string? name)	; only files have strings for names
-		       (keep-file-names?)
-		       (keep-procedure-names?))
-		   name
-		   #f))
-	 (debug-data (new-debug-data name parent-data pc-in-parent)))
-    (let-fluid $debug-data debug-data
-      (lambda ()
-	(let* ((maps (emit-with-environment-maps! astate segment))
-	       (cv (check-stack-use cv)))
-	  (set-debug-data-env-maps! debug-data maps)
-	  (make-immutable! cv)
-	  (segment-data->template cv
-				  (debug-data->info debug-data)
-				  (reverse (astate-literals astate))))))))
+(define (segment->template segment frame)
+  (let* ((big-stack? (check-stack-use (frame-size frame)))
+	 (cv (make-code-vector (+ (segment-size segment)
+				  (if big-stack? 3 0))
+			       0))
+	 (astate (make-astate cv)))
+    (emit-segment! astate segment)
+    (if big-stack?
+	(add-big-stack-protocol! cv (frame-size frame)))
+    (set-debug-data-env-maps! (frame-debug-data frame)
+			      (astate-env-maps astate))
+    (make-immutable! cv)
+    (segment-data->template cv
+			    (debug-data->info (frame-debug-data frame))
+			    (reverse (frame-literals frame)))))
 
 (define (segment-data->template cv debug-data literals)
   (let ((template (make-template (+ template-overhead (length literals)) 0)))
     (set-template-code! template cv)
     (set-template-info! template debug-data)
+    (set-template-package-id! template (fluid $package-key))
     (do ((lits literals (cdr lits))
 	 (i template-overhead (+ i 1)))
 	((null? lits) template)
       (template-set! template i (car lits)))
     template))
 
-; If CV needs more than the default allotment of stack space replace its
-; protocol with one that checks that the needed space is available.  The
-; original protocol is preserved at the end of the new code vector (to
-; preserve the debugging indicies into the original).
+(define $package-key (make-fluid #f))
 
-(define (check-stack-use cv)
-  (let ((uses (maximum-stack-use cv)))
-    (cond ((<= uses default-stack-space)
-	   cv)
-	  ((<= uses available-stack-space)
-	   (let* ((length (code-vector-length cv))
-		  (new (make-code-vector (+ length 3) 0)))
-	     (do ((i 0 (+ i 1)))
-		 ((= i length))
-	       (code-vector-set! new i (code-vector-ref cv i)))
-	     (code-vector-set! new length (code-vector-ref cv 1))
-	     (code-vector-set! new 1 big-stack-protocol)
-	     (code-vector-set2! new (+ length 1) uses)
-	     new))
-	  (else
-	   (error "VM limit exceeded: procedure requires too much stack space")))))
+(define (with-package-key package-key thunk)
+  (let-fluid $package-key package-key thunk))
+
+; If CV needs more than the default allotment of stack space we add a new
+; protocol onto the front.
+
+(define (check-stack-use frame-size)
+  (cond ((<= frame-size default-stack-space)
+	 #f)
+	((<= frame-size available-stack-space)
+	 #t)
+	(else
+	 (error "VM limit exceeded: procedure requires too much stack space"
+		frame-size))))
+
+; We put the length and the original protocol at the end of the code vector
+; so that the original protocol's data doesn't have to be moved (which would
+; complicate the already-complicated VM code for protocol dispatch).
+
+(define (add-big-stack-protocol! cv frame-size)
+  (let ((length (code-vector-length cv)))
+    (code-vector-set! cv (- length 3) (code-vector-ref cv 1))
+    (code-vector-set! cv (- length 2) (high-byte frame-size))
+    (code-vector-set! cv (- length 1) (low-byte  frame-size))
+    (code-vector-set! cv 1 big-stack-protocol)))
 
 ; "astate" is short for "assembly state"
 
 (define-record-type assembly-state :assembly-state
-  (make-assembly-state cv pc count lits)
-  (cv    astate-code-vector)
-  (pc    astate-pc    set-astate-pc!)
-  (count astate-count set-astate-count!)
-  (lits  astate-literals  set-astate-literals!))
+  (make-assembly-state cv pc env-maps)
+  (cv       astate-code-vector)
+  (pc       astate-pc       set-astate-pc!)
+  (env-maps astate-env-maps set-astate-env-maps!))
 
 (define (make-astate cv)
-  (make-assembly-state cv 0 template-overhead '()))
+  (make-assembly-state cv 0 '()))
 
 (define (emit-byte! a byte)
   (code-vector-set! (astate-code-vector a) (astate-pc a) byte)
   (set-astate-pc! a (+ (astate-pc a) 1)))
-
-(define (literal->index a thing)
-  (let ((probe (literal-position thing (astate-literals a)))
-	(count (astate-count a)))
-    (if probe
-	;; +++  Eliminate duplicate entries.
-	;; Not necessary, just a modest space saver [how much?].
-	;; Measurably slows down compilation.
-	;; when 1 thing, lits = (x), count = 3, probe = 0, want 2
-	(- (- count probe) 1)
-	(begin
-	  (if (>= count two-byte-limit)
-	      (error "compiler bug: too many literals"
-		     thing))
-	  (set-astate-literals! a (cons thing (astate-literals a)))
-	  (set-astate-count! a (+ count 1))
-	  count))))
-
-(define (literal-position thing literals)
-  (position (if (thingie? thing)
-		(lambda (thing other-thing)
-		  (and (thingie? other-thing)
-		       (equal? (thingie-name thing)
-			       (thingie-name other-thing))))
-		equal?)
-	    thing
-	    literals))
-
-(define (position pred elt list)
-  (let loop ((i 0) (l list))
-    (cond ((null? l)
-	   #f)
-	  ((pred elt (car l))
-	   i)
-	  (else
-	   (loop (+ i 1) (cdr l))))))
-
-(define (emit-literal! a thing)
-  (let ((index (literal->index a thing)))
-    (emit-byte! a (high-byte index))
-    (emit-byte! a (low-byte index))))
 
 (define (emit-segment! astate segment)
   ((segment-emitter segment) astate))
@@ -126,12 +87,19 @@
 (define (instruction opcode . operands)
   (make-segment (+ 1 (length operands))
 		(lambda (astate)
+;                  (format #t "[emit ~D(~D) -> ~S ~S]~%"
+;                          (astate-pc astate)
+;                          (code-vector-length (astate-code-vector astate))
+;                          (enumerand->name opcode op)
+;                          (cons opcode operands))
 		  (emit-byte! astate opcode)
 		  (for-each (lambda (operand)
 			      (emit-byte! astate operand))
 			    operands))))
 
 (define (sequentially . segments)
+  (if (not (car segments))
+      (error "bad call to SEQUENTIALLY"))
   ;;  (reduce sequentially-2 empty-segment segments)
   ;;+++ this sped the entire compilation process up by several percent
   (cond ((null? segments)
@@ -161,45 +129,21 @@
 			 (emit-segment! astate seg1)
 			 (emit-segment! astate seg2)))))) ;tail call
 
-; Literals are obtained from the template.
+(define continuation-data-size 8)
 
-(define (instruction-with-literal opcode thing . operands)
-  (make-segment (+ 3 (length operands))
+(define (continuation-data depth)
+  (make-segment continuation-data-size
 		(lambda (astate)
-		  (let ((index (literal->index astate thing)))
-		    (if (and (= opcode (enum op literal))
-                             (< index byte-limit))
-			(begin
-			  (emit-byte! astate (enum op small-literal))
-			  (emit-byte! astate index)
-			  (emit-byte! astate 0))
-			(begin
-			  (emit-byte! astate opcode)
-			  (emit-byte! astate (high-byte index))
-			  (emit-byte! astate (low-byte index))))
-		    (for-each (lambda (operand)
-				(emit-byte! astate operand))
-			      operands)))))
-
-; So are locations.
-
-(define (instruction-with-location opcode binding name want-type)
-  (make-segment 3
-		(lambda (astate)
-		  (emit-byte! astate opcode)
-		  (emit-literal! astate (make-thingie binding name want-type)))))
-
-; Templates for inferior closures are also obtained from the
-; (parent's) template.
-
-(define (template segment name)
-  (make-segment 2
-  		(lambda (astate)
-  		  (emit-literal! astate
-  				 (segment->template segment
-  						    name
-						    (astate-pc astate)
-						    (fluid $debug-data))))))
+		  (let ((offset (+ (astate-pc astate)
+				   continuation-data-size)))
+		    (emit-byte! astate (enum op cont-data))
+		    (emit-byte! astate 0)    ; high and low bytes of the size
+		    (emit-byte! astate continuation-data-size)
+		    (emit-byte! astate (high-byte offset))
+		    (emit-byte! astate (low-byte  offset))
+		    (emit-byte! astate 0)		; GC mask size
+		    (emit-byte! astate (high-byte depth))
+		    (emit-byte! astate (low-byte depth))))))
 
 ; Labels.  Each label maintains a list of pairs (location . origin).
 ; Instr is the index of the first of two bytes that will hold the jump
@@ -210,12 +154,14 @@
 
 (define (make-label) (list #f))
 
-(define (instruction-using-label opcode label . rest)
-  (let ((segment (apply instruction opcode 0 0 rest)))
+(define (label-reference before label after)
+  (let ((segment (sequentially before
+			       (instruction 0 0)
+			       after)))
     (make-segment (segment-size segment)
 		  (lambda (astate)
 		    (let* ((origin (astate-pc astate))
-			   (location (+ origin 1)))
+			   (location (+ origin (segment-size before))))
 		      (emit-segment! astate segment)
 		      (if (car label)
 			  (insert-label! (astate-code-vector astate)
@@ -224,6 +170,30 @@
 			  (set-cdr! label
 				    (cons (cons location origin)
 					  (cdr label)))))))))
+
+(define (instruction-using-label opcode label . rest)
+  (label-reference (instruction opcode)
+		   label
+		   (bytes->segment rest)))
+
+(define (optional-label-reference before maybe-label after)
+  (if maybe-label
+      (label-reference before maybe-label after)
+      (sequentially before
+		    (instruction 0 0)
+		    after)))
+
+(define (using-optional-label opcode maybe-label . rest)
+  (optional-label-reference (instruction opcode)
+			    maybe-label
+			    (bytes->segment rest)))
+
+(define (bytes->segment bytes)
+  (make-segment (length bytes)
+		(lambda (astate)
+		  (for-each (lambda (operand)
+			      (emit-byte! astate operand))
+			    bytes))))
 
 ; computed-goto
 ; # of labels
@@ -278,57 +248,57 @@
   (code-vector-set! cv i       (high-byte value))
   (code-vector-set! cv (+ i 1) (low-byte  value)))
 
-(define two-byte-limit (expt 2 (* 2 bits-used-per-byte)))
-
 (define (high-byte n)
   (quotient n byte-limit))
 
 (define (low-byte n)
   (remainder n byte-limit))
 
-; Special segments for maintaining debugging information.  Not
-; essential for proper functioning of compiler.
-
-(define $debug-data (make-fluid #f))
-
 ; Keep track of source code at continuations.
 
-(define (note-source-code info segment)
+(define (note-source-code info segment frame)
   (make-segment (segment-size segment)
 		(lambda (astate)
-		  (emit-segment! astate segment)
-		  (let ((dd (fluid $debug-data)))
+		  (let ((dd (frame-debug-data frame)))
 		    (set-debug-data-source!
 		     dd
 		     (cons (cons (astate-pc astate) info)
-			   (debug-data-source dd)))))))
+			   (debug-data-source dd))))
+		  (emit-segment! astate segment))))
 
 ; Keep track of variable names from lexical environments.
 ; Each environment map has the form
 ;    #(pc-before pc-after (var ...) (env-map ...))
+;
+; It's a bit more complex now.  Variables are found in the frame itself and
+; in vectors within the frame.
+;  #(pc-before pc-after offset names more)
+; We need a way to distinguish between names in the frame and names in vectors.
+; Put the vector ones in lists.
+;  (lambda (x y)
+;    (lambda (a b)
+;       ...))
+;  -> (0 <last-pc> 0 (a b (x y)) . more)
+; The (X Y) are in the free-variable vector.
+;
+; Could also add PC's that correspond to calls to mark the values with
+; the source that they were returned from.
 
-(define (note-environment vars segment)
+(define (note-environment vars offset segment)
   (if (keep-environment-maps?)
-      (make-segment (segment-size segment)
-		    (lambda (astate)
-		      (let* ((pc-before (astate-pc astate))
-			     (env-maps
-			      (emit-with-environment-maps! astate segment))
-			     (cell (fluid $environment-maps)))
-			(if cell
-			    (cell-set! cell
-				       (cons (vector pc-before
-						     (astate-pc astate)
-						     (list->vector vars)
-						     env-maps)
-					     (cell-ref cell)))))))
+      (make-segment
+        (segment-size segment)
+	(lambda (astate)
+	  (let* ((pc-before (astate-pc astate))
+		 (old (astate-env-maps astate)))
+	    (set-astate-env-maps! astate '())
+	    (emit-segment! astate segment)
+	    (let ((new (astate-env-maps astate)))
+	      (set-astate-env-maps! astate
+				    (cons (vector pc-before
+						  (astate-pc astate)
+						  offset
+						  (list->vector vars)
+						  new)
+					  old))))))
       segment))
-
-(define (emit-with-environment-maps! astate segment)
-  (let ((cell (make-cell '())))
-    (let-fluid $environment-maps cell
-      (lambda ()
-	(emit-segment! astate segment)))
-    (cell-ref cell)))
-
-(define $environment-maps (make-fluid #f))

@@ -167,7 +167,9 @@
   (optimize auto-integrate))
 
 (define-structure continuations continuations-interface
-  (open scheme-level-1 primitives templates methods architecture code-vectors)
+  (open scheme-level-1 primitives
+	architecture code-vectors
+	templates closures methods)
   (files (rts continuation))
   (optimize auto-integrate))
 
@@ -200,12 +202,12 @@
 
 (define-structure architecture vm-architecture-interface
   (open scheme-level-1 signals enumerated)
-  (files (vm arch)))
+  (files (vm/interp arch)))
 
 (define-structure vm-data vm-data-interface
   (open scheme-level-1 enumerated bitwise ascii
-	architecture
-	(subset signals (error)))
+        architecture
+        (subset signals (error)))
   (begin
     ; Scheme/Pre-Scheme differences
     (define (arithmetic-shift-right n k)
@@ -225,11 +227,11 @@
     
     (define-syntax assert
       (syntax-rules ()
-	((assert foo) #t)))
+        ((assert foo) #t)))
     
     ; We just know this.
     (define useful-bits-per-word 32))
-  (files (vm data)))
+  (files (vm/data data)))
 
 (define-structures ((exceptions exceptions-interface)
 		    (handle handle-interface))
@@ -282,6 +284,7 @@
 	(subset primitives	(find-all-records
 				 current-thread set-current-thread!
 				 unspecific
+				 collect
 				 time)))
   (optimize auto-integrate)
   (files (rts thread)

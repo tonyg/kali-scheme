@@ -149,13 +149,14 @@
 	(let ((deref? (or (and (reference-node? proc)
 			       (variable-binder (reference-variable proc)))
 			  (call-node? proc))))
-	   (c-assign-to-variable (car vars) port indent)
-	   (if deref?
-	       (display "(*" port))
-	   (c-value proc port)
-	   (if deref?
-	       (writec port #\)))
-	   (write-value+result-var-list args start (cdr vars) port)))
+	  (if (used? (car vars))
+	      (c-assign-to-variable (car vars) port indent))
+	  (if deref?
+	      (display "(*" port))
+	  (c-value proc port)
+	  (if deref?
+	      (writec port #\)))
+	  (write-value+result-var-list args start (cdr vars) port)))
     (writec port #\;)
     (values)))
 

@@ -9,28 +9,33 @@
 ; others are passed off to PLAIN-PROTOCOL-MATCH.
 
 (define-opcode call
-  (let ((stack-arg-count (code-byte 0)))
-    (if (closure? *val*)
-	(let* ((template (closure-template *val*))
-	       (code (template-code template))
-	       (protocol (code-vector-ref code 1)))
-	  (cond ((= protocol stack-arg-count)
-		 (set! *template* template)
-		 (set-current-env! (closure-env *val*))
-		 (set-code-pointer! code 2)
-		 (ensure-default-procedure-space!)
-		 (if (pending-interrupt?)
-		     (goto handle-interrupt stack-arg-count)
-		     (goto interpret *code-pointer*)))
-		((= (native->byte-protocol protocol)
-		    stack-arg-count)
-		 (goto call-native-code *val* 2 stack-arg-count))
-		(else
-		 (goto plain-protocol-match stack-arg-count))))
-	(goto application-exception
-	      (enum exception bad-procedure)
-	      stack-arg-count null 0))))
+  (let ((stack-arg-count (code-byte 2)))
+    (make-continuation-on-stack (address+ *code-pointer* (code-offset 0))
+				stack-arg-count)
+    (goto do-call stack-arg-count)))
 
+(define-opcode tail-call
+  (let ((stack-arg-count (code-byte 0)))
+    (move-args-above-cont! stack-arg-count)
+    (goto do-call (code-byte 0))))
+
+(define (do-call stack-arg-count)
+  (if (closure? *val*)
+      (let* ((template (closure-template *val*))
+	     (code (template-code template))
+	     (protocol (code-vector-ref code 1)))
+	(cond ((= protocol stack-arg-count)
+	       (goto run-body-with-default-space code 2 template))
+	      ((= (native->byte-protocol protocol)
+		  stack-arg-count)
+	       (goto call-native-code *val* 2 stack-arg-count))
+	      (else
+	       (goto plain-protocol-match stack-arg-count))))
+      (goto application-exception
+	    (enum exception bad-procedure)
+	    stack-arg-count null 0)))
+
+;----------------------------------------------------------------
 ; Native protocols have the high bit set.
 
 (define (native-protocol? protocol)
@@ -55,49 +60,76 @@
   (set! s48-*native-protocol* protocol))
 
 (define (post-native-dispatch tag)
-  (case tag
-    ((0)
-     (goto return-values s48-*native-protocol* null 0))
-    ((1)
-     (goto perform-application s48-*native-protocol*))
-    (else
-     (error "unexpected native return value" tag))))
+  (let loop ((tag tag))
+    (case tag
+      ((0)
+       (goto return-values s48-*native-protocol* null 0))
+      ((1)
+       (goto perform-application s48-*native-protocol*))
+      ((2)
+       (cond ((pending-interrupt?)
+	      (push-native-interrupt-continuation)
+	      (goto find-and-call-interrupt-handler))
+	     (else
+	      (loop (s48-invoke-native-continuation
+		     (+ (address->integer (pop-continuation-from-stack))
+			2))))))
+      ((3)
+       (raise-exception native-code-not-supported -1))
+      (else
+       (error "unexpected native return value" tag)))))
 
-; As above but with a two-byte argument count.
+;----------------------------------------------------------------
+; As above but with a two-byte argument count.  The tail and not-tail calls
+; are both done using the same opcode (which is not done above for speed in
+; the tail case; this optimization needs to be tested for effectiveness).
 
 (define-opcode big-call
-  (goto perform-application (code-offset 0)))
+  (let ((stack-arg-count (code-offset 2)))
+    (maybe-make-continuation stack-arg-count)
+    (goto perform-application stack-arg-count)))
+
+; A number of opcodes that make calls use this.  We get a the offset of the
+; return address and then either add it as a new continuation below the current
+; arguments or, for tail calls, move those arguments above the current
+; continuation.
+
+(define (maybe-make-continuation stack-arg-count)
+  (let ((return-pointer-offset (code-offset 0)))
+    (if (= return-pointer-offset 0)
+	(move-args-above-cont! stack-arg-count)
+	(make-continuation-on-stack (address+ *code-pointer*
+					      return-pointer-offset)
+				    stack-arg-count))))
 
 ; Call a template instead of a procedure.  This is currently only used for
 ; stringing together the initialization code made by the static linker.
 ;
-; **limitation**: this code only works for templates that take no arguments.
+; call-template <return-offset> <template-index> <index-within-template> <nargs>
 
 (define-opcode call-template
-  (let ((win (lambda ()
-	       (set-template! (get-literal 0)
-			      (enter-fixnum 2)) ; skip the protocol
-	       (if (pending-interrupt?)
-		   (goto handle-interrupt 0)  ; pass nargs count (always 0)
-		   (goto interpret *code-pointer*))))
-	(code (template-code (get-literal 0))))
-    (cond ((= 0 (code-vector-ref code 1))
-	   (ensure-default-procedure-space!)
-	   (win))
+  (let* ((template (get-literal 2))
+	 (code (template-code template))
+	 (nargs (code-byte 6)))
+    (maybe-make-continuation nargs)
+    (cond ((= nargs (code-vector-ref code 1))
+	   (goto run-body-with-default-space code 2 template))
 	  ((and (= big-stack-protocol (code-vector-ref code 1))
-		(= 0 (code-vector-ref code (- (code-vector-length code) 3))))
-	   (ensure-stack-space! (code-vector-ref16
-				   code
-				   (- (code-vector-length code) 2)))
-	   (win))
+		(= nargs
+		   (code-vector-ref code (- (code-vector-length code) 3))))
+	   (goto run-body
+		 code
+		 6
+		 template
+		 (code-vector-ref16 code (- (code-vector-length code) 2))))
 	  (else
-	   (raise-exception wrong-type-argument 3 (get-literal 0))))))
+	   (raise-exception wrong-type-argument 7 template)))))
 
 ; The following is used only for experiments.  The compiler does not use it.
 
-(define-opcode goto-template
-  (set-template! (get-literal 0) (enter-fixnum 0))
-  (goto interpret *code-pointer*))
+;(define-opcode goto-template
+;  (set-code-pointer! (template-code template) 0)
+;  (goto interpret *code-pointer*))
 
 ; APPLY: *VAL* is the procedure, the rest-arg list is on top of the stack,
 ; the next two bytes are the number of stack arguments below the rest-args list.
@@ -108,15 +140,17 @@
   (let ((list-args (pop)))
     (receive (okay? length)
 	(okay-argument-list list-args)
-      (if okay?
-	  (goto perform-application-with-rest-list
-		(code-offset 0)
-		list-args
-		length)
-	  (begin
-	    (push list-args)
-	    (let ((args (pop-args->list*+gc null (+ (code-offset 0) 1))))
-	      (raise-exception wrong-type-argument -1 *val* args))))))) ; no next
+      (cond (okay?
+	     (let ((stack-nargs (code-offset 2)))
+	       (maybe-make-continuation stack-nargs)
+	       (goto perform-application-with-rest-list
+		     stack-nargs
+		     list-args
+		     length)))
+	    (else
+	     (push list-args)
+	     (let ((args (pop-args->list*+gc null (+ (code-offset 0) 1))))
+	       (raise-exception wrong-type-argument -1 *val* args)))))))
 
 ; This is only used for the closed-compiled version of APPLY.
 ;
@@ -131,15 +165,15 @@
 ; (APPLY APPLY LIST 1 '(2 (3))) the stack will be
 ; [<list-procedure>, 1, (2 (3)), 3, 4].
 ;
-; We grab the counts and the procedure, and clobber the procedure's stack
-; slot for GC safety.  Then we get the true stack-arg count and list args
-; and again let PERFORM-APPLICATION-WITH-REST-LIST do the work.
+; We grab the counts and the procedure and copy the rest of the stack arguments
+; down to make us properly tail-recursive.  Then we get the true stack-arg count
+; and list args and again let PERFORM-APPLICATION-WITH-REST-LIST do the work.
 
 (define-opcode closed-apply
   (let* ((nargs (extract-fixnum (pop)))
 	 (stack-nargs (extract-fixnum (pop)))
 	 (proc (stack-ref stack-nargs)))
-    (stack-set! stack-nargs false)
+    (move-args-above-cont! nargs)
     (receive (okay? stack-arg-count list-args list-arg-count)
 	(get-closed-apply-args nargs stack-nargs)
       (if okay?
@@ -236,18 +270,6 @@
 	       (enum exception bad-procedure)
 	       stack-arg-count list-args list-arg-count))))
 
-(define (install-*val*-closure skip)
-  (let ((template (closure-template *val*)))
-    (set! *template* template)
-    (set-code-pointer! (template-code template) skip)
-    (set-current-env! (closure-env *val*))))
-
-(define (check-interrupts-and-go stack-slots stack-arg-count)
-  (ensure-stack-space! stack-slots)
-  (if (pending-interrupt?)
-      (goto handle-interrupt stack-arg-count)
-      (goto interpret *code-pointer*)))
-
 (define (wrong-nargs stack-arg-count list-args list-arg-count)
   (goto application-exception
 	(enum exception wrong-number-of-arguments)
@@ -257,13 +279,16 @@
 
 (define *losing-opcode* 0)
 
+; We clobber the code pointer so that protocol errors in calls to handlers do
+; not end up in infinite loops.
+
 (define (call-exception-handler stack-arg-count opcode)
-  (set! *template* *val*)  ; Use *VAL* (a closure) as a marker.
+  (set! *code-pointer* (integer->address 0))
   (set! *losing-opcode* opcode)
   (goto plain-protocol-match stack-arg-count))
 
 (define (call-interrupt-handler stack-arg-count interrupt)
-  (set! *template* *val*)  ; Use *VAL* (a closure) as a marker.
+  (set! *code-pointer* (integer->address 0))
   (set! *losing-opcode* (- interrupt))
   (goto plain-protocol-match stack-arg-count))
 
@@ -289,11 +314,10 @@
       (let ((win (lambda (skip stack-arg-count)
 		   (if native?
 		       (goto call-native-code *val* skip stack-arg-count)
-		       (begin
-			 (install-*val*-closure skip)
-			 (goto check-interrupts-and-go
-			       stack-space
-			       stack-arg-count))))))
+		       (goto run-body code
+			              skip
+				      (closure-template *val*)
+			              stack-space)))))
 	(let ((fixed-match (lambda (wants skip)
 			     (if (= wants total-arg-count)
 				 (begin
@@ -328,17 +352,17 @@
 				    (push (enter-fixnum total-arg-count))
 				    (win skip (+ final-stack-arg-count 3))))))
 	  (cond ((= protocol nary-dispatch-protocol)
-		 (if (< total-arg-count 3)
-		     (let ((skip (code-vector-ref code (+ 2 total-arg-count))))
-		       (if (= 0 skip)
-			   (lose)
-			   (begin
-			     (push-list list-args list-arg-count)
-			     (win skip total-arg-count))))
-		     (let ((skip (code-vector-ref code 5)))
-		       (if (= 0 skip)
-			   (lose)
-			   (args+nargs-match skip)))))
+		 (cond ((< total-arg-count 3)
+			(let ((skip (code-vector-ref code (+ 3 total-arg-count))))
+			  (if (= 0 skip)
+			      (lose)
+			      (begin
+				(push-list list-args list-arg-count)
+				(goto run-nary-dispatch-body code skip)))))
+		       ((= 0 (code-vector-ref code 2))
+			(lose))
+		       (else
+			(args+nargs-match 6))))	; leave env/template
 		((<= protocol maximum-stack-args)
 		 (fixed-match protocol 2))
 		((= protocol two-byte-nargs+list-protocol)
@@ -349,9 +373,7 @@
 		     (args+nargs-match 3)
 		     (lose)))
 		((native-protocol? protocol)
-		 (loop (native->byte-protocol protocol)
-		       stack-space
-		       #t))
+		 (loop (native->byte-protocol protocol) stack-space #t))
 		((= protocol two-byte-nargs-protocol)
 		 (fixed-match (code-vector-ref16 code 2) 4))
 		((= protocol big-stack-protocol)
@@ -385,7 +407,7 @@
 
 (define (application-exception exception
 			       stack-arg-count list-args list-arg-count)
-  (cond ((not (vm-eq? *template* *val*))
+  (cond ((not (address= *code-pointer* (integer->address 0)))
 	 (let ((args (pop-args->list*+gc (copy-list*+gc list-args list-arg-count)
 					 stack-arg-count)))
 	   (raise-exception* exception -1 *val* args))) ; no next opcode
@@ -408,6 +430,38 @@
 ;        (push args)
 ;        (goto raise 2))))
 
+(define (run-body-with-default-space code used template)
+  (real-run-body-with-default-space code used (+ used 1) template))
+
+(define (run-nary-dispatch-body code start-pc)
+  (real-run-body-with-default-space code 6 start-pc (closure-template *val*)))
+
+(define (real-run-body-with-default-space code env/temp-offset used template)
+  (env-and-template-setup (code-vector-ref code env/temp-offset) template)
+  (set-code-pointer! code used)
+  (if (and (ensure-default-procedure-space!)
+	   (pending-interrupt?))
+      (goto handle-interrupt)
+      (goto interpret *code-pointer*)))
+
+(define (run-body code used template needed-stack-space)
+  (env-and-template-setup (code-vector-ref code used) template)
+  (set-code-pointer! code (+ used 1))
+  (if (and (ensure-stack-space! needed-stack-space)
+	   (pending-interrupt?))
+      (goto handle-interrupt)
+      (goto interpret *code-pointer*)))
+
+(define (env-and-template-setup env/template template)
+  (cond ((= #b11 env/template)
+	 (push (closure-env *val*))
+	 (push template))
+	((= #b01 env/template)
+	 (push (closure-env *val*)))
+	((= #b10 env/template)
+	 (push template))))
+
+;----------------------------------------------------------------
 ; Get a two-byte number from CODE-VECTOR.
 
 (define (code-vector-ref16 code-vector index)
@@ -454,9 +508,7 @@
 	      ((or (= protocol (byte->native-protocol 1))
 		   (= protocol (byte->native-protocol
 				  ignore-values-protocol)))
-	       (goto post-native-dispatch
-		     (s48-invoke-native-continuation
-		       (+ (pop-native-continuation-from-stack) 2))))
+	       (goto native-return 2))
 	      ((= protocol bottom-of-stack-protocol)
 	       (let ((cont (get-continuation-from-heap)))
 		 (if (continuation? cont)
@@ -465,11 +517,15 @@
 		       (loop))
 		     (goto return-from-vm cont))))
 	      ((= protocol call-with-values-protocol)
-	       (let ((consumer (current-continuation-ref continuation-cells)))
-		 (skip-current-continuation!)
+	       (let ((proc (current-continuation-ref 0))
+		     (offset (code-pointer-ref16 code-pointer 2)))
+		 (if (= offset 0)
+		     (skip-current-continuation! 0)	; we're done with it
+		     (shrink-and-reset-continuation!
+		       (address+ code-pointer offset)))
 		 (push *val*)
-	         (set! *val* consumer))
-	       (goto perform-application-with-rest-list 1 null 0))
+		 (set! *val* proc)
+		 (goto perform-application-with-rest-list 1 null 0)))
 	      ((= protocol two-byte-nargs+list-protocol)
 	       (let ((wants-stack-args (code-pointer-ref16 code-pointer 2)))
 		 (cond ((= 0 wants-stack-args)
@@ -548,6 +604,9 @@
 	  ((= protocol ignore-values-protocol)
 	   (pop-continuation!)
 	   (goto continue 1))
+          ((native-protocol? protocol)
+           (goto native-return-values
+                 protocol stack-nargs list-args list-arg-count))
 	  ((= protocol bottom-of-stack-protocol)
 	   (let ((cont (get-continuation-from-heap)))
 	     (cond ((continuation? cont)
@@ -559,13 +618,18 @@
 		   (else
 		    (goto return-exception stack-nargs list-args)))))
 	  ((= protocol call-with-values-protocol)
-	   (let ((consumer (current-continuation-ref continuation-cells)))
-	     (skip-current-continuation!)
-	     (set! *val* consumer)
-	     (goto perform-application-with-rest-list
-		   stack-nargs
-		   list-args
-		   list-arg-count)))
+	   (set! *val* (current-continuation-ref 0))
+	   (let ((offset (code-pointer-ref16 code-pointer 2)))
+	     (cond ((= offset 0)
+		    (skip-current-continuation! stack-nargs))
+		   (else
+		    (shrink-and-reset-continuation!
+		      (address+ code-pointer offset))
+		    (move-args-above-cont! stack-nargs))))
+	   (goto perform-application-with-rest-list
+		 stack-nargs
+		 list-args
+		 list-arg-count))
 	  ((<= protocol maximum-stack-args)
 	   (goto fixed-arg-return protocol 1
 		 stack-nargs list-args list-arg-count))
@@ -578,6 +642,25 @@
 	  (else
 	   (error "unknown protocol" protocol)
 	   (goto return-exception stack-nargs list-args)))))
+
+(define (native-return-values protocol stack-nargs list-args list-arg-count)
+  (cond ((= protocol (byte->native-protocol 1))
+	 (if (= 1 (+ stack-nargs list-arg-count))
+	     (begin
+	       (return-value->*val* stack-nargs list-args)
+	       (goto native-return 2))
+	     (goto return-exception stack-nargs list-args)))
+	((= protocol (byte->native-protocol ignore-values-protocol))
+	 (goto native-return 2))
+	(else
+	 (error "unknown native return protocol" protocol)
+	 (goto return-exception stack-nargs list-args))))
+
+(define (native-return protocol-skip)
+  (goto post-native-dispatch
+	(s48-invoke-native-continuation
+	  (+ (address->integer (pop-continuation-from-stack))
+	     protocol-skip))))
 
 ; The continuation wants a fixed number of arguments.  We pop the current
 ; continuation, move the stack arguments down to the new stack top, push
@@ -625,6 +708,10 @@
 ; a list and raise an exception.
 
 (define (return-exception stack-nargs list-args)
+  (write-string "RETURN-EXCEPTION: " (current-error-port))
+  (report-continuation-uids (current-code-vector)
+			    (current-error-port))
+  (newline (current-error-port))
   (let ((args (pop-args->list*+gc list-args stack-nargs)))
     (raise-exception wrong-number-of-arguments
 		     -1		 ; no next opcode

@@ -311,8 +311,7 @@
 ; --------------------
 ; Lookup
 
-; Look up a name in a package.  Returns a binding if bound, or a name if
-; not.  In the unbound case we return #f.
+; Look up a name in a package.  Returns a binding if bound or #F if not.
 
 (define (package-lookup package name)
   (really-package-lookup package name (package-integrate? package)))

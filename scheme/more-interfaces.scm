@@ -185,7 +185,8 @@
           from-file
 	  forget
 	  bound?
-	  expand))
+	  expand
+	  expand-once))
 
 (define-interface usual-commands-interface
   (compound-interface

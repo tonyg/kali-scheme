@@ -122,9 +122,12 @@
 
 (define (continuation-preview c)
   (if (continuation? c)
-      (cons (cons (template-info (continuation-template c))
+      (cons (cons (let ((template (continuation-template c)))
+		    (if template
+			(template-info template)
+			'?))
 		  (continuation-pc c))
-	    (continuation-preview (continuation-parent c)))
+	    (continuation-preview (continuation-cont c)))
       '()))
 
 ; ERROR is a compiler primitive, but if it weren't, it could be

@@ -2,15 +2,20 @@
 
 Recent changes to Scheme 48.
 
-...	 ???
+10/7/01  (version 1.0)
 	 Bug fixes:
 	  Fixed a problem with the debug data for LETREC environments.
 	  Null output ports now marked as output ports.
+	  Command reader now checks that , is followed by a symbol.
 	 Changes:
+	  The byte code architecture has been changed.  It no longer has
+	   dedicated registers for the template and environment.  All values
+	   are now accessed via the stack pointer.
 	  Image writer now uses hash tables instead of breaking hearts.  This
 	   allows for more careful construction of the image files and means
 	   that having static areas no longer prevents writing images.
-	  Continuations no longer have headers when on the stack.
+	  Continuations no longer have headers when on the stack, making
+	   non-tail calls a little bit faster.
 	  Removed the unused PORT-LOCKED? from ports.
 	  Made for less duplication of code between the VM and RTS: put the
 	   continuation offsets into vm/arch.scm, moved some code around so
@@ -18,6 +23,9 @@ Recent changes to Scheme 48.
 	   for vm/arch.scm and vm/data.scm are now shared.
 	  The VM's stack pointer (*stack*) now points to the top value on the
 	   stack instead of the unused location just above.
+	  The VM files are now in organized into subdirectories.
+	  The interrupt and stack overflow checks have been merged into a
+	   single test.  Calls are a little bit faster.
 
 7/15/01  (version 0.57)
 	 Additions:

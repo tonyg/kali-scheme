@@ -1,22 +1,37 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
 ; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-
-; This is file cprim.scm.
-
-;;;; Compiling primitive procedures and calls to them.
+; Compiling primitive procedures and calls to them.
 
 ; (primitive-procedure name)  =>  a procedure
 
 (define-compilator 'primitive-procedure syntax-type
-  (lambda (node level depth cont)
+  (lambda (node depth frame cont)
     (let ((name (cadr (node-form node))))
-      (deliver-value (sequentially
-		       (instruction (enum op closure))
-		       (template ((primop-closed (get-primop name)))
-				 (name->symbol (cont-name cont)))
-		       (instruction 0)) ; last byte of closure instruction
-		     cont))))
+      (deliver-value
+        (sequentially
+	  (stack-indirect-instruction
+	    (template-offset frame depth)
+	    (literal->index frame (primop-closed-template name)))
+	  (instruction (enum op push))
+	  (instruction (enum op false))		; no environment
+	  (instruction (enum op make-stored-object) 2 (enum stob closure))
+	  (instruction (enum op make-immutable!)))
+	cont))))
+
+(define (primop-closed-template name)
+  (let ((data (primop-closed (get-primop name))))
+    (receive (maybe-nargs proc)
+	(if (pair? data)
+	    (values (car data) (cdr data))
+	    (values #f data))
+      (let ((frame (make-frame #f	; no parent frame
+			       name	; name of primop
+			       (or maybe-nargs 0)
+					; nargs (needed if template used)
+			       #f	; no env
+			       maybe-nargs))) ; need template if nargs
+	(segment->template (proc frame) frame)))))
 
 ; --------------------
 ; Direct primitives.
@@ -26,21 +41,25 @@
 ; on the stack).
 
 (define (direct-compilator type opcode)
-  (lambda (node level depth cont)
+  (lambda (node depth frame cont)
     (let ((args (cdr (node-form node))))
       (sequentially (if (null? args)
                         empty-segment
-                        (push-all-but-last args level depth node))
+                        (push-all-but-last args depth frame node))
                     (deliver-value (instruction opcode) cont)))))
 
 (define (direct-closed-compilator opcode)
-  (lambda ()
+  (lambda (frame)
     (let ((arg-specs (vector-ref opcode-arg-specs opcode)))
       (sequentially (if (pair? arg-specs)
                         (sequentially
-                         (instruction (enum op protocol) (car arg-specs))
+                         (instruction (enum op protocol)
+                                      (car arg-specs)
+                                      #b00)     ; ignore env and template
                          (instruction (enum op pop)))
-                        (instruction (enum op protocol) 0))
+                        (instruction (enum op protocol)
+                                     0
+                                     #b00))     ; ignore env and template
                     (instruction opcode)
                     (instruction (enum op return))))))
 
@@ -149,17 +168,19 @@
         (simple-closed-compilator nargs segment)))))
 
 (define (simple-compilator segment)
-  (lambda (node level depth cont)
+  (lambda (node depth frame cont)
     (let ((args (cdr (node-form node))))
       (sequentially (if (null? args)
                         empty-segment
-                        (push-all-but-last args level depth node))
+                        (push-all-but-last args depth frame node))
                     (deliver-value segment cont)))))
 
 (define (simple-closed-compilator nargs segment)
-  (lambda ()
-    (sequentially (instruction (enum op protocol) nargs)
-                  (instruction (enum op pop))
+  (lambda (frame)
+    (sequentially (instruction (enum op protocol) nargs #b00)
+                  (if (< 0 nargs)
+                      (instruction (enum op pop))
+                      empty-segment)
                   segment
                   (instruction (enum op return)))))
 
@@ -180,13 +201,23 @@
 ; Making doubles
 
 (let ((:double (sexp->type ':double #t)))
-  (define-simple-primitive 'make-double
-    (proc () :double)
-    (sequentially
-      (instruction-with-literal (enum op literal) 0)
-      (instruction (enum op push))
-      (instruction-with-literal (enum op literal) 0)
-      (instruction (enum op make-stored-object) 2 (enum stob double)))))
+  (define-compiler-primitive 'make-double (proc () :double)
+    (lambda (node depth frame cont)
+      (deliver-value
+        (sequentially
+	  (stack-indirect-instruction (template-offset frame depth)
+				      (literal->index frame 0))
+	  (instruction (enum op push))		; leaves value in *val*
+	  (instruction (enum op make-stored-object) 2 (enum stob double)))
+	cont))
+    (cons 0
+	  (lambda (frame)
+	    (sequentially (instruction (enum op protocol) 0 #b10)
+			  (instruction (enum op stack-indirect)
+				       (template-offset frame 1) ; template
+				       (literal->index frame 0))
+			  (instruction (enum op push))
+			  (instruction (enum op return)))))))
 
 ; Define primitives for record-like stored objects (e.g. pairs).
 
@@ -213,9 +244,11 @@
 	      (enum op stored-object-ref) type-byte i))
         (if (not (null? (cdr slot)))
 	    (begin
-	      (def-prim (cadr slot)
-		(proc (type value-type) unspecific-type)
-		(enum op stored-object-set!) type-byte i 0)
+	      (if (not (eq? (cadr slot)
+			    'cell-set!))
+		  (def-prim (cadr slot)
+		    (proc (type value-type) unspecific-type)
+		    (enum op stored-object-set!) type-byte i 0))
 	      (if (car slot)
 		  (def-prim (symbol-append 'provisional- (car slot))
 		    (proc (type) value-type)
@@ -227,6 +260,31 @@
 (for-each (lambda (stuff)
             (apply define-data-struct-primitives stuff))
           stob-data)
+
+; CELL-SET! is special because we want to capture names for the debugging data.
+; Other than using NAMED-CONT when it can for compiling the value this is the
+; same as all the other accessors.
+
+(let ((inst (instruction (enum op stored-object-set!)
+			 (enum stob cell)
+			 0		; index
+			 0)))		; not provisional
+  (define-compiler-primitive 'cell-set!
+    (proc ((sexp->type ':cell #t) value-type) unspecific-type)
+    (lambda (node depth frame cont)
+      (let ((args (cdr (node-form node))))
+	(cond ((name-node? (car args))
+	       (sequentially 
+		 (push-argument node 0 depth frame)
+		 (compile (cadr args)
+			  (+ depth 1)
+			  frame
+			  (named-cont (node-form (car args))))
+		 (deliver-value inst cont)))
+	      (else
+	       (sequentially (push-all-but-last args depth frame node)
+			     (deliver-value inst cont))))))
+    (simple-closed-compilator 2 inst)))
 
 ; Define primitives for vector-like stored objects.
 
@@ -323,103 +381,89 @@
 (define-simple-primitive 'signal-condition (proc (pair-type) unspecific-type)
   (instruction (enum op trap)))
 
-
 ; (primitive-catch (lambda (cont) ...))
 
 (define-compiler-primitive 'primitive-catch
   (proc ((proc (escape-type) any-values-type #f)) any-values-type)
   ;; (primitive-catch (lambda (cont) ...))
-  (lambda (node level depth cont)
+  (lambda (node depth frame cont)
     (let* ((exp (node-form node))
            (args (cdr exp)))
-      (maybe-push-continuation
-       (sequentially (instruction (enum op current-cont))
-                     (instruction (enum op push))
-                     ;; If lambda exp, should do compile-lambda-code to
-                     ;; avoid consing closure...
-                     (compile (car args) level 1 (fall-through-cont node 1))
-                     (instruction (enum op call) 1))
-       0
-       cont)))
-  (lambda ()
-    (sequentially (instruction (enum op protocol) 1)
-                  (instruction (enum op make-env)   ;Seems unavoidable.
-			       (high-byte 1)
-			       (low-byte 1))
+      (receive (before depth label after)
+	  (maybe-push-continuation depth frame cont (car args))
+	(depth-check! frame (+ depth 1))
+	(sequentially before
+	              (instruction (enum op current-cont))
+		      (instruction (enum op push))
+		      (compile (car args)
+			       (+ depth 1)
+			       frame
+			       (fall-through-cont node 1))
+		      (call-instruction 1 label)	; one argument
+		      after))))
+  (lambda (frame)
+    (sequentially (instruction (enum op protocol) 1 #b00)
                   (instruction (enum op current-cont))
-                  (instruction (enum op push))
-                  (instruction (enum op local0) 1)
-                  (instruction (enum op call) 1))))  
+		  (instruction (enum op push))
+		  (instruction (enum op stack-ref 1))
+                  (call-instruction 1 #f))))	; one argument, no return label
 
 ; (call-with-values producer consumer)
 
+; Optimization 1 (not done):
+;  If consumer is a lambda then generate it in-line with its own protocol as
+; the return protocol for the producer.  Once you have the values on the stack
+; it can be treated as a redex.
+; 
+; Optimization 2 (not done):
+;  If both the consumer and producer are lambdas then do as above except
+; that the producer gets a special multiple-values continuation.  There
+; could be a VALUES opcode that moved its arguments down to the appropriate
+; point and then jumped, or the jump could be a separate instruction.
+;  The jump target would have a protocol to allow tail calls within the
+; producer as well.
+
 (define-compiler-primitive 'call-with-values
   (proc ((proc () any-values-type #f)
-	 any-procedure-type)
-	any-values-type)
-  (lambda (node level depth cont)
+         any-procedure-type)
+        any-values-type)
+  (lambda (node depth frame cont)
     (let ((args (cdr (node-form node))))
-      (let ((producer (car args))
-            (consumer (cadr args)))
-        (maybe-push-continuation
-	 (compile-call-with-values node producer consumer level)
-         depth
-         cont))))
-  (lambda ()
-    ;; producer and consumer on stack
-    (let ((label (make-label)))
-      (sequentially (instruction (enum op protocol) 2)
-                    (instruction (enum op make-env)
-				 (high-byte 2)
-				 (low-byte 2))
-                    (instruction (enum op local0) 1) ;consumer
-                    (instruction (enum op push))
-                    (instruction-using-label (enum op make-cont) label)
-                    (instruction (enum op local0) 2) ;producer
-                    (instruction (enum op call) 0)
-		    (let ((cont-size (+ 1 continuation-cells)))
-		      (instruction (enum op cont-data)
-				   (high-byte cont-size)
-				   (low-byte cont-size)))
-                    (attach-label label
-                                  (instruction (enum op protocol)
-					       call-with-values-protocol))))))
-
-; If consumer is a lambda we can put its code, including the protocol,
-; in the continuation.  Otherwise the continuation contains just the
-; consuming procedure and uses the special CALL-WITH-VALUES protocol.
-
-(define (compile-call-with-values node producer consumer level)
-  (if (or (lambda-node? consumer)		;+++
-	  (flat-lambda-node? consumer))
-      (sequentially (maybe-push-continuation     ; nothing maybe about it
-		      (compile-call-with-values-producer producer level)
-		      0
-		      (accept-values-cont #f 0))
-                    (compile-continuation-lambda (unflatten-form consumer)
-						 level
-						 #f))
-      (sequentially (compile consumer level 0 (fall-through-cont node 2))
-		    (instruction (enum op push))
-		    (maybe-push-continuation     ; nothing maybe about it
-		      (compile-call-with-values-producer producer level)
-		      1
-		      (accept-values-cont #f 0))
-		    (instruction (enum op protocol)
-				 call-with-values-protocol))))
-
-; If producer is a lambda (with no arguments) we can just compile the body
-; with a return-cont.
-
-(define (compile-call-with-values-producer producer level)
-  (if (thunk-node? producer)	; +++
-      (compile (thunk-body producer)
-	       level
-	       0
-	       (return-cont #f))
-      (compile-call (make-node operator/call `(,producer))
-		    level 0
-		    (return-cont #f))))
+      (receive (ignore-before ignore-depth c-label c-after)
+	  (maybe-push-continuation depth frame cont (cadr args))
+	(receive (p-before p-depth p-label p-after)
+	    (push-continuation-no-protocol (+ depth 1)
+					   frame
+					   (car args)
+					   (fall-through-cont node 1))
+	  (sequentially (push-argument node 1 depth frame)
+			p-before
+			(compile (car args)
+				 p-depth
+				 frame
+				 (fall-through-cont node 1))
+			(instruction-using-label (enum op call)
+						 p-label
+						 0)
+			p-after
+			(optional-label-reference
+			 (instruction (enum op protocol)
+				      call-with-values-protocol)
+			 c-label
+			 empty-segment)
+			c-after)))))
+    (lambda (frame)
+      (receive (before depth label after)
+	  (push-continuation-no-protocol 1 frame #f (plain-fall-through-cont))
+	(sequentially (instruction (enum op protocol) 2 #b00)
+		      (instruction (enum op pop))
+		      before
+		      (using-optional-label (enum op call) label 0)
+		      after
+		      (instruction (enum op protocol)
+				   call-with-values-protocol
+				   0
+				   0)))))
 
 ; Is NODE a lambda with a null variable list.
 
@@ -456,14 +500,13 @@
     closed))
 
 (define (n-ary-primitive-compilator name min-nargs compilator)
-  (lambda (node level depth cont)
+  (lambda (node depth frame cont)
     (let ((exp (node-form node)))
       (if (>= (length (cdr exp)) min-nargs)
-          (compilator node level depth cont)
+          (compilator node depth frame cont)
           (begin (warn "too few arguments to primitive"
                        (schemify node))
-                 (compile-unknown-call node level depth cont))))))
-
+                 (compile-unknown-call node depth frame cont))))))
 
 ; APPLY wants the arguments on the stack, with the final list on top, and the
 ; procedure in *VAL*.
@@ -471,44 +514,82 @@
 (define-compiler-primitive 'apply
   (proc (any-procedure-type &rest value-type) any-values-type)
   (n-ary-primitive-compilator 'apply 2
-    (lambda (node level depth cont)
-      (let ((exp (node-form node)))	; (apply proc arg1 arg2 arg3 rest)
-	(let* ((proc+args+rest (cdr exp))
-	       (rest+args		; (rest arg3 arg2 arg1)
-		(reverse (cdr proc+args+rest)))
-	       (args+rest+proc		; (arg1 arg2 arg3 rest proc)
-		(reverse (cons (car proc+args+rest) rest+args)))
-	       (stack-nargs (length (cdr rest+args))))
-	  (maybe-push-continuation
-	   (sequentially (push-all-but-last args+rest+proc level 0 #f)
-			 ;; Operand is number of non-final arguments
-			 (instruction (enum op apply)
-				      (high-byte stack-nargs)
-				      (low-byte stack-nargs)))
-	   depth
-	   cont)))))
-  (lambda ()
-    (sequentially (instruction (enum op protocol) args+nargs-protocol 2)
+    (lambda (node depth frame cont)
+      (let* ((exp (node-form node))     ; (apply proc arg1 arg2 arg3 rest)
+	     (proc+args+rest (cdr exp))
+	     (rest+args               ; (rest arg3 arg2 arg1)
+	      (reverse (cdr proc+args+rest)))
+	     (args+rest+proc          ; (arg1 arg2 arg3 rest proc)
+	      (reverse (cons (car proc+args+rest) rest+args)))
+	     (stack-nargs (length (cdr rest+args))))
+	(receive (before depth label after)
+	    (maybe-push-continuation depth frame cont node)
+	  (sequentially before
+			(push-all-but-last args+rest+proc depth frame #f)
+			;; Operand is number of non-final arguments
+			(using-optional-label (enum op apply)
+					      label
+					      (high-byte stack-nargs)
+					      (low-byte stack-nargs))
+			after)))))
+  (lambda (frame)
+    (sequentially (instruction (enum op protocol) args+nargs-protocol 2 #b00)
                   (instruction (enum op closed-apply)))))
 
 ; (values value1 value2 ...)
+;
+; Okay, this is the second half of the deal.
+;  - if tail-recursive, then just push the arguments followed by the opcode
+;  - if ignore-values continuation, then evaluate the arguments without
+;    doing any pushes in between
+;  - if fall-through, then there had better be only one value
+;  - that's it for now, given that there is no special CALL-WITH-VALUES
+;    continuation
 
 (define-n-ary-compiler-primitive 'values #f 0
-  (lambda (node level depth cont)
+  (lambda (node depth frame cont)
     (let* ((args (cdr (node-form node)))
-	   (nargs (length args)))
-      (if (= 1 nargs)
-	  (compile (car args) level depth cont)		;+++
-	  (maybe-push-continuation (sequentially (push-arguments node level 0)
-						 (instruction (enum op values)
-							      (high-byte nargs)
-							      (low-byte nargs)))
-				   depth
-				   cont))))
-  (lambda ()
-    (sequentially (instruction (enum op protocol) args+nargs-protocol 0)
+           (nargs (length args)))
+      (cond ((= 1 nargs)		; +++ (we miss some errors this way)
+	     (compile (car args)
+		      depth
+		      frame
+		      cont))
+	    ((return-cont? cont)
+	     (depth-check! frame (+ depth nargs))
+	     (sequentially (push-arguments node depth frame)
+			   (instruction (enum op values)
+					(high-byte nargs)
+					(low-byte nargs))))
+	    ((ignore-values-cont? cont)
+	     (evaluate-arguments-for-effect args node depth frame))
+	    ((fall-through-cont? cont)
+	     (generate-trap depth
+			    frame
+			    cont
+			    (if (= nargs 0)
+				"returning no arguments where one is expected"
+				(string-append "returning "
+					       (number->string nargs)
+					       "arguments where one is expected"))
+			    (schemify node)))
+	    (else
+	     (error "unknown compiler continuation for VALUES" cont)))))
+  (lambda (frame)
+    (sequentially (instruction (enum op protocol) args+nargs-protocol 0 #b00)
 		  (instruction (enum op closed-values)))))
 
+(define (evaluate-arguments-for-effect args node depth frame)
+  (do ((args args (cdr args))
+       (i 1 (+ i 1))
+       (code empty-segment
+	     (sequentially code
+			   (compile (car args)
+				    depth
+				    frame
+				    (fall-through-cont node i)))))
+      ((null? args)
+       code)))
 
 ; (error message irritant1 irritant2)
 ;  => (trap (cons 'error (cons message (cons irritant1 (cons irritant2 '())))))
@@ -517,61 +598,72 @@
        (instruction (enum op make-stored-object) 2 (enum stob pair))))
 
   (define-n-ary-compiler-primitive 'error error-type 1
-    (lambda (node level depth cont)
-      (let ((exp (node-form node)))
-        (let ((args (cdr exp)))
-          (sequentially (instruction-with-literal (enum op literal) 'error)
-                        (instruction (enum op push))
-                        (push-arguments node level (+ depth 1))
-                        (instruction-with-literal (enum op literal) '())
-                        (apply sequentially
-                               (map (lambda (arg) cons-instruction) args))
-                        cons-instruction
-                        (deliver-value (instruction (enum op trap)) cont)))))
-    (lambda ()
-      ; stack at start is: irritants message
-      (sequentially (instruction (enum op protocol)
-				 two-byte-nargs+list-protocol
-				 0		; (high-byte 1) 
-				 1)		; (low-byte 1)
-		    (instruction (enum op pop))   ; list into *val*
-		    cons-instruction
-                    (instruction (enum op push))
-                    (instruction-with-literal (enum op literal) 'error)
-                    (instruction (enum op push))
-                    (instruction (enum op stack-ref) 1)
-                    cons-instruction
-                    (instruction (enum op trap))
-                    (instruction (enum op return))))))
-
-
+    (lambda (node depth frame cont)
+      (let* ((exp (node-form node))
+	     (args (cdr exp)))
+	(sequentially
+	  (stack-indirect-instruction (template-offset frame depth)
+				      (literal->index frame 'error))
+	  (instruction (enum op push))
+	  (push-arguments node (+ depth 1) frame)
+	  (stack-indirect-instruction
+	    (template-offset frame
+			     (+ depth 1 (length args)))
+	    (literal->index frame '()))
+	  (apply sequentially
+		 (map (lambda (arg) cons-instruction) args))
+	  cons-instruction
+	  (deliver-value (instruction (enum op trap)) cont))))
+    (cons 2
+	  (lambda (frame)
+	    ; stack at start is: template irritants message
+	    (sequentially (instruction (enum op protocol)
+				       two-byte-nargs+list-protocol
+				       0              ; (high-byte 1) 
+				       1              ; (low-byte 1)
+				       #b10)
+			  (instruction (enum op stack-ref) 1)       ; irritants
+			  (instruction (enum op push))
+			  (instruction (enum op stack-ref) 3)       ; message
+			  cons-instruction
+			  (instruction (enum op push))
+			  ; (message . irritants) template irritants message
+			  (instruction (enum op stack-indirect)
+				       1
+				       (literal->index frame 'error))
+			  (instruction (enum op push))
+			  (instruction (enum op stack-ref) 1)
+			  cons-instruction
+			  (instruction (enum op trap))
+			  (instruction (enum op return)))))))
+    
 ; (call-external-value external-routine arg ...)
 
 (define-n-ary-compiler-primitive 'call-external-value value-type 1
   #f                                         ;Could be done
-  (lambda ()
-    (sequentially (instruction (enum op protocol) args+nargs-protocol 1)
+  (lambda (frame)
+    (sequentially (instruction (enum op protocol) args+nargs-protocol 1 #b00)
                   (instruction (enum op call-external-value))
                   (instruction (enum op return)))))
 
 (let ((n-ary-constructor
         (lambda (name type type-byte)
 	  (define-n-ary-compiler-primitive name type 0
-	    (lambda (node level depth cont)
+	    (lambda (node depth frame cont)
 	      (let ((args (cdr (node-form node))))
 		(sequentially (if (null? args)
 				  empty-segment
-				  (push-all-but-last args level depth node))
+				  (push-all-but-last args depth frame node))
 			      (deliver-value
 			       (instruction (enum op make-stored-object)
 					    (length args)
 					    type-byte)
 			       cont))))
-	    (lambda ()
-	      (sequentially
-	       (instruction (enum op protocol) args+nargs-protocol 0)
-	       (instruction (enum op closed-make-stored-object) type-byte)
-	       (instruction (enum op return))))))))
+	    (lambda (frame)
+              (sequentially
+                (instruction (enum op protocol) args+nargs-protocol 0 #b00)
+		(instruction (enum op closed-make-stored-object) type-byte)
+		(instruction (enum op return))))))))
   (n-ary-constructor 'vector vector-type (enum stob vector))
   (n-ary-constructor 'record #f (enum stob record)))
 
@@ -581,28 +673,26 @@
 	(lambda (id opcode type)
 	  (define-compiler-primitive id
 	    type
-	    (lambda (node level depth cont)
+	    (lambda (node depth frame cont)
 	      (if (node-ref node 'type-error)
-		  (compile-unknown-call node level depth cont)
+		  (compile-unknown-call node depth frame cont)
 		  (let ((args (cdr (node-form node))))
 		    (if (null? args)
 			(deliver-value (instruction opcode 1) cont)
 			(sequentially
-			 (push-all-but-last args level depth node)
+			 (push-all-but-last args depth frame node)
 			 (deliver-value (instruction opcode 0) cont))))))
-	    (lambda ()
-	      (make-dispatch-protocol
+            (lambda (frame)
+              (make-dispatch-protocol
 	        ; Zero arguments
- 	        (sequentially
-		  (instruction opcode 1)
-		  (instruction (enum op return)))
+	        (sequentially (instruction opcode 1)
+			      (instruction (enum op return)))
 		; One argument
-		(sequentially
-		  (instruction (enum op pop))
-		  (instruction opcode 0)
-		  (instruction (enum op return)))
-		empty-segment
-		empty-segment))))))
+		(sequentially (instruction (enum op pop))
+			      (instruction opcode 0)
+			      (instruction (enum op return)))
+	       empty-segment
+	       empty-segment))))))
   (define-char-io 'read-char
     (enum op read-char)
     (proc (&opt value-type) value-type))
@@ -614,30 +704,28 @@
 	(lambda (id opcode type)
 	  (define-compiler-primitive id
 	    type
-	    (lambda (node level depth cont)
+	    (lambda (node depth frame cont)
 	      (if (node-ref node 'type-error)
-		  (compile-unknown-call node level depth cont)
+		  (compile-unknown-call node depth frame cont)
 		  (let ((args (cdr (node-form node))))
 		    (sequentially
-		     (push-all-but-last args level depth node)
+		     (push-all-but-last args depth frame node)
 		     (if (null? (cdr args))
 			 (deliver-value (instruction opcode 1) cont)
 			 (sequentially
 			  (deliver-value (instruction opcode 0) cont)))))))
-	    (lambda ()
-	      (make-dispatch-protocol
-	        empty-segment
-	        ; One argument
-	        (sequentially
-		  (instruction (enum op pop))
-		  (instruction opcode 1)
-		  (instruction (enum op return)))
-		; Two arguments
-	        (sequentially
-		  (instruction (enum op pop))
-		  (instruction opcode 0)
-		  (instruction (enum op return)))
-		empty-segment))))))
+            (lambda (frame)
+              (make-dispatch-protocol
+                empty-segment
+                ; One argument
+                (sequentially (instruction (enum op pop))
+			      (instruction opcode 1)
+			      (instruction (enum op return)))
+                ; Two arguments
+                (sequentially (instruction (enum op pop))
+			      (instruction opcode 0)
+			      (instruction (enum op return)))
+                empty-segment))))))
   (define-char-io 'write-char
     (enum op write-char)
     (proc (char-type &opt value-type) unspecific-type)))
@@ -661,43 +749,42 @@
 	(lambda (id opcode identity type)
 	  (define-compiler-primitive id
 	    (proc (&rest type) type)
-	    (lambda (node level depth cont)
+	    (lambda (node depth frame cont)
 	      (if (node-ref node 'type-error)
-		  (compile-unknown-call node level depth cont)
+		  (compile-unknown-call node depth frame cont)
 		  (let ((args (cdr (node-form node))))
 		    (cond ((null? args)
 			   (deliver-value
-			    (instruction-with-literal (enum op literal)
-						      identity)
-			    cont))
+			     (stack-indirect-instruction
+			       (template-offset frame depth)
+			       (literal->index frame identity))
+			     cont))
 			  ((null? (cdr args))
 			   (call-on-arg-and-id opcode identity (car args)
-					       node level depth cont))
+					       node depth frame cont))
 			  (else
-			   (call-on-args opcode args node level depth cont))))))
-	    (lambda ()
-	      (make-dispatch-protocol
-	        ; No arguments
-	        (sequentially
-		  (instruction-with-literal (enum op literal) identity)
-		  (instruction (enum op return)))
-		; One argument
-		(sequentially
-		  (instruction-with-literal (enum op literal) identity)
-		  (instruction opcode)
-		  (instruction (enum op return)))
-		; Two arguments
-		(sequentially
-		  (instruction (enum op pop))
-		  (instruction opcode)
-		  (instruction (enum op return)))
-		; More than two arguments
-		(sequentially
-		  (instruction (enum op pop))	; pop off nargs
-		  (instruction (enum op binary-reduce1))
-		  (instruction opcode)
-		  (instruction (enum op binary-reduce2))
-		  (instruction (enum op return)))))))))
+			   (call-on-args opcode args node depth frame cont))))))
+	    (lambda (frame)
+              (make-dispatch-protocol
+                ; No arguments
+                (sequentially (integer-literal-instruction identity)
+			      (instruction (enum op return)))
+                ; One argument
+                (sequentially (integer-literal-instruction identity)
+			      (instruction opcode)
+			      (instruction (enum op return)))
+                ; Two arguments
+                (sequentially
+                  (instruction (enum op pop))
+                  (instruction opcode)
+                  (instruction (enum op return)))
+                ; More than two arguments
+                (sequentially
+                  (instruction (enum op pop))   ; pop off nargs
+                  (instruction (enum op binary-reduce1))
+                  (instruction opcode)
+                  (instruction (enum op binary-reduce2))
+                  (instruction (enum op return)))))))))
   (define+* '+ (enum op +) 0 number-type)
   (define+* '* (enum op *) 1 number-type)
   (define+* 'bitwise-ior (enum op bitwise-ior) 0 exact-integer-type)
@@ -710,29 +797,27 @@
 	(lambda (id opcode)
 	  (define-compiler-primitive id
 	    (proc (real-type real-type &rest real-type) boolean-type)
-	    (lambda (node level depth cont)
+	    (lambda (node depth frame cont)
 	      (if (node-ref node 'type-error)
-		  (compile-unknown-call node level depth cont)
+		  (compile-unknown-call node depth frame cont)
 		  (let ((args (cdr (node-form node))))
 		    (if (= (length args) 2)
-			(call-on-args opcode args node level depth cont)
-			(compile-unknown-call node level depth cont)))))
-	    (lambda ()
-	      (make-dispatch-protocol
+			(call-on-args opcode args node depth frame cont)
+			(compile-unknown-call node depth frame cont)))))
+	    (lambda (frame)
+              (make-dispatch-protocol
 	        empty-segment
-		empty-segment
-		; Two arguments
-		(sequentially 
-		  (instruction (enum op pop))           ; get first argument
-		  (instruction opcode)
-		  (instruction (enum op return)))
-		; More than two arguments
-		(sequentially
-		  (instruction (enum op pop))
-		  (instruction (enum op binary-reduce1))
-		  (instruction opcode)
-		  (instruction (enum op binary-comparison-reduce2))
-		  (instruction (enum op return)))))))))
+                empty-segment
+                ; Two arguments
+                (sequentially (instruction (enum op pop))  ; get first argument
+			      (instruction opcode)
+			      (instruction (enum op return)))
+                ; More than two arguments
+                (sequentially (instruction (enum op pop))
+			      (instruction (enum op binary-reduce1))
+			      (instruction opcode)
+			      (instruction (enum op binary-comparison-reduce2))
+			      (instruction (enum op return)))))))))
   (define=< '= (enum op =))
   (define=< '< (enum op <))
   (define=< '> (enum op >))
@@ -741,29 +826,39 @@
 
 ; Returns code to apply OPCODE to IDENTITY and ARGUMENT.
 
-(define (call-on-arg-and-id opcode identity argument node level depth cont)
-  (sequentially (instruction-with-literal (enum op literal) identity)
+(define (call-on-arg-and-id opcode identity argument node depth frame cont)
+  (sequentially (stack-indirect-instruction (template-offset frame depth)
+					    (literal->index frame identity))
 		(instruction (enum op push))
-		(compile argument level (+ depth 1) (fall-through-cont node 1))
+		(compile argument (+ depth 1) frame (fall-through-cont node 1))
 		(deliver-value (instruction opcode) cont)))
   
-; Returns code to redue ARGS using OPCODE.
+; Returns code to reduce ARGS using OPCODE.
 
-(define (call-on-args opcode args node level depth cont)
-  (let ((do-arg (lambda (arg index)
-		  (compile arg
-			   level
-			   (if (= index 1) depth (+ depth 1))
-			   (fall-through-cont node index)))))
-    (let loop ((args (cdr args)) (i 2) (code (do-arg (car args) 1)))
+(define (call-on-args opcode args node depth frame cont)
+  (let ((start (sequentially
+		 (push-all-but-last (list (car args)
+					  (cadr args))
+				    depth
+				    frame
+				    node)
+		  (instruction opcode))))
+    (let loop ((args (cddr args)) (i 3) (code start))
       (if (null? args)
 	  (deliver-value code cont)
 	  (loop (cdr args)
 		(+ i 1)
 		(sequentially code
-			      (instruction (enum op push))
-			      (do-arg (car args) i)
+			      (push-and-compile (car args)
+						(+ depth 1)
+						frame
+						(fall-through-cont node i))
 			      (instruction opcode)))))))
+
+(define (push-and-compile node depth frame cont)
+  (or (maybe-compile-with-push node depth frame #t)	; +++
+      (sequentially push-instruction
+		    (compile node depth frame cont))))
 
 (define op/unspecific (get-operator 'unspecific))
 (define op/literal (get-operator 'literal))
@@ -774,33 +869,31 @@
 	(lambda (id opcode default-arg)
 	  (define-compiler-primitive id
             (proc (number-type &opt number-type) number-type)
-	    (lambda (node level depth cont)
+	    (lambda (node depth frame cont)
 	      (if (node-ref node 'type-error)
-		  (compile-unknown-call node level depth cont)
+		  (compile-unknown-call node depth frame cont)
 		  (let* ((args (cdr (node-form node)))
 			 (args (if (null? (cdr args))
 				   (list (make-node op/literal default-arg)
 					 (car args))
 				   args)))
 		    (sequentially
-		     (push-all-but-last args level depth node)
+		     (push-all-but-last args depth frame node)
 		     (deliver-value (instruction opcode) cont)))))
-	    (lambda ()
-	      (make-dispatch-protocol
+	    (lambda (frame)
+              (make-dispatch-protocol
 	        empty-segment
-		; One argument
- 	        (sequentially
-		  (instruction-with-literal (enum op literal) default-arg)
-		  (instruction (enum op push))
-		  (instruction (enum op stack-ref) 1)
-		  (instruction opcode)
-		  (instruction (enum op return)))
-		; Two arguments
-		(sequentially
-		  (instruction (enum op pop))
-		  (instruction opcode)
-		  (instruction (enum op return)))
-		empty-segment))))))
+                ; One argument
+                (sequentially (integer-literal-instruction default-arg)
+			      (instruction (enum op push))
+			      (instruction (enum op stack-ref) 1)
+			      (instruction opcode)
+			      (instruction (enum op return)))
+                ; Two arguments
+                (sequentially (instruction (enum op pop))
+			      (instruction opcode)
+			      (instruction (enum op return)))
+                empty-segment))))))
   (define-one-or-two '- (enum op -) 0)
   (define-one-or-two '/ (enum op /) 1))
 
@@ -808,30 +901,28 @@
 
 (define-compiler-primitive 'atan
   (proc (number-type &opt number-type) number-type)
-  (lambda (node level depth cont)
+  (lambda (node depth frame cont)
     (if (node-ref node 'type-error)
-	(compile-unknown-call node level depth cont)
+	(compile-unknown-call node depth frame cont)
 	(let* ((args (cdr (node-form node)))
 	       (opcode (if (null? (cdr args))
 			   (enum op atan1)
 			   (enum op atan2))))
 	  (sequentially
-	   (push-all-but-last args level depth node)
+	   (push-all-but-last args depth frame node)
 	   (deliver-value (instruction opcode) cont)))))
-  (lambda ()
+  (lambda (frame)
     (make-dispatch-protocol
-     empty-segment
-     ; One argument
-     (sequentially
-      (instruction (enum op pop))
-      (instruction (enum op atan1))
-      (instruction (enum op return)))
-     ; Two arguments
-     (sequentially
-      (instruction (enum op pop))
-      (instruction (enum op atan2))
-      (instruction (enum op return)))
-     empty-segment)))
+      empty-segment
+      ; One argument
+      (sequentially (instruction (enum op pop))
+		    (instruction (enum op atan1))
+		    (instruction (enum op return)))
+      ; Two arguments
+      (sequentially (instruction (enum op pop))
+		    (instruction (enum op atan2))
+		    (instruction (enum op return)))
+      empty-segment)))
 
 ; make-vector and make-string take one or two arguments.
 
@@ -839,30 +930,28 @@
 	(lambda (id op-segment default-arg default-arg-segment type)
 	  (define-compiler-primitive id
 	    type
-	    (lambda (node level depth cont)
+	    (lambda (node depth frame cont)
 	      (if (node-ref node 'type-error)
-		  (compile-unknown-call node level depth cont)
+		  (compile-unknown-call node depth frame cont)
 		  (let* ((args (cdr (node-form node)))
 			 (args (if (null? (cdr args))
 				   (list (car args) default-arg)
 				   args)))
 		    (sequentially
-		     (push-all-but-last args level depth node)
+		     (push-all-but-last args depth frame node)
 		     (deliver-value op-segment cont)))))
-	    (lambda ()
-	      (make-dispatch-protocol
+	    (lambda (frame)
+              (make-dispatch-protocol
 	        empty-segment
 		; One argument
- 	        (sequentially
-		  default-arg-segment
-		  op-segment
-		  (instruction (enum op return)))
-		; Two arguments
- 	        (sequentially
-		  (instruction (enum op pop))
-		  op-segment
-		  (instruction (enum op return)))
-		empty-segment))))))
+                (sequentially default-arg-segment
+			      op-segment
+			      (instruction (enum op return)))
+                ; Two arguments
+                (sequentially (instruction (enum op pop))
+			      op-segment
+			      (instruction (enum op return)))
+                empty-segment))))))
   (define-one-or-two 'make-vector
     (instruction (enum op make-vector-object) (enum stob vector))
     (make-node op/unspecific '(unspecific))
@@ -871,52 +960,47 @@
   (define-one-or-two 'make-string
     (instruction (enum op make-string))
     (make-node op/literal #\?)
-    (instruction-with-literal (enum op literal) #\?)
+    (sequentially (integer-literal-instruction (char->ascii #\?))
+		  (instruction (enum op ascii->char)))
     (proc (number-type &opt char-type) string-type)))
 
 ; --------------------
 ; Utilities
-
-(define (push-all-but-last args level depth source-info)
-  (let recur ((args args) (depth depth) (i 1))
-    (let ((first-code
-           (compile (car args) level depth (fall-through-cont source-info i))))
-      (if (null? (cdr args))
-          first-code
-          (sequentially first-code
-                        (instruction (enum op push))
-                        (recur (cdr args) (+ depth 1) (+ i 1)))))))
 
 ; Building primitives that use the computed-goto provided by the
 ; protocol dispatcher.
 
 (define dispatch-protocol-size
   (segment-size (instruction (enum op protocol) nary-dispatch-protocol
-			     0 0 0 0)))
+			     0     ; 3+
+			     0     ; 0
+			     0     ; 1
+			     0     ; 2
+			     0)))  ; env/template
+
+; For a silly reason involving the way the call-setup code in the VM is
+; organized we have to the THREE-PLUS-ARGS offset and code come before
+; the others.
 
 (define (make-dispatch-protocol zero-args one-arg two-args three-plus-args)
-  (sequentially
-    (instruction (enum op protocol) nary-dispatch-protocol
-		 (if (= 0 (segment-size zero-args))
-		     0
-		     dispatch-protocol-size)
-		 (if (= 0 (segment-size one-arg))
-		     0
-		     (+ dispatch-protocol-size
-			(segment-size zero-args)))
-		 (if (= 0 (segment-size two-args))
-		     0
-		     (+ dispatch-protocol-size
-			(segment-size zero-args)
-			(segment-size one-arg)))
-		 (if (= 0 (segment-size three-plus-args))
-		     0
-		     (+ dispatch-protocol-size
-			(segment-size zero-args)
-			(segment-size one-arg)
-			(segment-size two-args))))
-    zero-args
-    one-arg
-    two-args
-    three-plus-args))
+  (let ((segments (list three-plus-args zero-args one-arg two-args)))
+    (let loop ((to-do segments)
+	       (offset dispatch-protocol-size)
+	       (offsets '()))
+      (if (null? to-do)
+	  (apply sequentially
+		 (apply instruction
+			(enum op protocol)
+			nary-dispatch-protocol
+			(reverse (cons #b00 offsets))) ; no env, no template
+		 segments)
+	  (loop (cdr to-do)
+		(+ offset (segment-size (car to-do)))
+		(cons (if (empty-segment? (car to-do))
+			  0
+			  offset)
+		      offsets))))))
 
+(define (empty-segment? segment)
+  (= (segment-size segment)
+     0))

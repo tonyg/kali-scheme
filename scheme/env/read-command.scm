@@ -93,7 +93,8 @@
 						       #f
 						       port
 						       #f))))
-	  ((get-command-syntax c-name)
+	  ((and (symbol? c-name)
+		(get-command-syntax c-name))
 	   => (lambda (syntax)
 		(make-command c-name
 			      (read-command-arguments syntax #f port

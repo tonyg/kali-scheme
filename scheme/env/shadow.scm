@@ -33,34 +33,28 @@
 ; Exception handler:
 
 (define (deal-with-replaced-variables succeed)
-  (lambda (opcode reason loc . rest)
+  (lambda (opcode reason loc template index . rest)
     (if (= reason (enum exception undefined-global))
-	(deal-with-replaced-variable opcode reason loc rest succeed)
+	(deal-with-replaced-variable opcode reason loc template index rest
+				     succeed)
 	(apply signal-exception opcode reason loc rest))))
 
-(define (deal-with-replaced-variable opcode reason loc rest succeed)
+(define (deal-with-replaced-variable opcode reason loc template index rest
+				     succeed)
   (primitive-catch
    (lambda (cont)
-     (let* ((tem (continuation-template cont))
-	    (index (+ (code-vector-ref (template-code tem)
-				       (+ (continuation-pc cont) 2))
-		      (* (code-vector-ref (template-code tem)
-					  (+ (continuation-pc cont) 1))
-			 byte-limit))))
-       (if (eq? (template-ref tem index) loc)
-	   (let* ((p-uid (do ((env (continuation-env cont)
-				   (vector-ref env 0)))
-			     ((not (vector? env)) env)))
-		  (new (maybe-replace-location loc p-uid)))
-	     (if (eq? new loc)
-		 (apply signal-exception opcode reason loc rest)
-		 (begin (template-set! tem index new)
-			;(signal 'note "Replaced location" loc new p-uid)
-			(if (location-defined? new)
-			    (succeed new rest)
-			    (apply signal-exception opcode reason new rest)))))
-	   (error "lossage in deal-with-replaced-variables"
-		  loc index))))))
+     (if (eq? (template-ref template index) loc)
+	 (let* ((p-uid (template-package-id template))
+		(new (maybe-replace-location loc p-uid)))
+	   (if (eq? new loc)
+	       (apply signal-exception opcode reason loc rest)
+	       (begin (template-set! template index new)
+		      ;(signal 'note "Replaced location" loc new p-uid)
+		      (if (location-defined? new)
+			  (succeed new rest)
+			  (apply signal-exception opcode reason new rest)))))
+	 (error "lossage in deal-with-replaced-variables"
+		loc index)))))
 
 (define-exception-handler (enum op global)
   (deal-with-replaced-variables

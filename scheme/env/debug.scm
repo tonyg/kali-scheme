@@ -47,14 +47,15 @@
   (let ((id (let-fluid (make-fluid #f) #f
 	      (lambda ()
 		(primitive-catch (lambda (k)
-				   (template-id
-				    (continuation-template k))))))))
+				   (let ((template (continuation-template k)))
+				     (if template
+					 (template-id template)
+					 #f))))))))
     (lambda (info) 
       (eqv? (if (debug-data? info)
 		(debug-data-uid info)
 		info)
 	    id))))
-
 
 (define-command-syntax 'preview ""
   "show pending continuations (stack trace)"
@@ -89,11 +90,6 @@
 	   (and (exception? condition)
 		(let ((opcode (exception-opcode condition)))
 		  (or (= opcode (enum op global))
-		      (= opcode (enum op local))
-		      (= opcode (enum op local0))
-		      (= opcode (enum op local1))
-		      (= opcode (enum op local2))
-		      (= opcode (enum op set-global!))
 		      (>= opcode (enum op eq?)))))
 	   #t)))
 
@@ -665,11 +661,27 @@ Kind should be one of: names maps files source tabulate"
   "macro-expand a form"
   '(&opt expression))
 
+; Doesn't work - the current syntax interface doesn't have anything that only
+; expands once.
+;(define-command-syntax 'expand-once "[<form>]"
+;  "macro-expand a form once"
+;  '(&opt expression))
+
 (define (expand . maybe-exp)
+  (do-expand maybe-exp syntactic:expand-form))
+
+(define (expand-once . maybe-exp)
+  (do-expand maybe-exp syntactic:expand))
+
+(define (do-expand maybe-exp expander)
   (let ((exp (if (null? maybe-exp)
 		 (focus-object)
 		 (car maybe-exp)))
 	(env (package->environment (environment-for-commands))))
     (set-command-results!
-     (list (schemify (syntactic:expand-form exp env)
+     (list (schemify (expander exp env)
 		     env)))))
+
+
+
+
