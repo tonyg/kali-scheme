@@ -11,14 +11,18 @@
 ;;; %insert-sort! is also called from vqsort.scm's quick-sort function.
 
 (define (insert-sort elt< v . maybe-start+end)
-  (let-vector-start+end (start end) insert-sort v maybe-start+end
-    (let ((ans (vector-copy v start end)))
+  (call-with-values
+   (lambda () (vector-start+end v maybe-start+end))
+   (lambda (start end)
+    (let ((ans (vector-portion-copy v start end)))
       (%insert-sort! elt< ans 0 (- end start))
-      ans)))
+      ans))))
 
 (define (insert-sort! < v . maybe-start+end)
-  (let-vector-start+end (start end) insert-sort! v maybe-start+end
-    (%insert-sort! < v start end)))
+  (call-with-values
+   (lambda () (vector-start+end v maybe-start+end))
+   (lambda (start end)
+     (%insert-sort! < v start end))))
 
 (define (%insert-sort! elt< v start end)
   (do ((i (+ 1 start) (+ i 1)))	; Invariant: [start,i) is sorted.
@@ -48,10 +52,6 @@
 
 ;;; Code tuning & porting
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; This code is completely R5RS except for the LET-VECTOR-START+END
-;;; macro used to handle defaulting & checking the optional START/END
-;;; subvector args. There's an R5RS definition of this macro in 
-;;; sort-support-macs.scm, which comes with this SRFI reference implementation.
 ;;;
 ;;; This code is tightly bummed as far as I can go in portable Scheme.
 ;;;

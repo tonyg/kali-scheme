@@ -24,17 +24,26 @@
 ;;; Stable vector merge -- V1's elements come out ahead of equal V2 elements.
 
 (define (vector-merge < v1 v2 . maybe-starts+ends)
-  (let-optionals maybe-starts+ends ((start1 0) (end1 (vector-length v1))
-				    (start2 0) (end2 (vector-length v2)))
-    (let ((ans (make-vector (+ (- end1 start1) (- end2 start2)))))
-      (%vector-merge! < ans v1 v2 0 start1 end1 start2 end2)
-      ans)))
+  (call-with-values
+   (lambda () (vectors-start+end-2 v1 v2 maybe-starts+ends))
+   (lambda (start1 end1 start2 end2)
+     (let ((ans (make-vector (+ (- end1 start1) (- end2 start2)))))
+       (%vector-merge! < ans v1 v2 0 start1 end1 start2 end2)
+       ans))))
 
 (define (vector-merge! < v v1 v2 . maybe-starts+ends)
-  (let-optionals maybe-starts+ends ((start  0)
-				    (start1 0) (end1 (vector-length v1))
-				    (start2 0) (end2 (vector-length v2)))
-    (%vector-merge! < v v1 v2 start start1 end1 start2 end2)))
+  (call-with-values
+   (lambda ()
+     (if (pair? maybe-starts+ends)
+	 (values (car maybe-starts+ends)
+		 (cdr maybe-starts+ends))
+	 (values 0
+		 '())))
+   (lambda (start rest)
+     (call-with-values
+      (lambda () (vectors-start+end-2 v1 v2 rest))
+      (lambda (start1 end1 start2 end2)
+	(%vector-merge! < v v1 v2 start start1 end1 start2 end2))))))
 
 
 ;;; This routine is not exported. The code is tightly bummed.
@@ -84,10 +93,15 @@
 ;;; Stable natural vector merge sort
 
 (define (vector-merge-sort! < v . maybe-args)
-  (let-optionals maybe-args ((start 0)
-			     (end (vector-length v))
-			     (temp (vector-copy v)))
-    (%vector-merge-sort! < v start end temp)))
+  (call-with-values
+   (lambda () (vector-start+end v maybe-args))
+   (lambda (start end)
+     (let ((temp (if (and (pair? maybe-args) ; kludge
+			  (pair? (cdr maybe-args))
+			  (pair? (cddr maybe-args)))
+		     (caddr maybe-args)
+		     (vector-copy v))))
+       (%vector-merge-sort! < v start end temp)))))
 
 (define (vector-merge-sort < v . maybe-args)
   (let ((ans (vector-copy v)))
@@ -189,7 +203,7 @@
 			       (xor nrvec=v0? v=v0?))
 			(lp (+ pfxlen nr-len) (+ pfxlen2 pfxlen2)
 			    temp v (not v=v0?))))))))
-	(if (not ansvec=v0?) (vector-copy! v0 temp0 l r)))))
+	(if (not ansvec=v0?) (vector-portion-copy! v0 temp0 l r)))))
 
 
 ;;; Copyright
@@ -206,14 +220,6 @@
 
 ;;; Code tuning & porting
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; This is very portable code. It's R4RS with the following exceptions:
-;;; - VECTOR-COPY
-;;; - The scsh LET-OPTIONAL macro for parsing and defaulting optional
-;;;   arguments.
-;;; - The merge sort recursion bottoms out in a call to an insertion sort
-;;;   routine, %INSERT-SORT!. But you could even punt this and go with pure
-;;;   recursion in a pinch.
-;;;
 ;;; This code is *tightly* bummed as far as I can go in portable Scheme.
 ;;;
 ;;; The two internal primitives that do the real work can be converted to

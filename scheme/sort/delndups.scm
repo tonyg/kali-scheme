@@ -85,12 +85,12 @@
 
 (define (list-delete-neighbor-dups = lis)
   (letrec ((lp (lambda (last-pair xs)
-		 (format #t "lp(last-pair=~a, xs=~a)\n" last-pair xs)
+		 (format #t "lp(last-pair=~a, xs=~a)~%" last-pair xs)
 		 (if (pair? xs)
 		     (let ((x0  (car xs))
 			   (x1+ (cdr xs)))
 		       (receive (chunk last-pair2 xs) (recur xs 2)
-			 (format #t "<-recur: chunk=~a lp=~a xs=~a\n"
+			 (format #t "<-recur: chunk=~a lp=~a xs=~a~%"
 				 chunk last-pair2 xs)
 			 (set-cdr! last-pair chunk)
 			 (lp last-pair2 xs))))))
@@ -105,7 +105,7 @@
 				     '()))))))
 
 	   (recur (lambda (xs n)
-		    (format #t "->recur(xs=~a, n=~a)\n" xs n)
+		    (format #t "->recur(xs=~a, n=~a)~%" xs n)
 		    (if (pair? xs)
 			(receive (x0 rest) (kill xs)
 			  (if (pair? rest)
@@ -160,52 +160,55 @@
 
 
 (define (vector-delete-neighbor-dups elt= v . maybe-start+end)
-  (let-vector-start+end (start end) vector-delete-neighbor-dups v maybe-start+end
-    (if (< start end)
-	(let* ((x (vector-ref v start))
-	       (ans (let recur ((x x) (i start) (j 1))
-		      (if (< i end)
-			  (let ((y (vector-ref v i))
-				(nexti (+ i 1)))
-			    (if (elt= x y) (recur x nexti j)
-				(let ((ansvec (recur y nexti (+ j 1))))
-				  (vector-set! ansvec j y)
-				  ansvec)))
-			  (make-vector j)))))
-	  (vector-set! ans 0 x)
-	  ans)
-	'#())))
+  (call-with-values
+   (lambda () (vector-start+end v maybe-start+end))
+   (lambda (start end)
+     (if (< start end)
+	 (let* ((x (vector-ref v start))
+		(ans (let recur ((x x) (i start) (j 1))
+		       (if (< i end)
+			   (let ((y (vector-ref v i))
+				 (nexti (+ i 1)))
+			     (if (elt= x y) (recur x nexti j)
+				 (let ((ansvec (recur y nexti (+ j 1))))
+				   (vector-set! ansvec j y)
+				   ansvec)))
+			   (make-vector j)))))
+	   (vector-set! ans 0 x)
+	   ans)
+	 '#()))))
 
 
 ;;; Packs the surviving elements to the left, in range [start,end'),
 ;;; and returns END'.
 (define (vector-delete-neighbor-dups! elt= v . maybe-start+end)
-  (let-vector-start+end (start end)
-			vector-delete-neighbor-dups! v maybe-start+end
+  (call-with-values
+   (lambda () (vector-start+end v maybe-start+end))
+   (lambda (start end)
 
-    (if (>= start end) end
+     (if (>= start end)
+	 end
+	 ;; To eliminate unnecessary copying (read elt i then write the value 
+	 ;; back at index i), we scan until we find the first dup.
+	 (let skip ((j start) (vj (vector-ref v start)))
+	   (let ((j+1 (+ j 1)))
+	     (if (>= j+1 end) end
+		 (let ((vj+1 (vector-ref v j+1)))
+		   (if (not (elt= vj vj+1)) (skip j+1 vj+1)
 
-	;; To eliminate unnecessary copying (read elt i then write the value 
-	;; back at index i), we scan until we find the first dup.
-	(let skip ((j start) (vj (vector-ref v start)))
-	  (let ((j+1 (+ j 1)))
-	    (if (>= j+1 end) end
-	      (let ((vj+1 (vector-ref v j+1)))
-		(if (not (elt= vj vj+1)) (skip j+1 vj+1)
-
-		    ;; OK -- j & j+1 are dups, so we're committed to moving
-		    ;; data around. In lp2, v[start,j] is what we've done;
-		    ;; v[k,end) is what we have yet to handle.
-		    (let lp2 ((j j) (vj vj) (k (+ j 2)))
-		      (let lp3 ((k k))
-			(if (>= k end) (+ j 1) ; Done.
-			    (let ((vk (vector-ref v k))
-				  (k+1 (+ k 1)))
-			      (if (elt= vj vk)
-				  (lp3 k+1)
-				  (let ((j+1 (+ j 1)))
-				    (vector-set! v j+1 vk)
-				    (lp2 j+1 vk k+1)))))))))))))))
+		       ;; OK -- j & j+1 are dups, so we're committed to moving
+		       ;; data around. In lp2, v[start,j] is what we've done;
+		       ;; v[k,end) is what we have yet to handle.
+		       (let lp2 ((j j) (vj vj) (k (+ j 2)))
+			 (let lp3 ((k k))
+			   (if (>= k end) (+ j 1) ; Done.
+			       (let ((vk (vector-ref v k))
+				     (k+1 (+ k 1)))
+				 (if (elt= vj vk)
+				     (lp3 k+1)
+				     (let ((j+1 (+ j 1)))
+				       (vector-set! v j+1 vk)
+				       (lp2 j+1 vk k+1))))))))))))))))
 		    
 ;;; Copyright
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -220,10 +223,6 @@
 ;;;
 ;;; Code porting
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; This code is completely R5RS except for the LET-VECTOR-START+END
-;;; macro used to handle defaulting & checking the optional START/END
-;;; subvector args. There's an R5RS definition of this macro in 
-;;; sort-support-macs.scm, which comes with this SRFI reference implementation.
 ;;;
 ;;; If your Scheme has a faster mechanism for handling optional arguments
 ;;; (e.g., Chez), you should definitely port over to it. Note that argument

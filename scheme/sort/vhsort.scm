@@ -62,28 +62,21 @@
 ;;; Here are the two exported interfaces.
 
 (define (heap-sort! elt< v . maybe-start+end)
-  (let-vector-start+end (start end) heap-sort! v maybe-start+end
-    (really-heap-sort! elt< v start end)))
+  (call-with-values
+   (lambda () (vector-start+end v maybe-start+end))
+   (lambda (start end)
+     (really-heap-sort! elt< v start end))))
 
 (define (heap-sort elt< v . maybe-start+end)
-  (let-vector-start+end (start end) heap-sort v maybe-start+end
-    (let ((ans (vector-copy v start end)))
-      (really-heap-sort! elt< ans 0 (- end start))
-      ans)))
+  (call-with-values
+   (lambda () (vector-start+end v maybe-start+end))
+   (lambda (start end)
+     (let ((ans (vector-portion-copy v start end)))
+       (really-heap-sort! elt< ans 0 (- end start))
+       ans))))
 
 ;;; Notes on porting
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; This code is completely R5RS-compliant, with two exceptions:
-;;; + (RECEIVE (var ...) mv-exp body ...)
-;;;   This is the SRFI-?? multiple-value form that expands into
-;;;   (call-with-values (lambda () mv-exp) (lambda (var ...) body ...))
-;;; 
-;;; + (LET-VECTOR-START+END (start end) client-proc v maybe-start+end body ...)
-;;;   This macro defaults & checks the optional START/END subvector arguments
-;;;   passed to HEAP-SORT and HEAP-SORT!.
-;;; 
-;;; Both of these macros are defined in a separate file sort-support-macs.scm
-;;; that comes with the SRFI-?? reference implementation.
 ;;; 
 ;;; Bumming the code for speed
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

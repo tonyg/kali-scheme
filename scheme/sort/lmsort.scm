@@ -72,6 +72,16 @@
 		(lp (cons prev ans) (+ i 1) x (cdr xs))))
 	  (values (append-reverse ans (cons prev '())) i xs))))
 
+  (define (append-reverse rev-head tail)
+    (let lp ((rev-head rev-head) (tail tail))
+      (if (null-list? rev-head) tail
+	  (lp (cdr rev-head) (cons (car rev-head) tail)))))
+
+  (define (null-list? l)
+    (cond ((pair? l) #f)
+	  ((null? l) #t)
+	  (else (error "null-list?: argument out of domain" l))))
+
   ;; (merge a b) -> list
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; List merge -- stably merge lists A (length > 0) & B (length > 0).

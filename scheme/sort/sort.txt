@@ -936,20 +936,7 @@ List merge    Yes      O(n lg n)   O(n lg n)     Either
 -------------------------------------------------------------------------------
 * Porting and optimisation
 --------------------------
-This package should be trivial to port. There are only four non-R4RS bits
-in the code:
-- Use of multiple-value return, with the R5RS VALUES procedure, and the
-  simple (RECEIVE (var ...) mv-exp body ...) multiple-value binding macro
-  of SRFI-8.
-
-- A VECTOR-COPY procedure. This is a tiny little procedure:
-    (vector-copy v [start end])
-
-- Use of the LET-OPTIONALS macro from scsh to parse and default optional
-  arguments to three routines. Again, easy to port the macro or rewrite
-  the code to parse, default, and error check the args by hand. 
-
-- Calls to an ERROR function for complaining about bad arguments.
+This package should be trivial to port.
 
 This code is tightly bummed, as far as I can go in portable Scheme.
 

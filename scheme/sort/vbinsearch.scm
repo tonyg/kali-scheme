@@ -9,26 +9,26 @@
 ;;;   => 2
 
 (define (vector-binary-search key< elt->key key v . maybe-start+end)
-  (let-vector-start+end (start end) vector-binary-search v maybe-start+end
-    (let lp ((left start) (right end))	; Search V[left,right).
-      (and (< left right)
-	   (let* ((m (quotient (+ left right) 2))
-		  (elt (vector-ref v m))
-		  (elt-key (elt->key elt)))
-	     (cond ((key< key elt-key) (lp left m))
-		   ((key< elt-key key) (lp (+ m 1) right))
-		   (else m)))))))
+  (call-with-values
+   (lambda () (vector-start+end v maybe-start+end))
+   (lambda (start end)
+     (let lp ((left start) (right end))	; Search V[left,right).
+       (and (< left right)
+	    (let* ((m (quotient (+ left right) 2))
+		   (elt (vector-ref v m))
+		   (elt-key (elt->key elt)))
+	      (cond ((key< key elt-key) (lp left m))
+		    ((key< elt-key key) (lp (+ m 1) right))
+		    (else m))))))))
 
 (define (vector-binary-search3 compare v . maybe-start+end)
-  (let-vector-start+end (start end) vector-binary-search v maybe-start+end
-    (let lp ((left start) (right end))	; Search V[left,right).
-      (and (< left right)
-	   (let* ((m (quotient (+ left right) 2))
-		  (sign (compare (elt->key (vector-ref v m)))))
-	     (cond ((> sign 0) (lp left m))
-		   ((< sign 0) (lp (+ m 1) right))
-		   (else m)))))))
-
-;;; These procedures are completely R5RS except for the LET-VECTOR-START+END
-;;; macro, which parses out the optional START/END arguments from the rest
-;;; argument.
+  (call-with-values
+   (lambda () (vector-start+end v maybe-start+end))
+   (lambda (start end)
+     (let lp ((left start) (right end))	; Search V[left,right).
+       (and (< left right)
+	    (let* ((m (quotient (+ left right) 2))
+		   (sign (compare (vector-ref v m))))
+	      (cond ((> sign 0) (lp left m))
+		    ((< sign 0) (lp (+ m 1) right))
+		    (else m))))))))
