@@ -253,11 +253,13 @@
 	  lower-case upper-case alphabetic
 	  numeric hexdigit
 	  alphanumeric
-	  punctuation whitespace
+	  punctuation whitespace blank
 	  graphic printing
 	  control
 
 	  sequence one-of text repeat
+
+	  string-start string-end
 
 	  ignore-case use-case
 
