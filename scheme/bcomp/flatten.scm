@@ -135,9 +135,11 @@
     (let ((proc (car (node-form node)))
 	  (args (cdr (node-form node))))
       (make-similar-node node
-			 (cons (cond ((lambda-node? proc)
+			 (cons (cond ((and (lambda-node? proc)
+					   (not (n-ary? (cadr (node-form proc)))))
 				      (flatten-lambda proc caddr free #f))
-				     ((flat-lambda-node? proc)
+				     ((and (flat-lambda-node? proc)
+					   (not (n-ary? (cadr (node-form proc)))))
 				      (flatten-lambda proc cadddr free #f))
 				     (else
 				      (flatten-node proc free)))
