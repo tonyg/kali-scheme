@@ -33,7 +33,7 @@ static s48_value	s48_socket(s48_value udp_p, s48_value input_p),
 			s48_bind(s48_value socket_channel, s48_value number),
 			s48_socket_number(s48_value socket_channel),
 			s48_listen(s48_value socket_channel),
-			s48_accept(s48_value socket_channel),
+			s48_accept(s48_value socket_channel, s48_value retry_p),
 			s48_connect(s48_value socket_channel,
 				    s48_value machine,
 				    s48_value port,
@@ -224,7 +224,7 @@ s48_listen(s48_value channel)
  */
 
 static s48_value
-s48_accept(s48_value channel)
+s48_accept(s48_value channel, s48_value retry_p)
 {
   int			socket_fd,
    			connect_fd,
@@ -249,8 +249,6 @@ s48_accept(s48_value channel)
 
   if (connect_fd >= 0) {
     
-    S48_DECLARE_GC_PROTECT(1);
-  
     RETRY_OR_RAISE_NEG(status, fcntl(connect_fd, F_SETFL, O_NONBLOCK));
 
     input_channel = s48_add_channel(S48_CHANNEL_STATUS_INPUT,
