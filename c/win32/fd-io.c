@@ -294,6 +294,7 @@ reader_thread_proc(LPVOID lpParameter)
   stream_descriptor_t* stream_descriptor = (stream_descriptor_t*)lpParameter;
   file_thread_data_t* thread_data
     = &(stream_descriptor->file_special_data.thread_data);
+  DWORD file_type = GetFileType(thread_data->file_handle);
 
   while ((!thread_data->eof) && (!thread_data->error))
     {
@@ -313,7 +314,7 @@ reader_thread_proc(LPVOID lpParameter)
 	  thread_data->error = FALSE;
 	  thread_data->available = n_read;
 	  /* kludge: pressing Ctrl-C looks like EOF on stdin */
-	  if ((n_read == 0) && (stream_descriptor->callback_data.fd != 0))
+	  if ((n_read == 0)  && (file_type != FILE_TYPE_CHAR))
 	    thread_data->eof = TRUE;
 	}
       else
@@ -692,20 +693,19 @@ ps_read_fd(long fd, char *buffer, long max, bool waitp,
 	}
     }
 
-  if (!s48_add_pending_fd(fd, TRUE))
-    {
-      *status = 4712; //#### out of memory, need symbolic constant
-      return 0;
-    }
-
-  /* There's nothing in the buffer---need to do an actual read. */
-
-  maybe_grow_callback_data_buffer(callback_data, (size_t)max);
-
   switch (stream_descriptor->type)
     {
     case STREAM_FILE_REGULAR:
       {
+	if (!s48_add_pending_fd(fd, TRUE))
+	  {
+	    *status = 4712; //#### out of memory, need symbolic constant
+	    return 0;
+	  }
+	
+	/* There's nothing in the buffer---need to do an actual read. */
+	maybe_grow_callback_data_buffer(callback_data, (size_t)max);
+
 	callback_data->overlap.Offset = stream_descriptor->file_regular_data.current_offset;
 	callback_data->overlap.OffsetHigh = stream_descriptor->file_regular_data.current_offset_high;
 
@@ -744,10 +744,26 @@ ps_read_fd(long fd, char *buffer, long max, bool waitp,
       }
     case STREAM_FILE_SPECIAL:
       {
+	file_thread_data_t* thread_data =
+	  &(stream_descriptor->file_special_data.thread_data);
+
+	if (thread_data->eof)
+	  {
+	    *eofp = TRUE;
+	    return 0;
+	  }
+
+	if (!s48_add_pending_fd(fd, TRUE))
+	  {
+	    *status = 4712; //#### out of memory, need symbolic constant
+	    return 0;
+	  }
+	
+	/* There's nothing in the buffer---need to do an actual read. */
+	maybe_grow_callback_data_buffer(callback_data, (size_t)max);
+
 	if (waitp)
 	  {
-	    file_thread_data_t* thread_data =
-	      &(stream_descriptor->file_special_data.thread_data);
 	    thread_data->buffer = callback_data->buffer;
 	    thread_data->requested = max;
 	    thread_data->callback_thread = s48_main_thread;
