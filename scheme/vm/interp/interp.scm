@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ;Need to fix the byte-code compiler to make jump etc. offsets from the
 ;beginning of the instruction.  (Later: why?)

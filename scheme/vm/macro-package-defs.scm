@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; VM-ARCHITECTURE is used in a FOR-SYNTAX clause in the VM package definitions.

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The stack grows from higher addresses to lower ones.
 ; *STACK-BEGIN* and *STACK-END* delimit the stack portion of memory.

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2004 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2005 by Richard Kelsey.  See file COPYING.
 
 ; Code to turn PROC lambdas into JUMP lambdas.
 

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; These need to operate on both bignums and fixnums.
 ;bignum-add

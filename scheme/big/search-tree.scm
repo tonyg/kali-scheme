@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Red-Black binary search trees as described in Introduction to Algorithms
 ; by Cormen, Leiserson, and Rivest.  Look there if you want to understand

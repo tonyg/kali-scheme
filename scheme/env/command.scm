@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Interpreting commands.
 
@@ -596,7 +596,7 @@
         (begin (write-char #\space port)
                (display info port)))
     (newline port)
-    (write-line "Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees."
+    (write-line "Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees."
 		port)
     (write-line "Please report bugs to scheme-48-bugs@s48.org."
                 port)

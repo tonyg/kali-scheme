@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2004 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2005 by Richard Kelsey.  See file COPYING.
 
 
 ; Call JOIN-SUBSTITUTE on all variable/value pairs.

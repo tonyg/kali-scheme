@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2004 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2005 by Richard Kelsey.  See file COPYING.
 
 (define (put-literal-first call)
   (if (and (not (literal-node? (call-arg call 0)))

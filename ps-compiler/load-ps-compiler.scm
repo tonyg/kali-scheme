@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2004 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2005 by Richard Kelsey.  See file COPYING.
 
 ; -*- Mode: Scheme; -*-
 
@@ -21,7 +21,7 @@
 	      (display "Pre-Scheme compiler version 1.")
 	      (display minor-number)
 	      (newline)
-	      (display "Copyright (c) 1993-2004 by Richard Kelsey.")
+	      (display "Copyright (c) 1993-2005 by Richard Kelsey.")
 	      (newline)
 	      (display "Please report bugs to pre-scheme@s48.org.")
 	      (newline)
