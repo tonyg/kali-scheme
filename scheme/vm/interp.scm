@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ;Need to fix the byte-code compiler to make jump etc. offsets from the
 ;beginning of the instruction.
@@ -44,6 +44,14 @@
 (define (code-pointer) *code-pointer*)
 (define (current-thread) *current-thread*)
 
+; The current proposal is stored in the current thread.
+
+(define (current-proposal)
+  (record-ref (current-thread) 3))
+
+(define (set-current-proposal! proposal)
+  (record-set! (current-thread) 3 proposal))
+
 ;----------------
 
 (define (clear-registers)
@@ -53,17 +61,23 @@
 		 (enter-fixnum 0))
   (set! *val*                unspecific-value)
   (set! *current-thread*     null)
-  (set! *session-data*       null)
-  (set! *exception-handlers* null)
-  (set! *interrupt-handlers* null)
+  (shared-set! *session-data*       null)
+  (shared-set! *exception-handlers* null)
+  (shared-set! *interrupt-handlers* null)
   (set! *enabled-interrupts* 0)
-  (set! *finalizer-alist*    null)
-  (set! *finalize-these*     null)
+  (shared-set! *finalizer-alist*    null)
+  (set! *finalize-these*	    null)
 
   (set! *pending-interrupts* 0)
   (set! s48-*pending-interrupt?* #f)
   (set! *interrupted-template* false)
   unspecific-value)
+
+(define (s48-initialize-shared-registers! s-d e-h i-h f-a)
+  (set! *session-data*       s-d)
+  (set! *exception-handlers* e-h)
+  (set! *interrupt-handlers* i-h)
+  (set! *finalizer-alist*    f-a))
 
 (define *saved-pc*)	; for saving the pc across GC's
 
@@ -74,27 +88,34 @@
     (set! *template*             (s48-trace-value *template*))
     (set! *val*                  (s48-trace-value *val*))
     (set! *current-thread*       (s48-trace-value *current-thread*))
-    (set! *session-data*         (s48-trace-value *session-data*))
-    (set! *exception-handlers*   (s48-trace-value *exception-handlers*))
-    (set! *exception-template*   (s48-trace-value *exception-template*))
-    (set! *interrupt-handlers*   (s48-trace-value *interrupt-handlers*))
     (set! *interrupt-template*   (s48-trace-value *interrupt-template*))
+    (set! *exception-template*   (s48-trace-value *exception-template*))
     (set! *interrupted-template* (s48-trace-value *interrupted-template*))
-    (set! *finalize-these*       (s48-trace-value *finalize-these*))
     (set! *os-signal-type*       (s48-trace-value *os-signal-type*))
     (set! *os-signal-argument*   (s48-trace-value *os-signal-argument*))
+
+    (shared-set! *session-data*
+		 (s48-trace-value (shared-ref *session-data*)))
+    (shared-set! *exception-handlers*
+		 (s48-trace-value (shared-ref *exception-handlers*)))
+    (shared-set! *interrupt-handlers*
+		 (s48-trace-value (shared-ref *interrupt-handlers*)))
+    (shared-set! *finalize-these*
+		 (s48-trace-value (shared-ref *finalize-these*)))
+
     (trace-finalizer-alist!)
     
     ; These could be moved to the appropriate modules.
     (set-current-env! (s48-trace-value (current-env)))
     (trace-io s48-trace-value)
+    (trace-channel-names s48-trace-value)
     (trace-stack s48-trace-locations! s48-trace-stob-contents! s48-trace-value)))
 
 (add-post-gc-cleanup!
   (lambda ()
     (set-template! *template* *saved-pc*)
     (partition-finalizer-alist!)
-    (close-untraced-channels!)
+    (close-untraced-channels! s48-extant? s48-trace-value)
     (note-interrupt! (enum interrupt post-gc))))
 
 ;----------------
@@ -112,7 +133,7 @@
 ; the things.
 
 (define (trace-finalizer-alist!)
-  (let loop ((alist *finalizer-alist*))
+  (let loop ((alist (shared-ref *finalizer-alist*)))
     (if (not (vm-eq? alist null))
 	(let* ((pair (vm-car alist)))
 	  (if (not (s48-extant? (vm-car pair)))  ; if not already traced
@@ -124,10 +145,10 @@
 ; have been copied.
 
 (define (partition-finalizer-alist!)
-  (let loop ((alist *finalizer-alist*) (okay null) (goners null))
+  (let loop ((alist (shared-ref *finalizer-alist*)) (okay null) (goners null))
     (if (vm-eq? alist null)
 	(begin
-	  (set! *finalizer-alist* okay)
+	  (shared-set! *finalizer-alist* okay)
 	  (set! *finalize-these* (vm-append! goners *finalize-these*)))
 	(let* ((alist (s48-trace-value alist))
 	       (pair (s48-trace-value (vm-car alist)))
@@ -171,15 +192,17 @@
   (code-pointer->pc *code-pointer* *template*))
 
 (define (initialize-interpreter+gc)          ;Used only at startup
-  (let ((key (ensure-space (op-template-size 2))))
+  (let ((key (ensure-space (* 2 (op-template-size 3)))))
     (set! *interrupt-template*
-	  (make-template-containing-ops (enum op ignore-values)
-					(enum op return-from-interrupt)
-					key))
+	  (make-template-containing-three-ops (enum op protocol)
+					      ignore-values-protocol
+					      (enum op return-from-interrupt)
+					      key))
     (set! *exception-template*
-	  (make-template-containing-ops (enum op return-from-exception)
-					(enum op false)     ; ignored
-					key))))
+	  (make-template-containing-three-ops (enum op protocol)
+					      1	; want exactly one return value
+					      (enum op return-from-exception)
+					      key))))
 
 ;----------------
 ; Continuations
@@ -289,8 +312,8 @@
 	     (< (vm-vector-length *val*) op-count))
 	 (raise-exception wrong-type-argument 0 *val*))
 	(else
-	 (let ((temp *exception-handlers*))
-	   (set! *exception-handlers* *val*)
+	 (let ((temp (shared-ref *exception-handlers*)))
+	   (shared-set! *exception-handlers* *val*)
 	   (goto continue-with-value
 		 temp
 		 0)))))
@@ -339,10 +362,11 @@
 			   (fixnum? (location-id (stack-ref (- nargs 1)))))
 		      (error message opcode why
 			     (extract-fixnum (location-id (stack-ref (- nargs 1)))))
-		      (error message opcode why))))))
-    (if (not (vm-vector? *exception-handlers*))
+		      (error message opcode why)))))
+	 (handlers (shared-ref *exception-handlers*)))
+    (if (not (vm-vector? handlers))
 	(lose "exception-handlers is not a vector"))
-    (set! *val* (vm-vector-ref *exception-handlers* opcode))
+    (set! *val* (vm-vector-ref handlers opcode))
     (if (not (closure? *val*))
 	(lose "exception handler is not a closure"))
     (goto call-exception-handler (+ nargs 2) opcode)))
@@ -463,55 +487,90 @@
 ; LAMBDA
 
 (define-opcode closure
-  (let ((env (if (= 0 (code-byte 2))
-		 (preserve-current-env (ensure-space (current-env-size)))
-		 *val*)))
-    (receive (key env)
-	(ensure-space-saving-temp closure-size env)
-      (goto continue-with-value
-	    (make-closure (get-literal 0) env key)
-	    3))))
+  (receive (env key)
+      (if (= 0 (code-byte 2))
+	  (let ((key (ensure-space (+ closure-size (current-env-size)))))
+	    (values (preserve-current-env key) key))
+	  (let ((key (ensure-space closure-size)))
+	    (values *val* key)))
+    (goto continue-with-value
+	  (make-closure (get-literal 0) env key)
+	  3)))
 
-; Looks like:
-; (enum op make-flat-env)
-; number of vars
+; This makes recursive closures.  *VAL* should be an environment (a vector).
+; The first slot in *VAL* is replaced with a vector containing COUNT closures
+; that have *VAL* as their environment.  The first slot of the new vector has
+; the old first slot of *VAL*.  The closures that are created are also added
+; to *ENV*.
+
+(define-opcode letrec-closures
+  (let* ((count (code-offset 0))
+	 (key (ensure-space (+ (vm-vector-size (+ count 1))
+			       (* count closure-size))))
+	 (vector (vm-make-vector (+ count 1) key)))
+    (do ((i 1 (+ i 1)))
+	((< count i))
+      (let ((closure (make-closure (get-literal (* i 2)) *val* key)))
+	(vm-vector-set! vector i closure)
+	(push closure)))
+    (vm-vector-set! vector 0 (vm-vector-ref *val* 0))
+    (vm-vector-set! *val* 0 vector)
+    (pop-args-into-env count)
+    (goto continue (* (+ count 1) 2))))
+
+; There are two versions of this, one with one-byte size and offsets and the
+; other with two-byte size and offsets.
+;
+; (enum op make-[big-]flat-env)
 ; use *val* as first element?
+; number of vars (one or two bytes)
 ; depth of first level
 ; number of vars in level
-; offsets of vars in level
+; (one or two byte) offsets of vars in level
 ; delta of depth of second level
 ; ...
 
-(define-opcode make-flat-env
-  (let* ((total-count (code-byte 1))
-	 (new-env (vm-make-vector total-count
-				  (ensure-space (vm-vector-size total-count))))
-	 (start-i (if (= 0 (code-byte 0))
-		      0
-		      (begin
-			(vm-vector-set! new-env 0 *val*)
-			1))))
-    (let loop ((i start-i)
-	       (offset 2)		; count and use-*val*
-	       (env (current-env)))
-      (if (= i total-count)
-	  (goto continue-with-value
-		new-env
-		offset)
-	  (let ((env (env-back env (code-byte offset)))
-		(count (code-byte (+ offset 1))))
-	    (do ((count count (- count 1))
-		 (i i (+ i 1))
-		 (offset (+ offset 2) (+ offset 1)))	; env-back and count
-		((= count 0)
-		 (loop i offset env))
-	      (vm-vector-set! new-env
-			      i
-			      (vm-vector-ref env
-					     (code-byte offset)))))))))
+; We have two versions of this, one where the offsets are one byte and
+; one where they are two bytes.
+
+(define (flat-env-maker size fetch)
+  (lambda ()
+    (let* ((total-count (fetch 1))
+	   (new-env (vm-make-vector total-count
+				    (ensure-space
+				      (vm-vector-size total-count))))
+	   (start-i (if (= 0 (code-byte 0))
+			0
+			(begin
+			  (vm-vector-set! new-env 0 *val*)
+			  1))))
+      (let loop ((i start-i)
+		 (offset (+ 1 size))		; use-*val* and count
+		 (env (current-env)))
+	(if (= i total-count)
+	    (goto continue-with-value
+		  new-env
+		  offset)
+	    (let ((env (env-back env (code-byte offset)))
+		  (count (fetch (+ offset 1))))
+	      (do ((count count (- count 1))
+		   (i i (+ i 1))
+		   (offset (+ offset 1 size)	; env-back and count
+			   (+ offset size)))
+		  ((= count 0)
+		   (loop i offset env))
+		(vm-vector-set! new-env
+				i
+				(vm-vector-ref env (fetch offset))))))))))
+
+(let ((one-byte-maker (flat-env-maker 1 code-byte)))
+  (define-opcode make-flat-env (one-byte-maker)))
+
+(let ((two-byte-maker (flat-env-maker 2 code-offset)))
+  (define-opcode make-big-flat-env (two-byte-maker)))
 
 ;----------------
-; Continuation creation and invocation
+; Continuation creation
 
 (define-opcode make-cont   ;Start a non-tail call.
   (push-continuation! (address+ *code-pointer*
@@ -525,124 +584,18 @@
 		      (code-offset 2))
   (goto continue 4))
 
-(define-opcode return            ;Invoke the continuation.
-  (pop-continuation!)
-  (goto interpret *code-pointer*))
-
-; This is only used in the closed-compiled version of VALUES.
-; Stack is: arg0 arg1 ... argN rest-list N+1 total-arg-count.
-; If REST-LIST is non-empty then there are at least two arguments on the stack.
-
-(define-opcode closed-values
-  (let* ((nargs (extract-fixnum (pop)))
-	 (stack-nargs (extract-fixnum (pop)))
-	 (rest-list (pop)))
-    (goto return-values stack-nargs rest-list (- nargs stack-nargs))))
-
-; Same as the above, except that the value count is in the instruction stream
-; and all of the arguments are on the stack.
-; This is used for in-lining calls to VALUES.
-
-(define-opcode values
-  (goto return-values (code-offset 0) null 0))
-
-; STACK-NARGS return values are on the stack.  If there is only one value, pop
-; it off and do a normal return.  Otherwise, find the actual continuation
-; and see if it ignores the values, wants the values, or doesn't know
-; anything about them.
-
-(define (return-values stack-nargs list-args list-arg-count)
-  (cond ((= stack-nargs 1)  ; if list-arg-count > 0 then stack-nargs > 1
-	 (set! *val* (pop))
-	 (pop-continuation!)
-	 (goto interpret *code-pointer*))
-	(else
-	 (let ((cont (peek-at-current-continuation)))
-	   (if (continuation? cont)
-	       (goto really-return-values
-		     cont stack-nargs list-args list-arg-count)
-	       (goto return-exception stack-nargs list-args))))))
-	 
-; If the next op-code is:
-; op/ignore-values - just return, ignoring the return values
-; op/call-with-values - remove the continuation containing the consumer
-;  (the consumer is the only useful information it contains), and then call
-;  the consumer.
-; anything else - only one argument was expected so raise an exception.
-
-(define (really-return-values cont stack-nargs list-args list-arg-count)
-  (let ((next-op (code-vector-ref (template-code (continuation-template cont))
-				  (extract-fixnum (continuation-pc cont)))))
-    (cond ((= next-op (enum op ignore-values))
-	   (pop-continuation!)
-	   (goto interpret *code-pointer*))
-	  ((= next-op (enum op call-with-values))
-	   (skip-current-continuation!)
-	   (set! *val* (continuation-ref cont continuation-cells))
-	   (goto perform-application-with-rest-list stack-nargs
-		                                    list-args
-						    list-arg-count))
-	  (else
-	   (goto return-exception stack-nargs list-args)))))
-
-; This would avoid the need for the consumer to be a closure.  It doesn't
-; work because the NARGS check (which would be the next instruction to be
-; executed) assumes that a closure has just been called.
-
-;(define (do-call-with-values nargs)
-;  (cond ((address= *cont* *bottom-of-stack*)
-;	 (restore-from-continuation (continuation-cont *cont*))
-;	 (set-continuation-cont! *bottom-of-stack* *cont*)
-;	 (set! *cont* *bottom-of-stack*))
-;	(else
-;	 (restore-from-continuation cont)))
-;  (set! *code-pointer* (address+ *code-pointer* 1)) ; move past (enum op call-with-values
-;)  (goto interpret *code-pointer*))
-
-(define (return-exception stack-nargs list-args)
-  (let ((args (pop-args->list* list-args stack-nargs)))
-    (raise-exception wrong-number-of-arguments -1 false args))) ; no next opcode
-
-; This is executed only if the producer returned exactly one value.
-
-(define-opcode call-with-values
-  (let ((consumer (pop)))
-    (push *val*)
-    (set! *val* consumer)
-    (goto perform-application 1)))
-
-; This is just a marker for the code that handles returns.
-
-(define-opcode ignore-values
-  (goto continue 0))
-
 ;----------------
 ; Preserve the current continuation and put it in *val*.
 
 (define-opcode current-cont
   (let ((key (ensure-space (current-continuation-size))))
     (goto continue-with-value
-	  (current-continuation key)
+	  (copy-current-continuation-to-heap key)
 	  0)))
 
 (define-opcode with-continuation
   (set-current-continuation! (pop))
   (goto perform-application 0))
-
-; only used in the stack underflow template
-
-(define-opcode get-cont-from-heap
-  (let ((cont (get-continuation-from-heap)))
-    (cond ((continuation? cont)
-	   (set-current-continuation! cont)
-	   (goto continue 0))
-	  ((and (false? cont)
-		(fixnum? *val*))			  ; VM returns here
-	   (set! s48-*callback-return-stack-block* false) ; not from a callback
-	   (extract-fixnum *val*))
-	  (else
-	   (set-current-continuation! false)
-	   (raise-exception wrong-type-argument 0 *val* cont)))))
 
 ;----------------
 ; Control flow

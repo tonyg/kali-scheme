@@ -1,0 +1,77 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Discussion</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_24.html">Module system</A><BR>Previous: <A HREF="s48manual_33.html">Configuration packages</A> | Next: <A HREF="s48manual_35.html">Libraries</A>
+<H2>Discussion</H2>
+<P>This module system was not designed as the be-all and end-all of
+Scheme module systems; it was only intended to help us
+organize the Scheme&nbsp;48 system.  Not only does the module system
+help avoid name clashes by keeping different subsystems in different
+namespaces, it has also helped us to tighten up and generalize
+Scheme&nbsp;48's internal interfaces.  Scheme&nbsp;48 is unusual among Lisp
+implementations in admitting many different possible modes of
+operation.  Examples of such multiple modes include the following:
+<UL><LI>Linking can be either static or dynamic.
+    <LI>The development environment (compiler, debugger, and command
+    processor) can run either in the same address space as the program
+    being developed or in a different address space.  The environment and
+    user program may even run on different processors under different
+    operating systems<A HREF="s48manual_73.html#8">[8]</A>.
+    <LI>The virtual machine can be supported by either
+    of two implementations of its implementation language, Prescheme.
+</UL>
+The module system has been helpful in organizing these multiple modes.
+By forcing us to write down interfaces and module dependencies, the
+module system helps us to keep the system clean, or at least to keep
+us honest about how clean or not it is.
+<P>The need to make structures and interfaces second-class instead of
+first-class results from the requirements of static program analysis:
+it must be possible for the compiler and linker to expand macros and
+resolve variable bindings before the program is executed.  Structures
+could be made first-class (as in FX<A HREF="s48manual_73.html#9">[9]</A>) if a
+type system were added to Scheme and the definitions of exported
+macros were defined in interfaces instead of in module bodies, but
+even in that case types and interfaces would remain second-class.
+<P>The prohibition on assignment to imported bindings makes substitution
+a valid optimization when a module is compiled as a block.  The block
+compiler first scans the entire module body, noting which variables
+are assigned.  Those that aren't assigned (only <TT>define</TT>d) may be
+assumed never assigned, even if they are exported.  The optimizer can
+then perform a very simple-minded analysis to determine automatically
+that some procedures can and should have their calls compiled in line.
+<P>The programming style encouraged by the module system is consistent
+with the unextended Scheme language.  Because module system features
+do not generally show up within module bodies, an individual module
+may be understood by someone who is not familiar with the module
+system.  This is a great aid to code presentation and portability.  If
+a few simple conditions are met (no name conflicts between packages,
+no use of <TT>structure-ref</TT>, and use of <TT>files</TT> in preference to
+<TT>begin</TT>), then a multi-module program can be loaded into a Scheme
+implementation that does not support the module system.  The Scheme&nbsp;48
+static linker satisfies these conditions, and can therefore run in
+other Scheme implementations.  Scheme&nbsp;48's bootstrap process, which is
+based on the static linker, is therefore nonincestuous.  This
+contrasts with most other integrated programming environments, such as
+Smalltalk-80, where the system can only be built using an existing
+version of the system itself.
+<P>Like ML modules, but unlike Scheme Xerox modules, this module system
+is compositional.  That is, structures are constructed by single
+syntactic units that compose existing structures with a body of code.
+In Scheme Xerox, the set of modules that can contribute to an
+interface is open-ended -- any module can contribute bindings to any
+interface whose name is in scope.  The module system implementation is
+a cross-bar that channels definitions from modules to interfaces.  The
+module system described here has simpler semantics and makes
+dependencies easier to trace.  It also allows for higher-order
+modules, which Scheme Xerox considers unimportant.
+
+
+<P>
+  
+Previous: <A HREF="s48manual_33.html">Configuration packages</A> | Next: <A HREF="s48manual_35.html">Libraries</A></BODY></HTML>

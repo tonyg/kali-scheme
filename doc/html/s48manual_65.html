@@ -1,0 +1,46 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:24 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Process environment</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_62.html">Access to POSIX</A><BR>Previous: <A HREF="s48manual_64.html">Signals</A> | Next: <A HREF="s48manual_66.html">Users and groups</A>
+<H2>Process environment</H2>
+<P>These are in structures <CODE>posix-process-data</CODE> and <CODE>posix</CODE>.
+<H3><A NAME="1">Process identification</A></H3>
+<UL><LI><CODE>(get-process-id<I></I>)&nbsp;-&gt;&nbsp;<I>&nbsp;process-id</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(get-parent-process-id<I></I>)&nbsp;-&gt;&nbsp;<I>&nbsp;process-id</I></CODE><A NAME="3">&nbsp;</A>
+</UL>
+These return the process ids of the current process and its parent.
+See section&nbsp;<A HREF="s48manual_63.html#processes">*</A> for operations on process ids.
+<UL><LI><CODE>(get-user-id<I></I>)&nbsp;-&gt;&nbsp;<I>&nbsp;user-id</I></CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(get-effective-user-id<I></I>)&nbsp;-&gt;&nbsp;<I>&nbsp;user-id</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(set-user-id!<I>&nbsp;user-id</I>)</CODE><A NAME="6">&nbsp;</A>
+</UL>
+<UL><LI><CODE>(get-group-id<I></I>)&nbsp;-&gt;&nbsp;<I>&nbsp;group-id</I></CODE><A NAME="7">&nbsp;</A>
+<LI><CODE>(get-effective-group-id<I></I>)&nbsp;-&gt;&nbsp;<I>&nbsp;group-id</I></CODE><A NAME="8">&nbsp;</A>
+<LI><CODE>(set-group-id!<I>&nbsp;group-id</I>)</CODE><A NAME="9">&nbsp;</A>
+</UL>
+Every process has both the original and effective user id and group id.
+The effective values may be set, but not the original ones.
+<UL><LI><CODE>(get-groups<I></I>)&nbsp;-&gt;&nbsp;<I>&nbsp;group-ids</I></CODE><A NAME="10">&nbsp;</A>
+<LI><CODE>(get-login-name<I></I>)&nbsp;-&gt;&nbsp;<I>&nbsp;string</I></CODE><A NAME="11">&nbsp;</A>
+</UL>
+<CODE>Get-groups</CODE> returns a list of the supplementary groups of the
+ current process.
+<CODE>Get-login-name</CODE> returns a user name for the current process.
+<H3><A NAME="12">Environment variables</A></H3>
+<UL><LI><CODE>(lookup-environment-variable<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>string&nbsp;or&nbsp;<CODE>#f</CODE></I></CODE><A NAME="13">&nbsp;</A>
+<LI><CODE>(environment-alist<I></I>)&nbsp;-&gt;&nbsp;<I>alist</I></CODE><A NAME="14">&nbsp;</A>
+</UL>
+<CODE>Lookup-environment-variable</CODE> looks up its argument in the
+ environment list and returns the corresponding value or <CODE>#f</CODE>
+ if there is none.
+<CODE>Environment-alist</CODE> returns the entire environment as a list of
+ <CODE>(<CODE><I>name-string</I></CODE> . <CODE><I>value-string</I></CODE>)</CODE> pairs.
+<P>
+  
+Previous: <A HREF="s48manual_64.html">Signals</A> | Next: <A HREF="s48manual_66.html">Users and groups</A></BODY></HTML>

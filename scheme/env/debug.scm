@@ -1,5 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
-
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Commands for debugging.
 
@@ -122,23 +121,55 @@
 
 ; reset
 
-(define (reset)
-  (abort-to-command-level (top-command-level)))
+(define (reset . maybe-level)
+  (if (null? maybe-level)
+      (abort-to-command-level (top-command-level))
+      (go-to-level (car maybe-level))))
 
-(define-command-syntax 'reset "" "top level" '())
+(define-command-syntax 'reset "[<number>]"
+  "restart command level (default level is 0)"
+  '(&opt expression))
 
 (define (go-to-level n)
+  (let ((level (find-level n)))
+    (if level
+	(abort-to-command-level level)
+	(write-line "invalid command level" (command-output)))))
+
+; Old ,level command retained for compatibility.
+; Has no help strings s it won't show up in the ,? list.
+
+(define-command-syntax 'level #f #f '(expression))
+
+(define level go-to-level)
+
+; Find the Nth command level.
+
+(define (find-level n)
   (let ((levels (reverse (command-levels))))
     (if (and (integer? n)
 	     (>= n 0)
 	     (< n (length levels)))
-	(abort-to-command-level (list-ref levels n))
+	(list-ref levels n)
+	#f)))
+
+; resume
+; Same as ,reset except that we don't restart the level.
+
+(define (resume . maybe-level)
+  (let ((level (if (null? maybe-level)
+		   (top-command-level)
+		   (find-level (car maybe-level)))))
+    (if level
+	(begin
+	  (if (command-level-paused-thread level)
+	      (kill-paused-thread! level))
+	  (proceed-with-command-level level))
 	(write-line "invalid command level" (command-output)))))
 
-(define-command-syntax 'level "<number>" "go to specific command level"
-  '(expression))
-
-(define level go-to-level)
+(define-command-syntax 'resume "[<number>]"
+  "resume specific command level (default is 0)"
+  '(&opt expression))
 
 (define-command-syntax 'condition ""
   "select an object that describes the current error condition"
@@ -150,80 +181,130 @@
 	(set-focus-object! c)
 	(write-line "no condition" (command-output)))))
 
-; Commands that toggle various flags.
+; Toggling various boolean flags.
 
-(define (toggle-command get set description)
-  (lambda maybe-option
-    (let ((b (if (null? maybe-option)
-		 (not (get))
-		 (case (car maybe-option)
-		   ((off) #f)
-		   ((on) #t)
-		   ((?) (get))
-		   (else (error "invalid setting (should be on or off or ?)"
-				(car maybe-option))))))
-	  (out (command-output)))
-      (set b)
-      (display (if b "Will " "Won't ") out)
-      (display description out)
-      (newline out))))
+(define-command-syntax 'set "<switch> [<on-or-off-or-?>]"
+  "set the value of a switch (? lists switches)"
+  '(name &opt name))
 
-(define syntax-for-toggle '(&opt name))
+(define-command-syntax 'unset "<switch>"
+  "turn off a switch"
+  '(name))
 
-; Batch mode
+(define (set name . maybe-value)
+  (if (eq? name '?)
+      (list-switches)
+      (let* ((switch (lookup-switch name))
+	     (value (cond ((not switch)
+			   (error "switch not found" name))
+			  ((null? maybe-value)
+			   #t)
+			  (else
+			   (case (car maybe-value)
+			     ((off) #f)
+			     ((on) #t)
+			     ((?)
+			      (display (if (switch-on? switch)
+					   "on, "
+					   "off, ")
+				       (command-output))
+			      (switch-on? switch))
+			     (else
+			      (error "invalid setting (should be on or off or ?)"
+				     (car maybe-value)))))))
+	     (out (command-output)))
+	(switch-set! switch value)
+	(display (switch-doc switch) out)
+	(newline out))))
+	 
+(define (unset name)
+  (let ((switch (lookup-switch name))
+	(out (command-output)))
+    (if (not switch)
+	(error "switch not found" name)
+	(switch-set! switch #f))
+    (display (switch-doc switch) out)
+    (newline out)))
 
-(define-command-syntax 'batch "[on | off]"
-  "enable/disable batch mode (no prompt, errors exit)"
-  syntax-for-toggle)
+; The actual switches.
 
-(define batch
-  (toggle-command batch-mode?
-		  set-batch-mode?!
-		  "exit on errors"))
+(add-switch 'batch
+	    batch-mode?
+	    set-batch-mode?!
+	    "will not prompt and will exit on errors"
+	    "will prompt and will not exit on errors")
 
-; Benchmark mode (i.e., inline primitives)
+(add-switch 'inline-values
+	    (lambda ()
+	      (package-integrate? (environment-for-commands)))
+	    (lambda (b)
+	      (set-package-integrate?! (environment-for-commands) b))
+	    "will compile some calls in line"
+	    "will not compile calls in line")
 
-(define-command-syntax 'bench "[on | off]"
-  "enable/disable benchmark mode (integrate primitives)"
-  syntax-for-toggle)
+(add-switch 'break-on-warnings
+	    break-on-warnings?
+	    set-break-on-warnings?!
+	    "will enter breakpoint on warnings"
+	    "will not enter breakpoint on warnings")
 
-(define bench
-  (toggle-command (lambda ()
-		    (package-integrate? (environment-for-commands)))
-		  (lambda (b)
-		    (set-package-integrate?! (environment-for-commands) b))
-		  "compile some calls in line"))
+(add-switch 'load-noisily
+	    load-noisily?
+	    set-load-noisily?!
+	    "will notify when loading modules and files"
+	    "will not notify when loading modules and files")
 
-; Break on warnings
+;(add-switch 'form-preferred
+;            form-preferred?
+;            set-form-preferred?!
+;            "commas are required before commands"
+;            "commas are not required before commands")
 
-(define-command-syntax 'break-on-warnings "[on | off]"
-  "treat warnings as errors"
-  syntax-for-toggle)
+(add-switch 'levels
+	    push-command-levels?
+	    set-push-command-levels?!
+	    "will push command level on errors"
+	    "will not push command level on errors")
 
-(define break-on-warnings
-  (toggle-command break-on-warnings?
-		  set-break-on-warnings?!
-		  "enter breakpoint on warnings"))
+; Old toggling commands retained for compatibility
+; These have no help strings.
 
+(define (define-toggle-syntax name help)
+  (define-command-syntax name #f #f '(&opt name)))
+  
+(define (toggle-command name)
+  (lambda maybe-value
+    (set name (if (null? maybe-value)
+		  (if (switch-on? (or (lookup-switch name)
+				      (error "switch not found" name)))
+		      'off
+		      'on)
+		  (car maybe-value)))))
 
-(define-command-syntax 'form-preferred "[on | off]"
-  "enable/disable form-preferred command processor mode"
-  syntax-for-toggle)
+(define-toggle-syntax 'batch 
+  "enable/disable batch mode (no prompt, errors exit)")
 
-(define form-preferred
-  (toggle-command (user-context-accessor 'form-preferred? (lambda () #t))
-		  (user-context-modifier 'form-preferred?)
-		  "prefer forms to commands"))
+(define batch (toggle-command 'batch))
 
-(define-command-syntax 'levels "[on | off]"
-  "disable/enable command levels"
-  syntax-for-toggle)
+(define-toggle-syntax 'bench
+  "enable/disable inlining of primitives")
 
-(define levels
-  (toggle-command (user-context-accessor 'push-command-levels (lambda () #t))
-		  (user-context-modifier 'push-command-levels)
-		  "push command level on errors"))
+(define bench (toggle-command 'inline-values))
 
+(define-toggle-syntax 'break-on-warnings
+  "treat warnings as errors")
+
+(define break-on-warnings (toggle-command 'break-on-warnings))
+
+;(define-toggle-syntax 'form-preferred
+;  "enable/disable form-preferred command processor mode")
+;
+;(define form-preferred (toggle-command 'form-preferred))
+
+(define-toggle-syntax 'levels
+  "disable/enable command levels")
+
+(define levels (toggle-command 'levels))
 
 ; Flush debug data base
 
@@ -386,24 +467,26 @@ Kind should be one of: names maps files source tabulate"
      (lambda ()
        (display "[" port))
      (lambda ()
-       (let-fluids $write-length *trace-depth*
-	 $write-depth *trace-depth*
+       (with-limited-output
 	 (lambda ()
 	   (display "Enter " port)
 	   (write-carefully (error-form name args) port)
-	   (newline port)))
+	   (newline port))
+	 *trace-depth*
+	 *trace-depth*)
        (call-with-values (lambda ()
 			   (apply proc args))
 	 (lambda results
-	   (let-fluids $write-length *trace-depth*
-	     $write-depth (- *trace-depth* 1)
-	     (lambda ()
+	   (with-limited-output
+ 	     (lambda ()
 	       (display " Leave " port)
 	       (write-carefully name port)
 	       (for-each (lambda (result)
 			   (display " " port)
 			   (write-carefully (value->expression result) port))
-			 results)))
+			 results))
+	     *trace-depth*
+	     (- *trace-depth* 1))
 	   (apply values results))))
      (lambda ()
        (display "]" port)
@@ -429,7 +512,7 @@ Kind should be one of: names maps files source tabulate"
 	    (write-hundredths (- stop-real-time start-real-time) port)
 	    (display " seconds" port)
 	    (newline port)
-	    (set-focus-values! results)))))))
+	    (set-command-results! results)))))))
 
 ; N is in milliseconds
 
@@ -441,6 +524,14 @@ Kind should be one of: names maps files source tabulate"
       (if (< r 10)
 	  (write-char #\0 port))
       (write r port))))
+
+; Copied from rts/time.scm to avoid a dependency.
+
+(define (real-time)
+  ((structure-ref primitives time) (enum time-option real-time) #f))
+
+(define (run-time)
+  ((structure-ref primitives time) (enum time-option run-time) #f))
 
 (define-command-syntax 'time "<command>" "measure execution time"
   '(command))
@@ -503,7 +594,7 @@ Kind should be one of: names maps files source tabulate"
   (set-file-environments! '()))
 
 (define (note-file-environment! filename env)
-  (if (user-context)
+  (if (maybe-user-context)
       (let* ((translated ((structure-ref filenames translate) filename))
 	     (envs (file-environments))
 	     (probe (or (assoc filename envs) ;What to do?
@@ -524,6 +615,17 @@ Kind should be one of: names maps files source tabulate"
 	    (set-file-environments!
 	     (cons (cons filename (make-weak-pointer env))
 		   envs))))))
+
+; Temporary hack until we get default values for unhandled upcalls.
+
+(define (maybe-user-context)
+  (call-with-current-continuation
+    (lambda (exit)
+      (with-handler (lambda (condition punt)
+		      (if (error? condition)
+			  (exit #f)
+			  (punt)))
+		    user-context))))
 
 (define (get-file-environment filename)
   (let ((probe (assoc filename (file-environments)))) ;translate ?
@@ -566,6 +668,6 @@ Kind should be one of: names maps files source tabulate"
 		 (focus-object)
 		 (car maybe-exp)))
 	(env (package->environment (environment-for-commands))))
-    (set-focus-object!
-     (schemify ((structure-ref syntactic expand-form) exp env)
-	       env))))
+    (set-command-results!
+     (list (schemify ((structure-ref syntactic expand-form) exp env)
+		     env)))))

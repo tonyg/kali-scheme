@@ -1,27 +1,23 @@
-\documentstyle[11pt]{article}
 
-\include{code}
-\include{latex-stuff}
+%\htmltitle{Another Module System for Scheme}
+%
+%\begin{center}
+%{\Large\bf Another Module System for Scheme}
+%
+%\T\vspace{2ex}
+%Jonathan Rees \\
+%3 January 1993 (updated 15 January 1994)
+%\end{center}
+%
+%\T\vspace{3ex}}
+%
+%\W\begin{abstract}
 
-\newcommand{\goesto}{\hbox{$\longrightarrow$}}
-\newcommand{\alt}{$\vert$}
-\newcommand{\arbno}[1]{{{#1}$^*$}}
-\newcommand{\hack}{Scheme~48}
+\chapter{Module system}
+\label{chapter:modules}
 
-\begin{document}
-
-\begin{center}
-{\Large\bf Another Module System for Scheme}
-
-\vspace{2ex}
-Jonathan Rees \\
-3 January 1993 (updated 15 January 1994)
-\end{center}
-
-\vspace{3ex}
-
-This memo describes a module system for the Scheme programming
-language.  The module system is unique in the extent to which it
+This chapter describes the module system used in Scheme~48.
+The module system is unique in the extent to which it
 supports both static linking and rapid turnaround during program
 development.  The design was influenced by Standard ML
 modules\cite{MacQueen:Modules} and by the module system for Scheme
@@ -38,8 +34,9 @@ Unlike the Common Lisp package system, the module system described
 here controls the mapping of names to denotations, not the
 mapping of strings to symbols.
 
+%\W\end{abstract}
 
-\subsection*{Introduction}
+\section{Introduction}
 
 The module system supports the structured division of a corpus of
 Scheme software into a set of modules.  Each module has its own
@@ -49,7 +46,7 @@ descriptions written in a special {\em configuration language.}
 A module may be instantiated multiple times, producing several {\em
 packages}, just as a lambda-expression can be instantiated multiple
 times to produce several different procedures.  Since single
-instantiation is the normal case, I will defer discussion of multiple
+instantiation is the normal case, we will defer discussion of multiple
 instantiation until a later section.  For now you can think of a
 package as simply a module's internal environment mapping names to
 denotations.
@@ -69,17 +66,17 @@ structure require explicitly qualified references written with the
 {\tt structure-ref} operator.
 
 For example:
-\begin{code}
-    (define-structure foo (export a c cons)
-      (open scheme)
-      (begin (define a 1)
-             (define (b x) (+ a x))
-             (define (c y) (* (b a) y))))
-\codeskip
-    (define-structure bar (export d)
-      (open scheme foo)
-      (begin (define (d w) (+ a (c w)))))
-\end{code}
+\begin{example}
+(define-structure foo (export a c cons)
+  (open scheme)
+  (begin (define a 1)
+         (define (b x) (+ a x))
+         (define (c y) (* (b a) y))))
+
+(define-structure bar (export d)
+  (open scheme foo)
+  (begin (define (d w) (+ a (c w)))))
+\end{example}
 This configuration defines two structures, {\tt foo} and {\tt bar}.
 {\tt foo} is a view on a package in which the {\tt scheme} structure's
 bindings (including {\tt define} and {\tt +}) are visible, together
@@ -100,18 +97,19 @@ bindings from the {\tt scheme} structure aren't visible unless they
 become so by {\tt scheme} (or an equivalent structure) being opened.
 
 
-\subsection*{The configuration language}
+\section{The configuration language}
+%\renewcommand{\topfraction}{0.8}
 
 The configuration language consists of top-level defining forms for
-modules and interfaces.  Its syntax is given in figure~1.
+ modules and interfaces.
+\T{Its syntax is given in figure~\ref{module-language-figure}.}
+\W{Its syntax is as follows:}
 
-\setbox0\hbox{\goesto}
-\newcommand{\altz}{\hbox to 1\wd0{\hfil\alt}}
+\T\setbox0\hbox{\goesto}
+\T\newcommand{\altz}{\hbox to 1\wd0{\hfil\alt}}
+\W\newcommand{\altz}{\goesto}
 
-%%%%% Put the figure inside a box ?
-
-\begin{figure}
-%\begin{frameit}
+\begin{figure}[htb]
 \begin{tabbing}
    \syn{configuration} \=\goesto{}~\arbno{\syn{definition}} \\
    \syn{definition} \=\goesto{}~
@@ -121,7 +119,7 @@ modules and interfaces.  Its syntax is given in figure~1.
           \arbno{\syn{clause}}) \\
         \>\altz{}~ \tt(define-interface \syn{name} \syn{interface}) \\
         \>\altz{}~ \tt(define-syntax \syn{name} \syn{transformer-spec}) \\
-   \syn{clause} \=\goesto{}~ \tt(open \arbno{\syn{name}}) \\
+   \syn{clause} \=\goesto{}~ \tt(open \arbno{\syn{structure}}) \\
         \>\altz{}~ \tt(access \arbno{\syn{name}}) \\
         \>\altz{}~ \tt(begin \syn{program}) \\
         \>\altz{}~ \tt(files \arbno{\syn{filespec}}) \\
@@ -130,16 +128,24 @@ modules and interfaces.  Its syntax is given in figure~1.
    \syn{interface} \=\goesto{}~ \tt(export \arbno{\syn{item}}) \\
         \>\altz{}~ \syn{name} \\
         \>\altz{}~ \tt(compound-interface \arbno{\syn{interface}}) \\
-   \syn{item} \=\goesto{}~ \syn{name}~ 
-          \alt{}~ \tt(\syn{name} \syn{type})
-          \alt{}~ \tt((\arbno{\syn{name}}) \syn{type})
+   \syn{item} \=\goesto{}~ \syn{name} \\
+        \>\altz{}~ \tt(\syn{name} \syn{type}) \\
+        \>\altz{}~ \tt((\arbno{\syn{name}}) \syn{type}) \\
+   \syn{structure} \=\goesto{}~ \syn{name} \\
+        \>\altz{}~ \tt(modify \syn{structure} \arbno{\syn{modifier}}) \\
+        \>\altz{}~ \tt(subset \syn{structure} (\arbno{\syn{name}})) \\
+        \>\altz{}~ \tt(with-prefix \syn{structure} \syn{name}) \\
+   \syn{modifier} \=\goesto{}~ \tt(expose \arbno{\syn{name}}) \\
+        \>\altz{}~ \tt(hide \arbno{\syn{name}}) \\
+        \>\altz{}~ \tt(rename \arbno{(\syn{name}$_0$ \syn{name}$_1$)}) \\
+        \>\altz{}~ \tt(alias \arbno{(\syn{name}$_0$ \syn{name}$_1$)}) \\
+        \>\altz{}~ \tt(prefix \syn{name}) \\
 \end{tabbing}
 \caption{The configuration language.}
-%\end{frameit}
 \end{figure}
+\label{module-language-figure}
 
-
-A {\tt define-structure} form introduces a binding of a name to a
+A \codemainindex{define-structure} form introduces a binding of a name to a
 structure.  A structure is a view on an underlying package which is
 created according to the clauses of the {\tt define-structure} form.
 Each structure has an interface that specifies which bindings in the
@@ -147,7 +153,7 @@ structure's underlying package can be seen via that structure in other
 packages.
 
 An {\tt open} clause specifies which structures will be opened up for
-use inside the new package.  At least one package must be specified or
+use inside the new package.  At least one structure must be specified or
 else it will be impossible to write any useful programs inside the
 package, since {\tt define}, {\tt lambda}, {\tt cons}, {\tt
 structure-ref}, etc.\ will be unavailable.  Typical packages to list
@@ -158,6 +164,43 @@ structures that export structures, there is a {\tt defpackage} package
 that exports the operators of the configuration language.  Many other
 structures, such as record and hash table facilities, are also
 available in the \hack{} implementation.
+
+The \codemainindex{modify}, \codemainindex{subset}, and
+ \codemainindex{prefix} forms produce new
+ views on existing structures by renaming or hiding exported names.
+\code{Subset} returns a new structure that exports only the listed names
+ from its \syn{structure} argument.
+\code{With-prefix} returns a new structure that adds \syn{prefix}
+ to each of the names exported by the \syn{structure} argument.
+For example, if structure \code{s} exports \code{a} and \code{b},
+ then
+\begin{example}
+(subset s (a))
+\end{example}
+ exports only \code{a} and
+\begin{example}
+(with-prefix s p/)
+\end{example}
+exports \code{a} as \code{p/a} and \code{b} as \code{p/b}.
+
+Both \code{subset} and \code{with-prefix} are simple macros that
+ expand into uses of \code{modify}, a more general renaming form.
+In a \code{modify} structure specification the \syn{command}s are applied to
+ the names exported
+ by \syn{structure} to produce a new set of names for the \syn{structure}'s
+ bindings.
+\code{Expose} makes only the listed names visible.
+\code{Hide} makes all but the listed names visible.
+\code{Rename} makes each \syn{name}$_0$ visible as \syn{name}$_1$ 
+ name and not visible as \syn{name}$_0$ , while
+ \code{alias} makes each \syn{name}$_0$ visible as both \syn{name}$_0$ 
+ and \syn{name}$_1$.
+\code{Prefix} adds \syn{name} to the beginning of each exported name.
+The modifiers are applied from right to left.  Thus
+\begin{example}
+(modify scheme (prefix foo/) (rename (car bus))))
+\end{example}
+ makes \code{car} available as \code{foo/bus}..
 
 An {\tt access} clause specifies which bindings of names to structures
 will be visible inside the package body for use in {\tt structure-ref}
@@ -179,7 +222,7 @@ that for {\tt begin} the text is given directly in the package
 definition, while for {\tt files} the text is stored somewhere in the
 file system.  The body consists of a Scheme program, that is, a
 sequence of definitions and expressions to be evaluated in order.  In
-practice, I always use {\tt files} in preference to {\tt begin}; {\tt
+practice, we always use {\tt files} in preference to {\tt begin}; {\tt
 begin} exists mainly for expository purposes.
 
 A name's imported binding may be lexically overridden or {\em shadowed}
@@ -205,7 +248,7 @@ File names in a {\tt files} clause can be symbols, strings, or lists
 (Maclisp-style ``namelists'').  A ``{\tt.scm}'' file type suffix is
 assumed.  Symbols are converted to file names by converting to upper
 or lower case as appropriate for the host operating system.  A
-namelist is an operating-system-indepedent way to specify a file
+namelist is an operating-system-independent way to specify a file
 obtained from a subdirectory.  For example, the namelist {\tt(rts
 record)} specifies the file {\tt record.scm} in the {\tt rts}
 subdirectory.
@@ -217,22 +260,23 @@ was found.  You can't at present put an absolute path name in the {\tt
 files} list.
 
 
-\subsection*{Interfaces}
+\section{Interfaces}
+\mainschindex{define-interface}
 
 An interface can be thought of as the type of a structure.  In its
 basic form it is just a list of variable names, written {\tt(export
-\var{name} \etc)}.  However, in place of
-a name one may write {\tt(\var{name} \var{type})}, indicating the type
-of \var{name}'s binding.  Currently the type field is ignored, except
+\cvar{name} \etc)}.  However, in place of
+a name one may write {\code (\cvar{name} \cvar{type})}, indicating the type
+of \cvar{name}'s binding.  Currently the type field is ignored, except
 that exported macros must be indicated with type {\tt :syntax}.
 
 Interfaces may be either anonymous, as in the example in the
 introduction, or they may be given names by a {\tt define-interface}
 form, for example
-\begin{code}
-    (define-interface foo-interface (export a c cons))
-    (define-structure foo foo-interface \etc)
-\end{code}
+\begin{example}
+(define-interface foo-interface (export a c cons))
+(define-structure foo foo-interface \etc)
+\end{example}
 In principle, interfaces needn't ever be named.  If an interface
 had to be given at the point of a structure's use as well as at the
 point of its definition, it would be important to name interfaces in
@@ -246,26 +290,26 @@ package definitions when there are multiple distinct structures that
 have the same interface --- that is, multiple implementations of the
 same abstraction.
 
-\item It is conceptually cleaner, and useful for documentation
+\item It is conceptually cleaner, and often useful for documentation
 purposes, to separate a module's specification (interface) from its
 implementation (package).
 
-\item My experience is that configurations that are separated into
+\item Our experience is that configurations that are separated into
 interface definitions and package definitions are easier to read; the
 long lists of exported bindings just get in the way most of the time.
 \end{enumerate}
 
-The {\tt compound-interface} operator forms an interface that is the
+The \codemainindex{compound-interface} operator forms an interface that is the
 union of two or more component interfaces.  For example,
-\begin{code}
-    (define-interface bar-interface
-      (compound-interface foo-interface (export mumble)))
-\end{code}
+\begin{example}
+(define-interface bar-interface
+  (compound-interface foo-interface (export mumble)))
+\end{example}
 defines {\tt bar-interface} to be {\tt foo-interface} with the name
 {\tt mumble} added.
 
 
-\subsection*{Macros}
+\section{Macros}
 
 Hygienic macros, as described in
 \cite{Clinger-Rees:Macros,Clinger-Rees:R4RS}, are implemented.
@@ -274,9 +318,9 @@ expansion are resolved in the environment of the macro's definition.
 
 For example, the {\tt scheme} structure's {\tt delay} macro 
 is defined by the rewrite rule
-\begin{code}
-    (delay \var{exp})  \xform  (make-promise (lambda () \var{exp}))\rm.
-\end{code}
+\begin{example}
+(delay \cvar{exp})  \xform  (make-promise (lambda () \cvar{exp})).
+\end{example}
 The variable {\tt make-promise} is defined in the {\tt scheme}
 structure's underlying package, but is not exported.  A use of the
 {\tt delay} macro, however, always accesses the correct definition
@@ -286,17 +330,17 @@ by {\tt scheme}, but their correct bindings will be found even if they
 are shadowed by definitions in the client package.
 
 
-\subsection*{Higher-order modules}
+\section{Higher-order modules}
 
 There are {\tt define-module} and {\tt define} forms for
 defining modules that are intended to be instantiated multiple times.
 But these are pretty kludgey --- for example, compiled code isn't
-shared between the instantiations --- so I won't describe them yet.
+shared between the instantiations --- so we won't describe them yet.
 If you must know, figure it out from the following grammar.
 \begin{tabbing}
 \qquad
    \syn{definition} \=\goesto{}~
-      \tt(d\=\tt{}efine-module (\syn{name} \arbno{(\syn{name} \syn{interface})}) \\
+      \tt(d\=efine-module (\syn{name} \arbno{(\syn{name} \syn{interface})}) \\
        \>  \>\arbno{\syn{definition}} \\
        \>  \>\syn{name}\tt) \\
         \>\altz{}~ \tt(define \syn{name}
@@ -304,10 +348,10 @@ If you must know, figure it out from the following grammar.
 \end{tabbing}
 
 
-\subsection*{Compiling and linking}
+\section{Compiling and linking}
 
 \hack{} has a static linker that produces stand-alone heap images
-from module descriptions.  One specifies a particular procedure in a
+from module descriptions.  The programmer specifies a particular procedure in a
 particular structure to be the image's startup procedure (entry
 point), and the linker traces dependency links as given by {\tt open}
 and {\tt access} clauses to determine the composition of the heap
@@ -322,7 +366,7 @@ extent of extracting its macro definitions.  The compiler knows from
 the interface of an opened or accessed structure which of its exports
 are macros.  Except for macros, a module may be compiled without any
 knowledge of the implementation of its opened and accessed structures.
-However, inter-module optimization will be available as an option.
+However, inter-module optimization may be available as an option.
 
 The main difficulty with separate compilation is resolution of
 auxiliary bindings introduced into macro expansions.  The module
@@ -333,10 +377,9 @@ or linker needs to know that the desired binding of {\tt make-promise}
 is the one apparent in {\tt delay}'s defining package, not in the
 package being loaded or linked.
 
-[I need to describe structure reification.]
+%[I need to describe structure reification.]
 
-
-\subsection*{Semantics of configuration mutation}
+\section{Semantics of configuration mutation}
 
 During program development it is often desirable to make changes to
 packages and interfaces.  In static languages it may be necessary to
@@ -355,24 +398,24 @@ rule is that variable bindings in a running program are always
 resolved according to current structure and interface bindings, even
 when these bindings change as a result of edits to the configuration.
 For example, consider the following:
-\begin{code}
-    (define-interface foo-interface (export a c))
-    (define-structure foo foo-interface
-      (open scheme)
-      (begin (define a 1)
-             (define (b x) (+ a x))
-             (define (c y) (* (b a) y))))
-    (define-structure bar (export d)
-      (open scheme foo)
-      (begin (define (d w) (+ (b w) a))))
-\end{code}
+\begin{example}
+(define-interface foo-interface (export a c))
+(define-structure foo foo-interface
+  (open scheme)
+  (begin (define a 1)
+         (define (b x) (+ a x))
+         (define (c y) (* (b a) y))))
+(define-structure bar (export d)
+  (open scheme foo)
+  (begin (define (d w) (+ (b w) a))))
+\end{example}
 This program has a bug.  The variable {\tt b}, which is free in the
 definition of {\tt d}, has no binding in {\tt bar}'s package.  Suppose
 that {\tt b} was supposed to be exported by {\tt foo}, but was omitted
 from {\tt foo-interface} by mistake.  It is not necessary to
 re-process {\tt bar} or any of {\tt foo}'s other clients at this point.
 One need only change {\tt foo-interface} and inform the development
-system of that one change (using, say, an appropriate Emacs command),
+system of that change (using, say, an appropriate Emacs command),
 and {\tt foo}'s binding of {\tt b} will be found when procedure {\tt
 d} is called.
 
@@ -396,7 +439,8 @@ development environment uses caching with cache invalidation to make
 variable references fast.
 
 
-\subsection*{Command processor support}
+\section{Command processor support}
+\label{module-commands}
 
 While it is possible to use the \hack{} static linker for program
 development, it is far more convenient to use the development
@@ -411,7 +455,7 @@ borrowed from the Symbolics Lisp Machine system, and is reminiscent of
 non-Lisp debuggers.  Commands are a little easier to type than Scheme
 forms (no parentheses, so you don't have to shift), but more
 importantly, making them distinct from Scheme forms ensures that
-programs' namespaces aren't clutterred with inappropriate bindings.
+programs' namespaces aren't cluttered with inappropriate bindings.
 Equivalently, the command set is available for use regardless of what
 bindings happen to be visible in the current program.  This is
 especially important in conjunction with the module system, which puts
@@ -429,44 +473,42 @@ Commands are introduced by a comma ({\tt,}) and end at the end of
 line.  The command processor's prompt consists of the name of the
 current package followed by a greater-than ({\tt>}).
 
-\begin{list}{}{}{}
-
-\item
-\begin{code}
-,config
-\end{code}
+\begin{description}
+\item \code{,config} \\
     The {\tt,config} command sets the command processor's current
     package to be the current configuration package.  Forms entered at
     this point are interpreted as being configuration language forms,
     not Scheme forms.
 
-\item
-\begin{code}
-,config \var{command}
-\end{code}
+\item \code{,config \cvar{command}} \\
     This form of the {\tt,config} command executes another command in
     the current configuration package.  For example,
-\begin{code}
-    ,config ,load foo.scm
-\end{code}
+\begin{example}
+,config ,load foo.scm
+\end{example}
     interprets configuration language forms from the file {\tt
     foo.scm} in the current configuration package.
 
-\item
-\begin{code}
-,in \var{struct-name}
-\end{code}
+\item \code{,config-package-is \cvar{struct-name}} \\
+    The {\tt,config-package-is} command designates a new configuration
+    package for use by the {\tt,config} command and resolution of
+    \cvar{struct-name}s for other commands such as {\tt,in} and
+    {\tt,open}.  See
+    \link*{below}[Section~\Ref]{config-packages}
+    for information on making new configuration packages.
+
+\item \code{,in \cvar{struct-name}} \\
     The {\tt ,in} command moves the command processor to a specified
     structure's underlying package.  For example:
-\begin{code}
-    user> ,config
-    config> (define-structure foo (export a)
-              (open scheme))
-    config> ,in foo
-    foo> (define a 13)
-    foo> a
-    13
-\end{code}
+\begin{example}
+user> ,config
+config> (define-structure foo (export a)
+          (open scheme))
+config> ,in foo
+foo> (define a 13)
+foo> a
+13
+\end{example}
     In this example the command processor starts in a package called
     {\tt user}, but the {\tt ,config} command moves it into the
     configuration package, which has the name {\tt config}.  The {\tt
@@ -479,86 +521,73 @@ current package followed by a greater-than ({\tt>}).
     {\em loaded}, which is accomplished by the {\tt ,load-package}
     command.
 
-\item
-\begin{code}
-,in \var{struct-name} \var{command}
-\end{code}
+\item \code{,in \cvar{struct-name} \cvar{command}} \\
     This form of the {\tt,in} command executes a single command in the
     specified package without moving the command processor into that
     package.  Example:
-\begin{code}
-    ,in mumble (cons 1 2)
-    ,in mumble ,trace foo
-\end{code}
+\begin{example}
+,in mumble (cons 1 2)
+,in mumble ,trace foo
+\end{example}
 
-\item
-\begin{code}
-,user $[$\var{command}$]$
-\end{code}
+\item \code{,user [\cvar{command}]} \\
     This is similar to the {\tt ,config} and {\tt ,in} commands.  It
     moves to or executes a command in the user package (which is the
     default package when the \hack{} command processor starts).
 
-\item
-\begin{code}
-,for-syntax $[$\var{command}$]$
-\end{code}
+\item \code{,for-syntax [\cvar{command}]} \\
     This is similar to the {\tt ,config} and {\tt ,in} commands.  It
     moves to or executes a command in the current package's ``package
     for syntax,'' which is the package in which the forms $f$ in
-    {\tt (define-syntax \var{name} $f$)} are evaluated.
+    {\tt (define-syntax \cvar{name} \cvar{f})} are evaluated.
 
-\item
-\begin{code}
-,load-package \var{struct-name}
-\end{code}
+\item \code{,load-package \cvar{struct-name}} \\
     The {\tt,load-package} command ensures that the specified structure's
     underlying package's program has been loaded.  This 
     consists of (1) recursively ensuring that the packages of any
     opened or accessed structures are loaded, followed by (2)
     executing the package's body as specified by its definition's {\tt
     begin} and {\tt files} forms.
+%  (Note that 
+%   commands related to packages, such as \code{load-package}, take structures
+%   as arguments.
+%  This is because packages are usually anonymous while structures are
+%   usually named and each has a unique package associated with it.)
 
-\item
-\begin{code}
-,reload-package \var{struct-name}
-\end{code}
+\item \code{,reload-package \cvar{struct-name}} \\
     This command re-executes the structure's package's program.  It
     is most useful if the program comes from a file or files, when
     it will update the package's bindings after mutations to its
     source file.
 
-\item
-\begin{code}
-,load \var{filespec} \etc
-\end{code}
+\item \code{,load \cvar{filespec} \etc} \\
     The {\tt,load} command executes forms from the specified file or
-    files in the current package.  {\tt,load \var{filespec}} is similar
-    to {\tt(load "\var{filespec}")}
+    files in the current package.  {\tt,load \cvar{filespec}} is similar
+    to {\tt(load "\cvar{filespec}")}
     except that the name {\tt load} needn't be bound in the current
     package to Scheme's {\tt load} procedure.
 
-\item
-\begin{code}
-,structure \var{name} \var{interface}
-\end{code}
-    The {\tt,structure} command defines \var{name} in the
-    configuration package to be a structure with interface
-    \var{interface} based on the current package.
+\item \code{,new-package} \\
+    The {\tt,new-package} command creates a new package in which only
+    the standard Scheme bindings are visible and moves the command
+    processor to it.
 
-\item
-\begin{code}
-,open \arbno{\var{struct-name}}
-\end{code}
+\item \code{,structure \cvar{name} \cvar{interface}} \\
+    The {\tt ,structure} command defines \cvar{name} in the
+    configuration package to be a structure with interface
+    \cvar{interface} based on the current package.
+
+\item \code{,open \arbno{\cvar{struct-name}}} \\
     The {\tt,open} command opens a new structure in the current
     package, as if the package's definition's {\tt open} clause
-    had listed \var{struct-name}.
+    had listed \cvar{struct-name}.
 
-\end{list}
+\end{description}
 
 
 
-\subsection*{Configuration packages}
+\section{Configuration packages}
+\label{config-packages}
 
 It is possible to set up multiple configuration packages.  The default
 configuration package opens the following structures:
@@ -567,50 +596,73 @@ configuration package opens the following structures:
       other configuration language keywords, as well as standard types
       and type constructors ({\tt :syntax}, {\tt :value}, {\tt proc}, etc.).
 \item {\tt built-in-structures}, which exports structures that are
-      built into the initial \hack{} image; these include {\tt
-      scheme}, {\tt tables}, and {\tt records}.
+      built into the initial \hack{} image; these include
+      {\tt scheme}, {\tt threads}, {\tt tables}, and {\tt records}.
 \item {\tt more-structures}, which exports additional structures that
-      are available in the development environment; these include
-      {\tt sort}, {\tt random}, and {\tt threads}.
+      are available in the development environment. 
+      A complete listing
+      can be found in the definition of \code{more-structures-interface}
+      at the end of the file \code{scheme/more-packages.scm}.
 \end{itemize}
 Note that it does not open {\tt scheme}.
 
 You can define other configuration packages by simply making a package
-that opens {\tt module-system} and, optionally, {\tt
-built-in-\ok{}structures}, {\tt more-\ok{}structures}, or other structures that
-export structures and interfaces.
+ that opens {\tt module-system} and, optionally, {\tt built-in-\ok{}structures},
+{\tt more-\ok{}structures}, or other structures that
+ export structures and interfaces.
 
 For example:
-\begin{code}
-    > ,config (define-structure foo (export )
-                (open module-system
-                      built-in-structures
-                      more-structures))
-    > ,in foo
-    foo> (define-structure x (export a b)
-           (open scheme)
-           (files x))
-    foo> 
-\end{code}
+\begin{example}
+> ,config (define-structure foo (export)
+            (open module-system
+                  built-in-structures
+                  more-structures))
+> ,in foo
+foo> (define-structure x (export a b)
+       (open scheme)
+       (files x))
+foo> 
+\end{example}
 
-\begin{list}{}{}{}
-\item
-\begin{code}
-,config-package-is \var{struct-name}
-\end{code}
-    The {\tt,config-package-is} command designates a new configuration
-    package for use by the {\tt,config} command and resolution of
-    \var{struct-name}s for other commands such as {\tt,in} and
-    {\tt,open}.
-\end{list}
+Unfortunately, the above example does not work.
+The problem is that every environment in which
+ \code{define-structure} is defined must also have a way to
+ create ``reflective towers'' (a misnomer; a better name would be
+ ``syntactic towers'').
+A new reflective tower is required whenever a new environment is created for
+ compiling the source code in the package associated with a new structure.
+The environment's tower is used at compile time for
+ evaluating the \cvar{macro-source} in
+ \code{(define-syntax \cvar{name} \cvar{macro-source})},
+ \code{(let-syntax ((\cvar{name} \cvar{macro-source}) \ldots) \cvar{body})},
+ and so forth.
+It is a ``tower'' because that environment, in turn, has to say what environment
+ to use if \code{macro-source} itself contains a use of \code{let-syntax}.
 
+The simplest way to provide a tower maker is to pass on the one used by
+ an existing configuration package.
+The special form \code{export-reflective-tower} creates an interface
+ that exports a configuration package's tower.
+The following example uses \code{export-reflective-tower} and
+ the \code{,structure} command to obtain a tower maker and create a new
+ configuration environment.
 
+\begin{example}
+> ,config ,structure towers (export-reflective-tower-maker)
+> ,config (define-structure foo (export)
+            (open module-system
+                  towers
+                  built-in-structures
+                  more-structures))
+\end{example}
 
-\subsection*{Discussion}
+%Talk about bootstrapping, define-all-operators, and usual-transforms?
+
+\section{Discussion}
 
 This module system was not designed as the be-all and end-all of
-Scheme module systems; it was only intended to help Richard Kelsey and
-me to organize the \hack{} system.  Not only does the module system
+Scheme module systems; it was only intended to help us
+organize the \hack{} system.  Not only does the module system
 help avoid name clashes by keeping different subsystems in different
 namespaces, it has also helped us to tighten up and generalize
 \hack{}'s internal interfaces.  \hack{} is unusual among Lisp
@@ -685,44 +737,3 @@ modules, which Scheme Xerox considers unimportant.
 %[Future work: ideas for anonymous structures and more of a module
 %calculus; dealing with name conflicts; interface subtraction.]
 
-
-\begin{thebibliography}{10}
-
-\bibitem{Clinger-Rees:Macros}
-William Clinger and Jonathan~Rees.
-\newblock Macros that work.
-\newblock {\em Principles of Programming Languages}, January 1991.
-
-\bibitem{Clinger-Rees:R4RS}
-William Clinger and Jonathan~Rees (editors).
-\newblock Revised${}^4$ report on the algorithmic language {S}cheme.
-\newblock {\em LISP Pointers} IV(3):1--55, July-September 1991.
-
-\bibitem{Curtis-Rauen:Modules}
-Pavel Curtis and James Rauen.
-\newblock A module system for Scheme.
-\newblock {\em ACM Conference on Lisp and Functional Programming,}
-pages 13--19, 1990.
-
-\bibitem{MacQueen:Modules}
-David MacQueen.
-\newblock Modules for Standard ML.
-\newblock {\em ACM Conference on Lisp and Functional Programming,}
-1984.
-
-\bibitem{Rees-Donald:Program}
-Jonathan Rees and Bruce Donald.
-\newblock Program mobile robots in Scheme.
-\newblock {\em International Conference on Robotics and
-Automation,} IEEE, 1992. 
-
-\bibitem{Sheldon-Gifford:Static}
-Mark A.~Sheldon and David K.~Gifford.
-\newblock Static dependent types for first-class modules.
-\newblock {\em ACM Conference on Lisp and Functional Programming,}
-pages 20--29, 1990.
-
-\end{thebibliography}
-
-
-\end{document}

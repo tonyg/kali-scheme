@@ -2,12 +2,63 @@
 
 Recent changes to Scheme 48.
 
+3/20/01  (version 0.54)
+         Additions:
+	  SET and UNSET commands for modifying switch values. The following
+	   commands are now obsolete (but still work): batch, bench,
+	   break-on-warnings, form-preferred, and levels.
+	  Support for some SRFIs.
+	  Support for some Posix functionality.
+	  Functional interface to Posix regular expression matching.
+	  ITERATE and REDUCE macros for writing loops.
+	  Much of the documentation is now in a single manual (doc/manual.ps
+	   or doc/html/manual.html).
+	  MODIFY added to the module language for interface mangling.
+	  LETREC-CLOSURE opcode for LETREC's when using flat environments.
+	  OUTPUT-PORT-READY? in I/O is CHAR-READY? for output ports.
+	 Deletions:
+	  Removed misc/syscall.scm and misc/getenv.scm.  Use the posix calls
+	   instead.
+	  Removed the .notify rule.
+	 Changes:
+	  Replaced ,levels <i> with ,reset <i> and added ,resume <i>.
+	  The command interpreter loads ,OPENed packages without asking.
+	   Do `,set ask-before-loading' to get the old behavior.
+	  The command interpreter no longer prints out the names of files
+	   and modules being loaded.  Do `,unset load-silently' to get the
+	   old behavior.
+	  The command interpreter has changed in a number of other ways.
+	   See the manual.
+	  Changed misc/either.scm to use fluid variables and replaced (init)
+	   with (with-nondeterminism <thunk>).  Moved the sources to
+	   big/either.scm and the structure definition to more-packages.scm.
+	  Moved the programming-environment packages out of more-packages.scm
+	   and into env-packages.scm.  more-packages.scm was getting too large.
+	  Modified the opt/analyzer.scm code to get CADR to inline.
+	  The last-resort condition handler now uses DEBUG-MESSAGE to print,
+	   in the hope that it will be more robust this way.  The message
+	   is a bit more wordy as well.
+	  CHAR-READY? no longer causes any characters to be read from OS
+	   ports.
+	 Bug fixes:
+	  The flat-environment optimizer can now handle large environments.
+	  Removed command-interpreter's saved focus values from the stack
+	   to keep them from being captured by call/cc.
+	  The code in misc/pipe.scm works again.
+	  Changed variable `errno' in c/unix/misc.c to something that does
+	   not conflict with glibc.
+	  Fixed (lambda () (define x 1) (define y 2)) bug.
+	  Added Mike Sperber's more generalized alt/ fixes.
+	  Fixed definition of S48_SET_CAR() and friends in c/scheme48.h.
+	  Added EINTR checks to more of the system calls.
+	  Made macro-defining SYNTAX-RULES macros work.
+
 2/24/99  (version 0.53)
 	 Additions:
 	  DEFINE-FINITE-TYPE and DEFINE-ENUMERATED-TYPE (in structure
 	   FINITE-TYPES; documented in doc/utilities.ps and
 	   doc/html/utilities.html.
-          Added CHAR-SOURCE->INPUT-PORT, CHAR-SINK->OUTPUT-PORT,
+          Added CHAR-SOURCE->INPUT-PORT, CHAR-SOURCE->OUTPUT-PORT,
  	   MAKE-STRING-OUTPUT-PORT, STRING-OUTPUT-SOURCE-OUTPUT to
 	   the extended-ports structure.
 	  The structure BYTE-VECTORS is the same as CODE-VECTORS with `byte'
@@ -32,12 +83,11 @@ Recent changes to Scheme 48.
 	  The heap, gc, and image code is now in three separate modules.
           The symbol table is now held in a VM register.
 	  Inlined SHOWING-FOCUS-VALUES into the main command loop and moved
-	   the sentinal call to reduce the noise at the base of ,preview output.
+	   the sentinel call to reduce the noise at the base of ,preview output.
 	  The tables returned by MAKE-TABLE now use EQV? for comparison (instead
 	   of EQ?).  This makes these tables about 50% slower when numbers are
            used as keys, but significantly more accurate.
 	  Floating-point numbers are no longer double boxed.
-	  The channels structure has been split into channels and low-channels.
 
 7/22/98  (version 0.52)
          Bug fixes:

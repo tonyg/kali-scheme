@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 
 ; The intermediate language (node tree)
@@ -14,7 +14,13 @@
   (begin 
     (define-syntax let-nodes
       (lambda (form rename compare)
-	(expand-let-nodes form rename compare))))
+	(expand-let-nodes form rename compare)))
+    (define-syntax new-lambda
+      (lambda (form rename compare)
+	(expand-new-lambda form rename compare)))
+    (define-syntax new-call
+      (lambda (form rename compare)
+	(expand-new-call form rename compare))))
   (files (node node)         ; variable and node data structures
 	 (node primop)       ; primop data structure
 	 (node node-util)    ; various small utilities
@@ -50,7 +56,9 @@
 
 ; Expander for LET-NODES, a macro for creating interconnected nodes.
 	 
-(define-structure let-nodes (export expand-let-nodes)
+(define-structure let-nodes (export expand-let-nodes
+				    expand-new-lambda
+				    expand-new-call)
   (open scheme big-scheme arch)
   (files (node let-nodes)))
 
@@ -156,7 +164,7 @@
 ; A random collection of utilities.
 
 (define-structure comp-util utilities-interface
-  (open scheme big-scheme structure-refs expanding-vectors)
+  (open scheme big-scheme defrecord structure-refs expanding-vectors)
   (for-syntax (open scheme big-scheme))
   (access primitives features)
   (files (util syntax)        ; macro for defining subrecords
@@ -216,8 +224,8 @@
 
 ; Vectors of bytes, a renaming of Scheme 48's code vectors.
 
-(define-structure byte-vectors compiler-byte-vector-interface
-  (open scheme code-vectors bitwise signals)
+(define-structure compiler-byte-vectors compiler-byte-vector-interface
+  (open scheme byte-vectors bitwise signals)
   (optimize auto-integrate)
   (files (util byte-vector)))
 

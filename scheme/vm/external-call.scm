@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Calling C procedures.
 
@@ -15,8 +15,9 @@
 	   (stack-nargs (extract-fixnum (pop)))
 	   (rest-list (pop)))
       (if (< maximum-external-call-args
-	     nargs)
+	     (- nargs 2))			; procedure & name
 	  (raise-exception too-many-arguments-to-external-procedure
+			   0
 			   (stack-ref (- stack-nargs 1))
 			   nargs)
 	  (begin
@@ -85,52 +86,38 @@
 ; Two tables of shared bindings: those we import from the outside and those
 ; that we provide to the outside.
 
-(define *imported-bindings*)
-(define *exported-bindings*)
+(define *imported-bindings* false)
+(define *exported-bindings* false)
 
 ; When resuming a statically-linked image these tables are FALSE.
 
 (define (install-shared-bindings!+gc imported-bindings exported-bindings)
-  (receive (key imported-bindings exported-bindings)
-      (ensure-space-saving-temps (* hash-table-size 2)
-				 imported-bindings
-				 exported-bindings)
-    (set! *imported-bindings*
-	  (if (vm-eq? imported-bindings false)
-	      (make-hash-table key)
-	      imported-bindings))
-    (set! *exported-bindings*
-	  (if (vm-eq? exported-bindings false)
-	      (make-hash-table key)
-	      exported-bindings))))
+  (if (vm-eq? imported-bindings false)
+      (begin
+	(set! *imported-bindings* (make-hash-table+gc))
+	(set! *exported-bindings* (make-hash-table+gc)))
+      (begin
+	(set! *imported-bindings* imported-bindings)
+	(set! *exported-bindings* exported-bindings))))
 
 (define shared-binding-table-size
   (* hash-table-size 2))
 
-(add-gc-root!
-  (lambda ()
-    (set! *imported-bindings* (s48-trace-value *imported-bindings*))
-    (set! *exported-bindings* (s48-trace-value *exported-bindings*))))
+(let ((tracer (table-tracer shared-binding-next
+			    set-shared-binding-next!
+			    s48-trace-value)))
+  (add-gc-root!
+    (lambda ()
+      (set! *imported-bindings* (tracer *imported-bindings*))
+      (set! *exported-bindings* (tracer *exported-bindings*)))))
 
 ; These next two procedure are used to write the bindings tables out in images.
 
 (define (s48-exported-bindings)
   *exported-bindings*)
 
-; This returns a version of the import table that contains only those bindings
-; that have been traced, and in which the values of the bindings are all set to
-; UNASSIGNED-VALUE.
-
-(define s48-cleaned-imported-bindings
-  (let ((cleaner (table-cleaner shared-binding-next set-shared-binding-next!))
-	(walker (table-walker shared-binding-next)))
-    (lambda ()
-      (let ((table (s48-trace-value *imported-bindings*)))
-	(cleaner table)
-	(walker (lambda (binding)
-		  (shared-binding-set! binding unassigned-marker))
-		table)
-	table))))
+(define (s48-imported-bindings)
+  *imported-bindings*)
 
 ; Imported bindings.
 
@@ -201,15 +188,17 @@
 ; export/import terminology.
 
 (define (s48-define-exported-binding name value)
-  (receive (key value)
-      (ensure-space-saving-temp (+ shared-binding-size
-				   (vm-string-size (string-length name)))
-				value)
-    (shared-binding-set! (lookup-imported-binding (enter-string name key) key)
-			 value)))
+  (save-temp0! value)
+  (let ((name (enter-string+gc name)))
+    (save-temp1! name)
+    (let ((key (ensure-space shared-binding-size)))
+      (let ((name (recover-temp1!))
+	    (value (recover-temp0!)))
+	(shared-binding-set! (lookup-imported-binding name key)
+			     value)))))
 
 (define (s48-get-imported-binding name)
-  (let ((key (ensure-space (+ shared-binding-size
-			      (vm-string-size (string-length name))))))
-    (lookup-exported-binding (enter-string name key) key)))
-
+  (save-temp0! (enter-string+gc name))
+  (let* ((key (ensure-space shared-binding-size))
+	 (name (recover-temp0!)))
+    (lookup-exported-binding name key)))

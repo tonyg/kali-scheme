@@ -77,5 +77,3 @@ the virtual machine.
 .TP
 .B LLIB/LS48.image
 the default image.
-.SH BUGS
-Procedure calls with more than 63 explicit arguments might not work.

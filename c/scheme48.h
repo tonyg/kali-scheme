@@ -4,7 +4,7 @@
 #ifndef _H_SCHEME48
 #define _H_SCHEME48
 
-/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include "write-barrier.h"
@@ -44,7 +44,9 @@ extern double		s48_extract_double(s48_value);
 extern s48_value	s48_cons(s48_value, s48_value);
 extern s48_value	s48_enter_string(char *);
 extern char *		s48_extract_string(s48_value);
-extern s48_value	s48_enter_substring(char *, int);
+extern s48_value	s48_enter_substring(char *, long);
+extern s48_value	s48_enter_byte_vector(char *, long);
+extern char *		s48_extract_byte_vector(s48_value);
 extern s48_value	s48_make_string(int, char);
 extern s48_value	s48_make_vector(int, s48_value);
 extern s48_value	s48_make_byte_vector(int);
@@ -227,6 +229,7 @@ extern void s48_check_record_type(s48_value record, s48_value type_binding);
 #define S48_UNDEFINED    (S48_MISC_IMMEDIATE(4))
 #define S48_EOF    (S48_MISC_IMMEDIATE(5))
 #define S48_NULL    (S48_MISC_IMMEDIATE(6))
+#define S48_UNRELEASED    (S48_MISC_IMMEDIATE(7))
 
 #define S48_ENTER_BOOLEAN(n) ((n) ? S48_TRUE : S48_FALSE)
 #define S48_EXTRACT_BOOLEAN(x) ((x) != S48_FALSE)
@@ -239,7 +242,7 @@ extern void s48_check_record_type(s48_value record, s48_value type_binding);
 #define S48_STOB_REF(x, i) (S48_ADDRESS_AFTER_HEADER(x, s48_value)[i])
 #define S48_STOB_BYTE_REF(x, i) (((char *)S48_ADDRESS_AFTER_HEADER(x, s48_value))[i])
 #define S48_STOB_SET(x, i, v) do { s48_value __stob_set_x = (x); long __stob_set_i = (i); s48_value __stob_set_v = (v); if (S48_STOB_IMMUTABLEP(__stob_set_x)) s48_raise_argtype_error(__stob_set_x); else { S48_WRITE_BARRIER((__stob_set_x), (char *) (&S48_STOB_REF((__stob_set_x), (__stob_set_i))),(__stob_set_v)); *(&S48_STOB_REF((__stob_set_x), (__stob_set_i))) = (__stob_set_v); } } while (0)
-#define S48_STOB_BYTE_SET(x, i, v) do { char __stob_set_x = (x); long __stob_set_i = (i); s48_value __stob_set_v = (v); if (S48_STOB_IMMUTABLEP(__stob_set_x)) s48_raise_argtype_error(__stob_set_x); else *(&S48_STOB_BYTE_REF((__stob_set_x), (__stob_set_i))) = (__stob_set_v); } while (0)
+#define S48_STOB_BYTE_SET(x, i, v) do { s48_value __stob_set_x = (x); long __stob_set_i = (i); char __stob_set_v = (v); if (S48_STOB_IMMUTABLEP(__stob_set_x)) s48_raise_argtype_error(__stob_set_x); else *(&S48_STOB_BYTE_REF((__stob_set_x), (__stob_set_i))) = (__stob_set_v); } while (0)
 #define S48_STOB_TYPE(x)   ((S48_STOB_HEADER(x)>>2)&31)
 #define S48_STOB_HEADER(x) (S48_STOB_REF((x),-1))
 #define S48_STOB_ADDRESS(x) (&(S48_STOB_HEADER(x)))
@@ -258,46 +261,48 @@ extern void s48_check_record_type(s48_value record, s48_value type_binding);
 #define S48_CLOSURE_P(x) (s48_stob_has_type(x, 3))
 #define S48_STOBTYPE_LOCATION 4
 #define S48_LOCATION_P(x) (s48_stob_has_type(x, 4))
-#define S48_STOBTYPE_CHANNEL 5
-#define S48_CHANNEL_P(x) (s48_stob_has_type(x, 5))
-#define S48_STOBTYPE_PORT 6
-#define S48_PORT_P(x) (s48_stob_has_type(x, 6))
-#define S48_STOBTYPE_RATNUM 7
-#define S48_RATNUM_P(x) (s48_stob_has_type(x, 7))
-#define S48_STOBTYPE_RECORD 8
-#define S48_RECORD_P(x) (s48_stob_has_type(x, 8))
-#define S48_STOBTYPE_CONTINUATION 9
-#define S48_CONTINUATION_P(x) (s48_stob_has_type(x, 9))
-#define S48_STOBTYPE_EXTENDED_NUMBER 10
-#define S48_EXTENDED_NUMBER_P(x) (s48_stob_has_type(x, 10))
-#define S48_STOBTYPE_TEMPLATE 11
-#define S48_TEMPLATE_P(x) (s48_stob_has_type(x, 11))
-#define S48_STOBTYPE_WEAK_POINTER 12
-#define S48_WEAK_POINTER_P(x) (s48_stob_has_type(x, 12))
-#define S48_STOBTYPE_SHARED_BINDING 13
-#define S48_SHARED_BINDING_P(x) (s48_stob_has_type(x, 13))
-#define S48_STOBTYPE_UNUSED_D_HEADER1 14
-#define S48_UNUSED_D_HEADER1_P(x) (s48_stob_has_type(x, 14))
-#define S48_STOBTYPE_UNUSED_D_HEADER2 15
-#define S48_UNUSED_D_HEADER2_P(x) (s48_stob_has_type(x, 15))
-#define S48_STOBTYPE_STRING 16
-#define S48_STRING_P(x) (s48_stob_has_type(x, 16))
-#define S48_STOBTYPE_BYTE_VECTOR 17
-#define S48_BYTE_VECTOR_P(x) (s48_stob_has_type(x, 17))
-#define S48_STOBTYPE_DOUBLE 18
-#define S48_DOUBLE_P(x) (s48_stob_has_type(x, 18))
-#define S48_STOBTYPE_BIGNUM 19
-#define S48_BIGNUM_P(x) (s48_stob_has_type(x, 19))
+#define S48_STOBTYPE_CELL 5
+#define S48_CELL_P(x) (s48_stob_has_type(x, 5))
+#define S48_STOBTYPE_CHANNEL 6
+#define S48_CHANNEL_P(x) (s48_stob_has_type(x, 6))
+#define S48_STOBTYPE_PORT 7
+#define S48_PORT_P(x) (s48_stob_has_type(x, 7))
+#define S48_STOBTYPE_RATNUM 8
+#define S48_RATNUM_P(x) (s48_stob_has_type(x, 8))
+#define S48_STOBTYPE_RECORD 9
+#define S48_RECORD_P(x) (s48_stob_has_type(x, 9))
+#define S48_STOBTYPE_CONTINUATION 10
+#define S48_CONTINUATION_P(x) (s48_stob_has_type(x, 10))
+#define S48_STOBTYPE_EXTENDED_NUMBER 11
+#define S48_EXTENDED_NUMBER_P(x) (s48_stob_has_type(x, 11))
+#define S48_STOBTYPE_TEMPLATE 12
+#define S48_TEMPLATE_P(x) (s48_stob_has_type(x, 12))
+#define S48_STOBTYPE_WEAK_POINTER 13
+#define S48_WEAK_POINTER_P(x) (s48_stob_has_type(x, 13))
+#define S48_STOBTYPE_SHARED_BINDING 14
+#define S48_SHARED_BINDING_P(x) (s48_stob_has_type(x, 14))
+#define S48_STOBTYPE_UNUSED_D_HEADER1 15
+#define S48_UNUSED_D_HEADER1_P(x) (s48_stob_has_type(x, 15))
+#define S48_STOBTYPE_UNUSED_D_HEADER2 16
+#define S48_UNUSED_D_HEADER2_P(x) (s48_stob_has_type(x, 16))
+#define S48_STOBTYPE_STRING 17
+#define S48_STRING_P(x) (s48_stob_has_type(x, 17))
+#define S48_STOBTYPE_BYTE_VECTOR 18
+#define S48_BYTE_VECTOR_P(x) (s48_stob_has_type(x, 18))
+#define S48_STOBTYPE_DOUBLE 19
+#define S48_DOUBLE_P(x) (s48_stob_has_type(x, 19))
+#define S48_STOBTYPE_BIGNUM 20
+#define S48_BIGNUM_P(x) (s48_stob_has_type(x, 20))
 
 #define S48_CAR_OFFSET 0
 #define S48_CAR(x) (s48_stob_ref((x), S48_STOBTYPE_PAIR, 0))
 #define S48_UNSAFE_CAR(x) (S48_STOB_REF((x), 0))
-#define S48_SET_CAR(x, v) (s48_stob_ref((x), S48_STOBTYPE_PAIR, 0, (v)))
+#define S48_SET_CAR(x, v) (s48_stob_set((x), S48_STOBTYPE_PAIR, 0, (v)))
 #define S48_UNSAFE_SET_CAR(x, v) S48_STOB_SET((x), 0, (v))
 #define S48_CDR_OFFSET 1
 #define S48_CDR(x) (s48_stob_ref((x), S48_STOBTYPE_PAIR, 1))
 #define S48_UNSAFE_CDR(x) (S48_STOB_REF((x), 1))
-#define S48_SET_CDR(x, v) (s48_stob_ref((x), S48_STOBTYPE_PAIR, 1, (v)))
+#define S48_SET_CDR(x, v) (s48_stob_set((x), S48_STOBTYPE_PAIR, 1, (v)))
 #define S48_UNSAFE_SET_CDR(x, v) S48_STOB_SET((x), 1, (v))
 #define S48_SYMBOL_TO_STRING_OFFSET 0
 #define S48_SYMBOL_TO_STRING(x) (s48_stob_ref((x), S48_STOBTYPE_SYMBOL, 0))
@@ -305,13 +310,18 @@ extern void s48_check_record_type(s48_value record, s48_value type_binding);
 #define S48_LOCATION_ID_OFFSET 0
 #define S48_LOCATION_ID(x) (s48_stob_ref((x), S48_STOBTYPE_LOCATION, 0))
 #define S48_UNSAFE_LOCATION_ID(x) (S48_STOB_REF((x), 0))
-#define S48_SET_LOCATION_ID(x, v) (s48_stob_ref((x), S48_STOBTYPE_LOCATION, 0, (v)))
+#define S48_SET_LOCATION_ID(x, v) (s48_stob_set((x), S48_STOBTYPE_LOCATION, 0, (v)))
 #define S48_UNSAFE_SET_LOCATION_ID(x, v) S48_STOB_SET((x), 0, (v))
 #define S48_CONTENTS_OFFSET 1
 #define S48_CONTENTS(x) (s48_stob_ref((x), S48_STOBTYPE_LOCATION, 1))
 #define S48_UNSAFE_CONTENTS(x) (S48_STOB_REF((x), 1))
-#define S48_SET_CONTENTS(x, v) (s48_stob_ref((x), S48_STOBTYPE_LOCATION, 1, (v)))
+#define S48_SET_CONTENTS(x, v) (s48_stob_set((x), S48_STOBTYPE_LOCATION, 1, (v)))
 #define S48_UNSAFE_SET_CONTENTS(x, v) S48_STOB_SET((x), 1, (v))
+#define S48_CELL_REF_OFFSET 0
+#define S48_CELL_REF(x) (s48_stob_ref((x), S48_STOBTYPE_CELL, 0))
+#define S48_UNSAFE_CELL_REF(x) (S48_STOB_REF((x), 0))
+#define S48_CELL_SET(x, v) (s48_stob_set((x), S48_STOBTYPE_CELL, 0, (v)))
+#define S48_UNSAFE_CELL_SET(x, v) S48_STOB_SET((x), 0, (v))
 #define S48_CLOSURE_TEMPLATE_OFFSET 0
 #define S48_CLOSURE_TEMPLATE(x) (s48_stob_ref((x), S48_STOBTYPE_CLOSURE, 0))
 #define S48_UNSAFE_CLOSURE_TEMPLATE(x) (S48_STOB_REF((x), 0))
@@ -330,7 +340,7 @@ extern void s48_check_record_type(s48_value record, s48_value type_binding);
 #define S48_SHARED_BINDING_REF_OFFSET 2
 #define S48_SHARED_BINDING_REF(x) (s48_stob_ref((x), S48_STOBTYPE_SHARED_BINDING, 2))
 #define S48_UNSAFE_SHARED_BINDING_REF(x) (S48_STOB_REF((x), 2))
-#define S48_SHARED_BINDING_SET(x, v) (s48_stob_ref((x), S48_STOBTYPE_SHARED_BINDING, 2, (v)))
+#define S48_SHARED_BINDING_SET(x, v) (s48_stob_set((x), S48_STOBTYPE_SHARED_BINDING, 2, (v)))
 #define S48_UNSAFE_SHARED_BINDING_SET(x, v) S48_STOB_SET((x), 2, (v))
 #define S48_PORT_HANDLER_OFFSET 0
 #define S48_PORT_HANDLER(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 0))
@@ -338,42 +348,42 @@ extern void s48_check_record_type(s48_value record, s48_value type_binding);
 #define S48_PORT_STATUS_OFFSET 1
 #define S48_PORT_STATUS(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 1))
 #define S48_UNSAFE_PORT_STATUS(x) (S48_STOB_REF((x), 1))
-#define S48_SET_PORT_STATUS(x, v) (s48_stob_ref((x), S48_STOBTYPE_PORT, 1, (v)))
+#define S48_SET_PORT_STATUS(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 1, (v)))
 #define S48_UNSAFE_SET_PORT_STATUS(x, v) S48_STOB_SET((x), 1, (v))
 #define S48_PORT_LOCK_OFFSET 2
 #define S48_PORT_LOCK(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 2))
 #define S48_UNSAFE_PORT_LOCK(x) (S48_STOB_REF((x), 2))
-#define S48_SET_PORT_LOCK(x, v) (s48_stob_ref((x), S48_STOBTYPE_PORT, 2, (v)))
+#define S48_SET_PORT_LOCK(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 2, (v)))
 #define S48_UNSAFE_SET_PORT_LOCK(x, v) S48_STOB_SET((x), 2, (v))
 #define S48_PORT_LOCKEDP_OFFSET 3
 #define S48_PORT_LOCKEDP(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 3))
 #define S48_UNSAFE_PORT_LOCKEDP(x) (S48_STOB_REF((x), 3))
-#define S48_SET_PORT_LOCKEDP(x, v) (s48_stob_ref((x), S48_STOBTYPE_PORT, 3, (v)))
+#define S48_SET_PORT_LOCKEDP(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 3, (v)))
 #define S48_UNSAFE_SET_PORT_LOCKEDP(x, v) S48_STOB_SET((x), 3, (v))
 #define S48_PORT_DATA_OFFSET 4
 #define S48_PORT_DATA(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 4))
 #define S48_UNSAFE_PORT_DATA(x) (S48_STOB_REF((x), 4))
-#define S48_SET_PORT_DATA(x, v) (s48_stob_ref((x), S48_STOBTYPE_PORT, 4, (v)))
+#define S48_SET_PORT_DATA(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 4, (v)))
 #define S48_UNSAFE_SET_PORT_DATA(x, v) S48_STOB_SET((x), 4, (v))
 #define S48_PORT_BUFFER_OFFSET 5
 #define S48_PORT_BUFFER(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 5))
 #define S48_UNSAFE_PORT_BUFFER(x) (S48_STOB_REF((x), 5))
-#define S48_SET_PORT_BUFFER(x, v) (s48_stob_ref((x), S48_STOBTYPE_PORT, 5, (v)))
+#define S48_SET_PORT_BUFFER(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 5, (v)))
 #define S48_UNSAFE_SET_PORT_BUFFER(x, v) S48_STOB_SET((x), 5, (v))
 #define S48_PORT_INDEX_OFFSET 6
 #define S48_PORT_INDEX(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 6))
 #define S48_UNSAFE_PORT_INDEX(x) (S48_STOB_REF((x), 6))
-#define S48_SET_PORT_INDEX(x, v) (s48_stob_ref((x), S48_STOBTYPE_PORT, 6, (v)))
+#define S48_SET_PORT_INDEX(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 6, (v)))
 #define S48_UNSAFE_SET_PORT_INDEX(x, v) S48_STOB_SET((x), 6, (v))
 #define S48_PORT_LIMIT_OFFSET 7
 #define S48_PORT_LIMIT(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 7))
 #define S48_UNSAFE_PORT_LIMIT(x) (S48_STOB_REF((x), 7))
-#define S48_SET_PORT_LIMIT(x, v) (s48_stob_ref((x), S48_STOBTYPE_PORT, 7, (v)))
+#define S48_SET_PORT_LIMIT(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 7, (v)))
 #define S48_UNSAFE_SET_PORT_LIMIT(x, v) S48_STOB_SET((x), 7, (v))
 #define S48_PORT_PENDING_EOFP_OFFSET 8
 #define S48_PORT_PENDING_EOFP(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 8))
 #define S48_UNSAFE_PORT_PENDING_EOFP(x) (S48_STOB_REF((x), 8))
-#define S48_SET_PORT_PENDING_EOFP(x, v) (s48_stob_ref((x), S48_STOBTYPE_PORT, 8, (v)))
+#define S48_SET_PORT_PENDING_EOFP(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 8, (v)))
 #define S48_UNSAFE_SET_PORT_PENDING_EOFP(x, v) S48_STOB_SET((x), 8, (v))
 #define S48_CHANNEL_STATUS_OFFSET 0
 #define S48_CHANNEL_STATUS(x) (s48_stob_ref((x), S48_STOBTYPE_CHANNEL, 0))
@@ -386,19 +396,19 @@ extern void s48_check_record_type(s48_value record, s48_value type_binding);
 #define S48_UNSAFE_CHANNEL_OS_INDEX(x) (S48_STOB_REF((x), 2))
 
 #define S48_VECTOR_LENGTH(x) (s48_stob_length((x), S48_STOBTYPE_VECTOR))
-#define S48_UNSAFE_VECTOR_LENGTH(x) (STOB_DESCRIPTOR_LENGTH(x))
+#define S48_UNSAFE_VECTOR_LENGTH(x) (S48_STOB_DESCRIPTOR_LENGTH(x))
 #define S48_VECTOR_REF(x, i) (s48_stob_ref((x), S48_STOBTYPE_VECTOR, (i)))
 #define S48_VECTOR_SET(x, i, v) (s48_stob_set((x), S48_STOBTYPE_VECTOR, (i), (v)))
 #define S48_UNSAFE_VECTOR_REF(x, i) (S48_STOB_REF((x), (i)))
 #define S48_UNSAFE_VECTOR_SET(x, i, v) S48_STOB_SET((x), (i), (v))
 #define S48_RECORD_LENGTH(x) (s48_stob_length((x), S48_STOBTYPE_RECORD))
-#define S48_UNSAFE_RECORD_LENGTH(x) (STOB_DESCRIPTOR_LENGTH(x))
+#define S48_UNSAFE_RECORD_LENGTH(x) (S48_STOB_DESCRIPTOR_LENGTH(x))
 #define S48_RECORD_REF(x, i) (s48_stob_ref((x), S48_STOBTYPE_RECORD, (i) + 1))
 #define S48_RECORD_SET(x, i, v) (s48_stob_set((x), S48_STOBTYPE_RECORD, (i) + 1, (v)))
 #define S48_UNSAFE_RECORD_REF(x, i) (S48_STOB_REF((x), (i) + 1))
 #define S48_UNSAFE_RECORD_SET(x, i, v) S48_STOB_SET((x), (i) + 1, (v))
-#define S48_RECORD_TYPE(x) (s48_stob_ref((x), S48_STOBTYPE_RECORD))
-#define S48_UNSAFE_RECORD_TYPE(x) (STOB_REF((x), 0))
+#define S48_RECORD_TYPE(x) (s48_stob_ref((x), S48_STOBTYPE_RECORD, 0))
+#define S48_UNSAFE_RECORD_TYPE(x) (S48_STOB_REF((x), 0))
 #define S48_BYTE_VECTOR_LENGTH(x) (s48_stob_byte_length((x), S48_STOBTYPE_BYTE_VECTOR))
 #define S48_BYTE_VECTOR_REF(x, i) (s48_stob_byte_ref((x), S48_STOBTYPE_BYTE_VECTOR, (i)))
 #define S48_BYTE_VECTOR_SET(x, i, v) (s48_stob_byte_set((x), S48_STOBTYPE_BYTE_VECTOR, (i), (v)))
@@ -434,21 +444,20 @@ extern void s48_check_record_type(s48_value record, s48_value type_binding);
 #define S48_EXCEPTION_CANNOT_OPEN_CHANNEL 10
 #define S48_EXCEPTION_CHANNEL_OS_INDEX_ALREADY_IN_USE 11
 #define S48_EXCEPTION_CLOSED_CHANNEL 12
-#define S48_EXCEPTION_PENDING_CHANNEL_IO 13
-#define S48_EXCEPTION_BUFFER_FULLEMPTY 14
-#define S48_EXCEPTION_UNIMPLEMENTED_INSTRUCTION 15
-#define S48_EXCEPTION_TRAP 16
-#define S48_EXCEPTION_PROCEEDING_AFTER_EXCEPTION 17
-#define S48_EXCEPTION_BAD_OPTION 18
-#define S48_EXCEPTION_UNBOUND_EXTERNAL_NAME 19
-#define S48_EXCEPTION_TOO_MANY_ARGUMENTS_TO_EXTERNAL_PROCEDURE 20
-#define S48_EXCEPTION_TOO_MANY_ARGUMENTS_IN_CALLBACK 21
-#define S48_EXCEPTION_CALLBACK_RETURN_UNCOVERED 22
-#define S48_EXCEPTION_EXTENSION_EXCEPTION 23
-#define S48_EXCEPTION_EXTENSION_RETURN_ERROR 24
-#define S48_EXCEPTION_OS_ERROR 25
-#define S48_EXCEPTION_UNRESUMABLE_RECORDS_IN_IMAGE 26
-#define S48_EXCEPTION_GC_PROTECTION_MISMATCH 27
+#define S48_EXCEPTION_BUFFER_FULLEMPTY 13
+#define S48_EXCEPTION_UNIMPLEMENTED_INSTRUCTION 14
+#define S48_EXCEPTION_TRAP 15
+#define S48_EXCEPTION_PROCEEDING_AFTER_EXCEPTION 16
+#define S48_EXCEPTION_BAD_OPTION 17
+#define S48_EXCEPTION_UNBOUND_EXTERNAL_NAME 18
+#define S48_EXCEPTION_TOO_MANY_ARGUMENTS_TO_EXTERNAL_PROCEDURE 19
+#define S48_EXCEPTION_TOO_MANY_ARGUMENTS_IN_CALLBACK 20
+#define S48_EXCEPTION_CALLBACK_RETURN_UNCOVERED 21
+#define S48_EXCEPTION_EXTENSION_EXCEPTION 22
+#define S48_EXCEPTION_EXTENSION_RETURN_ERROR 23
+#define S48_EXCEPTION_OS_ERROR 24
+#define S48_EXCEPTION_GC_PROTECTION_MISMATCH 25
+#define S48_EXCEPTION_NO_CURRENT_PROPOSAL 26
 
 #define S48_CHANNEL_STATUS_CLOSED S48_UNSAFE_ENTER_FIXNUM(0)
 #define S48_CHANNEL_STATUS_INPUT S48_UNSAFE_ENTER_FIXNUM(1)

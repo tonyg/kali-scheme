@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include <stdlib.h>
@@ -10,6 +10,7 @@
 #include "c-mods.h"
 #include "scheme48.h"
 #include "scheme48vm.h"
+#include "bignum.h"
 
 /*
  * The Joy of C
@@ -74,8 +75,6 @@ static s48_value 	the_record_type_binding = S48_FALSE;
 static s48_value 	stack_block_type_binding = S48_FALSE;
 static s48_value 	callback_binding = S48_FALSE;
 static s48_value 	delay_callback_return_binding = S48_FALSE;
-static s48_value 	bignum_to_long_binding = S48_FALSE;
-static s48_value 	long_to_bignum_binding = S48_FALSE;
 
 void
 s48_initialize_external()
@@ -93,18 +92,11 @@ s48_initialize_external()
   delay_callback_return_binding =
     s48_get_imported_binding("s48-delay-callback-return");
 
-  S48_GC_PROTECT_GLOBAL(bignum_to_long_binding);
-  bignum_to_long_binding = s48_get_imported_binding("s48-bignum-to-long");
-
-  S48_GC_PROTECT_GLOBAL(long_to_bignum_binding);
-  long_to_bignum_binding = s48_get_imported_binding("s48-long-to-bignum");
-
   S48_GC_PROTECT_GLOBAL(current_stack_block);
   S48_GC_PROTECT_GLOBAL(current_procedure);
 
   S48_EXPORT_FUNCTION(s48_clear_stack_top);
   S48_EXPORT_FUNCTION(s48_trampoline);
-
 }
 
 /* The three reasons for an extern-call longjump. */
@@ -268,7 +260,7 @@ s48_external_call(s48_value sch_proc, s48_value proc_name,
       external_return_value = S48_UNSPECIFIC;
     }
   }
-  
+
   return external_return_value;
 }
 
@@ -585,7 +577,7 @@ s48_stob_set(s48_value thing, int type, long offset, s48_value value)
 }
 
 char
-s48_byte_ref(s48_value thing, int type, long offset)
+s48_stob_byte_ref(s48_value thing, int type, long offset)
 {
   long length;
 
@@ -605,7 +597,7 @@ s48_byte_ref(s48_value thing, int type, long offset)
 }
 
 void
-s48_byte_set(s48_value thing, int type, long offset, char value)
+s48_stob_byte_set(s48_value thing, int type, long offset, char value)
 {
   long length;
 
@@ -659,83 +651,24 @@ s48_extract_fixnum(s48_value value)
   return S48_UNSAFE_EXTRACT_FIXNUM(value);
 }
 
-/*
- * If `value' fits in a fixnum we put it there.  Larger values are passed to the
- * Scheme procedure LONG-TO-BIGNUM as the sign and the two sixteen-bit halves of
- * the negative magnitude.  Using the negative magnitude avoids problems with
- * two's complement's asymmetry.
- */
-
-s48_value
-s48_enter_integer(long value)
-{
-  if (S48_MIN_FIXNUM_VALUE <= value && value <= S48_MAX_FIXNUM_VALUE)
-    return S48_UNSAFE_ENTER_FIXNUM(value);
-  else {
-    S48_SHARED_BINDING_CHECK(long_to_bignum_binding);
-
-    if (value < 0)
-      return s48_call_scheme(S48_SHARED_BINDING_REF(long_to_bignum_binding),
-			     3,
-			     S48_FALSE,
-			     S48_UNSAFE_ENTER_FIXNUM(value >> 16),
-			     S48_UNSAFE_ENTER_FIXNUM(value & 0xFFFF));
-    else
-      return s48_call_scheme(S48_SHARED_BINDING_REF(long_to_bignum_binding),
-			     3,
-			     S48_TRUE,
-			     S48_UNSAFE_ENTER_FIXNUM((- value) >> 16),
-			     S48_UNSAFE_ENTER_FIXNUM((- value) & 0xFFFF));
-  }
-}
-
-/*
- * If we have a fixnum we just extract it.  Bignums require a call back into
- * Scheme 48.  (BIGNUM-TO-LONG n) returns a vector containing the sign and the
- * high and low sixteen-bit halves of N.  If N is not an integer we get #f back.
- * Again, we use negative numbers to stay out of trouble.
+/* If we have a fixnum we just extract it. For bignums call the
+ * functions in bignum.c.
  */
 
 long
 s48_extract_integer(s48_value value)
 {
   if (S48_FIXNUM_P(value))
-    return S48_UNSAFE_EXTRACT_FIXNUM(value);
+    return S48_UNSAFE_EXTRACT_FIXNUM (value);
 
-  else {
-    s48_value stuff;
-    S48_DECLARE_GC_PROTECT(1);
-
-    S48_GC_PROTECT_1(value);
-
-    S48_SHARED_BINDING_CHECK(bignum_to_long_binding);
-
-    stuff = s48_call_scheme(S48_SHARED_BINDING_REF(bignum_to_long_binding),
-			    1,
-			    value);
-
-    S48_GC_UNPROTECT();
-
-    if (stuff == S48_FALSE)
-      s48_raise_argtype_error(value);
-
-    /* The first VECTOR_REF does the type checking for the rest. */
-    {
-      long low  = S48_UNSAFE_EXTRACT_FIXNUM(S48_VECTOR_REF(stuff, 2));
-      s48_value boxed_high = S48_UNSAFE_VECTOR_REF(stuff, 1);
-      long high = S48_UNSAFE_EXTRACT_FIXNUM(boxed_high);
-      int pos_p = S48_EXTRACT_BOOLEAN(S48_UNSAFE_VECTOR_REF(stuff, 0));
-      
-      if ((! S48_FIXNUM_P(boxed_high)) ||
-	  high > (pos_p ? 0x7FFF : 0x8000))
-	s48_raise_argtype_error(value);
-      
-      {
-      long magnitude = ((- high) << 16) - low;
-      return pos_p ? - magnitude : magnitude;
-      }
-    }
+  if (S48_BIGNUM_P(value)){
+    bignum_type bignum = S48_ADDRESS_AFTER_HEADER (value, long);
+    
+    if (! s48_bignum_fits_in_word_p(bignum, 32, 1))
+      s48_raise_argtype_error (value);
+    else return s48_bignum_to_long (bignum);
   }
+  else s48_raise_argtype_error(value);
 }
 
 /*
@@ -804,7 +737,7 @@ s48_cons(s48_value v1, s48_value v2)
 
   S48_GC_PROTECT_2(v1, v2);
 
-  obj = s48_allocate_stob(S48_STOBTYPE_PAIR, 2 * sizeof(s48_value));
+  obj = s48_allocate_stob(S48_STOBTYPE_PAIR, 2);
   S48_UNSAFE_SET_CAR(obj, v1);
   S48_UNSAFE_SET_CDR(obj, v2);
 
@@ -820,18 +753,22 @@ s48_make_weak_pointer(s48_value value)
 
   S48_GC_PROTECT_1(value);
 
-  obj = s48_allocate_stob(S48_STOBTYPE_WEAK_POINTER, sizeof(s48_value));
+  obj = s48_allocate_stob(S48_STOBTYPE_WEAK_POINTER, 1);
   S48_STOB_SET(obj, 0, value);
 
   S48_GC_UNPROTECT();
   return obj;
 }
 
+/*
+ * Entering and extracting strings.
+ */
+
 s48_value
-s48_enter_substring(char *str, int length)
+s48_enter_substring(char *str, long length)
 {
   s48_value obj = s48_allocate_stob(S48_STOBTYPE_STRING, length + 1);
-  strncpy(S48_UNSAFE_EXTRACT_STRING(obj), str, length);
+  memcpy(S48_UNSAFE_EXTRACT_STRING(obj), str, length);
   *(S48_UNSAFE_EXTRACT_STRING(obj) + length) = '\0';
   return obj;
 }
@@ -849,6 +786,30 @@ s48_extract_string(s48_value string)
 
   return S48_UNSAFE_EXTRACT_STRING(string);
 }
+
+/*
+ * Entering and extracting byte vectors.
+ */
+
+s48_value
+s48_enter_byte_vector(char *bytes, long length)
+{
+  s48_value obj = s48_allocate_stob(S48_STOBTYPE_BYTE_VECTOR, length);
+  memcpy(S48_UNSAFE_EXTRACT_STRING(obj), bytes, length);
+  return obj;
+}
+
+char *
+s48_extract_byte_vector(s48_value byte_vector)
+{
+  S48_CHECK_VALUE(byte_vector);
+
+  return S48_UNSAFE_EXTRACT_STRING(byte_vector);
+}
+
+/*
+ * Making various kinds of stored objects.
+ */
 
 s48_value
 s48_make_string(int length, char init)
@@ -868,7 +829,7 @@ s48_make_vector(int length, s48_value init)
 
   S48_GC_PROTECT_1(init);
 
-  obj = s48_allocate_stob(S48_STOBTYPE_VECTOR, length * sizeof(s48_value));
+  obj = s48_allocate_stob(S48_STOBTYPE_VECTOR, length);
   for (i = 0; i < length; ++i)
     S48_UNSAFE_VECTOR_SET(obj, i, init);
 
@@ -903,8 +864,7 @@ s48_make_record(s48_value type_shared_binding)
     number_of_fields =
       S48_UNSAFE_EXTRACT_FIXNUM(S48_RECORD_TYPE_NUMBER_OF_FIELDS(record_type));
 
-    record = s48_allocate_stob(S48_STOBTYPE_RECORD,
-			   (number_of_fields + 1) * sizeof(s48_value));
+    record = s48_allocate_stob(S48_STOBTYPE_RECORD, number_of_fields + 1);
 
     S48_UNSAFE_RECORD_SET(record, -1, record_type);
     for (i = 0; i < number_of_fields; ++i)
@@ -945,3 +905,71 @@ s48_length(s48_value list)
   return S48_UNSAFE_ENTER_FIXNUM(i);
 }
 
+void
+s48_call_native_code(s48_value closure, long stack_nargs)
+{
+  extern char		*Scode_pointerS;
+  extern char		*SstackS;
+  extern s48_value	StemplateS;
+  extern s48_value	SenvS;
+  extern s48_value	SvalS;
+  extern s48_value	ScontS;
+
+  static char	*saved_c_stack;
+
+  s48_value	cont, template, protocol;
+  char		*code_pointer;
+
+  fprintf(stderr, "[ding]\n");
+
+  saved_c_stack = SstackS;  /* esp */
+
+  /*
+   * stack-reg -> saved-C-stack
+   * SstackS   -> stack-reg
+   * closure   -> env-reg
+   *
+   * someone has to check for stack overflow
+   *
+   * jump to Scode_pointerS;
+   *
+   */
+
+  /*
+   * The following handles single value returns.
+   * 
+   */
+
+  SvalS = S48_TRUE;		/* whatever value you want to return */
+
+  cont = ScontS;		/* really esp + tag and offset */
+
+  if (!S48_CONTINUATION_P(cont)) {
+    fprintf(stderr, "bad continuation in native code return\n");
+    exit(-1);}
+
+  template = S48_STOB_REF(cont, 2);
+  code_pointer = S48_ADDRESS_AFTER_HEADER(S48_STOB_REF(template, 0), char)
+    + S48_UNSAFE_EXTRACT_FIXNUM(S48_STOB_REF(cont, 1));
+
+  if (*code_pointer != 0) {
+    fprintf(stderr, "native code return has no protocol\n");
+    exit(-1);}
+
+  protocol = *(code_pointer + 1);
+
+  if ((1 == protocol) || (65 == protocol)) {
+    StemplateS = template;
+    ScontS = S48_STOB_REF(cont, 0);
+    SenvS = S48_STOB_REF(cont, 3);
+    Scode_pointerS = code_pointer + 2;
+
+    /* Pop continuation */
+    SstackS = S48_ADDRESS_AFTER_HEADER(cont, char) + 12; }
+  else {
+    fprintf(stderr, "bad protocol %d in native code continuation\n", protocol);
+    exit(-1);}
+
+  fprintf(stderr, "[dong]\n");
+
+}

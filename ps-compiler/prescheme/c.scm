@@ -1,4 +1,4 @@
-; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 ; Translating the node tree into C
 
@@ -194,6 +194,7 @@
 
 (define (write-merged-form form port)
   (format #t "  ~A~%" (form-c-name form))
+;  (breakpoint "write-merged-form ~S" form)
   (proc->c (form-c-name form)
 	   form
 	   '()

@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include "write-barrier.h"
@@ -38,7 +38,9 @@ extern double		s48_extract_double(s48_value);
 extern s48_value	s48_cons(s48_value, s48_value);
 extern s48_value	s48_enter_string(char *);
 extern char *		s48_extract_string(s48_value);
-extern s48_value	s48_enter_substring(char *, int);
+extern s48_value	s48_enter_substring(char *, long);
+extern s48_value	s48_enter_byte_vector(char *, long);
+extern char *		s48_extract_byte_vector(s48_value);
 extern s48_value	s48_make_string(int, char);
 extern s48_value	s48_make_vector(int, s48_value);
 extern s48_value	s48_make_byte_vector(int);

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This code, along with C code in c/external.c, handles the interaction between
@@ -214,33 +214,10 @@
       (apply call-error "bad procedure" call-imported-binding proc args)))
 
 ;----------------
-; Helper functions for converting between C longs and Scheme bignums.
-;
-; HIGH and LOW are the two sixteen-bit halves of the negative magnitude of
-; the number.  The negative magnitude is used to avoid problems with two's
-; complement's asymmetry.
+; We export the record-type type so that external code can check to see if
+; supposed record types really are such.
 
-(define (long-to-bignum positive? high low)
-  (let ((magnitude (+ (arithmetic-shift high 16)
-                      low)))
-    (if positive?
-        (- magnitude)
-        magnitude)))
-
-; Same again, except that we break the number into the sign and the two halves.
-
-(define (bignum-to-long n)
-  (if (integer? n)
-      (let ((m (abs n)))
-        (vector (>= n 0)
-	        (arithmetic-shift m -16)
-	        (bitwise-and m sixteen-candles)))
-      #f))
-
-(define sixteen-candles (- (arithmetic-shift 1 16) 1))
-
-(define-exported-binding "s48-long-to-bignum" long-to-bignum)
-(define-exported-binding "s48-bignum-to-long" bignum-to-long)
+(define-exported-binding "s48-the-record-type" :record-type)
 
 ;----------------
 ; Testing

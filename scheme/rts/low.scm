@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Low-level things that rely on the fact that we're running under the
@@ -108,61 +108,6 @@
 (define (code-vector-ref bv i) (byte-vector-ref bv i))
 (define (code-vector-set! bv i x) (byte-vector-set! bv i x))
 
-; Block reads and writes in terms of partial reads and writes.
-
-; CHANNEL-READ returns the number of characters read or the EOF object.
-; BUFFER is either a string or byte vector and START is the index at which
-; to place the first character read.  NEEDED is one of
-;  <integer> : the call returns when this many characters has been read or
-;     an EOF is reached.
-;  'IMMEDIATE : the call reads as many characters as are available and
-;     returns immediately.
-;  'ANY : the call returns as soon as at least one character has been read
-;     or an EOF is reached.
-
-(define (channel-read buffer start needed channel)
-  (call-with-values
-   (lambda ()
-     (cond ((eq? needed 'immediate)
-	    (values #f 0 (- (buffer-length buffer) start)))
-	   ((eq? needed 'any)
-	    (values #t 1 (- (buffer-length buffer) start)))
-	   (else
-	    (values #t needed needed))))
-   (lambda (keep-trying? need max-chars)
-     (let loop ((have 0))
-       (let ((got (channel-maybe-read buffer
-				      (+ start have)
-				      (- max-chars have)
-				      keep-trying?
-				      channel)))
-	 (if (eof-object? got)
-	     (if (= have 0)
-		 (eof-object)
-		 have)
-	     (let ((have (+ have got)))
-	       (if (and keep-trying? (< have need))
-		   (loop have)
-		   have))))))))
-
-(define (buffer-length buffer)	   
-  (if (byte-vector? buffer)
-      (byte-vector-length buffer)
-      (string-length buffer)))
-
-; Write COUNT characters from BUFFER, which is either a string or a byte-vector,
-; to CHANNEL, beginning with the character at START.  No meaningful value is
-; returned.
-
-(define (channel-write buffer start count channel)
-  (let loop ((sent 0))
-    (if (< sent count)
-	(loop (+ sent
-		 (channel-maybe-write buffer
-				      (+ start sent)
-				      (- count sent)
-				      channel))))))
-
 ; Shared bindings - six procedures from two primitives.  The lookup and
 ; undefine primitives take a flag which is true for imports and false for
 ; exports.
@@ -187,7 +132,47 @@
 (define (undefine-exported-binding name)
   (undefine-shared-binding name #f))
 
+; This really shouldn't be here, but I don't know where else to put it.
+
+(define (byte-vector . l)
+  (let ((v (make-byte-vector (secret-length l 0) 0)))
+    (do ((i 0 (+ i 1))
+         (l l (cdr l)))
+        ((eq? l '()) v)
+      (byte-vector-set! v i (car l)))))
+
+(define (secret-length list length)
+  (if (eq? list '())
+      length
+      (secret-length (cdr list) (+ length 1))))
+
 ; Writing debugging messages.
 
 (define (debug-message . stuff)
   (message stuff))
+
+; Checking for undumpable objects when writing images.
+
+(define (write-image filename start-procedure message)
+  (let ((undumpable (make-vector 1000 #f)))
+    (write-image-low filename start-procedure message undumpable)
+    (if (vector-ref undumpable 0)
+	(signal 'error
+		"undumpable records written in image"
+		(vector-prefix->list undumpable)))))
+
+; Return a list containing the non-#F values at the beginning of VECTOR.
+
+(define (vector-prefix->list vector)
+  (do ((i 0 (+ i 1))
+       (losers '() (cons (vector-ref vector i) losers)))
+      ((or (= i (vector-length vector))
+	   (if (vector-ref vector i) #f #t))
+       losers)))
+
+; Proposals are just vectors.
+
+(define empty-log '#(#f))
+
+(define (make-proposal)
+  (vector #f empty-log empty-log #f))

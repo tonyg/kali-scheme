@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 /* Implementation of the vm-extension opcode.  This is completely

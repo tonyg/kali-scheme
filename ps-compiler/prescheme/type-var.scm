@@ -1,21 +1,24 @@
-; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 
 ; Type variables - what a mess
 
-(define-record-type uvar
-  (prefix        ; a name for debugging
-   (depth)       ; lexical depth of the uvar
-   id            ; a number
-   (tuple-okay?) ; true if this can be unified with a tuple, set when merged
-   )
-  ((place        #f)  ; used in producing type schemes
-   (source       #f)  ; to let the user know where this came from
-   (binding      #f)  ; known value of this uvar
-   (temp         #f)  ; useful field
-   ))
+(define-record-type uvar :uvar
+  (really-make-uvar prefix depth id tuple-okay?
+	     place source binding temp)		; all initialized to #F
+  uvar?
+  (prefix  uvar-prefix)			  ; a name for debugging
+  (depth   uvar-depth set-uvar-depth!)	  ; lexical depth of the uvar
+  (id      uvar-id)			  ; a number
+  ; true if this can be unified with a tuple, set when merged
+  (tuple-okay? uvar-tuple-okay? set-uvar-tuple-okay?!)
+  (place   uvar-place   set-uvar-place!)  ; used in producing type schemes
+  (source  uvar-source  set-uvar-source!)
+  ; to let the user know where this came from
+  (binding uvar-binding set-uvar-binding!); known value of this uvar
+  (temp    uvar-temp    set-uvar-temp!))  ; useful field
 
-(define-record-discloser type/uvar
+(define-record-discloser :uvar
   (lambda (uvar)
     (list 'uvar
 	  (uvar-prefix uvar)
@@ -24,20 +27,22 @@
 	  (uvar-binding uvar))))
 
 (define (make-uvar prefix depth . maybe-id)
-  (uvar-maker prefix
-	      depth
-	      (if (null? maybe-id)
-		  (unique-id)
-		  (car maybe-id))
-	      #f))
+  (really-make-uvar prefix
+		    depth
+		    (if (null? maybe-id)
+			(unique-id)
+			(car maybe-id))
+		    #f			; tuple-okay?
+		    #f #f #f #f))	; place source binding temp
 
 (define (make-tuple-uvar prefix depth . maybe-id)
-  (uvar-maker prefix
-	      depth
-	      (if (null? maybe-id)
-		  (unique-id)
-		  (car maybe-id))
-	      #t))
+  (really-make-uvar prefix
+		    depth
+		    (if (null? maybe-id)
+			(unique-id)
+			(car maybe-id))
+		    #t			; tuple-okay?
+		    #f #f #f #f))	; place source binding temp
 
 ; Could this safely short-circuit the chains?
 

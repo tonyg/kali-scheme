@@ -21,12 +21,23 @@
 #undef	HAVE_SYS_SELECT_H
 
 /*
+ * HAVE_DLOPEN is defined iff we have dlopen().
+ */
+#undef	HAVE_DLOPEN
+
+/*
  * USCORE is defined iff C externals are prepended with an underscore.
  */
 #undef	USCORE
+
+/*
+ * ENVIRON_NAME is defined to be the name of the environ variable.
+ */
+#undef ENVIRON_NAME
 
 @BOTTOM@
 
 #include "fake/sigact.h"
 #include "fake/strerror.h"
 #include "fake/sys-select.h"
+#include "fake/environ.h"

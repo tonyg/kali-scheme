@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file arch.scm.
 
@@ -69,7 +69,9 @@
   (set-global!    index 1)
   (closure        index byte)    ; byte = 0 -> use environment in *env*
                                  ; byte = 1 -> use environment in *val*
+  (letrec-closures letrec-data)  ; add closures to the current env
   (make-flat-env  env-data)      ; make new environment from env-data
+  (make-big-flat-env big-env-data) ; same, but with two-byte size and offsets
   (push 1)		         ; push *val* onto stack
   ((local0-push push-local0)	 ; common combination
 		  byte junk 1)
@@ -81,14 +83,10 @@
   (make-big-cont  offset two-bytes) ; save state in *cont*, two-byte size
   (current-cont)	         ; copy *cont* to *val*, use WITH-CONTINUATION
 			         ; to use copied continuation
-  (get-cont-from-heap)	         ; copy next continuation from heap (this
-			         ; op-code is used internally by the VM)
 
-  ;; different ways to call procedures
+  ;; Five different ways to call procedures
   (call     nargs     1 +)       ; last argument is the procedure to call
   (big-call two-bytes 1 +)       ; ditto, nargs count is two bytes
-  (move-args-and-call nargs 1 +) ; same, move args to just above *cont* first
-  				 ; (*EXP*, and no two-byte version)
   (apply    two-bytes 2 +)       ; last argument is procedure to call, second to
 				 ; last is a list of additional arguments, next
                                  ; two bytes are the number of stack arguments
@@ -96,25 +94,21 @@
 				 ; the number of non-list arguments pushed on
   				 ; the top of the stack
   (with-continuation 2)		 ; first arg is cont, second is procedure
-  (call-with-values +)		 ; values are on stack, consumer is in the
-				 ; continuation pointed to by *cont*
 
-  ;; Three different ways to return from calls and one way to ignore any
-  ;; returned values
-  (return 1)			 ; return to continuation in *cont*
+  ;; Three different ways to return from calls
+  (return 1)			 ; return one value
   (values two-bytes +)		 ; values are on stack, count is next two bytes
   (closed-values +)		 ; values are on stack, count is pushed on stack
-  (ignore-values +)		 ; ignore (and dispose of) returned values
 
-  ;; Different ways to jump
-  (goto-template        index)	 ; jump to another template (*EXP*)
+  ;; Five different ways to jump
+  (goto-template index)		 ; jump to another template (*EXP*)
 				 ; does not poll for interrupts
-  (call-template  index nargs)	 ; call a template instead of a procedure
+  (call-template index nargs)	 ; call a template instead of a procedure
 				 ; nargs is needed for interrupt handling
   				 ; Current VM only handles the zero-arg case.
-  (jump-if-false  offset 1)	 ; boolean in *val*
-  (jump           offset)
-  (computed-goto  byte offset 1) ; jump using delta specified by *val*
+  (jump-if-false offset 1)	 ; boolean in *val*
+  (jump          offset)
+  (computed-goto byte offset 1)	 ; jump using delta specified by *val*
 				 ; defaults to instruction after deltas (*EXP*)
 
   ;; For the closed-compiled definitions of n-ary arithmetic functions.
@@ -142,6 +136,7 @@
   (atan 2)
   ((make-polar make-rectangular) 2)
   (bitwise-not 1)
+  (bit-count 1)
   ((bitwise-and bitwise-ior bitwise-xor) 2)
   (arithmetic-shift 2)
   (char? 1)
@@ -154,13 +149,15 @@
   (stored-object-length stob 1)
 
   (make-stored-object byte stob)
-  (closed-make-stored-object stob) ; size pushed on stack
-  (stored-object-ref  stob byte 1) ; byte is the offset
-  (stored-object-set! stob byte 2)
+  (closed-make-stored-object stob)	; size pushed on stack
+  (stored-object-ref  stob byte 1)	; byte is the offset
+  (stored-object-set! stob byte byte 2)	; byte0 is the offset, byte1 = 0
+  					; means not to log in the proposal
 
-  (make-vector-object stob 2)	      ; size + init
-  (stored-object-indexed-ref  stob 2) ; vector + offset
-  (stored-object-indexed-set! stob 3) ; vector + offset + value
+  (make-vector-object stob 2)			; size + init
+  ; If the byte = 0 then do not log in the current proposal
+  (stored-object-indexed-ref  stob byte 2)	; vector + offset
+  (stored-object-indexed-set! stob byte 3)	; vector + offset + value
 
   (make-byte-vector 2)
   (byte-vector-length 1)
@@ -183,15 +180,25 @@
   (close-channel 1)
   (channel-maybe-read 5)
   (channel-maybe-write 4)
+  (channel-ready? 1)
   (channel-abort 1)             ; stop channel operation
   (open-channels-list)		; return a list of the open channels
   
+  ;; Optimistic concurrency
+  (current-proposal)
+  (set-current-proposal! 1)
+  (maybe-commit)
+  (stored-object-logging-ref stob byte 1)
+  (copy-bytes! byte 5)		; byte = 0 -> don't log
+  (byte-vector-logging-ref 2)
+  (byte-vector-logging-set! 3)
+
   ;; Misc
   ((unassigned unspecific))
   (trap 1)			; raise exception
   (false)			; return #f (for bootstrapping)
   (eof-object)                  ; hard to get otherwise
-  (write-image 3)
+  (write-image-low 4)
   (collect)
   (string-hash 1)		; used by the static linker for the initial table
   (add-finalizer! 2)
@@ -211,7 +218,6 @@
   (wait 2)                      ; do nothing until something happens
   (call-external-value 1 +)
   (lookup-shared-binding 2)
-  (define-shared-binding 3)
   (undefine-shared-binding 2)
   (time 2)
   (vm-extension 2)		; access to extensions of the virtual machine
@@ -221,9 +227,9 @@
   (string=? 2)
   (reverse-list->string 2)
   (assq 2)
-  (checked-record-ref 3)
-  (checked-record-set! 4)
-  (copy-bytes! 5)
+  ; If the byte = 0 then do not log in the current proposal
+  (checked-record-ref byte 3)
+  (checked-record-set! byte 4)
 
   ;; ports (buffered I/O) - these are all unnecessary
   ;; byte = 0 -> port is supplied
@@ -259,7 +265,6 @@
    cannot-open-channel
    channel-os-index-already-in-use
    closed-channel
-   pending-channel-i/o
    buffer-full/empty
    unimplemented-instruction
    trap
@@ -272,8 +277,8 @@
    extension-exception
    extension-return-error
    os-error
-   unresumable-records-in-image
    gc-protection-mismatch
+   no-current-proposal
    ))
 
 ; Used by (READ-CHAR) and (WRITE-CHAR) to get the appropriate ports from
@@ -284,12 +289,10 @@
    current-output-port))
 
 ;----------------
-; Encoding for template protocols:
-; 0 ... MAX-STACK-ARGS = that number of arguments, no rest list
-; TWO-BYTE-NARGS = (2*MAX-STACK-ARGS)+1 = next two bytes are the fixed argument
-;  count
-; TWO-BYTE-NARGS+LIST = TWO-BYTE-NARGS + 1 = next two bytes are the fixed
-;  argument count, plus a rest list
+; Call and return protocols
+;
+; Protocols 0..maximum-stack-args are just the number of arguments sitting on
+; the stack.
 
 (define maximum-stack-args 63)
 
@@ -299,11 +302,19 @@
   (set! *last-protocol* (+ *last-protocol* 1))
   *last-protocol*)
 
+; The next two bytes gives the expected number of arguments.
+
 (define two-byte-nargs-protocol      (next-protocol))
 
-; Used for all n-ary procedures.
+; Used for all n-ary procedures.  The next two bytes gives the minimum
+; number of arguments.
 
 (define two-byte-nargs+list-protocol (next-protocol))
+
+; Drop any and all arguments on the floor.  The compiler doesn't use this
+; for procedures, but does generate it for continuations.
+
+(define ignore-values-protocol (next-protocol))
 
 ; Real protocol is at the end of the code vector, along with the required
 ; stack size:
@@ -324,11 +335,22 @@
 (define args+nargs-protocol (next-protocol))
 
 ; Followed by four bytes: the offsets of code for the 0, 1, 2, and 3+ arg cases.
-; A zero indicatest that the primitive doesn't accept that many arguments.
+; A zero indicates that the primitive doesn't accept that number of arguments.
 ; If there are fewer than three arguments they are all on the stack.  In the
 ; 3+ case this is the same as args+nargs above.
 
 (define nary-dispatch-protocol (next-protocol))
+
+; The following is used to mark continuations created for the first argument
+; to CALL-WITH-VALUES when the second argument is not a LAMBDA expression.
+; The continuation contains a single value, the procedure to be called on the
+; values returned by the first argument.
+
+(define call-with-values-protocol (next-protocol))
+
+; Used to mark the continuation at the bottom of the stack cash.
+
+(define bottom-of-stack-protocol (next-protocol))
 
 ; The maximum number of arguments that can be passed to EXTERNAL-CALL.
 ; This is determined by the C procedure `external_call()'.
@@ -397,6 +419,7 @@
    vector
    closure
    location
+   cell
    channel
    port
    ratnum
@@ -431,6 +454,8 @@
     (location location? make-location
       (location-id set-location-id!)
       (contents set-contents!))
+    (cell cell? make-cell
+      (cell-ref cell-set!))
     (closure closure? make-closure
       (closure-template) (closure-env))
     (weak-pointer weak-pointer? make-weak-pointer

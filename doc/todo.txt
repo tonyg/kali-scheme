@@ -1,15 +1,7 @@
 --*- Mode: Indented-text; -*-
 
 Scheme 48: list of bugs and things to do.
-Last update by RAK on 28 April 1998.
-
-Run-time system bugs:
-    Shadowing can fail sometimes for macro-referenced variables.  E.g.
-      the following sequence will lose if entered interactively as
-      three separate forms:
-        (define (foo x) `(a ,x))
-	(define cons list)
-	(foo 1) => (a (1 ()))
+Last update by RAK on 26 Feb 2001.
 
 Programming environment:
     Fuller on-line documentation.
@@ -17,16 +9,12 @@ Programming environment:
       restart continuations.
     Types in scheme-interface (and elsewhere) aren't as tight as they
       could be.
-    LET continuation "pessimization" to retain the environment longer.
+    Add LET continuation "pessimization" to retain the environment longer.
     Have the disassembler display local variable names.
     This ought to be recoverable, but isn't always:
 	> (let loop ((x '())) (loop (cons 3 x)))
 	not enough room in heap for stack
-    The get-cont-from-heap instruction should have an exception
-      discloser that indicates the actual error (returning a
-      non-fixnum from application top level).
-    Separate compilation (compile a module, writing object code to a
-      file).  (Rudiments in misc/separate.scm)
+    ,exit 'not-a-fixnum should not exit
     Semicolon comments don't quite work after commands (extra newline
       required).
     Command (and procedure) to change current directory.
@@ -34,6 +22,13 @@ Programming environment:
       one package to another: (transport <from-package> <exp> <to-package>
       [<id>]), and/or have eval etc. commands return the value
     Batch mode should write error messages to (error-output).
+    In command preferred mode you have to do
+        in foo run bar
+      instead of
+        in foo bar
+      if foo is a read-only package    
+    ,reset should flush the input buffer
+    Export the VM's preview displayer as a procedure for debugging.
 
 Performance:
     Generational GC.
@@ -63,9 +58,8 @@ Big Scheme bugs / features:
       The new thread would read characters eagerly, buffering
       everything except control-C's for the thread that is doing the
       real work, and converting control-C's into interrupts.
-    How about deleting entries from tables?
-    RPC.
-    Add call/gcc (invokes the Gnu C compiler).
+    big/pipe.scm uses the old port interface
+    Tracking output ports are not thread safe.
 
 Module system bugs:
     ,untrace should undefine as well if the variable wasn't bound
@@ -76,10 +70,7 @@ Module system bugs:
 
 Module system features:
     Check for name conflicts between opened structures.
-    Implement interface subtraction as a way of dealing with such
-      conflicts: (WITHOUT (<name> ...) <interface>)
     Check for cycles in structure inheritance.
-    An ,access command, similar to ,open.
     Deal with package system state better (for linker).  Maybe each
       package should point to a data structure containing
       *location-uid*, location-name-table, *package-uid*,
@@ -91,8 +82,6 @@ VM:
     Add a test to configure.in that can determine whether ld -A works.
       If both it and dlopen() work, then both kinds of dynamic loading
       should be made available.
-    Merge in Olin's changes and extensions (command line processing,
-      the #! syntax for scripts, external function call, etc.).
     Interrupt while writing out image causes an exit.  [Fixed?]
     A jump-back instruction?  Might be easier to use than call-template.
     Scrutinize all VM fatal errors to see if any can be recovered
@@ -140,21 +129,19 @@ Cleanup:
       that includes vm/data.scm.
     Flush (optimize ...) clause in DEFINE-STRUCTURE in favor of
       optimizer argument to SCAN-STRUCTURES.
-    Vector patterns and templates ought to be supported in
-      SYNTAX-RULES.
+    Vector templates ought to be supported in SYNTAX-RULES.
     The DEFINE-INTERFACE forms should contain types for every exported
       variable; the code in cprim.scm (and recon.scm?) shouldn't have
       to worry about setting up types.
     Add ENVIRONMENT-DEFINED? ?
     Make USUAL-TRANSFORM return a transform?
-    Add enough to the node signature to make it usable on its own?
     make-c-header-file should put definitions for the interrupt
       enumeration into scheme48.h, and unix.c et al should use them.
     Flatloading and loading are very different operations, so FLATLOAD
       shouldn't do SET-PACKAGE-LOADED?!; instead it should maintain its
       own list of flatloaded packages (in a global variable, say).
   Etc:
-    Start using a source control system (like rcs).
+    Start using a source control system (like rcs or Perforce).
     There ought to be a sanity check to ensure that the size of the
       area as computed by static.scm agrees with the size as computed
       by C's sizeof() operator.
@@ -186,58 +173,3 @@ Type ,? (comma question-mark) for help.
 > ,expand (foo x)
 '((lambda (x) (set! x (- x))) x)
 > 
-
-
-
-Date: Mon, 14 Jun 93 18:33:30 HKT
-From: shivers@csd.hku.hk
-To: kelsey@flora.ccs.neu.edu
-Cc: jar@cs.cornell.edu
-Subject: Scheme 48
-
-...
-All true.  My major motivation was portability. I also found the module system
-to be a big win. Other things that influenced me were (1) elegance and
-modularity -- I felt I could comprehend and mung the system as needed (2)
-reasonable efficiency and small size and (3) real, full R4RS+ support (most
-small systems do it partly).
-
-Actually, I wouldn't say the programming environment is particularly
-exceptional, unless you count the module system.
-
-A small thing lacking in other Schemes that really reduced my debug times: the
-loader would complain about undefined free var refs in my code. This
-frequently picked out variable spelling errors, inconsistent name linkages,
-and forgotten procedure defs. Not a big thing, but really effective.
-
-Another win was simply having the implementors around for detailed
-explanations and support.
-
-Problems I had with S48: 
-- Inability to mess with the VM, as it is written in a language that can
-  be compiled by only 1 person in the world.
-
-- The foreign-function support was quite limited, and the foreign-data support
-  was basically non-existent. Exporting gc'd data to C, gc'ing data allocated
-  in C, hooks into the GC, importing C data into Scheme -- no support.  Elk
-  handles this better, as that is critical to the type of applications at
-  which elk is targeted.
-
-  I fixed some of this myself -- helped by your general, portable low-level ff
-  interface, which was well-designed in terms of those goals -- but I couldn't
-  do much about foreign-data support.
-
-- No support currently for linking static heap data into a text-pages
-  area to reduce gc copying and shrink the dynamic heap.
-
-- The module system was frequently frustrating. The non-uniform , command 
-  language, bugs, the restrictions of living with a module system,
-  being blocked from accessing primitives whose bindings had been
-  gc'd away at link time, and awkwardnesses in the user interface really
-  slowed me down.
-
-  The module system was also a great help; these are simply the problems
-  of life with an experimental system, as opposed to a polished final
-  product.
-
-[But] all in all, S48 was the best choice I could have made.  

@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include <unistd.h>
@@ -80,6 +80,35 @@ ps_close_fd(long fd_as_long)
     else if (errno != EINTR)
       return errno;
   }
+}
+
+bool ps_check_fd(long fd_as_long, bool is_read, long *status)
+{
+  int fd = (int)fd_as_long;
+  int ready;
+
+  struct timeval timeout;
+  fd_set fds;
+
+  FD_ZERO(&fds);
+  FD_SET(fd, &fds);
+  timerclear(&timeout);
+
+  *status = NO_ERRORS;
+
+  while(TRUE) {
+    ready = select(fd + 1,
+		   is_read ? &fds : NULL,
+		   is_read ? NULL : &fds,
+		   &fds,
+		   &timeout);
+    if (ready == 0)
+	return FALSE;
+    else if (ready == 1)
+	return TRUE;
+    else if (errno != EINTR) {
+	*status = errno;
+	return FALSE; } } 
 }
 
 long

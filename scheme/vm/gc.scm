@@ -1,46 +1,27 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Collector
 
-; The interface to the GC consists of
-; (S48-BEGIN-COLLECTION)		; call either this
-; (BEGIN-WRITING-IMAGE)			; or this first
 ; (S48-TRACE-LOCATIONS! start end)	; trace all roots
 ; (S48-TRACE-VALUE value) => copied value
 ; (S48-TRACE-STOB-CONTENTS! stob)
-; (S48-DO-GC)				; then do the GC
-; (S48-END-COLLECTION)			; and either finish
-; (ABORT-COLLECTION)			; or abort if writing an image
 
 (define *gc-count* 0)
 (define (s48-gc-count) *gc-count*)
 
-; True if the GC is being done for the purpose of dumping an image, in which
-; case we check for undumpable records.
-
-(define *writing-image?*)
-(define *undumpable-records*)
-(define *undumpable-count*)
-
-(define (s48-begin-collection)
-  (really-begin-collection)
-  (set! *writing-image?* #f)
-  (trace-static-areas)
-  (unspecific))
-
-(define (begin-writing-image)
-  (really-begin-collection)
-  (set! *writing-image?* #t)
-  (set! *undumpable-records* null)
-  (set! *undumpable-count* 0))
-
-(define (really-begin-collection)
-  (set! *from-begin* (heap-start))
+(define (s48-collect)
+  (set! *from-begin* (s48-heap-begin))
   (set! *from-end* (heap-limit))
   (swap-spaces)
-  (set-heap-pointer! (heap-start))
-  (set! *weak-pointer-hp* null-address))
+  (set-heap-pointer! (s48-heap-begin))
+  (set! *weak-pointer-hp* null-address)
+  (trace-static-areas)
+  (s48-gc-root)			; trace the interpreter's roots
+  (do-gc)
+  (clean-weak-pointers)
+  (s48-post-gc-cleanup)		; interpreter's post-gc clean up
+  (set! *gc-count* (+ *gc-count* 1)))
 
 (define *from-begin*)
 (define *from-end*)
@@ -52,39 +33,9 @@
               (address< a *from-end*)))))
 
 (define (s48-trace-value stob)
-  (cond ((and *writing-image?*
-	      (undumpable? stob))
-	 (begin
-	   (note-undumpable! stob)
-	   (s48-trace-value (undumpable-alias stob))))
-	((in-oldspace? stob)
-	 (copy-object stob))
-	(else
-	 stob)))
-    
-(define (s48-end-collection)
-  (set! *gc-count* (+ *gc-count* 1)))
-
-(define (s48-undumpable-records)
-  (values *undumpable-records*
-	  *undumpable-count*))
-
-; Undo the effects of the current collection (assuming that it did not
-; modify any VM registers or the stack).
-
-(define (abort-collection)
-  (swap-spaces)
-  (let loop ((addr (heap-start)))
-    (if (address< addr (heap-pointer))
-	(let* ((d (fetch addr))
-	       (h (if (header? d)
-		      d
-		      (let ((h (stob-header d)))
-			(store! addr h)            ; mend heart
-			h))))
-	  (loop (address+ addr
-			  (+ (cells->a-units stob-overhead)
-			     (header-length-in-a-units h))))))))
+  (if (in-oldspace? stob)
+      (copy-object stob)
+      stob))
 
 ; Complete a GC after all roots have been traced.
 
@@ -97,15 +48,14 @@
 ; Scan the heap, copying pointed to objects, starting from START.  Quit once
 ; the scanning pointer catches up with the heap pointer.
 
-(define (s48-do-gc)
-  (let loop ((start (heap-start)))
+(define (do-gc)
+  (let loop ((start (s48-heap-begin)))
     (let ((end (heap-pointer)))
       (s48-trace-locations! start end)
       (cond ((< (s48-available) 0)
 	     (error "GC error: ran out of space in new heap"))
 	    ((address< end (heap-pointer))
-	     (loop end)))))
-  (clean-weak-pointers))
+	     (loop end))))))
 
 (define (s48-trace-stob-contents! stob)
   (let ((start (address-after-header stob))
@@ -126,11 +76,6 @@
 			      frontier))
 		       (else
 			(loop next frontier))))
-		((and *writing-image?*
-		      (undumpable? thing))
-		 (note-undumpable! thing)
-		 (store! addr (undumpable-alias thing))
-		 (loop addr frontier))
 		((in-oldspace? thing)
 		 (receive (new-thing frontier)
 		     (real-copy-object thing frontier)
@@ -268,58 +213,3 @@
 		  (let ((h (stob-header value)))
 		    (if (stob? h) h false)))))))
 
-;----------------
-; Undumpable records
-;
-; Record types may be marked as `undumpable', in which case they are replaced in
-; images by the value of their first slot.
-
-(define (undumpable? x)
-  (and (gc-record? x)
-       (let ((type (record-ref x 0)))
-	 (and (gc-record? type)
-	      (= false (record-ref type 1))))))
-
-(define (gc-record? x)
-  (and (stob? x)
-       (let ((header (stob-header x)))
-	 (if (stob? header)
-	     (record? header)
-	     (record? x)))))
-
-(define (undumpable-alias record)
-  (record-ref record 1))
-
-; This is a bit weird.
-;
-; We want to cons a list of undumpable records that the user is trying to dump.
-; The list is used by the write-image instruction after the image is written out,
-; so it needs to be in what is currently oldspace.  We swap the spaces, cons
-; onto the list, and then swap back.
-;
-; We only return the first one-thousand undumpable objects because:
-;  A. It is unlikely anyone will want more.
-;  B. We don't want to get hung up in MEMQ? in pathological cases.
-;  C. Using an NlogN algorithm would be too much work for this.
-
-(define (note-undumpable! thing)
-  (if (and (<= *undumpable-count* 1000)
-	   (not (vm-memq? thing *undumpable-records*)))
-      (begin
-	(set! *undumpable-count* (+ 1 *undumpable-count*))
-	(swap-spaces)
-	(if (s48-available? vm-pair-size)
-	    (set! *undumpable-records*
-		  (vm-cons thing
-			   *undumpable-records*
-			   (s48-preallocate-space vm-pair-size))))
-	(swap-spaces))))
-
-(define (vm-memq? thing list)
-  (let loop ((list list))
-    (cond ((vm-eq? null list)
-	   #f)
-	  ((vm-eq? (vm-car list) thing)
-	   #t)
-	  (else
-	   (loop (vm-cdr list))))))

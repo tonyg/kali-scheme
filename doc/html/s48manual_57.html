@@ -1,0 +1,59 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:23 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Calling Scheme functions from C</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_49.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_56.html">Accessing Scheme data from C</A> | Next: <A HREF="s48manual_58.html">Interacting with the Scheme heap</A>
+<H2>Calling Scheme functions from C</H2>
+
+<P>External code that has been called from Scheme can call back to Scheme
+ procedures using the following function.
+<UL><LI><CODE>scheme_value s48_call_scheme(s48_value proc, long nargs, ...)</CODE>
+</UL>
+This calls the Scheme procedure <CODE>proc</CODE> on <CODE>nargs</CODE>
+ arguments, which are passed as additional arguments to <CODE>s48_call_scheme</CODE>.
+There may be at most ten arguments.
+The value returned by the Scheme procedure is returned by the C procedure.
+Invoking any Scheme procedure may potentially cause a garbage collection.
+<P>There are some complications that occur when mixing calls from C to Scheme
+ with continuations and threads.
+C only supports downward continuations (via <CODE>longjmp()</CODE>).
+Scheme continuations that capture a portion of the C stack have to follow the
+ same restriction.
+For example, suppose Scheme procedure <CODE>s0</CODE> captures continuation <CODE>a</CODE>
+ and then calls C procedure <CODE>c0</CODE>, which in turn calls Scheme procedure
+ <CODE>s1</CODE>.
+Procedure <CODE>s1</CODE> can safely call the continuation <CODE>a</CODE>, because that
+ is a downward use.
+When <CODE>a</CODE> is called Scheme&nbsp;48 will remove the portion of the C stack used
+ by the call to <CODE>c0</CODE>.
+On the other hand, if <CODE>s1</CODE> captures a continuation, that continuation
+ cannot be used from <CODE>s0</CODE>, because by the time control returns to
+ <CODE>s0</CODE> the C stack used by <CODE>c0</CODE> will no longer be valid.
+An attempt to invoke an upward continuation that is closed over a portion
+ of the C stack will raise an exception.
+<P>In Scheme&nbsp;48 threads are implemented using continuations, so the downward
+ restriction applies to them as well.
+An attempt to return from Scheme to C at a time when the appropriate
+ C frame is not on top of the C stack will cause the current thread to
+ block until the frame is available.
+For example, suppose thread <CODE>t0</CODE> calls a C procedure which calls back
+ to Scheme, at which point control switches to thread <CODE>t1</CODE>, which also
+ calls C and then back to Scheme.
+At this point both <CODE>t0</CODE> and <CODE>t1</CODE> have active calls to C on the
+ C stack, with <CODE>t1</CODE>'s C frame above <CODE>t0</CODE>'s.
+If thread <CODE>t0</CODE> attempts to return from Scheme to C it will block,
+ as its frame is not accessible.
+Once <CODE>t1</CODE> has returned to C and from there to Scheme, <CODE>t0</CODE> will
+ be able to resume.
+The return to Scheme is required because context switches can only occur while
+ Scheme code is running.
+<CODE>T0</CODE> will also be able to resume if <CODE>t1</CODE> uses a continuation to
+ throw past its call to C.
+<P>
+  
+Previous: <A HREF="s48manual_56.html">Accessing Scheme data from C</A> | Next: <A HREF="s48manual_58.html">Interacting with the Scheme heap</A></BODY></HTML>

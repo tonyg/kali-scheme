@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Compiling expressions.
 
@@ -264,8 +264,17 @@
 			  (note-source-code (fixup-source (cont-source-info cont))
 					    code)
 			  code)
+		      ;; Header and/or other data goes here.
+		      ;; But what about the stack-check code?
+		      ;; What about alignment?
 		      (attach-label label
-				    (cont-segment cont))))))
+				    (if (accept-values-cont? cont)
+					empty-segment
+					(instruction
+					  (enum op protocol)
+					  (if (ignore-values-cont? cont)
+					      ignore-values-protocol
+					      1))))))))
 
 (define (fixup-source info)
   ;; Abbreviate this somehow?
@@ -298,209 +307,10 @@
 					 level
 					 (+ depth 1)))))
      
-; OK, now that you've got all that under your belt, here's LAMBDA.
-
-(define-compilator 'lambda syntax-type
-  (lambda (node level depth cont)
-    (let ((exp (node-form node))
-	  (name (cont-name cont)))
-      (deliver-value
-       (sequentially
-	 (instruction (enum op closure))
-	 (template (compile-lambda exp level #f)
-		   (if (name? name)
-		       (name->symbol name)
-		       #f))
-	 (instruction 0)) ; last byte of closure instruction, 0 means use
-                          ; *env* for environment
-       cont))))
-
-(define (compile-lambda exp level body-name)
-  (let* ((formals (cadr exp))
-	 (nargs (number-of-required-args formals))
-	 (fast-protocol? (and (<= nargs maximum-stack-args)
-			      (not (n-ary? formals)))))
-    (sequentially
-     ;; Insert protocol
-     (cond (fast-protocol?
-	    (instruction (enum op protocol) nargs))
-	   ((<= nargs available-stack-space)
-	    (instruction (enum op protocol)
-			 (if (n-ary? formals)
-			     two-byte-nargs+list-protocol
-			     two-byte-nargs-protocol)
-			 (high-byte nargs)
-			 (low-byte nargs)))
-	   (else
-	    (error "compiler bug: too many formals"
-		   (schemify exp))))
-     (compile-lambda-code formals (caddr exp) level body-name))))
-
-; name isn't the name of the procedure, it's the name to be given to
-; the value that the procedure will return.
-
-(define (compile-lambda-code formals body level name)
-  (if (null? formals)		;+++ Don't make null environment
-      (compile body level 0 (return-cont name))
-      ;; (if (node-ref node 'no-inferior-lambdas) ...)
-      (sequentially
-       (let* ((nargs (number-of-required-args formals))
-	      (nargs (if (n-ary? formals)
-			 (+ nargs 1)
-			 nargs)))
-	 (instruction (enum op make-env)
-		      (high-byte nargs)
-		      (low-byte nargs)))
-       (let ((vars (normalize-formals formals))
-	     (level (+ level 1)))
-	 (set-lexical-offsets! (reverse vars) level)
-	 (note-environment
-	  (map name-node->symbol vars)
-	  (compile body level 0 (return-cont name)))))))
-
-(define (name-node->symbol node)
-  (let ((form (node-form node)))
-    (cond ((name? form)
-	   (name->symbol form))
-	  ((symbol? form)
-	   form)
-	  (else
-	   #f))))
-
-; Give each name node in NAMES a binding record that has the names lexical
-; level and offset.
-
-(define (set-lexical-offsets! names level)
-  (let loop ((over 1) (names names))
-    (if (not (null? names))
-	(begin
-	  (node-set! (car names) 
-		     'binding
-		     (cons level over))
-	  (loop (+ over 1) (cdr names))))))
-
-(define-compilator 'flat-lambda syntax-type
-  (lambda (node level depth cont)
-    (let ((exp (node-form node))
-	  (name (cont-name cont)))
-      (let ((vars (cadr exp))
-	    (free (caddr exp))
- 	    (body (cadddr exp)))
- 	(deliver-value (compile-flat-lambda name vars body free level)
- 		       cont)))))
- 
-; The MAKE-FLAT-ENV instruction is designed to allow us to make nested flat
-; environments (i.e. flat environments consisting of a linked chain of vectors)
-; but this code doesn't generate them.  The nested environments would avoid
-; the need for offsets larger than a byte.  The current code cannot handle
-; large environments.
-; When we're done we have to restore the old locations of the free variables.
-
-(define (compile-flat-lambda name vars body free level)
-  (let* ((alist (sort-list (get-variables-offsets free level)
-			   (lambda (p1 p2)
-			     (< (cadr p1)
-				(cadr p2)))))
-	 (free (map car alist))
-	 (old-locations (map name-node-binding free)))
-    (set-lexical-offsets! free 0)  ; 0 is the level
-    (let ((code (sequentially
-		 (instruction (enum op false)) ; either the super env or the env
-		 (if (null? free)
-		     empty-segment
-		     (apply instruction (enum op make-flat-env)
-			    1   ; add in *val*
-			    (+ (length free) 1)
-			    (variable-env-data (map cdr alist))))
-		 (instruction (enum op closure))
-		 (note-environment (reverse (map node-form free))
-				   (template (compile-lambda `(lambda ,vars
-								,body)
-							     0
-							     #f)
-					     (if (name? name)
-						 (name->symbol name)
-						 #f)))
-		 (instruction 1)))) ; last byte of closure instruction, 1 means
-                                    ; use *val* as environment, instead of *env*
-      (for-each (lambda (node location)
-		  (node-set! node 'binding location))
-		free
-		old-locations)
-      code)))
-
-; Looks up VARS in CENV and returns an alist of (<name> . (<level> <over>))
-; pairs.
-
-(define (get-variables-offsets vars level)
-  (let loop ((vars vars) (locs '()))
-    (if (null? vars)
-	locs
-	(let ((binding (name-node-binding (car vars))))
-	  (if (pair? binding)
-	      (let ((back (- level (car binding)))
-		    (over (cdr binding)))
-		(if (< byte-limit over)
-		    (error "lexical environment limit exceeded; complain to implementors"))
-		(loop (cdr vars)
-		      (cons (cons (car vars)
-				  (cons back over))
-			    locs)))
-	      (error "variable in flat-lambda list is not local"
-		     (car vars)))))))
-
-; Addresses is a list of (level . over) pairs, sorted by level.
-; This returns the reverse of the following data:
-;   <back for level>
-;   <number of variables from this level>
-;   <over of 1st var> ...
-;   <back for next level>
-;   ...
-; If a <back> is too large we insert some empty levels.
-
-(define (variable-env-data addresses)
-  (let level-loop ((addresses addresses) (last-level 0) (data '()))
-    (if (null? addresses)
-	(reverse data)
-	(let ((level (caar addresses)))
-	  (let loop ((addresses addresses) (overs '()))
-	    (if (or (null? addresses)
-		    (not (= level (caar addresses))))
-		(level-loop addresses
-			    level
-			    (append overs
-				    (list (length overs))
-				    (let loop ((delta (- level last-level))
-					       (back '()))
-				      (if (<= delta byte-limit)
-					  (cons delta back)
-					  (loop (- delta byte-limit)
-						`(0 ,byte-limit . ,back))))
-				    data))
-		(loop (cdr addresses)
-		      (cons (cdar addresses) overs))))))))
-	  
-; We should probably just use the sort from big-scheme.
-
-(define (sort-list xs less?)
-  (letrec ((insert (lambda (x xs)
-		     (if (null? xs)
-			 (list x)
-			 (if (less? (car xs) x)
-			     (cons (car xs)
-				   (insert x (cdr xs)))
-			     (cons x xs))))))
-    (let sort ((xs xs))    
-      (if (null? xs)
-	  '()
-	  (insert (car xs)
-		  (sort (cdr xs)))))))
-
 ; LETREC.
 
 (define-compilator 'letrec syntax-type
   (lambda (node level depth cont)
-    ;; (if (node-ref node 'pure-letrec) ...)
     (let* ((exp (node-form node))
 	   (specs (cadr exp))
 	   (body (caddr exp))
@@ -525,14 +335,73 @@
 	    depth
 	    cont)))))
 
+; (PURE-LETREC ((<var> <val>) ...) (<free var> ...) <body>)
+; These are LETREC's where the values are all LAMBDA's.  They are produced by
+; opt/flatten.scm. 
+
+(define-compilator 'pure-letrec syntax-type
+  (lambda (node level depth cont)
+    (let* ((exp (node-form node))
+	   (specs (cadr exp))
+	   (free-vars (caddr exp))
+	   (body (cadddr exp))
+	   (count (length specs)))
+      (call-with-values
+        (lambda ()
+	  (compile-flat-environment free-vars level))
+	(lambda (env-code free-vars)
+	  (maybe-push-continuation
+	    (sequentially
+	     (instruction-with-literal (enum op literal) (fluid $env-key))
+	     (if (empty-segment? env-code)
+		 (instruction (enum op make-stored-object)
+			      1
+			      (enum stob vector))
+		 env-code)
+	     (instruction (enum op letrec-closures)
+			  (high-byte count)
+			  (low-byte count))
+	     (letrec-lambda-code specs free-vars)
+	     (letrec-body-code body specs level (cont-name cont)))
+	    depth
+	    cont))))))
+
+(define (empty-segment? segment)
+  (= 0 (segment-size segment)))
+
+(define (letrec-lambda-code specs free-vars)
+  (let ((vars (map car specs))
+	(vals (map (lambda (spec)
+		     (node-form (cadr spec)))
+		   specs)))
+    (set-lexical-offsets! vars 0)
+    (apply sequentially
+	   (map (lambda (var val)
+		  (really-compile-flat-lambda (node-form var)
+					      (cadr val)	; vars
+					      (cadddr val)	; body
+					      free-vars
+					      1))		; depth
+		vars
+		vals))))
+
+(define (letrec-body-code body specs level name)
+  (let ((vars (map car specs))
+	(level (+ level 1)))
+    (set-lexical-offsets! (reverse vars) level)
+    (note-environment
+     (map name-node->symbol vars)
+     (compile body level 0 (return-cont name)))))
+
 ; --------------------
 ; Compile-time continuations
 ;
-; A compile-time continuation is a pair (segment . source-info).
-; Segment is one of the following:
-;   a return instruction - invoke the current full continuation.
-;   empty-segment - fall through to subsequent instructions.
-;   an ignore-values instruction - ignore values, then fall through.
+; A compile-time continuation is a pair (kind . source-info).
+; Kind is one of the following:
+;   'return        - invoke the current full continuation.
+;   'fall-through  - fall through to subsequent instructions.
+;   'ignore-values - ignore values, then fall through.
+;   'accept-values - pass values to continuation
 ; Source-info is one of:
 ;   #f - we don't know anything
 ;   symbol - value delivered to subsequent instructions will be assigned to
@@ -540,8 +409,8 @@
 ;     can give that lambda that name.
 ;   (i . node) - the value being computed is the i'th subexpression of the node.
 
-(define (make-cont seg source-info) (cons seg source-info))
-(define cont-segment car)
+(define (make-cont kind source-info) (cons kind source-info))
+(define cont-kind car)
 (define cont-source-info cdr)
 
 ; We could probably be able to optimize jumps to jumps.
@@ -550,18 +419,16 @@
 ;      (make-cont label (cont-name cont))
 ;      cont))
 
-(define return-cont-segment (instruction (enum op return)))
-
 (define (return-cont name)
-  (make-cont return-cont-segment name))
+  (make-cont 'return name))
 
 (define (return-cont? cont)
-  (eq? (cont-segment cont) return-cont-segment))
+  (eq? (cont-kind cont) 'return))
 
 ; Fall through into next instruction while compiling the I'th part of NODE.
 
 (define (fall-through-cont node i)
-  (make-cont empty-segment (cons i node)))
+  (make-cont 'fall-through (cons i node)))
 
 (define (fall-through-cont? cont)
   (not (return-cont? cont)))
@@ -569,26 +436,32 @@
 ; Ignore return value, then fall through
 
 (define ignore-values-segment
-  (instruction (enum op ignore-values)))
+  (instruction ignore-values-protocol))
 
 (define (ignore-values-cont node i)
-  (make-cont ignore-values-segment (cons i node)))
+  (make-cont 'ignore-values (cons i node)))
 
 (define (ignore-values-cont? cont)
-  (eq? (cont-segment cont) ignore-values-segment))
+  (eq? (cont-kind cont) 'ignore-values))
+
+(define (accept-values-cont node i)
+  (make-cont 'accept-values (cons i node)))
+
+(define (accept-values-cont? cont)
+  (eq? (cont-kind cont) 'accept-values))
 
 ; Value is in *val*; deliver it to its continuation.
-; No need to generate an ignore-values instruction in this case.
 
 (define (deliver-value segment cont)
-  (if (ignore-values-cont? cont)	;+++
-      segment
-      (sequentially segment (cont-segment cont))))
+  (if (return-cont? cont)
+      (sequentially segment
+		    (instruction (enum op return)))
+      segment))			; just fall through to next instruction
 
 ; For putting names to lambda expressions:
 
 (define (named-cont name)
-  (make-cont empty-segment name))
+  (make-cont 'fall-through name))
 
 (define (cont-name cont)
   (if (pair? (cont-source-info cont))
@@ -687,9 +560,10 @@
 
 ; Node predicates and operators.
 
-(define lambda-node?  (node-predicate 'lambda syntax-type))
-(define name-node?    (node-predicate 'name 'leaf))
-(define literal-node? (node-predicate 'literal 'leaf))
+(define lambda-node?      (node-predicate 'lambda syntax-type))
+(define flat-lambda-node? (node-predicate 'flat-lambda syntax-type))
+(define name-node?        (node-predicate 'name 'leaf))
+(define literal-node?     (node-predicate 'literal 'leaf))
 
 (define operator/lambda     (get-operator 'lambda syntax-type))
 (define operator/set!	    (get-operator 'set!   syntax-type))

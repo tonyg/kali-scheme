@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This file contains things that tie together the compiler and the
@@ -49,7 +49,8 @@
 	 (template (compile-forms (map (lambda (form)
 					 (delay (expand-scanned-form form env)))
 				       (scan-forms forms env))
-				  maybe-filename)))
+				  maybe-filename
+				  (package-uid package))))
     (link! template package note-undefined?)
     (invoke-closure
       (make-closure template

@@ -1,0 +1,37 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Threads</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_11.html">Command processor</A><BR>Previous: <A HREF="s48manual_21.html">Resource query and control</A> | Next: <A HREF="s48manual_23.html">Quite obscure</A>
+<H2>Threads</H2>
+<P>Each command level has its own set of threads.  These threads are suspended
+ when a new level is entered and resumed when the owning level again becomes
+ the current level.
+A thread that raises an error is not resumed unless
+ explicitly restarted using the <CODE>,proceed</CODE> command.
+In addition to any threads spawned by the user, each level has a thread
+ that runs the command processor on that level.
+A new command-processor thread is started if the current one
+ dies or is terminated.
+When a command level is abandoned for a lower level, or when
+ a level is restarted using <CODE>,reset</CODE>, all of the threads on that
+ level are terminated and any <CODE>dynamic-wind</CODE> "after" thunks are run.
+<P>The following commands are useful when debugging multithreaded programs:
+<DL><DT><B></B><DD><CODE>,resume [<CODE><I>number</I></CODE>]</CODE><BR>Pops out to a given level and resumes running all threads at that level.
+  <CODE><I>Number</I></CODE> defaults to zero.
+<DT><B></B><DD><CODE>,threads</CODE><BR>Invokes the inspector on a list of the threads running at the
+    next lower command level.
+<DT><B></B><DD><CODE>,exit-when-done [<CODE><I>exp</I></CODE>]</CODE><BR>Waits until all user threads have completed and then
+    exits back out to shell (or executive or whatever invoked Scheme&nbsp;48
+    in the first place).
+    <CODE><I>Exp</I></CODE> should evaluate to an integer which is then
+    returned to the calling program.
+</DL>
+<P>
+  
+Previous: <A HREF="s48manual_21.html">Resource query and control</A> | Next: <A HREF="s48manual_23.html">Quite obscure</A></BODY></HTML>

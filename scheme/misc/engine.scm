@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Christopher P. Haynes and Daniel P. Friedman.
 ; Engines build process abstractions.

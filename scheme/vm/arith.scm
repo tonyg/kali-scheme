@@ -1,15 +1,16 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Arithmetic that checks for overflow
 
 (define (carefully op)
   (lambda (x y succ fail)
-    (let ((z (op (extract-fixnum x) (extract-fixnum y))))
+    (let ((z (op (extract-fixnum x)
+		 (extract-fixnum y))))
       (if (or (too-big-for-fixnum? z)
 	      (too-small-for-fixnum? z))
-          (goto fail x y)
-          (goto succ (enter-fixnum z))))))
+	  (goto fail x y)
+	  (goto succ (enter-fixnum z))))))
 
 (define add-carefully (carefully +))
 (define subtract-carefully (carefully -))
@@ -42,13 +43,9 @@
 	       (> mid-c max-middle))
 	   (goto fail x y))
 	  (positive-result?
-	   (if (too-big-for-fixnum? c)
-	       (goto fail x y)
-	       (goto succ (enter-fixnum c))))
+	   (goto succ c))
 	  (else
-	   (if (too-small-for-fixnum? (- 0 c))
-	       (goto fail x y)
-	       (goto succ (enter-fixnum (- 0 c))))))))
+	   (goto succ (- 0 c))))))
 
 (define small*
   (external "SMALL_MULTIPLY" (=> (integer integer) integer) *))
@@ -63,7 +60,7 @@
 
 (define (divide-carefully x y succ fail)
   (if (= y (enter-fixnum 0))
-      (fail x y)
+      (goto fail x y)
       (let* ((a (extract-fixnum x))
 	     (b (extract-fixnum y))
 	     (positive-result? (if (>= a 0)
@@ -75,11 +72,9 @@
 	(cond ((not (= 0 (remainder a b)))
 	       (goto fail x y))
 	      ((not positive-result?)
-	       (goto succ (enter-fixnum (- 0 c))))
-	      ((too-big-for-fixnum? c)  ; (divide least-fixnum -1)
-	       (goto fail x y))
+	       (goto succ (- 0 c)))
 	      (else
-	       (goto succ (enter-fixnum c)))))))
+	       (goto succ c))))))
 
 ; Watch out for (quotient least-fixnum -1)
 (define (quotient-carefully x y succ fail)
@@ -116,13 +111,13 @@
   (let ((value (extract-fixnum value+tag))
 	(count (extract-fixnum count+tag)))
     (if (< count 0)
-	(goto succ (enter-fixnum (arithmetic-shift-right value (- 0 count))))
-	(let ((result (extract-fixnum (enter-fixnum (shift-left value count)))))
+	(goto succ (arithmetic-shift-right value (- 0 count)))
+	(let ((result (shift-left value count)))
 	  (if (and (= value (arithmetic-shift-right result count))
 		   (if (>= value 0)
 		       (>= result 0)
 		       (< result 0)))
-	      (goto succ (enter-fixnum result))
+	      (goto succ result)
 	      (goto fail value+tag count+tag))))))
 
 ; beware of (abs least-fixnum)
@@ -132,3 +127,13 @@
 	(goto fail n)
 	(goto succ (enter-fixnum r)))))
 
+(define (fixnum-bit-count x)
+  (let* ((x (extract-fixnum x))
+	 (x (if (< x 0) 
+		(bitwise-not x)
+		x)))
+    (do ((x x (arithmetic-shift-right x 1))
+	 (count 0 (+ count (bitwise-and x 1))))
+	((= x 0)
+	 (enter-fixnum count)))))
+    

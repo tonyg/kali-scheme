@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The stack grows from higher addresses to lower ones.
 ; *STACK-BEGIN* and *STACK-END* delimit the stack portion of memory.
@@ -78,16 +78,15 @@
 	(store! a stack-marker))
       (let ((key (ensure-space (op-template-size 2))))
 	(push-continuation-on-stack
-	  (make-template-containing-ops (enum op get-cont-from-heap)
-					(enum op return)
+	  (make-template-containing-ops (enum op protocol)
+					bottom-of-stack-protocol
 					key)
 	  (enter-fixnum 0)
 	  0))
       (set! *bottom-of-stack* *cont*))))
 
 (define (reset-stack-pointer base-continuation)
-  (set! *stack* (the-pointer-before
-		 (the-pointer-before (address-after-header *bottom-of-stack*))))
+  (set! *stack* (the-pointer-before (address-at-header *bottom-of-stack*)))
   (set-continuation-cont! *bottom-of-stack* base-continuation)
   (set! *cont* *bottom-of-stack*))
 
@@ -137,9 +136,6 @@
 (define (remove-stack-arguments count)
   (add-cells-to-stack! (- 0 count)))
 
-(define (address-at-header stob)
-  (address- (address-after-header stob) (cells->a-units 1)))
-
 ;----------------
 ; *STACK-LIMIT* is offset by DEFAULT-STACK-SPACE to make this test faster.
 
@@ -168,14 +164,25 @@
      space))
 
 ;----------------
-; Setting the current continuation.
+; Getting and setting the current continuation.
+
+(define (current-continuation)
+  *cont*)
 
 ; Called when replacing the current continuation with a new one.
 
 (define (set-current-continuation! cont)
   (if (continuation? cont)
-      (copy-continuation-from-heap! cont)
+      (copy-continuation-from-heap! cont 0)
       (reset-stack-pointer cont)))
+
+; For multiple-value returns (see call.scm).
+
+(define (skip-current-continuation!)
+  (let ((next (continuation-cont *cont*)))
+    (if (= *cont* *bottom-of-stack*)
+	(set-continuation-cont! *cont* (continuation-cont next))
+	(set! *cont* next))))
 
 ; Called when returning off of the end of the stack.
 
@@ -184,14 +191,25 @@
 
 ; Copy CONT from heap onto stack just above *BOTTOM-OF-STACK*, linking it
 ; to *BOTTOM-OF-STACK* and *BOTTOM-OF-STACK* to CONT's continuation.
+; There are STACK-ARG-COUNT arguments on top of the stack that need to be
+; preserved.
 
-(define (copy-continuation-from-heap! cont)
+(define (copy-continuation-from-heap! cont stack-arg-count)
   (assert (continuation? cont))
   (let* ((top (address- (address-at-header *bottom-of-stack*)
 			(cells->a-units (+ 1 (continuation-length cont)))))
          (new-cont (address->stob-descriptor (address1+ top))))
     (add-copy-cont-from-heap-stats cont)
-    (set! *stack* (the-pointer-before top))
+    (if (= stack-arg-count 0)
+	(set! *stack* (the-pointer-before top))
+	(let ((new-stack (address- (the-pointer-before top)
+				   (cells->a-units stack-arg-count))))
+	  (if (address< new-stack *stack*)
+	      (begin
+		(copy-memory! (address1+ *stack*)
+			      (address1+ new-stack)
+			      (cells->bytes stack-arg-count))
+		(set! *stack* new-stack)))))
     (set! *cont* new-cont)
     (copy-memory! (address-at-header cont)
 		  top
@@ -227,20 +245,6 @@
 			    (cells->a-units continuation-cells)))))
 
 ;----------------
-; Support for multiple-value returns.
-
-(define (peek-at-current-continuation)
-  (if (= *cont* *bottom-of-stack*)
-      (continuation-cont *bottom-of-stack*)
-      *cont*))
-
-(define (skip-current-continuation!)
-  (let ((next (continuation-cont *cont*)))
-    (if (= *cont* *bottom-of-stack*)
-	(set-continuation-cont! *cont* (continuation-cont next))
-	(set! *cont* next))))
-
-;----------------
 ; Copying the stack into the heap because there is no more room on the
 ; stack.  This preserves the continuation and then moves any arguments
 ; down on top of the current continuation.
@@ -249,7 +253,8 @@
   (let ((arg-count (arguments-on-stack))
 	(top *stack*))
     (preserve-continuation key (enum copy overflow))
-    (really-move-args-above-cont! arg-count top)))
+    (set! *stack* (the-pointer-before (address-at-header *cont*)))
+    (move-stack-arguments! top arg-count)))
 
 (define (arguments-on-stack)
   (do ((p (address1+ *stack*) (address1+ p))
@@ -265,6 +270,16 @@
 
 (define argument-limit-marker (make-header (enum stob channel) 0))
 
+; Move NARGS values from TOP-OF-ARGS to the current top of the stack.
+
+(define (move-stack-arguments! top-of-args nargs)
+  (let ((start-arg (address+ top-of-args (cells->a-units nargs))))
+    (do ((loc *stack* (the-pointer-before loc))
+	 (arg start-arg (the-pointer-before arg)))
+	((address<= arg top-of-args)
+	 (set! *stack* loc))
+      (store! loc (fetch arg)))))
+
 (define (really-move-args-above-cont! nargs top-of-args)
   (let ((start-loc (the-pointer-before (address-at-header *cont*)))
 	(start-arg (address+ top-of-args (cells->a-units nargs))))
@@ -275,17 +290,28 @@
       (store! loc (fetch arg)))))
 
 ; Copy NARGS arguments from the top of the stack to just above CONT.
-; Used by OP/MOVE-ARGS-AND-CALL to implement tail-recursive calls.
 
 (define (move-args-above-cont! nargs)
-  (really-move-args-above-cont! nargs *stack*))
+  (let ((top-of-args *stack*)
+	(top-of-cont (the-pointer-before (address-at-header *cont*))))
+    (if (not (address= top-of-cont
+		       (address+ top-of-args
+				 (cells->a-units nargs))))
+	(begin
+	  (set! *stack* top-of-cont)
+	  (move-stack-arguments! top-of-args nargs)))))
+
+; Return the top-of-args value needed above.
+
+(define (top-of-argument-stack)
+  *stack*)
 
 ; Migrating the current continuation into the heap, saving the environment
 ; first.  The heap space needed is no more than the current stack size.
 
 (define current-continuation-size current-stack-size)
 
-(define (current-continuation key)
+(define (copy-current-continuation-to-heap key)
   (preserve-continuation key (enum copy preserve)))
 
 (define (preserve-continuation key reason)

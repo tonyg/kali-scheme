@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Simple code analysis to determine whether it's a good idea to
 ; in-line calls to a given procedure.
@@ -175,6 +175,9 @@
 (define-analyzer 'letrec
   (lambda (exp ret?) #f))
 
+(define-analyzer 'pure-letrec
+  (lambda (exp ret?) #f))
+
 (define-analyzer 'lap
   (lambda (exp ret?) #f))
 
@@ -237,11 +240,20 @@
   (let ((proc (car exp)))
     (and (require "non-local non-tail call" proc
 	   (or (and ret? (simple? proc no-ret))	;tail calls are ok
-	       (lexical-node? proc)))		;so are calls to arguments
+               (primitive-proc? proc)))         ;as are calls to primitives
 	 (simple-list? exp))))
 
-(define (lexical-node? node)
-  (not (node-ref node 'binding)))
+; Calls to primitives and lexically bound variables are okay.
+
+(define (primitive-proc? proc)
+  (cond ((literal-node? proc)
+	 (primop? (node-form proc)))
+	((name-node? proc)
+	 (let ((binding (node-ref proc 'binding)))
+	   (and (binding? binding)
+		(primop? (binding-static binding)))))
+	(else
+	 #f)))
 
 (define no-ret #f)
 
@@ -282,6 +294,7 @@
 (define name-node? (node-predicate 'name))
 (define loophole-node? (node-predicate 'loophole))
 (define define-node? (node-predicate 'define syntax-type))
+(define literal-node? (node-predicate 'literal 'leaf))
 
 ;----------------
 ;(define (foo f p)

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Names (symbols) and generated names.
 
@@ -31,7 +31,7 @@
     (list 'generated (generated-symbol name) (generated-uid name))))
 
 (define (generate-name symbol env parent-name)    ;for opt/inline.scm
-  (make-generated symbol (cons #f #f) env parent-name)) ;foo
+  (make-generated symbol (cons #f #f) env parent-name))
 
 (define (generated-uid generated-name)
   (let ((token (generated-token generated-name)))
@@ -58,7 +58,8 @@
 	(else
 	 (error "invalid name" name))))
 
-(define make-name-table (make-table-maker eq? name-hash))
+(define make-name-table
+  (make-table-maker eq? name-hash))
 
 ; Used by QUOTE to turn generated names back into symbols
 
@@ -97,7 +98,7 @@
 ; 
 ; A qualified name is a generated name that has been translated into a path.
 ; For example, if syntax A introduces a reference to procedure B, then the
-; reference to B, as a qualified name, will be #(>> A B).  If B has refers
+; reference to B, as a qualified name, will be #(>> A B).  If B refers to
 ; C and is substituted in-line, then the reference to C is #(>> #(>> A B) C).
 ; The binding for C can be located by going to the structure which supplies A,
 ; finding where it gets B from, and then looking up C there.
@@ -114,6 +115,7 @@
 
 (define (qualified-parent-name q) (vector-ref q 1))
 (define (qualified-symbol q) (vector-ref q 2))
+(define (qualified-uid q) (vector-ref q 3))
 
 ; Convert an alias (generated name) to S-expression form ("qualified name").
 

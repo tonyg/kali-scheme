@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include <stdio.h>
@@ -8,6 +8,7 @@
 #include <string.h>
 #include "io.h"
 #include "scheme48.h"
+#include "unix.h"
 
 #define	TRUE	(0 == 0)
 #define	FALSE	(! TRUE)
@@ -239,6 +240,7 @@ void
 ps_error(char *message, long count, ...)
 {
   va_list ap;
+  extern long opcode_count;
 
   va_start(ap, count);
   fputs(message, stderr);
@@ -264,7 +266,7 @@ ps_really_open_file(char *filename, long *status, char *mode)
     *status = EDOM;    /* has to be something */
     return NULL; }
 
-  new = fopen(expanded, mode);
+  RETRY_NULL(new, fopen(expanded, mode));
 
   if (new == NULL) {
     *status = errno;
@@ -289,7 +291,11 @@ ps_open_output_file(char *name, long *status)
 long
 ps_close(FILE *stream)
 {
-  if (0 == fclose(stream))
+  int status;
+
+  RETRY_NEG(status, fclose(stream));
+
+  if (0 == status)
     return 0;
   else
     return errno;

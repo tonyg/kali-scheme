@@ -1,0 +1,62 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:24 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Unsafe functions and macros</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_49.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_60.html">Raising exceptions from external code</A> | Next: <A HREF="s48manual_62.html">Access to POSIX</A>
+<H2>Unsafe functions and macros</H2>
+<P>All of the C procedures and macros described above check that their
+ arguments have the appropriate types and that indexes are in range.
+The following procedures and macros are identical to those described
+ above, except that they do not perform type and range checks.
+They are provided for the purpose of writing more efficient code;
+ their general use is not recommended.
+<UL><LI><CODE>char      S48_UNSAFE_EXTRACT_CHAR(s48_value)</CODE>
+<LI><CODE>char *    S48_UNSAFE_EXTRACT_STRING(s48_value)</CODE>
+<LI><CODE>long      S48_UNSAFE_EXTRACT_INTEGER(s48_value)</CODE>
+<LI><CODE>long      S48_UNSAFE_EXTRACT_DOUBLE(s48_value)</CODE>
+</UL>
+<UL><LI><CODE>long      S48_UNSAFE_EXTRACT_FIXNUM(s48_value)</CODE>
+<LI><CODE>s48_value S48_UNSAFE_ENTER_FIXNUM(long)</CODE>
+</UL>
+<UL><LI><CODE>s48_value S48_UNSAFE_CAR(s48_value)</CODE>
+<LI><CODE>s48_value S48_UNSAFE_CDR(s48_value)</CODE>
+<LI><CODE>void      S48_UNSAFE_SET_CAR(s48_value, s48_value)</CODE>
+<LI><CODE>void      S48_UNSAFE_SET_CDR(s48_value, s48_value)</CODE>
+</UL>
+<UL><LI><CODE>long      S48_UNSAFE_VECTOR_LENGTH(s48_value)</CODE> 
+<LI><CODE>s48_value S48_UNSAFE_VECTOR_REF(s48_value, long)</CODE> 
+<LI><CODE>void      S48_UNSAFE_VECTOR_SET(s48_value, long, s48_value)</CODE> 
+</UL>
+<UL><LI><CODE>long      S48_UNSAFE_STRING_LENGTH(s48_value)</CODE> 
+<LI><CODE>char      S48_UNSAFE_STRING_REF(s48_value, long)</CODE> 
+<LI><CODE>void      S48_UNSAFE_STRING_SET(s48_value, long, char)</CODE> 
+</UL>
+<UL><LI><CODE>s48_value S48_UNSAFE_SYMBOL_TO_STRING(s48_value)</CODE> 
+</UL>
+<UL><LI><CODE>long      S48_UNSAFE_BYTE_VECTOR_LENGTH(s48_value)</CODE> 
+<LI><CODE>char      S48_UNSAFE_BYTE_VECTOR_REF(s48_value, long)</CODE> 
+<LI><CODE>void      S48_UNSAFE_BYTE_VECTOR_SET(s48_value, long, int)</CODE> 
+</UL>
+<UL><LI><CODE>s48_value S48_UNSAFE_SHARED_BINDING_REF(s48_value s_b)</CODE>
+<LI><CODE>int       S48_UNSAFE_SHARED_BINDING_P(x)</CODE>
+<LI><CODE>int       S48_UNSAFE_SHARED_BINDING_IS_IMPORT_P(s48_value s_b)</CODE>
+<LI><CODE>s48_value S48_UNSAFE_SHARED_BINDING_NAME(s48_value s_b)</CODE>
+<LI><CODE>void      S48_UNSAFE_SHARED_BINDING_SET(s48_value s_b, s48_value value)</CODE>
+</UL>
+<UL><LI><CODE>s48_value S48_UNSAFE_RECORD_TYPE(s48_value)</CODE> 
+<LI><CODE>s48_value S48_UNSAFE_RECORD_REF(s48_value, long)</CODE> 
+<LI><CODE>void      S48_UNSAFE_RECORD_SET(s48_value, long, s48_value)</CODE> 
+</UL>
+<UL><LI><CODE>type      S48_UNSAFE_EXTRACT_VALUE(s48_value, type)</CODE>
+<LI><CODE>type *    S48_UNSAFE_EXTRACT_VALUE_POINTER(s48_value, type)</CODE>
+<LI><CODE>void      S48_UNSAFE_SET_VALUE(s48_value, type, value)</CODE>
+</UL>
+
+<P>
+  
+Previous: <A HREF="s48manual_60.html">Raising exceptions from external code</A> | Next: <A HREF="s48manual_62.html">Access to POSIX</A></BODY></HTML>

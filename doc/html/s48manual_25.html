@@ -1,0 +1,63 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Introduction</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_24.html">Module system</A><BR>Previous: <A HREF="s48manual_24.html">Module system</A> | Next: <A HREF="s48manual_26.html">The configuration language</A>
+<H2>Introduction</H2>
+<P>The module system supports the structured division of a corpus of
+Scheme software into a set of modules.  Each module has its own
+isolated namespace, with visibility of bindings controlled by module
+descriptions written in a special <EM>configuration language.</EM>
+<P>A module may be instantiated multiple times, producing several <EM>packages</EM>, just as a lambda-expression can be instantiated multiple
+times to produce several different procedures.  Since single
+instantiation is the normal case, we will defer discussion of multiple
+instantiation until a later section.  For now you can think of a
+package as simply a module's internal environment mapping names to
+denotations.
+<P>A module exports bindings by providing views onto the underlying
+package.  Such a view is called a <EM>structure</EM> (terminology from
+Standard ML).  One module may provide several different views.  A
+structure is just a subset of the package's bindings.  The particular
+set of names whose bindings are exported is the structure's <EM>interface</EM>.
+<P>A module imports bindings from other modules by either <EM>opening</EM>
+or <EM>accessing</EM> some structures that are built on other packages.
+When a structure is opened, all of its exported bindings are visible
+in the client package.  On the other hand, bindings from an accessed
+structure require explicitly qualified references written with the
+<TT>structure-ref</TT> operator.
+<P>For example:
+<BLOCKQUOTE><PRE>
+(define-structure foo (export a c cons)
+  (open scheme)
+  (begin (define a 1)
+         (define (b x) (+ a x))
+         (define (c y) (* (b a) y))))
+
+(define-structure bar (export d)
+  (open scheme foo)
+  (begin (define (d w) (+ a (c w)))))
+</PRE></BLOCKQUOTE>
+This configuration defines two structures, <TT>foo</TT> and <TT>bar</TT>.
+<TT>foo</TT> is a view on a package in which the <TT>scheme</TT> structure's
+bindings (including <TT>define</TT> and <TT>+</TT>) are visible, together
+with bindings for <TT>a</TT>, <TT>b</TT>,
+and <TT>c</TT>.  <TT>foo</TT>'s interface is <TT>(export a c cons)</TT>, so of
+the bindings in its underlying package, <TT>foo</TT> only exports those
+three.  Similarly, structure <TT>bar</TT> consists of the binding of <TT>d</TT> from a package in which both <TT>scheme</TT>'s and <TT>foo</TT>'s
+bindings are visible.  <TT>foo</TT>'s binding of <TT>cons</TT> is imported
+from the Scheme structure and then re-exported.
+<P>A module's body, the part following <TT>begin</TT> in the above example,
+is evaluated in an isolated lexical scope completely specified by the
+package definition's <TT>open</TT> and <TT>access</TT> clauses.  In
+particular, the binding of the syntactic operator <TT>define-structure</TT>
+is not visible unless it comes from some opened structure.  Similarly,
+bindings from the <TT>scheme</TT> structure aren't visible unless they
+become so by <TT>scheme</TT> (or an equivalent structure) being opened.
+<P>
+  
+Previous: <A HREF="s48manual_24.html">Module system</A> | Next: <A HREF="s48manual_26.html">The configuration language</A></BODY></HTML>

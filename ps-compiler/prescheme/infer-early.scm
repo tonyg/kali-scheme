@@ -1,4 +1,4 @@
-; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 ; Type checking nodes.
 
@@ -283,6 +283,19 @@
 	    (else
 	     (unify! true-type false-type node)
 	     true-type)))))
+
+; Unions haven't been completely implemented yet.
+;
+;(define-inference-rule 'type-case
+;  (lambda (node depth return?)
+;    (let ((args (cdr (node-form node))))
+;      (let ((type-id (cadr (node-form (cadr args))))
+;            (uvar (make-uvar 'v depth)))
+;        (let ((union-type (make-pointer-type (get-union-type type-id)))
+;              (cont-types (get-union-deconstruction-types type-id uvar)))
+;          (check-arg-type args 0 union-type depth node)
+;          (check-arg-types args 2 cont-types depth node)
+;          uvar)))))
 
 (define-inference-rule 'letrec
   (lambda (node depth return?)

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Once we know that we want something to be inlined, the following things
 ; actually makes use of the fact.  For procedures for which all
@@ -145,7 +145,8 @@
 		 (reconstitute-name foo package)
 		 foo)))
 	  ((qualified? st)
-	   (reconstitute-name (qualified->name st rename) package))
+	   (reconstitute-name (qualified->name st rename)
+			      package))
 	  ((pair? st)
 	   (case (car st)
 	     ((quote)

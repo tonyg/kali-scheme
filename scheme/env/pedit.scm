@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Package / structure / interface mutation operations.
@@ -79,18 +79,23 @@
 	(let recur ((q p))
 	  (let loop ((opens (package-opens q)))
 	    (if (not (null? opens))
-		(if (interface-ref (structure-interface (car opens)) name)
-		    ;; Shadowing
-		    (let* ((q (structure-package (car opens)))
-			   (probe (table-ref (package-undefineds q)
-					    name)))
-		      (if probe
-			  (begin (if *debug?*
-				     (note "undefined -> shadowed"
-					   name loc probe))
-				 (cope-with-mutation p name loc probe))
-			  (recur q)))
-		    (loop (cdr opens)))))))
+		(call-with-values
+		 (lambda ()
+		   (interface-ref (structure-interface (car opens))
+				  name))
+		 (lambda (base-name type)
+		   (if base-name
+		       ;; Shadowing
+		       (let* ((q (structure-package (car opens)))
+			      (probe (table-ref (package-undefineds q)
+						base-name)))
+			 (if probe
+			     (begin (if *debug?*
+					(note "undefined -> shadowed"
+					      name loc probe))
+				    (cope-with-mutation p name loc probe))
+			     (recur q)))
+		       (loop (cdr opens)))))))))
     loc))
 
 ; COPE-WITH-MUTATION:
@@ -140,7 +145,7 @@
 	      (begin (set! losers (cons package losers))
 		     (walk-population
 		      (lambda (struct)
-			(if (interface-ref (structure-interface struct) name)
+			(if (interface-member? (structure-interface struct) name)
 			    (walk-population recur (structure-clients struct))))
 		      (package-clients package)))))
 	losers)))
@@ -183,18 +188,17 @@
 (define (verify-loser loser)
   (if *debug?*
       (begin (write `(verify-loser ,loser)) (newline)))
-  (cond ((structure? loser)
+  (cond ((interface? loser)
+	 (walk-population verify-loser (interface-clients loser)))
+	((structure? loser)
 	 (reinitialize-structure! loser)
-	 (walk-population
-	  (lambda (p)
-	    (reinitialize-package! p)
-	    (let ((ps (fluid $package-losers)))
-	      (if (not (memq p ps))
-		  (set-fluid! $package-losers
-			      (cons p ps)))))
-	  (structure-clients loser)))
-	((interface? loser)
-	 (walk-population verify-loser (interface-clients loser)))))
+	 (walk-population verify-loser (structure-clients loser)))
+	((package? loser)
+	 (reinitialize-package! loser)
+	 (let ((losers (fluid $package-losers)))
+	   (if (not (memq loser losers))
+	       (set-fluid! $package-losers
+			   (cons loser losers)))))))
 
 (define (drain flu check)
   (let loop ()

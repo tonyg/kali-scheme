@@ -1,0 +1,42 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:25 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Time</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_62.html">Access to POSIX</A><BR>Previous: <A HREF="s48manual_68.html">Files and directories</A> | Next: <A HREF="s48manual_70.html">I/O</A>
+<H2>Time</H2>
+<P>These procedures are in structures <CODE>posix-time</CODE> and <CODE>posix</CODE>.
+<UL><LI><CODE>(make-time<I>&nbsp;integer</I>)&nbsp;-&gt;&nbsp;<I>time</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(current-time<I></I>)&nbsp;-&gt;&nbsp;<I>time</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(time?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(time-seconds<I>&nbsp;time</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="4">&nbsp;</A>
+</UL>
+A <CODE>time</CODE> record contains an integer that represents time as
+ the number of second since the Unix epoch (00:00:00 GMT, January 1, 1970).
+<CODE>Make-time</CODE> and <CODE>current-time</CODE> return <CODE>time</CODE>s, with
+ <CODE>make-time</CODE>'s using its argument while <CODE>current-time</CODE>'s has
+ the current time.
+<CODE>Time?</CODE> is a predicate that recognizes <CODE>time</CODE>s and
+ <CODE>time-seconds</CODE> returns the number of seconds <CODE><I>time</I></CODE> represents.
+<UL><LI><CODE>(time=?<I>&nbsp;time&nbsp;time</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(time&lt;?<I>&nbsp;time&nbsp;time</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="6">&nbsp;</A>
+<LI><CODE>(time&lt;=?<I>&nbsp;time&nbsp;time</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="7">&nbsp;</A>
+<LI><CODE>(time&gt;?<I>&nbsp;time&nbsp;time</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="8">&nbsp;</A>
+<LI><CODE>(time&gt;=?<I>&nbsp;time&nbsp;time</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="9">&nbsp;</A>
+</UL>
+These perform various comparison operations on the <CODE>time</CODE>s.
+<UL><LI><CODE>(time-&gt;string<I>&nbsp;time</I>)&nbsp;-&gt;&nbsp;<I>string</I></CODE><A NAME="10">&nbsp;</A>
+</UL>
+<CODE>Time-&gt;string</CODE> returns a string representation of <CODE><I>time</I></CODE> in the
+ following form.
+<BLOCKQUOTE><PRE>
+"Wed Jun 30 21:49:08 1993
+"
+</PRE></BLOCKQUOTE>
+<P>
+  
+Previous: <A HREF="s48manual_68.html">Files and directories</A> | Next: <A HREF="s48manual_70.html">I/O</A></BODY></HTML>

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Generate filenames.make from *-packages.scm.
 
@@ -6,6 +6,7 @@
 ; Define DEFINE-STRUCTURE and friends
 (for-each load
 	  '("scheme/bcomp/module-language.scm"
+	    "scheme/alt/dummy-interface.scm"
 	    "scheme/alt/config.scm"
 	    "scheme/env/flatload.scm"))
 

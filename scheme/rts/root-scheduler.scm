@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The root scheduler.
 ;
@@ -16,6 +16,7 @@
 					 quantum
 					 abort)
 				      (lambda ()
+					(abort-unwanted-i/o!)
 					(spawn-output-forcers #t)
 					(wake-some-threads))
 				      housekeeping-quantum)
@@ -110,7 +111,10 @@
 	      (set-enabled-interrupts! all-interrupts)
 	      #f))))))
 
-(define one-day-of-milliseconds (* (* 1000 60) (* 60 24)))
+(define one-day-of-milliseconds (* 1000		; milliseconds in a second
+				   60		; seconds in a minute
+				   60		; minutes in an hour
+				   24))		; hours in a day
 
 ; A mess because a fixnum's worth of milliseconds is only a few days.
 ; The VM's WAIT procedure takes its maximum-wait argument in either

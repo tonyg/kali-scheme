@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; [This is a kludge.  Richard is loathe to include it in the
 ; distribution.  But now the system itself uses it, so we're stuck.]
@@ -122,9 +122,9 @@
     (c-define (string-append
 	       "S48_STOB_BYTE_SET(x, i, v) "
 	       "do { "
-	       "char __stob_set_x = (x); "
+	       "s48_value __stob_set_x = (x); "
 	       "long __stob_set_i = (i); "
-	       "s48_value __stob_set_v = (v); "
+	       "char __stob_set_v = (v); "
 	       "if (S48_STOB_IMMUTABLEP(__stob_set_x)) "
 	       "s48_raise_argtype_error(__stob_set_x); "
 	       "else "
@@ -157,7 +157,7 @@
 		      (c-define "S48_UNSAFE_~A(x) (S48_STOB_REF((x), ~D))" name i))
 		    (if (not (null? (cdar accs)))
 			(let ((name (upcase (cadar accs))))
-			  (c-define "S48_~A(x, v) (s48_stob_ref((x), S48_STOBTYPE_~A, ~D, (v)))"
+			  (c-define "S48_~A(x, v) (s48_stob_set((x), S48_STOBTYPE_~A, ~D, (v)))"
 				    name type i)
 			  (c-define "S48_UNSAFE_~A(x, v) S48_STOB_SET((x), ~D, (v))" name i))))))
 	      stob-data)
@@ -165,7 +165,7 @@
     (for-each (lambda (type index)
 		(c-define "S48_~A_LENGTH(x) (s48_stob_length((x), S48_STOBTYPE_~A))"
 			  type type)
-		(c-define "S48_UNSAFE_~A_LENGTH(x) (STOB_DESCRIPTOR_LENGTH(x))"
+		(c-define "S48_UNSAFE_~A_LENGTH(x) (S48_STOB_DESCRIPTOR_LENGTH(x))"
 			  type)
 		(c-define "S48_~A_REF(x, i) (s48_stob_ref((x), S48_STOBTYPE_~A, ~A))"
 			  type type index)
@@ -177,8 +177,8 @@
 			  type index))
 	      '("VECTOR" "RECORD")
 	      '("(i)" "(i) + 1"))
-    (c-define "S48_RECORD_TYPE(x) (s48_stob_ref((x), S48_STOBTYPE_RECORD))")
-    (c-define "S48_UNSAFE_RECORD_TYPE(x) (STOB_REF((x), 0))")
+    (c-define "S48_RECORD_TYPE(x) (s48_stob_ref((x), S48_STOBTYPE_RECORD, 0))")
+    (c-define "S48_UNSAFE_RECORD_TYPE(x) (S48_STOB_REF((x), 0))")
     (for-each (lambda (type)
 		(c-define "S48_~A_LENGTH(x) (s48_stob_byte_length((x), S48_STOBTYPE_~A))"
 			  type type)

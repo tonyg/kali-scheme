@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Interpreting commands.
 
@@ -26,7 +26,11 @@
 			     context
 			     start-thunk
 			     real-command-loop
-			     #f)))))	; no condition
+			     #f			; no condition
+			     #f			; not inspecting
+			     (current-input-port)
+			     (current-output-port)
+			     (current-error-port))))))
 
 ; Entry for initialization & testing.
 
@@ -45,30 +49,46 @@
 ; started.
 
 (define (command-loop condition)
-  (push-command-level real-command-loop condition))
-
-(define command-level-condition command-level-repl-data)
+  (push-command-level condition #f))
 
 ; Install the handler, bind $NOTE-UNDEFINED to keep from annoying the user,
-; display the condition and start reading commands.
-;
-; This has SHOWING-FOCUS-OBJECT inlined by hand to reduce the amount of noise
-; the debugger sees on the stack.
+; bind $FOCUS-BEFORE to avoid keeping state on the stack where it can be
+; captured by CALL/CC, display the condition and start reading commands.
 
 (define (real-command-loop)
   (let-fluids $note-undefined #f    ;useful
+	      $command-results #f
       (lambda ()
-	(display-command-level-condition (command-level-condition (command-level)))
-	(let loop ()
+	(display-command-level-condition
+	  (command-level-condition (command-level)))
+	(let command-loop ()
 	  (let ((command (read-command-carefully (command-prompt)
 						 (form-preferred?)
-						 (command-input)))
-		(focus-before (focus-values)))
+						 (command-input))))
+	    (set-fluid! $command-results #f)
 	    (execute-command command)
-	    (let ((focus-after (focus-values)))
-	      (if (not (eq? focus-after focus-before))
-		  (show-command-results focus-after)))
-	    (loop))))))
+	    (let ((results (fluid $command-results)))
+	      (if results
+		  (show-command-results results)))
+	    (command-loop))))))
+
+; For saving the results returned by a command.
+
+(define $command-results (make-fluid #f))
+
+(define (set-command-results! results . maybe-set-focus-object?)
+  (set-fluid! $command-results results)
+  (if (or (null? maybe-set-focus-object?)
+	  (car maybe-set-focus-object?))
+      (case (length results)
+	((0)
+	 (values))
+	((1)
+	 (if (not (eq? (car results)
+		       (unspecific)))
+	     (set-focus-object! (car results))))
+	(else
+	 (set-focus-object! results)))))
 
 (define (display-command-level-condition condition)
   (if condition
@@ -78,8 +98,13 @@
 ; treated as an argument to RUN.  If #F no commas are needed and RUN
 ; commands must be explicit.
 
-(define form-preferred?
-  (user-context-accessor 'form-preferred? (lambda () #t)))
+(define (form-preferred?)
+  (not (value-stack)))
+
+; If true then print a menu when showing results.
+
+(define (inspect-mode?)
+  (value-stack))
 
 ; Go up to the previous level or exit if there are no more levels.
 
@@ -153,6 +178,7 @@
 ; The prompt is "level-number environment-id-string> " or just
 ; "environment-id-string> " at top level.  The id-string is empty for the
 ; current user package and the name of the package otherwise.
+; The ">" changes to ":" in command-preferred mode.
 
 (define (command-prompt)
   (let ((level (- (length (command-levels)) 1))
@@ -164,7 +190,9 @@
 		       ""
 		       " ")
 		   id
-		   "> ")))
+		   (if (form-preferred?)
+		       "> "
+		       ": "))))
 
 (define-generic environment-id-string &environment-id-string (env))
 
@@ -172,61 +200,48 @@
 
 ;----------------
 ; Evaluate a form and save its result as the current focus values.
+; The unspecific object is discarded.
 
 (define (evaluate-and-select form env)
   (call-with-values (lambda ()
                       (eval form env))
     (lambda results
-      (if (or (null? results)
-              (not (null? (cdr results)))
-              (not (eq? (car results) (unspecific))))
-          (set-focus-values! results))
+      (set-command-results! results)
       (apply values results))))
 
 ;----------------
-; Display the focus object if it changes (sort of like emacs's redisplay)
-
-(define (showing-focus-object thunk)
-  (let ((focus-before (focus-values)))
-    (thunk)
-    (let ((focus-after (focus-values)))
-      (if (not (eq? focus-after focus-before))
-          (show-command-results focus-after)))))
-
-(define (focus-object)
-  (let ((v (focus-values)))
-    (if (and (pair? v) (null? (cdr v))) (car v) v)))
-
-(define (set-focus-object! obj)
-  (set-focus-values! (list obj)))
+; Printing command results.  The results are also saved as the current
+; focus object.
 
 (define (show-command-results results)
-  (cond ((null? results))
-        ((not (null? (cdr results)))
-         (let ((out (command-output)))
-           (display "; " out)
-           (write (length results) out)
-           (display " values" out)
-           (newline out))
-         (for-each show-command-result results))
-        (else ;(not (eq? (car results) (unspecific)))
-         (show-command-result (car results)))))
+  (let ((out (command-output)))
+    (case (length results)
+      ((0)
+       (display "; no values returned" out)
+       (newline out))
+      ((1)
+       (show-command-result (car results))
+       (if (inspect-mode?)
+	   (present-menu)))
+      (else
+       (display "; " out)
+       (write (length results) out)
+       (display " values returned" out)
+       (if (inspect-mode?)
+	   (present-menu)
+	   (begin
+	     (newline out)
+	     (for-each show-command-result results)))))))
 
 (define (show-command-result result)
-  (write-carefully (value->expression result)
-                   (command-output))
-  (newline (command-output)))
-
-(define $write-depth (make-fluid -1))
-(define $write-length (make-fluid -1))
-
-(define (write-carefully x port)
-  (if (error? (ignore-errors (lambda ()
-                               (limited-write x port
-                                              (fluid $write-depth)
-                                              (fluid $write-length))
-                               #f)))
-      (display "<Error while printing.>" port)))
+  (let ((out (command-output)))
+    ((if (inspect-mode?)
+	 with-limited-output
+	 (lambda (p) (p)))
+     (lambda ()
+       (write-carefully (value->expression result)
+			out)
+       (newline out)))))
 
 ;----------------
 ; Sentinels - run after every command.
@@ -309,6 +324,62 @@
 	   (apply proc (cdr command))))))
 
 ;----------------
+; Switches - these are boolean-valued cells for controlling the behavior
+; of the command interpreter.
+;
+; This code is here so that the help listing can print out the switches
+; and their current values.
+
+(define *switches* '())
+
+(define (lookup-switch name)
+  (assq name *switches*))
+
+(define (add-switch name get set on-doc off-doc)
+  (set! *switches*
+	(insert (list name get set on-doc off-doc)
+		*switches*
+		(lambda (z1 z2)
+		  (string<=? (symbol->string (car z1))
+			     (symbol->string (car z2)))))))
+
+(define (switch-on? switch)
+  ((cadr switch)))
+
+(define (switch-set! switch value)
+  ((caddr switch) value))
+
+; We have two documentation strings, one for `on' and one for `off'.
+
+(define (switch-doc switch)
+  (let ((doc (cdddr switch)))
+    (if (switch-on? switch)
+	(car doc)
+	(cadr doc))))
+
+; Print out a list of the switches and their current values.
+
+(define (list-switches)
+  (let ((o-port (command-output))
+	(size (apply max (map (lambda (switch)
+				(string-length (symbol->string (car switch))))
+			      *switches*))))
+    (for-each (lambda (switch)
+		(let ((name (symbol->string (car switch))))
+		  (display #\space o-port)
+		  (display name o-port)
+		  (display #\space o-port)
+		  (write-spaces (- size (string-length name)) o-port)
+		  (display (if (switch-on? switch)
+			       "(on, "
+			       "(off, ")
+			   o-port)
+		  (display (switch-doc switch) o-port)
+		  (display #\) o-port)
+		  (newline o-port)))
+	      *switches*)))
+
+;----------------
 ; help
 
 (define (help . maybe-id)
@@ -340,9 +411,8 @@
     (for-each (lambda (s)
                 (write-line s o-port))
               '(
-"This is a beta-test version of Scheme 48.  You are interacting with"
-"the command processor.  A command is either a Scheme form to evaluate"
-"or one of the following:"
+"This is Scheme 48.  You are interacting with the command processor."
+"A command is either a Scheme form to evaluate or one of the following:"
 ""))
 
     (list-command-help (user-command-help) f? o-port)
@@ -352,6 +422,14 @@
 ""
 "Square brackets [...] indicate optional arguments."
 ""
+"The following switches are turned on and off by the `set' and `unset' commands:"
+""
+                ))
+    (list-switches)
+    (for-each (lambda (s)
+                (write-line s o-port))
+              '(
+""		
 "The expression ## evaluates to the last value displayed by the command"
 "processor."
                 ))))
@@ -382,10 +460,15 @@
 (define (error-form proc args)
   (cons proc (map value->expression args)))
 
+; Print non-self-evaluating value X as 'X.
+
 (define (value->expression obj)         ;mumble
-  (if (or (number? obj) (char? obj) (string? obj) (boolean? obj))
-      obj
-      `',obj))
+  (if (or (symbol? obj)
+	  (pair? obj)
+	  (null? obj)
+	  (vector? obj))
+      `',obj
+      obj))
 
 (define (write-spaces count o-port)
   (do ((count count (- count 1)))
@@ -396,10 +479,6 @@
   (cond ((string? prefix) prefix)
         ((char? prefix) (string prefix))
         ((symbol? prefix) (symbol->string prefix))))
-
-(define (write-line string port)
-  (display string port)
-  (newline port))
 
 (define (y-or-n? question eof-value)
   (let ((i-port (command-input))
@@ -449,12 +528,6 @@
     (if (not (batch-mode?))
 	(write-line "Type ,? (comma question-mark) for help." port))))
 
-; The following is used by the debugger to get an appropriate continuation
-; or list of threads to show the user.
-
-(define thread? (structure-ref threads thread?))
-(define thread-continuation (structure-ref threads-internal thread-continuation))
-
 (define (command-continuation)          ;utility for debugger
   (let ((obj (focus-object)))
     (cond ((debug-command-level)
@@ -465,7 +538,7 @@
 		      (if (= 1 (length threads))
 			  (thread-continuation (car threads))
 			  #f)))))
-	  (((structure-ref continuations continuation?) obj)
+	  ((continuation? obj)
 	   obj)
 	  ((thread? obj)
 	   (thread-continuation obj))

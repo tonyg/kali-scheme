@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; --------------------
@@ -37,6 +37,9 @@
                 (if (and name (not (eq? name (location-id obj))))
                     (list name (location-package-name obj))
                     '())))))
+
+(define-method &disclose ((obj :cell))
+  (cons 'cell '()))
 
 (define-method &disclose ((obj :continuation))
   (list (if (exception-continuation? obj)
@@ -205,7 +208,6 @@
 		    (map value->expression (cons (car args) (cadr args)))))))
   (define-exception-discloser (enum op call) disc)
   (define-exception-discloser (enum op big-call) disc)
-  (define-exception-discloser (enum op move-args-and-call) disc)
   (define-exception-discloser (enum op with-continuation) disc)
   (define-exception-discloser (enum op apply) disc)
   (define-exception-discloser (enum op closed-apply) disc))
@@ -225,6 +227,7 @@
 		       (list 'error
 			     "returning several values when only one is expected"
 			     (error-form 'values args))))))))
+  (define-exception-discloser (enum op return) disc)
   (define-exception-discloser (enum op values) disc)
   (define-exception-discloser (enum op closed-values) disc))
 
@@ -277,17 +280,17 @@
 (define-exception-discloser (enum op stored-object-indexed-set!)
   (vector-exception-discloser 'set!))
 
-(define-exception-discloser (enum op get-cont-from-heap)
-  (lambda (opcode reason args)
-    (let ((value (car args))
-	  (continuation (cadr args)))
-      (if (not continuation)
-	  (list 'error
-		"exit status is not a small integer"
-		(value->expression value))
-	  (list 'error
-		"returning to a non-continuation"
-		(value->expression continuation))))))
+;(define-exception-discloser (enum op get-cont-from-heap)
+;  (lambda (opcode reason args)
+;    (let ((value (car args))
+;          (continuation (cadr args)))
+;      (if (not continuation)
+;          (list 'error
+;                "exit status is not a small integer"
+;                (value->expression value))
+;          (list 'error
+;                "returning to a non-continuation"
+;                (value->expression continuation))))))
 
 (define-exception-discloser (enum op ascii->char)
   (lambda (opcode reason args)
@@ -315,14 +318,14 @@
 (define (template-id tem)
   (let ((info (template-info tem)))
     (if (debug-data? info)
-      (debug-data-uid info)
- info)))
+	(debug-data-uid info)
+	info)))
 
 (define (template-name tem)
   (let ((probe (template-debug-data tem)))
     (if probe
-     (debug-data-name probe)
-       #f)))
+	(debug-data-name probe)
+	#f)))
 
 (define (template-names tem)
   (debug-data-names (template-info tem)))
@@ -333,9 +336,9 @@
 (define (debug-data-names info)
   (let ((dd (get-debug-data info)))
     (if (debug-data? dd)     ;paranoid
-    (cons (debug-data-name dd)
-          (debug-data-names (debug-data-parent dd)))
-      '())))
+	(cons (debug-data-name dd)
+	      (debug-data-names (debug-data-parent dd)))
+	'())))
 
 ; --------------------
 ; Utilities

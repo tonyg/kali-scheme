@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file vmio.scm.
 
@@ -8,6 +8,16 @@
 (define *number-of-channels* 100)
 
 (define *vm-channels*)
+
+; Both of the above are needed when writing images.
+
+(define (s48-channels)
+  *vm-channels*)
+
+(define (s48-channel-count)
+  *number-of-channels*)
+
+; The channel statuses as fixnums.
 
 (define closed-status
   (enter-fixnum (enum channel-status-option closed)))
@@ -20,6 +30,8 @@
 (define special-output-status
   (enter-fixnum (enum channel-status-option special-output)))
 
+; Predicates for channels.
+
 (define (input-channel? channel)
   (= (channel-status channel) input-status))
 
@@ -28,6 +40,8 @@
 
 (define (open? channel)
   (not (= (channel-status channel) closed-status)))
+
+; Initialization - create the channel vector and the three standard channels.
 
 (define (initialize-i/o-system+gc)
   (set! *number-of-channels*
@@ -285,32 +299,36 @@
 ;----------------------------------------------------------------
 ; Automatically closing channels.
 
+; Make sure all open channel names survive the GC.
+
+(define (trace-channel-names s48-trace-value)
+  (do ((i 0 (+ i 1)))
+      ((= i *number-of-channels*) #f)
+    (let ((channel (vector-ref *vm-channels* i)))
+      (if (and (not (false? channel))
+	       (open? channel))
+	  (set-channel-id! channel
+			   (s48-trace-value (channel-id channel)))))))
+
 ; The following is called after the GC finishes.
 
-(define (close-untraced-channels!)
+(define (close-untraced-channels! s48-extant? s48-trace-value)
   (do ((i 0 (+ i 1)))
       ((= i *number-of-channels*) #f)
     (let ((channel (vector-ref *vm-channels* i)))
       (if (not (false? channel))
-	  (let* ((header (stob-header channel))
-		 (new (cond ((stob? header)  ; channel was copied
-			     header)
-			    ((open? channel) ; channel was not copied
-			     (close-channel-noisily! channel)
-			     false)
-			    (else
-			     false))))
+	  (let ((new (cond ((s48-extant? channel)
+			    (s48-trace-value channel))
+			   ((open? channel) ; channel was not copied
+			    (close-channel-noisily! channel)
+			    false)
+			   (else
+			    false))))
 	    (vector-set! *vm-channels* i new))))))
 
 (define (close-channel-noisily! channel)
   (let ((status (close-channel! channel))
-	(id (let ((id (channel-id channel)))
-	      (cond ((fixnum? id)
-		     id)
-		    ((stob? (stob-header id))
-		     (stob-header id))
-		    (else
-		     id)))))
+	(id (channel-id channel)))
     (if (error? status)
 	(channel-close-error status (channel-os-index channel) id))
     (write-error-string "Channel closed: ")
@@ -321,21 +339,3 @@
     (write-error-integer (extract-fixnum (channel-os-index channel)))
     (write-error-newline)))
 
-; Mark channels in about-to-be-dumped heaps as closed.
-
-(define (s48-mark-traced-channels-closed!)
-  (do ((i 0 (+ i 1)))
-      ((= i *number-of-channels*))
-    (let ((channel (vector-ref *vm-channels* i)))
-      (if (not (false? channel))
-	  (let ((header (stob-header channel)))
-	    (if (stob? header)    ; channel was copied
-		(begin
-		  (write-error-string "Channel closed in dumped image: ")
-		  (if (fixnum? (channel-id channel))
-		      (write-error-integer (extract-fixnum (channel-id channel)))
-		      (write-error-string (extract-string (channel-id channel))))
-		  (write-error-newline)
-		  (set-channel-status! header closed-status)
-		  (set-channel-os-index! header (enter-fixnum -1))))))))
-  (unspecific))

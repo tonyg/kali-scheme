@@ -1,4 +1,4 @@
-; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 
 ; Data must be done last as it may contain references to the other stuff.

@@ -22,8 +22,11 @@
 % The following is for prototypes that have return types.
 %    (foo int int) -> int
 
-\newcommand{\proto}[3]{\item\noindent\unskip%
-\cindex{\code{#1}}%
+\newcommand{\proto}[3]{%
+\protonoindex{{#1}}{{#2}}{{#3}}%
+\mainschindex{{#1}}}%
+
+\newcommand{\protonoindex}[3]{\item\noindent\unskip%
 \hbox{\spaceskip=0.5em\code{({#1}{\it#2\/})} {$\rightarrow$} {\it#3}}}
 
 \newcommand{\cproto}[1]{\item\noindent\unskip%
@@ -33,8 +36,15 @@
 \hbox{\spaceskip=0.5em\code{{#1}}}\hfill\penalty 0%
 \hbox{ }\nobreak\hfill\hbox{\rm (may GC)}}
 
-\newcommand{\protonoresult}[2]{\item\noindent\unskip%
+\newcommand{\protonoresultnoindex}[2]{\item\noindent\unskip%
 \hbox{\spaceskip=0.5em\code{(\hbox{#1}{\it#2\/})}}}
+
+\newcommand{\protonoresult}[2]{%
+\protonoresultnoindex{{#1}}{{#2}}%
+\mainschindex{{#1}}}%
+
+\newcommand{\protoresult}[1]{\newline\unskip%
+{\hspace*{2em}\code{{$\rightarrow$} {\it#1}}\hfill}}
 
 % Syntax prototypes
 
@@ -42,17 +52,21 @@
 \hbox{\spaceskip=0.5em\code{(\hbox{#1}{#2})}}\hfill\penalty 0%
 \hbox{ }\nobreak\hfill\hbox{\rm syntax}}
 
-\newcommand{\syntaxproto}[3]{\syntaxprotonoresult{#1}{#2}%
-\hspace*{24pt}{$\rightarrow$} {\it#3}}
+\newcommand{\syntaxproto}[3]{\item\noindent\unskip%
+\hbox{\spaceskip=0.5em\code{(\hbox{#1}{#2})}} {$\rightarrow$} {\it#3}%
+\hfill\penalty 0%
+\hbox{ }\nobreak\hfill\hbox{\rm syntax}}
 
 % This can be reduced
 
 \newcommand{\pconstproto}[2]{\item\noindent\unskip%
-\hbox{\spaceskip=0.5em#1}\code\hfill\penalty 0%
+\hbox{\spaceskip=0.5em\code{#1}}\hfill\penalty 0%
 \hbox{ }\nobreak\hfill\hbox{\rm #2}}
 
 % Variable prototype
-\newcommand{\constproto}[2]{\pconstproto{#1}{#2}}
+\newcommand{\constproto}[2]{\pconstproto{{#1}}{{#2}}\mainschindex{{#1}}}
+
+\newcommand{\constprotonoindex}[2]{\pconstproto{{#1}}{{#2}}}
 
 }
 %%%%%%%%%%%%%%%% end of Latex proto definitions
@@ -64,16 +78,29 @@
 % The following is for prototypes that have return types.
 %    (foo int int) -> int
 
-\newcommand{\proto}[3]{%
+\newcommand{\protonoindex}[3]{%
 %\cindex{\code{#1}}%
 \item\noindent\code{({#1}{\var{#2}\/})~-->~{\var{#3}}}}
 
-\newcommand{\protonoresult}[2]{%
+\newcommand{\proto}[3]{%
+\protonoindex{{#1}}{{#2}}{{#3}}%
+\mainschindex{{#1}}}%
+
+\newcommand{\protonoresultnoindex}[2]{%
 %\cindex{\code{#1}}%
 \item\noindent\code{({#1}{\var{#2}\/})}}
 
-\newcommand{\constproto}[2]{%
+\newcommand{\protonoresult}[2]{%
+\protonoresultnoindex{{#1}}{{#2}}%
+\mainschindex{{#1}}}%
+
+\newcommand{\pconstproto}[2]{%
 \item\noindent\prototagstart\code{{#1}}\prototag{{#2}}}
+
+% Variable prototype
+\newcommand{\constproto}[2]{\pconstproto{{#1}}{{#2}}\mainschindex{{#1}}}
+
+\newcommand{\constprotonoindex}[2]{\pconstproto{{#1}}{{#2}}}
 
 \newcommand{\cproto}[1]{%
 \item\noindent\code{{#1}}}
@@ -83,6 +110,12 @@
 
 \newcommand{\syntaxprotonoresult}[2]{%
 \item\noindent\prototagstart\code{({#1}{#2})}\prototag{syntax}}
+
+\newcommand{\protoresult}[1]{%
+\\{}\noindent\code{\ \ \ \ -->~{\it{#1}}}}
+
+\newcommand{\syntaxproto}[3]{%
+\item\noindent\prototagstart\code{({#1}{#2})~-->~{\var{#3}}}\prototag{syntax}}
 
 \newcommand{\prototagstart}{%
 \begin{rawhtml}<table border=0 cellspacing=0 cellpadding=0 width=80%>

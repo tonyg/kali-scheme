@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This manages external roots that can be registered and unregistered in a
 ; stack-like fashion.  It also provides the GC interface for the C FFI.
@@ -67,6 +67,7 @@
 (define (s48-release-gc-roots-base! old-base)
   (let ((okay? (address= *external-root-stack*
 			 *external-root-stack-base*)))
+    (set! *external-root-stack* old-base)
     (set! *external-root-stack-base* old-base)
     okay?))
 
@@ -127,8 +128,10 @@
   (store! cell (s48-trace-value (fetch cell))))
 
 ;----------------
-; The point to all this is, in part, to be able to allocate space while
-; outside the VM.
+; The parallel VM needs to reinitialize these in each process.
 
-(define (s48-allocate-stob type size)
-  (make-b-vector type size (ensure-space size)))
+(define (s48-reset-external-roots!)
+  (set! *external-root-stack* null-address)
+  (set! *external-root-stack-base* null-address)
+  (set! *permanent-external-roots* null-address))
+

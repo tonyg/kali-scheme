@@ -467,10 +467,11 @@ invoked" is innocuous.  Feel free to ignore it.
 See also the package system documentation, doc/module.tex.
 
 Unfortunately, few of these wonderful things are documented.  They are
-listed, however, in files rts-packages.scm, comp-packages.scm, and
-more-packages.scm in the distribution directory, and the bindings they
-export are listed in interfaces.scm and more-interfaces.scm.  Here is
-a little information on the more generally useful structures.
+listed, however, in files rts-packages.scm, comp-packages.scm,
+env-packages.scm and more-packages.scm in the distribution directory,
+and the bindings they export are listed in interfaces.scm and
+more-interfaces.scm.  Here is a little information on the more generally
+useful structures.
 
 architecture
     Information about the virtual machine.  E.g.

@@ -1,0 +1,38 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Compiling and linking</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_24.html">Module system</A><BR>Previous: <A HREF="s48manual_29.html">Higher-order modules</A> | Next: <A HREF="s48manual_31.html">Semantics of configuration mutation</A>
+<H2>Compiling and linking</H2>
+<P>Scheme&nbsp;48 has a static linker that produces stand-alone heap images
+from module descriptions.  The programmer specifies a particular procedure in a
+particular structure to be the image's startup procedure (entry
+point), and the linker traces dependency links as given by <TT>open</TT>
+and <TT>access</TT> clauses to determine the composition of the heap
+image.
+<P>There is not currently any provision for separate compilation; the
+only input to the static linker is source code.  However, it will not
+be difficult to implement separate compilation.  The unit of
+compilation is one module (not one file).  Any opened or accessed
+structures from which macros are obtained must be processed to the
+extent of extracting its macro definitions.  The compiler knows from
+the interface of an opened or accessed structure which of its exports
+are macros.  Except for macros, a module may be compiled without any
+knowledge of the implementation of its opened and accessed structures.
+However, inter-module optimization may be available as an option.
+<P>The main difficulty with separate compilation is resolution of
+auxiliary bindings introduced into macro expansions.  The module
+compiler must transmit to the loader or linker the search path by
+which such bindings are to be resolved.  In the case of the <TT>delay</TT>
+macro's auxiliary <TT>make-promise</TT> (see example above), the loader
+or linker needs to know that the desired binding of <TT>make-promise</TT>
+is the one apparent in <TT>delay</TT>'s defining package, not in the
+package being loaded or linked.
+<P>
+  
+Previous: <A HREF="s48manual_29.html">Higher-order modules</A> | Next: <A HREF="s48manual_31.html">Semantics of configuration mutation</A></BODY></HTML>

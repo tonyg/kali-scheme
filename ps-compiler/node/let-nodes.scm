@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 
 ;   This is a backquote-like macro for building nodes.
@@ -6,6 +6,11 @@
 ;   One goal is to produce code that is as efficient as possible.
 ;
 ; (LET-NODES (<spec1> ... <specN>) . <body>)
+; (NEW-LAMBDA (<ident> (<var1> ... <varN>) <call>))
+; (NEW-LAMBDA (<ident> (<var1> ... <varN> . <last-vars>)) <call>)
+; (NEW-CALL <primop-id> <exits> <arg> ...)
+;
+;
 ;
 ; <spec> ::= (<ident> <real-call>) |                            ; call node
 ;            (<ident> (<var1> ... <varN>) <call>) |             ; lambda node
@@ -82,6 +87,39 @@
 	    ,@code
 	    ,@body)))))
 
+; (NEW-LAMBDA (<ident> (<var1> ... <varN>) <call>))
+; (NEW-LAMBDA (<ident> (<var1> ... <varN> . <last-vars>)) <call>)
+; (NEW-LAMBDA (<ident> (<var1> ... <varN>)))
+; (NEW-LAMBDA (<ident> (<var1> ... <varN> . <last-vars>)))
+
+(define (expand-new-lambda form rename compare)
+  (destructure (((#f vars . maybe-call) form))
+    (if (not (or (null? maybe-call)
+		 (null? (cdr maybe-call))))
+	form
+	(let ((lambda-name (rename 'the-lambda))
+	      (call-name (rename 'the-call))
+	      (%let (rename 'let))
+	      (%attach-body (rename 'attach-body)))
+	  (receive (vars node)
+	      (construct-vars vars rename compare)
+	    (if (null? maybe-call)
+		`(,%let ,vars ,node)
+		`(,%let ,vars
+		   (,%let ((,lambda-name ,node)
+			   (,call-name ,(car maybe-call)))
+	              (,%attach-body ,lambda-name ,call-name)
+		      ,lambda-name))))))))
+
+(define (expand-new-call form rename compare)
+  (let ((call-name (rename 'the-call))
+	(%let (rename 'let)))
+    (receive (node code)
+	(construct-call call-name (cdr form) rename compare)
+      `(,%let ((,call-name ,node))
+	  ,@code
+	  ,call-name))))
+
 (define (test form)
   (destructure (((#f specs . body) form))
     (receive (vars nodes code)
@@ -112,7 +150,7 @@
                          (append vs vars)
                          `((,name ,node) . ,nodes)
                          (if call 
-                             `((attach-body ,name ,call) . ,codes)
+                             `((,(r 'attach-body) ,name ,call) . ,codes)
                              codes))))
                 (else
                  (error "illegal spec in LET-NODES ~S" (cons name spec))))))))
@@ -216,7 +254,7 @@
              ((*)     `(,(r 'make-reference-node) ,data))
              ((quote) (if (pair? data)
                           `(,(r 'make-literal-node) . ,data)
-                          `(,(r 'make-literal-node) ,data type/unknown)))
+                          `(,(r 'make-literal-node) ,data ,(r 'type/unknown))))
              ((!)     data)
              (else
 	      (construct-nested-call spec r c)))))))
@@ -251,19 +289,26 @@
 			   `(,(r 'list) . ,(reverse! vlist))
 			   `(,(r 'append) (,(r 'list) . ,(reverse! vlist))
 					  ,vs))))
-             (values code `(,(r 'make-lambda-node) 'c 'cont ,vars))))
+             (values code
+		     `(,(r 'make-lambda-node) 'c 'cont ,vars))))
           (else
            (let ((spec (car vs))
                  (rest (cdr vs)))
              (cond ((null? spec)
-                    (loop rest (cons #f vlist) code))
+                    (loop rest
+			  (cons #f vlist)
+			  code))
                    ((atom? spec)
-                    (loop rest (cons spec vlist)
+                    (loop rest
+			  (cons spec vlist)
                           `((,spec (,(r 'copy-variable) ,spec)) . ,code)))
                    ((c (car spec) 'quote)
-                    (loop rest (cons (cadr spec) vlist) code))
+                    (loop rest
+			  (cons (cadr spec) vlist)
+			  code))
                    (else
-                    (loop rest (cons (car spec) vlist)
+                    (loop rest
+			  (cons (car spec) vlist)
                           `((,(car spec)
                              (,(r 'make-variable) ',(car spec) ,(cadr spec)))
                             . ,code)))))))))

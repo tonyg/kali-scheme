@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This determines the maximum stack depth needed by a code vector.
 
@@ -108,6 +108,14 @@
     (continue code-vector (+ i byte-args) maximum jumps)))
 
 ;----------------
+; Two-byte offsets, here because it is used at top-level.
+
+(define (get-offset code pc)
+  (+ (* (code-vector-ref code pc)
+	byte-limit)
+     (code-vector-ref code (+ pc 1))))
+
+;----------------
 ; All the special opcodes
 
 (define-delta make-env           (pusher environment-stack-size 2))
@@ -115,23 +123,44 @@
 (define-delta pop                (popper 1 0))
 (define-delta call               (continuer 1))
 (define-delta big-call           (continuer 2))
-(define-delta move-args-and-call (continuer 1))
 (define-delta apply              (continuer 2))
 (define-delta closed-apply       (continuer 0))
 (define-delta with-continuation  (nothing 0))     ; what the compiler requires
-(define-delta call-with-values   (continuer 0))
 (define-delta return             (continuer 0))
 (define-delta values             (continuer 2))
 (define-delta closed-values      (continuer 0))
-(define-delta ignore-values      (nothing 0))
 (define-delta goto-template      (continuer 2))
 (define-delta call-template      (continuer 3))
 
-; We should never reach a PROTOCOL opcode.
+; We should only reach PROTOCOL opcodes in continuations.
 
 (define-delta protocol
-  (lambda stuff
-    (error "looking for protocol's stack delta")))
+  (lambda (cv pc depth maximum jumps)
+    (let ((protocol (code-vector-ref cv pc)))
+      (if (= protocol call-with-values-protocol)
+	  (continue cv (+ pc 1) maximum jumps)
+	  (call-with-values
+	   (lambda ()
+	     (cond ((or (<= protocol 1)
+			(= protocol ignore-values-protocol))
+		    (values 1 0))
+		   ((<= protocol maximum-stack-args)
+		    (values 1 protocol))
+		   ((= protocol two-byte-nargs+list-protocol)
+		    (values (+ (get-offset cv (+ pc 1))
+			       1)		; the rest list
+			    3))
+		   ((= protocol two-byte-nargs-protocol)
+		    (values (get-offset cv (+ pc 1))
+			    3))
+		   (else
+		    (error "unknown protocol" protocol))))
+	   (lambda (bytes on-stack)
+	     (stack-max cv
+			(+ pc bytes)
+			(+ depth on-stack)
+			(imax maximum (+ depth on-stack))
+			jumps)))))))
 
 ; Peephole optimizations
 
@@ -179,21 +208,37 @@
 
 ; Skip over the environment specification.
 
-(define-delta make-flat-env
-  (lambda (code-vector i depth maximum jumps)
-    (let ((include-*val*? (= 1 (code-vector-ref code-vector i)))
-	  (count (code-vector-ref code-vector (+ i 1))))
-      (let loop ((i (+ i 2)) (count (if include-*val*? (- count 1) count)))
+(define (flat-env-checker size fetch)
+  (lambda (cv pc depth maximum jumps)
+    (let ((include-*val*? (= 1 (code-vector-ref cv pc)))
+	  (count (fetch cv (+ pc 1))))
+      (let loop ((i (+ pc 1 size))
+		 (count (if include-*val*?
+			    (- count 1)
+			    count)))
 	(if (= count 0)
-	    (stack-max code-vector
-		       i
-		       depth maximum jumps)
-	    (let ((level-count (code-vector-ref code-vector (+ i 1))))
-	      (loop (+ i 2 level-count)
+	    (stack-max cv i depth maximum jumps)
+	    (let ((level-count (fetch cv (+ i 1))))
+	      (loop (+ i 1 size (* level-count size))
 		    (- count level-count))))))))
+
+(define-delta make-flat-env     (flat-env-checker 1 code-vector-ref))
+(define-delta make-big-flat-env (flat-env-checker 2 get-offset))
+
+; Temporarily puts COUNT values on the stack.
+
+(define-delta letrec-closures
+  (lambda (cv pc depth maximum jumps)
+    (let ((count (get-offset cv pc)))
+      (stack-max cv
+		 (+ pc (* 2 (+ count 1)))
+		 depth
+		 (max maximum (+ depth count environment-stack-size))
+		 jumps))))
 
 ; Adds the target to the list of jumps.
 ; The -1 is to back up over the opcode.
+; Could check that the we agree with the compiler on the size of the stack.
 
 (define (do-make-cont total-bytes)
   (lambda (code-vector i depth maximum jumps)
@@ -278,7 +323,3 @@
 (define (imax x y)
   (if (< x y) y x))
 
-(define (get-offset code pc)
-  (+ (* (code-vector-ref code pc)
-	byte-limit)
-     (code-vector-ref code (+ pc 1))))

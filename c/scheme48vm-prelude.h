@@ -10,6 +10,7 @@
 
 #include "scheme48vm.h"
 #include "scheme48heap.h"
+#include "scheme48image.h"
 #include "event.h"
 #include "fd-io.h"
 
@@ -32,6 +33,12 @@ static char	*_HHallocate_temp;
 		(_HHallocate_temp = s48_ShpS,	\
 			s48_ShpS += ((len)+3) & ~3,	\
 			_HHallocate_temp)
+
+
+#define	GET_PROPOSAL_LOCK()	((void)0)
+#define	RELEASE_PROPOSAL_LOCK()	((void)0)
+#define SHARED_REF(x)		(x)
+#define SHARED_SETB(x, v)	((x) = (v))
 
 /*
  * We rename these to avoid name clashes.

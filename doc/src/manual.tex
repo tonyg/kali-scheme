@@ -1,0 +1,122 @@
+% Scheme 48 documentation
+
+\documentclass[twoside]{report}
+\usepackage{hyperlatex}
+\T\usepackage{longtable}
+\T\usepackage{myindex}
+\W\include{latex-index}
+
+\makeindex
+
+\W\include{my-sequential}
+\include{proto}
+\include{hacks}
+
+%\includeonly{posix}
+
+% Make a few big HTML files, and not a lot of small ones.
+\setcounter{htmldepth}{3}
+
+% Put the html code in its own directory.
+\htmldirectory{manual}
+
+% Set the html base name.
+\htmlname{s48manual}
+
+% Add sections to main menu
+\setcounter{htmlautomenu}{2}
+
+% White background
+\htmlattributes{BODY}{BGCOLOR="#ffffff"}
+
+\htmltitle{Scheme 48 Manual}
+
+% Suppress navigation panel for first page.
+\htmlpanel{0}
+
+%%% End preamble
+
+\begin{document}
+\label{top_node}
+
+\T\sloppy    % Tells TeX not to worry too much about line breaks.
+
+\title{{\large The Incomplete} \\ Scheme 48 Reference Manual \\ {\large for release 0.54}}
+%         December 25, 1994
+\author{Richard Kelsey and Jonathan Rees \\
+ {\normalsize with a chapter by Mike Sperber}}
+\date{}
+%\date{October 31, 1995}
+
+\T\cleardoublepage\pagenumbering{roman}
+
+\maketitle
+
+% For some reason the tabbing doesn't work here in html mode.
+\texonly{
+\begin{verse}
+A line may take us hours, yet if it does not seem a moment's thought \\
+All our stitching and unstitching has been as nought.
+\end{verse}
+\begin{tabbing}
+A line may take us hours, yet if it does not seem\= \kill
+\> Yeats \\
+\> {\em Adam's Curse}
+\end{tabbing}
+}
+
+\htmlonly{
+\begin{center}
+\begin{tabbing}
+A line may take us hours, yet if it does not seem\= a moment's thought \\
+All our stitching and unstitching has been as nought. \\
+\> Yeats \\
+\> {\em Adam's Curse}
+\end{tabbing}
+\end{center}
+}
+
+\htmlpanel{1}
+
+\chapter*{Acknowledgements}
+
+Thanks to Scheme~48's users for their suggestions, bug reports,
+  and forbearance.
+Thanks also to Deborah Tatar for providing the Yeats quotation.
+
+\T\tableofcontents
+
+\T\cleardoublepage\pagenumbering{arabic}\setcounter{page}{1}
+
+\setcounter{htmlautomenu}{1}
+
+
+\include{intro}
+\include{user-guide}
+\include{command}
+\include{module}
+\include{utilities}
+\include{external}
+\include{posix}
+\include{bibliography}
+
+\texonly{
+\begin{myindex}
+\addtocounter{chapter}{1}
+\addcontentsline{toc}{chapter}{\protect\numberline{\thechapter}{Index}}
+
+The principal entry for each term, procedure, or keyword is listed
+first, separated from the other entries by a semicolon.
+
+\bigskip
+
+\input{index}
+\end{myindex}
+}
+
+\htmlonly{
+\chapter*{Index}
+\htmlprintindex
+}
+
+\end{document}    

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Miscellaneous things.
 
@@ -7,31 +7,13 @@
   (open scheme escapes signals)
   (files shift-reset))
 
-(define-structure unix-system-calls
-    (export pipe waitpid fork dup close execv exit)
-  (open scheme externals signals)
-  (files syscall))
-
 (define-structure call-with-mumble-pipes
     (export call-with-input-pipe call-with-output-pipe)
   (open scheme
-	unix-system-calls
-	architecture channels
-	i/o-internal
-	signals)
+	posix-process
+	posix-i/o
+	i/o)		; current-error-port
   (files pipe))
-
-(define-structure unix-getenv (export getenv)
-  (open scheme primitives)
-  (files getenv))
-
-(define-structure nondeterminism (export (either :syntax)
-					 (one-value :syntax)
-					 (all-values :syntax)
-					 fail
-					 init)
-  (open scheme)
-  (files either))
 
 (define-structure engines (export (engine :syntax))
   (open scheme primitives interrupts)

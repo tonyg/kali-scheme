@@ -1,14 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
-
-
-; byte vectors are just code vectors
-
-(define make-byte-vector   make-code-vector)
-(define byte-vector?       code-vector?)
-(define byte-vector-length code-vector-length)
-
-(define byte-vector-ref  code-vector-ref)
-(define byte-vector-set! code-vector-set!)
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 (define (byte-vector-endianess)
   (if (eq? byte-vector-word-ref high-byte-vector-word-ref)
@@ -31,13 +21,13 @@
      (error "endianess specifier is neither HIGH nor LOW" high-or-low))))
 
 (define (high-byte-vector-word-ref vector index)
-  (+ (code-vector-ref vector (+ index 3))
+  (+ (byte-vector-ref vector (+ index 3))
      (arithmetic-shift
-      (+ (code-vector-ref vector (+ index 2))
+      (+ (byte-vector-ref vector (+ index 2))
 	 (arithmetic-shift
-	  (+ (code-vector-ref vector (+ index 1))
+	  (+ (byte-vector-ref vector (+ index 1))
 	     (arithmetic-shift
-	      (code-vector-ref vector index)
+	      (byte-vector-ref vector index)
 	      8))
 	  8))
       8)))
@@ -49,9 +39,9 @@
   (byte-vector-set! vector (+ index 3)                   value))
 
 (define (high-byte-vector-half-word-ref vector index)
-  (+ (code-vector-ref vector (+ index 1))
+  (+ (byte-vector-ref vector (+ index 1))
      (arithmetic-shift
-      (code-vector-ref vector index)
+      (byte-vector-ref vector index)
       8)))
 
 (define (high-byte-vector-half-word-set! vector index value)
@@ -59,13 +49,13 @@
   (byte-vector-set! vector (+ index 1)                   value))
 
 (define (low-byte-vector-word-ref vector index)
-  (+ (code-vector-ref vector index)
+  (+ (byte-vector-ref vector index)
      (arithmetic-shift
-      (+ (code-vector-ref vector (+ index 1))
+      (+ (byte-vector-ref vector (+ index 1))
 	 (arithmetic-shift
-	  (+ (code-vector-ref vector (+ index 2))
+	  (+ (byte-vector-ref vector (+ index 2))
 	     (arithmetic-shift
-	      (code-vector-ref vector (+ index 3))
+	      (byte-vector-ref vector (+ index 3))
 	      8))
 	  8))
       8)))
@@ -77,9 +67,9 @@
   (byte-vector-set! vector (+ index 3) (arithmetic-shift value -24)))
 
 (define (low-byte-vector-half-word-ref vector index)
-  (+ (code-vector-ref vector index)
+  (+ (byte-vector-ref vector index)
      (arithmetic-shift
-      (code-vector-ref vector (+ index 1))
+      (byte-vector-ref vector (+ index 1))
       8)))
 
 (define (low-byte-vector-half-word-set! vector index value)

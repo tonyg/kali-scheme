@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This is file features.scm.
@@ -43,11 +43,10 @@
          (h 0 (+ h (char->ascii (string-ref s i)))))
         ((>= i n) h))))
 
-(define (make-immutable! thing) #f)
+(define (make-immutable! thing) thing)
 (define (immutable? thing) #f)
 (define (unspecific) (if #f #f))
 
-
 ; BITWISE -- use alt/bitwise.scm (!)
-; ACII -- use alt/ascii.scm
+; ASCII -- use alt/ascii.scm
 ; CODE-VECTORS -- use alt/code-vectors.scm

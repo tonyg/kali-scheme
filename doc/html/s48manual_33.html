@@ -1,0 +1,75 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Configuration packages</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_24.html">Module system</A><BR>Previous: <A HREF="s48manual_32.html">Command processor support</A> | Next: <A HREF="s48manual_34.html">Discussion</A>
+<H2>Configuration packages</H2>
+
+<P>It is possible to set up multiple configuration packages.  The default
+configuration package opens the following structures:
+<UL><LI><TT>module-system</TT>, which exports <TT>define-structure</TT> and the
+      other configuration language keywords, as well as standard types
+      and type constructors (<TT>:syntax</TT>, <TT>:value</TT>, <TT>proc</TT>, etc.).
+<LI><TT>built-in-structures</TT>, which exports structures that are
+      built into the initial Scheme&nbsp;48 image; these include
+      <TT>scheme</TT>, <TT>threads</TT>, <TT>tables</TT>, and <TT>records</TT>.
+<LI><TT>more-structures</TT>, which exports additional structures that
+      are available in the development environment. 
+      A complete listing
+      can be found in the definition of <CODE>more-structures-interface</CODE>
+      at the end of the file <CODE>scheme/more-packages.scm</CODE>.
+</UL>
+Note that it does not open <TT>scheme</TT>.
+<P>You can define other configuration packages by simply making a package
+ that opens <TT>module-system</TT> and, optionally, <TT>built-in-structures</TT>,
+<TT>more-structures</TT>, or other structures that
+ export structures and interfaces.
+<P>For example:
+<BLOCKQUOTE><PRE>
+&gt; ,config (define-structure foo (export)
+            (open module-system
+                  built-in-structures
+                  more-structures))
+&gt; ,in foo
+foo&gt; (define-structure x (export a b)
+       (open scheme)
+       (files x))
+foo&gt; 
+</PRE></BLOCKQUOTE>
+<P>Unfortunately, the above example does not work.
+The problem is that every environment in which
+ <CODE>define-structure</CODE> is defined must also have a way to
+ create "reflective towers" (a misnomer; a better name would be
+ "syntactic towers").
+A new reflective tower is required whenever a new environment is created for
+ compiling the source code in the package associated with a new structure.
+The environment's tower is used at compile time for
+ evaluating the <CODE><I>macro-source</I></CODE> in
+ <CODE>(define-syntax <CODE><I>name</I></CODE> <CODE><I>macro-source</I></CODE>)</CODE>,
+ <CODE>(let-syntax ((<CODE><I>name</I></CODE> <CODE><I>macro-source</I></CODE>) ...) <CODE><I>body</I></CODE>)</CODE>,
+ and so forth.
+It is a "tower" because that environment, in turn, has to say what environment
+ to use if <CODE>macro-source</CODE> itself contains a use of <CODE>let-syntax</CODE>.
+<P>The simplest way to provide a tower maker is to pass on the one used by
+ an existing configuration package.
+The special form <CODE>export-reflective-tower</CODE> creates an interface
+ that exports a configuration package's tower.
+The following example uses <CODE>export-reflective-tower</CODE> and
+ the <CODE>,structure</CODE> command to obtain a tower maker and create a new
+ configuration environment.
+<BLOCKQUOTE><PRE>
+&gt; ,config ,structure towers (export-reflective-tower-maker)
+&gt; ,config (define-structure foo (export)
+            (open module-system
+                  towers
+                  built-in-structures
+                  more-structures))
+</PRE></BLOCKQUOTE>
+<P>
+  
+Previous: <A HREF="s48manual_32.html">Command processor support</A> | Next: <A HREF="s48manual_34.html">Discussion</A></BODY></HTML>

@@ -1,10 +1,9 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; More and more packages.  Some of these get loaded into the initial
 ; image to create scheme48.image; those that aren't can be loaded later
 ; using ,load-package.
-
 
 ; Things to load into initial.image to make scheme48.image.
 
@@ -22,328 +21,6 @@
 	;; The following is listed because this structure is used to
 	;; generate a dependency list used by the Makefile...
 	usual-commands))
-
-
-; Command processor
-
-(define-structures ((command-processor command-processor-interface)
-		    (command (export command-processor)))
-  (open scheme ;;-level-2     ; eval, interaction-environment
-	tables fluids
-	conditions handle
-	define-record-types
-	command-levels
-	reading			; gobble-line, with-sharp-sharp
-	i/o                     ; current-error-port
-	display-conditions	; display-condition
-	methods
-	;; environments		; interaction-environment
-	util			; unspecific
-	undefined		; $note-undefined
-	features		; force-output
-	interrupts		; set-enabled-interrupts!, all-interrupts
-	vm-exposure		; primitive-catch
-	fluids-internal         ; get-dynamic-env, set-dynamic-env!
-	nodes			; for ## kludge
-	signals
-	structure-refs
-	root-scheduler)		; scheme-exit-now
-  (access threads		; thread?
-	  threads-internal      ; thread-continuation
-	  continuations         ; continuation?
-	  ports)
-  (files (env version-info)
-	 (env command)
-	 (env read-command)))
-
-(define-structure command-levels command-levels-interface
-  (open scheme
-	enumerated enum-case 
-	tables
-	session-data
-	define-record-types
-	threads threads-internal
-	scheduler
-	interrupts
-	weak
-	debug-messages		; for debugging
-	signals			; error
-	i/o			; current-error-port
-	util                    ; unspecific
-	channel-i/o             ; steal-channel-port
-	fluids-internal         ; get-dynamic-env, set-dynamic-env!
-	root-scheduler          ; call-when-deadlocked!
-	conditions)             ; define-condition-type
-  (files (env command-level)))
-
-(define-structure basic-commands basic-commands-interface
-  (open scheme-level-2
-        command-processor
-	command-levels
-        undefined               ; noting-undefined-variables
-	environments		; with-interaction-environment
-	evaluation		; eval, load-into
-        ;; packages		; package?
-	root-scheduler		; scheme-exit-now
-	)
-  (files (env basic-command)))
-
-; Usual command set
-               
-(define-structure usual-commands usual-commands-interface
-  (open basic-commands
-        build-commands
-        package-commands
-        debug-commands
-        inspect-commands
-        disassemble-commands
-	;profile-commands
-	))
-
-; Image builder.
-
-(define-structures ((build (export build-image stand-alone-resumer))
-		    (build-commands build-commands-interface))
-  (open scheme-level-2
-        command-processor
-	command-levels
-        conditions handle
-        low-level               ; flush-the-symbol-tables!
-        usual-resumer
-        filenames               ; translate
-        display-conditions      ; display-condition
-        evaluation              ; package-for-load, eval
-	environments		; with-interaction-environment
-	i/o			; current-error-port
-        write-images
-        signals)
-  (files (env build)))
-
-; Package commands.
-
-(define-structures ((package-commands package-commands-interface)
-		    (package-commands-internal
-		       package-commands-internal-interface))
-  (open scheme
-        command-processor
-	command-levels
-	methods
-        undefined               ; noting-undefined-variables
-        packages                ; for creating a user package
-        packages-internal       ; set-package-integrate?!, etc.
-        package-mutation        ; package-system-sentinel
-        environments            ; *structure-ref, etc.
-	compiler-envs		; reflective-tower
-        ensures-loaded          ; ensure-loaded
-	interfaces
-	ascii
-	i/o			; force-output, current-error-port
-        signals
-	util			; every
-        fluids)
-  (files (env pacman)))
-
-
-; Debugging aids.
-
-; Disclosers: this makes objects and conditions print nicely.
-
-(define-structure disclosers disclosers-interface
-  (open scheme-level-1
-        methods more-types
-        tables
-        conditions
-        display-conditions
-        locations
-        code-vectors
-        closures
-        packages-internal       ; location-info-tables
-        debug-data
-	segments                ; get-debug-data
-        enumerated              ; enumerand->name
-        weak                    ; weak-pointer?
-	i/o                     ; disclose-port
-        templates continuations low-channels
-        architecture)
-  (files (env disclosers)))
-
-; For printing procedures with their names, etc.
-
-(define-structure debuginfo debuginfo-interface
-  (open scheme-level-2
-        tables
-        debug-data
-	segments		; debug-data-table
-        ;; packages
-        packages-internal	; package-name-table
-        names			; generated?
-	features
-	weak)
-  (files (env debuginfo)))
-
-; Most of the debugging commands.
-
-(define-structures ((debugging		;additional exports in future
-		     (export breakpoint
-			     continuation-parent))
-		    (debug-commands debug-commands-interface))
-  (open scheme-level-2
-        command-processor       ; define-command, etc.
-	command-levels
-        fluids
-        signals                 ; make-condition
-        util                    ; filter
-        evaluation              ; eval-from-file, eval
-        environments            ; environment-define! (for ,trace)
-        conditions              ; define-condition-type
-        filenames               ; set-translation!
-        disclosers              ; template-name, debug-data-names
-        packages                ; flush-location-names, package-integrate?
-        packages-internal       ; [set-]package-integrate?[!], flush-location-names
-	undefined		; noting-undefined-variables
-        continuations           ; continuation-template
-        architecture            ; op/global, etc.
-        interrupts              ; all-interrupts, set-enabled-interrupts!
-        vm-exposure             ; fluid-let suppression kludge - fix later
-        exceptions              ; continuation-preview
-        tables
-        nodes		        ; schemify for ,expand command
-        reading-forms           ; $note-file-package
-	debug-data segments     ;  yucko
-	time                    ; real-time
-        primitives              ; memory-status
-        structure-refs)
-  (access primitives            ; want to both use and shadow collect
-          filenames             ;  and translate
-	  syntactic)		;  and expand
-  (files (env debug)))
-
-; Inspector
-
-(define-structures ((inspector (export inspect))
-		    (inspector-internal (export prepare-menu))
-		    (inspect-commands inspect-commands-interface))
-  (open scheme-level-2
-        command-processor       ; define-command, etc.
-	command-levels
-	define-record-types
-        fluids
-        debugging               ; command-loop-continuation
-        closures                ; closure-template
-        disclosers              ; template-debug-data, etc.
-        debug-data
-	evaluation		; eval
-	segments                ; get-debug-data
-        templates
-        continuations
-        names	                ; desyntaxify
-        records
-	records-internal
-        low-level               ; vector-unassigned?
-        locations
-        signals                 ; error
-        ;; tables  - not yet.
-        weak
-        util                    ; sublist
-        display-conditions)     ; limited-write
-  (files (env inspect)))
-
-(define-structure list-interfaces (export list-interface)
-  (open scheme-level-2 interfaces packages meta-types sort bindings)
-  (files (env list-interface)))
-
-
-; Package and interface mutation.
-
-(define-structure package-mutation package-mutation-interface
-  (open scheme-level-2
-        shadowing               ; shadow-location!
-        packages
-        interfaces
-	bindings
-        packages-internal
-        defpackage              ; set-verify-later!
-        locations
-        disclosers              ; location-info
-        handle
-        tables fluids weak signals)
-  (files (env pedit)))
-
-; The following hooks the compiler up with an exception handler for
-; unbound variables.
-
-(define-structure shadowing (export shadow-location!)
-  (open scheme-level-1
-        vm-exposure             ;primitive-catch
-        continuations templates locations code-vectors
-        exceptions signals
-        architecture)   ;(enum op global)
-  (files (env shadow)))     ;Exception handler to support package system
-
-
-; Disassembler
-
-(define-structures ((disassembler
-		       (export disassemble write-instruction))
-		    (disassemble-commands disassemble-commands-interface))
-  (open scheme-level-2
-        command-processor       ; define-command
-	disclosers              ; template-name
-        enumerated              ; enumerand->name
-        disclosers              ; location-name
-	evaluation		; eval
-        templates
-        continuations
-        locations
-        code-vectors
-        closures
-        architecture
-        signals)
-  (files (env disasm)))
-
-; Assembler.
-
-(define-structure assembling (export)	; No exports, this defines a compilator.
-  (open scheme-level-2
-	compiler		;define-compilator
-	segments
-	architecture
-	nodes			;node-form node-ref
-	bindings		;binding? binding-place
-        meta-types              ;value-type
-        templates               ; for Richard's version
-        signals                 ;error
-        enumerated              ;name->enumerand
-        code-vectors)
-  (files (env assem)))
-
-; Foo
-
-(define-structure assembler (export (lap :syntax))
-  (open scheme-level-2)
-  (for-syntax (open scheme-level-2 nodes meta-types assembling))
-  (begin
-    (define-syntax lap
-      (lambda (e r c)
-        (make-node (get-operator 'lap syntax-type) e)))))
-
-; Execution profiler.
-
-(define-structures ((profile (export run-with-profiling))
-		    (profile-commands profile-commands-interface))
-  (open scheme
-	command-processor
-        continuations
-        architecture
-        interrupts
-        tables
-        primitives     ; schedule-interrupt
-        wind
-        disclosers
-	time
-        sort
-        escapes)       ; primitive-cwcc
-  (files (env profile)))
 
 ; Large integers and rational and complex numbers.
 
@@ -430,7 +107,6 @@
         methods)               ;disclose
   (files (big pp)))
 
-
 ; Bitwise logical operators on bignums.
 
 (define-structure bigbit (export )  ;No exports
@@ -450,9 +126,13 @@
   (files (big format)))
 
 (define-structure extended-ports extended-ports-interface
-  (open scheme-level-2 records define-record-types ports i/o i/o-internal
-	code-vectors ascii
+  (open scheme-level-2 define-record-types ascii byte-vectors
+	ports
+	i/o i/o-internal
+	;records
+	proposals
 	structure-refs
+	util			; unspecific
 	signals)
   (access primitives)     ; copy-bytes!
   (files (big more-port)))
@@ -460,6 +140,25 @@
 (define-structure destructuring (export (destructure :syntax))
   (open scheme-level-2)
   (files (big destructure)))
+
+(define-structure mvlet (export ((mvlet mvlet*) :syntax))
+  (open scheme-level-2)
+  (files (big mvlet)))
+
+(define-structure reduce (export ((reduce iterate)
+				  :syntax)
+				 ((list* list%
+				   vector* vector%
+				   string* string%
+				   count* count%
+				   bits* bits%
+				   input* input%
+				   stream* stream%)
+				  :syntax))
+  (open scheme-level-2
+	bitwise
+	signals)
+  (files (big iterate)))
 
 (define-structure arrays arrays-interface
   (open scheme-level-2 define-record-types signals)
@@ -471,8 +170,17 @@
 
 (define-structure defrecord defrecord-interface
   (open scheme-level-1 records loopholes
-	primitives) ; unspecific
+	primitives)			; unspecific, low-level record ops
   (files (big defrecord)))
+
+(define-structures ((masks masks-interface)
+		    (mask-types mask-types-interface))
+  (open scheme-level-1 define-record-types
+	bitwise
+	util			; every
+	number-i/o		; number->string
+	signals)		; call-error
+  (files (big mask)))
 
 (define general-tables tables)    ; backward compatibility
 
@@ -522,7 +230,8 @@
 	shared-bindings
 	byte-vectors
 	bitwise bigbit		;for {enter|extract}_integer() helpers
-	records)
+	(subset records			(define-record-resumer))
+	(subset records-internal	(:record-type)))
   (files (big import-def)
 	 (big callback)))
 
@@ -578,28 +287,50 @@
         templates)              ;template-info
   (files (big dump)))
 
+; Pipes containing values.
+
+(define-structure value-pipes value-pipes-interface
+  (open scheme queues
+        proposals
+        threads-internal
+	signals)		;call-error
+  (optimize auto-integrate)
+  (files (big value-pipe)))
+
 ; Unix Sockets
 
-(define-structure sockets
-    (export open-socket
-	    close-socket
-	    socket-accept
-	    socket-port-number
-	    socket-client
+(define-structures ((sockets (export open-socket
+				     close-socket
+				     socket-accept
+				     socket-port-number
+				     socket-client
+				     get-host-name
 
-	    get-host-name
-
-	    ; From the old interface; I would like to get rid of these.
-	    socket-listen
-	    socket-listen-channels
-	    socket-client-channels
-	    )
+				     ; From the old interface
+				     ; I would like to get rid of these.
+				     socket-listen
+				     socket-listen-channels
+				     socket-client-channels))
+		    (udp-sockets (export get-host-name
+					 close-socket
+					 open-udp-socket
+					 udp-send
+					 udp-receive
+					 lookup-udp-address
+					 socket-port-number
+					 udp-address?
+					 udp-address-address
+					 udp-address-hostname
+					 udp-address-port)))
   (open scheme define-record-types
 	external-calls
-	low-channels	; channel? close-channel
-	signals		; error
-	interrupts	; enable-interrupts! disable-interrupts!
-	channel-i/o)	; wait-for-channel {in|out}put-channel->port
+	channels		; channel? close-channel
+	signals			; error call-error
+	proposals		; atomically!
+	interrupts		; enable-interrupts! disable-interrupts!
+	channel-ports		; {in|out}put-channel->port
+	channel-i/o		; wait-for-channel
+	condvars)		; for wait-for-channel
   (files (big socket)))
 
 ; Heap traverser
@@ -624,6 +355,12 @@
 	features sort locations display-conditions)
   (files (env space)))
 
+; Listing what is in an interface.  Here because it needs sort.
+
+(define-structure list-interfaces (export list-interface)
+  (open scheme-level-2 interfaces packages meta-types sort bindings)
+  (files (env list-interface)))
+
 ; Structure & Interpretation compatibility
 
 (define-structure sicp sicp-interface
@@ -637,6 +374,8 @@
   (optimize auto-integrate)
   (files (big search-tree)))
 
+; record types with a fixed number of instances
+
 (define-structure finite-types (export ((define-finite-type
 					 define-enumerated-type) :syntax))
   (open scheme-level-2 code-quote define-record-types
@@ -644,6 +383,101 @@
 	features)		; make-immutable
   (files (big finite-type)))
 
+; nondeterminism via call/cc
+
+(define-structure nondeterminism (export with-nondeterminism
+					 ((either one-value all-values) :syntax)
+					 fail)
+  (open scheme-level-2
+	fluids
+	(subset signals (error)))
+  (files (big either)))
+
+;----------------
+; SRFI packages
+
+; SRFI-0 - Doesn't work with the module system.
+
+; Olin's list library.
+
+(define-structure srfi-1 srfi-1-interface
+  (open scheme-level-2
+	receiving)
+  (files (srfi srfi-1)))
+
+(define-structure srfi-2 (export (and-let* :syntax))
+  (open scheme-level-2
+	signals)		; error
+  (files (srfi srfi-2)))
+
+; SRFI-3 - withdrawn
+; SRFI-4 - needs hacks to the reader
+
+(define-structure srfi-5 (export (let :syntax))
+  (open (modify scheme-level-2 (drop let)))
+  (files (srfi srfi-5)))
+
+(define-structure srfi-6 (export open-input-string
+				 open-output-string
+				 get-output-string)
+  (open (modify extended-ports
+		(rename (make-string-input-port    open-input-string)
+			(make-string-output-port   open-output-string)
+			(string-output-port-output get-output-string)))))
+
+; Configuration language
+
+(define-structure srfi-7 (export)	; defines a command
+  (open scheme
+
+	; for parsing programs
+	receiving
+	nondeterminism
+	(subset signals (error))
+
+	(subset package-commands-internal	(config-package))
+	ensures-loaded
+	(subset packages			(note-structure-name!))
+
+	; for defining the command
+	(subset command-processor		(define-user-command-syntax
+						 user-command-environment))
+	(subset environments			(environment-define!)))
+
+  (begin
+    (define available-srfis
+      '(srfi-1 srfi-2 srfi-5 srfi-6 srfi-7))
+
+    ; Some SRFI's redefine Scheme variables.
+    (define shadowed
+      '((srfi-1 map for-each member assoc)
+	(srfi-5 let))))
+
+  (files (srfi srfi-7)))
+
+; Taken directly from the SRFI document (or from `receiving', take your pick).
+
+(define-structure srfi-8 (export (receive :syntax))
+  (open scheme-level-2)
+  (begin
+    (define-syntax receive
+      (syntax-rules ()
+	((receive formals expression body ...)
+	 (call-with-values (lambda () expression)
+			   (lambda formals body ...)))))))
+
+; SRFI-9 is a slight modification of DEFINE-RECORD-TYPE.
+
+(define-structure srfi-9 (export define-record-type)
+  (open scheme-level-2 
+	(with-prefix define-record-types sys:))
+  (begin
+    (define-syntax define-record-type
+      (syntax-rules ()
+	((define-record-type type-name . stuff)
+	 (sys:define-record-type type-name type-name . stuff))))))
+
+;----------------
 ; ... end of package definitions.
 
 ; Temporary compatibility stuff
@@ -689,9 +523,11 @@
 	    innums
 	    inspector
 	    inspector-internal
-	    ;linked-queues
 	    list-interfaces
-	    ;more-threads
+	    masks
+	    mask-types
+	    mvlet
+	    nondeterminism
 	    package-commands-internal
 	    package-mutation
 	    placeholders
@@ -701,13 +537,17 @@
 	    time
 	    random
 	    receiving
+	    reduce
 	    search-trees
 	    sicp
 	    sockets
 	    sort
+	    spatial
 	    strong
 	    traverse
-	    spatial
+	    udp-sockets
+	    value-pipes
+
 	    big-scheme
 	    big-util
 	    ;; From link-packages.scm:
@@ -721,6 +561,20 @@
 	    shadowing
 	    ;; Compatibility
 	    record table
+
+	    ; POSIX packages (see scheme/posix/packages.scm)
+	    posix-files
+	    posix-time
+	    posix-users
+	    posix-process-data
+	    posix-processes
+	    posix-regexps
+	    posix-i/o
+	    regexps
+	    posix
+
+	    ; SRFI packages
+	    srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
 	    )
 	   :structure)
 	  ((define-signature define-package) :syntax)))

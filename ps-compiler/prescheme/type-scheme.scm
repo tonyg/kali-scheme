@@ -1,18 +1,14 @@
-; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
-
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 ; Type schemes
 
-(define-record-type type-scheme
-  (
-   type           ; a type
-   free-uvars     ; uvars that are free
-   )
-  ())
+(define-record-type type-scheme :type-scheme
+  (make-type-scheme type free-uvars)
+  type-scheme?
+  (type type-scheme-type)		; a type
+  (free-uvars type-scheme-free-uvars))	; uvars that are free
 
-(define make-type-scheme type-scheme-maker)
-
-(define-record-discloser type/type-scheme
+(define-record-discloser :type-scheme
   (lambda (type-scheme)
     (list 'type-scheme
 	  (map uvar-id (type-scheme-free-uvars type-scheme))

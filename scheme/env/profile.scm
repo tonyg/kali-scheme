@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Profiling
@@ -24,7 +24,7 @@
 	 (display "Waiting:" port)
 	 (newline port)
 	 (display-counts on-stack hits (lambda (total next) next) port)
-	 (set-focus-values! results))))))
+	 (set-command-results! results))))))
 
 (define-command-syntax 'profile "<command>" "profile execution"
   '(command))

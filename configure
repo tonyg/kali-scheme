@@ -1380,7 +1380,7 @@ else
 fi
 done
 
-     for ac_func in dlopen gettimeofday ftime nlist select setitimer sigaction
+     for ac_func in gettimeofday ftime nlist select setitimer sigaction
 do
 echo $ac_n "checking for $ac_func""... $ac_c" 1>&6
 if eval "test \"`echo '$''{'ac_cv_func_$ac_func'+set}'`\" = set"; then
@@ -1433,6 +1433,102 @@ else
 fi
 done
 
+     echo $ac_n "checking for dlopen""... $ac_c" 1>&6
+if eval "test \"`echo '$''{'ac_cv_func_dlopen'+set}'`\" = set"; then
+  echo $ac_n "(cached) $ac_c" 1>&6
+else
+  cat > conftest.$ac_ext <<EOF
+#line 1442 "configure"
+#include "confdefs.h"
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char dlopen(); below.  */
+#include <assert.h>
+/* Override any gcc2 internal prototype to avoid an error.  */
+/* We use char because int might match the return type of a gcc2
+    builtin and then its argument prototype would still apply.  */
+char dlopen();
+
+int main() { return 0; }
+int t() {
+
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_dlopen) || defined (__stub___dlopen)
+choke me
+#else
+dlopen();
+#endif
+
+; return 0; }
+EOF
+if { (eval echo configure:1466: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
+  rm -rf conftest*
+  eval "ac_cv_func_dlopen=yes"
+else
+  rm -rf conftest*
+  eval "ac_cv_func_dlopen=no"
+fi
+rm -f conftest*
+
+fi
+if eval "test \"`echo '$ac_cv_func_'dlopen`\" = yes"; then
+  echo "$ac_t""yes" 1>&6
+  cat >> confdefs.h <<\EOF
+#define HAVE_DLOPEN 1
+EOF
+
+else
+  echo "$ac_t""no" 1>&6
+echo $ac_n "checking for nlist""... $ac_c" 1>&6
+if eval "test \"`echo '$''{'ac_cv_func_nlist'+set}'`\" = set"; then
+  echo $ac_n "(cached) $ac_c" 1>&6
+else
+  cat > conftest.$ac_ext <<EOF
+#line 1489 "configure"
+#include "confdefs.h"
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char nlist(); below.  */
+#include <assert.h>
+/* Override any gcc2 internal prototype to avoid an error.  */
+/* We use char because int might match the return type of a gcc2
+    builtin and then its argument prototype would still apply.  */
+char nlist();
+
+int main() { return 0; }
+int t() {
+
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_nlist) || defined (__stub___nlist)
+choke me
+#else
+nlist();
+#endif
+
+; return 0; }
+EOF
+if { (eval echo configure:1513: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
+  rm -rf conftest*
+  eval "ac_cv_func_nlist=yes"
+else
+  rm -rf conftest*
+  eval "ac_cv_func_nlist=no"
+fi
+rm -f conftest*
+
+fi
+if eval "test \"`echo '$ac_cv_func_'nlist`\" = yes"; then
+  echo "$ac_t""yes" 1>&6
+  LIBOBJS="$LIBOBJS c/fake/libdl1.o
+else
+  echo "$ac_t""no" 1>&6
+LIBOBJS="$LIBOBJS c/fake/libdl2.o
+fi
+
+fi
+
      for ac_func in socket chroot
 do
 echo $ac_n "checking for $ac_func""... $ac_c" 1>&6
@@ -1440,7 +1536,7 @@ if eval "test \"`echo '$''{'ac_cv_func_$ac_func'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 1444 "configure"
+#line 1540 "configure"
 #include "confdefs.h"
 /* System header to define __stub macros and hopefully few prototypes,
     which can conflict with char $ac_func(); below.  */
@@ -1464,7 +1560,7 @@ $ac_func();
 
 ; return 0; }
 EOF
-if { (eval echo configure:1468: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
+if { (eval echo configure:1564: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
   rm -rf conftest*
   eval "ac_cv_func_$ac_func=yes"
 else
@@ -1491,7 +1587,7 @@ if eval "test \"`echo '$''{'ac_cv_func_strerror'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 1495 "configure"
+#line 1591 "configure"
 #include "confdefs.h"
 /* System header to define __stub macros and hopefully few prototypes,
     which can conflict with char strerror(); below.  */
@@ -1515,7 +1611,7 @@ strerror();
 
 ; return 0; }
 EOF
-if { (eval echo configure:1519: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
+if { (eval echo configure:1615: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
   rm -rf conftest*
   eval "ac_cv_func_strerror=yes"
 else
@@ -1536,9 +1632,62 @@ else
 LIBOBJS="$LIBOBJS c/fake/strerror.o"
 fi
 
+     echo $ac_n "checking environ""... $ac_c" 1>&6
+     cat > conftest.$ac_ext <<EOF
+#line 1638 "configure"
+#include "confdefs.h"
+
+int main() { return 0; }
+int t() {
+extern char **environ;
+		  if (environ)
+		     return 0;
+		  else
+		     return 1;
+; return 0; }
+EOF
+if { (eval echo configure:1650: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
+  rm -rf conftest*
+  		 cat >> confdefs.h <<\EOF
+#define ENVIRON_NAME environ
+EOF
+
+		 echo "$ac_t""using environ" 1>&6
+else
+  rm -rf conftest*
+  	         cat > conftest.$ac_ext <<EOF
+#line 1660 "configure"
+#include "confdefs.h"
+
+int main() { return 0; }
+int t() {
+extern char **__environ;
+			      if (__environ)
+			        return 0;   
+			      else
+				return 1;
+; return 0; }
+EOF
+if { (eval echo configure:1672: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
+  rm -rf conftest*
+  		             cat >> confdefs.h <<\EOF
+#define ENVIRON_NAME __environ
+EOF
+
+	     		     echo "$ac_t""using __environ" 1>&6
+else
+  rm -rf conftest*
+                               echo "configure: warning: no environ variable found" 1>&2
+                             LIBOBJS="$LIBOBJS c/fake/environ.o"
+fi
+rm -f conftest*
+
+fi
+rm -f conftest*
+
      echo $ac_n "checking n_name""... $ac_c" 1>&6
      cat > conftest.$ac_ext <<EOF
-#line 1542 "configure"
+#line 1691 "configure"
 #include "confdefs.h"
 #include <nlist.h>
 int main() { return 0; }
@@ -1547,7 +1696,7 @@ struct nlist name_list;
 		  name_list.n_name = "foo";
 ; return 0; }
 EOF
-if { (eval echo configure:1551: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
+if { (eval echo configure:1700: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
   rm -rf conftest*
   cat >> confdefs.h <<\EOF
 #define NLIST_HAS_N_NAME 1
@@ -1562,7 +1711,7 @@ rm -f conftest*
 
      echo $ac_n "checking __NEXT__""... $ac_c" 1>&6
      cat > conftest.$ac_ext <<EOF
-#line 1566 "configure"
+#line 1715 "configure"
 #include "confdefs.h"
 
 int main() { return 0; }
@@ -1576,7 +1725,7 @@ fail
 
 ; return 0; }
 EOF
-if { (eval echo configure:1580: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
+if { (eval echo configure:1729: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; }; then
   rm -rf conftest*
   CC="$CC -posix"
 		cat >> confdefs.h <<\EOF
@@ -1606,7 +1755,7 @@ EOF
 
      	echo $ac_n "checking link with -rdynamic""... $ac_c" 1>&6
 	cat > conftest.$ac_ext <<EOF
-#line 1610 "configure"
+#line 1759 "configure"
 #include "confdefs.h"
 
 int main() { return 0; }
@@ -1616,7 +1765,7 @@ int t() {
 #endif
 ; return 0; }
 EOF
-if { (eval echo configure:1620: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:1769: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   echo "$ac_t""no" 1>&6
 else

@@ -1,21 +1,22 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Threads.
 
-; This is inspired by Haynes et al's  engines.
+; This was inspired by Haynes et al's engines.
 ;
 ; The fundamental operation is (RUN <thread> <time>), which runs the thread
 ; for the given amount of time.
 ;
 ; Each thread has:
-;   saved continuation
-;   saved interrupt mask
+;   dynamic environment
+;   dynamic point
+;   current proposal
+;   saved continuation (if not currently runnning)
+;   state
 ;   scheduler, which is the thread that RUNs this one
 ;   remaining time in clock ticks ('waiting = waiting for events)
 ;   queue that is holding this thread, if any
 ;   arguments waiting to be passed to the thread when it is next run
-;   dynamic environment
-;   dynamic point
 ;   whatever data the scheduler wants
 ; Schedulers also have:
 ;   list of pending events
@@ -39,23 +40,37 @@
 ; the list is spliced back together and eN's continuation is resumed.
 
 (define-record-type thread :thread
-  (really-make-thread dynamic-env dynamic-point continuation scheduler
+  (really-make-thread dynamic-env dynamic-point proposal
+		      continuation scheduler
 		      queue arguments
 		      events current-task uid name)
   thread?
+
+  ; These first three fields hold dynamic data used by various VM opcodes.
   (dynamic-env    thread-dynamic-env)   ;Must be first!  (See fluid.scm)
   (dynamic-point  thread-dynamic-point set-thread-dynamic-point!)
-  					;Must be second!  (See fluid.scm)
+  					;Must be second! (See fluid.scm)
+  (proposal       thread-proposal)	;Must be third!  (See fluid.scm)
+
+  ; The time remaining for a thread to run.
+  (time           thread-time         set-thread-time!)
+
+  ; The saved state of a non-running thread
   (continuation   thread-continuation set-thread-continuation!)
-  (queue          thread-queue set-thread-queue!)
-  (arguments      thread-arguments set-thread-arguments!)
-  (time           thread-time set-thread-time!)
-  (scheduler      thread-scheduler set-thread-scheduler!)
-  (data           thread-data set-thread-data!)
-  (events         thread-events set-thread-events!)             ; schedulers
-  (current-task   thread-current-task set-thread-current-task!) ; schedulers
-  (uid            thread-uid)       ; for debugging (and as a cheap weak pointer)
-  (name		  thread-name))     ; for debugging
+  (arguments      thread-arguments    set-thread-arguments!)
+
+  ; Used by the engine algorithm
+  (scheduler      thread-scheduler    set-thread-scheduler!)
+  (current-task   thread-current-task set-thread-current-task!)
+  (events         thread-events       set-thread-events!)
+
+  ; Used by schedulers
+  (data           thread-data         set-thread-data!)
+  (queue          thread-queue        set-thread-queue!)
+
+  ; For debugging
+  (uid            thread-uid)       ; (also used as a cheap weak pointer)
+  (name		  thread-name))
 
 (define-record-discloser :thread
   (lambda (thread)
@@ -71,6 +86,7 @@
 (define (make-thread thunk dynamic-env name)
   (let ((thread (really-make-thread dynamic-env
 				    #f               ; dynamic-point root
+				    #f		     ; proposal
 				    (thunk->continuation
 				     (thread-top-level thunk))
 				    (current-thread) ; scheduler
@@ -121,6 +137,13 @@
 		  q))
 	    event))
 
+(define (next-event! thread)
+  (let ((queue (thread-events thread)))
+    (if (and queue
+	     (not (queue-empty? queue)))
+	(dequeue! queue)
+	#f)))
+
 ; A bit of magic courtesy of JAR.  We need to use PRIMITIVE-CWCC to save
 ; thread continuations because CALL-WITH-CURRENT-CONTINUATION saves the
 ; dynamic state, including the current thread.  PRIMITIVE-CWCC's continuations
@@ -157,8 +180,7 @@
 ;----------------
 ; Enqueueing and dequeuing threads.
 
-; Rename the queue operations as thread-specific ones (both for clarity
-; and because we will want to use priority queues in the future).
+; Rename the queue operations as thread-specific ones (just for clarity).
 
 (define make-thread-queue make-queue)
 (define thread-queue-empty? queue-empty?)
@@ -252,8 +274,8 @@
 ; above the thread to be run.
 ;
 ; We first go down from the user-provided thread, looking for a thread with
-; no time left.  We then continue either with that thread's scheduler or with
-; the bottom thread of the chain.
+; no time left or a thread that has an event queued.  We then continue either
+; with that thread's scheduler or with the bottom thread of the chain.
 
 ; This could be modified to add the current time to NEW-THREAD and any threads
 ; below.  Then the old time limit could be reused if none of the new threads
@@ -263,10 +285,17 @@
   (set-thread-time! new-thread time) ; in case we don't run it now
   (let loop ((thread new-thread) (time time))
     (let ((next (thread-current-task thread)))
-      (if (and next
-	       (< 0 (thread-time next)))
-	  (loop next (min time (thread-time next)))
-	  (debit-thread-times-and-run! thread time)))))
+      (cond ((or (not next)
+		 (< 0 (thread-time next)))
+	     (debit-thread-times-and-run! thread time #f))
+	    ((next-event! thread)
+	     => (lambda (event)
+		  (set-thread-current-task! thread #f)
+		  (set-thread-arguments! thread (cons (thread-time next)
+						      event))
+		  (debit-thread-times-and-run! thread time #f)))
+	    (else
+	     (loop next (min time (thread-time next))))))))
 
 ; Debit the times of all threads from the current-thread on up.  If we find a
 ; thread with no time left, then that thread's scheduler becomes the potential
@@ -275,14 +304,16 @@
 ; Only the root thread can end up with a time-limit of #f, as all other threads
 ; have schedulers.
 
-(define (debit-thread-times-and-run! next-to-run time-limit)
+(define (debit-thread-times-and-run! next-to-run time-limit time-out?)
   (let ((elapsed (interrupt-timer-time)))
     (let loop ((thread (current-thread))
 	       (time-limit time-limit)
 	       (next-to-run next-to-run))
       (let ((scheduler (thread-scheduler thread)))
 	(cond (scheduler
-	       (let ((time-left (- (thread-time thread) elapsed)))
+	       (let ((time-left (max2 (- (thread-time thread)
+					 elapsed)
+				      0)))
 		 (set-thread-time! thread time-left)
 		 (if (<= time-left 0)
 		     (loop scheduler #f scheduler)
@@ -292,6 +323,9 @@
 			       time-left)
 			   next-to-run))))
 	      (next-to-run
+;               (debug-message (if time-out?
+;                                  "[quantum ran out]"
+;                                  "[run called]"))
 	       (run-next-thread next-to-run time-limit))
 	      (else
 	       (schedule-interrupt! time-limit)))))))
@@ -300,7 +334,7 @@
 
 (define (handle-timer-interrupt interrupted-template ei)
   (if (thread-scheduler (current-thread))
-      (debit-thread-times-and-run! #f #f)))
+      (debit-thread-times-and-run! #f #f #t)))
 
 ; Run the next thread, first scheduling an interrupt if the thread is not the
 ; root thread.  If the next thread has a current task, then the return values
@@ -333,6 +367,8 @@
 ; the list of running threads.
 
 (define (run-thread thread return-values)
+;  (debug-message "[Running " (thread-name thread)
+;		 " " (thread-uid thread) "]")
   (set-current-thread! thread)
   (set-thread-current-task! thread #f)
   (with-continuation (thread-continuation thread)
@@ -357,6 +393,9 @@
 ; thread between the current one and SCHEDULER.
 
 (define (suspend-to scheduler event)  ; called with interrupts disabled
+;  (debug-message "[suspending for "
+;		 (enumerand->name (car event) event-type)
+;		 "]")
   (debit-down! (thread-current-task scheduler))
   (switch-to-thread scheduler
 		    (cons (thread-time (thread-current-task scheduler))
@@ -367,7 +406,10 @@
     (let loop ((thread thread))
       (if thread
           (begin
-            (set-thread-time! thread (- (thread-time thread) elapsed))
+            (set-thread-time! thread
+			      (max2 (- (thread-time thread)
+				       elapsed)
+				    0))
             (loop (thread-current-task thread)))))))
 
 ; Same thing, except that we don't save the current continuation and
@@ -376,6 +418,7 @@
 
 (define (exit reason stuff)
   (disable-interrupts!)
+;  (debug-message "[thread exiting]")
   (let ((thread (current-thread)))
     (set-thread-continuation! thread #f)
     (run-thread (thread-scheduler thread)
@@ -394,6 +437,7 @@
 		    (not (queue-empty? (thread-events thread)))))
 	  (let ((time-left (- (thread-time thread)
 			      (interrupt-timer-time))))
+;	    (debug-message "[thread waiting]")
 	    (set-thread-time! thread 'waiting)
 	    (switch-to-thread (thread-scheduler thread)
 			      (list time-left (enum event-type blocked)))))
@@ -406,11 +450,24 @@
 
 ; Various calls to SUSPEND.
 
+(define (relinquish-timeslice)
+  (suspend (enum event-type out-of-time) '()))
+
 (define (block)
   (suspend (enum event-type blocked) '()))
 
-(define (relinquish-timeslice)
-  (suspend (enum event-type out-of-time) '()))
+; Block if the current proposal succeeds.  Returns true if successful and false
+; if the commit fails.
+
+(define (maybe-commit-and-block)
+  (disable-interrupts!)
+  (cond ((maybe-commit)
+	 (suspend-to (thread-scheduler (current-thread))
+		     (list (enum event-type blocked)))
+	 #t)
+	(else
+	 (enable-interrupts!)
+	 #f)))
 
 ; Send the upcall to the current scheduler and check the return value(s)
 ; to see if it was handled properly.
@@ -457,63 +514,69 @@
 
 (define (get-next-event!)
   (let* ((interrupts (disable-interrupts!))
-	 (events (thread-events (current-thread))))
-    (if (or (not events)
-	    (queue-empty? events))
-	(begin
-	  (set-enabled-interrupts! interrupts)
-	  (enum event-type no-event))
-	(let ((event (dequeue! events)))
-	  (set-enabled-interrupts! interrupts)
-	  (apply values event)))))
+	 (event (next-event! (current-thread))))
+    (set-enabled-interrupts! interrupts)
+    (if event
+	(apply values event)
+	(enum event-type no-event))))
 
 (define (event-pending?)
   (let ((events (thread-events (current-thread))))
     (and events (not (queue-empty? events)))))
 
-; Schedule the given event for THREAD.  If THREAD is waiting, a RUNNABLE
-; event is also scheduled for its scheduler and so on up the tree.  If
-; THREAD is running we suspend to allow the interrupt to be processed
-; immediately (running threads that are not the current thread must be
-; above the current thread in the tree and so have priority over it).
+; Schedule the given event for THREAD and then check to see if any of the
+; current thread's ancestors have received an event.
 
 (define (schedule-event thread . event)
   (let ((interrupts (disable-interrupts!)))
-    (cond ((eq? thread (current-thread))
-	   (add-event! thread event)
-	   (values))
-	  ((waiting? thread)
-	   (add-event! thread event)
-	   (schedule-wakeup thread))
-	  ((running? thread)
-	   (suspend-to thread event))
-	  ((thread-current-task thread)
-	   (set-thread-arguments! thread
-				  (cons (thread-time (thread-current-task thread))
-					event))
-	   (set-thread-current-task! thread #f))
-	  (else
-	   (add-event! thread event)))
+    (really-schedule-event thread event)
+    (maybe-suspend)
     (set-enabled-interrupts! interrupts)
     ((structure-ref primitives unspecific))))
 
-; Make THREAD's scheduler aware of the fact that THREAD is runnable, and
-; similarly for its own scheduler and so on up the tree.
+; Resume running the highest thread which has both a current task and a
+; waiting event.  If there are none such the current thread can continue.
+
+(define (maybe-suspend)
+  (let loop ((thread (root-scheduler)))
+    (let ((next (thread-current-task thread)))
+      (if next
+	  (let ((event (next-event! thread)))
+	    (if event
+		(suspend-to thread event)
+		(loop next)))))))
+
+; Add EVENT to THREAD's event queue.  If THREAD is already running some other
+; thread but is not currently runnning, then we arrange for it's call to RUN
+; to return as soon as it is resumed.
+
+(define (really-schedule-event thread event)
+;  (debug-message "[event "
+;                 (enumerand->name (car event) event-type)
+;                 " for "
+;                 (thread-uid thread)
+;                 "]")
+  (cond ((and (thread-current-task thread)
+	      (not (running? thread)))
+	 (set-thread-arguments! thread
+				(cons (thread-time (thread-current-task thread))
+				      event))
+	 (set-thread-current-task! thread #f))
+	(else
+	 (add-event! thread event)))
+  (if (waiting? thread)
+      (schedule-wakeup thread)))
+
+; Make THREAD's scheduler aware of the fact that THREAD is runnable.
 ; Called with interrupts disabled.
 
 (define (schedule-wakeup thread)
-  (set-thread-time! thread 0)             ; clear WAITING flag
   (let ((scheduler (thread-scheduler thread)))
+    (set-thread-time! thread 0)             ; clear WAITING flag
     (if scheduler
-	(let ((event (list (enum event-type runnable) thread)))
-	  (cond ((eq? scheduler (current-thread))
-		 (add-event! scheduler event)
-		 (values))
-		((waiting? scheduler)
-		 (add-event! scheduler event)
-		 (schedule-wakeup scheduler))
-		((running? scheduler)
-		 (suspend-to scheduler event)))))))
+	(really-schedule-event scheduler 
+			       (list (enum event-type runnable)
+				     thread)))))
 
 ; Debugging routine
 
@@ -540,7 +603,10 @@
 ; scheduler.
 
 (define (spawn thunk . id)
-  (apply spawn-on-scheduler (thread-scheduler (current-thread)) thunk id))
+  (apply spawn-on-scheduler
+	 (thread-scheduler (current-thread))
+	 thunk
+	 id))
 
 (define (spawn-on-root thunk . id)
   (if (root-scheduler)
@@ -556,19 +622,47 @@
 		  thunk
 		  (if (null? id) #f (car id))))
 
-; Enqueue a RUNNABLE for THREAD's scheduler.
+; Enqueue a RUNNABLE event for THREAD's scheduler.
 
 (define (make-ready thread . args)
   (if (thread-queue thread)
       (error "trying to schedule a queued thread" thread))
-;  (if (not (null? (thread-arguments thread)))
-;      (error "trying to replace thread arguments"))
   (set-thread-arguments! thread args)
   (if (thread-scheduler thread)
       (schedule-event (thread-scheduler thread)
 		      (enum event-type runnable)
 		      thread)
       (error "MAKE-READY thread has no scheduler" thread)))
+
+; Same, except that we only schedule the thread if the current proposal
+; succeeds.
+
+(define (maybe-commit-and-make-ready thread-or-queue . args)
+  (let ((ints (set-enabled-interrupts! 0)))
+    (cond ((maybe-commit)
+	   (if (queue? thread-or-queue)
+	       (make-threads-ready thread-or-queue)
+	       (apply make-ready thread-or-queue args))
+	   (set-enabled-interrupts! ints)
+	   #t)
+	  (else
+	   (set-enabled-interrupts! ints)
+	   #f))))
+
+; Make all of the threads on QUEUE ready (and don't run any of them until
+; all have been processed).
+
+(define (make-threads-ready queue)
+  (let loop ()
+    (if (thread-queue-empty? queue)
+	(maybe-suspend)
+	(let ((thread (dequeue-thread! queue)))
+	  (if (thread-scheduler thread)
+	      (really-schedule-event (thread-scheduler thread)
+				     (list (enum event-type runnable)
+					   thread))
+	      (error "MAKE-READY thread has no scheduler" thread))
+	  (loop)))))
 
 ;----------------
 
@@ -611,12 +705,16 @@
     (lambda (exit-multitasking)
       (with-handler
        (lambda (c punt)
-	 (if (deadlock? c) (exit-multitasking 0) (punt)))
+	 (if (deadlock? c)
+	     (exit-multitasking 0)
+	     (punt)))
        (lambda ()
 	 (call-with-current-continuation
 	   (lambda (terminate)
 	     (with-handler (lambda (c punt)
-			     (if (terminate? c) (terminate 0) (punt)))
+			     (if (terminate? c)
+				 (terminate 0)
+				 (punt)))
 	       (lambda ()
 		 (set! *thread-uid* 0)
 		 (let ((thread (make-thread #f    ; thunk
@@ -630,7 +728,7 @@
 		 ;; End the LET to get THREAD out of the continuation to THUNK
 		 ;; Interrupts were turned off by START-THREADS
 		 (enable-interrupts!)
-		 ;; We throw out after THUNK to avoid teh EXIT below, as we
+		 ;; We throw out after THUNK to avoid the EXIT below, as we
 		 ;; have no scheduler to exit to.
 		 (exit-multitasking (thunk))))))
 	 ;; land here when terminating a thread
@@ -668,4 +766,11 @@
 (define (root-scheduler)
   (session-data-ref root-scheduler-slot))
 
+;----------------
+; Fast binary version of max.
+
+(define (max2 x y)
+  (if (< x y)
+      y
+      x))
 

@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:20 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+
+<A NAME="top_node">&nbsp;</A>
+
+
+
+
+
+
+    <H1 ALIGN=CENTER><FONT SIZE=+1>The Incomplete</FONT> <BR>Scheme 48 Reference Manual <BR><FONT SIZE=+1>for release 0.54</FONT></H1>
+    <H2 ALIGN=CENTER>Richard Kelsey and Jonathan Rees <BR><FONT SIZE=+0>with a chapter by Mike Sperber</FONT></H2>
+    
+    
+
+<BLOCKQUOTE><CENTER>
+<TABLE CELLSPACING="1" CELLPADDING="0"><TR>
+<TD NOWRAP COLSPAN="1" ALIGN="LEFT">
+A line may take us hours, yet if it does not seem</TD><TD NOWRAP COLSPAN="99" ALIGN="LEFT"> a moment's thought </TD></TR>
+<TR>
+<TD NOWRAP COLSPAN="99" ALIGN="LEFT">All our stitching and unstitching has been as nought. </TD></TR>
+<TR>
+<TD NOWRAP COLSPAN="1" ALIGN="LEFT"></TD><TD NOWRAP COLSPAN="99" ALIGN="LEFT"> Yeats </TD></TR>
+<TR>
+<TD NOWRAP COLSPAN="1" ALIGN="LEFT"></TD><TD NOWRAP COLSPAN="99" ALIGN="LEFT"> <EM>Adam's Curse</EM>
+</TD></TR></TABLE>
+
+</CENTER></BLOCKQUOTE>
+
+<MENU>
+<LI><A HREF="s48manual_1.html">Acknowledgements</A>
+<LI><A HREF="s48manual_2.html">Introduction</A>
+<LI><A HREF="s48manual_3.html">User's guide</A>
+<MENU>
+<LI><A HREF="s48manual_4.html">Command line arguments</A>
+<LI><A HREF="s48manual_5.html">Command processor</A>
+<LI><A HREF="s48manual_6.html">Editing</A>
+<LI><A HREF="s48manual_7.html">Performance</A>
+<LI><A HREF="s48manual_8.html">Disassembler</A>
+<LI><A HREF="s48manual_9.html">Module system</A>
+<LI><A HREF="s48manual_10.html">Library</A>
+</MENU>
+<LI><A HREF="s48manual_11.html">Command processor</A>
+<MENU>
+<LI><A HREF="s48manual_12.html">Current focus value and <TT>##</TT></A>
+<LI><A HREF="s48manual_13.html">Command levels</A>
+<LI><A HREF="s48manual_14.html">Logistical commands</A>
+<LI><A HREF="s48manual_15.html">Module commands</A>
+<LI><A HREF="s48manual_16.html">Debugging commands</A>
+<LI><A HREF="s48manual_17.html">Switches</A>
+<LI><A HREF="s48manual_18.html">Inspection mode</A>
+<LI><A HREF="s48manual_19.html">Command programs</A>
+<LI><A HREF="s48manual_20.html">Building images</A>
+<LI><A HREF="s48manual_21.html">Resource query and control</A>
+<LI><A HREF="s48manual_22.html">Threads</A>
+<LI><A HREF="s48manual_23.html">Quite obscure</A>
+</MENU>
+<LI><A HREF="s48manual_24.html">Module system</A>
+<MENU>
+<LI><A HREF="s48manual_25.html">Introduction</A>
+<LI><A HREF="s48manual_26.html">The configuration language</A>
+<LI><A HREF="s48manual_27.html">Interfaces</A>
+<LI><A HREF="s48manual_28.html">Macros</A>
+<LI><A HREF="s48manual_29.html">Higher-order modules</A>
+<LI><A HREF="s48manual_30.html">Compiling and linking</A>
+<LI><A HREF="s48manual_31.html">Semantics of configuration mutation</A>
+<LI><A HREF="s48manual_32.html">Command processor support</A>
+<LI><A HREF="s48manual_33.html">Configuration packages</A>
+<LI><A HREF="s48manual_34.html">Discussion</A>
+</MENU>
+<LI><A HREF="s48manual_35.html">Libraries</A>
+<MENU>
+<LI><A HREF="s48manual_36.html">ASCII character encoding</A>
+<LI><A HREF="s48manual_37.html">Bitwise integer operations</A>
+<LI><A HREF="s48manual_38.html">Byte vectors</A>
+<LI><A HREF="s48manual_39.html">Cells</A>
+<LI><A HREF="s48manual_40.html">Arrays</A>
+<LI><A HREF="s48manual_41.html">Records</A>
+<LI><A HREF="s48manual_42.html">Finite record types</A>
+<LI><A HREF="s48manual_43.html">Hash tables</A>
+<LI><A HREF="s48manual_44.html">Fluid bindings</A>
+<LI><A HREF="s48manual_45.html">Sockets</A>
+<LI><A HREF="s48manual_46.html">Macros for writing loops</A>
+<LI><A HREF="s48manual_47.html">Regular expressions</A>
+<LI><A HREF="s48manual_48.html">SRFIs</A>
+</MENU>
+<LI><A HREF="s48manual_49.html">Mixing Scheme 48 and C &nbsp;&nbsp; <I>Mike Sperber and Richard Kelsey</I></A>
+<MENU>
+<LI><A HREF="s48manual_50.html">Available facilities</A>
+<LI><A HREF="s48manual_51.html">Shared bindings</A>
+<LI><A HREF="s48manual_52.html">Calling C functions from Scheme</A>
+<LI><A HREF="s48manual_53.html">Adding external modules to the <TT>Makefile</TT></A>
+<LI><A HREF="s48manual_54.html">Dynamic loading</A>
+<LI><A HREF="s48manual_55.html">Compatibility</A>
+<LI><A HREF="s48manual_56.html">Accessing Scheme data from C</A>
+<LI><A HREF="s48manual_57.html">Calling Scheme functions from C</A>
+<LI><A HREF="s48manual_58.html">Interacting with the Scheme heap</A>
+<LI><A HREF="s48manual_59.html">Using Scheme records in C code</A>
+<LI><A HREF="s48manual_60.html">Raising exceptions from external code</A>
+<LI><A HREF="s48manual_61.html">Unsafe functions and macros</A>
+</MENU>
+<LI><A HREF="s48manual_62.html">Access to POSIX</A>
+<MENU>
+<LI><A HREF="s48manual_63.html">Process primitives</A>
+<LI><A HREF="s48manual_64.html">Signals</A>
+<LI><A HREF="s48manual_65.html">Process environment</A>
+<LI><A HREF="s48manual_66.html">Users and groups</A>
+<LI><A HREF="s48manual_67.html">OS and machine identification</A>
+<LI><A HREF="s48manual_68.html">Files and directories</A>
+<LI><A HREF="s48manual_69.html">Time</A>
+<LI><A HREF="s48manual_70.html">I/O</A>
+<LI><A HREF="s48manual_71.html">Regular expressions</A>
+<LI><A HREF="s48manual_72.html">C to Scheme correspondence</A>
+</MENU>
+<LI><A HREF="s48manual_73.html">References</A>
+<LI><A HREF="s48manual_74.html">Index</A>
+</MENU>
+<P>
+  
+</BODY></HTML>

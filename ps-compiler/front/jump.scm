@@ -1,49 +1,30 @@
-; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
-
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 ; Code to turn PROC lambdas into JUMP lambdas.
 
+; FIND-JUMP-PROCS returns two lists.  The first contains lists of the form
+;    ((<proc-lambda> ...) (<var> ...) <continuation>)
+; indicating that these lambda nodes, bound to the given variables, are all
+; called with <continuation> as their only continuation.  The second list
+; is of procedures that are called only by each other.  The procedures in
+; the second list are deleted.  Those in the first list are converted to
+; JUMP lambdas
+;
+; INTEGRATE-JUMP-PROCS! returns #T if any change is made to the program.
+
 (define (integrate-jump-procs!)
   (receive (hits useless)
-      (find-jump-procs (filter proc-lambda? (make-lambda-list)) find-calls)
+      (find-jump-procs (filter proc-lambda?
+			       (make-lambda-list))
+		       find-calls)
     (remove-unused-procedures! useless)
     (for-each (lambda (p)
 		(procs->jumps (cdr p)
 			      (map bound-to-variable (cdr p))
 			      (car p)))
 	      hits)
-    (not (and (null? hits) (null? useless)))))
-
-; Make a call graph with extra nodes inserted for continuations:
-;
-; If F calls G tail-recursively, add an edge F->G
-; If F calls G ... with continuation K, add a node K and edges F->K, K->G ...
-;
-; Then FIND-JOINS will return a list of the nodes that are passed two or
-; more distinct continuations.  The rest can be merged with their callers.
-;
-; Need a root node, so make one that points to all procs with unknown calls.
-
-(define-record-type node :node
-  (really-make-node proc cont successors join? merged?)
-  node?
-  (proc node-proc)             ; lambda node (or #f for continuation holders)
-  (cont node-cont)             ; lambda node (or #f for procs)
-  (successors node-successors set-node-successors!)
-  (temp node-temp set-node-temp!)
-  (join? node-join? set-node-join?!)
-  (merged? node-merged? set-node-merged?!))
-
-(define (make-node proc cont)
-  (really-make-node proc cont '() #f #f))
-
-(define-record-discloser :node
-  (lambda (node)
-    (list 'node (node-proc node) (node-cont node))))
-
-(define (add-child! parent child)
-  (if (not (memq? child (node-successors parent)))
-      (set-node-successors! parent (cons child (node-successors parent)))))
+    (or (not (null? hits))
+	(not (null? useless)))))
 
 ; We want to find subsets of ALL-PROCS such that all elements of a subset
 ; are always called with the same continuation.  (PROC->USES <proc>) returns
@@ -102,6 +83,39 @@
 		      all-procs)
 	    (values mergable useless)))))))
 
+; Make a call graph with extra nodes inserted for continuations:
+;
+;  If F calls G tail-recursively, add an edge F->G
+;  If F calls G ... with continuation K, add a node K and edges F->K, K->G ...
+;
+; Then FIND-JOINS will return a list of the nodes that are passed two or
+; more distinct continuations.  The rest can be merged with their callers.
+;
+; Need a root node, so make one that points to all procs with unknown calls.
+
+(define-record-type node :node
+  (really-make-node proc cont successors join? merged?)
+  node?
+  (proc node-proc)             ; lambda node (or #f for continuation holders)
+  (cont node-cont)             ; lambda node (or #f for procs)
+  (successors node-successors set-node-successors!)
+  (temp node-temp set-node-temp!)
+  (join? node-join? set-node-join?!)
+  (merged? node-merged? set-node-merged?!))
+
+(define (make-node proc cont)
+  (really-make-node proc cont '() #f #f))
+
+(define-record-discloser :node
+  (lambda (node)
+    (list 'node (node-proc node) (node-cont node))))
+
+(define (add-child! parent child)
+  (if (not (memq? child (node-successors parent)))
+      (set-node-successors! parent
+			    (cons child
+				  (node-successors parent)))))
+
 ; Walk KNOWN-PROCS adding edges to the call graph.
 
 (define (note-calls! known-procs conts-cell procs-cell proc->uses)
@@ -156,7 +170,8 @@
     (if (null? mergable)
 	#f
 	(cons (or (node-cont node)
-		  (car (variable-refs (car (lambda-variables (node-proc node))))))
+		  (car (variable-refs
+			 (car (lambda-variables (node-proc node))))))
 	      mergable))))
 
 (define (really-find-mergable node)    
@@ -176,7 +191,7 @@
 			(recur (node-successors node)
 			       (cons (node-proc node) res)))))))))
 
-;=============================================================================;
+;----------------
 ; Part 2.  PROCS is a list of procedures that are only called by each other;
 ; with no entry point they are useless and can be removed.
 
@@ -192,12 +207,12 @@
 		(erase proc)))
 	    procs))
 
-;=============================================================================;
+;----------------
 ; Part 3.  Turn JUMP-PROCS from procs to jumps.  CONT is the continuation they
 ; all receive, and is also turned into a jump.
 
 ; This creates a LETREC to bind all CONT and any of JUMP-PROCS that are
-; passed CONT directly and are bound abouve the LCA of all calls to JUMP-PROCS
+; passed CONT directly and are bound above the LCA of all calls to JUMP-PROCS
 ; that use CONT.  Then every jump-proc is changed from a proc lambda to a
 ; jump lambda and has its continuation removed.  Returns are replaced with
 ; jumps to CONT.  If CONT is not a variable some protocol adjustment may be
@@ -216,11 +231,13 @@
 	(for-each detach-bound-value called-vars called-procs)
 	(cond ((lambda-node? cont)
 	       (determine-continuation-protocol cont jump-procs)
-	       (move cont (lambda (ignore) (make-literal-node '#f '#f)))
-	       (put-in-letrec (cons cvar called-vars)
-			      (cons cont called-procs)
-			      lca)
-	       (change-lambda-type cont 'jump))
+	       (let ((cont-copy (copy-node-tree cont)))
+		 (change-lambda-type cont-copy 'jump)
+		 (put-in-letrec (cons cvar
+				      called-vars)
+				(cons cont-copy
+				      called-procs)
+				lca)))
 	      (else
 	       (put-in-letrec called-vars called-procs lca))))
       (for-each proc-calls->jumps jump-procs)
@@ -230,7 +247,7 @@
 		    (set-variable-refs! v '())
 		    (for-each (lambda (r)
 				(if (lambda-node? cont)
-				    (return->jump (node-parent r) cvar cont)
+				    (return->jump (node-parent r) cvar)
 				    (replace r (make-reference-node
 						(car (lambda-variables proc))))))
 			      refs)
@@ -238,25 +255,31 @@
 		jump-procs)
       (values))))
 
-; Returns those of VALS and VARS where there is a call to the variable that
+; Returns those of VARS and VALS where there is a call to the variable that
 ; passes CONT as a continuation, or where the variable is not bound.  The
-; third values returned is the least-common-ancestor of all calls to VARS
+; third value returned is the least-common-ancestor of all calls to VARS
 ; that use CONT.
+;
+; Why exclude uncalled variables just because they are bound?
 
 (define (find-cont-uses cont vars vals)
   (let loop ((vars vars) (vals vals) (r-vars '()) (r-vals '()) (uses '()))
     (if (null? vars)
-	(values r-vars r-vals (least-common-ancestor uses))
+	(values r-vars
+		r-vals
+		(least-common-ancestor uses))
 	(let ref-loop ((refs (variable-refs (car vars))) (my-uses uses))
 	  (cond ((not (null? refs))
 		 (ref-loop (cdr refs)
 			   (if (node-equal? cont
-					    (call-arg (node-parent (car refs)) 0))
+					    (call-arg (node-parent (car refs))
+						      0))
 			       (cons (car refs) my-uses)
 			       my-uses)))
-		((and (variable-binder (car vars))
-		      (eq? my-uses uses))
-		 (loop (cdr vars) (cdr vals) r-vars r-vals uses))
+; Why was this here?  It breaks for some examples.
+;                ((and (variable-binder (car vars))
+;                      (eq? my-uses uses))
+;                 (loop (cdr vars) (cdr vals) r-vars r-vals uses))
 		(else
 		 (loop (cdr vars) (cdr vals)
 		       (cons (car vars) r-vars)
@@ -310,7 +333,7 @@
 ; Change a return to a jump.  VAR is a variable bound to JUMP, the lambda
 ; being jumped to.
 
-(define (return->jump call var jump)
+(define (return->jump call var)
   (case (primop-id (call-primop call))
     ((return)
      (set-call-primop! call (get-primop (enum primop jump)))

@@ -1,21 +1,5 @@
-\documentclass{article}
-\usepackage{hyperlatex}
 
-\include{proto}
-
-% Make a few big HTML files, and not a lot of small ones.
-\setcounter{htmldepth}{1}
-
-\makeindex
-
-\title{Scheme 48 User's Guide}
-\author{Richard A. Kelsey}
-
-%\date{}
-
-\begin{document}
-
-\maketitle
+\chapter{Libraries}
 
 \section{ASCII character encoding}
 
@@ -61,11 +45,46 @@ basis. `\code{ior}' is inclusive OR and `\code{xor}' is exclusive OR.
  shifting left for positive counts and right for negative ones.
 Shifting preserves the integer's sign.
 
+\begin{protos}
+\proto{bit-count}{ integer}{integer}
+\end{protos}
+\noindent Counts the number of bits set in the integer.
+If the argument is negative a bitwise NOT operation is performed
+ before counting.
+
+\section{Byte vectors}
+
+These are homogeneous vectors of small integers ($0 \le i \le 255$).
+The functions that operate on them are analogous to those for vectors.
+They are in the structure \code{byte-vectors}.
+
+\begin{protos}
+\proto{byte-vector?}{ value}{boolean}
+\proto{make-byte-vector}{ k fill}{byte-vector}
+\proto{byte-vector}{ i \ldots}{byte-vector}
+\proto{byte-vector-length}{ byte-vector}{integer}
+\proto{byte-vector-ref}{ byte-vector k}{integer}
+\protonoresult{byte-vector-set!}{ byte-vector k i}
+\end{protos}
+
+\section{Cells}
+
+These hold a single value and are useful when a simple indirection is
+ required.
+The system uses these to hold the values of lexical variables that
+ may be \code{set!}.
+
+\begin{protos}
+\proto{cell?}{ value}{boolean}
+\proto{make-cell}{ value}{cell}
+\proto{cell-ref}{ cell}{value}
+\protonoresult{cell-set!}{ cell value}
+\end{protos}
+
 \section{Arrays}
 
-These are N-dimensional, zero-based arrays and
+These provide N-dimensional, zero-based arrays and
  are in the structure \code{arrays}.
-
 The array interface is derived from one written by Alan Bawden.
 
 \begin{protos}
@@ -126,11 +145,11 @@ Returns \code{\#t} if \cvar{value} is an array.
 \end{protos}
 \noindent
 \code{Make-shared-array} makes a new array that shares storage with \cvar{array}
- and uses \cvar{linear-map} to map indicies to elements.
+ and uses \cvar{linear-map} to map indexes to elements.
 \cvar{Linear-map} must accept as many arguments as the number of
  \cvar{dimension}s given and must return a list of non-negative integers
- that are valid indicies into \cvar{array}.
-\begin{example}
+ that are valid indexes into \cvar{array}.
+<\begin{example}
 (array-ref (make-shared-array a f i0 i1 ...)
            j0 j1 ...)
 \end{example}
@@ -146,9 +165,9 @@ As an example, the following function makes the transpose of a two-dimensional
   (let ((dimensions (array-dimensions array)))
     (make-shared-array array
                        (lambda (x y)
-		         (list y x))
-		       (cadr dimensions)
-		       (car dimensions))))
+                         (list y x))
+                       (cadr dimensions)
+                       (car dimensions))))
 
 (array->vector
   (transpose
@@ -157,6 +176,7 @@ As an example, the following function makes the transpose of a two-dimensional
 \end{example}
 
 \section{Records}
+\label{records}
 
 New types can be constructed using the \code{define-record-type} macro
  from the \code{define-record-types} structure
@@ -170,23 +190,23 @@ The general syntax is:
 \end{example}
 This makes the following definitions:
 \begin{protos}
-\constproto{\cvar{type-name}}{type}
-\proto{\cvar{constructor-name}}{ field-init \ldots}{type-name}
-\proto{\cvar{predicate-name}}{ value}{boolean}
-\proto{\cvar{accessor-name}}{ type-name}{value}
-\protonoresult{\cvar{modifier-name}}{ type-name value}
+\constprotonoindex{\cvar{type-name}}{type}
+\protonoindex{\cvar{constructor-name}}{ field-init \ldots}{type-name}
+\protonoindex{\cvar{predicate-name}}{ value}{boolean}
+\protonoindex{\cvar{accessor-name}}{ type-name}{value}
+\protonoresultnoindex{\cvar{modifier-name}}{ type-name value}
 \end{protos}
 \noindent
 \cvar{Type-name} is the record type itself, and can be used to
  specify a print method (see below).
 \cvar{Constructor-name} is a constructor that accepts values
  for the fields whose tags are specified.
-\cvar{Predicate-name} to a predicate that can returns \code{\#t} for
+\cvar{Predicate-name} is a predicate that returns \code{\#t} for
  elements of the type and \code{\#f} for everything else.
 The \cvar{accessor-name}s retrieve the values of fields,
  and the \cvar{modifier-name}'s update them.
-The \cvar{tag} is used in printing instances of the record type and
- the field tags are used in the inspector and to match
+\cvar{Tag} is used in printing instances of the record type and
+ the \cvar{field-tag}s are used in the inspector and to match
  constructor arguments with fields.
 
 \begin{protos}
@@ -215,8 +235,8 @@ For example
 The type itself is named \code{:pare}.
 \code{Pare} is a tag used in printing the new objects.
 
-By default, the new objects print as \code{\#{Pare}}.
-The print method can be modified using DEFINE-RECORD-DISCLOSER:
+By default, the new objects print as \code{\#\{Pare\}}.
+The print method can be modified using \code{define-record-discloser}:
 \begin{example}
 (define-record-discloser :pare
   (lambda (p) `(pare ,(kar p) ,(kdr p))))
@@ -229,7 +249,7 @@ The print method can be modified using DEFINE-RECORD-DISCLOSER:
 The structure \code{finite-types} has
  two macros for defining `finite' record types.
 These are record types for which there are a fixed number of instances,
- which are created when the record type is defined.
+ all of which are created at the same time as the record type itself.
 The syntax for the defining a finite type is:
 \begin{example}
 (define-finite-type \cvar{tag} \cvar{type-name}
@@ -275,14 +295,14 @@ The name lookup is done at macro-expansion time.
   (red   color-red)
   (green color-green)
   (blue  color-blue)
-  ((white  255 255 255)
-   (black    0   0   0)
-   (yellow 255 255   0)
+  ((black    0   0   0)
+   (white  255 255 255)
+   (purple 160  32 240)
    (maroon 176  48  96)))
 
-(color-name (vector-ref colors 0)) \evalsto white
 (color-name (color black))         \evalsto black
-(color-index (color yellow))       \evalsto 2
+(color-name (vector-ref colors 1)) \evalsto white
+(color-index (color purple))       \evalsto 2
 (color-red (color maroon))         \evalsto 176
 \end{example}
 
@@ -308,11 +328,11 @@ The above example of a finite type can be pared down to the following
   colors
   color-name
   color-index
-  (white black yellow maroon))
+  (black white purple maroon))
 
-(color-name (vector-ref colors 0)) \evalsto white
-(color-name (color black))         \evalsto black
-(color-index (color yellow))       \evalsto 2
+(color-name (vector-ref colors 0)) \evalsto black
+(color-name (color white))         \evalsto white
+(color-index (color purple))       \evalsto 2
 \end{example}
 
 \section{Hash tables}
@@ -354,7 +374,7 @@ For example, \code{make-integer-table} could be defined
 
 \begin{protos}
 \proto{table?}{ value}{boolean}
-\proto{table-ref}{ table key}{value or \code{\#f}}
+\proto{table-ref}{ table key}{value or {\tt \#f}}
 \protonoresult{table-set!}{ table key value}
 \protonoresult{table-walk}{ procedure table}
 \end{protos}
@@ -370,14 +390,763 @@ For example, \code{make-integer-table} could be defined
 \proto{string-hash}{ string}{integer}
 \end{protos}
 \noindent
-\code{default-hash-function} is the hash function used in the tables
+\code{Default-hash-function} is the hash function used in the tables
  returned by \code{make-table}, and \code{string-hash} it the one used
  by \code{make-string-table}.
+
+\section{Fluid bindings}
+
+These procedures implement dynamic binding and are in structure \code{fluids}.
+A \cvar{fluid} is a cell whose value can be bound dynamically.
+Each fluid has a top-level value that is used when the fluid
+ is unbound in the current dynamic environment.
+
+\begin{protos}
+\proto{make-fluid}{ value}{fluid}
+\proto{fluid}{ fluid}{value}
+\proto{let-fluid}{ fluid value thunk}{value(s)}
+\proto{let-fluids}{ fluid$_0$ value$_0$  fluid$_1$ value$_1$ \ldots thunk}{value(s)}
+\protonoresult{set-fluid!}{ fluid value}
+\end{protos}
+\noindent
+\code{Make-fluid} returns a new fluid with \cvar{value} as its initial
+ top-level value.
+\code{Fluid} returns \code{fluid}'s current value.
+\code{Let-fluid} calls \code{thunk}, with \cvar{fluid} bound to \cvar{value}
+ until \code{thunk} returns.
+Using a continuation to throw out of the call to \code{thunk} causes
+ \cvar{fluid} to revert to its original value, while throwing back
+ in causes \cvar{fluid} to be rebound to \cvar{value}.
+\code{Let-fluid} returns the value(s) returned by \cvar{thunk}.
+\code{Let-fluids} is identical to \code{let-fluid} except that it binds
+ an arbitrary number of fluids to new values.
+\code{Set-fluid!} sets \code{fluid}'s value to be \cvar{value}.
+Only the innermost binding of \code{fluid} is affected.
+
+\begin{example}
+(let* ((f (make-fluid 'a))
+       (v0 (fluid f))
+       (v1 (let-fluid f 'b
+             (lambda ()
+               (fluid f))))
+       (v2 (fluid f))
+       (v3 (let-fluid f 'b
+             (lambda ()
+               (set-fluid! f 'c)
+               (fluid f))))
+       (v4 (fluid f)))
+  (list v0 v1 v2 v3 v4))
+  \evalsto '(a b a c a)
+\end{example}
+
+\begin{example}
+(let ((f (make-fluid 'a))
+      (path '())
+      (c \#f))
+  (let ((add (lambda ()
+               (set! path (cons (fluid f) path)))))
+    (add)
+    (let-fluid f 'b
+      (lambda ()
+        (call-with-current-continuation
+          (lambda (c0)
+            (set! c c0)))
+        (add)))
+    (add)
+    (if (< (length path) 5)
+        (c)
+        (reverse path))))
+  \evalsto '(a b a b a)
+\end{example}
+
+\section{Sockets}
+
+Structure \code{sockets} provides access to sockets for interprocess
+ communication.
+
+\begin{protos}
+\proto{open-socket}{}{socket}
+\proto{open-socket}{ port-number}{socket}
+\proto{socket-port-number}{ socket}{integer}
+\protonoresult{close-socket}{ socket}
+\proto{socket-accept}{ socket}{input-port output-port}
+\proto{get-host-name}{}{string}
+\end{protos}
+\noindent
+\code{Open-socket} creates a new socket.
+If no \cvar{port-number} is supplied the system picks one at random.
+\code{Socket-port-number} returns a socket's port number.
+\code{Close-socket} closes a socket, preventing any further connections.
+\code{Socket-accept} accepts a single connection on \cvar{socket}, returning
+ an input port and an output port for communicating with the client.
+If no client is waiting \code{socket-accept} blocks until one appears.
+\code{Get-host-name} returns the network name of the machine.
+
+\begin{protos}
+\proto{socket-client}{ host-name port-number}{input-port output-port}
+\end{protos}
+\noindent
+\code{Socket-client} connects to the server at \cvar{port-number} on
+ the machine named \cvar{host-name}.
+\code{Socket-client} blocks until the server accepts the connection.
+
+The following simple example shows a server and client for a centralized UID
+ service.
+\begin{example}
+(define (id-server)
+  (let ((socket (open-socket)))
+    (display "Waiting on port ")
+    (display (socket-port-number socket))
+    (newline)
+    (let loop ((next-id 0))
+      (call-with-values
+        (lambda ()
+          (socket-accept socket))
+        (lambda (in out)
+          (display next-id out)
+          (close-input-port in)
+          (close-output-port out)
+          (loop (+ next-id 1)))))))
+         
+(define (get-id machine port-number)
+  (call-with-values
+    (lambda ()
+      (socket-client machine port-number))
+    (lambda (in out)
+      (let ((id (read in)))
+        (close-input-port in)
+        (close-output-port out)
+        id))))
+\end{example}
+
+\section{Macros for writing loops}
+
+\code{Iterate} and \code{reduce} are extensions of named-\code{let} for
+ writing loops that walk down one or more sequences,
+ such as the elements of a list or vector, the
+ characters read from a port, or an arithmetic series.
+Additional sequences can be defined by the user.
+\code{Iterate} and \code{reduce} are in structure \code{reduce}.
+
+\subsection{{\tt Iterate}}
+
+The syntax of \code{iterate} is:
+\begin{example}
+  (iterate \cvar{loop-name}
+           ((\cvar{sequence-type} \cvar{element-variable} \cvar{sequence-data} \ldots)
+            \ldots)
+           ((\cvar{state-variable} \cvar{initial-value})
+            \ldots)
+    \cvar{body-expression}
+    [\cvar{final-expression}])
+\end{example}
+
+\code{iterate} steps the \cvar{element-variable}s in parallel through the
+ sequences, while each \cvar{state-variable}s has the corresponding
+ \cvar{initial-value} for the first iteration and have later values
+ supplied by \cvar{body-expression}. 
+If any sequence has reached its limit the value of the \code{iterate}
+ expression is
+ the value of \cvar{final-expression}, if present, or the current values of
+ \cvar{state-variable}s, returned as multiple values.
+If no sequence has reached
+ its limit, \cvar{body-expression} is evaluated and either calls \cvar{loop-name} with
+ new values for the \cvar{state-variable}s, or returns some other value(s).
+
+The \cvar{loop-name} and the \cvar{state-variable}s and \cvar{initial-value}s behave
+exactly as in named-\code{let}.  The named-\code{let} expression
+\begin{example}
+  (let loop-name ((state-variable initial-value) ...)
+    body ...)
+\end{example}
+is equivalent to an \code{iterate} expression with no sequences
+ (and with an explicit
+ \code{let} wrapped around the body expressions to take care of any
+ internal \code{define}s):
+\begin{example}
+  (iterate loop-name
+           ()
+           ((state-variable initial-value) ...)
+    (let () body ...))
+\end{example}
+
+The \cvar{sequence-type}s are keywords (they are actually macros of a particular
+ form; it is easy to add additional types of sequences).
+Examples are \code{list*} which walks down the elements of a list and
+ \code{vector*} which does the same for vectors.
+For each iteration, each \cvar{element-variable} is bound to the next
+ element of the sequence.
+The \cvar{sequence-data} gives the actual list or vector or whatever.
+
+If there is a \cvar{final-expression}, it is evaluated when the end of one or more
+ sequences is reached.
+If the \cvar{body-expression} does not call \cvar{loop-name} the
+ \cvar{final-expression} is not evaluated.
+The \cvar{state-variable}s are visible in
+ \cvar{final-expression} but the \cvar{sequence-variable}s are not.  
+
+The \cvar{body-expression} and the \cvar{final-expression} are in tail-position within
+ the \code{iterate}.
+Unlike named-\code{let}, the behavior of a non-tail-recursive call to
+ \cvar{loop-name} is unspecified (because iterating down a sequence may involve side
+ effects, such as reading characters from a port).
+
+\subsection{{\tt Reduce}}
+
+If an \code{iterate} expression is not meant to terminate before a sequence
+ has reached its end,
+ \cvar{body-expression} will always end with a tail call to \cvar{loop-name}.
+\code{Reduce} is a macro that makes this common case explicit.
+The syntax of \code{reduce} is
+ the same as that of \code{iterate}, except that there is no \cvar{loop-name}.
+The \cvar{body-expression} returns new values of the \cvar{state-variable}s
+ instead of passing them to \cvar{loop-name}.
+Thus \cvar{body-expression} must return as many values as there are state
+ variables.
+By special dispensation, if there are
+ no state variables then \cvar{body-expression} may return any number of values,
+ all of which are ignored.
+
+The syntax of \code{reduce} is:
+\begin{example}
+  (reduce ((\cvar{sequence-type} \cvar{element-variable} \cvar{sequence-data} \ldots)
+            \ldots)
+           ((\cvar{state-variable} \cvar{initial-value})
+            \ldots)
+    \cvar{body-expression}
+    [\cvar{final-expression}])
+\end{example}
+
+The value(s) returned by an instance of \code{reduce} is the value(s) returned
+ by the \cvar{final-expression}, if present, or the current value(s) of the state
+variables when the end of one or more sequences is reached.
+
+A \code{reduce} expression can be rewritten as an equivalent \code{iterate}
+ expression by adding a \cvar{loop-var} and a wrapper for the
+ \cvar{body-expression} that calls the \cvar{loop-var}.
+\begin{example}
+(iterate loop
+         ((\cvar{sequence-type} \cvar{element-variable} \cvar{sequence-data} \ldots)
+          \ldots)
+         ((\cvar{state-variable} \cvar{initial-value})
+          \ldots)
+  (call-with-values (lambda ()
+                      \cvar{body-expression})
+                    loop)
+  [\cvar{final-expression}])
+\end{example}
+
+\subsection{Sequence types}
+
+The predefined sequence types are:
+\begin{protos}
+\syntaxprotonoresult{list*}{ \cvar{elt-var} \cvar{list}}
+\syntaxprotonoresult{vector*}{ \cvar{elt-var} \cvar{vector}}
+\syntaxprotonoresult{string*}{ \cvar{elt-var} \cvar{string}}
+\syntaxprotonoresult{count*}
+ { \cvar{elt-var} \cvar{start} [\cvar{end} [\cvar{step}]]}
+\syntaxprotonoresult{input*}
+ { \cvar{elt-var} \cvar{input-port} \cvar{read-procedure}}
+\syntaxprotonoresult{stream*}
+ { \cvar{elt-var} \cvar{procedure} \cvar{initial-data}}
+\end{protos}
+
+For lists, vectors, and strings the element variable is bound to the
+ successive elements of the list or vector, or the characters in the
+ string.
+
+For \code{count*} the element variable is bound to the elements of the sequence
+\begin{example}
+ \cvar{start}, \cvar{start} + \cvar{step}, \cvar{start} + 2\cvar{step}, \ldots, \cvar{end}
+\end{example}
+ inclusive of \cvar{start} and exclusive of \cvar{end}.
+The default \cvar{step} is 1.
+The sequence does not terminate if no \cvar{end} is given or if there
+ is no $N > 0$ such that \cvar{end} = \cvar{start} + N\cvar{step}
+ (\code{=} is used to test for termination).
+For example, \code{(count* i 0 -1)} doesn't terminate
+ because it begins past the \cvar{end} value and \code{(count* i 0 1 2)} doesn't
+ terminate because it skips over the \cvar{end} value.
+
+For \code{input*} the elements are the results of successive applications
+ of \cvar{read-procedure} to \cvar{input-port}.
+The sequence ends when \cvar{read-procedure} returns an end-of-file object.
+
+For a stream, the \cvar{procedure} takes the current data value as an argument
+ and returns two values, the next value of the sequence and a new data value.
+If the new data is \code{\#f} then the previous element was the last
+ one.  For example,
+\begin{example}
+  (list* elt my-list)
+\end{example}
+ is the same as
+\begin{example}
+  (stream* elt list->stream my-list)
+\end{example}
+ where \code{list->stream} is
+\begin{example}
+  (lambda (list)
+    (if (null? list)
+        (values 'ignored \#f)
+        (values (car list) (cdr list))))
+\end{example}
+
+\subsection{Synchronous sequences}
+
+When using the sequence types described above, a loop terminates when any of
+its sequences reaches its end.  To help detect bugs it is useful to have
+sequence types that check to see if two or more sequences end on the same
+iteration.  For this purpose there is second set of sequence types called
+synchronous sequences.  These are identical to the ones listed above except
+that they cause an error to be signalled if a loop is terminated by a
+synchronous sequence and some other synchronous sequence did not reach its
+end on the same iteration.
+
+Sequences are checked for termination in order, from left to right, and
+if a loop is terminated by a non-synchronous sequence no further checking
+is done.
+
+The synchronous sequences are:
+
+\begin{protos}
+\syntaxprotonoresult{list\%}{ \cvar{elt-var} \cvar{list}}
+\syntaxprotonoresult{vector\%}{ \cvar{elt-var} \cvar{vector}}
+\syntaxprotonoresult{string\%}{ \cvar{elt-var} \cvar{string}}
+\syntaxprotonoresult{count\%}
+ { \cvar{elt-var} \cvar{start} \cvar{end} [\cvar{step}]}
+\syntaxprotonoresult{input\%}
+ { \cvar{elt-var} \cvar{input-port} \cvar{read-procedure}}
+\syntaxprotonoresult{stream\%}
+ { \cvar{elt-var} \cvar{procedure} \cvar{initial-data}}
+\end{protos}
+
+Note that the synchronous \code{count\%} must have an \cvar{end}, unlike the
+ nonsynchronous \code{count\%}.
+
+\subsection{Examples}
+
+\noindent
+Gathering the indexes of list elements that answer true to some
+predicate.
+\begin{example}
+(lambda (my-list predicate)
+  (reduce ((list* elt my-list)
+           (count* i 0))
+          ((hits '()))
+    (if (predicate elt)
+        (cons i hits)
+        hits)
+    (reverse hits))
+\end{example}
+
+\noindent
+Looking for the index of an element of a list.
+\begin{example}
+(lambda (my-list predicate)
+  (iterate loop
+           ((list* elt my-list)
+            (count* i 0))
+           ()                                ; no state
+    (if (predicate elt)
+        i
+        (loop))))
+\end{example}
+
+\noindent
+Reading one line.
+\begin{example}
+(define (read-line port)
+  (iterate loop
+           ((input* c port read-char))
+           ((chars '()))
+    (if (char=? c \#\verb2\2newline)
+        (list->string (reverse chars))
+        (loop (cons c chars)))
+    (if (null? chars)
+        (eof-object)
+        ; no newline at end of file
+        (list->string (reverse chars)))))
+\end{example}
+
+\noindent
+Counting the lines in a file.  We can't use \code{count*} because we
+need the value of the count after the loop has finished.
+\begin{example}
+(define (line-count name)
+  (call-with-input-file name
+    (lambda (in)
+      (reduce ((input* l in read-line))
+              ((i 0))
+        (+ i 1)))))
+\end{example}
+
+\subsection{Defining sequence types}
+
+The sequence types are object-oriented macros similar to enumerations.
+A non-synchronous sequence macro needs to supply three values:
+ \code{\#f} to indicate that it isn't synchronous, a list of state variables
+ and their initializers, and the code for one iteration.
+The first
+ two methods are CPS'ed: they take another macro and argument to
+ which to pass their result.
+The \code{synchronized?} method gets no additional arguments.
+The \code{state-vars} method is passed a list of names which
+ will be bound to the arguments to the sequence.
+The final method, for the step, is passed the list of names bound to
+ the arguments and the list of state variables.
+In addition there is
+ a variable to be bound to the next element of the sequence, the
+ body expression for the loop, and an expression for terminating the
+ loop.
+
+The definition of \code{list*} is
+\begin{example}
+(define-syntax list*
+  (syntax-rules (synchronized? state-vars step)
+    ((list* synchronized? (next more))
+     (next \#f more))
+    ((list* state-vars (start-list) (next more))
+     (next ((list-var start-list)) more))
+    ((list* step (start-list) (list-var)
+            value-var loop-body final-exp)
+     (if (null? list-var)
+         final-exp
+         (let ((value-var (car list-var))
+               (list-var (cdr list-var)))
+           loop-body)))))
+\end{example}
+
+Synchronized sequences are the same, except that they need to
+ provide a termination test to be used when some other synchronized
+ method terminates the loop.
+\begin{example}
+(define-syntax list\%
+  (syntax-rules (sync done)
+    ((list\% sync (next more))
+     (next \#t more))
+    ((list\% done (start-list) (list-var))
+     (null? list-var))
+    ((list\% stuff ...)
+     (list* stuff ...))))
+\end{example}
+
+\subsection{Expanded code}
+
+The expansion of 
+\begin{example}
+  (reduce ((list* x '(1 2 3)))
+          ((r '()))
+    (cons x r))
+\end{example}
+is
+\begin{example}
+  (let ((final (lambda (r) (values r)))
+        (list '(1 2 3))
+        (r '()))
+    (let loop ((list list) (r r))
+      (if (null? list)
+          (final r)
+          (let ((x (car list))
+                (list (cdr list)))
+            (let ((continue (lambda (r)
+                              (loop list r))))
+              (continue (cons x r)))))))
+\end{example}
+
+The only inefficiencies in this code are the \code{final} and \code{continue},
+ both of which could be substituted in-line.
+The macro expander could do the substitution for \code{continue} when there
+ is no explicit proceed variable, as in this case, but not in general.
+
+\section{Regular expressions}
+\label{regexp-adt}
+
+This section describes a functional interface for building regular
+ expressions and matching them against strings.
+The matching is done using the POSIX regular expression package.
+Regular expressions are in the structure \code{regexp}.
+
+A regular expression is either a character set, which matches any character
+in the set, or a composite expression containing one or more subexpressions.
+A regular expression can be matched against a string to determine success
+or failure, and to determine the substrings matched by particular subexpressions.
+
+\subsection{Character sets}
+
+Character sets may be defined using a list of characters and strings,
+using a range or ranges of characters, or by using set operations on
+existing character sets.
+
+\begin{protos}
+\proto{set}{ character-or-string \ldots}{char-set}
+\proto{range}{ low-char high-char}{char-set}
+\proto{ranges}{ low-char high-char \ldots}{char-set}
+\proto{ascii-range}{ low-char high-char}{char-set}
+\proto{ascii-ranges}{ low-char high-char \ldots}{char-set}
+\end{protos}
+\noindent
+\code{Set} returns a set that contains the character arguments and the
+characters in any string arguments.  \code{Range} returns a character
+set that contain all characters between \cvar{low-char} and \cvar{high-char},
+inclusive.  \code{Ranges} returns a set that contains all characters in
+the given ranges.  \code{Range} and \code{ranges} use the ordering induced by
+\code{char->integer}.  \code{Ascii-range} and \code{ascii-ranges} use the
+ ASCII ordering.
+It is an error for a \cvar{high-char} to be less than the preceding
+ \cvar{low-char} in the appropriate ordering.
+
+\begin{protos}
+\proto{negate}{ char-set}{char-set}
+\proto{intersection}{ char-set char-set}{char-set}
+\proto{union}{ char-set char-set}{char-set}
+\proto{subtract}{ char-set char-set}{char-set}
+\end{protos}
+\noindent
+These perform the indicated operations on character sets.
+
+The following character sets are predefined:
+\begin{center}
+\begin{tabular}{ll}
+ \code{lower-case} &   \code{(set "abcdefghijklmnopqrstuvwxyz")} \\
+ \code{upper-case} &   \code{(set "ABCDEFGHIJKLMNOPQRSTUVWXYZ")} \\
+ \code{alphabetic} &   \code{(union lower-case upper-case)} \\
+ \code{numeric} &      \code{(set "0123456789")} \\
+ \code{alphanumeric} & \code{(union alphabetic numeric)} \\
+ \code{punctuation} &
+ \code{(set "}\verb2!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~2\code{")} \\
+ \code{graphic} &      \code{(union alphanumeric punctuation)} \\
+ \code{printing} &     \code{(union graphic (set \#}\verb2\2\code{space))} \\
+ \code{control} &      \code{(negate printing)} \\
+ \code{blank} &
+      \code{(set \#}\verb2\2\code{space (ascii->char 9))} ; 9 is tab \\
+ \code{whitespace} &
+      \code{(union (set \#}\verb2\2\code{space) (ascii-range 9 13))} \\
+ \code{hexdigit} &     \code{(set "0123456789abcdefABCDEF")} \\
+\end{tabular}
+\end{center}
+\noindent The above are taken from the default locale in POSIX.
+The characters in \code{whitespace} are \cvar{space}, \cvar{tab}, \cvar{newline},
+ \cvar{vertical tab}, \cvar{form feed}, and \cvar{carriage return}.
+
+\subsection{Anchoring}
+
+\begin{protos}
+\proto{string-start}{}{reg-exp}
+\proto{string-end}{}{reg-exp}
+\end{protos}
+\noindent
+\code{String-start} returns a regular expression that matches the beginning
+ of the string being matched against; {string-end} returns one that matches
+ the end.
+
+\subsection{Composite expressions}
+
+\begin{protos}
+\proto{sequence}{ reg-exp \ldots}{reg-exp}
+\proto{one-of}{ reg-exp \ldots}{reg-exp}
+\end{protos}
+\noindent
+\code{Sequence} matches the concatenation of its arguments, \code{one-of} matches
+any one of its arguments.
+
+\begin{protos}
+\proto{text}{ string}{reg-exp}
+\end{protos}
+\noindent
+\code{Text} returns a regular expression that matches the characters in a
+string, in order.
+
+\begin{protos}
+\proto{repeat}{ reg-exp}{reg-exp}
+\proto{repeat}{ count reg-exp}{reg-exp}
+\proto{repeat}{ min max reg-exp}{reg-exp}
+\end{protos}
+\noindent
+\code{Repeat} returns a regular expression that matches zero or more
+occurences of its \cvar{reg-exp} argument.  With no count the result
+will match any number of times (\cvar{reg-exp}*).  With a single
+count the returned expression will match
+ \cvar{reg-exp} exactly that number of times.
+The final case will match from \cvar{min} to \cvar{max}
+ repetitions, inclusive.
+\cvar{Max} may be \code{\#f}, in which case there
+ is no maximum number of matches.
+\cvar{Count} and \cvar{min} should be exact, non-negative integers;
+ \cvar{max} should either be an exact non-negative integer or \code{\#f}.
+
+\subsection{Case sensitivity}
+
+Regular expressions are normally case-sensitive.
+\begin{protos}
+\proto{ignore-case}{ reg-exp}{reg-exp}
+\proto{use-case}{ reg-exp}{reg-exp}
+\end{protos}
+\noindent
+The value returned by
+ \code{ignore-case} is identical its argument except that case will be
+ ignored when matching.
+The value returned by \code{use-case} is protected
+ from future applications of \code{ignore-case}.
+The expressions returned
+ by \code{use-case} and \code{ignore-case} are unaffected by later uses of the
+ these procedures.
+By way of example, the following matches \code{"ab"} but not \code{"aB"},
+ \code{"Ab"}, or \code{"AB"}.
+\begin{example}
+\code{(text "ab")}
+\end{example}
+\noindent
+while
+\begin{example}
+\code{(ignore-case (test "ab"))}
+\end{example}
+\noindent
+matches \code{"ab"}, \code{"aB"},
+ \code{"Ab"}, and \code{"AB"} and
+\begin{example}
+(ignore-case (sequence (text "a")
+                       (use-case (text "b"))))
+\end{example}
+\noindent
+matches \code{"ab"} and \code{"Ab"} but not \code{"aB"} or \code{"AB"}.
+
+\subsection{Submatches and matching}
+
+A subexpression within a larger expression can be marked as a submatch.
+When an expression is matched against a string, the success or failure
+of each submatch within that expression is reported, as well as the
+location of the substring matched be each successful submatch.
+
+\begin{protos}
+\proto{submatch}{ key reg-exp}{reg-exp}
+\proto{no-submatches}{ reg-exp}{reg-exp}
+\end{protos}
+\noindent
+\code{Submatch} returns a regular expression that matches its argument and
+ causes the result of matching its argument to be reported by the \code{match}
+ procedure.
+\cvar{Key} is used to indicate the result of this particular submatch 
+ in the alist of successful submatches returned by \code{match}.
+ Any value may be used as a \cvar{key}.
+\code{No-submatches} returns an expression identical to its
+ argument, except that all submatches have been elided.
+
+\begin{protos}
+\proto{any-match?}{ reg-exp string}{boolean}
+\proto{exact-match?}{ reg-exp string}{boolean}
+\proto{match}{ reg-exp string}{match or {\tt \#f}}
+\proto{match-start match}{ match}{index}
+\proto{match-end match}{ match}{index}
+\proto{match-submatches match}{ match}{alist}
+\end{protos}
+\noindent
+\code{Any-match?} returns \code{\#t} if \cvar{string} matches \cvar{reg-exp} or
+ contains a substring that does, and \code{\#f} otherwise.
+\code{Exact-match?} returns \code{\#t} if \cvar{string} matches
+ \cvar{reg-exp} and \code{\#f} otherwise.
+
+\code{Match} returns \code{\#f} if \cvar{reg-exp} does not match \cvar{string}
+ and a match record if it does match.
+A match record contains three values: the beginning and end of the substring
+ that matched
+ the pattern and an a-list of submatch keys and corresponding match records
+ for any submatches that also matched.
+\code{Match-start} returns the index of
+ the first character in the matching substring and \code{match-end} gives index
+ of the first character after the matching substring.
+\code{Match-submatches} returns an alist of submatch keys and match records.
+Only the top match record returned by \code{match} has a submatch alist.
+
+Matching occurs according to POSIX.
+The match returned is the one with the lowest starting index in \cvar{string}.
+If there is more than one such match, the longest is returned.
+Within that match the longest possible submatches are returned.
+
+All three matching procedures cache a compiled version of \cvar{reg-exp}.
+Subsequent calls with the same \cvar{reg-exp} will be more efficient.
+
+The C interface to the POSIX regular expression code uses ASCII \code{nul}
+ as an end-of-string marker.
+The matching procedures will ignore any characters following an
+ embedded ASCII \code{nul}s in \cvar{string}.
+
+\begin{example}
+(any-match? (text "abc") "abc")         \evalsto #t
+(any-match? (text "abc") "abx")         \evalsto #f
+(any-match? (text "abc") "xxabcxx")     \evalsto #t
+
+(exact-match? (text "abc") "abc")       \evalsto #t
+(exact-match? (text "abc") "abx")       \evalsto #f
+(exact-match? (text "abc") "xxabcxx")   \evalsto #f
+
+(match (text "abc") "abc")              \evalsto (#\{match 0 3\})
+(match (text "abc") "abx")              \evalsto #f
+(match (text "abc") "xxabcxx")          \evalsto (#\{match 2 5\})
+
+(let ((x (match (sequence (text "ab")
+                          (submatch 'foo (text "cd"))
+                          (text "ef"))
+                "xxxabcdefxx")))
+  (list x (match-submatches x)))
+  \evalsto (#\{match 3 9\} ((foo . #\{match 5 7\}))
+
+(match-submatches
+  (match (sequence (set "a")
+                   (one-of (submatch 'foo (text "bc"))
+                           (submatch 'bar (text "BC"))))
+         "xxxaBCd"))
+  \evalsto ((bar . #\{match 4 6\}))
+\end{example}
+
+\section{SRFIs}
+
+`SRFI' stands for `Scheme Request For Implementation'.
+An SRFI is a description of an extension to standard Scheme.
+Draft and final SRFI documents, a FAQ, and other information about SRFIs
+ can be found at the
+\xlink{SRFI web site}[ at \code{http://srfi.schemers.org}]
+{http://srfi.schemers.org}.
+
+Scheme~48 includes implementations of the following (final) SRFIs:
+\begin{itemize}
+\item SRFI 1 -- List Library
+\item SRFI 2 -- \code{and-let*}
+\item SRFI 5 -- \code{let} with signatures and rest arguments
+\item SRFI 6 -- Basic string ports
+\item SRFI 7 -- Program configuration
+\item SRFI 8 -- \code{receive}
+\item SRFI 9 -- Defining record types
+\end{itemize}
+Documentation on these can be found at the web site mentioned above.
+
+The SRFI bindings can be accessed either by opening the appropriate structure
+ (the structure \code{srfi-}\cvar{n} contains SRFI \cvar{n})
+ or by loading structure \code{srfi-7} and then using
+ the \code{,load-srfi-7-program} command to load an SRFI 7-style program.
+The syntax for the command is
+\begin{example}
+\code{,load-srfi-7-program \cvar{name} \cvar{filename}}
+\end{example}
+This creates a new structure and associated package, binds the structure
+ to \cvar{name} in the configuration package, and then loads the program
+ found in \cvar{filename} into the package.
+
+As an example, if the file \code{test.scm} contains
+\begin{example}
+(program (code (define x 10)))
+\end{example}
+this program can be loaded as follows:
+\begin{example}
+> ,load-package srfi-7
+> ,load-srfi-7-program test test.scm
+[test]
+> ,in test
+test> x
+10
+test> 
+\end{example}
 
 %\W \chapter*{Index}
 %\W \htmlprintindex
 %\T \input{doc.ind}
-
-\end{document}
-
 

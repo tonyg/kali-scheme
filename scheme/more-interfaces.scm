@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Interfaces for packages that can get loaded after the initial.image
@@ -7,8 +7,7 @@
 ; Command processor
 
 (define-interface command-processor-interface
-  (export $write-length $write-depth
-	  abort-to-command-level
+  (export abort-to-command-level
 	  add-sentinel!
 	  command-continuation
 	  command-threads
@@ -22,19 +21,15 @@
 	  gobble-line
 	  greet-user
 	  environment-for-commands
-	  focus-object
 	  pop-command-level
 	  read-command			;take
 	  read-command-carefully	;inspect
 	  read-form
 	  run-sentinels
-	  set-focus-object!
-	  showing-focus-object		;inspect
+	  set-command-results!
 	  start-command-processor
 	  restart-command-processor
 	  value->expression		;foo
-	  write-carefully
-	  write-line
 	  y-or-n?
 	  help
 	  define-command-syntax
@@ -46,6 +41,14 @@
           read-command-error            ;inspect
 	  &environment-id-string
 	  ;&evaluate
+
+	  ; Switches
+	  add-switch
+	  lookup-switch
+	  switch-on?
+	  switch-set!
+	  switch-doc
+	  list-switches
 	  ))
 
 (define-interface command-levels-interface
@@ -58,32 +61,56 @@
 	  proceed-with-command-level
 	  kill-paused-thread!
 
-	  user-context
-	  user-context-accessor
-	  user-context-modifier
-
-	  push-command-levels?
-
-	  command-input
-	  command-output
-	  command-error-output
-	  focus-values
-	  set-focus-values!
-	  batch-mode?
-	  set-batch-mode?!
-	  break-on-warnings?
-	  set-break-on-warnings?!
-
 	  reset-command-input?  ; condition predicate 
-
-	  repl-data set-repl-data!
 
 	  terminate-command-processor!
 	  command-level
 	  command-level-threads
+	  command-level-condition
 	  command-level-paused-thread
-	  command-level-repl-data
 	  command-level?))
+
+(define-interface command-state-interface
+  (export user-context
+	  user-context-accessor
+	  user-context-modifier
+
+	  push-command-levels?
+	  set-push-command-levels?!
+
+	  focus-object
+	  set-focus-object!
+	  pop-value-stack!
+
+	  command-input
+	  command-output
+	  command-error-output
+	  batch-mode?
+	  set-batch-mode?!
+	  break-on-warnings?
+	  set-break-on-warnings?!
+	  load-noisily?
+	  set-load-noisily?!
+
+	  maybe-menu
+	  set-menu!
+	  menu-position
+	  set-menu-position!
+	  value-stack
+	  set-value-stack!
+	  pop-value-stack!))
+
+(define-interface menus-interface
+  (export present-menu
+	  present-more-menu
+	  menu-length
+	  menu-ref
+	  
+	  selection-command?
+
+	  write-line
+	  write-carefully
+	  with-limited-output))
 
 (define-interface basic-commands-interface
   (export exit
@@ -102,7 +129,15 @@
   (export inspect
 	  debug
 	  threads
-	  where))
+	  where
+
+	  menu
+	  m
+	  q
+	  u
+	  d
+	  template
+	  select-menu-item))
        
 (define-interface disassemble-commands-interface
   (export dis))
@@ -132,12 +167,14 @@
 	  push
 	  pop
           reset
+	  resume
 	  level
 	  condition
+	  set
+	  unset
 	  batch
 	  bench
 	  break-on-warnings
-	  form-preferred
 	  levels
 	  flush
 	  keep
@@ -284,12 +321,12 @@
   (export dynamic-load
 
           get-external
+	  lookup-external
 	  lookup-all-externals
 
 	  external?
 	  external-name
 	  external-value
-	  external-lookup
 
 	  call-external))
 
@@ -321,6 +358,26 @@
 	  copy-array		; <array>
 	  array->vector		; <array>
 	  array))		; <bounds> . <elements>
+
+(define-interface mask-types-interface
+  (export make-mask-type
+	  mask-type?
+	  mask-type
+	  mask-has-type?
+	  integer->mask
+	  list->mask
+	  mask?))
+
+(define-interface masks-interface
+  (export mask->integer
+	  mask->list
+	  mask-member?
+	  mask-set
+	  mask-clear
+	  mask-union
+	  mask-intersection
+	  mask-subtract
+	  mask-negate))
 
 (define-interface search-trees-interface
   (export make-search-tree
@@ -370,6 +427,17 @@
   (export (define-record-type :syntax)
 	  define-record-discloser))
 
+(define-interface value-pipes-interface
+  (export make-pipe
+	  empty-pipe?
+	  pipe-read!
+	  pipe-write!
+	  pipe-push!
+	  empty-pipe!
+	  pipe-maybe-read!
+	  pipe-maybe-read?!
+	  pipe-maybe-write!))
+
 (define-interface placeholder-interface
   (export make-placeholder
 	  placeholder?
@@ -382,3 +450,38 @@
 	  (cons-stream :syntax) head tail the-empty-stream empty-stream?
 	  explode implode get put))
 
+; Olin's encyclopedic list SRFI.
+
+(define-interface srfi-1-interface
+  (export xcons tree-copy make-list list-tabulate cons* list-copy 
+	  proper-list? circular-list? dotted-list? not-pair? null-list? list=
+	  circular-list length+
+	  iota
+	  first second third fourth fifth sixth seventh eighth ninth tenth
+	  car+cdr
+	  take       drop       
+	  take-right drop-right 
+	  take!      drop-right!
+	  split-at   split-at!
+	  last last-pair
+	  zip unzip1 unzip2 unzip3 unzip4 unzip5
+	  count
+	  append! append-reverse append-reverse! concatenate concatenate! 
+	  unfold       fold       pair-fold       reduce
+	  unfold-right fold-right pair-fold-right reduce-right
+	  append-map append-map! map! pair-for-each filter-map map-in-order
+	  filter  partition  remove
+	  filter! partition! remove! 
+	  find find-tail any every list-index
+	  take-while drop-while take-while!
+	  span break span! break!
+	  delete delete!
+	  alist-cons alist-copy
+	  delete-duplicates delete-duplicates!
+	  alist-delete alist-delete!
+	  reverse! 
+	  lset<= lset= lset-adjoin  
+	  lset-union  lset-intersection  lset-difference  lset-xor
+	  lset-diff+intersection
+	  lset-union! lset-intersection! lset-difference! lset-xor!
+	  lset-diff+intersection!))

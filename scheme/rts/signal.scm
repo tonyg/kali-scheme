@@ -1,11 +1,10 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ;;;; Signalling conditions
 
 ; I don't like the term "signal," but that's the one Gnu Emacs Lisp,
 ; Common Lisp, and Dylan use, so it's probably best to stick with it.
-
 
 (define make-condition cons)
 

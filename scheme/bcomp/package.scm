@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Structures 'n' packages.
@@ -63,6 +63,18 @@
     (add-to-population! struct (package-clients package))
     struct))
 
+; Make a structure by using COMMANDS to modify the STRUCTURE's interface.
+
+(define (make-modified-structure structure commands)
+  (let ((new-struct (make-structure (structure-package structure)
+				    (lambda ()
+				      (make-modified-interface
+				        (structure-interface structure)
+					commands)))))
+    (if (structure-unstable? structure)
+	(add-to-population! new-struct (structure-clients structure)))
+    new-struct))
+
 ; STRUCT has name NAME.  NAME can then also be used to refer to STRUCT's
 ; package.
 
@@ -71,7 +83,7 @@
       (begin (set-structure-name! struct name)
 	     (note-package-name! (structure-package struct) name))))
 
-; A structure is unstable if it's package is.  An unstable package is one
+; A structure is unstable if its package is.  An unstable package is one
 ; where new code may be added, possibly modifying the exported bindings.
 
 (define (structure-unstable? struct)
@@ -82,8 +94,8 @@
 (define (for-each-export proc struct)
   (let ((int (structure-interface struct)))
     (for-each-declaration
-        (lambda (name want-type)
-	  (let ((binding (real-structure-lookup struct name want-type #t)))
+        (lambda (name base-name want-type)
+	  (let ((binding (real-structure-lookup struct base-name want-type #t)))
 	    (proc name
 		  (if (and (binding? binding)
 			   (eq? want-type undeclared-type))
@@ -256,8 +268,7 @@
 ; --------------------
 ; The definitions table
 
-; Each entry in the package-definitions table is a binding
-; #(type place static).
+; Each entry in the package-definitions table is a binding.
 
 (define (package-definition package name)
   (initialize-package-if-necessary! package)
@@ -328,10 +339,13 @@
 	    (loop (cdr opens))))))
 
 (define (structure-lookup struct name integrate?)
-  (let ((type (interface-ref (structure-interface struct) name)))
-    (if type
-	(real-structure-lookup struct name type integrate?)
-	#f)))
+  (call-with-values
+    (lambda ()
+      (interface-ref (structure-interface struct) name))
+    (lambda (base-name type)
+      (if type
+	  (real-structure-lookup struct base-name type integrate?)
+	  #f))))
 
 (define (real-structure-lookup struct name type integrate?)
   (impose-type type
@@ -348,8 +362,8 @@
 			       name
 			       (package-integrate? (structure-package env)))
 	     (call-error "not exported" generic-lookup env name)))
-	;((procedure? env)
-	; (lookup env name))
+	((procedure? env)
+	 (lookup env name))
 	(else
 	 (error "invalid environment" env name))))
 

@@ -1,0 +1,42 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:20 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Library</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_3.html">User's guide</A><BR>Previous: <A HREF="s48manual_9.html">Module system</A> | Next: <A HREF="s48manual_11.html">Command processor</A>
+<H2>Library</H2>
+<P>A number of useful utilities are either built in to Scheme&nbsp;48 or can
+be loaded from an external library.  These utilities are not visible
+in the user environment by default, but can be made available with the
+<CODE>open</CODE> command.  For example, to use the <CODE>tables</CODE> structure, do
+<BLOCKQUOTE><PRE>
+&gt; ,open tables
+&gt; 
+</PRE></BLOCKQUOTE>
+<P>If the utility is not already loaded, then the <CODE>,open</CODE> command will
+ load it.
+Or, you can load something explicitly (without opening it) using the
+<CODE>load-package</CODE> command:
+<BLOCKQUOTE><PRE>
+&gt; ,load-package queues
+&gt; ,open queues
+</PRE></BLOCKQUOTE>
+<P>When loading a utility, the message "Note: optional optimizer not
+invoked" is innocuous.  Feel free to ignore it.
+<P>See also the package system documentation, in
+ <A HREF="s48manual_24.html">the module chapter</A>.
+<P>Many of these utilities are documented in later chapters.
+Unfortunately, some are not.  They are
+listed, however, in files <CODE>scheme/rts-packages.scm</CODE>,
+<CODE>scheme/comp-packages.scm</CODE>, <CODE>env-packages.scm</CODE>, and
+<CODE>more-packages.scm</CODE> in the distribution directory, and the bindings they
+export are listed in <CODE>scheme/interfaces.scm</CODE> and
+<CODE>more-interfaces.scm</CODE>.
+
+<P>
+  
+Previous: <A HREF="s48manual_9.html">Module system</A> | Next: <A HREF="s48manual_11.html">Command processor</A></BODY></HTML>

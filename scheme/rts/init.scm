@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; System entry and exit
 
@@ -18,8 +18,7 @@
 (define (initialize-rts in out error thunk)
   (initialize-session-data!)
   (initialize-dynamic-state!)
-  (initialize-output-port-list!)
-  (initialize-exceptions! current-error-port write-string
+  (initialize-exceptions!
     (lambda ()
       (initialize-interrupts!
        spawn-on-root

@@ -1,4 +1,4 @@
-; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 ; This code determines which procedures are called from one other form, and
 ; thus can be compiled as part of that form and called with a `goto' instead
@@ -58,6 +58,13 @@
 
 ; Returns the merged form, if any, to which NODE is a reference.
 
+;(define (merged-procedure-reference node)
+;  (let ((res (real-merged-procedure-reference node)))
+;    (if (and (reference-node? node)
+;             (eq? 'trace-value (variable-name (reference-variable node))))
+;        (format "  [m-p-r ~S -> ~S]~%" node res))
+;    res))
+;
 (define (merged-procedure-reference node)
   (cond ((and (reference-node? node)
 	      (maybe-variable->form (reference-variable node)))
@@ -65,7 +72,8 @@
 	      (if (eq? 'merged (form-type form))
 		  form
 		  #f)))
-	(else #f)))
+	(else
+	 #f)))
 
 ; Is FORM ever tail called?
 
@@ -283,7 +291,8 @@
   (let ((call (node-parent ref)))
     (if (or (calls-this-primop? call 'tail-call)
 	    (calls-this-primop? call 'unknown-tail-call))
-	(let ((type (arrow-type-result (node-type (call-arg call 1)))))
+	(let ((type (arrow-type-result
+		      (maybe-follow-uvar (node-type (call-arg call 1))))))
 	  (move (call-arg call 0)
 		(lambda (cont)
 		  (let-nodes ((new-cont ((v type)) (return 0 cont (* v))))

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Meta-modules: the big picture.
@@ -194,6 +194,7 @@
 				run-time-structures
 				compiler-structures))
   (files ;; more-interfaces, when not flatloading
+         env-packages
 	 more-packages))
 
 
@@ -238,16 +239,17 @@
 	    features
 	    ;; records  - lose
 	    signals
+	    cells
 	    channels
 	    closures
 	    code-quote
 	    escapes
 	    locations
 	    loopholes
-	    low-channels
 	    low-level
 	    ports
 	    primitives
+	    low-proposals
 	    scheme-level-0
 	    shared-bindings
 	    silly
@@ -261,12 +263,14 @@
 (define-interface run-time-structures-interface
   (export ((architecture
 	    channel-i/o
+	    condvars
 	    define-record-types
 	    enum-case
 	    enumerated
 	    fluids
 	    ;linked-queues
 	    locks
+	    proposals
 	    queues
 	    scheduler
 	    scheme-level-1
@@ -279,7 +283,8 @@
 	   :structure)))
 
 (define-interface run-time-internals-structures-interface
-  (export ((conditions
+  (export ((channel-ports
+	    conditions
 	    continuations
 	    display-conditions
 	    ;; escapes
@@ -314,6 +319,7 @@
 	    compiler-envs
 	    compile-packages
 	    debug-data
+	    debug-data-internal
 	    defpackage
 	    filenames
 	    flat-environments

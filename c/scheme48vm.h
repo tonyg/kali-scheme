@@ -24,6 +24,7 @@ extern char		s48_Spending_interruptPS;
 extern void		s48_disable_interruptsB(void);
 extern void		s48_enable_interruptsB(void);
 extern void		s48_set_os_signal(s48_value type, s48_value argument);
+extern void		s48_reset_interruptsB();
 
 /* imported and exported bindings */	  
 extern void		s48_define_exported_binding(char *, s48_value);
@@ -39,13 +40,17 @@ extern s48_value	s48_stack_ref(long offset);
 extern void		s48_stack_setB(long offset, s48_value value);
 
 /* called when writing an image */
-extern s48_value	s48_copy_symbol_table(void);
-extern void		s48_mark_traced_channels_closedB(void);
-extern s48_value	s48_cleaned_imported_bindings(void);
+extern s48_value	s48_symbol_table(void);
+extern s48_value	*s48_channels(void);
+extern long		s48_channel_count(void);
+extern s48_value	s48_imported_bindings(void);
 extern s48_value	s48_exported_bindings(void);
 
 /* called when resuming an image */
-extern char	s48_warn_about_undefined_imported_bindings(void);
+extern char		s48_warn_about_undefined_imported_bindings(void);
+
+/* for initializion on SMP machines */
+extern void		s48_initialize_shared_registersB(long, long, long, long);
 
 /* manipulating channels */
 extern void		s48_close_channel(long);
@@ -59,3 +64,4 @@ extern char		s48_pop_gc_rootsB(void);
 extern char *		s48_set_gc_roots_baseB(void);
 extern char		s48_release_gc_roots_baseB(char *);
 extern void		s48_register_gc_rootB(char *marker);
+extern void		s48_reset_external_rootsB();

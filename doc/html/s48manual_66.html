@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:24 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Users and groups</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_62.html">Access to POSIX</A><BR>Previous: <A HREF="s48manual_65.html">Process environment</A> | Next: <A HREF="s48manual_67.html">OS and machine identification</A>
+<H2>Users and groups</H2>
+<P><CODE><I>User-id</I></CODE>s and <CODE><I>group-id</I></CODE>s are boxed integers representing
+ Unix users and groups.
+The procedures in this section are in structures <CODE>posix-users</CODE> and
+ <CODE>posix</CODE>.
+<UL><LI><CODE>(user-id?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(user-id=?<I>&nbsp;user-id0&nbsp;user-id1</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(user-id-&gt;integer<I>&nbsp;user-id</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(integer-&gt;user-id<I>&nbsp;integer</I>)&nbsp;-&gt;&nbsp;<I>user-id</I></CODE><A NAME="4">&nbsp;</A>
+</UL>
+<UL><LI><CODE>(group-id?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(group-id=?<I>&nbsp;group-id0&nbsp;group-id1</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="6">&nbsp;</A>
+<LI><CODE>(group-id-&gt;integer<I>&nbsp;group-id</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="7">&nbsp;</A>
+<LI><CODE>(integer-&gt;group-id<I>&nbsp;integer</I>)&nbsp;-&gt;&nbsp;<I>group-id</I></CODE><A NAME="8">&nbsp;</A>
+</UL>
+User-ids and group-ids have their own
+ own predicates and comparison, boxing, and unboxing functions.
+<UL><LI><CODE>(user-id-&gt;user-info<I>&nbsp;user-id</I>)&nbsp;-&gt;&nbsp;<I>user-info</I></CODE><A NAME="9">&nbsp;</A>
+<LI><CODE>(name-&gt;user-info<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>user-info</I></CODE><A NAME="10">&nbsp;</A>
+</UL>
+These return the user info for a user identified by user-id or name.
+<UL><LI><CODE>(user-info?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;boolean</I></CODE><A NAME="11">&nbsp;</A>
+<LI><CODE>(user-info-name<I>&nbsp;user-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;string</I></CODE><A NAME="12">&nbsp;</A>
+<LI><CODE>(user-info-id<I>&nbsp;user-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;user-id</I></CODE><A NAME="13">&nbsp;</A>
+<LI><CODE>(user-info-group<I>&nbsp;user-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;group-id</I></CODE><A NAME="14">&nbsp;</A>
+<LI><CODE>(user-info-home-directory<I>&nbsp;user-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;string</I></CODE><A NAME="15">&nbsp;</A>
+<LI><CODE>(user-info-shell<I>&nbsp;user-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;string</I></CODE><A NAME="16">&nbsp;</A>
+</UL>
+A <CODE>user-info</CODE> contains information about a user.
+Available are the user's name, id, group, home directory, and shell.
+<UL><LI><CODE>(group-id-&gt;group-info<I>&nbsp;group-id</I>)&nbsp;-&gt;&nbsp;<I>group-info</I></CODE><A NAME="17">&nbsp;</A>
+<LI><CODE>(name-&gt;group-info<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>group-info</I></CODE><A NAME="18">&nbsp;</A>
+</UL>
+These return the group info for a group identified by group-id or name.
+<UL><LI><CODE>(group-info?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;boolean</I></CODE><A NAME="19">&nbsp;</A>
+<LI><CODE>(group-info-name<I>&nbsp;group-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;string</I></CODE><A NAME="20">&nbsp;</A>
+<LI><CODE>(group-info-id<I>&nbsp;group-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;group-id</I></CODE><A NAME="21">&nbsp;</A>
+<LI><CODE>(group-info-members<I>&nbsp;group-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;user-ids</I></CODE><A NAME="22">&nbsp;</A>
+</UL>
+A <CODE>group-info</CODE> contains information about a group.
+Available are the group's name, id, and a list of members.
+<P>
+  
+Previous: <A HREF="s48manual_65.html">Process environment</A> | Next: <A HREF="s48manual_67.html">OS and machine identification</A></BODY></HTML>

@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:22 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Fluid bindings</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_43.html">Hash tables</A> | Next: <A HREF="s48manual_45.html">Sockets</A>
+<H2>Fluid bindings</H2>
+<P>These procedures implement dynamic binding and are in structure <CODE>fluids</CODE>.
+A <CODE><I>fluid</I></CODE> is a cell whose value can be bound dynamically.
+Each fluid has a top-level value that is used when the fluid
+ is unbound in the current dynamic environment.
+<UL><LI><CODE>(make-fluid<I>&nbsp;value</I>)&nbsp;-&gt;&nbsp;<I>fluid</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(fluid<I>&nbsp;fluid</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(let-fluid<I>&nbsp;fluid&nbsp;value&nbsp;thunk</I>)&nbsp;-&gt;&nbsp;<I>value(s)</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(let-fluids<I>&nbsp;fluid<I><sub>0</sub></I>&nbsp;value<I><sub>0</sub></I>&nbsp;fluid<I><sub>1</sub></I>&nbsp;value<I><sub>1</sub></I>&nbsp;...&nbsp;thunk</I>)&nbsp;-&gt;&nbsp;<I>value(s)</I></CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(set-fluid!<I>&nbsp;fluid&nbsp;value</I>)</CODE><A NAME="5">&nbsp;</A>
+</UL>
+<CODE>Make-fluid</CODE> returns a new fluid with <CODE><I>value</I></CODE> as its initial
+ top-level value.
+<CODE>Fluid</CODE> returns <CODE>fluid</CODE>'s current value.
+<CODE>Let-fluid</CODE> calls <CODE>thunk</CODE>, with <CODE><I>fluid</I></CODE> bound to <CODE><I>value</I></CODE>
+ until <CODE>thunk</CODE> returns.
+Using a continuation to throw out of the call to <CODE>thunk</CODE> causes
+ <CODE><I>fluid</I></CODE> to revert to its original value, while throwing back
+ in causes <CODE><I>fluid</I></CODE> to be rebound to <CODE><I>value</I></CODE>.
+<CODE>Let-fluid</CODE> returns the value(s) returned by <CODE><I>thunk</I></CODE>.
+<CODE>Let-fluids</CODE> is identical to <CODE>let-fluid</CODE> except that it binds
+ an arbitrary number of fluids to new values.
+<CODE>Set-fluid!</CODE> sets <CODE>fluid</CODE>'s value to be <CODE><I>value</I></CODE>.
+Only the innermost binding of <CODE>fluid</CODE> is affected.
+<BLOCKQUOTE><PRE>
+(let* ((f (make-fluid 'a))
+       (v0 (fluid f))
+       (v1 (let-fluid f 'b
+             (lambda ()
+               (fluid f))))
+       (v2 (fluid f))
+       (v3 (let-fluid f 'b
+             (lambda ()
+               (set-fluid! f 'c)
+               (fluid f))))
+       (v4 (fluid f)))
+  (list v0 v1 v2 v3 v4))
+  <CODE>-&gt;</CODE> '(a b a c a)
+</PRE></BLOCKQUOTE>
+<BLOCKQUOTE><PRE>
+(let ((f (make-fluid 'a))
+      (path '())
+      (c #f))
+  (let ((add (lambda ()
+               (set! path (cons (fluid f) path)))))
+    (add)
+    (let-fluid f 'b
+      (lambda ()
+        (call-with-current-continuation
+          (lambda (c0)
+            (set! c c0)))
+        (add)))
+    (add)
+    (if (&lt; (length path) 5)
+        (c)
+        (reverse path))))
+  <CODE>-&gt;</CODE> '(a b a b a)
+</PRE></BLOCKQUOTE>
+<P>
+  
+Previous: <A HREF="s48manual_43.html">Hash tables</A> | Next: <A HREF="s48manual_45.html">Sockets</A></BODY></HTML>

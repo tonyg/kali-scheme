@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 
 (define (simplify-jump call)
@@ -176,7 +176,8 @@
 
 (define (expand-test call)
   (bug "Trying to expand a call to TEST (~D) ~S"
-       (node-hash (node-parent (nontrivial-ancestor call)))))
+       (node-hash (node-parent (nontrivial-ancestor call)))
+       call))
 
 ; TEST can be simplified using any literal value.
 ; The check for reference nodes is a heuristic.  It will only help if the

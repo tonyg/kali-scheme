@@ -1,28 +1,19 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Operations on integers.
 
-; This expects its arguments to be integers.
+; These expect their arguments to be integers.
 
-(define (integer-op fixnum-op bignum-op)
-  (if (and (fixnum? x)
-	   (fixnum? y))
-      (fixnum-op x y (lambda (r) r) bignum-op)
-      (bignum-op x y)))
-  
-(define integer-add       (integer-op add-carefully       bignum-add))
-(define integer-subtract  (integer-op subtract-carefully  bignum-subtract))
-(define integer-multiply  (integer-op multiply-carefully  bignum-multiply))
-(define integer-quotient  (integer-op quotient-carefully  bignum-quotient))
-(define integer-remainder (integer-op remainder-carefully bignum-remainder))
+(define integer-add       bignum-add)
+(define integer-subtract  bignum-subtract)
+(define integer-multiply  bignum-multiply)
 
-(define (integer-abs x)
-  (if (fixnum? x)
-      (abs-carefully x (lambda (r) r) bignum-abs)
-      (bignum-abs x)))
+(define integer-remainder bignum-remainder)
+(define integer-quotient  bignum-quotient)
+(define integer-divide    bignum-divide)
 
-; What about shifts and bitwise operations?
+(define integer-abs bignum-abs)
 
 ; Fixnums and bignums are disjoint.
 
@@ -45,7 +36,7 @@
 	     (fixnum< x y)
 	     (bignum-positive? y)))
 	((fixnum? y)
-	 (not (bignum-positive? y)))
+	 (not (bignum-positive? x)))
 	(else
 	 (bignum< x y))))
 
@@ -58,6 +49,22 @@
 (define (integer>= x y)
   (not (integer< x y)))
 
+(define integer-arithmetic-shift bignum-arithmetic-shift)
 
-	 
+(define integer-bitwise-not  bignum-bitwise-not)
+
+(define integer-bit-count bignum-bit-count)
+
+(define integer-bitwise-and bignum-bitwise-and)
+
+(define integer-bitwise-ior bignum-bitwise-ior)
+ 
+(define integer-bitwise-xor bignum-bitwise-xor)
 		
+(define (enter-integer x key)
+  (if  (or (too-big-for-fixnum? x)
+	   (too-small-for-fixnum? x))
+       (long->bignum x key)
+       (enter-fixnum x)))
+
+(define long-as-integer-size (bignum-bits-to-size 32))

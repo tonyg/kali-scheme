@@ -1,30 +1,99 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Ports built on OS channels.
-;
-; We wrap the channels in a record so that we can distinguish these ports
-; from others.
 
-; Repeatedly calls CHANNEL-READ until enough characters have been obtained.
-; There are three different conditions under which the buffer-procedure
-; is called:
-;  1) any number of characters is fine, but an immediate response is
-;     needed (the originating procedure was CHAR-READY?)
-;  2) wait for at least one character, but not after that (from READ-CHAR)
-;  3) exactly NEEDED characters are required (from READ-BLOCK)
+;----------------
+; Records used as the PORT-DATA value in ports that read or write to channel.
+; CLOSER is a function that closes the channel; socket channels have their own
+; closing method.
+
+(define-synchronized-record-type channel-cell :channel-cell
+  (really-make-channel-cell channel closer condvar in-use?)
+  (in-use? sent)
+  channel-cell?
+  (channel channel-cell-ref)
+  (closer  channel-cell-closer)
+  (condvar channel-cell-condvar)
+  (in-use? channel-cell-in-use? set-channel-cell-in-use?!)
+  (sent    channel-cell-sent    set-channel-cell-sent!))
+
+(define (make-channel-cell channel closer)
+  (really-make-channel-cell channel closer (make-condvar) #f))
+
+; Extracting the channel from a port.
+
+(define (port->channel port)
+  (let ((data (port-data port)))
+    (if (channel-cell? data)
+	(channel-cell-ref data)
+	#f)))
+
+; Closing a port's channel.  This is called with a proposal already in place.
+
+(define (port-channel-closer cell)
+  (channel-maybe-commit-and-close (channel-cell-ref cell)
+				  (channel-cell-closer cell)))
+
+;----------------
+; Input ports
+
+; Four possibilities:
+;   A. there is no read in progress
+;       -> initiate a read
+;   B. a read has completed
+;       -> update the port
+;   C. a read has been started and has not completed
+;       -> wait for it
+;   D. we don't want to wait
+;       -> so we don't
+
+(define (fill-buffer! port wait?)
+  (let ((cell (port-data port))
+	(buffer (port-buffer port)))
+    (let ((condvar (channel-cell-condvar cell))
+	  (channel (channel-cell-ref cell)))
+      (cond ((not (channel-cell-in-use? cell))
+	     (set-channel-cell-in-use?! cell #t)
+	     (channel-maybe-commit-and-read channel
+					    buffer
+					    0
+					    (byte-vector-length buffer)
+					    condvar
+					    wait?)
+	     #f)	; caller should retry as results may now be available
+	    ((condvar-has-value? condvar)
+	     (let ((result (condvar-value condvar)))
+	       (set-channel-cell-in-use?! cell #f)
+	       (set-condvar-has-value?! condvar #f)
+	       (note-buffer-reuse! port)
+	       (if (eof-object? result)
+		   (provisional-set-port-pending-eof?! port #t)
+		   (begin
+		     (provisional-set-port-index! port 0)
+		     (provisional-set-port-limit! port result)))
+	       (maybe-commit)))
+	    (wait?
+	     (maybe-commit-and-wait-for-condvar condvar))
+	    (else
+	     (maybe-commit))))))
+
+(define (channel-port-ready? port)
+  (let ((ready? (channel-ready? (channel-cell-ref (port-data port)))))
+    (if (maybe-commit)
+	(values #t ready?)
+	(values #f #f))))
 
 (define input-channel-handler
-  (make-port-handler
-   (lambda (channel-cell)
-     (list 'input-port (channel-cell-ref channel-cell)))
-   (lambda (channel-cell)
-     ((channel-cell-closer channel-cell)
-        (channel-cell-ref channel-cell)))
-   (lambda (channel-cell buffer start needed)
-     (channel-read buffer start needed (channel-cell-ref channel-cell)))))
+  (make-buffered-input-port-handler
+     (lambda (cell)
+       (list 'input-port
+	     (channel-cell-ref cell)))
+     port-channel-closer
+     fill-buffer!
+     channel-port-ready?))
 
 (define (input-channel->port channel . maybe-buffer-size)
-  (real-input-channel->port channel maybe-buffer-size close-input-channel))
+  (real-input-channel->port channel maybe-buffer-size close-channel))
 
 ; This is for sockets, which have their own closing mechanism.
 
@@ -36,107 +105,136 @@
 			 default-buffer-size
 			 (car maybe-buffer-size))))
     (if (>= 0 buffer-size)
-	(call-error "invalid buffer size" input-channel->port channel buffer-size)
-	(make-input-port input-channel-handler
-			 (make-channel-cell channel closer)
-			 (make-code-vector buffer-size 0)
-			 0
-			 0))))
-  
+	(call-error "invalid buffer size"
+		    input-channel->port channel buffer-size)
+	(make-buffered-input-port input-channel-handler
+				  (make-channel-cell channel closer)
+				  (make-byte-vector buffer-size 0)
+				  0
+				  0))))
+
+;----------------
+; Output ports
+
+; A. No write already in progress
+;     -> start one
+; B. A write has completed
+;     -> if we're done then reset the index, otherwise write some more
+; C. Wait.
+;
+; If NECESSARY? is #f we are doing a periodic buffer flushing and shouldn't
+; bother to wait if someone else is already writing out the buffer.
+
+(define (empty-buffer! port necessary?)
+  (let* ((cell (port-data port))
+	 (condvar (channel-cell-condvar cell)))
+    (cond ((not (channel-cell-in-use? cell))
+	   (let ((buffer (port-buffer port))
+		 (count (provisional-port-index port)))
+	     (set-channel-cell-in-use?! cell #t)
+	     (send-some port 0)))
+	  ((condvar-has-value? condvar)
+	   (let ((sent (+ (condvar-value condvar)
+			  (channel-cell-sent cell))))
+	     (set-condvar-has-value?! condvar #f)
+	     (if (< sent
+		    (provisional-port-index port)) 
+		 (send-some port sent)
+		 (begin
+		   (provisional-set-port-index! port 0)
+		   (note-buffer-reuse! port)
+		   (set-channel-cell-in-use?! cell #f)
+		   (maybe-commit)))))
+	  (necessary?
+	   (maybe-commit-and-wait-for-condvar condvar))
+	  (else
+	   (maybe-commit)))))
+
+; Try writing the rest of PORT's buffer. SENT characters have already been
+; written out.
+
+(define (send-some port sent)
+  (let ((cell (port-data port)))
+    (set-channel-cell-sent! cell sent)
+    (channel-maybe-commit-and-write (channel-cell-ref cell)
+				    (port-buffer port)
+				    sent
+				    (- (provisional-port-index port)
+				       sent)
+				    (channel-cell-condvar cell))))
+
 (define output-channel-handler
-  (make-port-handler
-   (lambda (channel-cell)
-     (list 'output-port (channel-cell-ref channel-cell)))
-   (lambda (channel-cell)
-     ((channel-cell-closer channel-cell)
-        (channel-cell-ref channel-cell)))
-   (lambda (channel-cell buffer start count)
-     (channel-write buffer start count (channel-cell-ref channel-cell)))))
-
-; Unbuffered channel output ports.  Used for the default error port.
-
-(define (make-unbuffered-output-channel-handler)
-  (let ((buffer (make-code-vector 1 0)))
-    (make-port-handler
-     (lambda (channel-cell)
-       (list 'output-port (channel-cell-ref channel-cell)))
-     (lambda (channel-cell)
-       ((channel-cell-closer channel-cell)
-          (channel-cell-ref channel-cell)))
-     (lambda (channel-cell char)
-       (code-vector-set! buffer 0 (char->ascii char))
-       (channel-write buffer 0 1 (channel-cell-ref channel-cell))))))
-
-; Dispatch on the buffer size to make the appropriate port.  A buffer
-; size of zero creates an unbuffered port.  Buffered output ports get a
-; finalizer to flush the buffer if the port is GC'ed.
+  (make-buffered-output-port-handler
+     (lambda (cell)
+       (list 'output-port
+	     (channel-cell-ref cell)))
+     port-channel-closer
+     empty-buffer!
+     channel-port-ready?))
 
 (define (output-channel->port channel . maybe-buffer-size)
-  (real-output-channel->port channel maybe-buffer-size close-output-channel))
+  (if (and (not (null? maybe-buffer-size))
+	   (eq? 0 (car maybe-buffer-size)))
+      (make-unbuffered-output-port unbuffered-output-handler
+				   (make-channel-cell channel close-channel))
+      (real-output-channel->port channel maybe-buffer-size close-channel)))
 
 ; This is for sockets, which have their own closing mechanism.
 
 (define (output-channel+closer->port channel closer . maybe-buffer-size)
   (real-output-channel->port channel maybe-buffer-size closer))
 	     
+; Dispatch on the buffer size to make the appropriate port.  A buffer
+; size of zero creates an unbuffered port.  Buffered output ports get a
+; finalizer to flush the buffer if the port is GC'ed.
+
 (define (real-output-channel->port channel maybe-buffer-size closer)
   (let ((buffer-size (if (null? maybe-buffer-size)
 			 default-buffer-size
 			 (car maybe-buffer-size))))
-    (cond ((> 0 buffer-size)
-	   (call-error "invalid buffer size"
-		       output-channel->port channel buffer-size))
-	  ((= 0 buffer-size)
-	   (make-unbuffered-output-port (make-unbuffered-output-channel-handler)
-					(make-channel-cell channel closer)))
-	  (else
-	   (let ((port (make-output-port output-channel-handler
-					 (make-channel-cell channel closer)
-					 (make-code-vector buffer-size 0)
-					 0
-					 buffer-size)))
-	     (periodically-force-output! port)
-	     ((structure-ref primitives add-finalizer!) port
-							maybe-force-output)
-	     port)))))
+    (if  (or (not (integer? buffer-size))
+	     (< buffer-size 0)
+	     (not (channel? channel)))
+	 (call-error "invalid argument"
+		     output-channel->port channel buffer-size)
+	 (let ((port (make-buffered-output-port output-channel-handler
+						(make-channel-cell channel
+								   closer)
+						(make-byte-vector buffer-size 0)
+						0
+						buffer-size)))
+	   (periodically-force-output! port)
+	   ((structure-ref primitives add-finalizer!) port
+						      force-output-if-open)
+	   port))))
 	     
-; Flush PORT's output buffer if the port is open and not locked.
-
-(define (maybe-force-output port)
-  (cond ((maybe-obtain-lock (port-lock port))
-	 (report-errors-as-warnings (lambda ()
-				      (really-force-output port))
-				    "error while flushing GC'ed port's buffer"
-				    port)
-	 (release-lock (port-lock port)))))
-
-;----------------
-; The records we use to mark channel ports and the function that makes use of
-; them.
-
-(define-record-type channel-cell :channel-cell
-  (make-channel-cell channel closer)
-  channel-cell?
-  (channel channel-cell-ref)
-  (closer channel-cell-closer))
-
-(define (port->channel port)
-  (let ((data (port-data port)))
-    (if (channel-cell? data)
-	(channel-cell-ref data)
-	#f)))
-
 ;----------------
 ; Various ways to open ports on files.
 
+; First a generic procedure to do the work.
+
+(define (maybe-open-file filename option coercion)
+  (let ((channel (open-channel filename option)))
+    (if channel
+	(coercion channel default-buffer-size)
+	#f)))
+  
+; And then all of RnRS's file opening procedures.
+
 (define (open-input-file string)
   (if (string? string)
-      (input-channel->port (open-input-channel string))
+      (or (maybe-open-file string
+			   (enum channel-status-option input)
+			   input-channel->port)
+	  (error "can't open for input" string))
       (call-error "invalid argument" open-input-file string)))
 
 (define (open-output-file string)
   (if (string? string)
-      (output-channel->port (open-output-channel string))
+      (or (maybe-open-file string
+			   (enum channel-status-option output)
+			   output-channel->port)
+	  (error "can't open for output" string))
       (call-error "invalid argument" open-output-file string)))
 
 (define (call-with-input-file string proc)
@@ -174,55 +272,38 @@
 	    (periodically-flushed-ports)))
 
 ;----------------
-; The following is used to make the REPL's input, output, and error ports
-; available after a keyboard interrupt.  If PORT is a locked channel port
-; we save the its state and then reinitialize it.  The OS is told to
-; abort any pending operation on the port's channel.  Finally, the owning
-; thread's continuation is munged to restore the port when the thread
-; resumes.  Any buffered input is thrown away at that point (it could
-; be saved away with the channel).
-;
-; If the port is locked by us or one of our ancestors there is no point in
-; trying to grab it.
+; Unbuffered output ports.
+; This is used for the initial current-error-port.
 
-(define (steal-channel-port! port)
-  (if (port->channel port)
-      (begin
-	(disable-interrupts!)
-	(let ((owner (if (lock-owner-uid (port-lock port))
-			 (thread-uid->thread (lock-owner-uid (port-lock port)))
-			 #f)))
-	  (if (and owner
-		   (not (running? owner)))
-	      (really-steal-channel-port! port owner))
-	  (enable-interrupts!)))))
+(define (one-char-handler port char)
+  (let ((channel (channel-cell-ref (port-data port)))
+	(buffer (make-byte-vector 1 0)))
+    (byte-vector-set! buffer 0 (char->ascii char))
+    (let loop ()
+      (if (= 0 (channel-write channel buffer 0 1))
+	  (loop)))))
 
-(define (really-steal-channel-port! port owner)
-  (let ((lock (port-lock port))
-	(buffer (port-buffer port))
-	(index (port-index port))
-	(limit (port-limit port))
-	(eof? (port-pending-eof? port))
-	(status (steal-channel! (port->channel port) owner)))
-    (set-port-buffer! port (make-code-vector (code-vector-length buffer) 0))
-    (set-port-index! port 0)
-    (set-port-limit! port (if (input-port? port) 0 (code-vector-length buffer)))
-    (set-port-pending-eof?! port #f)
-    (set-port-locked?! port #f)
-    (set-port-lock! port (make-lock))
-    (interrupt-thread owner
-		      (lambda results
-			(obtain-port-lock port)
-			(cond ((output-port? port)
-			       (really-force-output port))
-			      ((< (port-index port)
-				  (port-limit port))
-			       (warn "dropping input from port" port)))
-			(set-port-buffer! port buffer)
-			(set-port-index! port index)
-			(set-port-limit! port limit)
-			(set-port-pending-eof?! port eof?)
-			(set-port-lock! port lock)
-			(or status (apply values results))))
-    ; if we took OWNER off a channel-wait queue we need to make it ready to run
-    (if status (make-ready owner))))
+(define (write-block-handler port buffer start count)
+  (let ((channel (channel-cell-ref (port-data port))))
+    (let loop ((sent 0))
+      (let ((sent (+ sent
+		     (channel-write channel
+				    buffer
+				    (+ start sent)
+				    (- count sent)))))
+	(if (< sent count)
+	    (loop sent))))))
+
+(define unbuffered-output-handler
+  (make-port-handler (lambda (port)
+		       (list 'output-port
+			     (channel-cell-ref (port-data port))))
+		     (lambda (port)
+		       (port-channel-closer (port-data port)))
+		     one-char-handler
+		     write-block-handler
+		     (lambda (port)			; ready
+		       (channel-ready? (channel-cell-ref (port-data port))))
+		     (lambda (port error-if-closed?)	; output forcer
+		       (unspecific))))
+

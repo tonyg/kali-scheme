@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 ; Code for handling interrupts.
 
 ; New interrupt handler vector in *val*
@@ -8,8 +8,8 @@
 	     (< (vm-vector-length *val*) interrupt-count))
 	 (raise-exception wrong-type-argument 0 *val*))
 	(else
-	 (let ((temp *interrupt-handlers*))
-	   (set! *interrupt-handlers* *val*)
+	 (let ((temp (shared-ref *interrupt-handlers*)))
+	   (shared-set! *interrupt-handlers* *val*)
 	   (set! *val* temp)
 	   (goto continue 0)))))
 
@@ -27,15 +27,18 @@
   (push *val*)
   (push *template*)
   (push (current-pc))
+  (push (current-proposal))
   (push (enter-fixnum *enabled-interrupts*))
+  (set-current-proposal! false)
   (set-template! *interrupt-template* (enter-fixnum 0))
-  (push-continuation! *code-pointer* (+ stack-arg-count 4))
+  (push-continuation! *code-pointer* (+ stack-arg-count 5))
   (let* ((pending-interrupt (get-highest-priority-interrupt!))
-	 (arg-count (push-interrupt-args pending-interrupt)))
-    (if (not (vm-vector? *interrupt-handlers*))
+	 (arg-count (push-interrupt-args pending-interrupt))
+	 (handlers (shared-ref *interrupt-handlers*)))
+    (if (not (vm-vector? handlers))
 	(error "interrupt handler is not a vector"))
     (set-enabled-interrupts! 0)
-    (set! *val* (vm-vector-ref *interrupt-handlers* pending-interrupt))
+    (set! *val* (vm-vector-ref handlers pending-interrupt))
     (if (not (closure? *val*))
 	(error "interrupt handler is not a closure" pending-interrupt))
     (goto call-interrupt-handler arg-count pending-interrupt)))
@@ -86,10 +89,20 @@
 (define *os-signal-type* false)
 (define *os-signal-argument* false)
 
+; Called from outside to initialize a new process.
+
+(define (s48-reset-interrupts!)
+  (set! *os-signal-type* false)
+  (set! *os-signal-argument* false)
+  (set! *enabled-interrupts* 0)
+  (set! *pending-interrupts* 0)
+  (set! s48-*pending-interrupt?* #f))
+
 ; Return from a call to an interrupt handler.
 
 (define-opcode return-from-interrupt
   (set-enabled-interrupts! (extract-fixnum (pop)))
+  (set-current-proposal! (pop))
   (let ((pc (pop)))
     (set-template! (pop) pc))
   (set! *val* (pop))

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; The barest skeleton of a test suite.
@@ -62,7 +62,11 @@
 	placeholders
 	locks
 	interrupts
+	mask-types
+	masks
+	finite-types
 	sockets
+	(subset i/o-internal (open-input-port?))
 	sicp)
   (begin
 
@@ -178,13 +182,15 @@
 
 (test "format" string=? "x(1 2)" (format #f "x~s" '(1 2)))
 
-(test "fancy input ports" equal? '(3 5)
+(test "fancy input ports" equal? '(#f 3 5)
       (let ((p1 (make-tracking-input-port (make-string-input-port "
 
 
     2 3"))))
 	(read p1)
-	(list (current-row p1) (current-column p1))))
+	(let ((res (list (current-row p1) (current-column p1))))
+	  (close-input-port p1)
+	  (cons (open-input-port? p1) res))))
 
 (test "fancy output ports" equal? '(1 4 "8
    9")
@@ -259,6 +265,81 @@
 	(search-tree-set! t 4 'a)
 	(search-tree-set! t 5 'c)
 	(search-tree-ref t 4)))
+
+(define-enumerated-type color :color
+  color?
+  colors
+  color-name
+  color-index
+  (black white purple maroon))
+
+(test "enumerated-types" equal? '(black white 2)
+      (list (color-name (vector-ref colors 0))
+	    (color-name (color white))
+	    (color-index (color purple))))
+
+(test "masks" equal? '((#t #f #f #t)
+		       (#t #t #t #f)
+		       ((black white purple)
+			#o11)
+		       ((black maroon)
+			(black maroon)
+			(black white maroon))
+		       ((black maroon)
+			(maroon)
+			(maroon))
+		       ((black white purple)
+			(black white purple maroon)
+			(black white purple))
+		       ((black white purple)
+			(black)
+			())
+		       (()
+			(white purple)
+			(black white purple))
+		       ((maroon)
+			(white purple)
+			(black white purple maroon)))
+      (let ((type (make-mask-type 'color-mask
+				  color?
+				  (lambda (i) (vector-ref colors i))
+				  color-index
+				  (vector-length colors)))
+	    (show (lambda (mask)
+		    (map color-name (mask->list mask)))))
+	(let ((m0 (list->mask type (list (color black)
+					 (color white)
+					 (color purple))))
+	      (m1 (integer->mask type #o11))
+	      (m2 (list->mask type '())))
+	  (list (list (mask-type? type)
+		      (mask-type? m0)
+		      (mask? type)
+		      (mask? m0))
+		(list (eq? (mask-type m0) type)
+		      (mask-has-type? m0 type)
+		      (mask-member? m0 (color black))
+		      (mask-member? m0 (color maroon)))
+		(list (map color-name (mask->list m0))
+		      (mask->integer m1))
+		(list (show (mask-set m1))
+		      (show (mask-set m1 (color black)))
+		      (show (mask-set m1 (color black) (color white))))
+		(list (show (mask-clear m1))
+		      (show (mask-clear m1 (color black)))
+		      (show (mask-clear m1 (color black) (color white))))
+		(list (show (mask-union m0 m0))
+		      (show (mask-union m0 m1))
+		      (show (mask-union m2 m0)))
+		(list (show (mask-intersection m0 m0))
+		      (show (mask-intersection m0 m1))
+		      (show (mask-intersection m2 m0)))
+		(list (show (mask-subtract m0 m0))
+		      (show (mask-subtract m0 m1))
+		      (show (mask-subtract m0 m2)))
+		(list (show (mask-negate m0))
+		      (show (mask-negate m1))
+		      (show (mask-negate m2)))))))
 
 (test "sockets" equal? '(303 202 101)
       (let ((server (open-socket))

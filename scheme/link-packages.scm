@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Static linker.  Doesn't work very well this way (debug info is
@@ -40,7 +40,7 @@
   (files (link reify)))
 
 ; Database of procedure names 'n' stuff.
-; (copy in more-packages.scm ...)
+; (copy in env-packages.scm ...)
 
 (define-structure debuginfo debuginfo-interface
   (open scheme-level-2

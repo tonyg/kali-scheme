@@ -1,4 +1,4 @@
-; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 (define-polymorphic-scheme-primop make-vector allocate
   (lambda (call)
@@ -25,6 +25,26 @@
     (record-field-type (literal-value (call-arg call 1)))))
 
 (define-nonsimple-scheme-primop record-set! write)
+
+(define (simplify-test call)
+  (simplify-args call 0))
+
+; There should be no discovered calls to TYPE-CASE.
+
+(define (expand-type-case call)
+  (bug "Trying to expand a call to TYPE-CASE (~D) ~S"
+       (node-hash (node-parent (nontrivial-ancestor call)))
+       call))
+
+; See simplify-if? in simplify/call.scm
+
+(define (simplify-type-case? call index value)
+  #f)
+
+(define-scheme-cond-primop type-case
+  simplify-test
+  expand-test
+  simplify-type-case?)
 
 (define-scheme-primop deallocate        deallocate type/unit)
 (define-scheme-primop allocate-memory   allocate   type/address)

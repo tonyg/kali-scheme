@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 
@@ -35,3 +35,4 @@
   (population-reduce (lambda (thing junk) (proc thing))
 		     #f
 		     pop))
+

@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include <signal.h>		/* for sigaction() (POSIX.1) */
@@ -19,19 +19,17 @@
 #define block_interrupts()
 #define allow_interrupts()
 
-
-static void	when_keyboard_interrupt();
-static void	when_alarm_interrupt();
+void		s48_when_keyboard_interrupt();
+void		s48_when_alarm_interrupt();
 static void     when_sigpipe_interrupt();
 bool		s48_setcatcher(int signum, void (*catcher)(int));
 void		s48_start_alarm_interrupts(void);
 
-
 void
 s48_sysdep_init(void)
 {
-  if (!s48_setcatcher(SIGINT, when_keyboard_interrupt)
-      || !s48_setcatcher(SIGALRM, when_alarm_interrupt)
+  if (!s48_setcatcher(SIGINT, s48_when_keyboard_interrupt)
+      || !s48_setcatcher(SIGALRM, s48_when_alarm_interrupt)
       || !s48_setcatcher(SIGPIPE, when_sigpipe_interrupt)) {
     fprintf(stderr,
 	    "Failed to install signal handlers, errno = %d\n",
@@ -41,11 +39,11 @@ s48_sysdep_init(void)
   s48_start_alarm_interrupts();
 }
 
-
 /*
  * Unless a signal is being ignored, set up the handler.
  * If we return FALSE, something went wrong and errno is set to what.
  */
+
 bool
 s48_setcatcher(int signum, void (*catcher)(int))
 {
@@ -65,8 +63,8 @@ s48_setcatcher(int signum, void (*catcher)(int))
 
 static long	keyboard_interrupt_count = 0;
 
-static void
-when_keyboard_interrupt(int ign)
+void
+s48_when_keyboard_interrupt(int ign)
 {
   keyboard_interrupt_count += 1;
   NOTE_EVENT;
@@ -94,11 +92,12 @@ static long	alarm_time = -1;
 static long	poll_time = -1;
 static long	poll_interval = 5;
 
-static void
-when_alarm_interrupt(int ign)
+void
+s48_when_alarm_interrupt(int ign)
 {
   s48_current_time += 1;
   /* fprintf(stderr, "[tick]"); */
+
   if ((alarm_time >= 0 && alarm_time <= s48_current_time) ||
       (poll_time >= 0 && poll_time <= s48_current_time)) {
     NOTE_EVENT;
@@ -114,10 +113,11 @@ long
 s48_schedule_alarm_interrupt(long delta)
 {
   long old;
+
   /*
   fprintf(stderr, "<scheduling alarm for %ld + %ld>\n", s48_current_time,
-	  delta/TICKS_PER_POLL);
-	  */
+	  delta/TICKS_PER_POLL); */
+
   /* get remaining time */
   if (alarm_time == -1)
     old = -1;
@@ -146,10 +146,10 @@ s48_real_time(long *ticks)
 {
   struct timeval tv;
   static struct timeval tv_orig;
-  static int initp = 0;
+  static int initp = FALSE;
   if (!initp) {
     gettimeofday(&tv_orig, NULL);
-    initp = 1;
+    initp = TRUE;
   };
   gettimeofday(&tv, NULL);
   *ticks = (tv.tv_usec - tv_orig.tv_usec)/(1000000/TICKS_PER_SECOND);
@@ -244,9 +244,7 @@ static int	queue_ready_ports(bool wait, long seconds, long ticks);
 int
 s48_get_next_event(long *ready_fd, long *status)
 {
-  /*
   extern int s48_os_signal_pending(void);
-  */
 
   int io_poll_status;
   /*
@@ -276,13 +274,11 @@ s48_get_next_event(long *ready_fd, long *status)
   }
   if (alarm_time != -1 && s48_current_time >= alarm_time) {
     alarm_time = -1;
-    /* fprintf(stderr, "[alarm]\n"); */
+    /* fprintf(stderr, "[alarm %ld]\n", ticks); */
     return (ALARM_EVENT);
   }
-  /*
   if (s48_os_signal_pending())
     return (OS_SIGNAL_EVENT);
-    */
   block_interrupts();
   if ((keyboard_interrupt_count == 0)
       &&  (alarm_time == -1 || s48_current_time < alarm_time)
@@ -424,10 +420,14 @@ s48_add_pending_fd(int fd, bool is_input)
   if (data == NULL) {
     data = add_fd(fd, is_input);
     if (data == NULL)
-      return (FALSE);		/* no more memory */
-  } else if (data->status == FD_PENDING)
+      return (FALSE); }		/* no more memory */
+
+  data->is_input = is_input;
+
+  if (data->status == FD_PENDING)
     return (TRUE);			/* fd is already pending */
-  else if (data->status == FD_READY)
+
+  if (data->status == FD_READY)
     findrm(data, &ready);
   data->status = FD_PENDING;
   addque(data, &pending);

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Alternate implementation of PRIMITIVES module.
@@ -102,13 +102,17 @@
 (define (unimplemented name)
   (lambda args (underlying-error "unimplemented primitive" name args)))
 (define collect (unimplemented 'collect))
-(define external-call (unimplemented 'external-call)) 
-(define external-lookup (unimplemented 'external-lookup))
-(define external-name (unimplemented 'external-name))
-(define external-value (unimplemented 'external-value))
-(define (external? x) #f)
+(define call-external-value (unimplemented 'call-external-value)) 
+(define lookup-shared-binding (unimplemented 'lookup-shared-binding))
+(define define-shared-binding (unimplemented 'define-shared-binding))
+(define undefine-shared-binding (unimplemented 'undefine-shared-binding))
+(define (shared-binding? x) #f)
+(define make-shared-binding (unimplemented 'make-shared-binding))
+(define shared-binding-name (unimplemented 'shared-binding-name))
+(define shared-binding-is-import? (unimplemented 'shared-binding-is-import?))
+(define shared-binding-ref (unimplemented 'shared-binding-ref))
+(define shared-binding-set! (unimplemented 'shared-binding-set!))
 (define find-all (unimplemented 'find-all))
-(define make-external (unimplemented 'make-external))
 (define vm-extension (unimplemented 'vm-extension))
 
 (define (memory-status which arg)
@@ -171,7 +175,7 @@
       (underlying-error "vm-return" rest)))
 
 
-(define (?start entry-point arg) ;E.g. (?start (usual-resumer bare) 0)
+(define (?start entry-point arg) ;E.g. (?start (usual-resumer bare #t) 0)
   (clear-registers!)
   (call-with-current-continuation
     (lambda (k)

@@ -1,9 +1,10 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 (define-structures ((scheme-level-1 scheme-level-1-interface)
 		    (util util-interface))
-  (open scheme-level-0 ascii signals)
+  (open scheme-level-0 ascii signals
+	code-quote)			; needed by SYNTAX-RULES
   (usual-transforms case quasiquote syntax-rules)
   (files (rts base)
 	 (rts util)
@@ -28,9 +29,12 @@
   (begin
     (define-exported-binding "s48-the-record-type" :record-type)))
 
-(define-structure define-record-types define-record-types-interface
+(define-structures ((define-record-types define-record-types-interface)
+		    (define-sync-record-types
+		      (export (define-synchronized-record-type :syntax))))
   (open scheme-level-1 records records-internal loopholes
-	primitives) ; unspecific
+	low-proposals	;provisional-checked-record-{ref|set!}
+	primitives)	;unspecific
   (files (rts jar-defrecord)))
 
 (define-structures ((methods methods-interface)
@@ -56,6 +60,7 @@
 (define-structure wind wind-interface
   (open scheme-level-1 signals define-record-types
 	fluids fluids-internal
+	low-proposals
 	escapes)
   (files (rts wind))
   (optimize auto-integrate))
@@ -73,40 +78,48 @@
 		    (i/o-internal i/o-internal-interface))
   (open scheme-level-1 signals fluids
 	architecture
-	primitives ports code-vectors bitwise
+	primitives
+	ports byte-vectors bitwise
 	define-record-types ascii
-	threads locks
+	proposals
+	session-data
+	debug-messages	; for error messages
 	methods         ; &disclose :input-port :output-port
-	interrupts      ; {en|dis}able-interrupts!
 	number-i/o      ; number->string for debugging
-	exceptions      ; wrong-number-of-args stuff
-	handle)		; report-errors-as-warnings
+	handle		; report-errors-as-warnings
+	exceptions)     ; wrong-number-of-args stuff
   (files (rts port)
+	 (rts port-buffer)
 	 (rts current-port))
   (optimize auto-integrate))
 
-(define-structure channels channels-interface
-  (open scheme-level-1
-	low-channels
+(define-structure channel-i/o channel-i/o-interface
+  (open scheme-level-1 byte-vectors queues
+	channels
+	i/o i/o-internal
+	signals
+	proposals
+	condvars condvars-internal
+	interrupts
 	architecture
-	signals)	; error, call-error
+	session-data
+	debug-messages)	; for error messages
   (files (rts channel)))
 
-(define-structure channel-i/o channel-i/o-interface
-  (open scheme-level-1 i/o i/o-internal signals
-	channels low-channels
-	architecture code-vectors wind
-	define-record-types
-	queues threads threads-internal locks
-	exceptions interrupts
-	ascii ports util
-	session-data
-	structure-refs
-	debug-messages	; for error messages
-	handle)		; report-errors-as-warnings
-  (access primitives)	; add-finalizer, channel stuff
-  (files (rts channel-port)
-	 (rts channel-io)))
+(define-structure channel-ports channel-ports-interface
+  (open scheme-level-1 byte-vectors define-record-types ascii
+	ports
+	i/o i/o-internal
+	channels channel-i/o
+	proposals
+	condvars
+	signals
+	architecture		; channel-opening options
+	debug-messages		; for error messages
+	util			; unspecific
+	structure-refs)
+  (access primitives)	; add-finalizer
+  (files (rts channel-port)))
 
 (define-structure conditions conditions-interface
   (open scheme-level-1 signals)
@@ -118,7 +131,7 @@
 	i/o				;output-port-option, write-string
 	methods				;disclose
 	structure-refs)
-  (access low-channels			;channel? channel-id
+  (access channels			;channel? channel-id
 	  code-vectors)			;code-vector?
   (files (rts write)))
 	 
@@ -141,7 +154,7 @@
 	reading
 	wind
 	i/o
-	channel-i/o))
+	channel-ports))
 
 (define-structure features features-interface
   (open primitives i/o))
@@ -160,13 +173,14 @@
 
 (define-structure more-types (export :closure :code-vector :location :double
 				     :template :channel :port :weak-pointer
-				     :shared-binding)
+				     :shared-binding :cell)
   (open scheme-level-1 methods
-	closures code-vectors locations templates low-channels ports primitives
-	shared-bindings)
+	closures code-vectors locations cells templates channels ports
+	primitives shared-bindings)
   (begin (define-simple-type :closure     (:value) closure?)
 	 (define-simple-type :code-vector (:value) code-vector?)
 	 (define-simple-type :location    (:value) location?)
+	 (define-simple-type :cell        (:value) cell?)
 	 (define-simple-type :template    (:value) template?)
 	 (define-simple-type :channel     (:value) channel?)
 	 (define-simple-type :port        (:value) port?)
@@ -199,6 +213,7 @@
 	meta-methods
 	more-types
 	architecture
+	debug-messages	  ; for printing from last-resort-condition handler
 	vm-exposure	  ;primitive-catch
 	templates	  ;template-code, template-info
 	continuations	  ;continuation-pc, etc.
@@ -225,6 +240,7 @@
         wind
         fluids
 	fluids-internal         ;get-dynamic-env
+	proposals		;maybe-commit
         escapes                 ;primitive-cwcc
         conditions              ;error?
         handle                  ;with-handler
@@ -237,6 +253,12 @@
   (access primitives)           ;time current-thread set-current-thread! etc.
   (optimize auto-integrate)
   (files (rts thread) (rts sleep)))
+
+(define-structure proposals proposals-interface
+  (open scheme-level-1 low-proposals
+	define-record-types define-sync-record-types
+	primitives)		 ;unspecific
+  (files (rts proposal)))
 
 (define-structure scheduler scheduler-interface
   (open scheme-level-1 threads threads-internal enumerated enum-case
@@ -255,7 +277,8 @@
 	i/o			;current-error-port
 	conditions		;warning?, error?
 	writing			;display
-	i/o-internal            ;output-port-forcer, output-forcer-id
+	debug-messages		;for debugging
+	i/o-internal		;output-port-forcer, output-forcer-id
 	fluids-internal         ;get-dynamic-env
 	interrupts              ;with-interrupts-inhibited
 	wind                    ;call-with-current-continuation
@@ -281,7 +304,7 @@
 	 (unspecific))))))
 
 (define-structure queues queues-interface
-  (open scheme-level-1 define-record-types signals)
+  (open scheme-level-1 proposals signals)
   (files (big queue))
   (optimize auto-integrate))
 
@@ -295,20 +318,31 @@
 ;  (optimize auto-integrate))
 
 (define-structure locks locks-interface
-  (open scheme-level-1 define-record-types interrupts threads threads-internal)
+  (open scheme-level-1
+	threads threads-internal
+	interrupts define-record-types
+	proposals)
   (optimize auto-integrate)
   (files (rts lock)))
+
+(define-structures ((condvars condvars-interface)
+		    (condvars-internal (export condvar-has-waiters?)))
+  (open scheme-level-1
+	proposals
+	threads threads-internal)
+  (optimize auto-integrate)
+  (files (rts condvar)))
 
 (define-structure usual-resumer (export usual-resumer)
   (open scheme-level-1
 	i/o		 ;initialize-i/o, etc.
-	channel-i/o      ;{in,out}put-channel->port, initialize-channel-i/o
+	channel-i/o      ;initialize-channel-i/o
+	channel-ports    ;{in,out}put-channel->port
 	session-data     ;initialize-session-data!
 	fluids-internal	 ;initialize-dynamic-state!
 	exceptions	 ;initialize-exceptions!
 	interrupts	 ;initialize-interrupts!
 	records-internal ;initialize-records!
-	export-the-record-type	;just what it says
 	threads-internal ;start threads
 	root-scheduler)  ;start a scheduler
   (files (rts init)))
@@ -320,7 +354,6 @@
 	primitives)	;Open primitives instead of loading (alt weak)
   (files ;;(alt weak)   ;Only needed if VM's weak pointers are buggy
 	 (rts population)))
-
 
 ; Utility for displaying error messages
 

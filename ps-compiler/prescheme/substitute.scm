@@ -1,4 +1,4 @@
-; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 ; Substituting new variables for old in expressions.
 
@@ -93,6 +93,8 @@
       (cond ((not binding)
 	     (note-name-use! node)
 	     node)
+	    ((not (binding? binding))
+	     (bug "unbound variable ~S" (node-form node)))
 	    ((primitive? (binding-static binding))
 	     (make-primitive-node (binding-static binding) call?))
 	    ((location? (binding-place binding))

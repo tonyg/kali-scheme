@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Macro expansion.
 
@@ -178,7 +178,9 @@
 ; The horror of internal defines
 
 ; This returns a single node, either a LETREC, if there are internal definitions,
-; or a BEGIN if there aren't any.
+; or a BEGIN if there aren't any.  If there are no expressions we turn the last
+; definition back into an expression, thus causing the correct warning to be
+; printed by the compiler.
 
 (define (expand-body body env)
   (if (null? (cdr body))  ;++
@@ -189,10 +191,18 @@
        (lambda (defs exps env)
 	 (if (null? defs)
 	     (make-node operator/begin (cons 'begin (expand-list exps env)))
-	     (expand-letrec (map car (reverse defs))
-			    (map cdr (reverse defs))
-			    exps
-			    env))))))
+	     (call-with-values
+	      (lambda ()
+		(if (null? exps)
+		    (values (reverse (cdr defs))
+			    `((,operator/define ,(caar defs) ,(cdar defs))))
+		    (values (reverse defs)
+			    exps)))
+	      (lambda (defs exps)
+		(expand-letrec (map car defs)
+			       (map cdr defs)
+			       exps
+			       env))))))))
 
 ; Walk through FORMS looking for definitions.  ENV is the current environment,
 ; DEFS a list of definitions found so far.

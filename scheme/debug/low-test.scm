@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Tests for many of the primitives, both inlined and close-compiled.
 
@@ -266,10 +266,10 @@
 	(newline out))))
 
 (define (write-string string . channel-option)  ; test n-ary procedures
-  (channel-maybe-write string
+  (channel-maybe-write (car channel-option)
+		       string
 		       0
-		       (string-length string)
-		       (car channel-option)))
+		       (string-length string)))
 
 (define (newline channel)
   (write-string "
@@ -289,7 +289,7 @@
 				     (make-string len #\space))
 				    (loop (+ have got))))
 			      (has-newline buffer have got))))
-		       (channel-maybe-read buffer have (- 80 have) #f in)))))
+		       (channel-maybe-read in buffer have (- 80 have) #f)))))
        (loop 0)))
    (make-string 80 #\space)))
 

@@ -1,0 +1,62 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:23 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Calling C functions from Scheme</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_49.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_51.html">Shared bindings</A> | Next: <A HREF="s48manual_53.html">Adding external modules to the <TT>Makefile</TT></A>
+<H2>Calling C functions from Scheme</H2>
+
+<P>There are three different ways to call C functions from Scheme, depending on
+ how the C function was obtained.
+<UL><LI><CODE>(call-imported-binding<I>&nbsp;binding&nbsp;arg<I><sub>0</sub></I>&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(call-external<I>&nbsp;external&nbsp;arg<I><sub>0</sub></I>&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(call-external-value<I>&nbsp;value&nbsp;name&nbsp;arg<I><sub>0</sub></I>&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="3">&nbsp;</A>
+</UL>
+Each of these applies its first argument, a C function, to the rest of
+ the arguments.
+For <CODE>call-imported-binding</CODE> the function argument must be an
+ imported binding.
+For <CODE>call-external</CODE> the function argument must be an external
+ bound in the current process
+ (see
+
+the section on <A HREF="s48manual_54.html">Dynamic Loading</A>).
+For <CODE>call-external-value</CODE> <CODE><I>value</I></CODE> must be a byte vector
+ whose contents is a pointer to a C function and <CODE><I>name</I></CODE> should be
+ a string naming the function.
+The <CODE><I>name</I></CODE> argument is used only for printing error messages.
+<P>For all of these, the C function is passed the <CODE><I>arg<I><sub>i</sub></I></I></CODE> values
+ and the value returned is that returned by C procedure.
+Up to twelve arguments may be passed.
+There is no method supplied for returning multiple values to
+ Scheme from C (or vice versa) (mainly because C does not have multiple return
+ values).
+<P>Keyboard interrupts that occur during a call to a C function are ignored
+ until the function returns to Scheme (this is clearly a
+ problem; we are working on a solution).
+<UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(import-lambda-definition <CODE><I>name</I></CODE> (<CODE><I>formal</I></CODE> ...))</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(import-lambda-definition <CODE><I>name</I></CODE> (<CODE><I>formal</I></CODE> ...) <CODE><I>c-name</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+</UL>
+These macros simplify importing functions from C.
+They define <CODE><I>name</I></CODE> to be a function with the given formals that
+ applies those formals to the corresponding C binding.
+<CODE><I>C-name</I></CODE>, if supplied, should be a string.
+These expand into
+<BLOCKQUOTE><PRE>
+(define temp (lookup-imported-binding <CODE><I>c-name</I></CODE>))
+(define <CODE><I>name</I></CODE>
+  (lambda (<CODE><I>formal</I></CODE> ...)
+    (external-apply temp <CODE><I>formal</I></CODE> ...)))
+</PRE></BLOCKQUOTE>
+<P>
+If <CODE><I>c-name</I></CODE> is not supplied, it is derived from <CODE><I>name</I></CODE> by converting
+ all letters to lowercase and replacing `<CODE>-</CODE>' with `<CODE>_</CODE>'.
+<P>
+  
+Previous: <A HREF="s48manual_51.html">Shared bindings</A> | Next: <A HREF="s48manual_53.html">Adding external modules to the <TT>Makefile</TT></A></BODY></HTML>

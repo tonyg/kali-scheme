@@ -1,12 +1,12 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Read a command.  No command name completion, yet.
 
 (define (read-command prompt form-preferred? i-port)
-  (really-read-command prompt form-preferred? i-port no-more-commands))
+  (really-read-command prompt form-preferred? i-port))
 
-(define (really-read-command prompt form-preferred? i-port more-commands)
+(define (really-read-command prompt form-preferred? i-port)
   (let ((o-port (command-output)))
     (let prompt-loop ()
       (if (and prompt (not (batch-mode?)))
@@ -24,18 +24,22 @@
                 ((char=? c #\;)      ;Comment
 		 (gobble-line i-port)
 		 (prompt-loop))
+                ((char=? c #\))      ;Erroneous right paren
+		 (read-char i-port)
+		 (warn "discarding extraneous right parenthesis")
+		 (loop))
                 ((char=? c command-prefix)
                  (read-char i-port)
-                 (read-named-command i-port more-commands form-preferred?))
+                 (read-named-command i-port form-preferred?))
 		((or form-preferred?
 		     (and (not (char-alphabetic? c))
 			  (not (char-numeric? c))
 			  (not (char=? c #\?))))
 		 (read-evaluation-command i-port))
 		(else
-		 (read-named-command i-port more-commands form-preferred?))))))))
+		 (read-named-command i-port form-preferred?))))))))
 
-(define (read-command-carefully prompt form-preferred? i-port . more-commands)
+(define (read-command-carefully prompt form-preferred? i-port)
   (call-with-current-continuation
     (lambda (k)
       (with-handler
@@ -54,10 +58,7 @@
 		(else
 		 (punt))))
 	(lambda ()
-	  (really-read-command prompt form-preferred? i-port
-			       (if (null? more-commands)
-				   no-more-commands
-				   (car more-commands))))))))
+	  (really-read-command prompt form-preferred? i-port))))))
 
 (define (eat-until-newline port)
   (do ()
@@ -72,9 +73,6 @@
 	(read-char i-port))
     (make-command 'run (list form))))
 
-(define (no-more-commands name)
-  #f)
-
 ; Read a single form, allowing ## as a way to refer to last command
 ; output.
 
@@ -85,21 +83,27 @@
 
 ; Read a command line:  <name> <arg> ... <newline>
 
-(define (read-named-command port more-commands form-preferred?)
+(define (read-named-command port form-preferred?)
   (let ((c-name (read port)))
-    (let ((syntax (or (more-commands c-name)
-		      (get-command-syntax c-name))))
-      (cond (syntax
-	     (make-command c-name
-			   (read-command-arguments syntax #f port
-						   more-commands
-						   form-preferred?)))
-	    (else
-	     (read-command-arguments '(&rest form) #f port #f #f) ; flush junk
-	     (write-line "Unrecognized command name." (command-output))
-	     #f)))))
+    (cond ((and (integer? c-name)
+		(<= 0 c-name))
+	   (make-command 'select-menu-item
+			 (cons c-name
+			       (read-command-arguments '(&rest selection-command)
+						       #f
+						       port
+						       #f))))
+	  ((get-command-syntax c-name)
+	   => (lambda (syntax)
+		(make-command c-name
+			      (read-command-arguments syntax #f port
+						      form-preferred?))))
+	  (else
+	   (read-command-arguments '(&rest form) #f port #f) ; flush junk
+	   (write-line "Unrecognized command name." (command-output))
+	   #f))))
 
-(define (read-command-arguments ds opt? port more-commands form-preferred?)
+(define (read-command-arguments ds opt? port form-preferred?)
   (let recur ((ds ds) (opt? opt?))
     (let ((c (skip-over horizontal-space? port)))
       (cond ((and (not (null? ds))
@@ -127,7 +131,7 @@
 	    ((eq? (car ds) 'command)	; must be the last argument
 	     (if (not (null? (cdr ds)))
 		 (error "invalid argument descriptions" ds))
-	     (list (really-read-command #f form-preferred? port more-commands)))
+	     (list (really-read-command #f form-preferred? port)))
 	    (else
 	     (let ((arg (read-command-argument (car ds) port)))
 	       (cons arg (recur (cdr ds) opt?))))))))
@@ -145,7 +149,13 @@
 	   (if (symbol? thing)
 	       thing
 	       (read-command-error port "invalid name" thing))))
-	(else (error "invalid argument description" d)))))
+	((selection-command)
+	 (let ((x (read port)))
+	   (if (selection-command? x)
+	       x
+	       (read-command-error port "invalid selection command" x))))
+	(else
+	 (error "invalid argument description" d)))))
 
 (define-condition-type 'read-command-error '(error))
 (define read-command-error? (condition-predicate 'read-command-error))

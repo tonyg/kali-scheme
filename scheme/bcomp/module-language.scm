@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; The DEFINE-INTERFACE and DEFINE-STRUCTURE macros.
@@ -49,7 +49,6 @@
   (syntax-rules ()
     ((compound-interface ?int ...)
      (make-compound-interface #f ?int ...))))
-
 
 ; <item> ::= <name> | (<name> <type>) | ((<name> ...) <type>)
 
@@ -105,6 +104,24 @@
      (let ((p (a-package #f ?clause ...)))
        (values (make-structure p (lambda () ?int))
 	       ...)))))
+
+(define-syntax modify
+  (syntax-rules ()
+    ((modify ?struct ?command ...)
+     (make-modified-structure ?struct '(?command ...)))))
+
+; Two handy shorthands for MODIFY.
+
+(define-syntax subset
+  (syntax-rules ()
+    ((restrict struct (name ...))
+     (modify struct (expose name ...)))))
+
+(define-syntax with-prefix
+  (syntax-rules ()
+    ((with-prefix struct the-prefix)
+     (modify struct (prefix the-prefix)))))
+
 ; Packages
 
 (define-syntax a-package

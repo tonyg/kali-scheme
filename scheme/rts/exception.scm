@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ;;;; Raising and handling conditions
@@ -61,20 +61,15 @@
 (define $condition-handlers
   (make-fluid #f))
 
-; CURRENT-ERROR-PORT and WRITE-STRING are passed in to avoid circular
-; module dependencies.
-
-(define (initialize-exceptions! current-error-port write-string thunk)
+(define (initialize-exceptions! thunk)
   (call-with-current-continuation
     (lambda (k)
       (set-fluid! $condition-handlers
-		  (list (last-resort-condition-handler k
-						       current-error-port
-						       write-string)))
+		  (list (last-resort-condition-handler k)))
       (set-exception-handlers! exception-handlers)
       (thunk))))
 
-(define (last-resort-condition-handler halt current-error-port write-string)
+(define (last-resort-condition-handler halt)
   (let ((interrupt/keyboard (enum interrupt keyboard))
 	(losing? #f))
     (lambda (condition punt)
@@ -83,10 +78,7 @@
 	       (lambda (c)
 		 (if (not losing?)
 		     (begin (set! losing? #t)
-			    (report-utter-lossage condition
-						  c
-						  current-error-port
-						  write-string)))
+			    (report-utter-lossage condition c)))
 		 (halt 123))))
 	    ((and (interrupt? condition)
 		  (= (cadr condition) interrupt/keyboard))
@@ -97,26 +89,27 @@
 ; This will print a list of template id's, which you can look up in
 ; initial.debug to get some idea of what was going on.
 
-(define (report-utter-lossage condition c current-error-port write-string)
-  (let ((out (current-error-port)))
-    (if out
-	(begin
-	  (cond ((exception? condition)
-		 (write-string (number->string (exception-opcode condition))
-			       out)
-		 (write-string " / " out))
-		((or (error? condition)
-		     (warning? condition))
-		 (write-string (car (condition-stuff condition)) out)
-		 (write-string " / " out)))
-	  (for-each (lambda (id+pc)
-		      (if (number? (car id+pc))
-			  (write-string (number->string
-					 (car id+pc))
-					out))
-		      (write-string " <- " out))
-		    (continuation-preview c))
-	  (write-char #\newline out)))))
+(define (report-utter-lossage condition c)
+  (cond ((exception? condition)
+	 (debug-message "VM exception `"
+			(exception-reason condition)
+			"' with no handler in place")
+	 (debug-message "opcode is: "
+			(enumerand->name (exception-opcode condition)
+					 op)))
+	(else
+	 (apply debug-message
+		(condition-type condition)
+		" with no handler in place: "
+		(condition-stuff condition))))
+  (apply debug-message
+	 "stack template id's: "
+	 (map (lambda (id+pc)
+		(if (number? (car id+pc))
+		    (string-append (number->string (car id+pc))
+				   " <- ")
+		    " <- "))
+	      (continuation-preview c))))
 
 (define (continuation-preview c)
   (if (continuation? c)
@@ -124,7 +117,6 @@
 		  (continuation-pc c))
 	    (continuation-preview (continuation-parent c)))
       '()))
-
 
 ; ERROR is a compiler primitive, but if it weren't, it could be
 ; defined as follows:

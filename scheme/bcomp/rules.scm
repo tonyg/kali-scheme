@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The syntax-rules macro (new in R5RS)
 
@@ -17,16 +17,16 @@
         (let ((subkeywords (cadr exp))
               (rules (cddr exp)))
        (if (and (list? subkeywords)
-                   (every name? subkeywords))
+		(every name? subkeywords))
        ;; Pair of the procedure and list of auxiliary names
-          `(,(r 'cons)              ;should be 'transformer
-               ,(process-rules rules subkeywords r c)
-                (,(r 'quote)
-           ,(find-free-names-in-syntax-rules subkeywords rules)))
-             exp))
+	   `(,(r 'cons)              ;should be 'transformer
+	       ,(process-rules rules subkeywords r c)
+	       (,(r 'quote)
+	        ,(find-free-names-in-syntax-rules subkeywords rules)))
+	   exp))
    exp))
   '(append and car cdr cond cons else eq? equal? lambda let let* map
-	   pair? quote values))
+	   pair? quote code-quote values))
 
 
 (define (process-rules rules subkeywords r c)
@@ -49,6 +49,7 @@
   (define %map (r 'map))
   (define %pair? (r 'pair?))
   (define %quote (r 'quote))
+  (define %code-quote (r 'code-quote))
   (define %rename (r 'rename))
   (define %tail (r 'tail))
   (define %temp (r 'temp))
@@ -79,7 +80,7 @@
   (define (process-match input pattern)
     (cond ((name? pattern)
 	   (if (member pattern subkeywords)
-	       `((,%compare ,input (,%rename ',pattern)))
+	       `((,%compare ,input (,%rename (,%code-quote ,pattern))))
 	       `()))
 	  ((segment-pattern? pattern)
 	   (process-segment-match input (car pattern)))
@@ -134,7 +135,7 @@
 		     template
 		     (syntax-error "template dimension error (too few ...'s?)"
 				   template))
-		 `(,%rename ',template))))
+		 `(,%rename (,%code-quote ,template)))))
 	  ((segment-template? template)
 	   (let* ((depth (segment-depth template))
 		  (seg-dim (+ dim depth))
@@ -160,7 +161,8 @@
 	  ((pair? template)
 	   `(,%cons ,(process-template (car template) dim env)
 		    ,(process-template (cdr template) dim env)))
-	  (else `(,%quote ,template))))
+	  (else
+	   `(,%quote ,template))))
 
   ; Return an association list of (var . dim)
 

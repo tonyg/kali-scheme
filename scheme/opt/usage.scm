@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Getting usage counts and doing a topological sort (so that definitions
 ; will be seen before uses, where possible).
@@ -142,17 +142,23 @@
 
 (define-usage-analyzer 'letrec syntax-type
   (lambda (node free usages)
-    (let* ((exp (node-form node))
-	   (specs (cadr exp))
-	   (body (caddr exp)))
-      (for-each (lambda (spec)
-		  (node-set! (car spec) 'usage (make-usage)))
-		specs)
-      (analyze body
-	       (analyze-nodes (map cadr specs)
-			      free
-			      usages)
-	       usages))))
+    (let ((exp (node-form node)))
+      (analyze-letrec (cadr exp) (caddr exp) free usages))))
+
+(define-usage-analyzer 'pure-letrec syntax-type
+  (lambda (node free usages)
+    (let ((exp (node-form node)))
+      (analyze-letrec (cadr exp) (cadddr exp) free usages))))
+
+(define (analyze-letrec specs body free usages)
+  (for-each (lambda (spec)
+	      (node-set! (car spec) 'usage (make-usage)))
+	    specs)
+  (analyze body
+	   (analyze-nodes (map cadr specs)
+			  free
+			  usages)
+	   usages))
 
 (define-usage-analyzer 'begin syntax-type
   (lambda (node free usages)

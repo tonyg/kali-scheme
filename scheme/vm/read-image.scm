@@ -1,75 +1,13 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-
-; Write-image and read-image
-
-(define (s48-image-writing-okay?)
-  (not (have-static-areas?)))
+; Read-image
 
 (define *status* (enum errors no-errors))
 
-(define-syntax write-check
-  (syntax-rules ()
-    ((write-check exp)
-     (if (eq? *status* (enum errors no-errors))
-	 (set! *status* exp)))))
-
-(define (write-heap-integer n port)
-  (write-check (write-integer n port))
-  (write-check (write-char #\newline port)))
-
-(define (s48-write-image resume-proc port)
-  (begin-writing-image)
-  (let ((resume-proc (s48-trace-value resume-proc))
-	(exported-bindings (s48-trace-value (s48-exported-bindings))))
-    (s48-do-gc)
-    (s48-mark-traced-channels-closed!)
-    (let ((symbols (s48-copy-symbol-table))
-	  (imported-bindings (s48-cleaned-imported-bindings))
-	  (resumer-records (find-resumer-records)))
-      (if (vm-eq? false resumer-records)
-	  (begin
-	    (abort-collection)
-	    (enum errors out-of-memory))
-	  (let ((status (really-write-image port resume-proc
-					    symbols
-					    imported-bindings
-					    exported-bindings
-					    resumer-records)))
-	    (abort-collection)
-	    status)))))
-
-(define (really-write-image port restart-proc
-			    symbols imported-bindings exported-bindings
-			    resumer-records)
-  (set! *status* (enum errors no-errors))
-  (write-check (write-char #\newline port))
-  (write-check (write-page port))
-  (write-check (write-char #\newline port))
-  (write-check (write-string architecture-version port))
-  (write-check (write-char #\newline port))
-  (write-heap-integer bytes-per-cell port)
-  (write-heap-integer (a-units->cells (address->integer (heap-start))) port)
-  (write-heap-integer (a-units->cells (address->integer (heap-pointer))) port)
-  (write-heap-integer symbols port)
-  (write-heap-integer imported-bindings port)
-  (write-heap-integer exported-bindings port)
-  (write-heap-integer resumer-records port)
-  (write-heap-integer restart-proc port)
-  (write-check (write-page port))
-  (store! (heap-pointer) 1)  ; used to detect endianess of image
-  (write-check (write-block port
-			    (heap-pointer)
-			    (address-difference (address1+ (heap-pointer)) (heap-pointer))))
-  (write-check (write-block port
-			    (heap-start)
-			    (address-difference (heap-pointer) (heap-start))))
-  *status*)
+(define *eof?* #f)
 
 ; Make sure the image file is okay and return the size of the heap it
 ; contains.
-
-(define *eof?* #f)
 
 (define-syntax read-check
   (syntax-rules ()
@@ -94,7 +32,7 @@
 ; Read in the ASCII portion of the image and make sure that it is compatible
 ; with this version of the VM.
 
-(define (s48-check-image-header filename)
+(define (s48-read-image filename heap-size)
   (receive (port status)
       (open-input-file filename)
     (cond ((error? status)
@@ -107,19 +45,18 @@
 	   (read-check (read-page port))
 	   (read-check (read-newline port)) ; version starts on next line
 	   (let* ((same-version? (read-check (check-image-version port) #f))
-		  (old-bytes-per-cell (read-check (read-integer port))))
-	     (set! *old-begin*
-		   (integer->address
-		     (cells->a-units (read-check (read-integer port)))))
-	     (set! *old-hp*
-		   (integer->address
-		     (cells->a-units (read-check (read-integer port)))))
+		  (old-bytes-per-cell (read-check (read-integer port)))
+		  (old-begin
+		    (integer->address
+		      (cells->a-units (read-check (read-integer port)))))
+		  (old-hp
+		    (integer->address
+		      (cells->a-units (read-check (read-integer port))))))
 	     (set! *symbols*           (read-check (read-integer port)))
 	     (set! *imported-bindings* (read-check (read-integer port)))
 	     (set! *exported-bindings* (read-check (read-integer port)))
 	     (set! *resumer-records*   (read-check (read-integer port)))
 	     (set! *startup-procedure* (read-check (read-integer port)))
-	     (set! *image-port* port)
 	     (read-check (read-page port)) ; read to beginning of heap
 	     (cond ((error? *status*)
 		    (read-lost "Error reading from image file" port))
@@ -127,28 +64,18 @@
 		    (set! *status* (enum errors parse-error))
 		    (read-lost "Premature EOF when reading image file" port))
 		   ((not same-version?)
-		    (read-lost "Format of image is incompatible with this version of system" port))
+		    (read-lost "Format of image is incompatible with this version of system"
+			       port))
 		   ((not (= old-bytes-per-cell bytes-per-cell))
 		    (read-lost "Incompatible bytes-per-cell in image" port))
 		   (else
-		    (address-difference *old-hp* *old-begin*))))))))
-
-(define (read-page port)
-  (read-this-character page-character port))
-
-(define (read-newline port)
-  (read-this-character #\newline port))
-
-(define (read-this-character char port)
-  (let loop ()
-    (receive (ch eof? status)
-	(read-char port)
-      (cond ((or eof? (error? status))
-	     (values -1 eof? status))
-	    ((char=? char ch)
-	     (values -1 #f status))
-	    (else
-	     (loop))))))
+		    (let* ((old-heap-size
+			     (bytes->cells (address-difference old-hp
+							       old-begin)))
+			   (new-begin (s48-initialize-heap heap-size
+							   old-heap-size
+							   old-begin)))
+		      (read-old-heap port new-begin old-begin old-hp)))))))))
 
 (define (check-image-version port)
   (let ((len (string-length architecture-version)))
@@ -163,10 +90,6 @@
 	       (loop (+ i 1)))
 	      (else
 	       (values #f #f status)))))))
-
-(define *image-port*)
-(define *old-begin*)
-(define *old-hp*)
 
 ;----------------
 ; Values provided by the image file.
@@ -211,56 +134,74 @@
   (set! *resumer-records*   records))
 
 ;----------------
+; Check the byte order before actually reading the image.
 
-(define (s48-read-image)
-  (let ((port *image-port*))
+(define (read-old-heap port new-begin old-begin old-hp)
+  (receive (okay? string)
+      (image-read-block port new-begin (cells->a-units 1))
+    (cond ((not okay?)
+	   (read-lost string port))
+	  ((= (fetch new-begin) 1)
+	   (really-read-image port new-begin old-begin old-hp #f))
+	  (else
+	   (reverse-descriptor-byte-order! new-begin)
+	   (if (= (fetch new-begin) 1)
+	       (really-read-image port new-begin old-begin old-hp #t)
+	       (read-lost "Unable to correct byte order" port))))))
+
+; We finally read the image and then check that everything is okay.  We
+; adjust the byte order and relocate the image if necessary.
+
+(define (really-read-image port new-begin old-begin old-hp reverse?)
+  (let* ((delta (address-difference new-begin old-begin))
+	 (new-hp (address+ old-hp delta)))
     (receive (okay? string)
-	(image-read-block port (cells->a-units 1))
-      (cond ((not okay?)
-	     (read-lost string port))
-	    ((= (fetch (heap-pointer)) 1)
-	     (really-read-image port #f))
-	    (else
-	     (reverse-descriptor-byte-order! (heap-pointer))
-	     (if (= (fetch (heap-pointer)) 1)
-		 (really-read-image port #t)
-		 (read-lost "Unable to correct byte order" port)))))))
+	(image-read-block port new-begin (address-difference old-hp old-begin))
+      (receive (ch eof? status)
+	  (read-char port)
+	(cond ((not okay?)
+	       (read-lost string port))
+	      ((error? status)
+	       (read-lost "Error reading from image file" port))
+	      ((not eof?)
+	       (read-lost "Image file has extraneous data after image" port))
+	      ((error? (close-input-port port))
+	       (read-lost "Error closing image file" port))
+	      (else
+	       (set! *startup-procedure* (adjust *startup-procedure* delta))
+	       (set! *symbols*           (adjust *symbols* delta))
+	       (set! *imported-bindings* (adjust *imported-bindings* delta))
+	       (set! *exported-bindings* (adjust *exported-bindings* delta))
+	       (set! *resumer-records*   (adjust *resumer-records* delta))
+	       (if reverse?
+		   (s48-reverse-byte-order! new-begin new-hp))
+	       (if (not (= delta 0))
+		   (begin
+		     (relocate-symbol-table! *symbols* delta)
+		     (relocate-binding-table! *imported-bindings* delta)
+		     (relocate-binding-table! *exported-bindings* delta)
+		     (relocate-image delta new-begin new-hp)))
+	       0))))))
 
-(define (really-read-image port reverse?)
-  (let* ((delta (address-difference (heap-pointer) *old-begin*))
-	 (new-hp (address+ *old-hp* delta))
-	 (new-limit (heap-limit))
-	 (start (heap-pointer)))
-    (if (address>= new-hp new-limit)
-	(read-lost "Heap not big enough to restore this image" port)
-	(receive (okay? string)
-	    (image-read-block port (address-difference *old-hp* *old-begin*))
-	  (receive (ch eof? status)
-	      (read-char port)
-	    (cond ((not okay?)
-		   (read-lost string port))
-		  ((error? status)
-		   (read-lost "Error reading from image file" port))
-		  ((not eof?)
-		   (read-lost "Image file has extraneous data after image" port))
-		  ((error? (close-input-port port))
-		   (read-lost "Error closing image file" port))
-		  (else
-		   (if reverse?
-		       (reverse-byte-order! start new-hp))
-		   (if (not (= delta 0))
-		       (relocate-image delta start new-hp))
-		   (set-heap-pointer! new-hp)
-		   (set! *startup-procedure* (adjust *startup-procedure* delta))
-		   (set! *symbols*           (adjust *symbols* delta))
-		   (set! *imported-bindings* (adjust *imported-bindings* delta))
-		   (set! *exported-bindings* (adjust *exported-bindings* delta))
-		   (set! *resumer-records*   (adjust *resumer-records* delta))
-		   0)))))))
+(define (s48-relocate-all delta new-begin new-hp symbols imported exported)
+  (relocate-symbol-table! symbols delta)
+  (relocate-binding-table! imported delta)
+  (relocate-binding-table! exported delta)
+  (relocate-image delta new-begin new-hp))
 
-(define (image-read-block port need)
+(define relocate-symbol-table!
+  (table-relocator vm-symbol-next
+		   vm-set-symbol-next!))
+
+(define relocate-binding-table!
+  (table-relocator shared-binding-next
+		   set-shared-binding-next!))
+
+;----------------
+
+(define (image-read-block port address need)
   (receive (got eof? status)
-      (read-block port (heap-pointer) need)
+      (read-block port address need)
     (cond ((error? status)
 	   (set! *status* status)
 	   (values #f "Error reading from image file"))
@@ -291,7 +232,7 @@
     (store-byte! (address+ addr 1) (fetch-byte (address+ addr 2)))
     (store-byte! (address+ addr 2) x)))
 
-(define (reverse-byte-order! start end)
+(define (s48-reverse-byte-order! start end)
   (error-message "Correcting byte order of resumed image.")
   (let loop ((ptr start))
     (if (address< ptr end)
@@ -323,6 +264,20 @@
 
 (define page-character (ascii->char 12))
 
-(define (write-page port)
-  (write-char page-character port))
+(define (read-page port)
+  (read-this-character page-character port))
+
+(define (read-newline port)
+  (read-this-character #\newline port))
+
+(define (read-this-character char port)
+  (let loop ()
+    (receive (ch eof? status)
+	(read-char port)
+      (cond ((or eof? (error? status))
+	     (values -1 eof? status))
+	    ((char=? char ch)
+	     (values -1 #f status))
+	    (else
+	     (loop))))))
 

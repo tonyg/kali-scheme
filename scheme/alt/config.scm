@@ -1,10 +1,7 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Stub support for DEFINE-PACKAGE and DEFINE-INTERFACE macros.
-
-; Interfaces are ignored.  Only dependencies are significant.
-
 
 (define (load-configuration filename . rest)
   (let ((save filename))
@@ -43,33 +40,50 @@
 
 ; --------------------
 
-(define (make-indirect-interface name thunk)
-  (thunk))
-
-
-(define (make-simple-interface name items)
-  (cons 'export items))
-
-(define (make-compound-interface name . sigs)
-  (cons 'compound-interface sigs))
-
-
 ; Structures are views into packages.
-; In this implementation, interface information is completely ignored.
 
-(define-syntax make-structure
-  (syntax-rules ()
-    ((make-structure ?package ?interface ?name)
-     (vector '<structure> ?name ?package))
-    ((make-structure ?package ?interface)
-     (make-structure ?package ?interface #f))))
+(define (make-structure package int-thunk . name-option)
+  (let ((struct (vector '<structure>
+			#f
+			package
+			(if (procedure? int-thunk)
+			    int-thunk
+			    (lambda () int-thunk))
+			#f)))
+    (if (not (null? name-option))
+	(note-structure-name! struct (car name-option)))
+    struct))
+
+(define (structure? thing)
+  (and (vector? thing)
+       (not (zero? (vector-length thing)))
+       (eq? '<structure> (vector-ref thing 0))))
 
 (define (structure-name s) (vector-ref s 1))
+(define (set-structure-name! s name) (vector-set! s 1 name))
 (define (structure-package s) (vector-ref s 2))
+(define (structure-interface-thunk s) (vector-ref s 3))
+(define (structure-interface-really s) (vector-ref s 4))
+(define (set-structure-interface! s i) (vector-set! s 4 i))
+(define (structure-interface s)
+  (or (structure-interface-really s)
+      (begin (initialize-structure! s)
+	     (structure-interface-really s))))
+
+(define (initialize-structure! s)
+  (let ((int ((structure-interface-thunk s))))
+    (begin (set-structure-interface! s int)
+	   (note-reference-to-interface! int s))))
 
 (define (verify-later! thunk) 'lose)
-;(define *all-files* '())
+(define (set-verify-later! proc) 'lose)
+;(define *all-files* '())------------
 
+
+; We assume that the commands are not actually necessary.
+
+(define (make-modified-structure struct commands)
+  struct)
 
 ; Packages are not what they appear to be.
 
@@ -89,29 +103,65 @@
 (define (package-loaded? p) (vector-ref p 5))
 (define (set-package-loaded?! p ?) (vector-set! p 5 ?))
 
-(define dummy-package
-  (make-a-package (lambda () '()) (lambda () '()) #f "" '() #f))
+(define (initialize-package! p) 'lose)
 
-; source-file-names  ?
-(define module-system (make-structure dummy-package #f 'module-system))
-(define scheme (make-structure dummy-package #f 'scheme))
-(define built-in-structures
-  (make-structure dummy-package #f 'built-in-structures))
+; The package hierarchy
+(define (first p l)
+  (let loop ((l l))
+    (and (not (null? l))
+	 (or (and (p (car l)) (car l))
+	     (loop (cdr l))))))
+
+(define *structures* '())
+(define (all-structures) *structures*)
+(define (find-structure name)
+  (first (lambda (struct)
+	   (eq? name (structure-name struct)))
+	 *structures*))
+(define *packages* '())
+(define *interfaces* '())
+
+(define (register-structure! struct)
+  (set! *structures* (cons struct *structures*)))
+(define (register-interface! int)
+  (set! *interfaces* (cons int *interfaces*)))
+(define (register-package! p)
+  (set! *packages* (cons p *packages*)))
+
+(define (initialize-module-system!)
+  (set! *structures* '())
+  (set! *packages* '())
+  (set! *interfaces* '()))
 
 (define (note-name! thing name)
+  (cond ((interface? thing)
+	 (note-interface-name! thing name))
+	((structure? thing)
+	 (note-structure-name! thing name)))
   thing)
 
+(define (note-structure-name! struct name)
+  (if (and name (not (structure-name struct)))
+      (begin
+	(set-structure-name! struct name)
+	(note-package-name! (structure-package struct) name)
+	(register-structure! struct))))
 
-; Handy
+(define (note-package-name! package name)
+  (register-package! package))
 
-(define (setdiff l1 l2)
-  (cond ((null? l2) l1)
-	((null? l1) l1)
-	((member (car l1) l2)
-	 (setdiff (cdr l1) l2))
-	(else (cons (car l1)
-		    (setdiff (cdr l1) l2)))))
-
+(define dummy-package
+  (make-a-package (lambda () '()) (lambda () '()) #f "" '() #f))
+(define dummy-interface
+  (make-simple-interface 'dummy-interface '())) 
+	 
+; source-file-names  ?
+(define module-system
+  (make-structure dummy-package dummy-interface 'module-system))
+(define scheme
+  (make-structure dummy-package dummy-interface 'scheme))
+(define built-in-structures
+  (make-structure dummy-package dummy-interface 'built-in-structures))
 
 ; Stuff copied from rts/filename.scm... ugh...
 
@@ -181,19 +231,6 @@
           ((eq? thing (string-ref s i)) i)
           (else (loop (+ i 1))))))
 
-; Types
-(define :value ':value)
-(define :syntax ':syntax)
-(define :structure ':structure)
-(define :procedure ':procedure)
-(define :number ':number)
-(define :type ':type)
-
-(define-syntax proc
-  (lambda (e r c) ''proc-lossage))
-
-(define-syntax interface-of
-  (lambda (e r c) ''interface-of-lossage))
-
+(define interface-of structure-interface)
 
 (define-reflective-tower-maker list)

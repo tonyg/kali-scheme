@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 (define-structures ((vm-utilities vm-utilities-interface))
@@ -14,7 +14,7 @@
     ))
 
 (define-structures ((external external-interface))
-  (open scheme)
+  (open scheme bitwise ps-memory)
   (for-syntax (open scheme signals)) ; for error
   (files external))
 

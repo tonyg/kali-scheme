@@ -10,6 +10,7 @@ CC = @CC@
 DEFS = @DEFS@
 LIBS = @LIBS@
 CFLAGS = @CFLAGS@
+CPPFLAGS =
 INSTALL = @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
@@ -72,7 +73,7 @@ include $(srcdir)/build/filenames.make
 #    requires you to have squirreled away a previous working version
 #    of scheme48.
 
-BIG_HEAP = -h 5000000
+BIG_HEAP = -h 6000000
 LINKER_VM = ./$(VM) $(BIG_HEAP)
 LINKER_RUNNABLE = $(LINKER_VM) -i $(IMAGE)
 LINKER_IMAGE = build/linker.image
@@ -89,7 +90,9 @@ IMAGE = scheme48.image
 INITIAL = build/initial.image
 VM = scheme48vm
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
-OBJS = c/scheme48vm.o c/scheme48heap.o c/extension.o c/external.o
+OBJS =	c/scheme48vm.o c/scheme48heap.o \
+	c/scheme48read-image.o c/scheme48write-image.o \
+	c/extension.o c/external.o bignum.o
 FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
 		c/fake/sys-select.h
 
@@ -102,17 +105,42 @@ CONFIG_FILES = scheme/interfaces.scm scheme/low-packages.scm \
 
 # The following is the first rule and therefore the "make" command's
 # default target.
-enough: $(VM) $(IMAGE) go .notify
+enough: $(VM) $(IMAGE) go
 
 # --------------------
 # External code to include in the VM
 # After changing any of these you should delete `scheme48vm' and remake it.
 
-EXTERNAL_OBJECTS = $(SOCKET_OBJECTS) $(LOOKUP_OBJECTS)
-EXTERNAL_FLAGS = $(SOCKET_FLAGS)
-EXTERNAL_INITIALIZERS = $(SOCKET_INITIALIZERS) $(LOOKUP_INITIALIZERS)
+EXTERNAL_OBJECTS = $(POSIX_OBJECTS) $(SOCKET_OBJECTS) $(LOOKUP_OBJECTS)
+EXTERNAL_LD_FLAGS = $(POSIX_LD_FLAGS) $(SOCKET_LD_FLAGS)
+EXTERNAL_INITIALIZERS = $(POSIX_INITIALIZERS) $(SOCKET_INITIALIZERS)	\
+                        $(LOOKUP_INITIALIZERS)
 
 # Rules for any external code.
+
+# POSIX rules; this could have its own Makefile, but I don't want to bother.
+
+posix_dir = c/posix
+
+$(posix_dir)/user.o     $(posix_dir)/regexp.o	\
+$(posix_dir)/proc-env.o $(posix_dir)/io.o:	\
+	c/scheme48.h $(posix_dir)/posix.h
+
+$(posix_dir)/proc.o:	\
+	c/scheme48.h $(posix_dir)/posix.h $(posix_dir)/s48_signals.h
+
+$(posix_dir)/dir.o:	\
+  c/scheme48.h c/scheme48heap.h c/event.h c/fd-io.h $(posix_dir)/posix.h
+
+POSIX_OBJECTS = $(posix_dir)/user.o     $(posix_dir)/regexp.o	\
+                $(posix_dir)/proc-env.o $(posix_dir)/proc.o	\
+                $(posix_dir)/io.o	$(posix_dir)/dir.o
+POSIX_LD_FLAGS =
+POSIX_INITIALIZERS = 	s48_init_posix_dir	s48_init_posix_user	\
+			s48_init_posix_regexp	s48_init_posix_proc_env	\
+			s48_init_posix_io	s48_init_posix_proc
+
+# End of POSIX rules
 
 # Socket rules
 
@@ -135,13 +163,6 @@ LOOKUP_INITIALIZERS = 	s48_init_external_lookup
 # End of external rules
 # --------------------
 
-# The developers are curious to know.  Don't be concerned if this fails.
-.notify: build/minor-version-number
-	touch .notify
-	-echo Another 0.`cat $(srcdir)/build/minor-version-number` \
-		installation. \
-		| mail scheme-48-notifications@martigny.ai.mit.edu
-
 $(VM): c/main.o $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
 	rm -f /tmp/s48_external_$$$$.c &&					\
 	build/build-external-modules /tmp/s48_external_$$$$.c			\
@@ -157,10 +178,13 @@ c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
 		-DDEFAULT_IMAGE_NAME=\"$(LIB)/$(IMAGE)\" \
 		$(CPPFLAGS) $(DEFS) c/main.c
 
-c/scheme48vm.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h c/event.h \
+c/scheme48vm.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
+			c/scheme48image.h c/event.h \
 			c/io.h c/fd-io.h c/scheme48vm-prelude.h
 c/scheme48heap.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h c/event.h \
 			c/io.h c/fd-io.h
+c/scheme48read-image.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h
+c/scheme48write-image.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h
 c/extension.o: c/sysdep.h $(FAKEHS) c/scheme48.h c/scheme48vm.h
 c/external.o: c/sysdep.h $(FAKEHS) c/scheme48.h
 c/unix/event.o: c/sysdep.h $(FAKEHS) c/scheme48vm.h c/scheme48heap.h \
@@ -180,7 +204,8 @@ c/fake/strerror.o: c/fake/strerror.h
 # even though it really is.
 
 $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
-		scheme/link-packages.scm scheme/more-packages.scm \
+		scheme/link-packages.scm scheme/env-packages.scm \
+		scheme/more-packages.scm \
 		$(usual-files) build/initial.debug build/build-usual-image
 	build/build-usual-image . "`pwd`/scheme" '$(IMAGE)' './$(VM)' \
 		'$(INITIAL)'
@@ -264,7 +289,7 @@ configure: configure.in
 	autoheader && autoconf
 
 clean:
-	-rm -f $(VM) *.o c/unix/*.o c/*.o c/fake/*.o			\
+	-rm -f $(VM) *.o c/unix/*.o c/posix/*.o c/*.o c/fake/*.o	\
 		TAGS $(IMAGE)						\
 		build/*.tmp $(MANPAGE) build/linker.image		\
 		scheme/debug/*.image scheme/debug/*.debug config.cache	\
@@ -307,7 +332,7 @@ tags:
 DISTFILES = README COPYING INSTALL configure				\
 		acconfig.h configure.in Makefile.in install-sh		\
 		doc/*.ps doc/*.txt doc/html/*.html doc/scheme48.man	\
-		doc/src/*.tex doc/src/*.sty				\
+		doc/src/*.tex doc/src/*.sty doc/src/*.scm		\
 		emacs/README build/*-version-number build/*.exec	\
 		build/*.lisp build/build-usual-image build/filenames.make \
 		build/filenames.scm build/initial.debug			\
@@ -316,7 +341,11 @@ DISTFILES = README COPYING INSTALL configure				\
 		c/*.[ch] c/*/*.[ch] c/scheme48.h.in			\
 		emacs/*.el gdbinit					\
 		scheme/*.scm scheme/*/*.scm				\
-		ps-compiler						\
+		ps-compiler/minor-version-number			\
+		ps-compiler/doc/node.txt ps-compiler/doc/todo.txt	\
+		ps-compiler/*.scm ps-compiler/*/*.scm			\
+		ps-compiler/prescheme/primop/*.scm			\
+		ps-compiler/prescheme/test/*.scm			\
 		c/sysdep.h.in
 
 distname = $(RUNNABLE)-0.`cat build/minor-version-number`
@@ -374,7 +403,8 @@ inc:
 
 PACKAGES=scheme/packages.scm scheme/rts-packages.scm scheme/alt-packages.scm \
 	 scheme/comp-packages.scm scheme/initial-packages.scm \
-	 scheme/link-packages.scm scheme/more-packages.scm \
+	 scheme/link-packages.scm scheme/env-packages.scm \
+	 scheme/more-packages.scm \
 	 build/filenames.scm
 
 build/filenames.make: $(PACKAGES)
@@ -532,4 +562,6 @@ i-know-what-i-am-doing:
 		echo ',exec ,load compile-gc.scm';			     \
 		echo ',exit'						     \
 	) | $(RUNNABLE) -h 8000000 &&					     \
-		mv ../scheme/vm/scheme48vm.c ../scheme/vm/scheme48heap.c ../c
+		mv ../scheme/vm/scheme48vm.c ../scheme/vm/scheme48heap.c     \
+		   ../scheme/vm/scheme48write-image.c			     \
+		   ../scheme/vm/scheme48read-image.c ../c

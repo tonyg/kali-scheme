@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; I/O primitives
 
@@ -84,99 +84,108 @@
 	      (goto no-result)))
 	(raise-exception wrong-type-argument 0 channel))))
 
-(define (channel-read-or-write read? proc)
-  (lambda (thing start count wait? channel key)
-    (let ((lose (lambda (reason)
-		  (if read?
-		      (raise-exception*
-		         reason 0
-			 thing
+(define-consing-primitive channel-ready? (channel->)
+  (lambda (ignore) error-string-size)
+  (lambda (channel key)
+    (if (open? channel)
+	(receive (ready? status)
+	    (channel-ready? (extract-channel channel)
+			    (input-channel? channel))
+	  (if (error? status)
+	      (raise-exception os-error 0 channel (get-error-string status key))
+	      (goto return-boolean ready?)))
+	(raise-exception wrong-type-argument 0 channel))))
+
+;----------------
+; Reading from and writing to channels.
+;
+; This is a wrapper around CHANNEL-READ-BLOCK.  We check argument types and
+; interpret the return value.
+
+(define-consing-primitive channel-maybe-read
+  (channel-> any-> fixnum-> fixnum-> boolean->)
+  (lambda (ignore) error-string-size)
+  (lambda (channel buffer start count wait? key)
+    (if (and (input-channel? channel)
+	     (buffer? buffer)
+	     (not (immutable? buffer))
+	     (<= (+ start count)
+		 (buffer-length buffer)))
+	(receive (got eof? pending? status)
+	    (channel-read-block (extract-channel channel)
+				(address+ (address-after-header buffer)
+					  start)
+				count
+				wait?)
+	  (if (error? status)
+	      (raise-exception os-error 0
+			       channel
+			       buffer
+			       (enter-fixnum start)
+			       (enter-fixnum count)
+			       (enter-boolean wait?)
+			       (get-error-string status key))
+	      (goto return
+		    (cond (eof? eof-object)
+			  (pending? false)
+			  (else
+			   (enter-fixnum got))))))
+	(raise-exception wrong-type-argument 0
+			 channel
+			 buffer
 			 (enter-fixnum start)
 			 (enter-fixnum count)
-			 (enter-boolean wait?)
-			 channel)
-		      (raise-exception*
-		         reason 0
-			 thing
+			 (enter-boolean wait?)))))
+
+; This is a wrapper around CHANNEL-WRITE-BLOCK.  We check argument types and
+; interpret the return value.
+
+(define-consing-primitive channel-maybe-write
+  (channel-> any-> fixnum-> fixnum->)
+  (lambda (ignore) error-string-size)
+  (lambda (channel buffer start count key)
+    (if (and (output-channel? channel)
+	     (buffer? buffer)
+	     (<= (+ start count)
+		 (buffer-length buffer)))
+	(receive (got pending? status)
+	    (channel-write-block (extract-channel channel)
+				 (address+ (address-after-header buffer)
+					   start)
+				 count)
+	  (if (error? status)
+	      (raise-exception os-error 0
+			       channel
+			       buffer
+			       (enter-fixnum start)
+			       (enter-fixnum count)
+			       (get-error-string status key))
+	      (goto return
+		    (if pending?
+			false
+			(enter-fixnum got)))))
+	(raise-exception wrong-type-argument 0
+			 channel
+			 buffer
 			 (enter-fixnum start)
-			 (enter-fixnum count)
-			 channel))))
-	  (os-lose (lambda (status)
-		     (if read?
-			 (raise-exception os-error 0
-					  thing
-					  (enter-fixnum start)
-					  (enter-fixnum count)
-					  (enter-boolean wait?)
-					  channel
-					  (get-error-string status key))
-			 (raise-exception os-error 0
-					  thing
-					  (enter-fixnum start)
-					  (enter-fixnum count)
-					  channel
-					  (get-error-string status key))))))
-      (if (and (if read?
-		   (and (input-channel? channel)
-			(not (immutable? thing)))
-		   (output-channel? channel))
-	       (or (vm-string? thing)
-		   (code-vector? thing)))
-	  (let ((length (if (vm-string? thing)
-			    (vm-string-length thing)
-			    (code-vector-length thing)))
-		(addr (address+ (address-after-header thing) start)))
-	    (if (< length (+ start count))
-		(lose (enum exception index-out-of-range))
-		(proc channel addr count wait? lose os-lose)))
-	  (lose (enum exception wrong-type-argument))))))
+			 (enter-fixnum count)))))
 
-; FETCH-STRING here avoids a type warning in the C code, but is not really
-; the right thing.
+;----------------
+; Utilities for the above two opcodes.
 
-(define (do-channel-read channel start count wait? lose os-lose)
-  (receive (got eof? pending? status)
-      (channel-read-block (extract-channel channel) start count wait?)
-    (cond ((error? status)
-	   (os-lose status))
-	  (eof?
-	   (goto return eof-object))
-	  (pending?
-	   (set-channel-os-status! channel true)  ; note that we're waiting
-	   (disable-interrupts!)  ; keep the result pending for a moment
-	   (lose (enum exception pending-channel-i/o)))
-	  (else
-	   (goto return-fixnum got)))))
+(define (buffer? thing)
+  (or (vm-string? thing)
+      (code-vector? thing)))
 
-; WAIT? is ignored when writing.
-
-(define (do-channel-write channel start count wait? lose os-lose)
-  (receive (got pending? status)
-      (channel-write-block (extract-channel channel) start count)
-    (cond ((error? status)
-	   (os-lose status))
-	  (pending?
-	   (set-channel-os-status! channel true)  ; note that we're waiting
-	   (disable-interrupts!)  ; keep the result pending for a moment
-	   (lose (enum exception pending-channel-i/o)))
-	  (else
-	   (goto return-fixnum got)))))
+(define (buffer-length buffer)
+  (if (vm-string? buffer)
+      (vm-string-length buffer)
+      (code-vector-length buffer)))
 
 (define (extract-channel channel)
   (extract-fixnum (channel-os-index channel)))
 
-(let ((do-it (channel-read-or-write #t do-channel-read)))
-  (define-consing-primitive channel-maybe-read
-    (any-> fixnum-> fixnum-> boolean-> channel->)
-    (lambda (ignore) error-string-size)
-    do-it))
-  
-(let ((do-it (channel-read-or-write #f do-channel-write)))	   
-  (define-consing-primitive channel-maybe-write
-    (any-> fixnum-> fixnum-> channel->)
-    (lambda (ignore) error-string-size)
-    (lambda (buffer start count channel key)
-      (do-it buffer start count #f channel key))))
+;----------------
 
 (define-primitive channel-abort (channel->)
   (lambda (channel)
@@ -224,6 +233,7 @@
 		(l (extract-fixnum (port-limit port)))
 		(b (port-buffer port)))
 	    (cond ((or (vm-eq? (port-locked? port) true)
+		       (false? b)
 		       (= i l))
 		   (raise-exception buffer-full/empty 1 port))
 		  (else
@@ -257,6 +267,7 @@
 	  (let ((i (extract-fixnum (port-index port)))
 		(b (port-buffer port)))
 	    (cond ((or (vm-eq? (port-locked? port) true)
+		       (false? b)
 		       (= i (code-vector-length b)))
 		   (raise-exception buffer-full/empty 1 char port))
 		  (else
@@ -346,33 +357,6 @@
 (define (record-type-name record)
   (vm-symbol->string (record-ref (record-ref record 0) 2)))
 
-(define-primitive copy-bytes! (any-> fixnum-> any-> fixnum-> fixnum->)
-  (lambda (from from-index to to-index count)
-    (cond ((and (or (vm-string? from)
-		    (code-vector? from))
-		(or (vm-string? from)
-		    (code-vector? from))
-		(<= 0 from-index)
-		(<= 0 to-index)
-		(<= 0 count)
-		(<= (+ from-index count)
-		    (if (vm-string? from)
-			(vm-string-length from)
-			(code-vector-length from)))
-		(<= (+ to-index count)
-		    (if (vm-string? to)
-			(vm-string-length to)
-			(code-vector-length to))))
-	   (copy-memory! (address+ (address-after-header from) from-index)
-			 (address+ (address-after-header to) to-index)
-			 count)
-	   (goto no-result))
-	  (else
-	   (raise-exception wrong-type-argument 0
-			    from (enter-fixnum from-index)
-			    to (enter-fixnum to-index)
-			    (enter-fixnum count))))))
-
 ;----------------------------------------------------------------
 ; RESUME-PROC is called when the image is resumed.
 ; This does a garbage collection rooting from RESUME-PROC, writes the heap
@@ -381,9 +365,9 @@
 
 ; Bug: finalizers for things in the image are ignored.
 
-(define-consing-primitive write-image (string-> any-> string->)
+(define-consing-primitive write-image-low (string-> any-> string-> vector->)
   (lambda (ignore) error-string-size)
-  (lambda (filename resume-proc comment-string key)
+  (lambda (filename resume-proc comment-string undumpables key)
     (let* ((lose (lambda (reason status)
 		   (raise-exception* reason 0
 				     filename resume-proc comment-string
@@ -392,33 +376,22 @@
 			(if (error? (close-output-port port))
 			    (error-message "Unable to close image file"))
 			(lose reason status))))
-      (if (not (s48-image-writing-okay?))
-	  (raise-exception unimplemented-instruction 0
-			   filename resume-proc comment-string)
-	  (receive (port status)
-	      (open-output-file (extract-string filename))
-	    (if (error? status)
-		(lose (enum exception cannot-open-channel) status)
-		(let ((status (write-string (extract-string comment-string) port)))
-		  (if (error? status)
-		      (port-lose (enum exception os-error) status port)
-		      (let ((status (s48-write-image resume-proc port)))
-			(if (error? status)
-			    (port-lose (enum exception os-error) status port)
-			    (let ((status (close-output-port port)))
-			      (if (error? status)
-				  (lose (enum exception os-error) status)
-				  (receive (undumpables undumpable-count)
-				      (s48-undumpable-records)
-				    (if (= undumpable-count 0)
-					(goto no-result)
-		     ; ---------------->
-		     (raise-exception unresumable-records-in-image 0
-				      filename
-				      resume-proc
-				      comment-string
-				      undumpables
-				      (enter-fixnum undumpable-count))))))))))))))))
+      (receive (port status)
+	  (open-output-file (extract-string filename))
+	(if (error? status)
+	    (lose (enum exception cannot-open-channel) status)
+	    (let ((status (write-string (extract-string comment-string) port)))
+	      (if (error? status)
+		  (port-lose (enum exception os-error) status port)
+		  (let ((status (s48-write-image resume-proc
+						 undumpables
+						 port)))
+		    (if (error? status)
+			(port-lose (enum exception os-error) status port)
+			(let ((status (close-output-port port)))
+			  (if (error? status)
+			      (lose (enum exception os-error) status)
+			      (goto no-result))))))))))))
 
 ; READ-IMAGE needs to protect some values against GCs (this can't be with
 ; READ-IMAGE as that is compiled separately.)

@@ -1,0 +1,433 @@
+
+\chapter{User's guide}
+
+This chapter details Scheme~48's user interface: its command-line arguments,
+ command processor, debugger, and so forth.
+
+\section{Command line arguments}
+
+A few command line arguments are processed by Scheme~48 as
+ it starts up.
+
+\code{scheme48}
+[\code{-i} \cvar{image}]
+[\code{-h} \cvar{heapsize}]
+% [\code{-s} \cvar{stacksize}]
+[\code{-a} \cvar{argument \ldots}]
+
+\begin{description}
+\item[{\tt -i} \cvar{image}]
+    specifies a heap image file to resume.  This defaults to a heap
+    image that runs a Scheme command processor.  Heap images are
+    created by the \code{,dump} and \code{,build commands}, for which see below.
+
+\item[{\tt -h} \cvar{heapsize}]
+    specifies how much space should be reserved for allocation.
+    \cvar{Heapsize} is in words (where one word = 4 bytes), and covers both
+    semispaces, only one of which is in use at any given time (except
+    during garbage collection).  Cons cells are currently 3 words, so
+    if you want to make sure you can allocate a million cons cells,
+    you should specify \code{-h 6000000} (actually somewhat more than this,
+    to account for the initial heap image and breathing room).
+    The default heap size is 3000000 words.  The system will use a
+    larger heap if the specified (or default) size is less than
+    the size of the image being resumed.
+
+%\item[{\tt -s} \cvar{stacksize}]
+%    specifies how much space should be reserved for the continuation
+%    and environment stack.  If this space is exhausted, continuations
+%    and environments are copied to the heap.  \cvar{Stacksize} is in words
+%    and defaults to 2500.
+
+\item[{\tt -a} \cvar{argument \ldots}]
+    is only useful with images built using \code{,build}.
+    The arguments are passed as a list of strings to the procedure specified
+    in the \code{,build} command as for example:
+\begin{example}
+> (define (f a) (for-each display a) (newline) 0)
+> ,build f foo.image
+> ,exit
+\% scheme48vm -i foo.image -a mumble "foo x"
+mumblefoo x
+\%
+\end{example}
+\end{description}
+
+The usual definition of the \code{s48} or \code{scheme48} command is actually a
+ shell script that starts up the Scheme~48 virtual machine with a
+ \code{-i \cvar{imagefile}}
+specifying the development environment heap image (and an obsolete
+ \code{-o \cvar{vm-executable}} specifying the location of the virtual-machine
+ executable).
+The file \code{go} in the Scheme~48 installation source directory is an example
+ of such a shell script.
+
+\section{Command processor}
+
+When you invoke the default heap image, a command processor starts
+ running.
+The command processor acts as both a read-eval-print loop, reading
+ expressions, evaluating them, and printing the results, and as
+ an interactive debugger and data inspector.
+See Chapter~\ref{chapter:command-processor} for
+\link*{a description of the command processor}
+[a description of the command processor]
+{chapter:command-processor}.
+
+\section{Editing}
+
+We recommend running Scheme~48 under GNU Emacs or XEmacs using the
+ \code{cmuscheme48} command package.
+This is in the Scheme~48 distribution's \code{emacs/} subdirectory and
+ is included in XEmacs's \code{scheme} package.
+It is a variant of the \code{cmuscheme} library, which
+ comes to us courtesy of Olin Shivers, formerly of CMU.
+You might want to put the following in your Emacs init file (\code{.emacs}):
+\begin{example}
+(setq scheme-program-name "scheme48")
+(autoload 'run-scheme
+          "cmuscheme48"
+          "Run an inferior Scheme process."
+          t)
+\end{example}
+The Emacs function \code{run-scheme} can then be used to start a process
+ running the program \code{scheme48} in a new buffer.
+To make the \code{autoload} and \code{(require \ldots)} forms work, you will
+also need
+to put the directory containing cmuscheme and related files in your
+emacs load-path:
+\begin{example}
+(setq load-path
+  (append load-path '("\cvar{scheme-48-directory}/emacs")))
+\end{example}
+For further documentation see \code{emacs/cmuscheme48.el} and
+\code{emacs/comint.el}.
+
+\section{Performance}
+\label{section:performance}
+
+If you want to generally have your code run faster than it normally
+would, enter \code{inline-values} mode before loading anything.  Otherwise
+calls to primitives (like \code{+} and \code{cons}) and in-line procedures
+(like \code{not} and \code{cadr}) won't be open-coded, and programs will run
+more slowly.
+
+The system doesn't start in \code{inline-values} mode by default because the
+Scheme report permits redefinitions of built-in procedures.  With
+this mode set, such redefinitions don't work according to the report,
+because previously compiled calls may have in-lined the old
+definition, leaving no opportunity to call the new definition.
+
+\code{Inline-values} mode is controlled by the \code{inline-values} switch.
+\code{,set inline-values} and \code{,unset inline-values} turn it on and off.
+
+\section{Disassembler}
+
+The \code{,dis} command prints out the disassembled byte codes of a procedure.
+\begin{example}
+> ,dis cons
+cons
+  0 (protocol 2)
+  2 (pop)
+  3 (make-stored-object 2 pair)
+  6 (return)
+> 
+\end{example}
+The current byte codes are listed in the file \code{scheme/vm/arch.scm}.
+A somewhat out-of-date description of them can be found in
+\cite{Kelsey-Rees:Scheme48}.
+
+The command argument is optional; if unsupplied it defaults to the
+current focus object (\code{\#\#}).
+
+The disassembler can also be invoked on continuations and templates.
+
+\section{Module system}
+\label{module-guide}
+
+This section gives a brief description of modules and related entities.
+For detailed information, including a description of the module
+ configuration language, see 
+\link*{the module chapter}[chapter~\Ref]{chapter:modules}.
+
+A {\em module} is an isolated namespace, with visibility of bindings
+ controlled by module descriptions written in a special
+ configuration language.
+A module may be instantiated as a {\em package}, which is an environment
+ in which code can be evaluated.
+Most modules are instantiated only once and so have a unique package.
+A {\em structure} is a subset of the bindings in a package.
+Only by being included in a structure can a binding be
+ made visible in other packages.
+A structure has two parts, the package whose bindings are being exported
+ and the set of names which are to be exported.
+This set of names is called an {\em interface}.
+A module then has three parts:
+\begin{itemize}
+\item a set of structures whose bindings are to be visible within the module
+\item the source code to be evaluated within the module
+\item a set of exported interfaces
+\end{itemize}
+Instantiating a module produces a package and a set of structures, one for
+ each of the exported interfaces.
+
+The following example uses \code{define-structure} to create a module that
+ implements simple cells as pairs, instantiates this module, and binds the
+ resulting structure to \code{cells}.
+The syntax \code{(export \cvar{name \ldots})} creates an interface
+ containing \cvar{name \ldots}.
+The \code{open} clause lists structures whose bindings are visible
+ within the module.
+The \code{begin} clause contains source code.
+\begin{example}
+(define-structure cells (export make-cell cell-ref cell-set!)
+  (open scheme)
+  (begin (define (make-cell x)
+           (cons 'cell x))
+         (define cell-ref cdr)
+         (define cell-set! set-cdr!)))
+\end{example}
+
+Cells could also have been implemented using the
+\link*{record facility}[record facility described in section~\Ref]{records}
+ and available in structure \code{define-record-type}.
+\begin{example}
+(define-structure cells (export make-cell cell-ref cell-set!)
+  (open scheme define-record-types)
+  (begin (define-record-type cell :cell
+           (make-cell value)
+           cell?
+           (value cell-ref cell-set!))))
+\end{example}
+
+With either definition the resulting structure can be used in other
+ modules by including \code{cells} in an \code{open} clause.
+
+The command interpreter is always operating within a particular package.
+Initially this is a package in which only the standard Scheme bindings
+ are visible.
+The bindings of other structures can be made visible by using the 
+\link*{\code{,open} command}
+[\code{,open} command described in section~\Ref{} below]{module-command-guide}.
+
+Note that this initial package does not include the configuration language.
+Module code needs to be evaluated in the configuration package, which can
+ be done by using the {\code ,config} command:
+\begin{example}
+> ,config (define-structure cells \ldots)
+> ,open cells
+> (make-cell 4)
+'(cell . 4)
+> (define c (make-cell 4))
+> (cell-ref c)
+4
+\end{example}
+
+\section{Library}
+
+A number of useful utilities are either built in to Scheme~48 or can
+be loaded from an external library.  These utilities are not visible
+in the user environment by default, but can be made available with the
+\code{open} command.  For example, to use the \code{tables} structure, do
+\begin{example}
+> ,open tables
+> 
+\end{example}
+
+If the utility is not already loaded, then the \code{,open} command will
+ load it.
+Or, you can load something explicitly (without opening it) using the
+\code{load-package} command:
+\begin{example}
+> ,load-package queues
+> ,open queues
+\end{example}
+
+When loading a utility, the message "Note: optional optimizer not
+invoked" is innocuous.  Feel free to ignore it.
+
+See also the package system documentation, in
+ \link*{the module chapter}[chapter~\Ref]{chapter:modules}.
+
+Many of these utilities are documented in later chapters.
+Unfortunately, some are not.  They are
+listed, however, in files \code{scheme/rts-packages.scm},
+\code{scheme/comp-packages.scm}, \code{env-packages.scm}, and
+\code{more-packages.scm} in the distribution directory, and the bindings they
+export are listed in \code{scheme/interfaces.scm} and
+\code{more-interfaces.scm}.
+
+%architecture
+%    Information about the virtual machine.  E.g.
+%      (enum op eq?) => the integer opcode of the EQ? instruction
+%
+%big-scheme
+%    Many generally useful features.  See doc/big-scheme.txt.
+%
+%bigbit
+%    Extensions to the bitwise logical operators (exported by
+%    the BITWISE structure) so that they operate on bignums.
+%    To use these you should do
+%
+%        ,load-package bigbit
+%        ,open bitwise
+%
+%conditions
+%    Part of the condition system: DEFINE-CONDITION-PREDICATE and
+%    routines for examining condition objects.  (See also handle,
+%    signals.)
+%
+%defpackage
+%    The module system: DEFINE-STRUCTURE and DEFINE-INTERFACE.
+%
+%destructuring
+%    DESTRUCTURE macro.  See doc/big-scheme.txt.
+%
+%display-conditions
+%    Displaying condition objects.
+%        (DISPLAY-CONDITION condition port) \goesto{} unspecific
+%          Display condition in an easily readable form.  E.g.
+%\begin{example}
+%          > ,open display-conditions handle conditions
+%          > (display-condition
+%             (call-with-current-continuation
+%               (lambda (k)
+%                 (with-handler (lambda (c punt)
+%                                 (if (error? c)
+%                                     (k c)
+%                                     (punt)))
+%                   (lambda () (+ 1 'a)))))
+%             (current-output-port))
+%
+%          Error: exception
+%                 (+ 1 'a)
+%          > 
+%\end{example}
+%
+%extended-ports
+%    Ports for reading from and writing to strings, and related things.
+%    See doc/big-scheme.txt.
+%
+%filenames
+%    Rudimentary file name parsing and synthesis.  E.g.
+%    file-name-directory and file-name-nondirectory are as in Gnu emacs.
+%
+%floatnums
+%    Floating point numbers.  These are in a very crude state; use at
+%    your own risk.  They are slow and do not read or print correctly.
+%
+%fluids
+%    Dynamically bound "variables."
+%      (MAKE-FLUID top-level-value) \goesto{} a "fluid" object
+%      (FLUID fluid) \goesto{} current value of fluid object
+%      (SET-FLUID! fluid value) \goesto{} unspecific; changes current value of
+%        fluid object
+%      (LET-FLUID fluid value thunk) \goesto{} whatever thunk returns
+%        Within the dynamic extent of execution of (thunk), the fluid
+%        object has value as its binding (unless changed by SET-FLUID!
+%        or overridden by another LET-FLUID).
+%    E.g.
+%      (define f (make-fluid 7))
+%      (define (baz) (+ (fluid f) 1))
+%      (baz)   ;\goesto{} 8
+%      (let-fluid f 4 (lambda () (+ (baz) 1)))  ;\goesto{} 6
+%
+%formats
+%    A simple FORMAT procedure, similar to Common Lisp's or T's.
+%    See doc/big-scheme.txt for documentation.
+%
+%handle
+%    Part of the condition system.
+%      (WITH-HANDLER handler thunk) \goesto{} whatever thunk returns.
+%        handler is a procedure of two arguments.  The first argument
+%        is a condition object, and the second is a "punt" procedure.
+%        The handler should examine the condition object (using ERROR?,
+%        etc. from the CONDITIONS structure).  If it decides not to do
+%        anything special, it should tail-call the "punt" procedure.
+%        Otherwise it should take appropriate action and perform a
+%        non-local exit.  It should not just return unless it knows
+%        damn well what it's doing; returns in certain situations can
+%        cause VM crashes.
+%
+%interrupts
+%    Interrupt system
+%
+%ports
+%    A few extra port-related operations, notably FORCE-OUTPUT.
+%
+%pp
+%    A pretty-printer.  (p \cvar{exp}) will pretty-print the result of \cvar{exp},
+%    which must be an S-expression.  (Source code for procedures is not
+%    retained or reconstructed.)  You can also do (p \cvar{exp} \cvar{port}) to
+%    print to a specific port.
+%
+%    The procedure pretty-print takes three arguments: the object to be
+%    printed, a port to write to, and the current horizontal cursor
+%    position.  If you've just done a newline, then pass in zero for
+%    the position argument.
+%
+%    The algorithm is very peculiar, and sometimes buggy.
+%
+%queues
+%    FIFO queues.
+%
+%random
+%    Not-very-random random number generator.  The \cvar{seed} should be between
+%    0 and 2$^{28}$ exclusive.
+%
+%        > (define random (make-random \cvar{seed}))
+%        > (random) \goesto{} pseudo-random number between 0 and 2$^{28}$
+%
+%receiving
+%    Convenient interface to the call-with-values procedure, like
+%    Common Lisp's multiple-value-bind macro.  See doc/big-scheme.txt.
+%
+%records
+%    MAKE-RECORD-TYPE and friends.  See the Scheme of Things column in
+%    Lisp Pointers, volume 4, number 1, for documentation.
+%
+%recnums
+%    Complex numbers.  This should be loaded (e.g. with ,load-package)
+%    but needn't be opened.
+%
+%search-trees
+%    Balanced binary search trees.  See comments at top of
+%    big/search-tree.scm. 
+%
+%signals
+%    ERROR, WARN, and related procedures.
+%
+%sort
+%    Online merge sort (see comment at top of file big/sort.scm).
+%
+%        (sort-list \cvar{list} \cvar{pred})
+%        (sort-list! \cvar{list} \cvar{pred})
+%
+%sicp
+%    Compatibility package for the Scheme dialect used in the book
+%    "Structure and Interpretation of Computer Programs."
+%
+%sockets
+%    Interface to Unix BSD sockets.  See comments at top of file
+%    misc/socket.scm.
+%
+%threads
+%    Multitasking.  See doc/threads.txt.
+%
+%util
+%    SUBLIST, ANY, REDUCE, FILTER, and some other useful things.
+%
+%weak
+%    Weak pointers and populations.
+%        (MAKE-WEAK-POINTER thing) => weak-pointer
+%        (WEAK-POINTER-REF weak-pointer) => thing or \code{\#f}
+%          \code{\#f} if the thing has been gc'ed.
+%
+%writing
+%        (RECURRING-WRITE thing port recur) => unspecific
+%          This is the same as WRITE except that recursive calls invoke
+%          the recur argument instead of WRITE.  For an example, see
+%          the definition of LIMITED-WRITE in env/dispcond.scm, which
+%          implements processing similar to common Lisp's *print-level*
+%          and *print-length*.
+

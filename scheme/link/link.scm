@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The static linker.
 
@@ -98,7 +98,8 @@
 	 (template (compile-forms (map (lambda (form)
 					 (expand-scanned-form form env))
 				       (scan-forms (list form) env))
-				  #f)))	;filename
+				  #f	;filename
+				  (package-uid package))))
     (link! template package #t)
     template))
 

@@ -1,4 +1,4 @@
-; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 ; This file has the Pre-Scheme compiler's code for dealing with the
 ; Scheme 48's module system.
@@ -44,10 +44,13 @@
 	      (for-each (lambda (struct-name)
 			  (let ((my-names '()))
 			    (for-each-declaration
-			     (lambda (name type)
-			       (set! my-names (cons name my-names)))
-			     (structure-interface (environment-ref config struct-name)))
-			    (set! names (cons (cons struct-name my-names) names))))
+			      (lambda (name package-name type)
+				(set! my-names (cons name my-names)))
+			      (structure-interface
+			        (environment-ref config struct-name)))
+			    (set! names
+				  (cons (cons struct-name my-names)
+					names))))
 			struct-names)
 	      names)
 	    (make-lookup config))))
@@ -147,7 +150,7 @@
 			       (get-operator id syntax-type)))
 	    '(if begin lambda letrec quote set!
 		 define define-syntax let-syntax
-		 goto real-external)))  ; special for Prescheme
+		 goto type-case real-external)))  ; special for Prescheme
 
 ; Add the usual macros.
 
@@ -201,6 +204,9 @@
 
 (eval '(define-syntax define-record-type expand-define-record-type)
       base-package)
+
+;(eval '(define-syntax define-union-type expand-define-union-type)
+;      base-package)
 
 ;----------------------------------------------------------------
 ; Make the Pre-Scheme structure and related structures

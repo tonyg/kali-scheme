@@ -13,8 +13,11 @@ $vm -i $initial -a batch <<EOF
 ,load $srcdir/scheme/env/init-defpackage.scm
 ((*structure-ref filenames 'set-translation!)
  "=scheme48/" "$srcdir/scheme/")
-,load =scheme48/more-interfaces.scm =scheme48/link-packages.scm
+,load =scheme48/more-interfaces.scm
+,load =scheme48/link-packages.scm
+,load =scheme48/env-packages.scm
 ,load =scheme48/more-packages.scm
+,load =scheme48/posix/packages.scm
 (ensure-loaded command-processor)
 (ensure-loaded usual-commands)
 ,go ((*structure-ref command 'command-processor)

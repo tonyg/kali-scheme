@@ -17,16 +17,6 @@ fixes.
 
 -----
 
-When running "make", don't worry if the ".notify" target fails.  Its
-only purpose is to send an email message to
-scheme-48-notifications@martigny.ai.mit.edu, so that we can get a
-rough idea of how much Scheme 48 is being used and by whom.  We
-promise not to use your name or email address for any commercial
-purpose.  If you don't want us to know, just do "make -t .notify"
-first (after running "configure").
-     
------
-
 The Scheme 48 root directory is organized as follows (not all files are
 listed here):
 
@@ -37,12 +27,11 @@ listed here):
     Makefile.in		input to configure
     doc/		some documentation
       scheme48.man	a Unix-style manual page
-      user-guide.txt	general guide to using Scheme 48
+      manual.ps		manual in Postscript
+      html/		manual in html (the root is html/index.html)
+      src/		manual sources
       todo.txt		list of improvements we hope to make someday
       news.txt		list of improvements we have already made
-      module.ps		description of Scheme 48's module system
-      big-scheme.txt	extensions to Scheme
-      threads.txt	multiprocessing
       io.txt		how the I/O system works
     scheme/		scheme source files
       packages.scm	meta-module definitions
@@ -60,7 +49,7 @@ listed here):
       prescheme/	code for running the VM using Scheme 48
       debug/		debugging utilities, tests, etc.
       misc/		very miscellaneous things (e.g. AMB operator)
-      posix/		unfinished interface to POSIX system calls
+      posix/		interface to POSIX system calls
     ps-compiler/	Pre-Scheme -> C compiler
     c/			c source files
       sysdep.h.in	input to configure

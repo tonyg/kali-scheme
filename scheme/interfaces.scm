@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Some interfaces.  Order of presentation is a bit random.
@@ -109,8 +109,15 @@
 (define-interface bitwise-interface
   (export arithmetic-shift
 	  bitwise-not
+	  bit-count
 	  ((bitwise-and bitwise-ior bitwise-xor)
 	   (proc (&rest :exact-integer) :exact-integer))))
+
+(define-interface cells-interface
+  (export cell?
+	  make-cell
+	  cell-ref
+	  cell-set!))
 
 (define-interface locations-interface
   (export location?
@@ -134,7 +141,9 @@
 	  byte-vector-length
 	  byte-vector-ref
 	  byte-vector-set!
-	  make-byte-vector))
+	  make-byte-vector
+
+	  byte-vector))
 
 ; Same again, but with old names for compatibility.
 
@@ -146,17 +155,6 @@
 	  make-code-vector))
 
 (define-interface channels-interface
-  (export input-channel?
-	  open-input-channel
-	  channel-read	  
-	  close-input-channel
-	  
-	  output-channel?
-	  open-output-channel
-	  channel-write
-	  close-output-channel))
-
-(define-interface low-channels-interface
   (export channel?
 	  channel-id
 	  channel-status
@@ -164,35 +162,33 @@
 	
 	  open-channel
 	  close-channel
-	  channel-read
-	  channel-write
+	  channel-ready?
+	  channel-maybe-read
+	  channel-maybe-write
 	  channel-abort
 
 	  open-channels-list))
-
-(define-interface channels-interface
-  (export input-channel?
-	  open-input-channel
-	  channel-read	  
-	  close-input-channel
-	  
-	  output-channel?
-	  open-output-channel
-	  channel-write
-	  close-output-channel))
 
 (define-interface ports-interface
   (export port?
 	  make-port
 	  port-handler
-	  port-lock set-port-lock!
-	  port-locked? set-port-locked?!
-	  port-status set-port-status!
-	  port-data set-port-data!
-	  port-buffer set-port-buffer!
-	  port-index set-port-index!
-	  port-limit set-port-limit!
-	  port-pending-eof? set-port-pending-eof?!))
+	  port-buffer       
+
+	  port-lock         set-port-lock!
+	  port-locked?      set-port-locked?!
+	  port-status       set-port-status!
+	  port-data         set-port-data!
+	  port-index        set-port-index!
+	  port-limit        set-port-limit!
+	  port-pending-eof? set-port-pending-eof?!
+
+	  provisional-port-status provisional-set-port-status!
+	  provisional-port-index  provisional-set-port-index!
+	  provisional-port-limit  provisional-set-port-limit!
+	  provisional-port-lock   provisional-set-port-lock!
+	  provisional-port-pending-eof?
+	  provisional-set-port-pending-eof?!))
 
 (define-interface locks-interface
   (export lock?
@@ -201,6 +197,13 @@
 	  maybe-obtain-lock
 	  release-lock
 	  lock-owner-uid))    ;really should be internal
+
+(define-interface condvars-interface
+  (export make-condvar
+	  maybe-commit-and-wait-for-condvar
+	  maybe-commit-and-set-condvar!
+	  condvar-value set-condvar-value!
+	  condvar-has-value? set-condvar-has-value?!))
 
 (define-interface shared-bindings-interface
   (export shared-binding?
@@ -214,6 +217,60 @@
 	  lookup-exported-binding
 	  define-exported-binding
 	  undefine-exported-binding))
+
+(define-interface low-proposals-interface
+  (export make-proposal
+	  current-proposal
+	  set-current-proposal!
+	  maybe-commit
+
+	  provisional-car
+	  provisional-cdr
+	  provisional-set-car!
+	  provisional-set-cdr!
+	  provisional-cell-ref
+	  provisional-cell-set!
+	  provisional-vector-ref
+	  provisional-vector-set!
+ 	  provisional-byte-vector-ref
+ 	  provisional-byte-vector-set!
+
+	  provisional-checked-record-ref
+	  provisional-checked-record-set!
+  
+	  attempt-copy-bytes!))
+
+(define-interface proposals-interface
+  (export ((ensure-atomicity
+	    ensure-atomicity!
+	    atomically
+	    atomically!
+	    with-new-proposal) :syntax)
+
+	  maybe-commit
+	  remove-current-proposal!
+	  invalidate-current-proposal!
+
+	  call-ensuring-atomicity
+	  call-ensuring-atomicity!
+	  call-atomically
+	  call-atomically!
+
+	  provisional-car
+	  provisional-cdr
+	  provisional-set-car!
+	  provisional-set-cdr!
+	  provisional-cell-ref
+	  provisional-cell-set!
+	  provisional-vector-ref
+	  provisional-vector-set!
+ 	  provisional-byte-vector-ref
+ 	  provisional-byte-vector-set!
+
+	  (define-synchronized-record-type :syntax)
+	  define-record-discloser	;users are likely to want it
+
+	  attempt-copy-bytes!))
 
 ; Miscellaneous useful procedures used in various random places.
 ; These are used in the byte-code compiler and the linker and so have
@@ -306,7 +363,9 @@
 	  reduce
 	  sublist
 	  insert
-	  unspecific))
+	  unspecific
+
+	  (mvlet :syntax)))
 
 ; Level 2 consists of harder things built on level 1.
 
@@ -400,7 +459,7 @@
 	  current-thread
 	  set-current-thread!
 	  get-dynamic-env		; wind.scm, env/command-level.scm
-	  set-dynamic-env!		; wind.scm
+	  set-dynamic-env!		; wind.scm, env/command-level.scm
 	  get-dynamic-point		; wind.scm
 	  set-dynamic-point!))		; wind.scm
 
@@ -449,23 +508,27 @@
 	  output-port-option		;write.scm
 	  write-string			;write.scm
 	  initialize-i/o                ;init.scm
-	  initialize-output-port-list!  ;init.scm
 	  with-current-ports
 	  initialize-i/o-handlers!      ;init.scm
 	  disclose-port
 	  current-error-port
 	  current-noise-port
 	  force-output			;xport.scm
+	  output-port-ready?
 	  input-port?
 	  output-port?
 	  silently
 	  make-null-output-port))
 
 (define-interface i/o-internal-interface
-  (export make-input-port
-	  make-output-port make-unbuffered-output-port
+  (export make-buffered-input-port  make-unbuffered-input-port
+	  make-buffered-output-port make-unbuffered-output-port
+
 	  make-port-handler
-	  port-handler-buffer-proc     ; extended-ports
+	  make-buffered-input-port-handler
+	  make-buffered-output-port-handler
+	 
+	  ;port-handler-buffer-proc     ; extended-ports
 	  default-buffer-size
 
 	  open-input-port?
@@ -477,42 +540,44 @@
 
 	  eof-object                   ; users will probably want this
 
-	  obtain-port-lock
-	  release-port-lock
+	  note-buffer-reuse!
+	  check-buffer-timestamp!
 
+	  force-output-if-open
 	  periodically-force-output!
 	  periodically-flushed-ports
-	  force-output-if-open
-	  really-force-output          ; assumes port alread locked
-
-	  output-port-forcers	       ;root-scheduler.scm
+	  output-port-forcers
 
 	  call-with-current-input-port
 	  call-with-current-output-port
 	  call-with-current-noise-port))
 
 (define-interface channel-i/o-interface
+  (export channel-maybe-commit-and-read
+	  channel-maybe-commit-and-write
+	  channel-maybe-commit-and-close
+	  channel-write
+
+	  initialize-channel-i/o!       ;scheduler
+	  waiting-for-i/o?              ;scheduler
+	  abort-unwanted-i/o!		;scheduler
+
+	  ; call this with interrupts disabled
+	  wait-for-channel))		;big/socket.scm
+
+(define-interface channel-ports-interface
   (export call-with-input-file call-with-output-file
 	  with-input-from-file with-output-to-file
 	  open-input-file open-output-file
 
-	  initialize-channel-i/o!       ;scheduler
-	  waiting-for-i/o?              ;scheduler
-
-	  steal-channel-port!		;command
-	  
-	  input-channel->port           ;usual-resumer posix
-	  output-channel->port          ;usual-resumer posix
+	  input-channel->port           ;usual-resumer, posix
+	  output-channel->port          ;usual-resumer, posix
 
 	  input-channel+closer->port    ;big/socket.scm
 	  output-channel+closer->port	;big/socket.scm
 	  
-	  ; call WAIT-FOR-CHANNEL with interrupts disabled
-	  wait-for-channel		;big/socket.scm
-
 	  port->channel			;posix
-	  force-channel-output-ports!	;posix
-	  ))
+	  force-channel-output-ports!))	;posix
 
 (define-interface threads-interface
   (export thread?
@@ -548,7 +613,9 @@
 	  running?
 	  
 	  block
+	  maybe-commit-and-block
 	  make-ready
+	  maybe-commit-and-make-ready
 	  spawn-on-scheduler spawn-on-root
 	  wait
 	  upcall propogate-upcall
@@ -572,7 +639,7 @@
           decrement-counter!))
 
 (define-interface queues-interface
-  (export make-queue enqueue! dequeue! queue-empty?
+  (export make-queue enqueue! dequeue! queue-empty? empty-queue!
 	  queue? queue->list queue-length delete-from-queue!))
 
 (define-interface exceptions-interface
@@ -795,6 +862,7 @@
 	  qualified?
 	  qualified-parent-name
 	  qualified-symbol
+	  qualified-uid
 	  name->qualified
 
           desyntaxify
@@ -902,17 +970,7 @@
 	  note-source-code
 	  segment->template  ;plan
 	  segment-size
-	  sequentially
-
-	  ;; state
-	  debug-flag-names	; keep and flush commands
-	  debug-flag-accessor
-	  debug-flag-modifier
-	  debug-data-table
-	  get-debug-data
-	  with-fresh-compiler-state     ;for linker
-	  keep-source-code?		;for bcomp
-	  ))
+	  sequentially))
 
 (define-interface compiler-interface
   (export compile-forms
@@ -936,15 +994,33 @@
 
 (define-interface debug-data-interface
   (export debug-data-env-maps
+	  debug-data-env-shape
 	  debug-data-name
 	  debug-data-parent
 	  debug-data-pc-in-parent
 	  debug-data-source
 	  debug-data-uid
 	  debug-data?
+	  get-debug-data))
+
+(define-interface debug-data-internal-interface
+  (export make-debug-data
 	  set-debug-data-source!
 	  set-debug-data-env-maps!
-	  make-debug-data))
+	  debug-flag-names		; keep and flush commands
+	  debug-flag-accessor
+	  debug-flag-modifier
+	  debug-data-table
+
+	  with-fresh-compiler-state     ;for linker
+
+	  keep-source-code?		;for bcomp
+	  keep-environment-maps?
+	  keep-file-names?
+	  keep-procedure-names?
+
+	  new-debug-data
+	  debug-data->info))
 
 ;----------------
 ; Module interfaces
@@ -952,10 +1028,12 @@
 ; Interfaces.
 
 (define-interface interfaces-interface
-  (export make-compound-interface
-	  make-simple-interface
+  (export make-simple-interface
+	  make-compound-interface
+	  make-modified-interface
 	  note-reference-to-interface!
 	  interface-ref
+	  interface-member?
 	  interface?
 	  interface-clients
 	  for-each-declaration
@@ -967,6 +1045,7 @@
   (export make-package
 	  make-simple-package		;start.scm
 	  make-structure
+	  make-modified-structure
 	  package-define!
 	  package-lookup
 	  package?			;command.scm
@@ -990,6 +1069,7 @@
 	  flush-location-names
 	  package-name-table		;debuginfo
 	  location-info-table		;debuginfo, disclosers
+	  package-definition
 	  package-unstable?		;env/pacman.scm
 	  package-integrate?		;env/debug.scm
 	  package-add-static!		;opt/analyze.scm
@@ -1085,6 +1165,7 @@
 	    define-reflective-tower-maker
 	    export-reflective-tower-maker
 	    compound-interface
+	    modify subset with-prefix
 	    export
 	    structure structures let	; New
 	    begin			; mostly for macros
@@ -1150,9 +1231,11 @@
 	  maximum-stack-args
 	  two-byte-nargs-protocol
 	  two-byte-nargs+list-protocol
+	  ignore-values-protocol
 	  args+nargs-protocol
-	  big-stack-protocol
 	  nary-dispatch-protocol
+	  call-with-values-protocol
+	  big-stack-protocol
 
 	  default-stack-space
 	  environment-stack-size

@@ -1,0 +1,161 @@
+
+Regular Expressions
+
+A regular expression is either a character set, which matches any character
+in the set, or a composite expression containing one or more subexpressions.
+A regular expression can be matched against a string to determine success
+or failure, and to determine the substrings matched by particular subexpressions.
+
+*Character Sets*
+
+Character sets may be defined using a list of characters and strings,
+using a range or ranges of characters, or by using set operations on
+existing character sets.
+
+ (set <character or string> ...)            ->   <char-set>
+ (range <low-char> <high-char>)             ->   <char-set>
+ (ranges <low-char> <high-char> ...)        ->   <char-set>
+ (ascii-range <low-char> <high-char>)       ->   <char-set>
+ (ascii-ranges <low-char> <high-char> ...)  ->   <char-set>
+
+SET returns a set that contains the character arguments and the
+characters in any string arguments.  RANGE returns a character
+set that contain all characters between <low-char> and <high-char>,
+inclusive.  RANGES returns a set that contains all characters in
+the given ranges.  RANGE and RANGES use the ordering induced by
+CHAR->INTEGER.  ASCII-RANGE and ASCII-RANGES use the ASCII ordering.
+It is an error for <high-char> to have a lower value than <low-char>
+in the appropriate ordering.
+
+ (negate <char-set>)                  ->   <char-set>
+ (intersection <char-set> <char-set>) ->   <char-set>
+ (union        <char-set> <char-set>) ->   <char-set>
+ (subtract     <char-set> <char-set>) ->   <char-set>
+
+These perform the indicated operations on character sets.
+
+The following character sets are predefined:
+
+ lower-case       abcdefghijklmnopqrstuvwxyz
+ upper-case       ABCDEFGHIJKLMNOPQRSTUVWXYZ
+ alphabetic       (union lower-case upper-case)
+ numeric          0123456789
+ alphanumeric     (union alphabetic numeric)
+ punctuation      !"#$%&'()*+,-./:;<=>?@ [\]^_`{|}~
+ graphic          (union alphanumeric punctuation)
+ printing         (union graphic (set <space>))
+ control          (negate printing)
+ blank            <space><tab>
+ whitespace       <space><tab><newline><vertical-tab><form-feed><carriage-return>
+ hexdigit         0123456789abcdefABCDEF
+
+The above are taken from the default locale in POSIX.
+
+*Composite expressions*
+
+ (sequence <reg-exp> ...)             ->   <reg-exp>
+ (one-of <reg-exp> ...)               ->   <reg-exp>
+
+SEQUENCE matches the concatenation of its arguments, ONE-OF matches
+any one of its arguments.
+
+ (text <string>)                      ->   <reg-exp>
+
+TEXT returns a regular expression that matches the characters in a
+string, in order.
+
+ (repeat <reg-exp>)                   ->   <reg-exp>
+ (repeat <count> <reg-exp>)           ->   <reg-exp>
+ (repeat <min> <max> <reg-exp>)       ->   <reg-exp>
+
+REPEAT returns a regular expression that matches zero or more
+occurances of its <reg-exp> argument.  With no count the result
+will match any number of times (<reg-exp>*).  With a single
+count the returned expression will match <reg-exp> exactly that
+number of times.  The final case will match from <min> to <max>
+repetitions, inclusive.  <Max> may be #F, in which case there
+is no maximum number of matches.
+
+*Case sensitivity*
+
+ (ignore-case <reg-exp>)              ->   <reg-exp>
+ (use-case <reg-exp>)                 ->   <reg-exp>
+
+<Reg-exp>s are normally case-sensitive.  The value returned by
+IGNORE-CASE is identical its argument except that case will be
+ignored when matching.  The value returned by USE-CASE is protected
+from future applications of IGNORE-CASE.  The expressions returned
+by IGNORE-CASE and USE-CASE are unaffected by later uses of the
+these procedures.
+
+  (text "ab)                 matches "ab" but not "aB", "Ab", or "AB"
+
+  (ignore-case (test "ab"))  matches "ab", "aB", "Ab", and "AB"
+
+  (ignore-case (sequence (text "a") (use-case (text "b"))))
+                             matches "ab" and "Ab" but not "aB" or "AB"
+
+*Submatches and matching*
+
+A subexpression within a larger expression can be marked as a submatch.
+When an expression is matched against a string, the success or failure
+of each submatch within that expression is reported, as well as the
+location of the substring matched be each successful submatch.
+
+ (submatch <reg-exp>)                 ->   <reg-exp>
+ (no-submatches <reg-exp>)            ->   <reg-exp>
+
+SUBMATCH returns a regular expression that matches its argument and
+causes the result of matching its argument to be reported by the MATCH
+procedure.  NO-SUBMATCHES returns an expression identical to its
+argument, except that all submatches have been elided.
+
+ (any-match? <reg-exp> <string>)     -> boolean
+ (exact-match? <reg-exp> <string>)   -> boolean
+ (match <reg-exp> <string>)          -> list of <match>s and #f's
+ (match-start <match>)               -> <integer>
+ (match-end   <match>)               -> <integer>
+
+ANY-MATCH? returns #T if <string> matches <reg-exp> or contains a substring
+that does, and #F otherwise.  EXACT-MATCH? returns #T if <string> matches
+<reg-exp> and #F otherwise.
+
+MATCH returns #F if <reg-exp> does not match <string>.  If it does match
+a list of match records is returned, one for the entire expression and one
+for each submatch, in tree pre-order.  MATCH-START returns the index of
+the first character in the matching substring and MATCH-END gives index
+of the first character after the matching substring.  Submatches that did
+not match get a #F instead of a match record.  Submatches nested in REPEAT
+expressions give the starting and ending indices of the last repetition.
+
+All three matching procedures cache a compiled version of <reg-exp>.
+Subsequent calls with the same <reg-exp> will be more efficient.
+
+ (any-match? (text "abc") "abc")         -> #t
+ (any-match? (text "abc") "abx")         -> #f
+ (any-match? (text "abc") "xxabcxx")     -> #t
+
+ (exact-match? (text "abc") "abc")       -> #t
+ (exact-match? (text "abc") "abx")       -> #f
+ (exact-match? (text "abc") "xxabcxx")   -> #f
+
+ (match (text "abc") "abc")              -> (#{match 0 3})
+ (match (text "abc") "abx")              -> #f
+ (match (text "abc") "xxabcxx")          -> (#{match 2 5})
+
+ (match (sequence (text "ab")
+                  (submatch (text "cd"))
+                  (text "ef"))
+        "xxxabcdefxx")
+   -> (#{match 3 9} #{match 5 7})
+
+ (match (sequence (set "a")
+                  (one-of (submatch (text "bc"))
+                          (submatch (text "BC"))))
+        "xxxaBCd")
+   -> (#{match 3 6} #f #{match 4 6})
+
+[Say something about matching rules; longest possible match, etc., example
+ for submatches in repetitions.]
+
+

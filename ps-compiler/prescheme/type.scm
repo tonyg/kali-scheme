@@ -1,13 +1,12 @@
-; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
+(define-record-type base-type :base-type
+  (really-make-base-type name uid)
+  base-type?
+  (name base-type-name)
+  (uid  base-type-uid))		; an integer
 
-(define-record-type base-type
-  (name
-   uid       ; an integer
-   )
-  ())
-
-(define-record-discloser type/base-type
+(define-record-discloser :base-type
   (lambda (base-type)
     (list (base-type-name base-type)
 	  (base-type-uid  base-type))))
@@ -22,7 +21,7 @@
 (define base-type-table (make-table))
 
 (define (make-base-type name)
-  (let ((type (base-type-maker name (next-base-type-uid))))
+  (let ((type (really-make-base-type name (next-base-type-uid))))
     (table-set! base-type-table name type)
     type))
 
@@ -44,7 +43,7 @@
 (define type/char         (make-base-type 'char))
 
 (define (make-atomic-type name)
-  (base-type-maker name (next-base-type-uid)))
+  (really-make-base-type name (next-base-type-uid)))
 
 (define type/unknown type/undetermined) ; an alias
 
@@ -83,18 +82,17 @@
 ; Arrow and pointer types (and perhaps others later)
 ; All done together to simplify the type walking
 
-(define-record-type other-type
-  (
-   kind
-   (subtypes)       ; set when finalized
-   )
-  (
-   (finalized? #f)
-   ))
+(define-record-type other-type :other-type
+  (really-make-other-type kind subtypes finalized?)
+  other-type?
+  (kind       other-type-kind)
+  (subtypes   other-type-subtypes set-other-type-subtypes!) ; set when finalized
+  (finalized? other-type-finalized? set-other-type-finalized?!))
 
-(define make-other-type other-type-maker)
+(define (make-other-type kind subtypes)
+  (really-make-other-type kind subtypes #f))
 
-(define-record-discloser type/other-type
+(define-record-discloser :other-type
   (lambda (type)
     (case (other-type-kind type)
       ((arrow)
@@ -113,7 +111,7 @@
 ; Arrow
 
 (define (make-arrow-type args result)
-  (other-type-maker 'arrow (cons result args)))
+  (make-other-type 'arrow (cons result args)))
 
 (define arrow-type? (make-other-type-predicate 'arrow))
 
@@ -126,7 +124,7 @@
 ; Pointer
 
 (define (make-pointer-type type)
-  (other-type-maker 'pointer (list type)))
+  (make-other-type 'pointer (list type)))
 
 (define pointer-type? (make-other-type-predicate 'pointer))
 (define (pointer-type-to pointer-type)
@@ -140,7 +138,7 @@
   (if (and (not (null? types))
 	   (null? (cdr types)))
       (car types)
-      (other-type-maker 'tuple types)))
+      (make-other-type 'tuple types)))
 
 (define tuple-type? (make-other-type-predicate 'tuple))
 

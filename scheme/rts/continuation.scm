@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Continuations
 
@@ -16,9 +16,11 @@
 (define (exception-continuation? thing)
   (and (continuation? thing)
        (= 0 (real-continuation-pc thing))
-       (= (enum op return-from-exception)
-	  (code-vector-ref (template-code (real-continuation-template thing))
-			   0))))
+       (let ((code (template-code (real-continuation-template thing))))
+	 (and (= 1				; one return value
+		 (code-vector-ref code 1))
+	      (= (enum op return-from-exception)
+		 (code-vector-ref code 2))))))
 
 (define (continuation-pc c)
   (if (exception-continuation? c)

@@ -1,4 +1,4 @@
-; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 ; Pre-Scheme packages
 
@@ -198,7 +198,7 @@
 		    (record-types record-type-interface)
 		    (expand-define-record-type
 		     (export expand-define-record-type)))
-  (open scheme big-scheme comp-util defrecord)
+  (open scheme big-scheme comp-util define-record-types)
   (files type
 	 type-scheme
 	 type-var
@@ -260,7 +260,8 @@
 	c-internal
 	ps-types type-variables inference-internal
 	inference          ; get-variable-type
-	forms byte-vectors
+	forms
+	compiler-byte-vectors
 	record-types
 	eval-node)         ; unspecific?
   (access ps-primitives prescheme)

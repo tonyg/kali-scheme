@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This is file cprim.scm.
@@ -181,8 +181,7 @@
 
 ; Making doubles
 
-(let ((:value (sexp->type ':value #t))
-      (:double (sexp->type ':double #t)))
+(let ((:double (sexp->type ':double #t)))
   (define-simple-primitive 'make-double
     (proc () :double)
     (sequentially
@@ -211,62 +210,115 @@
         ((null? slots))
       (let ((slot (car slots)))
         (if (car slot)
-            (def-prim (car slot)
-              (proc (type) value-type)
-              (enum op stored-object-ref) type-byte i))
+	    (def-prim (car slot)
+	      (proc (type) value-type)
+	      (enum op stored-object-ref) type-byte i))
         (if (not (null? (cdr slot)))
-            (def-prim (cadr slot)
-              (proc (type value-type) unspecific-type)
-              (enum op stored-object-set!) type-byte i))))))
+	    (begin
+	      (def-prim (cadr slot)
+		(proc (type value-type) unspecific-type)
+		(enum op stored-object-set!) type-byte i 0)
+	      (if (car slot)
+		  (def-prim (symbol-append 'provisional- (car slot))
+		    (proc (type) value-type)
+		    (enum op stored-object-logging-ref) type-byte i))
+	      (def-prim (symbol-append 'provisional- (cadr slot))
+		(proc (type value-type) unspecific-type)
+		(enum op stored-object-set!) type-byte i 1)))))))
 
 (for-each (lambda (stuff)
             (apply define-data-struct-primitives stuff))
           stob-data)
 
-; For flat environments
-
-(let ((:value (sexp->type ':value #t))
-      (:vector (sexp->type ':vector #t)))
-  (define-simple-primitive 'make-cell
-    (proc (:value) :vector)
-    (instruction (enum op make-stored-object) 1 (enum stob vector)))
-  (define-simple-primitive 'cell-ref
-    (proc (:vector) :value)
-    (instruction (enum op stored-object-ref) (enum stob vector) 0))
-  (define-simple-primitive 'cell-set!
-    (proc (:vector :value) unspecific-type)
-    (instruction (enum op stored-object-set!) (enum stob vector) 0)))
-
 ; Define primitives for vector-like stored objects.
 
-(define (define-vector-primitives name element-type make length ref set!)
+(define (define-vector-primitives name element-type)
   (let* ((type-byte (name->enumerand name stob))
-         (def-prim (lambda (name type op)
+         (def-prim (lambda (name type op . more)
                      (define-simple-primitive name type
-                       (instruction op type-byte))))
+                       (apply instruction op type-byte more))))
          (type (sexp->type (symbol-append ': name) #t)))
     (define-stob-predicate (symbol-append name '?) name)
     (if (not (eq? name 'vector))  ; 2nd arg to make-vector is optional
 	(def-prim (symbol-append 'make- name)
 	  (proc (exact-integer-type element-type) type)
-	  make))
+	  (enum op make-vector-object)))
     (def-prim (symbol-append name '- 'length)
       (proc (type) exact-integer-type)
-      length)
+      (enum op stored-object-length))
     (def-prim (symbol-append name '- 'ref)
       (proc (type exact-integer-type) element-type)
-      ref)
+      (enum op stored-object-indexed-ref)
+      0)		; do not log in the proposal
     (def-prim (symbol-append name '- 'set!)
       (proc (type exact-integer-type element-type) unspecific-type)
-      set!)))
+      (enum op stored-object-indexed-set!)
+      0)))		; do not log in the proposal
 
 (for-each (lambda (name)
-            (define-vector-primitives name value-type
-              (enum op make-vector-object)
-              (enum op stored-object-length)
-              (enum op stored-object-indexed-ref)
-              (enum op stored-object-indexed-set!)))
+            (define-vector-primitives name value-type))
           '(vector record continuation extended-number template))
+
+(define-syntax define-more-vector-primitives
+  (syntax-rules ()
+    ((define-vector-primitives
+       (ref ref-op)
+       (set set-op)
+       vector-type elt-type (more ...))
+     (begin
+       (define-simple-primitive 'ref
+	 (proc (vector-type exact-integer-type) elt-type)
+	 (instruction (enum op ref-op) more ...))
+       (define-simple-primitive 'set
+	 (proc (vector-type exact-integer-type elt-type) unspecific-type)
+	 (instruction (enum op set-op) more ...))))))
+
+; Vector ref and set! that use the current proposal's logs.
+
+(define-more-vector-primitives
+  (provisional-vector-ref  stored-object-indexed-ref)
+  (provisional-vector-set! stored-object-indexed-set!)
+  vector-type
+  value-type
+  ((enum stob vector) 1))
+       
+(define-more-vector-primitives
+  (provisional-byte-vector-ref  byte-vector-logging-ref)
+  (provisional-byte-vector-set! byte-vector-logging-set!)
+  value-type
+  exact-integer-type
+  ())
+       
+; Checked-record-ref and friends.
+
+(let ((record-type (sexp->type ':record #t)))
+  (define-simple-primitive 'checked-record-ref
+    (proc (record-type value-type exact-integer-type) value-type)
+    (instruction (enum op checked-record-ref) 0))
+
+  (define-simple-primitive 'provisional-checked-record-ref
+    (proc (record-type value-type exact-integer-type) value-type)
+    (instruction (enum op checked-record-ref) 1))
+
+  (define-simple-primitive 'checked-record-set!
+    (proc (record-type value-type exact-integer-type value-type)
+	  unspecific-type)
+    (instruction (enum op checked-record-set!) 0))
+
+  (define-simple-primitive 'provisional-checked-record-set!
+    (proc (record-type value-type exact-integer-type value-type)
+	  unspecific-type)
+    (instruction (enum op checked-record-set!) 1)))
+
+(let ((copy-type (proc (value-type exact-integer-type
+		        value-type exact-integer-type
+			exact-integer-type)
+		       unspecific-type)))
+  (define-simple-primitive 'copy-bytes! copy-type
+    (instruction (enum op copy-bytes!) 0))
+  (define-simple-primitive 'attempt-copy-bytes! copy-type
+    (instruction (enum op copy-bytes!) 1)))
+
 
 ; SIGNAL-CONDITION is the same as TRAP.
 
@@ -301,8 +353,7 @@
                   (instruction (enum op local0) 1)
                   (instruction (enum op call) 1))))  
 
-; (call-with-values (lambda () ...producer...)
-;                   (lambda args ...consumer...))
+; (call-with-values producer consumer)
 
 (define-compiler-primitive 'call-with-values
   (proc ((proc () any-values-type #f)
@@ -313,15 +364,7 @@
       (let ((producer (car args))
             (consumer (cadr args)))
         (maybe-push-continuation
-         (sequentially (compile consumer level 0 (fall-through-cont node 2))
-                       (instruction (enum op push))
-                       (maybe-push-continuation     ; nothing maybe about it
-                        (compile-call (make-node operator/call `(,producer))
-				      level 0
-                                      (return-cont #f))
-                        1
-                        (fall-through-cont #f 0))
-                       (instruction (enum op call-with-values)))
+	 (compile-call-with-values node producer consumer level)
          depth
          cont))))
   (lambda ()
@@ -337,8 +380,62 @@
                     (instruction (enum op local0) 2) ;producer
                     (instruction (enum op call) 0)
                     (attach-label label
-                                  (instruction (enum op call-with-values)))))))
+                                  (instruction (enum op protocol)
+					       call-with-values-protocol))))))
 
+; If consumer is a lambda we can put its code, including the protocol,
+; in the continuation.  Otherwise the continuation contains just the
+; consuming procedure and uses the special CALL-WITH-VALUES protocol.
+
+(define (compile-call-with-values node producer consumer level)
+  (if (or (lambda-node? consumer)		;+++
+	  (flat-lambda-node? consumer))
+      (sequentially (maybe-push-continuation     ; nothing maybe about it
+		      (compile-call-with-values-producer producer level)
+		      0
+		      (accept-values-cont #f 0))
+                    (compile-lambda (unflatten-form consumer) level #f))
+      (sequentially (compile consumer level 0 (fall-through-cont node 2))
+		    (instruction (enum op push))
+		    (maybe-push-continuation     ; nothing maybe about it
+		      (compile-call-with-values-producer producer level)
+		      1
+		      (accept-values-cont #f 0))
+		    (instruction (enum op protocol)
+				 call-with-values-protocol))))
+
+; If producer is a lambda (with no arguments) we can just compile the body
+; with a return-cont.
+
+(define (compile-call-with-values-producer producer level)
+  (if (thunk-node? producer)	; +++
+      (compile (thunk-body producer)
+	       level
+	       0
+	       (return-cont #f))
+      (compile-call (make-node operator/call `(,producer))
+		    level 0
+		    (return-cont #f))))
+
+; Is NODE a lambda with a null variable list.
+
+(define (thunk-node? node)
+  (and (or (lambda-node? node)
+	   (flat-lambda-node? node))
+       (null? (cadr (node-form node)))))
+
+; Works for both normal and flat lambdas.
+
+(define (thunk-body node)
+  (last (node-form node)))
+
+; Return a non-flat version of the possibly-flat lambda NODE's form.
+
+(define (unflatten-form node)
+  (let ((form (node-form node)))
+    (if (flat-lambda-node? node)
+	`(lambda ,(cadr form) ,(cadddr form))
+	form)))
 
 ; --------------------
 ; Variable-arity primitives

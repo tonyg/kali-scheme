@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file usual.scm.
 
@@ -263,7 +263,8 @@
 	(lambda (car-mode car-arg)
 	  (descend-quasiquote (cdr x) level
 	    (lambda (cdr-mode cdr-arg)
-	      (cond ((and (eq? car-mode 'quote) (eq? cdr-mode 'quote))
+	      (cond ((and (eq? car-mode 'quote)
+			  (eq? cdr-mode 'quote))
 		     (return 'quote x))
 		    ((eq? car-mode 'unquote-splicing)
 		     ;; (,@mumble ...)
@@ -288,7 +289,8 @@
 			  (list (finalize-quasiquote mode arg))))))))
 
     (define (interesting-to-quasiquote? x marker)
-      (and (pair? x) (c (car x) marker)))
+      (and (pair? x)
+	   (c (car x) marker)))
 
     (if (and (pair? (cdr exp))
 	     (null? (cddr exp)))

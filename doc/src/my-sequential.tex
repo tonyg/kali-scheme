@@ -1,0 +1,39 @@
+%% -*-latex-*-
+%% Navigation menus for the Scheme 48 report.
+
+\newcommand{\previousnextmenu}{\EmptyP{\HlxBackUrl\HlxForwUrl}{%
+    \EmptyP{\HlxBackUrl}
+      {Previous: \xlink{\HlxBackTitle}{\HlxBackUrl}}
+      {}%
+    \EmptyP{\HlxForwUrl}
+      {\EmptyP{\HlxBackUrl}{{} | {}}{}%
+       Next: \xlink{\HlxForwTitle}{\HlxForwUrl}}
+      {}%
+    }{}}
+
+\newcommand{\toppanel}{%
+    {\em Scheme 48 Manual} | {\link{Contents}{top_node}}%
+    \EmptyP{\HlxUpUrl}
+      {{} | In Chapter: \xlink{\HlxUpTitle}{\HlxUpUrl}}
+      {}%
+    \\%
+    \previousnextmenu}
+
+\newcommand{\chaptertoppanel}{%
+    {\em Scheme 48 Manual} | {\link{Contents}{top_node}}%
+    \EmptyP{\HlxPrevUrl}
+      {{} | Previous Chapter: \xlink{\HlxPrevTitle}{\HlxPrevUrl}}
+      {}%
+    \EmptyP{\HlxNextUrl}
+      {{} | Next Chapter: \xlink{\HlxNextTitle}{\HlxNextUrl}}
+      {}%
+    \\%
+    \previousnextmenu{}}
+
+\newcommand{\bottommatter}{%
+  %\htmlrule
+  \html{P}
+  \EmptyP{\HlxAddress}
+  {\par{}\html{ADDRESS}\HlxAddress\html{/ADDRESS}\\}{}}
+
+\newcommand{\bottompanel}{\previousnextmenu}

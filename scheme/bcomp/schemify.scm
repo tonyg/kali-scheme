@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; schemify
 
@@ -95,11 +95,18 @@
 (define-schemifier 'letrec syntax-type
   (lambda (node env)
     (let ((form (node-form node)))
-      `(letrec ,(map (lambda (spec)
-		       (schemify-nodes spec env))
-		     (cadr form))
-	 ,@(map (lambda (f) (schemify-node f env))
-		(cddr form))))))
+      (schemify-letrec (cadr form) (caddr form) env))))
+
+(define-schemifier 'pure-letrec syntax-type
+  (lambda (node env)
+    (let ((form (node-form node)))
+      (schemify-letrec (cadr form) (cadddr form) env))))
+
+(define (schemify-letrec specs body env)
+  `(letrec ,(map (lambda (spec)
+		   (schemify-nodes spec env))
+		 specs)
+     ,(schemify-node body env)))
 
 (define-schemifier 'loophole syntax-type
   (lambda (node env)

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This is a small mock-up of the Cornell mobile robot system.
@@ -30,8 +30,8 @@
 		    (for-each (lambda (name)
 				(recur name env trail))
 			      (transform-aux-names (binding-static b))))))))))
-  (for-each-declaration (lambda (name type)
-			  (recur name s '())) 
+  (for-each-declaration (lambda (name package-name type)
+			  (recur package-name s '())) 
 			(structure-interface s)))
 
 (note-structure-locations! scheme-level-2)

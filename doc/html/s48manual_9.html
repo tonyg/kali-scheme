@@ -1,0 +1,84 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:20 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Module system</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_3.html">User's guide</A><BR>Previous: <A HREF="s48manual_8.html">Disassembler</A> | Next: <A HREF="s48manual_10.html">Library</A>
+<H2>Module system</H2>
+
+<P>This section gives a brief description of modules and related entities.
+For detailed information, including a description of the module
+ configuration language, see 
+<A HREF="s48manual_24.html">the module chapter</A>.
+<P>A <EM>module</EM> is an isolated namespace, with visibility of bindings
+ controlled by module descriptions written in a special
+ configuration language.
+A module may be instantiated as a <EM>package</EM>, which is an environment
+ in which code can be evaluated.
+Most modules are instantiated only once and so have a unique package.
+A <EM>structure</EM> is a subset of the bindings in a package.
+Only by being included in a structure can a binding be
+ made visible in other packages.
+A structure has two parts, the package whose bindings are being exported
+ and the set of names which are to be exported.
+This set of names is called an <EM>interface</EM>.
+A module then has three parts:
+<UL><LI>a set of structures whose bindings are to be visible within the module
+<LI>the source code to be evaluated within the module
+<LI>a set of exported interfaces
+</UL>
+Instantiating a module produces a package and a set of structures, one for
+ each of the exported interfaces.
+<P>The following example uses <CODE>define-structure</CODE> to create a module that
+ implements simple cells as pairs, instantiates this module, and binds the
+ resulting structure to <CODE>cells</CODE>.
+The syntax <CODE>(export <CODE><I>name&nbsp;...</I></CODE>)</CODE> creates an interface
+ containing <CODE><I>name&nbsp;...</I></CODE>.
+The <CODE>open</CODE> clause lists structures whose bindings are visible
+ within the module.
+The <CODE>begin</CODE> clause contains source code.
+<BLOCKQUOTE><PRE>
+(define-structure cells (export make-cell cell-ref cell-set!)
+  (open scheme)
+  (begin (define (make-cell x)
+           (cons 'cell x))
+         (define cell-ref cdr)
+         (define cell-set! set-cdr!)))
+</PRE></BLOCKQUOTE>
+<P>Cells could also have been implemented using the
+<A HREF="s48manual_41.html">record facility</A>
+ and available in structure <CODE>define-record-type</CODE>.
+<BLOCKQUOTE><PRE>
+(define-structure cells (export make-cell cell-ref cell-set!)
+  (open scheme define-record-types)
+  (begin (define-record-type cell :cell
+           (make-cell value)
+           cell?
+           (value cell-ref cell-set!))))
+</PRE></BLOCKQUOTE>
+<P>With either definition the resulting structure can be used in other
+ modules by including <CODE>cells</CODE> in an <CODE>open</CODE> clause.
+<P>The command interpreter is always operating within a particular package.
+Initially this is a package in which only the standard Scheme bindings
+ are visible.
+The bindings of other structures can be made visible by using the 
+<A HREF="s48manual_15.html"><CODE>,open</CODE> command</A>.
+<P>Note that this initial package does not include the configuration language.
+Module code needs to be evaluated in the configuration package, which can
+ be done by using the <CODE>,</CODE>config command:
+<BLOCKQUOTE><PRE>
+&gt; ,config (define-structure cells ...)
+&gt; ,open cells
+&gt; (make-cell 4)
+'(cell . 4)
+&gt; (define c (make-cell 4))
+&gt; (cell-ref c)
+4
+</PRE></BLOCKQUOTE>
+<P>
+  
+Previous: <A HREF="s48manual_8.html">Disassembler</A> | Next: <A HREF="s48manual_10.html">Library</A></BODY></HTML>

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Rudimentary type reconstruction, hardly worthy of the name.
 
@@ -215,17 +215,25 @@
 (define-reconstructor 'letrec syntax-type
   (lambda (node constrained want-type)
     (let ((form (node-form node)))
-      (if (eq? constrained 'fast)
-          (reconstruct (caddr form) 'fast want-type)
-          (let ((alist (map (lambda (spec)
-			      (cons (car spec)
-				    (reconstruct (cadr spec)
-						 constrained
-						 value-type)))
-                            (cadr form))))
-            (reconstruct (caddr form)
-			 (append alist constrained)
-                         want-type))))))
+      (reconstruct-letrec (cadr form) (caddr form) constrained want-type))))
+
+(define-reconstructor 'pure-letrec syntax-type
+  (lambda (node constrained want-type)
+    (let ((form (node-form node)))
+      (reconstruct-letrec (cadr form) (cadddr form) constrained want-type))))
+
+(define (reconstruct-letrec specs body constrained want-type)
+  (if (eq? constrained 'fast)
+      (reconstruct body 'fast want-type)
+      (let ((alist (map (lambda (spec)
+			  (cons (car spec)
+				(reconstruct (cadr spec)
+					     constrained
+					     value-type)))
+			specs)))
+	(reconstruct body
+		     (append alist constrained)
+		     want-type))))
 
 (define-reconstructor 'loophole syntax-type
   (lambda (node constrained want-type)

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; The symbol table, which is just a string table full of symbols.
@@ -21,19 +21,20 @@
 ; could disable that for these setters, since the symbol table has to be
 ; checked every GC anyway.
 
-; Copy the table and remove any unreachable symbols.  This is exported for
-; use when writing an image.
+; Copy the table and remove any unreachable symbols.
 
-(define s48-copy-symbol-table
-  (let ((cleaner! (table-cleaner vm-symbol-next vm-set-symbol-next!)))
-    (lambda ()
-      (let ((new (s48-trace-value *the-symbol-table*)))
-	(cleaner! new)
-	new))))
+(let ((cleaner (table-cleaner vm-symbol-next
+			      vm-set-symbol-next!
+			      s48-extant?
+			      s48-trace-value)))
+  (add-post-gc-cleanup!
+   (lambda ()
+     (set! *the-symbol-table* (cleaner *the-symbol-table*)))))
 
-(add-post-gc-cleanup!
-  (lambda ()
-    (set! *the-symbol-table* (s48-copy-symbol-table))))
+; For the image writer.
+
+(define (s48-symbol-table)
+  *the-symbol-table*)
 
 ; There is no symbol table in images created by the static linker.
 
@@ -45,11 +46,11 @@
 ; Create the symbol table and then add to it all currently-extant symbols.
 
 (define (build-symbol-table+gc)
-  (set! *the-symbol-table* (make-hash-table (ensure-space hash-table-size)))
+  (set! *the-symbol-table* (make-hash-table+gc))
   (let ((symbols (let ((maybe (s48-find-all (enum stob symbol))))
 		   (if (eq? maybe false)
 		       (begin
-			 (collect)
+			 (s48-collect)
 			 (let ((maybe (s48-find-all (enum stob symbol))))
 			   (if (eq? maybe false)
 			       (error "insufficient heap space to build symbol table"))

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file resume.scm.
 
@@ -8,7 +8,9 @@
   (install-shared-bindings!+gc (s48-initial-imported-bindings)
 			       (s48-initial-exported-bindings))
   (initialize-stack+gc stack-begin stack-size)
-  (initialize-interpreter+gc))
+  (initialize-interpreter+gc)
+  (initialize-bignums)
+  (initialize-proposals!+gc))
 
 ;----------------
 ; Push the arguments to the initial procedure (a vector of strings passed
@@ -27,21 +29,12 @@
     (s48-restart (s48-startup-procedure) 5)))
   
 (define (enter-startup-argument+gc startup-vector startup-vector-length)
-  (let* ((size (+ (do ((i 0 (+ i 1))
-		       (size 0 (+ size (vm-string-size
-					(string-length
-					 (vector-ref startup-vector i))))))
-		      ((= i startup-vector-length)
-		       size))
-		  (vm-vector-size startup-vector-length)))
-	 (key (ensure-space size))
-	 (vector (vm-make-vector startup-vector-length key)))
+  (let ((vector (vm-make-vector+gc startup-vector-length)))
     (natural-for-each (lambda (i)
 			(vm-vector-set! vector
 					i
-					(enter-string
-					 (vector-ref startup-vector i)
-					 key)))
+					(enter-string+gc
+					 (vector-ref startup-vector i))))
 		      startup-vector-length)
     vector))
 
@@ -50,11 +43,13 @@
 ; stack.
 
 (define (s48-restart proc nargs)
-  (receive (key proc)
-      (ensure-space-saving-temp (code-vector-size 2) proc)
-    (let ((code (make-code-vector 2 key)))
+  (save-temp0! proc)
+  (let ((key (ensure-space (code-vector-size 2))))
+    (let ((code (make-code-vector 2 key))
+	  (proc (recover-temp0!)))
       (code-vector-set! code 0 (enum op call))
       (code-vector-set! code 1 nargs)
       (set-code-pointer! code 0)
       (set-val! proc)
       (interpret (code-pointer)))))
+

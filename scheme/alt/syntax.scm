@@ -1,18 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
-
-
-; This definition of define-syntax is appropriate for Scheme-to-C.
-
-(define-macro define-syntax
-  (lambda (form expander)
-    (expander `(define-macro ,(cadr form)
-		 (let ((transformer ,(caddr form)))
-		   (lambda (form expander)
-		     (expander (transformer form
-					    (lambda (x) x)
-					    eq?)
-			       expander))))
-	      expander)))
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Rewrite-rule compiler (a.k.a. "extend-syntax")

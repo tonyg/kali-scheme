@@ -1,0 +1,66 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Semantics of configuration mutation</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_24.html">Module system</A><BR>Previous: <A HREF="s48manual_30.html">Compiling and linking</A> | Next: <A HREF="s48manual_32.html">Command processor support</A>
+<H2>Semantics of configuration mutation</H2>
+<P>During program development it is often desirable to make changes to
+packages and interfaces.  In static languages it may be necessary to
+recompile and re-link a program in order for such changes to be
+reflected in a running system.  Even in interactive Common Lisp
+implementations, a change to a package's exports often requires
+reloading clients that have already mentioned names whose bindings
+change.  Once <TT>read</TT> resolves a use of a name to a symbol, that
+resolution is fixed, so a change in the way that a name resolves to a
+symbol can only be reflected by re-<TT>read</TT>ing all such references.
+<P>The Scheme&nbsp;48 development environment supports rapid turnaround in
+modular program development by allowing mutations to a program's
+configuration, and giving a clear semantics to such mutations.  The
+rule is that variable bindings in a running program are always
+resolved according to current structure and interface bindings, even
+when these bindings change as a result of edits to the configuration.
+For example, consider the following:
+<BLOCKQUOTE><PRE>
+(define-interface foo-interface (export a c))
+(define-structure foo foo-interface
+  (open scheme)
+  (begin (define a 1)
+         (define (b x) (+ a x))
+         (define (c y) (* (b a) y))))
+(define-structure bar (export d)
+  (open scheme foo)
+  (begin (define (d w) (+ (b w) a))))
+</PRE></BLOCKQUOTE>
+This program has a bug.  The variable <TT>b</TT>, which is free in the
+definition of <TT>d</TT>, has no binding in <TT>bar</TT>'s package.  Suppose
+that <TT>b</TT> was supposed to be exported by <TT>foo</TT>, but was omitted
+from <TT>foo-interface</TT> by mistake.  It is not necessary to
+re-process <TT>bar</TT> or any of <TT>foo</TT>'s other clients at this point.
+One need only change <TT>foo-interface</TT> and inform the development
+system of that change (using, say, an appropriate Emacs command),
+and <TT>foo</TT>'s binding of <TT>b</TT> will be found when procedure <TT>d</TT> is called.
+<P>Similarly, it is also possible to replace a structure; clients of the
+old structure will be modified so that they see bindings from the new
+one.  Shadowing is also supported in the same way.  Suppose that a
+client package <I>C</I> opens a structure <TT>foo</TT> that exports a name
+<TT>x</TT>, and <TT>foo</TT>'s implementation obtains the binding of <TT>x</TT>
+as an import from some other structure <TT>bar</TT>.  Then <I>C</I> will see
+the binding from <TT>bar</TT>.  If one then alters <TT>foo</TT> so that it
+shadows <TT>bar</TT>'s binding of <TT>x</TT> with a definition of its own,
+then procedures in <I>C</I> that reference <TT>x</TT> will automatically see
+<TT>foo</TT>'s definition instead of the one from <TT>bar</TT> that they saw
+earlier.
+<P>This semantics might appear to require a large amount of computation
+on every variable reference: The specified behavior requires scanning
+the package's list of opened structures, examining their interfaces,
+on every variable reference, not just at compile time.  However, the
+development environment uses caching with cache invalidation to make
+variable references fast.
+<P>
+  
+Previous: <A HREF="s48manual_30.html">Compiling and linking</A> | Next: <A HREF="s48manual_32.html">Command processor support</A></BODY></HTML>

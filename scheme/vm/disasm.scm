@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Disassembler that uses the VM's data structures.
@@ -96,6 +96,12 @@
 		((= protocol args+nargs-protocol)
 		 (display "args+nargs")
 		 3)
+		((= protocol ignore-values-protocol)
+		 (display "discard all values")
+		 2)
+		((= protocol call-with-values-protocol)
+		 (display "call-with-values")
+		 2)
 		((= protocol nary-dispatch-protocol)
 		 (display "nary-dispatch")
 		 (do ((i 0 (+ i 1)))

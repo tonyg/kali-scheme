@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Code for keeping external pointers in a table similar to the symbol table.
 ;
@@ -98,6 +98,11 @@
 			   losers)
 		 #f))))))
 
+; Re-lookup one external.
+
+(define (lookup-external external)
+  (external-lookup (external-name external)
+		   (external-value external)))
 
 ; Quietly look up all externals, returning #F if unsuccessful
 

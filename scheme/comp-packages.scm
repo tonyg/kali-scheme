@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Various data structures used by the compiler, module system, etc.
 
@@ -86,6 +86,7 @@
   (open scheme-level-2
 	names		;name?
 	fluids		;used in definition of %file-name%
+	code-quote
 	util
 	tables signals)
   (files (bcomp usual)
@@ -105,10 +106,16 @@
 
 ; Lexical environment layout info for debugging
 
-(define-structure debug-data debug-data-interface
+(define-structures ((debug-data debug-data-interface)
+		    (debug-data-internal debug-data-internal-interface))
   (open scheme-level-2 
-	define-record-types)
-  (files (bcomp ddata))
+	define-record-types
+	tables
+	fluids
+	records			;for debug-flags randomness
+	features)		;make-immutable!
+  (files (bcomp ddata)
+	 (bcomp state))
   (optimize auto-integrate))
 
 ; Determining stack usage.
@@ -123,15 +130,14 @@
 (define-structure segments segments-interface
   (open scheme-level-2 util tables fluids signals
 	define-record-types
-	features		;make-immutable!
-	records			;for debug-flags randomness
 	code-vectors
 	templates
 	architecture
-	debug-data
+	features		;make-immutable!
+	debug-data debug-data-internal
 	thingies
 	stack-check)
-  (files (bcomp state)
+  (files ; (bcomp state)
 	 (bcomp segment))
   (optimize auto-integrate))
 
@@ -167,8 +173,11 @@
 	nodes var-utilities
 	primops
 	segments
+	debug-data-internal	; keep-source-code?
+	flat-environments
 	reconstruction)
   (files (bcomp comp-exp)
+	 (bcomp comp-lambda)
 	 (bcomp comp-prim)
 	 (bcomp comp))
   (optimize auto-integrate))
@@ -190,6 +199,7 @@
 (define-structure flat-environments (export flatten-form)
   (open scheme-level-2 nodes signals
 	optimizer primops
+	util			;every
 	var-utilities)
   (files (opt flatten)))
 
@@ -199,7 +209,9 @@
 (define-structure interfaces interfaces-interface
   (open scheme-level-2
 	define-record-types tables
-	weak	; populations
+	util			;filter every mvlet
+	signals			;error
+	weak			;populations
 	meta-types)
   (files (bcomp interface))
   (optimize auto-integrate))
@@ -262,7 +274,6 @@
 	source-file-names	;%file-name%
 	signals			;error
 	tables)
-  (for-syntax (open scheme-level-2 signals))     ;syntax-error
   (files (bcomp module-language)
 	 (bcomp config)))
 
@@ -293,7 +304,7 @@
 
 (define-structure analysis (export analyze-forms)
   (open scheme-level-2
-	meta-types bindings nodes
+	meta-types bindings nodes primops
 	packages-internal	;package-add-static!
 	inline
 	usages

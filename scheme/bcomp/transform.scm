@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Transforms
 
@@ -65,7 +65,7 @@
 
 (define (name->source-name name)
   (if (generated? name)
-      (generated-symbol name)
+      (name->source-name (generated-symbol name))
       name))
 				       
 ; The env-of-definition for macros defined at top-level is a package,
@@ -89,17 +89,17 @@
 
 (define (make-name-generator env token parent-name)
   (let ((alist '()))			;list of (symbol . generated)
-    (lambda (symbol)
-      (if (symbol? symbol)
-	  (let ((probe (assq symbol alist)))
+    (lambda (name)
+      (if (name? name)
+	  (let ((probe (assq name alist)))
 	    (if probe
 		(cdr probe)
-		(let ((new-name (make-generated symbol token env parent-name)))
-		  (set! alist (cons (cons symbol new-name)
+		(let ((new-name (make-generated name token env parent-name)))
+		  (set! alist (cons (cons name new-name)
 				    alist))
 		  new-name)))
-	  (error "non-symbol argument to rename procedure"
-		 symbol parent-name)))))
+	  (error "non-name argument to rename procedure"
+		 name parent-name)))))
 
 ;----------------
 ; We break an abstraction here to avoid a circular module dependency.

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; For debugging
 
@@ -41,7 +41,6 @@
 	reconstruction
 	packages
 	packages-internal       ;only for structure-package ?
-	interfaces		;interface-ref
 	locations		;make-undefined-location
 	architecture
 	enumerated		;enumerand->name

@@ -1,5 +1,5 @@
  
-; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 ; This file contains miscellaneous utilities for accessing and modifying the
 ; node tree.
@@ -95,20 +95,20 @@
 
 ; True if executing NODE involves side-effects.
 
-(define (side-effects? node . permissable)
-  (let ((permissable (cons #f permissable)))
+(define (side-effects? node . permissible)
+  (let ((permissible (cons #f permissible)))
     (let label ((node node))
       (cond ((not (call-node? node))
 	     #f)
-	    ((or (n= 0 (call-exits node))
-		 (not (memq (primop-side-effects (call-primop node))
-			    permissable)))
-	     #t)
-	    (else
+	    ((and (= 0 (call-exits node))
+		  (memq (primop-side-effects (call-primop node))
+			permissible))
 	     (let loop ((i (- (call-arg-count node) 1)))
 	       (cond ((< i 0) #f)
 		     ((label (call-arg node i)) #t)
-		     (else (loop (- i 1))))))))))
+		     (else (loop (- i 1))))))
+	    (else
+	     #t)))))
 
 ; A conservative check - is there only one SET-CONTENTS call for the owner and
 ; are all calls between CALL and the LETREC call that binds the owner calls to
@@ -372,10 +372,16 @@
 	 (move-body
 	  call
 	  (lambda (call)
-	    (let-nodes ((c (letrec1 1 l2))
-			(l2 ((x #f) . vars) (letrec2 1 l3 (* x) . values))
-			(l3 () call))
-	      c))))))
+	    (receive (letrec-call letrec-cont)
+		(make-letrec vars values)
+	      (attach-body letrec-cont call)
+	      letrec-call))))))
+
+(define (make-letrec vars vals)
+  (let ((cont (make-lambda-node 'c 'cont '())))
+    (let-nodes ((call (letrec1 1 l2))
+		(l2 ((x #f) . vars) (letrec2 1 cont (* x) . vals)))
+      (values call cont))))
 
 ;-------------------------------------------------------------------------------
 ; Changing lambda-nodes' variable lists

@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:25 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- C to Scheme correspondence</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_62.html">Access to POSIX</A><BR>Previous: <A HREF="s48manual_71.html">Regular expressions</A> | Next: <A HREF="s48manual_73.html">References</A>
+<H2>C to Scheme correspondence</H2>
+
+<P>The following table lists the Scheme procedures that correspond to
+ particular C procedures.
+Not all of the Scheme procedures listed are part of the POSIX interface.
+<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
+
+C procedure </TD><TD COLSPAN="1" ALIGN="LEFT"> Scheme procedure(s) </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>access</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>accessible?</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>chdir</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>set-working-directory!</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>close</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>close-input-port, close-output-port,</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+</TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>  close-channel, close-socket</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>closedir</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>close-directory-stream</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>creat</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>open-file</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>ctime</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>time-&gt;string</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>dup</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>dup, dup-switching-mode</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>dup2</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>dup2</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>exec[l|v][e|p|<I>eps</I>]</CODE>
+ </TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>exec, exec-with-environment, exec-file,</CODE> </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+</TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>  exec-file-with-environment, exec-with-alias</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>_exit</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>exit</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>fcntl</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>io-flags, set-io-flags!,</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+</TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>  close-on-exec, set-close-on-exec!</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>fork</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>fork, fork-and-forget</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>fstat</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>get-port-info</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>getcwd</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>working-directory</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>getegid</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>get-effective-group-id</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>getenv</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>lookup-environment-variable, environment-alist</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>geteuid</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>get-effective-user-id</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>getgid</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>get-group-id</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>getgroups</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>get-groups</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>getlogin</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>get-login-name</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>getpid</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>get-process-id</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>getppid</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>get-parent-process-id</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>getuid</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>get-user-id</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>isatty</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>port-is-a-terminal?</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>link</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>link</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>lstat</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>get-file/link-info</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>mkdir</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>make-directory</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>mkfifo</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>make-fifo</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>open</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>open-file</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>opendir</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>open-directory-stream</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>pipe</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>open-pipe</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>read</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>read-char, read-block</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>readdir</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>read-directory-stream</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>rename</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>rename</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>rmdir</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>remove-directory</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>setgid</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>set-group-id!</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>setuid</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>set-user-id!</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>stat</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>get-file-info</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>time</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>current-time</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>ttyname</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>port-terminal-name</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>umask</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>set-file-creation-mask!</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>uname</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>os-name, os-node-name, os-release-name,</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+</TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>  os-version-name, machine-name</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>unlink</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>unlink</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>waitpid</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>wait-for-child-process</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>write</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"><CODE>write-char, write-block</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+</TD></TR></TABLE>
+
+
+<P>
+  
+Previous: <A HREF="s48manual_71.html">Regular expressions</A> | Next: <A HREF="s48manual_73.html">References</A></BODY></HTML>

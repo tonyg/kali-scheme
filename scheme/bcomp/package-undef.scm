@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The entry point for all this.
 
@@ -41,7 +41,7 @@
 	      ((variable-type? want-type)
 	       (get-location-for-unassignable cenv name))
 	      (else
-	       (warn "invalid variable reference" name)
+	       (warn "invalid variable reference" name cenv)
 	       (note-caching! cenv name place)
 	       place)))
       (get-location-for-undefined cenv name)))
@@ -79,12 +79,12 @@
       (if (not (table-ref (package-definitions package) name))
 	  (let loop ((opens (package-opens package)))
 	    (if (not (null? opens))
-		(if (interface-ref (structure-interface (car opens))
-				   name)
+		(if (interface-member? (structure-interface (car opens))
+				       name)
 		    (begin (table-set! (package-cached package) name place)
 			   (package-note-caching!
-			       (structure-package (car opens))
-			       name place))
+			    (structure-package (car opens))
+			    name place))
 		    (loop (cdr opens))))))))
 
 ; Find the actual package providing PLACE and remember that it is being used.
@@ -147,8 +147,8 @@
   (let loop ((opens (package-opens package)))
     (if (null? opens)
 	(get-undefined package name)
-	(if (interface-ref (structure-interface (car opens))
-			   name)
+	(if (interface-member? (structure-interface (car opens))
+			       name)
 	    (location-for-reference (structure-package (car opens)) name)
 	    (loop (cdr opens))))))
 
@@ -190,18 +190,28 @@
 			 (not (generic-lookup env name)))
 		       names)))
     (if (not (null? names))
-	(let ((out (current-noise-port)))
-	  (newline out)
-	  (display "Undefined" out)
-	  (if (and current-package
-		   (not (eq? env current-package)))
-	      (begin (display " in " out)
-		     (write env out)))
-	  (display ": " out)
-	  (write (map (lambda (name)
-			(if (generated? name)
-			    (generated-symbol name)
-			    name))
-		      (reverse names))
-		 out)
-	  (newline out)))))
+	(let ((names (map (lambda (name)
+			    (if (generated? name)
+				(generated-symbol name)
+				name))
+			  (reverse names))))
+	  (apply warn
+		 "undefined variables"
+		 env
+		 names)))))
+	      
+;        (let ((out (current-noise-port)))
+;          (newline out)
+;          (display "Undefined" out)
+;          (if (and current-package
+;                   (not (eq? env current-package)))
+;              (begin (display " in " out)
+;                     (write env out)))
+;          (display ": " out)
+;          (write (map (lambda (name)
+;                        (if (generated? name)
+;                            (generated-symbol name)
+;                            name))
+;                      (reverse names))
+;                 out)
+;          (newline out)))))

@@ -1,0 +1,32 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Higher-order modules</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_24.html">Module system</A><BR>Previous: <A HREF="s48manual_28.html">Macros</A> | Next: <A HREF="s48manual_30.html">Compiling and linking</A>
+<H2>Higher-order modules</H2>
+<P>There are <TT>define-module</TT> and <TT>define</TT> forms for
+defining modules that are intended to be instantiated multiple times.
+But these are pretty kludgey -- for example, compiled code isn't
+shared between the instantiations -- so we won't describe them yet.
+If you must know, figure it out from the following grammar.
+<TABLE CELLSPACING="1" CELLPADDING="0"><TR>
+<TD NOWRAP COLSPAN="1" ALIGN="LEFT">
+      <I>&lt;</I>definition<I>&gt;</I> </TD><TD NOWRAP COLSPAN="1" ALIGN="LEFT"><CODE>-&gt;</CODE>&nbsp;
+      <TT>(d</TD><TD NOWRAP COLSPAN="99" ALIGN="LEFT">efine-module (<I>&lt;</I>name<I>&gt;</I> (<I>&lt;</I>name<I>&gt;</I> <I>&lt;</I>interface<I>&gt;</I>)<I><sup>*</sup></I>) </TD></TR>
+<TR>
+<TD NOWRAP COLSPAN="1" ALIGN="LEFT"></TD><TD NOWRAP COLSPAN="1" ALIGN="LEFT">  </TD><TD NOWRAP COLSPAN="99" ALIGN="LEFT"><I>&lt;</I>definition<I>&gt;</I><I><sup>*</sup></I> </TD></TR>
+<TR>
+<TD NOWRAP COLSPAN="1" ALIGN="LEFT"></TD><TD NOWRAP COLSPAN="1" ALIGN="LEFT">  </TD><TD NOWRAP COLSPAN="99" ALIGN="LEFT"><I>&lt;</I>name<I>&gt;</I><TT>) </TD></TR>
+<TR>
+<TD NOWRAP COLSPAN="1" ALIGN="LEFT"></TD><TD NOWRAP COLSPAN="99" ALIGN="LEFT"><CODE>-&gt;</CODE>&nbsp; <TT>(define <I>&lt;</I>name<I>&gt;</I>
+                        (<I>&lt;</I>name<I>&gt;</I> <I>&lt;</I>name<I>&gt;</I><I><sup>*</sup></I>))
+</TT></TT></TT></TD></TR></TABLE>
+
+<P>
+  
+Previous: <A HREF="s48manual_28.html">Macros</A> | Next: <A HREF="s48manual_30.html">Compiling and linking</A></BODY></HTML>

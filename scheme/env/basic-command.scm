@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; run
@@ -49,12 +49,16 @@
 (define (load . filenames)
   (let ((env (environment-for-commands)))
     ;; (with-interaction-environment env
-      ;; (lambda ()
-	(noting-undefined-variables env
-	  (lambda ()
-	    (for-each (lambda (filename)
-			(load-into filename env))
-		      filenames)))));; ))
+    ;; (lambda ()
+    ((if (load-noisily?)
+	 (lambda (x) (x))
+	 silently)
+     (lambda ()
+       (noting-undefined-variables env
+	 (lambda ()
+	   (for-each (lambda (filename)
+		       (load-into filename env))
+		     filenames)))))));; ))
 
 ; help
 

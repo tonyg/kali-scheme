@@ -27,15 +27,22 @@
 #undef	NLIST_HAS_N_NAME
 
 /*
+ * HAVE_DLOPEN is defined iff we have dlopen().
+ */
+#undef	HAVE_DLOPEN
+
+/*
  * USCORE is defined iff C externals are prepended with an underscore.
  */
 #undef	USCORE
 
+/*
+ * ENVIRON_NAME is defined to be the name of the environ variable.
+ */
+#undef ENVIRON_NAME
+
 /* Define if you have the chroot function.  */
 #undef HAVE_CHROOT
-
-/* Define if you have the dlopen function.  */
-#undef HAVE_DLOPEN
 
 /* Define if you have the ftime function.  */
 #undef HAVE_FTIME
@@ -97,3 +104,4 @@
 #include "fake/sigact.h"
 #include "fake/strerror.h"
 #include "fake/sys-select.h"
+#include "fake/environ.h"

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Sleeping for N milliseconds.
 
@@ -6,19 +6,23 @@
   (let ((queue (make-thread-queue)))  ; only one entry, but it must be a queue
     (disable-interrupts!)
     (enqueue-thread! queue (current-thread))
-    (set! *dozers*
-	  (insert (cons (+ (real-time) n) queue)
-		  *dozers*
-		  (lambda (frob1 frob2)
-		    (< (car frob1) (car frob2)))))
+    (session-data-set! dozers
+		       (insert (cons (+ (real-time) n) queue)
+			       (session-data-ref dozers)
+			       (lambda (frob1 frob2)
+				 (< (car frob1) (car frob2)))))
     (block)))
 
-(define *dozers* '())  ; List of (wakeup-time . queue)
+(define dozers (make-session-data-slot! '()))
 	  
 (define (insert x l <)
-  (cond ((null? l) (list x))
-	((< x (car l)) (cons x l))
-	(else (cons (car l) (insert x (cdr l) <)))))
+  (cond ((null? l)
+	 (list x))
+	((< x (car l))
+	 (cons x l))
+	(else
+	 (cons (car l)
+	       (insert x (cdr l) <)))))
 
 ; Called by root scheduler, so won't be interrupted.
 ; This returns two values, a boolean that indicates if any threads were
@@ -26,20 +30,20 @@
 ; threads that have been started for some other reason.
 
 (define (wake-some-threads)
-  (if (null? *dozers*)
+  (if (null? (session-data-ref dozers))
       (values #f #f)
       (let ((time (real-time)))
-	(let loop ((dozers *dozers*) (woke? #f))
-	  (if (null? dozers)
+	(let loop ((to-do (session-data-ref dozers)) (woke? #f))
+	  (if (null? to-do)
 	      (begin
-		(set! *dozers* '())
+		(session-data-set! dozers '())
 		(values woke? #f))
-	      (let ((next (car dozers)))
+	      (let ((next (car to-do)))
 		(cond ((thread-queue-empty? (cdr next))
-		       (loop (cdr dozers) woke?))
+		       (loop (cdr to-do) woke?))
 		      ((< time (car next))
-		       (set! *dozers* dozers)
+		       (session-data-set! dozers to-do)
 		       (values woke? (- (car next) time)))
 		      (else
 		       (make-ready (dequeue-thread! (cdr next)))
-		       (loop (cdr dozers) #t)))))))))
+		       (loop (cdr to-do) #t)))))))))

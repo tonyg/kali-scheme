@@ -1,0 +1,59 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:22 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Hash tables</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_42.html">Finite record types</A> | Next: <A HREF="s48manual_44.html">Fluid bindings</A>
+<H2>Hash tables</H2>
+<P>These are generic hash tables, and are in the structure <CODE>tables</CODE>.
+Strictly speaking they are more maps than tables, as every table has a
+ value for every possible key (for that type of table).
+All but a finite number of those values are <CODE>#f</CODE>.
+<UL><LI><CODE>(make-table<I></I>)&nbsp;-&gt;&nbsp;<I>table</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(make-symbol-table<I></I>)&nbsp;-&gt;&nbsp;<I>symbol-table</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(make-string-table<I></I>)&nbsp;-&gt;&nbsp;<I>string-table</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(make-integer-table<I></I>)&nbsp;-&gt;&nbsp;<I>integer-table</I></CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(make-table-maker<I>&nbsp;compare-proc&nbsp;hash-proc</I>)&nbsp;-&gt;&nbsp;<I>procedure</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(make-table-immutable!<I>&nbsp;table</I>)</CODE><A NAME="6">&nbsp;</A>
+</UL>
+The first four functions listed make various kinds of tables.
+<CODE>Make-table</CODE> returns a table whose keys may be symbols, integer,
+ characters, booleans, or the empty list (these are also the values
+ that may be used in <CODE>case</CODE> expressions).
+As with <CODE>case</CODE>, comparison is done using <CODE>eqv?</CODE>.
+The comparison procedures used in symbol, string, and integer tables are
+ <CODE>eq?</CODE>, <CODE>string=?</CODE>, and <CODE>=</CODE>.
+<P><CODE>Make-table-maker</CODE> takes two procedures as arguments and returns
+ a nullary table-making procedure.
+<CODE><I>Compare-proc</I></CODE> should be a two-argument equality predicate.
+<CODE><I>Hash-proc</I></CODE> should be a one argument procedure that takes a key
+ and returns a non-negative integer hash value.
+If <CODE>(<CODE><I>compare-proc</I></CODE> <CODE><I>x</I></CODE> <CODE><I>y</I></CODE>)</CODE> returns true,
+ then <CODE>(= (<CODE><I>hash-proc</I></CODE> <CODE><I>x</I></CODE>) (<CODE><I>hash-proc</I></CODE> <CODE><I>y</I></CODE>))</CODE>
+ must also return true.
+For example, <CODE>make-integer-table</CODE> could be defined
+ as <CODE>(make-table-maker = abs)</CODE>.
+<P><CODE>Make-table-immutable!</CODE> prohibits future modification to its argument.
+<UL><LI><CODE>(table?<I>&nbsp;value</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="7">&nbsp;</A>
+<LI><CODE>(table-ref<I>&nbsp;table&nbsp;key</I>)&nbsp;-&gt;&nbsp;<I>value&nbsp;or&nbsp;<TT>&nbsp;#f</TT></I></CODE><A NAME="8">&nbsp;</A>
+<LI><CODE>(table-set!<I>&nbsp;table&nbsp;key&nbsp;value</I>)</CODE><A NAME="9">&nbsp;</A>
+<LI><CODE>(table-walk<I>&nbsp;procedure&nbsp;table</I>)</CODE><A NAME="10">&nbsp;</A>
+</UL>
+<CODE>Table?</CODE> is the predicate for tables.
+<CODE>Table-ref</CODE> and <CODE>table-set!</CODE> access and modify the value of <CODE><I>key</I></CODE>
+ in <CODE><I>table</I></CODE>.
+<CODE>Table-walk</CODE> applies <CODE><I>procedure</I></CODE>, which must accept two arguments,
+ to every associated key and non-<CODE>#f</CODE> value in <CODE>table</CODE>.
+<UL><LI><CODE>(default-hash-function<I>&nbsp;value</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="11">&nbsp;</A>
+<LI><CODE>(string-hash<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="12">&nbsp;</A>
+</UL>
+<CODE>Default-hash-function</CODE> is the hash function used in the tables
+ returned by <CODE>make-table</CODE>, and <CODE>string-hash</CODE> it the one used
+ by <CODE>make-string-table</CODE>.
+<P>
+  
+Previous: <A HREF="s48manual_42.html">Finite record types</A> | Next: <A HREF="s48manual_44.html">Fluid bindings</A></BODY></HTML>

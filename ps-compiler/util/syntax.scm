@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 
 ; Syntax used by the compiler
@@ -25,7 +25,7 @@
 			       (map (lambda (spec)
 				      (if (pair? spec) (car spec) spec))
 				    (cadr stuff)))))
-	`(begin (define-record-type ,sub . ,stuff)
+	`(begin (,(rename 'define-record-type) ,sub . ,stuff)
 		,@(map (lambda (name)
 			 `(define ,(concatenate-symbol super '- name)
 			    (lambda (v)

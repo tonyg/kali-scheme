@@ -1,0 +1,80 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:20 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Switches</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_11.html">Command processor</A><BR>Previous: <A HREF="s48manual_16.html">Debugging commands</A> | Next: <A HREF="s48manual_18.html">Inspection mode</A>
+<H2>Switches</H2>
+<P>There are a number of binary switches that control the behavior of the
+ command processor.
+They can be set using the <CODE>,set</CODE> and <CODE>,unset</CODE> commands.
+<DL><DT><B></B><DD><CODE>,set <CODE><I>switch</I></CODE> [on | off | ?]</CODE><BR>This sets the value of mode-switch <CODE><I>switch</I></CODE>.
+    The second argument defaults to <CODE>on</CODE>.
+    If the second argument is <CODE>?</CODE> the value of <CODE><I>switch</I></CODE> is
+    is displayed and not changed.
+    Doing <CODE>,switch ?</CODE> will display a list of the switches and
+    their current values.
+<DT><B></B><DD><CODE>,unset <CODE><I>switch</I></CODE></CODE><BR><CODE>,unset <CODE><I>switch</I></CODE></CODE> is the same as
+    <CODE>,set <CODE><I>switch</I></CODE> off</CODE>.
+</DL>
+<P>The switches are as follows:
+<DL><DT><B></B><DD><CODE>batch</CODE><BR>In `batch mode' any error or interrupt that comes up will cause
+    Scheme&nbsp;48 to exit immediately with a non-zero exit status.  Also,
+    the command processor doesn't print prompts.  Batch mode is
+    off by default.
+<DT><B></B><DD><CODE>auto-levels</CODE><BR>Enables or disables the automatic pushing of a new command level when
+    an error, interrupt, or other breakpoint occurs.
+    When enabled (the default), breakpoints push a new command level,
+    and <I>&lt;</I>eof<I>&gt;</I> (see above)
+    or <CODE>,reset</CODE> is required to return to top level.  The effects of
+    pushed command levels include:
+<UL><LI>a longer prompt
+<LI>retention of the continuation in effect at the point of errors
+<LI>confusion among some newcomers
+</UL>
+    With <CODE>auto-levels</CODE> disabled one must issue a
+    <CODE>,push</CODE> command immediately
+    following an error in order to retain the error continuation for
+    debugging purposes; otherwise the continuation is lost after the
+    next evaluation request.  If you don't know anything about the
+    available debugging tools, then levels might as well be disabled.
+<DT><B></B><DD><CODE>inspect-focus-value</CODE><BR>Enable or disable `inspection' mode, which is used for inspecting
+    data structures and continuations.
+    <A HREF="s48manual_18.html">Inspection mode is desribed below</A>.
+<DT><B></B><DD><CODE>break-on-warnings</CODE><BR>Enter a new command level when a warning is produced, just as
+    when an error occurs.  Normally warnings only result in a displayed
+    message and the program does not stop executing.
+<DT><B></B><DD><CODE>ask-before-loading</CODE> <BR>If on, the system will ask before loading modules that are arguments
+    to the <CODE>,open</CODE> command.  <CODE>Ask-before-loading</CODE> is off by
+    default.
+<BLOCKQUOTE><PRE>
+&gt; ,set ask-before-loading
+will ask before loading modules
+&gt; ,open random
+Load structure random (y/n)? y
+&gt;
+</PRE></BLOCKQUOTE>
+<DT><B></B><DD><CODE>load-noisily</CODE><BR>When on, the system will print out the names of modules and files
+    as they are loaded.  <CODE>load-noisily</CODE> is off by default.
+<BLOCKQUOTE><PRE>
+&gt; ,set load-noisily
+will notify when loading modules and files
+&gt; ,open random
+[random /usr/local/lib/scheme48/big/random.scm]
+&gt; 
+</PRE></BLOCKQUOTE>
+<DT><B></B><DD><CODE>inline-values</CODE><BR>This controls whether or not the compiler is allowed to substitute
+ variables' values in-line.
+When <CODE>inline-values</CODE> mode is on,
+some Scheme procedures will be substituted in-line; when it is off,
+none will.
+<A HREF="s48manual_7.html">The performance section</A>
+has more information.
+</DL>
+<P>
+  
+Previous: <A HREF="s48manual_16.html">Debugging commands</A> | Next: <A HREF="s48manual_18.html">Inspection mode</A></BODY></HTML>

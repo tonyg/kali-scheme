@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 
 ; Finding where to put phi-functions.
@@ -20,7 +20,7 @@
 ;   ACM Transactions on Programming Languages and Systems 1991 13(4)
 ;   pages 451-490
 
-(define-record-type node :node
+(define-record-type ssa-node :node
   (really-make-node data use-uid predecessors dominator dominated
 		    seen-mark join-mark)
   node?
@@ -82,6 +82,10 @@
 			  succs)
 		(set-node-successors! node succs))
 	      node))))
+    (if (any (lambda (node)
+	       (not (eq? node (temp (node-data node)))))
+	     nodes)
+	(breakpoint "graph made incorrectly"))
     (reverse! nodes)))  ; root ends up at front
 
 ; Find the dominance frontiers of the nodes in a graph.
@@ -109,6 +113,12 @@
                                 (cons (car kid-frontier) frontier))))))))))
 
 (define (find-joins nodes temp)
+  (for-each (lambda (n)
+	      (if (not (node? (temp n)))
+		  (begin
+		    (breakpoint "node not seen before ~s" n)
+		    n)))
+	    nodes)
   (map node-data (really-find-joins (map temp nodes))))
 
 (define (really-find-joins nodes)

@@ -1,5 +1,5 @@
 
-; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 ; This file contains the definitions of the node tree data structure.
 
@@ -262,6 +262,27 @@
   (set-node-parent! call parent)
   (set-node-index! call '-1)
   (values))
+
+; NODES is an alternating series ... lambda, call, lambda, call, ...
+; that is connected into a sequence.  Each call becomes the body of the
+; previous lambda and each lambda becomes the (single) exit of the previous
+; call.
+
+(define (connect-sequence . all-nodes)
+  (if (not (null? all-nodes))
+      (let loop ((last (car all-nodes)) (nodes (cdr all-nodes)))
+	(if (not (null? nodes))
+	    (let ((next (car nodes)))
+	      (cond ((and (lambda-node? last)
+			  (call-node? next))
+		     (attach-body last next))
+		    ((and (call-node? last)
+			  (lambda-node? next)
+			  (= 1 (call-exits last)))
+		     (attach last 0 next))
+		    (else
+		     (bug "bad node sequence ~S" all-nodes)))
+	      (loop next (cdr nodes)))))))
 
 ; Replace node in tree with value of applying proc to node.
 ; Note the fact that a change has been made at this point in the tree.

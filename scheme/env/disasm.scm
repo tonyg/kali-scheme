@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This is file assem.scm.
@@ -70,7 +70,15 @@
     (let ((pc (cond ((= opcode (enum op computed-goto))
  		     (display-computed-goto pc code))
  		    ((= opcode (enum op make-flat-env))
- 		     (display-flat-env (+ pc 1) code))
+ 		     (display-flat-env (+ pc 1) code 1 code-vector-ref))
+ 		    ((= opcode (enum op make-big-flat-env))
+ 		     (display-flat-env (+ pc 1) code 2 get-offset))
+ 		    ((= opcode (enum op letrec-closures))
+ 		     (display-letrec-closures (+ pc 1)
+					      code
+					      template
+					      level
+					      write-sub-templates?))
 		    ((= opcode (enum op protocol))
 		     (display-protocol (code-vector-ref code (+ pc 1)) pc code))
  		    (else
@@ -89,22 +97,39 @@
 	 (count count (- count 1)))
 	((= count 0) pc)
       (display #\space)
-      (write `(=> ,(+ start-pc (get-offset pc code) 2))))))
+      (write `(=> ,(+ start-pc (get-offset code pc) 2))))))
 
-; Write out the environment specs for the make-flat-env opcode.
-  
-(define (display-flat-env pc code)
-  (let ((total-count (code-vector-ref code (+ 1 pc))))
+(define (display-letrec-closures pc code template level write-sub-templates?)
+  (let ((count (get-offset code pc)))
+    (if write-sub-templates?
+	(do ((i 0 (+ i 1))
+	     (pc (+ pc 2) (+ pc 2)))
+	    ((= i count))
+	  (newline-indent (* (+ level 1) 3))
+	  (really-disassemble (template-ref template
+					    (get-offset code pc))
+			      (+ level 1)))
+	(begin
+	  (display count)
+	  (display " templates ...")))
+    (+ pc (* 2 (+ count 1)))))
+
+(define (display-flat-env pc code size fetch)
+  (let ((include-*val*? (= 1 (code-vector-ref code pc)))
+	(total-count (fetch code (+ pc 1))))
     (display #\space) (write total-count)
-    (let loop ((pc (+ pc 2)) (count 0) (old-back 0))
-      (if (= count total-count)
+    (let loop ((pc (+ pc size 1))
+	       (count (if include-*val*?
+			  (- total-count 1)
+			  total-count))
+	       (back 0))
+      (if (= count 0)
 	  pc
-	  (let ((back (+ (code-vector-ref code pc)
-			 old-back))
-		(limit (+ pc 2 (code-vector-ref code (+ pc 1)))))
-	    (do ((pc (+ pc 2) (+ pc 1))
-		 (count count (+ count 1))
-		 (offsets '() (cons (code-vector-ref code pc) offsets)))
+	  (let ((back (+ back (code-vector-ref code pc)))
+		(limit (+ pc 1 size (* size (fetch code (+ pc 1))))))
+	    (do ((pc (+ pc 1 size) (+ pc size))
+		 (count count (- count 1))
+		 (offsets '() (cons (fetch code pc) offsets)))
 		((= pc limit)
 		 (display #\space)
 		 (write `(,back ,(reverse offsets)))
@@ -119,12 +144,18 @@
 	       (display protocol)
 	       2)
 	      ((= protocol two-byte-nargs-protocol)
-	       (display (get-offset (+ pc 2) code))
+	       (display (get-offset code (+ pc 2)))
 	       4)
 	      ((= protocol two-byte-nargs+list-protocol)
-	       (display (get-offset (+ pc 2) code))
+	       (display (get-offset code (+ pc 2)))
 	       (display " +")
 	       4)
+	      ((= protocol ignore-values-protocol)
+	       (display "discard all values")
+	       2)
+	      ((= protocol call-with-values-protocol)
+	       (display "call-with-values")
+	       2)
 	      ((= protocol args+nargs-protocol)
 	       (display "args+nargs")
 	       3)
@@ -148,7 +179,8 @@
 					     pc
 					     code)))
 		 (display #\space)
-		 (display (get-offset (- (code-vector-length code) 2) code))
+		 (display (get-offset code
+				      (- (code-vector-length code) 2)))
 		 size))
 	      (else
 	       (error "unknown protocol" protocol)))))
@@ -184,15 +216,15 @@
     ((nargs byte)
      (write (code-vector-ref code pc)))
     ((two-bytes)
-     (write (get-offset pc code)))
+     (write (get-offset code pc)))
     ((index)
-     (let ((thing (template-ref template (get-offset pc code))))
+     (let ((thing (template-ref template (get-offset code pc))))
        (write-literal-thing thing level write-templates?)))
     ((small-index)
      (let ((thing (template-ref template (code-vector-ref code pc))))
        (write-literal-thing thing level write-templates?)))
     ((offset)
-     (write `(=> ,(+ start-pc (get-offset pc code)))))
+     (write `(=> ,(+ start-pc (get-offset code pc)))))
     ((stob)
      (write (enumerand->name (code-vector-ref code pc) stob)))
     ((env-data)
@@ -230,7 +262,7 @@
 
 ; Fetch the two-byte value at PC in CODE.
 
-(define (get-offset pc code)
+(define (get-offset code pc)
   (+ (* (code-vector-ref code pc)
 	byte-limit)
      (code-vector-ref code (+ pc 1))))

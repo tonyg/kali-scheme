@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Transmogrify code to produce flat lexical environments.
 ;
@@ -9,8 +9,8 @@
 (set-optimizer! 'flat-environments
   (lambda (forms package)
     (map (lambda (form)
-	   (flatten-form (force form)))
-	 forms)))
+           (flatten-form (force form)))
+         forms)))
 
 (define (flatten-form node)
   (mark-set-variables! node)  ; we need to introduce cells for SET! variables
@@ -18,98 +18,83 @@
       (let ((form (node-form node)))
 	(make-similar-node node
 			   `(define ,(cadr form)
-			      ,(call-with-values
-				(lambda ()
-				  (flatten-node (caddr form)))
-				(lambda (node ignore)
-				  node)))))
-      (call-with-values
-       (lambda ()
-	 (flatten-node node))
-       (lambda (node ignore)
-	 node))))
+			      ,(flatten-node (caddr form)
+					     (install-new-set!)))))
+      (flatten-node node (install-new-set!))))
 
 ; Main dispatch
 ; This returns a new node and a list of free lexical variables.
 
-(define (flatten-node node)
+(define (flatten-node node free)
   ((operator-table-ref flatteners (node-operator-id node))
-     node))
+     node
+     free))
 
 ; Particular operators
 
 (define flatteners
   (make-operator-table
-   (lambda (node)
-     (call-with-values
-      (lambda ()
-	(flatten-list (cdr (node-form node))))
-      (lambda (exps free)
-	(values (make-similar-node node
-				   (cons (car (node-form node))
-					 exps))
-		free))))))
+   (lambda (node free)
+     (make-similar-node node
+			(cons (car (node-form node))
+			      (flatten-list (cdr (node-form node))
+					    free))))))
 
 (define (define-flattener name proc)
   (operator-define! flatteners name #f proc))
 
-(define (flatten-list nodes)
-  (let loop ((nodes nodes) (new '()) (free '()))
-    (if (null? nodes)
-	(values (reverse new) free)
-	(call-with-values
-	 (lambda ()
-	   (flatten-node (car nodes)))
-	 (lambda (node more-free)
-	   (loop (cdr nodes)
-		 (cons node new)
-		 (union more-free free)))))))
+(define (flatten-list nodes free)
+  (map (lambda (node)
+	 (flatten-node node free))
+       nodes))
 
-(define (no-free-vars node)
-  (values node '()))
+(define (no-free-vars node free)
+  node)
 
 (define-flattener 'literal             no-free-vars)
 (define-flattener 'quote               no-free-vars)
 (define-flattener 'primitive-procedure no-free-vars)
-(define-flattener 'lap                 no-free-vars)
 
 ; LAMBDA's get changed to FLAT-LAMBDA's if the lexical environment is
 ; non-empty.
 ; (FLAT-LAMBDA -formals- -free-vars- -body-)
 
 (define-flattener 'lambda
-  (lambda (node)
-    (flatten-lambda node #t)))
+  (lambda (node free)
+    (flatten-lambda node free #t)))
 
-(define (flatten-lambda node closure?)
-  (let ((exp (node-form node)))
-    (call-with-values
-     (lambda ()
-       (convert-lambda-body node))
-     (lambda (body free)
-       (values (if closure?
-		   (make-node operator/flat-lambda
-			      (list 'flat-lambda
-				    (cadr exp)
-				    free
-				    body))
-		   (make-similar-node node
-				      (list (car exp)
-					    (cadr exp)
-					    body)))
-	       free)))))
+(define (flatten-lambda node free closure?)
+  (let ((exp (node-form node))
+	(my-free (install-new-set!)))
+    (let ((body (convert-lambda-body node my-free)))
+      (install-set! free)
+      (set-union! free my-free)
+      (if closure?
+	  (make-node operator/flat-lambda
+		     (list 'flat-lambda
+			   (cadr exp)
+			   (set->list my-free)
+			   body))
+	  (make-similar-node node
+			     (list (car exp)
+				   (cadr exp)
+				   body))))))
 	  
+(define-flattener 'flat-lambda
+  (lambda (node free)
+    (for-each (lambda (name)
+		(set-add-element! free name))
+	      (caddr (node-form node)))
+    node))
+
 ; Flatten the body and make cells for any SET! variables.
 
-(define (convert-lambda-body node)
+(define (convert-lambda-body node free)
   (let* ((exp (node-form node))
-	 (var-nodes (normalize-formals (cadr exp))))
-    (call-with-values
-     (lambda ()
-       (flatten-node (caddr exp)))
-     (lambda (body free)
-       (values (add-cells body var-nodes)
-	       (set-difference free var-nodes))))))
+	 (var-nodes (normalize-formals (cadr exp)))
+	 (body (flatten-node (caddr exp) free)))
+    (set-difference! free var-nodes)
+    (add-cells body var-nodes)))
 
 (define (add-cells exp vars)
   (do ((vars vars (cdr vars))
@@ -127,89 +112,103 @@
 ; Lexical nodes are free and may have cells.
 
 (define-flattener 'name
-  (lambda (node)
+  (lambda (node free)
     (if (node-ref node 'binding)
-	(values node '())
-	(values (if (assigned? node)
-		    (make-cell-ref node)
-		    node)
-		(list node)))))
+	node
+	(begin
+	  (set-add-element! free node)
+	  (if (assigned? node)
+	      (make-cell-ref node)
+	      node)))))
 
 (define-flattener 'set!
-  (lambda (node)
+  (lambda (node free)
     (let* ((exp (node-form node))
-	   (var (cadr exp)))
-      (call-with-values
-       (lambda ()
-	 (flatten-node (caddr exp)))
-       (lambda (value free)
-	 (if (assigned? var)
-	     (values (make-cell-set! var value)
-		     (union (list var) free))
-	     (values (make-similar-node node
-					(list 'set! var value))
-		     free)))))))
+	   (var (cadr exp))
+	   (value (flatten-node (caddr exp) free)))
+      (if (assigned? var)
+	  (begin
+	    (set-add-element! free var)
+	    (make-cell-set! var value))
+	  (make-similar-node node
+			     (list 'set! var value))))))
 
 (define-flattener 'call
-  (lambda (node)
-    (let ((form (node-form node)))
-      (call-with-values
-       (lambda ()
-	 (flatten-list (cdr form)))
-       (lambda (args free)
-	 (call-with-values
-	  (lambda ()
-	    (if (lambda-node? (car form))
-		(flatten-lambda (car form) #f)
-		(flatten-node (car form))))
-	  (lambda (proc more-free)
-	    (values (make-similar-node node
-				       (cons proc args))
-		    (union free more-free)))))))))
+  (lambda (node free)
+    (let ((proc (car (node-form node)))
+	  (args (cdr (node-form node))))
+      (make-similar-node node
+			 (cons (if (lambda-node? proc)
+				   (flatten-lambda proc free #f)
+				   (flatten-node proc free))
+			       (flatten-list args free))))))
 
 (define-flattener 'loophole
-  (lambda (node)
+  (lambda (node free)
     (let ((form (node-form node)))
-      (call-with-values
-       (lambda ()
-	 (flatten-node (caddr form)))
-       (lambda (new free)
-	 (values (make-similar-node node
-				    (list (car form)
-					  (cadr form)
-					  new))
-		 free))))))
+      (make-similar-node node
+			 (list (car form)
+			       (cadr form)
+			       (flatten-node (caddr form) free))))))
   
-; Use LET & SET! for LETREC.
+; Use LET & SET! for LETRECs that have non-LAMBDA values.
 
 (define-flattener 'letrec
-  (lambda (node)
-    (let* ((form (node-form node))
-	   (vars (map car (cadr form)))
-	   (vals (map cadr (cadr form))))
-      (for-each (lambda (var)
-		  (node-set! var 'assigned #t))
-		vars)
-      (call-with-values
-       (lambda ()
-	 (flatten-list (cons (caddr form) vals)))
-       (lambda (nodes free)
-	 (values (make-node operator/call
-		    (cons (make-node operator/lambda
-			     `(lambda ,vars
-				,(make-node operator/begin
-				   `(begin ,@(map make-cell-set!
-						  vars
-						  (cdr nodes))
-					   ,(car nodes)))))
-			  (map (lambda (ignore)
-				 (make-unassigned-cell))
-			       vars)))
-		 (set-difference free vars)))))))
+  (lambda (node free)
+    (let ((form (node-form node)))
+      (let ((vars (map car (cadr form)))
+	    (vals (map cadr (cadr form)))
+	    (body (caddr form)))
+	(cond ((null? vars)
+	       (flatten-node body free))			;+++
+	      ((and (every lambda-node? vals)
+		    (not (any assigned? vars)))
+	       (flatten-pure-letrec vars vals body free))	;+++
+	      (else
+	       (flatten-impure-letrec vars vals body free)))))))
+
+(define (flatten-pure-letrec vars vals body free)
+  (let* ((vals-free (install-new-set!))
+	 (vals (flatten-list vals vals-free)))
+    (set-difference! vals-free vars)
+    (install-set! free)
+    (let ((body (flatten-node body free)))
+      (set-difference! free vars)
+      (set-union! free vals-free)
+      (make-node operator/pure-letrec
+		 `(pure-letrec ,(map list vars vals)
+			       ,(set->list vals-free)
+			       ,body)))))
+
+(define (flatten-impure-letrec vars vals body free)
+  (for-each (lambda (var)
+	      (node-set! var 'assigned #t))
+	    vars)
+  (let ((vals (flatten-list vals free))
+	(body (flatten-node body free)))
+    (set-difference! free vars)
+    (make-node operator/call
+	       (cons (make-node operator/lambda
+				`(lambda ,vars
+				   ,(make-node operator/begin
+					       `(begin ,@(map make-cell-set!
+							      vars
+							      vals)
+						       ,body))))
+		     (map (lambda (ignore)
+			    (make-unassigned-cell))
+			  vars)))))
+
+; Pick out the lexical variables from the list of free variables in the
+; LAP form.
 
 (define-flattener 'lap
-  (lambda (node)
-    (caddr (node-form node))))
+  (lambda (node free)
+    (for-each (lambda (var)
+		(if (not (node-ref var 'binding))
+		    (set-add-element! free var)))
+	      (caddr (node-form node)))
+    node))
 
 ;----------------
 ; Is name-node NODE SET! anywhere?
@@ -244,6 +243,10 @@
 (define-set-marker 'lambda
   (lambda (node)
     (mark-set-variables! (caddr (node-form node)))))
+
+(define-set-marker 'flat-lambda
+  (lambda (node)
+    (values)))
 
 (define-set-marker 'set!
   (lambda (node)
@@ -300,6 +303,8 @@
 
 (define operator/flat-lambda (get-operator 'flat-lambda))
 (define operator/lambda      (get-operator 'lambda))
+(define operator/letrec      (get-operator 'letrec))
+(define operator/pure-letrec (get-operator 'pure-letrec))
 (define operator/begin       (get-operator 'begin))
 (define operator/literal     (get-operator 'literal))
 (define operator/call        (get-operator 'call))
@@ -328,23 +333,44 @@
 
 ;----------------
 ; Set operations on lists.
+;
+; These use side effects to make union and difference O(n).  Name nodes are
+; marked with the set they are in.  These marks are only valid for one set
+; at any given time.
 
-(define (union vars1 vars2)
-  (if (null? vars2)
-      vars1
-      (let recur ((vars1 vars1))
-	(cond ((null? vars1)
-	       vars2)
-	      ((memq (car vars1) vars2)
-	       (recur (cdr vars1)))
-	      (else
-	       (cons (car vars1) (recur (cdr vars1))))))))
+(define (install-new-set!)
+  (list 'set))
 
-(define (set-difference vars1 vars2)
-  (let recur ((vars1 vars1))
-    (cond ((null? vars1)
-	   '())
-	  ((memq (car vars1) vars2)
-	   (recur (cdr vars1)))
-	  (else
-	   (cons (car vars1) (recur (cdr vars1)))))))
+(define (install-set! set)
+  (for-each (lambda (var)
+	      (node-set! var 'set-owner set))
+	    (cdr set)))
+
+(define set->list cdr)
+
+(define (set-add-element! set var)
+  (if (not (eq? set (node-ref var 'set-owner)))
+      (begin
+	(node-set! var 'set-owner set)
+	(set-cdr! set (cons var (cdr set))))))
+
+(define (set-union! set other-set)
+  (for-each (lambda (var)
+	      (set-add-element! set var))
+	    (set->list other-set)))
+
+(define (set-difference! set vars)
+  (for-each clear-var-set! vars)
+  (set-cdr! set (clean-var-list (cdr set))))
+
+(define (clean-var-list list)
+  (cond ((null? list)
+	 list)
+	((node-ref (car list) 'set-owner)
+	 (cons (car list)
+	       (clean-var-list (cdr list))))
+	(else
+	 (clean-var-list (cdr list)))))
+
+(define (clear-var-set! var)
+  (node-set! var 'set-owner #f))

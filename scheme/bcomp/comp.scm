@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is the main entry point to the compiler.  It returns a template
 ; that will execute the forms (each of which is a node).
@@ -33,7 +33,7 @@
 ;                                                        an-ignore-values-cont))
 ;                            name)))
 
-(define (compile-forms forms name)
+(define (compile-forms forms name env-key)
   (if (null? forms)
       (segment->template (sequentially
                            (instruction (enum op protocol) 0)
@@ -42,38 +42,52 @@
                          name
                          #f             ;pc-in-segment
                          #f)            ;debug data
-      (compile-forms-loop (reverse forms) name #f)))
+      (compile-forms-loop (reverse forms)
+			  name
+			  env-key
+			  #f)))
 
-(define (compile-forms-loop forms name next)
+(define (compile-forms-loop forms name env-key next)
   (if (null? forms)
       next
       (compile-forms-loop (cdr forms)
 			  name
-			  (compile-form (car forms) name next))))
+			  env-key
+			  (compile-form (car forms) name env-key next))))
 
 ; Compile a single top-level form, returning a template.  NEXT is either #F or
 ; a template; if it is a template we jump to it after FORM.
   
-(define (compile-form form name next)
-  (segment->template (sequentially
-		      (instruction (enum op protocol) 0)
-		      (let ((node (force-node form))
-			    (cont (if next
-				      an-ignore-values-cont
-				      (return-cont #f))))
-			(if (define-node? node)
-			    (compile-definition node cont)
-			    (compile-expression node 0 cont)))
-		      (if next
-			  (instruction-with-literal (enum op call-template)
-						    next
-						    0)
-			  empty-segment))
-		     name
-		     #f		;pc-in-segment
-		     #f))	;debug data
+(define (compile-form form name env-key next)
+  (segment->template
+    (let-fluid $env-key env-key
+      (lambda ()
+	(sequentially
+ 	 (instruction (enum op protocol) 0)
+	 (let ((node (flatten-form (force-node form))))  ; could flatten here
+	   (cond ((define-node? node)
+		  (sequentially
+		   (compile-definition node an-ignore-values-cont)
+		   (if next
+		       (instruction-with-literal (enum op call-template)
+						 next
+						 0)
+		       (instruction (enum op values) 0 0))))
+		 (next
+		  (sequentially
+		   (compile-expression node 0 an-ignore-values-cont)
+		   (instruction-with-literal (enum op call-template)
+					     next
+					     0)))
+		 (else
+		  (compile-expression node 0 (return-cont #f))))))))
+    name
+    #f		;pc-in-segment
+    #f))	;debug data
 
 (define define-node? (node-predicate 'define syntax-type))
+
+(define $env-key (make-fluid #f))
 
 ; Definitions must be treated differently from assignments: we must
 ; use SET-CONTENTS! instead of SET-GLOBAL! because the SET-GLOBAL!
@@ -94,7 +108,8 @@
 		  (deliver-value
 		   (instruction (enum op stored-object-set!)
 				(enum stob location)
-				location-contents-offset)
+				location-contents-offset
+				0)	; do not log in current proposal
 		   cont))))
 
 (define location-contents-offset

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; A little Scheme reader.
@@ -19,10 +19,11 @@
   (let ((port (input-port-option port-option)))
     (let loop ()
       (let ((form (sub-read port)))
-        (cond ((not (reader-token? form)) form)
+        (cond ((not (reader-token? form))
+	       form)
               ((eq? form close-paren)
                ;; Too many right parens.
-	       (warn "discarding extraneous right parenthesis")
+	       (warn "discarding extraneous right parenthesis" port)
                (loop))
 	      (else
 	       (reading-error port (cdr form))))))))
@@ -218,7 +219,15 @@
 (define-sharp-macro #\(
   (lambda (c port)
     (read-char port)
-    (list->vector (sub-read-list c port))))
+    (let ((elts (sub-read-list c port)))
+      (if (proper-list? elts)
+	  (list->vector elts)
+	  (reading-error port "dot in #(...)")))))
+
+(define (proper-list? x)
+  (cond ((null? x) #t)
+	((pair? x) (proper-list? (cdr x)))
+	(else #f)))
 
 (let ((number-sharp-macro
        (lambda (c port)

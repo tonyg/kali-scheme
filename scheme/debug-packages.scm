@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Handy things for debugging the run-time system, byte code compiler,
@@ -131,3 +131,89 @@
 			     `(start ',(map car structs))
 			     medium-system for-reification)))))
 
+(define-structure test-bignum (export test-all)
+  (open scheme
+	i/o
+	bitwise
+	bigbit)
+  (begin 
+
+    (define *tests* '())
+    (define (add-test! test) (set! *tests* (cons test *tests*)))
+    (define (test-all) (for-each (lambda (t) (t)) *tests*))
+
+    (define *results* '())
+    (define (print-results fname)
+      (with-output-to-file fname 
+	(lambda () 
+	  (for-each (lambda (x) (display x)(newline)) *results*))))
+
+    (define (add! e) (set! *results* (cons e *results*)))
+
+    
+    (define (square-map f l1 l2)
+      (if (null? l1)
+	  '()
+	  (letrec ((one-map (lambda (e1)
+			      (map (lambda (e2)
+				     (add! (f e1 e2))) 
+				   l2))))
+	    (cons (one-map (car l1))
+		  (square-map f (cdr l1) l2)))))
+
+    (define (printing-map f l)
+      (for-each add!
+		(map f l)))
+
+    (define small-args '(-1234 -23 -2 -1 1 2 23 1234))
+    (define fixnum-args (append (list -536870912 -536870911 536870911)
+				small-args))
+    (define usual-args 
+      (append (list -12345678901234567890 -1234567890 -536870913 536870912 
+		    536870913 1234567890 12345678901234567890)
+	      fixnum-args))
+	      
+    (define small-args/0 (cons 0 small-args))
+    (define fixnum-args/0 (cons 0 fixnum-args))
+    (define usual-args/0 (cons 0 usual-args))
+    
+    
+    (add-test! (lambda () (square-map + usual-args/0 usual-args/0)))
+    (add-test! (lambda () (square-map - usual-args/0 usual-args/0)))
+    (add-test! (lambda () (square-map * usual-args/0 usual-args/0)))
+    
+    (add-test! (lambda () (square-map /         usual-args/0 usual-args)))
+    (add-test! (lambda () (square-map quotient  usual-args/0 usual-args)))
+    (add-test! (lambda () (square-map remainder usual-args/0 usual-args)))
+    
+    (add-test! (lambda () (square-map arithmetic-shift usual-args/0 small-args)))
+
+    (add-test! (lambda () (square-map bitwise-and usual-args/0 usual-args/0)))
+    (add-test! (lambda () (square-map bitwise-ior usual-args/0 usual-args/0)))
+    (add-test! (lambda () (square-map bitwise-xor usual-args/0 usual-args/0)))
+
+    (add-test! (lambda () (printing-map bitwise-not usual-args/0)))
+;    (add-test! (lambda () (printing-map bit-count usual-args/0)))
+
+    (add-test! (lambda () (square-map <  usual-args/0 usual-args/0)))
+    (add-test! (lambda () (square-map >  usual-args/0 usual-args/0)))
+    (add-test! (lambda () (square-map <= usual-args/0 usual-args/0)))
+    (add-test! (lambda () (square-map >= usual-args/0 usual-args/0)))
+    (add-test! (lambda () (square-map =  usual-args/0 usual-args/0)))
+
+    (add-test! (lambda () (printing-map abs usual-args/0)))
+;    (add-test! (lambda () (printing-map (lambda (x) (angle (abs x))) usual-args/0)))
+
+    (add-test! 
+     (lambda () 
+       (map (lambda (unary)
+	      (printing-map unary usual-args/0))
+	    (list integer? rational? real? complex? exact? real-part 
+		  imag-part floor numerator denominator))))
+    ))
+    
+
+		 
+
+    
+    

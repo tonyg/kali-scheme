@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 
 (define-interface utilities-interface
@@ -97,6 +97,7 @@
            move move-body
            insert-body
            replace replace-body
+	   connect-sequence
 
            mark-changed
 
@@ -158,7 +159,7 @@
 
            remove-body
 
-	   put-in-letrec
+	   put-in-letrec make-letrec
 
            remove-lambda-variable remove-variable remove-unused-variables
 
@@ -175,7 +176,7 @@
 
            find-scoping
 
-           (let-nodes :syntax)
+           ((let-nodes new-lambda new-call) :syntax)
 
            node-equal?
 

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; These are hacked to ensure that all calls to INPUT-TYPE-PREDICATE and
 ; INPUT-TYPE-COERCION are evaluated at load time (because they don't
@@ -111,7 +111,8 @@
 (define string->      (input-type vm-string?   no-coercion))
 (define vector->      (input-type vm-vector?   no-coercion))
 (define code-vector-> (input-type code-vector? no-coercion))
-
+(define vm-integer->  (input-type (lambda (x) (or (fixnum? x)
+						  (bignum? x))) no-coercion))
 ; Output coercion
 
 (define (return val)

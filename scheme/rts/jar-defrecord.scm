@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This knows about the implementation of records and creates the various
@@ -19,7 +19,7 @@
 	    (define-constructor ?constructor ?type
 	      ((?arg :value) ...)
 	      (?field ...))
-	    (define-accessors ?type (?field . ?field-stuff) ...)))
+	    (define-accessors ?type () (?field . ?field-stuff) ...)))
     ((define-record-type ?id ?type
        (?constructor ?arg ...)
        ?pred
@@ -31,6 +31,25 @@
 	      (lambda (x)
 		(and (record? x)
 		     (eq? ?type (record-ref x 0)))))))))
+
+(define-syntax define-synchronized-record-type
+  (syntax-rules ()
+    ((define-record-type ?id ?type
+       (?constructor ?arg ...)
+       (?sync-field ...)
+       ?pred
+       (?field . ?field-stuff)
+       ...)
+     (begin (define ?type (make-record-type '?id '(?field ...)))
+	    (define-constructor ?constructor ?type
+	      ((?arg :value) ...)
+	      (?field ...))
+	    (define ?pred
+	      (lambda (x)
+		(and (record? x)
+		     (eq? ?type (record-ref x 0)))))
+	    (define-accessors ?type (?sync-field ...)
+	      (?field . ?field-stuff) ...)))))
 
 ; (define-constructor <id> <type> ((<arg> <arg-type>)*) (<field-name>*))
 ;
@@ -78,11 +97,20 @@
     (let ((%define-accessor (r 'define-accessor))
 	  (%begin (r 'begin))
 	  (type (cadr e))
-	  (field-specs (cddr e)))
+	  (sync-fields (caddr e))
+	  (field-specs (cdddr e)))
+      (define (mem? name list)
+	(cond ((null? list)        #f)
+	      ((c name (car list)) #t)
+	      (else
+	       (mem? name (cdr list)))))
       (do ((i 1 (+ i 1))
 	   (field-specs field-specs (cdr field-specs))
 	   (ds '()
-	       (cons `(,%define-accessor ,type ,i ,@(cdar field-specs))
+	       (cons `(,%define-accessor
+		       ,(mem? (caar field-specs)
+			      sync-fields)
+		       ,type ,i ,@(cdar field-specs))
 		     ds)))
 	  ((null? field-specs)
 	   `(,%begin ,@ds)))))
@@ -90,16 +118,32 @@
 
 (define-syntax define-accessor
   (syntax-rules ()
-    ((define-accessor ?type ?index ?accessor)
+    ((define-accessor ?sync? ?type ?index ?accessor)
      (define ?accessor
        (loophole (proc (?type) :value)
 		 (lambda (r)
-		   (checked-record-ref (loophole :record r) ?type ?index)))))
-    ((define-accessor ?type ?index ?accessor ?modifier)
-     (begin (define-accessor ?type ?index ?accessor)
+		   ((ref-proc ?sync?) (loophole :record r) ?type ?index)))))
+    ((define-accessor ?sync? ?type ?index ?accessor ?modifier)
+     (begin (define-accessor ?sync? ?type ?index ?accessor)
 	    (define ?modifier
 	      (loophole (proc (?type :value) :unspecific)
 			(lambda (r new)
-			  (checked-record-set! (loophole :record r) ?type ?index new))))))
-    ((define-accessor ?type ?index)
+			  ((set-proc ?sync?)
+			    (loophole :record r) ?type ?index new))))))
+    ((define-accessor ?sync? ?type ?index)
      (begin))))
+
+(define-syntax ref-proc
+  (syntax-rules ()
+    ((ref-proc #t)
+     provisional-checked-record-ref)
+    ((ref-proc #f)
+     checked-record-ref)))
+
+(define-syntax set-proc
+  (syntax-rules ()
+    ((set-proc #t)
+     provisional-checked-record-set!)
+    ((set-proc #f)
+     checked-record-set!)))
+

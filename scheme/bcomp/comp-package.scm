@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; package -> template
 
@@ -7,7 +7,8 @@
 				     (package-optimizer-names package))
 				    (expand-package package)
 				    package)
-				 (package-name package))))
+				 (package-name package)
+				 (package-uid package))))
     (link! template package #t)		; #t means warn about undefined variables
     template))
 

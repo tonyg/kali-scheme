@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Allocation
 ;  s48-*hp* is the heap pointer and s48-*limit* is the limit beyond which no
@@ -17,32 +17,60 @@
 (define *oldspace-begin*)
 (define *oldspace-end*)
 
-; For the GC (which is in another module)
+; For the image code
+
+(define (s48-heap-begin)
+  *newspace-begin*)
+
+(define (s48-heap-pointer)
+  s48-*hp*)
+
+(define (s48-oldspace-begin)
+  *oldspace-begin*)
+
+(define (s48-oldspace-end)
+  *oldspace-end*)
+
+; For the GC
 
 (define (heap-pointer)
   s48-*hp*)
 
-(define (set-heap-pointer! new-hp)
-  (set! s48-*hp* new-hp))
-
-(define (heap-start)
-  *newspace-begin*)
+(define (set-heap-pointer! new)
+  (set! s48-*hp* new))
 
 (define (heap-limit)
   *newspace-end*)
 
 ;----------------
 
-(define (s48-initialize-heap start size)
-  (let ((semisize (cells->a-units (quotient size 2))))
-    (set! *newspace-begin* start)
-    (set! *newspace-end* (address+ *newspace-begin* semisize))
-    (set! s48-*hp* *newspace-begin*)
-    (set! s48-*limit* *newspace-end*)
-    (set! *oldspace-begin* *newspace-end*)
-    (set! *oldspace-end* (address+ *oldspace-begin* semisize))
-    (set! *oldspace-hp* *oldspace-begin*)
-    (set! *oldspace-limit* *oldspace-end*)))
+(define (s48-initialize-heap heap-size image-size image-start)
+  (let* ((minimum-size (* 4 image-size))  ; two semi-spaces, won't totally thrash
+	 (heap-size (if (< heap-size minimum-size)
+			(begin
+			  (write-error-string "heap size ")
+			  (write-error-integer heap-size)
+			  (write-error-string " is too small, using ")
+			  (write-error-integer minimum-size)
+			  (write-error-newline)
+			  minimum-size)
+			heap-size))
+	 (heap (allocate-memory (cells->a-units heap-size))))
+    (if (null-address? heap)
+	(error "unable to allocate heap space")
+	(let ((semisize (cells->a-units (quotient heap-size 2))))
+	  (set! *newspace-begin* heap)
+	  (set! *newspace-end* (address+ *newspace-begin* semisize))
+	  (set! *oldspace-begin* *newspace-end*)
+	  (set! *oldspace-end* (address+ *oldspace-begin* semisize))
+	  (if (address= *oldspace-begin* image-start)
+	      (swap-spaces))
+	  (set! *oldspace-hp* *oldspace-begin*)
+	  (set! *oldspace-limit* *oldspace-end*)
+	  (set! s48-*hp*
+		(address+ *newspace-begin* (cells->a-units image-size)))
+	  (set! s48-*limit* *newspace-end*)
+	  *newspace-begin*))))
 
 ; To write images we need to be able to undo the swapping.
 
@@ -54,8 +82,8 @@
        (set! b temp)))))
 
 (define (swap-spaces)
-  (swap! s48-*limit*          *oldspace-limit*)
-  (swap! s48-*hp*             *oldspace-hp*)
+  (swap! s48-*limit*      *oldspace-limit*)
+  (swap! s48-*hp*         *oldspace-hp*)
   (swap! *newspace-begin* *oldspace-begin*)
   (swap! *newspace-end*   *oldspace-end*))
 
@@ -63,6 +91,9 @@
 
 (define (s48-available? cells)
   (address< (address+ s48-*hp* (cells->a-units cells)) s48-*limit*))
+
+(define (bytes-available? bytes)
+  (address< (address+ s48-*hp* (bytes->a-units bytes)) s48-*limit*))
 
 (define (s48-available)
   (a-units->cells (address-difference s48-*limit* s48-*hp*)))
@@ -74,57 +105,7 @@
   (store! s48-*hp* descriptor)
   (set! s48-*hp* (address1+ s48-*hp*)))
 
-; Pre-Allocation
-;
-; Preallocation and keys are used to ensure that for every call to MAKE-STOB
-; there is a corresponding call to ENSURE-SPACE to see if there is sufficient
-; heap space.  ENSURE-SPACE returns a key and MAKE-STOB checks that the
-; key it is passed is the most recently allocated key and that the space
-; needed is no greater than the argument to ENSURE-SPACE.
-; 
-; Another solution would be to make ENSURE-SPACE and MAKE-STOB a single
-; procedure.  The difficulty is that ENSURE-SPACE may trigger a garbage
-; collection, which in turn requires that all live data be reachable
-; from the VM's registers.  The VM solves this by only calling ENSURE-SPACE
-; at the beginning of an instruction, before any values have been removed
-; from the stack or any of the registers.  Once the key has been obtained
-; the instruction is free to make any number of calls to MAKE-STOB, as long
-; as the total heap space required is no more than what was checked for.
-; 
-; There is a flag, CHECK-PREALLOCATION?, that determines whether MAKE-STOB
-; actually checks the keys.  In the VM as seen by the Pre-Scheme compiler
-; this flag is defined to be #f and never set, so all of the key code is
-; constant-folded into oblivion.
-; 
-; The main virtue of the keys is not that they can be checked but
-; that they exist at all.  MAKE-STOB requires a key argument, and
-; if there is none available you know that you forgot an ENSURE-SPACE.
-; Occasionally I run the VM in Scheme with checking enabled, just
-; to see if it all still works.
-
-(define check-preallocation? #f)
-
-(define *heap-key* 0)
-(define *okayed-space* 0)
-
-(define (s48-preallocate-space cells)
-  (cond (check-preallocation?
-	 (assert (s48-available? cells))
-	 (set! *heap-key* (+ *heap-key* 1))
-	 (set! *okayed-space* cells)
-	 *heap-key*)
-	(else
-	 0)))
-
-(define (s48-allocate-space type len key)	;len is in bytes
-  (= type 0)      ; declaration for type-checker
-  (if check-preallocation?
-      (let ((cells (+ (bytes->cells len) 1)))
-	(assert (s48-available? cells))
-	(if (not (and (= key *heap-key*)
-		      (>= *okayed-space* cells)))
-	    (error "invalid heap key" key cells))
-	(set! *okayed-space* (- *okayed-space* cells))))
+(define (allocate len)
   (let ((new s48-*hp*))
     (set! s48-*hp* (address+ s48-*hp* (bytes->a-units len)))
     new))
@@ -169,20 +150,22 @@
 
 (define (walk-pure-areas proc)
   (if (< 0 *pure-area-count*)
-      (walk-areas proc *pure-areas* *pure-sizes* *pure-area-count*)))
+      (walk-areas proc *pure-areas* *pure-sizes* *pure-area-count*)
+      #t))
 
 (define (walk-impure-areas proc)
   (if (< 0 *impure-area-count*)
-      (walk-areas proc *impure-areas* *impure-sizes* *impure-area-count*)))
+      (walk-areas proc *impure-areas* *impure-sizes* *impure-area-count*)
+      #t))
 
 ;----------------------------------------------------------------
 ; Finding things in the heap.
 
 (define *finding-type* (enum stob symbol))    ; work around lack of closures
 
-; Call PREDICATE on all objects of type *FINDING-TYPE* found between START and END.
-; The objects for which PREDICATE returns #T are pushed onto the heap using STORE-NEXT!.
-; Returns #T for success and #F for failure.
+; Call PREDICATE on all objects of type *FINDING-TYPE* found between START and
+; END.  The objects for which PREDICATE returns #T are pushed onto the heap
+; using STORE-NEXT!.  Returns #T for success and #F for failure.
 
 (define (collect-type-in-area predicate)
   (lambda (start end)
@@ -249,29 +232,79 @@
       (set! the-record-type record-type)
       (finder (enum stob record)))))
 
-(define find-resumer-records
-  (let ((finder (generic-find-all
-		  (lambda (record)
-		    (let ((type (record-type record)))
-		      (and (record? type)
-			   (stob? (record-type-resumer type))))))))
-    (lambda ()
-      (finder (enum stob record)))))
-
 ; Functions for accessing records.  Getting these from STRUCT would introduce
 ; a circular module dependency.
 
-(define (record? x)
-  (and (stob? x)
-       (= (header-type (stob-header x))
-	  (enum stob record))))
-    
 (define (record-type record)
   (record-ref record -1))
-
-(define (record-type-resumer record-type)
-  (record-ref record-type 0))
 
 (define (record-ref record offset)
   (fetch (address+ (address-after-header record)
 		   (cells->a-units (+ offset 1)))))
+
+;----------------
+; Checks for heap consistency.  Quits after ERROR-COUNT problems have been
+; found.
+
+(define (s48-check-heap error-count)
+  (set! *heap-errors-left* error-count)
+  (and (check-area *newspace-begin* s48-*hp*)
+       (walk-impure-areas check-area)
+       (walk-pure-areas check-area)))
+
+(define *heap-errors-left* 0)
+
+(define (check-area start end)
+  (let loop ((addr start))
+    (if (address>= addr end)
+	#t
+	(let* ((d (fetch addr))
+	       (next (address+ addr
+			       (+ (cells->a-units stob-overhead)
+				  (header-length-in-a-units d)))))
+	  (cond ((not (header? d))
+		 (check-lost "Heap-check: unexpected non-header."))
+		((address< end next)
+		 (check-lost "Heap-check: header too large."))
+		((b-vector-header? d)
+		 (loop next))
+		((check-stob-contents (address1+ addr) next)
+		 (loop next))
+		(else
+		 #f))))))
+
+; Check the descriptors from START (inclusive) to END (exclusive).  This does
+; not accept internal headers, which are normally allowed but not currently
+; used by the system.
+
+(define (check-stob-contents start end)
+  (let loop ((addr start))
+    (if (address= addr end)
+	#t
+	(let ((x (fetch addr)))
+	  (cond ((header? x)
+		 (check-lost "Heap-check: unexpected header."))
+		((or (not (stob? x))
+		     (check-stob x))
+		 (loop (address1+ addr)))
+		(else
+		 #f))))))
+		 
+; Check that STOB points into the heap just after a header.  This will fail
+; if there are any pure or impure areas.
+
+(define (check-stob stob)
+  (let ((addr (address-at-header stob)))
+    (cond ((or (address< addr *newspace-begin*)
+	       (address<= s48-*hp* addr))
+	   (check-lost "Heap-check: address out of bounds."))
+	  ((not (header? (fetch addr)))
+	   (check-lost "Heap-check: stob has no header."))
+	  (else
+	   #t))))
+
+(define (check-lost message)
+  (write-string message (current-error-port))
+  (newline (current-error-port))
+  (set! *heap-errors-left* (- *heap-errors-left* 1))
+  (< *heap-errors-left* 1))

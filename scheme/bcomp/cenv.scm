@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Compile-time environments
 ; These are functions
@@ -26,8 +26,8 @@
 
 (define (bindrec names cenv->bindings cenv)
   (set! cenv (bind names
-		  (cenv->bindings (lambda (a-name) (cenv a-name)))
-		  cenv))
+		   (cenv->bindings (lambda (a-name) (cenv a-name)))
+		   cenv))
   cenv)
 
 ; Making the initial environment.

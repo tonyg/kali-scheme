@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Link script.
 
@@ -30,7 +30,7 @@
 	(l '()))
     (for-each (lambda (int)
 		(for-each-declaration
-		     (lambda (name type)
+		     (lambda (name package-name type)
 		       (if (not (assq name l))
 			   (let ((s (eval name env)))
 			     (if (structure? s)

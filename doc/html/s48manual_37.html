@@ -1,0 +1,34 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Bitwise integer operations</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_36.html">ASCII character encoding</A> | Next: <A HREF="s48manual_38.html">Byte vectors</A>
+<H2>Bitwise integer operations</H2>
+<P>These functions use the two's-complement representation for integers.
+There is no limit to the number of bits in an integer.
+They are in the structures <CODE>bitwise</CODE> and <CODE>big-scheme</CODE>.
+<UL><LI><CODE>(bitwise-and<I>&nbsp;integer&nbsp;integer</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(bitwise-ior<I>&nbsp;integer&nbsp;integer</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(bitwise-xor<I>&nbsp;integer&nbsp;integer</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(bitwise-not<I>&nbsp;integer</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="4">&nbsp;</A>
+</UL>
+These perform various logical operations on integers on a bit-by-bit
+basis. `<CODE>ior</CODE>' is inclusive OR and `<CODE>xor</CODE>' is exclusive OR.
+<UL><LI><CODE>(arithmetic-shift<I>&nbsp;integer&nbsp;bit-count</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="5">&nbsp;</A>
+</UL>
+Shifts the integer by the given bit count, which must be an integer,
+ shifting left for positive counts and right for negative ones.
+Shifting preserves the integer's sign.
+<UL><LI><CODE>(bit-count<I>&nbsp;integer</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="6">&nbsp;</A>
+</UL>
+Counts the number of bits set in the integer.
+If the argument is negative a bitwise NOT operation is performed
+ before counting.
+<P>
+  
+Previous: <A HREF="s48manual_36.html">ASCII character encoding</A> | Next: <A HREF="s48manual_38.html">Byte vectors</A></BODY></HTML>

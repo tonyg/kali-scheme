@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include <stdlib.h>
@@ -7,9 +7,11 @@
 #include "scheme48vm.h"
 #include "scheme48heap.h"
 
+extern long s48_get_file_size(unsigned char *);
+
 #if !defined(DEFAULT_HEAP_SIZE)
-/* 1.5 megacell = 6 megabytes (3 meg per semispace) */
-#define DEFAULT_HEAP_SIZE 1500000L
+/* 3 megacell = 12 megabytes (6 meg per semispace) */
+#define DEFAULT_HEAP_SIZE 3000000L
 #endif
 
 #if !defined(DEFAULT_STACK_SIZE)
@@ -43,8 +45,9 @@ main(argc, argv)
   long stack_size = DEFAULT_STACK_SIZE;  /* in numbers of cells */
   int errors = 0;
   long return_value;
-  void *heap, *stack;
-  long required_heap_size;
+  int heap_okay;
+  void *stack;
+  long image_file_size;
   int warn_undefined_imported_bindings_p = 1;
 
 #if defined(STATIC_AREAS)
@@ -120,49 +123,30 @@ Options: -h <total heap size in words>\n\
   s48_heap_init();
   s48_init();
 
-  if (image_name == NULL)
-    required_heap_size = 0;
-  else {
-    /* check_image_header returns number of bytes; required_heap_size
-       is number of cells. */
-    required_heap_size =
-      s48_check_image_header((unsigned char *)image_name) >> 2;
-    if (-1 == required_heap_size) {
-      fprintf(stderr, "Image file \"%s\" is unusable.\n", image_name);
-      return 1; }
-  }
-
-  /* two semi-spaces, plus we want some room to maneuver */
-  if (heap_size < 4 * required_heap_size) {
-    fprintf(stderr, "heap size %ld is too small, using %ld\n",
-	    heap_size, 4 * required_heap_size);
-    heap_size = 4 * required_heap_size; }
-
-  heap = (void *) malloc(heap_size * sizeof(long));
-  stack = (void *) malloc(stack_size * sizeof(long));
-    
-  if (!heap || !stack) {
-    fprintf(stderr, "system is out of memory\n");
-    return 1; }
-
-  s48_initialize_heap((long)heap, heap_size);
-
-#if defined(STATIC_AREAS)
   if (image_name == NULL) {
+#if defined(STATIC_AREAS)
     s48_register_static_areas(p_count, p_areas, p_sizes,
 			      i_count, i_areas, i_sizes);
     s48_set_image_valuesB(static_entry,
 			  static_symbol_table,
 			  static_imported_binding_table,
 			  static_exported_binding_table);
-  } else if (s48_read_image() == -1) {
-    fprintf(stderr, "Image file \"%s\" is unusable.\n", image_name);
-    return 1; }
+    if (-1 == s48_initialize_heap(heap_size, 0, 0)) {
+      fprintf(stderr, "system is out of memory\n");
+      return 1; }
 #else
-  if (s48_read_image() == -1) {
+    fprintf(stderr, "No image file.\n");
+    return 1;
+#endif
+  } else if (s48_read_image(image_name, heap_size) == -1) {
     fprintf(stderr, "Image file \"%s\" is unusable.\n", image_name);
     return 1; }
-#endif
+  
+  stack = (void *) malloc(stack_size * sizeof(long));
+    
+  if (!stack) {
+    fprintf(stderr, "system is out of memory\n");
+    return 1; }
 
   s48_initialize_vm(stack, stack_size);
 

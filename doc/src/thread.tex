@@ -1,0 +1,252 @@
+
+\chapter{threads}
+
+safety (and the lack thereof)
+
+\section{Creating and controlling threads}
+
+\begin{protos}
+\proto{spawn}{ thunk}{thread}
+\proto{spawn}{ thunk name}{thread}
+\proto{thread?}{ thing}{boolean}
+\proto{thread-name}{ thread}{name}
+\proto{thread-uid}{ thread}{integer}
+\protonoresult{relinquish-timeslice}{}
+\protonoresult{sleep}{ time-in-?}
+\protonoresult{terminate-current-thread}{}
+\end{protos}
+
+\section{Debugging multithreaded programs}
+
+Debugging multithreaded programs can be difficult.
+
+As described in {section whatever}, when any thread raises an
+ error, Scheme~48 stops running all of the threads at that command level.
+
+The following procedure is useful in debugging multi-threaded programs.
+\begin{protos}
+\protonoresult{debug-message}{ element$_0$ \ldots}
+\end{protos}
+\code{Debug-message} prints the elements to `\code{stderr}', followed by a
+ newline.
+The only types of values that \code{debug-message} prints in full are small
+ integers (fixnums), strings, characters, symbols, boolean, and the empty list.
+Values of other types are abbreviated as follows.
+
+\begin{tabular}{ll}
+ pair       &   \code{(...)}\\
+ vector     &   \code{\#(...)}\\
+ procedure  &   \code{\#\{procedure\}}\\
+ record     &   \code{\#\{<name of record type>\}}\\
+ all others &   \code{???}\\
+\end{tabular}
+
+The great thing about \code{debug-message} is that it bypasses Scheme~48's
+ I/O and thread handling.
+The message appears immediately, with no delays
+ or errors.
+
+\code{Debug-message} is exported by the structure \code{debug-messages}.
+
+\section{Mutual exclusion}
+
+locks
+
+ make-lock
+ lock?
+ obtain-lock
+ maybe-obtain-lock
+ release-lock
+
+\begin{protos}
+\proto{make-lock}{ }{lock}
+\proto{lock?}{ thing}{boolean}
+\protonoresult{obtain-lock}{ lock}
+\proto{maybe-obtain-lock}{ lock}{boolean}
+\protonoresult{release-lock}{ lock}
+\end{protos}
+
+
+condition variables
+% these require proposals
+
+ (make-condvar [id]) -> condvar
+
+% add condvar?
+
+ (maybe-commit-and-wait-for-condvar condvar) -> boolean
+ (maybe-commit-and-set-condvar! condvar value)
+ (condvar-has-value? condvar) -> boolean
+ (set-condvar-value! condvar boolean)
+ (condvar-value condvar) -> value
+ (set-condvar-value! condvar value)
+
+placeholders
+
+ make-placeholder
+ placeholder?
+ placeholder-value
+ placeholder-set!
+
+\section{Optimistic concurrency}
+
+%add an overview
+
+A \cvar{proposal} is a record of reads from and and writes to locations in
+ memory.
+The \cvar{logging} operations listed below record any values read or
+ written in the current proposal.
+A reading operation, such as \code{provisional-vector-ref}, first checks to
+ see if the current proposal contains a value for the relevent location.
+If so, that value is returned as the result of the read.
+If not, the current contents of the location are stored in the proposal and
+ then returned as the result of the read.
+A logging write to a location stores the new value as the current contents of
+ the location in the current proposal; the contents of the location itself
+ remain unchanged.
+
+\cvar{Committing} to a proposal verifies that any reads logged in
+ the proposal are still valid and, if so, performs any writes that
+ the proposal contains.
+A logged read is valid if, at the time of the commit, the location contains
+ the same value it had at the time of the original read (note that this does
+ not mean that no change occured, simply that the value now is the same as
+ the value then).
+If a proposal has an invalid read then the effort to commit fails no change
+ is made to the value of any location.
+
+\begin{protos}
+\proto{ensure-atomicity}{ thunk}{value(s)}
+\protonoresult{ensure-atomicity!}{ thunk}
+\end{protos}
+\noindent
+If there is a proposal in place 
+ \code{ensure-atomicity} and \code{ensure-atomicity!}
+ simply make a (tail-recursive) call to \cvar{thunk}.
+If the current proposal is \code{\#f} they create a new proposal,
+ install it, call \cvar{thunk}, and then try to commit to the proposal.
+This process repeats, with a new proposal on each iteration, until
+ the commit succeeds.
+\code{Ensure-atomicity} returns whatever values are returned by \cvar{thunk}
+ on its final invocation, while \code{ensure-atomicity!} discards any such
+ values and returns nothing.
+
+\begin{protos}
+\proto{provisional-car}{ pair}{value}
+\proto{provisional-cdr}{ pair}{value}
+\protonoresult{provisional-set-car!}{ pair value}
+\protonoresult{provisional-set-cdr!}{ pair value}
+\proto{provisional-cell-ref}{ cell}{value}
+\protonoresult{provisional-cell-set!}{ cell value}
+\proto{provisional-vector-ref}{ vector i}{value}
+\protonoresult{provisional-vector-set!}{ vector i value}
+\proto{provisional-string-ref}{ vector i}{char}
+\protonoresult{provisional-string-set!}{ vector i char}
+\proto{provisional-byte-vector-ref}{ vector i}{k}
+\protonoresult{provisional-byte-vector-set!}{ vector i k}
+\end{protos}
+\noindent
+These are all logging versions of their Scheme counterparts.
+Reads are checked when the current proposal is committed and writes are
+ delayed until the commit succeeds.
+If the current proposal is \code{\#f} these perform exactly as their Scheme
+ counterparts.
+
+The following implementation of a simple counter may not function properly
+ when used by multiple threads.
+\begin{example}
+(define (make-counter)
+  (let ((value 0))
+    (lambda ()
+      (set! value (+ value 1))
+      value)))
+\end{example}
+
+Here is the same procedure using a proposal to ensure that each
+ increment operation happens atomically.
+The value of the counter is kept in a
+ \link*{cell}[cell (see section~\Ref]{cells}
+ to allow the use of
+ logging operations.
+\begin{example}
+(define (make-counter)
+  (let ((value (make-cell 0)))
+    (lambda ()
+      (ensure-atomicity
+        (lambda ()
+          (let ((v (+ (provisional-cell-ref value)
+                      1)))
+            (provisional-cell-set! value v)
+            v))))))
+\end{example}
+
+Because \code{ensure-atomicity} creates a new proposal only if there is
+ no existing proposal in place, multiple atomic actions can be performed
+ simultaneously.
+The following procedure increments an arbitrary number of counters at the same
+ time.
+This works even if the same counter appears multiple times;
+ \code{(step-counters! c0 c0)} would add two to the value of counter \code{c0}.
+\begin{example}
+(define (step-counters! . counters)
+  (ensure-atomicity
+    (lambda ()
+      (for-each (lambda (counter)
+                  (counter))
+                counters))))
+\end{example}
+
+\begin{example}
+(define-synchronized-record-type \cvar{tag} \cvar{type-name}
+  (\cvar{constructor-name} \cvar{field-tag} \ldots)
+  [(\cvar \cvar{field-tag} \ldots)]
+  \cvar{predicate-name}
+  (\cvar{field-tag} \cvar{accessor-name} [\cvar{modifier-name}])
+  \ldots)
+\end{example}
+This is the same as \code{define-record-type}
+ except all field reads and
+ writes are logged in the current proposal.
+If the optional list of field tags is present then only those fields will
+ be logged.
+
+\begin{protos}
+\proto{atomically}{ thunk}{value(s)}
+\protonoresult{atomically!}{ thunk}
+\end{protos}
+\noindent
+\code{Atomically} and \code{atomically!} are identical
+ to \code{ensure-atomicity} and \code{ensure-atomicity!} except that they
+ always install a new proposal before calling \code{thunk}.
+The current proposal is saved and then restored after \code{thunk} returns.
+\code{Atomically} and \code{atomically!} are useful if \code{thunk} contains
+ code that should not be combined with any other operation (example?).
+
+The following procedures give access to the low-level proposal mechanism.
+\begin{protos}
+\proto{make-proposal}{}{proposal}
+\proto{current-proposal}{}{proposal}
+\protonoresult{set-current-proposal!}{ proposal}
+\proto{with-proposal}{ proposal thunk}{value \ldots}
+\proto{maybe-commit}{ proposal}{boolean}
+\end{protos}
+\noindent
+\code{Make-proposal} creates a new proposal.
+\code{Current-proposal} and \code{set-current-proposal} access and set
+ the current thread's proposal.
+It is an error to pass to \code{set-current-proposal!} a proposal that
+ is already in use.
+\code{With-proposal} saves the current proposal, installs \cvar{proposal} as
+ the current proposal, and then calls \cvar{thunk}.
+When \cvar{thunk} returns the saved proposal is reinstalled as the current
+ proposal
+ and the value(s) returned by \cvar{thunk} are returned.
+
+\code{Maybe-commit} verifies that any reads logged in \cvar{proposal} are
+ still valid and, if so, performs any writes that \cvar{proposal} contains.
+A logged read is valid if, at the time of the commit, the location read contains
+ the same value it had at the time of the original read (note that this does
+ not mean that no change occured, simply that the value now is the same as
+ the value then).
+\code{Maybe-commit} returns \code{\#t} if the commit succeeds and \code{\#f}
+ if it fails.

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file struct.scm.
 
@@ -22,6 +22,7 @@
   (symbol-next set-symbol-next!))       		; hidden from RTS
 (define-shared-primitive-data-type closure #f #t)
 (define-shared-primitive-data-type location)
+(define-shared-primitive-data-type cell)
 (define-shared-primitive-data-type weak-pointer)
 (define-shared-primitive-data-type shared-binding #f #f
   #f
@@ -43,8 +44,16 @@
 (define-vector-data-type vector #t)
 (define-vector-data-type record)
 (define-vector-data-type extended-number)
+(define-vector-data-type bignum)
 (define-vector-data-type continuation)
 (define-vector-data-type template)
+
+(define (vm-make-vector+gc len)
+  (let ((vector (maybe-make-d-vector+gc (enum stob vector)
+					len)))
+    (if (false? vector)
+	(error "Out of space, unable to allocate")
+	vector)))
 
 (define (vm-vector-fill! v val)
   (do ((i 0 (+ i 1)))
@@ -78,8 +87,18 @@
     (code-vector-set! code 1 op2)
     temp))
 
+(define (make-template-containing-three-ops op1 op2 op3 key)
+  (let ((temp (make-template 2 key))
+        (code (make-code-vector 3 key)))
+    (template-set! temp 0 code)
+    (code-vector-set! code 0 op1)
+    (code-vector-set! code 1 op2)
+    (code-vector-set! code 2 op3)
+    temp))
+
 (define (op-template-size op-count)
-  (+ (template-size 2) (code-vector-size op-count)))
+  (+ (template-size 2)
+     (code-vector-size op-count)))
 
 ; Code vectors
 
@@ -107,12 +126,21 @@
 (define (vm-string-size length)
   (+ stob-overhead (bytes->cells (+ 1 length))))
 
-(define (enter-string string key)           ; used by VMIO on startup
-  (let ((z (string-length string)))
-    (let ((v (vm-make-string z key)))
-      (do ((i 0 (+ i 1)))
-          ((>= i z) v)
-        (vm-string-set! v i (string-ref string i))))))
+; Two calls for converting external (C) strings to S48 strings.
+
+(define (enter-string string key)
+  (really-enter-string string (string-length string) key))
+
+(define (enter-string+gc string)
+  (let* ((z (string-length string))
+	 (key (ensure-space (vm-string-size z))))
+    (really-enter-string string z key)))
+
+(define (really-enter-string string len key)
+  (let ((v (vm-make-string len key)))
+    (do ((i 0 (+ i 1)))
+	((= i len) v)
+      (vm-string-set! v i (string-ref string i)))))
 
 ; This depends on our having 0 bytes at the end of strings.
 
@@ -129,7 +157,7 @@
 
 ; Number predicates
 
-(define bignum?       (stob-predicate (enum stob bignum)))
+;(define bignum?       (stob-predicate (enum stob bignum)))
 (define ratnum?       (stob-predicate (enum stob ratnum)))
 (define double?       (stob-predicate (enum stob double)))
 

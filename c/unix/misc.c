@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include <stdio.h>
@@ -7,6 +7,7 @@
 #include <pwd.h>		/* for getpwnam() (POSIX.1) */
 #include <unistd.h>		/* for sysconf(), etc.  (POSIX.1/.2)*/
 #include <errno.h>
+#include <sys/stat.h>
 #include "sysdep.h"
 
 
@@ -127,3 +128,19 @@ ps_error_string(long the_errno)
 {
   return((unsigned char *)strerror(the_errno));
 }
+
+/* Getting the length of a file. */
+
+long
+s48_get_file_size(unsigned char *name)
+{
+  struct stat file_data;
+  int status;
+  
+  if (-1 == stat(name, &file_data) ||
+      ! S_ISREG(file_data.st_mode))
+    return -1;
+  else
+    return file_data.st_size;
+}
+  

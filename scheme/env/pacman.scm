@@ -1,10 +1,8 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
-
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; PACkage-manipulation comMANds
 
 (add-sentinel! package-system-sentinel)
-
 
 (define (set-environment-for-commands! p)
   (set-interaction-environment! p)
@@ -16,7 +14,6 @@
 (define set-user-environment!
   (user-context-modifier 'user-environment))
 
-
 (define-command-syntax 'in "<struct> [<command>]"
   "go to package, or execute single command in package"
   '(name &opt command))
@@ -24,8 +21,8 @@
 (define (in name . maybe-command)
   (if (and (not (null? maybe-command))
 	   (command-just-evaluates-symbol? (car maybe-command)))
-      (set-focus-object! (environment-ref (really-get-package name)
-					  (cadr (car maybe-command))))
+      (set-command-results! (list (environment-ref (really-get-package name)
+						   (cadr (car maybe-command)))))
       (in-package (get-package name) maybe-command)))
 
 (define (command-just-evaluates-symbol? command)
@@ -57,7 +54,7 @@
   '(name))
 
 (define (load-package name)
-  (ensure-loaded (get-structure name)))
+  (quietly-ensure-loaded (get-structure name)))
 
 (define-command-syntax 'reload-package "<struct>" "load package's source code again"
   '(name))
@@ -67,7 +64,7 @@
     (if (not (package-unstable? (structure-package s)))
 	(error "read-only structure" s))
     (set-package-loaded?! (structure-package s) #f)
-    (ensure-loaded s)))
+    (quietly-ensure-loaded s)))
 
 (define-command-syntax 'structure "<name> <interface>"
   "create new structure over the current package"
@@ -108,16 +105,31 @@
 			   (package-opens p))))
 	   #t)
 	  ((or (batch-mode?)
+	       (not (ask-before-loading?))
 	       (y-or-n? (if (structure-name struct)
 			    (string-append "Load structure "
 					   (symbol->string
 					    (structure-name struct)))
 			    "Load structure")
 			#f))
-	   (ensure-loaded struct)
+	   (quietly-ensure-loaded struct)
 	   #t)
 	  (else #f))))
 
+; Loading or asking is controlled by the user context.
+
+(define ask-before-loading?
+  (user-context-accessor 'ask-before-loading?
+			 (lambda () #f)))
+
+(define set-ask-before-loading?!
+  (user-context-modifier 'ask-before-loading?))
+
+(add-switch 'ask-before-loading
+	    ask-before-loading?
+	    set-ask-before-loading?!
+	    "will ask before loading modules"
+	    "will not ask before loading modules")
 
 (define-command-syntax 'for-syntax "[<command>]"
   "go to current package's package for syntax"
@@ -196,12 +208,20 @@
 		(command)
 		(execute-command (car maybe-command))))))))
 
+(define (quietly-ensure-loaded s)
+  (if (load-noisily?)
+      (ensure-loaded s)
+      (silently (lambda ()
+		  (ensure-loaded s)))))
+
+; The initial value used to be user-environment, but that required that the
+; user context be created and initialized separately.
+
 (define config-package
-  (user-context-accessor 'config-package user-environment))
+  (user-context-accessor 'config-package interaction-environment))
 
 (define set-config-package!
   (user-context-modifier 'config-package))
-
 
 (define (get-package name)
   (let ((p (really-get-package name)))
@@ -283,9 +303,11 @@
 	       tower			;?
 	       (delay (let ((p (eval `(a-package ((for-syntax ,id)) ,@clauses)
 				     config)))
-			(ensure-loaded (make-structure p
-						       (lambda () (make-simple-interface #f '()))
-						       'for-syntax))
+			(quietly-ensure-loaded (make-structure
+						p
+						(lambda ()
+						  (make-simple-interface #f '()))
+						'for-syntax))
 			(cons eval p))))))
     config))
 

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; To load the VM into Scheme 48:
 ;   ,exec ,load load-vm.scm
@@ -50,19 +50,17 @@
 ;
 ;    % make scheme/debug/tiny.image
 ;    (echo ',batch' && echo ',bench on'; \
-;    echo \(load-configuration \"scheme/debug/tiny-packages.scm\"\); \
-;    echo \(link-simple-system \'\(scheme/debug tiny\) \'start tiny-system\)) \
+;     echo \(load-configuration \"scheme/debug/tiny-packages.scm\"\); \
+;     echo \(link-simple-system \'\(scheme/debug tiny\) \'start tiny-system\)) \
 ;    | ./scheme48vm -h 5000000 -i build/linker.image
-;    Welcome to Scheme 48 0.45 (suspended image).
-;    Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-;    Copyright (c) 1996 by NEC Research Institute, Inc.
+;    Welcome to Scheme 48 0.53 (suspended image).
+;    Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
 ;    Please report bugs to scheme-48-bugs@martigny.ai.mit.edu.
 ;    Type ,? (comma question-mark) for help.
 ;    > Will exit on errors
 ;    Will compile some calls in line
-;    scheme/debug/tiny-packages.scm 
-;    [tiny-system
-;    scheme/debug/tiny.scm ]
+;    scheme/debug/tiny-packages.scm
+;    [tiny-system scheme/debug/tiny.scm]
 ;    Writing scheme/debug/tiny.debug
 ;    
 ;    % ./scheme48vm -i scheme/debug/tiny.image -a the-argument
@@ -89,23 +87,15 @@
 (open 'ps-memory)
 (open 'vm)
 (open 'heap-init)
-(open 'images)
+(open 'read-image)
 (open 'memory-debug)
 
 (run '
 (define (start-vm image-file heap-size stack-size start-args)
   (reinitialize-memory)
-  (let ((needed-space (+ (quotient (s48-check-image-header image-file) 4))))
-    (cond ((< heap-size (* 16 needed-space))
-           (display "Heap too small, want at least ")
-           (display (* 16 needed-space))
-           (newline))
-          (else
-           (let ((heap (allocate-memory heap-size))
-                 (stack (allocate-memory stack-size)))
-	     (s48-initialize-heap heap (quotient heap-size 4))
-	     (s48-read-image)
-	     (s48-initialize-vm stack (quotient stack-size 4))
-	     (s48-call-startup-procedure start-args
-					 (vector-length start-args)))))))
+  (s48-read-image image-file heap-size)
+  (s48-initialize-vm (allocate-memory stack-size)
+		     (quotient stack-size 4))
+  (s48-call-startup-procedure start-args
+			      (vector-length start-args)))
 )

@@ -1,33 +1,49 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-; Code to handle the calling conventions.
+; Code to handle the calling and return protocols.
 
 ; *VAL* is the procedure, the arguments are on stack, and the next byte
-; is the protocol.  This checks that *VAL* is in fact a closure and checks
-; for the common case of a non-n-ary procedure that has few arguments.
-; The common case is handled directly and all others are passed off to
-; PLAIN-PROTOCOL-MATCH.
+; is the number of arguments (all of which are on the stack).  This checks
+; that *VAL* is in fact a closure and for the common case of a non-n-ary
+; procedure that has few arguments.  This case is handled directly and all
+; others are passed off to PLAIN-PROTOCOL-MATCH.
 
 (define-opcode call
   (let ((stack-arg-count (code-byte 0)))
     (if (closure? *val*)
 	(let* ((template (closure-template *val*))
-	       (code (template-code template)))
-	  (if (= stack-arg-count (code-vector-ref code 1))
-	      (begin
-		(set! *template* template)
-		(set-current-env! (closure-env *val*))
-		(set-code-pointer! code 2)
-		(ensure-default-procedure-space! ensure-space)
-		(if (pending-interrupt?)
-		    (goto handle-interrupt stack-arg-count)
-		    (goto interpret *code-pointer*)))
-	      (goto plain-protocol-match stack-arg-count)))
+	       (code (template-code template))
+	       (protocol (code-vector-ref code 1)))
+	  (cond ((= protocol stack-arg-count)
+		 (set! *template* template)
+		 (set-current-env! (closure-env *val*))
+		 (set-code-pointer! code 2)
+		 (ensure-default-procedure-space! ensure-space)
+		 (if (pending-interrupt?)
+		     (goto handle-interrupt stack-arg-count)
+		     (goto interpret *code-pointer*)))
+		((= (native->byte-protocol protocol)
+		    stack-arg-count)
+		 (call-native-code *val* 2 stack-arg-count)
+		 (goto interpret *code-pointer*))
+		(else
+		 (goto plain-protocol-match stack-arg-count))))
 	(goto application-exception
 	      (enum exception bad-procedure)
 	      stack-arg-count null 0))))
 
-; Two bytes of arguments.
+; Native protocols have the high bit set.
+
+(define (native->byte-protocol protocol)
+  (bitwise-and protocol 127))
+
+(define (call-native-code proc protocol-skip stack-nargs)
+  (set! *template* (closure-template proc))
+  (set-code-pointer! (template-code *template*) protocol-skip)
+  (move-args-above-cont! stack-nargs)
+  (s48-call-native-code proc))
+
+; As above but with a two-byte argument count.
 
 (define-opcode big-call
   (goto perform-application (code-offset 0)))
@@ -42,7 +58,7 @@
 	       (set-template! (get-literal 0)
 			      (enter-fixnum 2)) ; skip the protocol
 	       (if (pending-interrupt?)
-		   (goto handle-interrupt (code-byte 2))  ; pass nargs count
+		   (goto handle-interrupt 0)  ; pass nargs count (always 0)
 		   (goto interpret *code-pointer*))))
 	(code (template-code (get-literal 0))))
     (cond ((= 0 (code-vector-ref code 1))
@@ -58,17 +74,7 @@
 	  (else
 	   (raise-exception wrong-type-argument 3 (get-literal 0))))))
 
-; The following two instructions are used only for experiments.  The compiler
-; does not normally use them.
-;
-; Same as op/call except that the arguments are moved to just above the
-; current continuation before the call is made.  For non-tail calls and some
-; tail-calls the arguments will already be there.
-
-(define-opcode move-args-and-call
-  (let ((nargs (code-byte 0)))
-    (move-args-above-cont! nargs)
-    (goto perform-application nargs)))
+; The following is used only for experiments.  The compiler does not use it.
 
 (define-opcode goto-template
   (set-template! (get-literal 0) (enter-fixnum 0))
@@ -85,10 +91,12 @@
 	(okay-argument-list list-args)
       (if okay?
 	  (goto perform-application-with-rest-list
-		(code-offset 0) list-args length)
+		(code-offset 0)
+		list-args
+		length)
 	  (begin
 	    (push list-args)
-	    (let ((args (pop-args->list* null (+ (code-offset 0) 1))))
+	    (let ((args (pop-args->list*+gc null (+ (code-offset 0) 1))))
 	      (raise-exception wrong-type-argument -1 *val* args))))))) ; no next
 
 ; This is only used for the closed-compiled version of APPLY.
@@ -124,8 +132,8 @@
 		  list-arg-count))
 	  (begin
 	    (push list-args)
-	    (let ((args (pop-args->list* null (+ stack-arg-count 1))))
-	      (pop)	; remove procedure
+	    (let* ((args (pop-args->list*+gc null (+ stack-arg-count 1)))
+		   (proc (pop)))
 	      (raise-exception wrong-type-argument -1 proc args)))))))
 
 ; Stack = arg0 arg1 ... argN rest-list
@@ -246,68 +254,7 @@
 ; is created.
 
 (define (plain-protocol-match stack-arg-count)
-  (let ((code (template-code (closure-template *val*)))
-	(lose (lambda ()
-		(goto wrong-nargs stack-arg-count null 0))))
-    (assert (= (enum op protocol)
-	       (code-vector-ref code 0)))
-    (let loop ((protocol (code-vector-ref code 1))
-	       (stack-space default-stack-space))
-      (let ((win (lambda (skip stack-arg-count)
-		   (install-*val*-closure skip)
-		   (goto check-interrupts-and-go stack-space stack-arg-count))))
-	(let (;; Fixed number of arguments.
-	      (fixed-match (lambda (wants skip)
-			     (if (= wants stack-arg-count)
-				 (win skip stack-arg-count)
-				 (lose))))
-	      ;; N-ary procedure.
-	      (n-ary-match (lambda (wants-stack-args skip)
-			     (if (<= wants-stack-args stack-arg-count)
-				 (begin
-				   (rest-list-setup wants-stack-args
-						    stack-arg-count
-						    null
-						    0)
-				   (win skip (+ wants-stack-args 1)))
-				 (lose))))
-	      ;; Push the rest list, the total number of arguments, and the
-	      ;; number on the stack arguments onto the stack.
-	      (args+nargs-match (lambda (skip)
-				  (push null)
-				  (push (enter-fixnum stack-arg-count))
-				  (push (enter-fixnum stack-arg-count))
-				  (win skip (+ stack-arg-count 3)))))
-	  (cond ((= protocol nary-dispatch-protocol)
-		 (if (< stack-arg-count 3)
-		     (let ((skip (code-vector-ref code (+ 2 stack-arg-count))))
-		       (if (= 0 skip)
-			   (lose)
-			   (win skip stack-arg-count)))
-		     (let ((skip (code-vector-ref code 5)))
-		       (if (= 0 skip)
-			   (lose)
-			   (args+nargs-match skip)))))
-		((= protocol args+nargs-protocol)
-		 (if (>= stack-arg-count
-			 (code-vector-ref code 2))
-		     (args+nargs-match 3)
-		     (lose)))
-		((= protocol two-byte-nargs+list-protocol)
-		 (n-ary-match (code-vector-ref16 code 2) 4))
-		((<= protocol maximum-stack-args)
-		 (fixed-match protocol 2))
-		((= protocol two-byte-nargs-protocol)
-		 (fixed-match (code-vector-ref16 code 2) 4))
-		((= protocol big-stack-protocol)
-		 (let ((length (code-vector-length code)))
-		   (loop (code-vector-ref code (- length 3))
-			 (code-vector-ref16 code (- length 2)))))
-		(else
-		 (error "unknown protocol" protocol)
-		 (lose))))))))
-
-; Same thing, except that there is an additional list of arguments.
+  (goto list-protocol-match stack-arg-count null 0))
 
 (define (list-protocol-match stack-arg-count list-args list-arg-count)
   (let ((code (template-code (closure-template *val*)))
@@ -321,22 +268,24 @@
 	       (stack-space default-stack-space))
       (let ((win (lambda (skip stack-arg-count)
 		   (install-*val*-closure skip)
-		   (goto check-interrupts-and-go stack-space stack-arg-count))))
-	(let (;; Fixed number of arguments.
-	      (fixed-match (lambda (wants skip)
+		   (goto check-interrupts-and-go
+			 stack-space
+			 stack-arg-count))))
+	(let ((fixed-match (lambda (wants skip)
 			     (if (= wants total-arg-count)
 				 (begin
-				   (push-list list-args list-arg-count)
+				   (if (not (= 0 list-arg-count))
+				       (push-list list-args list-arg-count))
 				   (win skip total-arg-count))
 				 (lose))))
 	      ;; N-ary procedure.
 	      (n-ary-match (lambda (wants-stack-args skip)
 			     (if (<= wants-stack-args total-arg-count)
 				 (begin
-				   (rest-list-setup wants-stack-args
-						    stack-arg-count
-						    list-args
-						    list-arg-count)
+				   (rest-list-setup+gc wants-stack-args
+						       stack-arg-count
+						       list-args
+						       list-arg-count)
 				   (win skip (+ wants-stack-args 1)))
 				 (lose))))
 	      ;; If there are > 2 args the top two are pushed on the stack.
@@ -347,11 +296,11 @@
 					 (if (< total-arg-count 3)
 					     total-arg-count
 					     (max 2 stack-arg-count))))
-				    (rest-list-setup (max stack-arg-count
-							  final-stack-arg-count)
-						     stack-arg-count
-						     list-args
-						     list-arg-count)
+				    (rest-list-setup+gc (max stack-arg-count
+							     final-stack-arg-count)
+							stack-arg-count
+							list-args
+							list-arg-count)
 				    (push (enter-fixnum final-stack-arg-count))
 				    (push (enter-fixnum total-arg-count))
 				    (win skip (+ final-stack-arg-count 3))))))
@@ -367,15 +316,15 @@
 		       (if (= 0 skip)
 			   (lose)
 			   (args+nargs-match skip)))))
+		((<= protocol maximum-stack-args)
+		 (fixed-match protocol 2))
+		((= protocol two-byte-nargs+list-protocol)
+		 (n-ary-match (code-vector-ref16 code 2) 4))
 		((= protocol args+nargs-protocol)
 		 (if (>= total-arg-count
 			 (code-vector-ref code 2))
 		     (args+nargs-match 3)
 		     (lose)))
-		((<= protocol maximum-stack-args)
-		 (fixed-match protocol 2))
-		((= protocol two-byte-nargs+list-protocol)
-		 (n-ary-match (code-vector-ref16 code 2) 4))
 		((= protocol two-byte-nargs-protocol)
 		 (fixed-match (code-vector-ref16 code 2) 4))
 		((= protocol big-stack-protocol)
@@ -390,17 +339,18 @@
 ; arguments between the stack and LIST-ARGS as necessary.  Whatever is left
 ; of LIST-ARGS is then copied and the copy is pushed onto the stack.
 
-(define (rest-list-setup wants-stack-args stack-arg-count list-args list-arg-count)
+(define (rest-list-setup+gc wants-stack-args stack-arg-count
+			    list-args list-arg-count)
   (cond ((= stack-arg-count wants-stack-args)
-	 (push (copy-list* list-args list-arg-count)))
+	 (push (copy-list*+gc list-args list-arg-count)))
 	((< stack-arg-count wants-stack-args)
 	 (let ((count (- wants-stack-args stack-arg-count)))
-	   (push (copy-list* (push-list list-args count)
-			     (- list-arg-count count)))))
+	   (push (copy-list*+gc (push-list list-args count)
+				(- list-arg-count count)))))
 	(else ; (> stack-arg-count wants-stack-args)
 	 (let ((count (- stack-arg-count wants-stack-args)))
-	   (push (pop-args->list* (copy-list* list-args list-arg-count)
-				  count))))))
+	   (push (pop-args->list*+gc (copy-list*+gc list-args list-arg-count)
+				     count))))))
 
 ; Raise an exception, passing to it a list of the arguments on the stack and
 ; in LIST-ARGS.
@@ -408,8 +358,8 @@
 (define (application-exception exception
 			       stack-arg-count list-args list-arg-count)
   (cond ((not (vm-eq? *template* *val*))
-	 (let ((args (pop-args->list* (copy-list* list-args list-arg-count)
-				      stack-arg-count)))
+	 (let ((args (pop-args->list*+gc (copy-list*+gc list-args list-arg-count)
+					 stack-arg-count)))
 	   (raise-exception* exception -1 *val* args))) ; no next opcode
 	((< 0 *losing-opcode*)
 	 (error "wrong number of arguments to exception handler"
@@ -439,6 +389,208 @@
 		 bits-used-per-byte)))
 
 ;----------------
+; Returns - these use many of the same protocols.
+
+; Invoke the contination, if it can handle a single value.  There are four
+; protocols that are okay:
+;
+;  1, ignore-values
+;    We just leave *VAL* as is and return.
+;  bottom-of-stack
+;    Real continuation is either in the heap or #F (if we are really at the
+;    bottom of the stack).  We get the real continuation and either try again
+;    or return from the VM.
+;  two-byte-nargs+list
+;    Continuation is n-ary.  If it want 0 or 1 value on the stack we are okay
+;    and do the setup and return.
+
+(define-opcode return
+  (let loop ()
+    (let* ((cont (current-continuation))
+	   (code (template-code (continuation-template cont)))
+	   (pc (extract-fixnum (continuation-pc cont))))
+      (assert (= (enum op protocol)
+		 (code-vector-ref code pc)))
+      (let ((protocol (code-vector-ref code (+ pc 1))))
+	(cond ((or (= protocol 1)
+		   (= protocol ignore-values-protocol))
+	       (pop-continuation!)
+	       (goto continue 1))		; one protocol byte
+	      ((= protocol bottom-of-stack-protocol)
+	       (let ((cont (get-continuation-from-heap)))
+		 (if (continuation? cont)
+		     (begin
+		       (copy-continuation-from-heap! cont 0)
+		       (loop))
+		     (goto return-from-vm cont))))
+	      ((= protocol call-with-values-protocol)
+	       (skip-current-continuation!)
+	       (push *val*)
+	       (set! *val* (continuation-ref cont continuation-cells))
+	       (goto perform-application-with-rest-list 1 null 0))
+	      ((= protocol two-byte-nargs+list-protocol)
+	       (let ((wants-stack-args (code-vector-ref16 code (+ pc 2))))
+		 (cond ((= 0 wants-stack-args)
+			(pop-continuation!)
+			(push (vm-cons *val* null (ensure-space vm-pair-size)))
+			(goto continue 3))
+		       ((= 1 wants-stack-args)
+			(pop-continuation!)
+			(push *val*)
+			(push null)
+			(goto continue 3))
+		       (else
+			(push *val*)
+			(goto return-exception 1 null)))))
+	      (else
+	       (push *val*)
+	       (goto return-exception 1 null)))))))
+
+; CONT is not a continuation.  If it is false and *VAL* is a fixnum we can
+; return from the VM.  Otherwise we set the continuation to #F and raise an
+; exception.
+
+(define (return-from-vm cont)
+  (cond ((and (false? cont)
+	      (fixnum? *val*))
+	 (set! s48-*callback-return-stack-block* false) ; not from a callback
+	 (extract-fixnum *val*))	  		; VM returns here
+	(else
+	 (set-current-continuation! false)
+	 (raise-exception wrong-type-argument -1 *val* cont))))
+
+; This is only used in the closed-compiled version of VALUES.
+; Stack is: arg0 arg1 ... argN rest-list N+1 total-arg-count.
+; If REST-LIST is non-empty then there are at least two arguments on the stack.
+
+(define-opcode closed-values
+  (let* ((nargs (extract-fixnum (pop)))
+	 (stack-nargs (extract-fixnum (pop)))
+	 (rest-list (pop)))
+    (goto return-values stack-nargs rest-list (- nargs stack-nargs))))
+
+; Same as the above, except that the value count is in the instruction stream
+; and all of the arguments are on the stack.
+; This is used for in-lining calls to VALUES.
+
+(define-opcode values
+  (goto return-values (code-offset 0) null 0))
+
+; STACK-NARGS return values are on the stack.  Find the actual continuation
+; and check the protocol:
+;
+; 1
+;   If we have just one value we put it in *VAL* and return.
+; ignore-values
+;   Drop everything and just return
+; bottom-of-stack
+;   The real continuation is either in the stack or is FALSE (if we are really
+;   at the bottom of the stack).  If the former we install it and try again.
+;   If the latter we can return a single value, but not multiple values.
+; call-with-values
+;   Current continuation has a single value, a closure.  We remove the closure
+;   and invoke it on the current values.
+
+(define (return-values stack-nargs list-args list-arg-count)
+  (let* ((cont (current-continuation))
+	 (code (template-code (continuation-template cont)))
+	 (pc (extract-fixnum (continuation-pc cont)))
+	 (protocol (code-vector-ref code (+ pc 1))))
+    (assert (= (enum op protocol)
+	       (code-vector-ref code pc)))
+    (cond ((= protocol 1)
+	   (if (= 1 (+ stack-nargs list-arg-count))
+	       (begin
+		 (return-value->*val* stack-nargs list-args)
+		 (pop-continuation!)
+		 (goto continue 1))
+	       (goto return-exception stack-nargs list-args)))
+	  ((= protocol ignore-values-protocol)
+	   (pop-continuation!)
+	   (goto continue 1))
+	  ((= protocol bottom-of-stack-protocol)
+	   (let ((cont (get-continuation-from-heap)))
+	     (cond ((continuation? cont)
+		    (copy-continuation-from-heap! cont stack-nargs)
+		    (goto return-values stack-nargs list-args list-arg-count))
+		   ((= 1 (+ stack-nargs list-arg-count))
+		    (return-value->*val* stack-nargs list-args)
+		    (goto return-from-vm cont))
+		   (else
+		    (goto return-exception stack-nargs list-args)))))
+	  ((= protocol call-with-values-protocol)
+	   (skip-current-continuation!)
+	   (set! *val* (continuation-ref cont continuation-cells))
+	   (goto perform-application-with-rest-list
+		 stack-nargs
+		 list-args
+		 list-arg-count))
+	  ((<= protocol maximum-stack-args)
+	   (goto fixed-arg-return protocol 1
+		 stack-nargs list-args list-arg-count))
+	  ((= protocol two-byte-nargs+list-protocol)
+	   (goto nary-arg-return (code-vector-ref16 code (+ pc 2)) 3
+		 stack-nargs list-args list-arg-count))
+	  ((= protocol two-byte-nargs-protocol)
+	   (goto fixed-arg-return (code-vector-ref16 code (+ pc 2)) 3
+		 stack-nargs list-args list-arg-count))
+	  (else
+	   (error "unknown protocol" protocol)
+	   (goto return-exception stack-nargs list-args)))))
+
+; The continuation wants a fixed number of arguments.  We pop the current
+; continuation, move the stack arguments down to the new stack top, push
+; any list arguments and off we go.
+
+(define (fixed-arg-return count bytes-used stack-nargs list-args list-arg-count)
+  (if (= count (+ stack-nargs list-arg-count))
+      (let ((arg-top (top-of-argument-stack)))
+	(pop-continuation!)
+	(move-stack-arguments! arg-top stack-nargs)
+	(if (not (= 0 list-arg-count))
+	    (push-list list-args list-arg-count))
+	(goto continue bytes-used))
+      (goto return-exception stack-nargs list-args)))
+
+; The continuation wants a COUNT arguments on the stack plus a list of any
+; additional arguments.  We pop the current continuation, move the stack
+; arguments down to the new stack top, adjust the number of stack arguments,
+; push the remaining list arguments, and off we go.
+
+(define (nary-arg-return count bytes-used stack-nargs list-args list-arg-count)
+  (if (<= count (+ stack-nargs list-arg-count))
+      (let ((arg-top (top-of-argument-stack)))
+	(pop-continuation!)
+	(move-stack-arguments! arg-top stack-nargs)
+	(push (if (<= stack-nargs count)
+		  (do ((stack-nargs stack-nargs (+ stack-nargs 1))
+		       (l list-args (vm-cdr l)))
+		      ((= count stack-nargs)
+		       l)
+		    (push (vm-car l)))
+		  (pop-args->list*+gc list-args (- stack-nargs count))))
+	(goto continue bytes-used))
+      (goto return-exception stack-nargs list-args)))
+
+; Move the (single) return value to *VAL*.
+
+(define (return-value->*val* stack-nargs list-args)	   
+  (set! *val*
+	(if (= 1 stack-nargs)
+	    (pop)
+	    (vm-car list-args))))
+
+; The return protocol doesn't match up so we gather all the return values into
+; a list and raise an exception.
+
+(define (return-exception stack-nargs list-args)
+  (let ((args (pop-args->list*+gc list-args stack-nargs)))
+    (raise-exception wrong-number-of-arguments
+		     -1		 ; no next opcode
+		     false
+		     args)))
+
+;----------------
 ; Manipulating lists of arguments
 
 ; Push COUNT elements from LIST onto the stack, returning whatever is left.
@@ -454,12 +606,14 @@
 
 ; Copy LIST, which has LENGTH elements.
 
-(define (copy-list* list length)
+(define (copy-list*+gc list length)
   (if (= length 0)
       null
-      (receive (key list)
-	  (ensure-space-saving-temp (* vm-pair-size length) list)
-	(let ((res (vm-cons (vm-car list) null key)))
+      (begin
+	(save-temp0! list)
+	(let* ((key (ensure-space (* vm-pair-size length)))
+	       (list (recover-temp0!))
+	       (res (vm-cons (vm-car list) null key)))
 	  (do ((l (vm-cdr list) (vm-cdr l))
 	       (last res (let ((next (vm-cons (vm-car l) null key)))
 			   (vm-set-cdr! last next)
@@ -469,9 +623,10 @@
 
 ; Pop COUNT arguments into a list with START as the cdr.
 
-(define (pop-args->list* start count)
-  (receive (key start)
-      (ensure-space-saving-temp (* vm-pair-size count) start)
+(define (pop-args->list*+gc start count)
+  (save-temp0! start)
+  (let* ((key (ensure-space (* vm-pair-size count)))
+	 (start (recover-temp0!)))
     (do ((args start (vm-cons (pop) args key))
 	 (count count (- count 1)))
 	((= count 0)

@@ -1,0 +1,40 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:20 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Editing</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_3.html">User's guide</A><BR>Previous: <A HREF="s48manual_5.html">Command processor</A> | Next: <A HREF="s48manual_7.html">Performance</A>
+<H2>Editing</H2>
+<P>We recommend running Scheme&nbsp;48 under GNU Emacs or XEmacs using the
+ <CODE>cmuscheme48</CODE> command package.
+This is in the Scheme&nbsp;48 distribution's <CODE>emacs/</CODE> subdirectory and
+ is included in XEmacs's <CODE>scheme</CODE> package.
+It is a variant of the <CODE>cmuscheme</CODE> library, which
+ comes to us courtesy of Olin Shivers, formerly of CMU.
+You might want to put the following in your Emacs init file (<CODE>.emacs</CODE>):
+<BLOCKQUOTE><PRE>
+(setq scheme-program-name "scheme48")
+(autoload 'run-scheme
+          "cmuscheme48"
+          "Run an inferior Scheme process."
+          t)
+</PRE></BLOCKQUOTE>
+The Emacs function <CODE>run-scheme</CODE> can then be used to start a process
+ running the program <CODE>scheme48</CODE> in a new buffer.
+To make the <CODE>autoload</CODE> and <CODE>(require ...)</CODE> forms work, you will
+also need
+to put the directory containing cmuscheme and related files in your
+emacs load-path:
+<BLOCKQUOTE><PRE>
+(setq load-path
+  (append load-path '("<CODE><I>scheme-48-directory</I></CODE>/emacs")))
+</PRE></BLOCKQUOTE>
+For further documentation see <CODE>emacs/cmuscheme48.el</CODE> and
+<CODE>emacs/comint.el</CODE>.
+<P>
+  
+Previous: <A HREF="s48manual_5.html">Command processor</A> | Next: <A HREF="s48manual_7.html">Performance</A></BODY></HTML>

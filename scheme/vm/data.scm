@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file data.scm.
 ; Requires DEFINE-ENUMERATION macro.
@@ -97,6 +97,9 @@
 (define (descriptor->fixnum p)
   (enter-fixnum (descriptor-data p)))
 
+(define (fixnum->stob p)
+  (make-descriptor (enum tag stob) (extract-fixnum p)))
+
 ; These happen to work out, given our representation for fixnums.
 (define fixnum= =)
 (define fixnum< <)
@@ -144,7 +147,8 @@
    unspecific
    undefined
    eof
-   null))
+   null
+   unreleased))
 
 ;; (assert (>= (shift-left 1 immediate-type-field-width)
 ;;             (vector-length imm)))
@@ -166,6 +170,7 @@
 (define quiescent         (make-immediate (enum imm undefined) 0))
 (define unbound-marker    (make-immediate (enum imm undefined) 1))
 (define unassigned-marker (make-immediate (enum imm undefined) 2))
+(define unreleased-value  (make-immediate (enum imm unreleased) 0))
 
 (define (false? x)
   (vm-eq? x false))
@@ -220,7 +225,7 @@
 (define (header-type h)
   (assert (header? h))
   (low-bits (descriptor-data h)
-             header-type-field-width))
+	    header-type-field-width))
 
 (define (immutable-header? h)
   (assert (header? h))
@@ -258,7 +263,8 @@
   (integer->address (- stob (enum tag stob))))
 
 (define (address-at-header stob)
-  (address- (address-after-header stob) (cells->a-units 1)))
+  (address- (address-after-header stob)
+	    (cells->a-units 1)))
 
 (define (stob-header stob)
   (fetch (address-at-header stob)))

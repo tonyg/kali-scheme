@@ -1,28 +1,30 @@
-; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
-
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 ; Records that translate into C structs.
 
-; Representation of records types.
+; Representation of record types.
 
-(define-record-type record-type
-  (name)
-  (fields              ; filled in later because of circularity
-   constructor-args)   ; fields passed to the constructor
-  )
+(define-record-type record-type :record-type
+  (really-make-record-type name)
+  record-type?
+  (name record-type-name)
+  ; FIELDS and CONSTRUCTOR-ARGS are filled in later because of circularity
+  (fields record-type-fields set-record-type-fields!)
+  (constructor-args			; fields passed to the constructor
+   record-type-constructor-args set-record-type-constructor-args!))
 
-(define-record-discloser type/record-type
+(define-record-discloser :record-type
   (lambda (rtype)
     (list 'record-type (record-type-name rtype))))
 
 ; Fields of record types.
 
-(define-record-type record-field
-  (record-type
-   name
-   type
-   )
-  ())
+(define-record-type record-field :record-field
+  (make-record-field record-type name type)
+  record-field?
+  (record-type	record-field-record-type)
+  (name		record-field-name)
+  (type		record-field-type))
 
 ; Global table of record types.  Since we compile to a single C file the
 ; record types used within a single computation must have distinct names.
@@ -50,12 +52,12 @@
 ; Each field specification consists of a name and a type.
 
 (define (make-record-type id constructor-args specs)
-  (let ((rt (record-type-maker id)))
+  (let ((rt (really-make-record-type id)))
     (if (table-ref *record-type-table* id)
 	(user-error "multiple definitions of record type ~S" id))
     (table-set! *record-type-table* id rt)
     (set-record-type-fields! rt (map (lambda (spec)
-				       (record-field-maker
+				       (make-record-field
 					  rt
 					  (car spec)
 					  (expand-type-spec (cadr spec))))
@@ -118,5 +120,4 @@
 ;
 ; C record creator
 ;  global list of these things
-  
-  
+

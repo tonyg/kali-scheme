@@ -1,0 +1,34 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Quite obscure</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_11.html">Command processor</A><BR>Previous: <A HREF="s48manual_22.html">Threads</A> | Next: <A HREF="s48manual_24.html">Module system</A>
+<H2>Quite obscure</H2>
+<DL><DT><B></B><DD><CODE>,go <CODE><I>exp</I></CODE></CODE><BR>This is like <CODE>,exit <CODE><I>exp</I></CODE></CODE> except that the evaluation of <CODE><I>exp</I></CODE>
+    is tail-recursive with respect to the command processor.  This
+    means that the command processor itself can probably be GC'ed,
+    should a garbage collection occur in the execution of <CODE><I>exp</I></CODE>.
+    If an error occurs Scheme&nbsp;48 will exit with a non-zero value.
+<DT><B></B><DD><CODE>,translate <CODE><I>from</I></CODE> <CODE><I>to</I></CODE></CODE><BR>For <CODE>load</CODE> and the <CODE>,load</CODE> command
+     (but not for <CODE>open-{in|out}put-file</CODE>), file
+    names beginning with the string <CODE><I>from</I></CODE> will be changed so that the
+    initial <CODE><I>from</I></CODE> is replaced by the string <CODE><I>to</I></CODE>.  E.g.
+<BLOCKQUOTE><PRE>
+<CODE>,translate /usr/gjc/ /zu/gjc/</CODE>
+</PRE></BLOCKQUOTE>
+will cause <CODE>(load "/usr/gjc/foo.scm")</CODE> to have the same effect as
+    <CODE>(load "/zu/gjc/foo.scm")</CODE>.
+<DT><B></B><DD><CODE>,from-file <CODE><I>filename</I></CODE> <CODE><I>form</I></CODE> ...,end</CODE><BR>This is used by the <CODE>cmuscheme48</CODE> Emacs library to indicate the file
+    from which the <CODE><I>form</I></CODE>s came.  <CODE><I>Filename</I></CODE> is then used by the
+    command processor to determine the package in which the <CODE><I>form</I></CODE>s
+    are to be evaluated.
+</DL>
+
+<P>
+  
+Previous: <A HREF="s48manual_22.html">Threads</A> | Next: <A HREF="s48manual_24.html">Module system</A></BODY></HTML>

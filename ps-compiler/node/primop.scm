@@ -1,5 +1,5 @@
 
-; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
 ;   The information about a primitive operation.
 

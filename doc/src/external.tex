@@ -1,57 +1,43 @@
-\documentclass{article}
-\usepackage{hyperlatex}
 
-\include{proto}
+%\htmltitle{Mixing Scheme 48 and C}
+%\htmladdress{\begin{rawhtml}<a href="http://www-pu.informatik.uni-tuebingen.de/users/sperber/">Mike
+%  Sperber</a>, <a href="http://www.neci.nj.nec.com/homepages/kelsey/">Richard Kelsey</a>\end{rawhtml}}
+%
+%\title{Using C code with Scheme 48}
+%\author{Mike Sperber\\\texttt{\small sperber@informatik.uni-tuebingen.de}\\
+%  Richard Kelsey\\\texttt{\small kelsey@research.nj.nec.com}
+%  }
+%
+%\makeindex
+%
+%\begin{document}
+%
+%\maketitle
+%
+%\begin{abstract}
 
-% Make each section be a separate HTML file.
-\setcounter{htmldepth}{1}
+% What is all this, you ask?
+% We provide three different titles:
+%    - for the table of contents, which has the extra authors
+%    - for links, which doesn't
+%    - for the page, which does, but on two lines
+% The html \chapter command takes a second optional argument, which is the
+% title to use in the ToC.
 
-\W\newcommand{\langle}{<}
-\W\newcommand{\rangle}{>}
+\texonly{
+\chapter[Mixing Scheme 48 and C {\rm\ \ Mike Sperber and Richard Kelsey}]
+{Mixing Scheme 48 and C \\ {\large Mike Sperber and Richard Kelsey}}
+}
 
-\newcommand{\meta}[1]{{\noindent\mbox{\textrm{$\langle$#1$\rangle$}}}}
-\newcommand{\hyper}[1]{\meta{#1}}
-\newcommand{\hyperi}[1]{\hyper{#1$_1$}}
-\newcommand{\hyperii}[1]{\hyper{#1$_2$}}
-\newcommand{\hyperj}[1]{\hyper{#1$_i$}}
-\newcommand{\hypern}[1]{\hyper{#1$_n$}}
-\renewcommand{\var}[1]{\noindent\mbox{\textit{#1}}}
-\newcommand{\vari}[1]{\var{#1$_1$}}
-\newcommand{\varii}[1]{\var{#1$_2$}}
-\newcommand{\variii}[1]{\var{#1$_3$}}
-\newcommand{\variv}[1]{\var{#1$_4$}}
-\newcommand{\varj}[1]{\var{#1$_j$}}
-\newcommand{\varn}[1]{\var{#1$_n$}}
+\htmlonly{
+\chapter[Mixing Scheme 48 and C]%
+[Mixing Scheme 48 and C %
+\htmlsym{nbsp}\htmlsym{nbsp} {\it Mike Sperber and Richard Kelsey}]
+{Mixing Scheme 48 and C \\ {\large Mike Sperber and Richard Kelsey}}
+}
+\label{external-chapter}
 
-\W\newcommand{\frenchspacing}{}
-\W\newcommand{\textnormal}[1]{#1}
-
-\newcommand{\defining}[1]{{\emph{#1}}}
-
-\newcommand{\exprtype}{syntax}
-
-\W\newcommand{\unskip}{}
-\W\newcommand{\textrm}[1]{#1}
-
-\newcommand{\dotsfoo}{\ldots\texonly{\thinspace}}
-
-\htmltitle{Mixing Scheme 48 and C}
-\htmladdress{\begin{rawhtml}<a href="http://www-pu.informatik.uni-tuebingen.de/users/sperber/">Mike
-  Sperber</a>, <a href="http://www.neci.nj.nec.com/homepages/kelsey/">Richard Kelsey</a>\end{rawhtml}}
-
-\title{Using C code with Scheme 48}
-\author{Mike Sperber\\\texttt{\small sperber@informatik.uni-tuebingen.de}\\
-  Richard Kelsey\\\texttt{\small kelsey@research.nj.nec.com}
-  }
-
-\makeindex
-
-\begin{document}
-
-\maketitle
-
-\begin{abstract}
-This document describes an interface for calling C functions
+This chapter describes an interface for calling C functions
  from Scheme, calling Scheme functions from C, and allocating
  storage in the Scheme heap.
 These facilities are designed to link
@@ -59,11 +45,11 @@ These facilities are designed to link
 To this end, Scheme~48 manages stub functions in C that
  negotiate between the calling conventions of Scheme and C and the
  memory allocation policies of both worlds.
-No stub generator is available yet, but writing them is a straightforward task.
+No stub generator is available yet, but writing stubs is a straightforward task.
 
-\end{abstract}
+%\end{abstract}
 
-\section{Available Facilities}
+\section{Available facilities}
 \label{sec:facilities}
 
 The following facilities are available for interfacing between
@@ -84,11 +70,11 @@ The following facilities are available for interfacing between
   bindings for access by C code.
 \end{itemize}
 %
-This document has three parts: the first describes how bindings are
- moved from Scheme to C and vice versa, the second tells how to call
- C functions from Scheme, and the third covers the C interface
- to Scheme objects, including calling Scheme procedures, using the
- Scheme heap, and so forth.
+%This section has three parts: the first describes how bindings are
+% moved from Scheme to C and vice versa, the second tells how to call
+% C functions from Scheme, and the third covers the C interface
+% to Scheme objects, including calling Scheme procedures, using the
+% Scheme heap, and so forth.
 
 \subsection{Scheme structures}
 
@@ -236,7 +222,7 @@ The following C macros correspond to the Scheme functions above.
 \cproto{void\ \ \ \ \ \ S48\_SHARED\_BINDING\_SET(s48\_value s\_b, s48\_value value)}
 \end{protos}
 
-\section{Calling C Functions from Scheme}
+\section{Calling C functions from Scheme}
 \label{sec:external-call}
 
 There are three different ways to call C functions from Scheme, depending on
@@ -296,17 +282,17 @@ These expand into
 If \cvar{c-name} is not supplied, it is derived from \cvar{name} by converting
  all letters to lowercase and replacing `\code{-}' with `\code{\_}'.
 
-\section{Adding external modules to the \code{Makefile}}
+\section{Adding external modules to the {\tt Makefile}}
 \label{sec:external-modules}
 
 Getting access to C bindings from Scheme requires that the C code be
- compiled an linked in with the Scheme~48 virtual machine and that the
- relevent shared-bindings be created.
+ compiled and linked in with the Scheme~48 virtual machine and that the
+ relevant shared bindings be created.
 The Scheme~48 makefile has rules for compiling and linking external code
  and for specifying initialization functions that should be called on
  startup.
-There are three Makefile variables that control which external modules are
- included in the executable for the virutal machine (\code{scheme48vm}).
+There are three \code{Makefile} variables that control which external modules are
+ included in the executable for the virtual machine (\code{scheme48vm}).
 \code{EXTERNAL\_OBJECTS} lists the object files to be included in
  \code{scheme48vm},
 \code{EXTERNAL\_FLAGS} is a list of \code{ld} flags to be used when
@@ -318,7 +304,7 @@ The procedures listed in \code{EXTERNAL\_INITIALIZERS} should take no
 After changing the definitions of any of these variables you should
  do \code{make scheme48vm} to rebuild the virtual machine.
 
-\section{Dynamic Loading}
+\section{Dynamic loading}
 \label{dynamic-externals}
 
 External code can be loaded into a running Scheme~48 process
@@ -370,8 +356,8 @@ The following two functions can be used to update the values of
 \end{protos}
 \noindent
 \code{Lookup-external} updates the value of \cvar{external} by looking its
- name in the current process, returning \code{\#t} if it is bound and \code{\#f}
- if it is not.
+ name in the current process, returning \code{\#t} if the name is bound
+ and \code{\#f} if it is not.
 \code{Lookup-all-externals} calls \code{lookup-external} on all extant
  externals, returning \code{\#f} any are unbound.
 
@@ -417,18 +403,18 @@ Predicates return \code{1} for true and \code{0} for false.
 
 The following macros denote Scheme constants:
 %
-\begin{description}
-\item[\code{S48\_FALSE}] is \verb|#f|.
-\item[\code{S48\_TRUE}] is \verb|#t|.
-\item[\code{S48\_NULL}] is the empty list.
-\item[\code{S48\_UNSPECIFIC}] is a value used for functions which have no
+\begin{itemize}
+\item \code{S48\_FALSE} is \verb|#f|.
+\item \code{S48\_TRUE} is \verb|#t|.
+\item \code{S48\_NULL} is the empty list.
+\item \code{S48\_UNSPECIFIC}] is a value used for functions which have no
   meaningful return value
  (in Scheme this value returned by the nullary procedure \code{unspecific}
  in the structure \code{util}).
-\item[\code{S48\_EOF}] is the end-of-file object
+\item \code{S48\_EOF} is the end-of-file object
  (in Scheme this value is returned by the nullary procedure \code{eof-object}
  in the structure \code{i/o-internal}).
-\end{description}
+\end{itemize}
 
 \subsection{Converting values}
 
@@ -440,17 +426,23 @@ The `extract' ones convert from Scheme to C and the `enter's go the other
 \begin{protos}
 \cproto{unsigned char s48\_extract\_char(s48\_value)}
 \cproto{char * \ \ \ s48\_extract\_string(s48\_value)}
+\cproto{char * \ \ \ s48\_extract\_byte\_vector(s48\_value)}
 \cproto{long \ \ \ \ \ s48\_extract\_integer(s48\_value)}
 \cproto{double \ \ \ s48\_extract\_double(s48\_value)}
 \cproto{s48\_value s48\_enter\_char(unsigned char)}
 \cgcproto{s48\_value s48\_enter\_string(char *)}
+\cgcproto{s48\_value s48\_enter\_byte\_vector(char *, long)}
 \cgcproto{s48\_value s48\_enter\_integer(long)}
 \cgcproto{s48\_value s48\_enter\_double(double)}
 \end{protos}
 
-\noindent{}The value returned by \code{s48\_extract\_string} points to the actual
- storage used by the string; it is valid only until the next
+\noindent{}The values returned by \code{s48\_extract\_string} and
+ \code{s48\_extract\_byte\_vector} point to the actual
+ storage used by the string or byte vector; they are valid only until the next
  \link{garbage collection}[; see Section~\ref{gc}]{gc}.
+
+The second argument to \code{s48\_enter\_byte\_vector} is the length of
+ returned byte vector.
 
 \code{s48\_enter\_integer()} needs to allocate storage when
  its argument is too large to fit in a Scheme~48 fixnum.
@@ -561,15 +553,15 @@ For example, suppose thread \code{t0} calls a C procedure which calls back
 At this point both \code{t0} and \code{t1} have active calls to C on the
  C stack, with \code{t1}'s C frame above \code{t0}'s.
 If thread \code{t0} attempts to return from Scheme to C it will block,
- as its frame is not accessable.
+ as its frame is not accessible.
 Once \code{t1} has returned to C and from there to Scheme, \code{t0} will
  be able to resume.
 The return to Scheme is required because context switches can only occur while
- C code is running.
+ Scheme code is running.
 \code{T0} will also be able to resume if \code{t1} uses a continuation to
  throw past its call to C.
 
-\section{Interacting with the Scheme Heap}
+\section{Interacting with the Scheme heap}
 \label{sec:heap-allocation}
 \label{gc}
 
@@ -584,7 +576,7 @@ The garbage collector has no facility for updating pointers to the interiors
  \code{EXTRACT\_STRING}, will likely become invalid when a garbage collection
  occurs.
 
-\subsection{Registering Objects with the GC}
+\subsection{Registering objects with the GC}
 \label{sec:gc-register}
 
 A set of macros are used to manage the registration of local variables with the
@@ -883,6 +875,4 @@ They are provided for the purpose of writing more efficient code;
 \cproto{type * \ \ \ S48\_UNSAFE\_EXTRACT\_VALUE\_POINTER(s48\_value, type)}
 \cproto{void \ \ \ \ \ S48\_UNSAFE\_SET\_VALUE(s48\_value, type, value)}
 \end{protos}
-
-\end{document}
 

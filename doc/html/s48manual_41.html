@@ -1,0 +1,74 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:22 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Records</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_40.html">Arrays</A> | Next: <A HREF="s48manual_42.html">Finite record types</A>
+<H2>Records</H2>
+
+<P>New types can be constructed using the <CODE>define-record-type</CODE> macro
+ from the <CODE>define-record-types</CODE> structure
+The general syntax is:
+<BLOCKQUOTE><PRE>
+(define-record-type <CODE><I>tag</I></CODE> <CODE><I>type-name</I></CODE>
+  (<CODE><I>constructor-name</I></CODE> <CODE><I>field-tag</I></CODE> ...)
+  <CODE><I>predicate-name</I></CODE>
+  (<CODE><I>field-tag</I></CODE> <CODE><I>accessor-name</I></CODE> [<CODE><I>modifier-name</I></CODE>])
+  ...)
+</PRE></BLOCKQUOTE>
+This makes the following definitions:
+<UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE><CODE><I>type-name</I></CODE></CODE></td> <td align=right>type</td></tr></table>
+<LI><CODE>(<CODE><I>constructor-name</I></CODE><I>&nbsp;field-init&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>type-name</I></CODE>
+<LI><CODE>(<CODE><I>predicate-name</I></CODE><I>&nbsp;value</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE>
+<LI><CODE>(<CODE><I>accessor-name</I></CODE><I>&nbsp;type-name</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE>
+<LI><CODE>(<CODE><I>modifier-name</I></CODE><I>&nbsp;type-name&nbsp;value</I>)</CODE>
+</UL>
+<CODE><I>Type-name</I></CODE> is the record type itself, and can be used to
+ specify a print method (see below).
+<CODE><I>Constructor-name</I></CODE> is a constructor that accepts values
+ for the fields whose tags are specified.
+<CODE><I>Predicate-name</I></CODE> is a predicate that returns <CODE>#t</CODE> for
+ elements of the type and <CODE>#f</CODE> for everything else.
+The <CODE><I>accessor-name</I></CODE>s retrieve the values of fields,
+ and the <CODE><I>modifier-name</I></CODE>'s update them.
+<CODE><I>Tag</I></CODE> is used in printing instances of the record type and
+ the <CODE><I>field-tag</I></CODE>s are used in the inspector and to match
+ constructor arguments with fields.
+<UL><LI><CODE>(define-record-discloser<I>&nbsp;type&nbsp;discloser</I>)</CODE><A NAME="1">&nbsp;</A>
+</UL>
+<CODE>Define-record-discloser</CODE> determines how
+ records of type <CODE><I>type</I></CODE> are printed.
+<CODE><I>Discloser</I></CODE> should be procedure which takes a single
+ record of type <CODE><I>type</I></CODE> and returns a list whose car is
+ a symbol.
+The record will be printed as the value returned by <CODE><I>discloser</I></CODE>
+ with curly braces used instead of the usual parenthesis.
+<P>For example
+<BLOCKQUOTE><PRE>
+(define-record-type pare :pare
+  (kons x y)
+  pare?
+  (x kar set-kar!)
+  (y kdr))
+</PRE></BLOCKQUOTE>
+defines <CODE>kons</CODE> to be a constructor, <CODE>kar</CODE> and <CODE>kdr</CODE> to be
+ accessors, <CODE>set-kar!</CODE> to be a modifier, and <CODE>pare?</CODE> to be a predicate
+ for a new type of object.
+The type itself is named <CODE>:pare</CODE>.
+<CODE>Pare</CODE> is a tag used in printing the new objects.
+<P>By default, the new objects print as <CODE>#{Pare}</CODE>.
+The print method can be modified using <CODE>define-record-discloser</CODE>:
+<BLOCKQUOTE><PRE>
+(define-record-discloser :pare
+  (lambda (p) `(pare ,(kar p) ,(kdr p))))
+</PRE></BLOCKQUOTE>
+will cause the result of <CODE>(kons 1 2)</CODE> to print as
+ <CODE>#{pare 1 2}</CODE>.
+<P>
+  
+Previous: <A HREF="s48manual_40.html">Arrays</A> | Next: <A HREF="s48manual_42.html">Finite record types</A></BODY></HTML>

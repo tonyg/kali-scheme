@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Implementation of OS channels in Scheme.
 ;
@@ -75,6 +75,12 @@
 
 (define (close-output-channel channel)
   ((structure-ref prescheme close-output-port) (channel->port channel)))
+
+(define (channel-ready? channel read?)
+  (values (if read?
+	      (char-ready? (channel->port channel))
+	      #t)
+	  (enum (structure-ref prescheme errors) no-errors)))
 
 ;----------------
 ; Non-blocking I/O (implemented using CHAR-READY?)

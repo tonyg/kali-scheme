@@ -1,4 +1,4 @@
-; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file fluid.scm.
 
@@ -23,9 +23,10 @@
 ; efficiency concerns.
 
 (define-record-type thread :thread
-  (make-thread dynamic-env dynamic-point)
-  (dynamic-env thread-dynamic-env)
-  (dynamic-point thread-dynamic-point))
+  (make-thread dynamic-env dynamic-point proposal)
+  (dynamic-env   thread-dynamic-env)
+  (dynamic-point thread-dynamic-point)
+  (proposal      thread-proposal))	; only accessed by the VM
 
 (define (get-dynamic-env)
   (record-ref (current-thread) 1))
@@ -33,7 +34,7 @@
 (define (set-dynamic-env! env)
   (record-set! (current-thread) 1 env))
 
-; The dynamic-wind point used to be just an ordinary fluid variable, which
+; The dynamic-wind point used to be just an ordinary fluid variable, but that
 ; doesn't work well with threads.
 
 (define (get-dynamic-point)
@@ -43,7 +44,7 @@
   (record-set! (current-thread) 2 point))
 
 (define (initialize-dynamic-state!)
-  (set-current-thread! (make-thread (empty-dynamic-env) #f)))
+  (set-current-thread! (make-thread (empty-dynamic-env) #f #f)))
 
 ;----------------
 ; Dynamic environment

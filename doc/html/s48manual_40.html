@@ -1,0 +1,89 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Arrays</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_39.html">Cells</A> | Next: <A HREF="s48manual_41.html">Records</A>
+<H2>Arrays</H2>
+<P>These provide N-dimensional, zero-based arrays and
+ are in the structure <CODE>arrays</CODE>.
+The array interface is derived from one written by Alan Bawden.
+<UL><LI><CODE>(make-array<I>&nbsp;value&nbsp;dimension<I><sub>0</sub></I>&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>array</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(array<I>&nbsp;dimensions&nbsp;element<I><sub>0</sub></I>&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>array</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(copy-array<I>&nbsp;array</I>)&nbsp;-&gt;&nbsp;<I>array</I></CODE><A NAME="3">&nbsp;</A>
+</UL>
+<CODE>Make-array</CODE> makes a new array with the given dimensions, each of which
+ must be a non-negative integer.
+Every element is initially set to <CODE><I>value</I></CODE>.
+<CODE>Array</CODE> Returns a new array with the given dimensions and elements.
+<CODE><I>Dimensions</I></CODE> must be a list of non-negative integers, 
+The number of elements should be the equal to the product of the
+ dimensions.
+The elements are stored in row-major order.
+<BLOCKQUOTE><PRE>
+(make-array 'a 2 3) <CODE>-&gt;</CODE> {Array 2 3}
+
+(array '(2 3) 'a 'b 'c 'd 'e 'f)
+    <CODE>-&gt;</CODE> {Array 2 3}
+</PRE></BLOCKQUOTE>
+<P><CODE>Copy-array</CODE> returns a copy of <CODE><I>array</I></CODE>.
+The copy is identical to the <CODE><I>array</I></CODE> but does not share storage with it.
+<UL><LI><CODE>(array?<I>&nbsp;value</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="4">&nbsp;</A>
+</UL>
+Returns <CODE>#t</CODE> if <CODE><I>value</I></CODE> is an array.
+<UL><LI><CODE>(array-ref<I>&nbsp;array&nbsp;index<I><sub>0</sub></I>&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(array-set!<I>&nbsp;array&nbsp;value&nbsp;index<I><sub>0</sub></I>&nbsp;...</I>)</CODE><A NAME="6">&nbsp;</A>
+<LI><CODE>(array-&gt;vector<I>&nbsp;array</I>)&nbsp;-&gt;&nbsp;<I>vector</I></CODE><A NAME="7">&nbsp;</A>
+<LI><CODE>(array-dimensions<I>&nbsp;array</I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="8">&nbsp;</A>
+</UL>
+<CODE>Array-ref</CODE> returns the specified array element and <CODE>array-set!</CODE>
+ replaces the element with <CODE><I>value</I></CODE>.
+<BLOCKQUOTE><PRE>
+(let ((a (array '(2 3) 'a 'b 'c 'd 'e 'f)))
+  (let ((x (array-ref a 0 1)))
+    (array-set! a 'g 0 1)
+    (list x (array-ref a 0 1))))
+    <CODE>-&gt;</CODE> '(b g)
+</PRE></BLOCKQUOTE>
+<P><CODE>Array-&gt;vector</CODE> returns a vector containing the elements of <CODE><I>array</I></CODE>
+ in row-major order.
+<CODE>Array-dimensions</CODE> returns the dimensions of
+ the array as a list.
+<UL><LI><CODE>(make-shared-array<I>&nbsp;array&nbsp;linear-map&nbsp;dimension<I><sub>0</sub></I>&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>array</I></CODE><A NAME="9">&nbsp;</A>
+</UL>
+<CODE>Make-shared-array</CODE> makes a new array that shares storage with <CODE><I>array</I></CODE>
+ and uses <CODE><I>linear-map</I></CODE> to map indexes to elements.
+<CODE><I>Linear-map</I></CODE> must accept as many arguments as the number of
+ <CODE><I>dimension</I></CODE>s given and must return a list of non-negative integers
+ that are valid indexes into <CODE><I>array</I></CODE>.
+&lt;<BLOCKQUOTE><PRE>
+(array-ref (make-shared-array a f i0 i1 ...)
+           j0 j1 ...)
+</PRE></BLOCKQUOTE>
+is equivalent to
+<BLOCKQUOTE><PRE>
+(apply array-ref a (f j0 j1 ...))
+</PRE></BLOCKQUOTE>
+<P>As an example, the following function makes the transpose of a two-dimensional
+ array:
+<BLOCKQUOTE><PRE>
+(define (transpose array)
+  (let ((dimensions (array-dimensions array)))
+    (make-shared-array array
+                       (lambda (x y)
+                         (list y x))
+                       (cadr dimensions)
+                       (car dimensions))))
+
+(array-&gt;vector
+  (transpose
+    (array '(2 3) 'a 'b 'c 'd 'e 'f)))
+      <CODE>-&gt;</CODE> '(a d b e c f)
+</PRE></BLOCKQUOTE>
+<P>
+  
+Previous: <A HREF="s48manual_39.html">Cells</A> | Next: <A HREF="s48manual_41.html">Records</A></BODY></HTML>
