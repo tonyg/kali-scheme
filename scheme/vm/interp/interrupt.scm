@@ -30,7 +30,15 @@
     (push code)
     (push (enter-fixnum pc)))
   (push-interrupt-state)
-  (push-adlib-continuation! (code+pc->code-pointer *interrupt-return-code*
+  (push-adlib-continuation! (code+pc->code-pointer *interrupted-byte-call-return-code*
+						   return-code-pc))
+  (goto find-and-call-interrupt-handler))
+
+(define (handle-native-interrupt protocol-skip)
+  (push (enter-fixnum protocol-skip))
+  (push *val*)
+  (push-interrupt-state)
+  (push-adlib-continuation! (code+pc->code-pointer *interrupted-native-call-return-code*
 						   return-code-pc))
   (goto find-and-call-interrupt-handler))
 
@@ -54,7 +62,7 @@
 (define (push-poll-interrupt-continuation)
   (push-interrupt-state)
   (push poll-interrupt-continuation-descriptors)
-  (push-continuation! (code+pc->code-pointer *interrupt-return-code*
+  (push-continuation! (code+pc->code-pointer *poll-interrupt-return-code*
 					     return-code-pc)))
 
 (define interrupt-state-descriptors 2)
@@ -148,17 +156,25 @@
 	    
 ; Return from a call to an interrupt handler.
 
-(define-opcode return-from-interrupt
-  (let ((byte? (not (fixnum= (pop)
-			     poll-interrupt-continuation-descriptors))))
-    (s48-pop-interrupt-state)
-    (cond (byte?
-	   (let ((pc (pop)))
-	     (set-code-pointer! (pop) (extract-fixnum pc)))
-	   (set! *val* (pop))
-	   (goto interpret *code-pointer*))
-	  (else
-	   (goto return-values 0 null 0)))))
+(define-opcode return-from-poll-interrupt
+  (pop)
+  (s48-pop-interrupt-state)
+  (goto return-values 0 null 0))
+
+(define-opcode resume-interrupted-call-to-byte-code
+  (pop)
+  (s48-pop-interrupt-state)
+  (let ((pc (pop)))
+    (set-code-pointer! (pop) (extract-fixnum pc)))
+  (set! *val* (pop))
+  (goto interpret *code-pointer*))
+
+(define-opcode resume-interrupted-call-to-native-code
+  (pop)
+  (s48-pop-interrupt-state)
+  (set! *val* (pop))
+  (let ((protocol-skip (extract-fixnum (pop))))
+    (goto really-call-native-code protocol-skip)))
 
 ; Do nothing much until something happens.  To avoid race conditions this
 ; opcode is called with all interrupts disabled, so it has to return if

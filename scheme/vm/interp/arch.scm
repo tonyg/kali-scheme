@@ -239,7 +239,9 @@
   (return-from-native-exception 1)
   (set-interrupt-handlers! 1)
   (set-enabled-interrupts! 1)
-  (return-from-interrupt)
+  (resume-interrupted-call-to-byte-code)
+  (resume-interrupted-call-to-native-code)
+  (return-from-poll-interrupt)
   (schedule-interrupt 1)
   (wait 2)                      ; do nothing until something happens
   (call-external-value 1 +)

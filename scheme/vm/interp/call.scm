@@ -28,7 +28,7 @@
 	       (goto run-body-with-default-space code 2 template))
 	      ((= (native->byte-protocol protocol)
 		  stack-arg-count)
-	       (goto call-native-code *val* 2 stack-arg-count))
+	       (goto call-native-code-with-default-space 2))
 	      (else
 	       (goto plain-protocol-match stack-arg-count))))
       (goto application-exception
@@ -47,8 +47,20 @@
 (define (byte->native-protocol protocol)
   (bitwise-ior protocol 128))
 
-(define (call-native-code proc protocol-skip stack-nargs)
-  (goto post-native-dispatch (s48-call-native-procedure proc protocol-skip)))
+(define (call-native-code-with-default-space protocol-skip)
+  (if (and (ensure-default-procedure-space!)
+	   (pending-interrupt?))
+      (goto handle-native-interrupt protocol-skip)
+      (goto really-call-native-code protocol-skip)))
+
+(define (call-native-code protocol-skip needed-stack-space)
+  (if (and (ensure-stack-space! needed-stack-space)
+	   (pending-interrupt?))
+      (goto handle-native-interrupt protocol-skip)
+      (goto really-call-native-code protocol-skip)))      
+
+(define (really-call-native-code protocol-skip)
+  (goto post-native-dispatch (s48-call-native-procedure *val* protocol-skip)))
 
 (define s48-*native-protocol*)
 
@@ -326,7 +338,7 @@
   	       (native? #f))
       (let ((win (lambda (skip stack-arg-count)
   		   (if native?
-  		       (goto call-native-code *val* skip stack-arg-count)
+  		       (goto call-native-code skip stack-space)
   		       (goto run-body code
 			              skip
 				      (closure-template *val*)
