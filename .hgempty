@@ -1,0 +1,6 @@
+
+Empty original changeset by sperber:
+Subject: Set svn:ignore property on doc/src [s48-tuebingen @ 916]
+
+There were just too many generated files in this directory.
+
