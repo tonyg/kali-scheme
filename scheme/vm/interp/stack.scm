@@ -346,15 +346,15 @@
     (data-init! data exception-cont-instruction-size-index inst-size)
     (push-continuation! code-pointer)))
 
-(define (push-native-exception-continuation! code-pointer opcode cont exception)
-  (add-cells-to-stack! exception-continuation-cells)
+(define (push-native-exception-continuation! code-pointer exception 
+                                             bc-pc bc-code)
+  (add-cells-to-stack! native-exception-continuation-cells)
   (let ((data (address->stob-descriptor *stack*))
 	(size (enter-fixnum (operands-on-stack))))
-    (data-init! data exception-cont-size-index             size)
-    (data-init! data exception-cont-pc-index               opcode)
-    (data-init! data exception-cont-code-index             cont)
-    (data-init! data exception-cont-exception-index        exception)
-    (data-init! data exception-cont-instruction-size-index 0) ;empty
+    (data-init! data native-exception-cont-size-index      size)
+    (data-init! data native-exception-cont-exception-index exception)
+    (data-init! data native-exception-cont-bc-pc-index     bc-pc)
+    (data-init! data native-exception-cont-bc-code-index   bc-code)
     (push-continuation! code-pointer)))
 
 (define (pop-exception-data)
@@ -364,6 +364,13 @@
 	    (data-ref data exception-cont-code-index)
 	    (data-ref data exception-cont-exception-index)
 	    (data-ref data exception-cont-instruction-size-index))))
+
+(define (pop-native-exception-data)
+  (let ((data (address->stob-descriptor *stack*)))
+    (add-cells-to-stack! (- native-exception-continuation-cells))
+    (values (data-ref data native-exception-cont-exception-index)
+            (data-ref data native-exception-cont-bc-pc-index)
+            (data-ref data native-exception-cont-bc-code-index))))
 
 ; The indexes into the data are the indexes into the continuation minus
 ; the normal continuation cells.  We use raw STORE! and FETCH to avoid

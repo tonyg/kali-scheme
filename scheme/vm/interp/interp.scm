@@ -417,16 +417,24 @@
 				       code
 				       (enter-fixnum exception)
 				       (enter-fixnum instruction-size)))
-      (begin
+      (receive (bc-code bc-pc) (current-code+pc)
 	(push *native-exception-cont*)
 	(set! *cont* *stack*)
 	(write-string "handling exception for nc " (current-error-port))
 	(write-integer *native-exception-cont* (current-error-port))
+	(write-string " return code pc is " (current-error-port))
+	(write-integer return-code-pc (current-error-port))
+        (write-string " opcode is " (current-error-port))
+        (write-integer (current-opcode) (current-error-port))
+        (write-string " exception is " (current-error-port))
+        (write-integer exception (current-error-port))
+        (write-string " *val* is " (current-error-port))
+        (write-integer *val* (current-error-port))
 	(push-native-exception-continuation! (code+pc->code-pointer *native-exception-return-code*
 								    return-code-pc)
-					     (enter-fixnum (current-opcode))
-					     *native-exception-cont*
-					     (enter-fixnum exception))
+					     (enter-fixnum exception)
+                                             (enter-fixnum bc-pc)
+                                             bc-code)
 	(reset-native-exception-cont!)))
   (push (enter-fixnum (current-opcode)))
   (push (enter-fixnum exception)))
@@ -444,15 +452,16 @@
 	     (raise-exception illegal-exception-return 0 exception))))))
 
 (define-opcode return-from-native-exception
-  (receive (opcode code exception ignore)
-      (pop-exception-data)
-    (let ((opcode (extract-fixnum opcode)))
+  (receive (exception bc-pc bc-code)
+      (pop-native-exception-data)
+    (let* ((bc-pc (extract-fixnum bc-pc))
+           (opcode (code-vector-ref bc-code bc-pc)))
       (cond ((okay-to-proceed? opcode)
 	     (write-string "returning to nc " (current-error-port))
 	     (write-integer (fetch *stack*)  (current-error-port))
 	     (return-values 0 null 0))
 	    (else 
-	     (set-code-pointer! code 0) ; Uahh...
+	     (set-code-pointer! bc-code bc-pc)
 	     (raise-exception illegal-exception-return 0 exception))))))
 
 ; It's okay to proceed if the opcode is a data operation, which are all those

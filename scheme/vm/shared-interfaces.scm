@@ -49,6 +49,12 @@
 	  exception-cont-code-index
 	  exception-cont-exception-index
 	  exception-cont-instruction-size-index
+          
+          native-exception-continuation-cells
+          native-exception-cont-size-index
+          native-exception-cont-exception-index
+          native-exception-cont-bc-pc-index
+          native-exception-cont-bc-code-index
 	  ))
 
 ; Data structures

@@ -408,6 +408,9 @@
 ; The number of additional values that the VM adds to exception continuations.
 (define exception-continuation-cells 5)
 
+; The number of additional values that the VM adds to native exception continuations.
+(define native-exception-continuation-cells 4)
+
 ; Offsets of saved registers in exception continuations.  Size must come
 ; first because the VM expects it there.
 (define exception-cont-size-index             (+ continuation-cells 0))
@@ -415,6 +418,11 @@
 (define exception-cont-code-index             (+ continuation-cells 2))
 (define exception-cont-exception-index        (+ continuation-cells 3))
 (define exception-cont-instruction-size-index (+ continuation-cells 4))
+
+(define native-exception-cont-size-index      (+ continuation-cells 0))
+(define native-exception-cont-exception-index (+ continuation-cells 1))
+(define native-exception-cont-bc-pc-index     (+ continuation-cells 2))
+(define native-exception-cont-bc-code-index   (+ continuation-cells 3))
 
 ;----------------
 

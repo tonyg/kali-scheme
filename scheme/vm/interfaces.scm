@@ -336,6 +336,7 @@
 	  push-native-exception-continuation!
 	  pop-continuation-from-stack
 	  pop-exception-data
+          pop-native-exception-data
 
 	  set-current-continuation!
 	  current-continuation-size
