@@ -94,7 +94,8 @@
       '(srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
 	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
 	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
-	srfi-31 srfi-42))
+	srfi-31 srfi-37
+	srfi-42))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -325,6 +326,17 @@
 	 (letrec ( (NAME (lambda VARIABLES . BODY)) ) NAME))
 	((rec NAME EXPRESSION)
 	 (letrec ( (NAME EXPRESSION) ) NAME))))))
+
+(define-interface srfi-37-interface
+  (export args-fold
+	  option-processor
+	  option option-names option-required-arg? option-optional-arg?))
+
+(define-structure srfi-37 srfi-37-interface
+  (open scheme
+	define-record-types
+	srfi-11)
+  (files srfi-37))
 
 (define-interface srfi-42-interface
   (export ((do-ec
