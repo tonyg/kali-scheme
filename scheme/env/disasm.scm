@@ -138,7 +138,8 @@
     (let* ((pc (if (< 0 closure-count)
 		   (begin
 		     (display-flat-env-closures closure-count
-						pc code
+						(+ pc size size)
+						code
 						level write-subs?
 						size fetch)
 		     (+ pc
@@ -179,11 +180,11 @@
        (reverse r))))
 
 (define (display-flat-env-closures count pc code level write-subs? size fetch)
-  (display "(closures from ")
+  (display " (closures from ")
   (display (fetch code pc))
   (display #\:)
   (do ((i 0 (+ i 1))
-       (pc pc (+ pc size)))
+       (pc (+ pc size) (+ pc size)))
       ((= i count))
     (display #\space)
     (display (fetch code pc)))
