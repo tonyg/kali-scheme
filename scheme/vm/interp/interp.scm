@@ -55,6 +55,11 @@
 (define (set-current-proposal! proposal)
   (record-set! (current-thread) 3 proposal))
 
+; For saving native code registers accross a GC
+
+(define s48-*nc-template*)
+(define s48-*nc-environment*)
+
 ;----------------
 
 (define (clear-registers)
@@ -74,6 +79,8 @@
   (set! s48-*pending-interrupt?* #f)
   (set! *os-signal-list* null)
   (set! *interrupted-template* false)
+  (set! s48-*nc-template* false)
+  (set! s48-*nc-environment* false)
   unspecific-value)
 
 (define (s48-initialize-shared-registers! s-d e-h i-h f-a)
@@ -101,6 +108,8 @@
 	  (s48-trace-value *call-with-values-return-code*))
     (set! *interrupted-template*  (s48-trace-value *interrupted-template*))
     (set! *os-signal-list*        (s48-trace-value *os-signal-list*))
+    (set! s48-*nc-template*       (s48-trace-value s48-*nc-template*))
+    (set! s48-*nc-environment*    (s48-trace-value s48-*nc-environment*))
 
     (shared-set! *session-data*
 		 (s48-trace-value (shared-ref *session-data*)))

@@ -565,6 +565,8 @@
 	  *last-code-called*
 	  *native-exception-cont*
 	  *val*
+          s48-*nc-template*
+          s48-*nc-environment*
 	  ))
 
 ; What the external world can call.  Because of C's flat namespace we have
@@ -631,6 +633,8 @@
 	  *stack*
 	  *last-code-called*
 	  *native-exception-cont*
+          s48-*nc-template*
+          s48-*nc-environment*
 	  s48-*stack-limit*
 	  s48-*native-protocol*
 	  s48-set-native-protocol!
