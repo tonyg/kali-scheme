@@ -11,7 +11,7 @@ LS48 \- a Scheme interpreter
 .B LS48
 is an implementation of the Scheme programming language as described in
 the
-.I "Revised^4 Report on the Algorithmic Language Scheme."
+.I "Revised^5 Report on the Algorithmic Language Scheme."
 A runnable system requires two parts, an executable program that implements
 the Scheme 48 virtual machine, and an image that is used to initialize
 the store of the virtual machine.
