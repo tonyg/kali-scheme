@@ -301,10 +301,13 @@
         architecture
         enumerated
         signals
+        fluids
         closures
+        debug-data
+        (subset disclosers (template-debug-data))
         continuations
         define-record-types)
-  (files parse-bytecode))
+  (files (env parse-bytecode)))
 
 ; Disassembler
 
