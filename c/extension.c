@@ -124,12 +124,11 @@ s48_extended_vm (long key, s48_value value)
     set_float_arg(value, 1, atof(str));
     EXT_RETURN(S48_UNSPECIFIC);}
   FLOP2(8) {			/* float->string */
-    extern void s48_double_to_string(char *buf, double v);
-    size_t len;
+    extern size_t s48_double_to_string(char *buf, double v);
     char *str = get_string_arg(value,1);
+    size_t len;
     get_float_arg(value, 0, x);
-    s48_double_to_string(str, x);
-    len = strlen(str);
+    len = s48_double_to_string(str, x);
     EXT_RETURN(S48_UNSAFE_ENTER_FIXNUM(len));}
 
     /* exp log sin cos tan asin acos atan1 atan2 sqrt */

@@ -50,26 +50,14 @@
     (floperate (enum flop string->float) string res)
     res))
 
-; Call the OS to get a string and then add a `.' if necessary (so that
-; it will be inexact).
+; Call the VM to get a string
 
 (define (float->string float)
   (let* ((res (make-string 40 #\space))
 	 (len (floperate (enum flop float->string)
 			 float
-			 res))
-	 (str (substring res 0 len)))
-    (let loop ((i 0))
-      (cond ((>= i (string-length str))
-	     (string-append str "."))
-	    ((char=? (string-ref str i) #\.)
-	     str)
-	    ((char=? (string-ref str i) #\e)
-	     (string-append (substring str 0 i)
-			    "."
-			    (substring str i (string-length str))))
-	    (else
-	     (loop (+ i 1)))))))
+			 res)))
+    (substring res 0 len)))
 
 (define (x->float x)
   (cond ((double? x)

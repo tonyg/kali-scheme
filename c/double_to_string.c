@@ -7,23 +7,28 @@
 extern int s48_dragon(char *buf, double v);
 extern void s48_free_init(void);
 
-void
-s48_double_to_string(char *buf, double v)
+size_t
+s48_double_to_string(char *dest, double v)
 {
   char raw[33];
+  char *buf = dest;
   char *digits = raw;
   int exponent = s48_dragon(raw, v);
   
   int digit_count = strlen(raw);
-  
+
+  if (*digits == '#') /* infinity or NaN */
+    {
+      strcpy(dest, digits);
+      return digit_count;
+    }
+
   if (*digits == '-')
     {
       *buf++ = '-';
       ++digits;
       --digit_count;
     }
-
-  /* #### need to tread infinity and NaN */
 
   if ((exponent <= -4) || (exponent > (digit_count + 7)))
     /* print with explicit exponent */
@@ -104,4 +109,5 @@ s48_double_to_string(char *buf, double v)
 	  
       *buf = '\0';
     }
+  return buf - dest;
 }

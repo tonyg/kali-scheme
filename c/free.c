@@ -43,6 +43,7 @@ typedef unsigned long word32_t;
 
 #define sign_mask 0x80000000
 #define exp_mask  0x7ff00000
+#define exp_max 0x7ff
 #define exp_shift1 20
 #define frac_mask 0xfffff
 
@@ -391,9 +392,16 @@ int s48_dragon(buf, v) char *buf; double v; {
    sign = ((word0 & sign_mask) != 0);
    e = (int)(word0 >> exp_shift1 & (exp_mask>>exp_shift1));
 
-   /* #### if ((word0 & exp_mask) == exp_mask) --- infinity or NaN */
-
    f = (((Bigit)(word0 & frac_mask)) << 32) | word1;
+
+   if (e == exp_max) {
+     /* infinity or NaN */
+     if (f == 0)
+       strcpy(buf, sign ? "#{-Inf}" : "#{Inf}");
+     else
+       strcpy(buf, "#{NaN}");
+     return 0;
+   }
 
    if (e != 0) {
       e = e - bias - bitstoright;
