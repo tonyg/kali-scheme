@@ -377,6 +377,7 @@ registered with the lock, the lock is transferred to the ``released''
 state.  In any case, \code{release-lock} returns immediately.
 
 \subsection{Placeholders}
+\label{placeholders}
 
 The \code{placeholders} structure contains bindings for
 \textit{placeholders}---thread-safe, write-once variables, akin to
@@ -461,6 +462,281 @@ and \code{\#f} otherwise.
 
 % \section{Writing your own schedulers}
 
+\section{Concurrent ML abstractions}
+
+The interface to the Concurrent ML abstractions in Scheme~48 is
+mostly analogous to the original implementation shipped with
+SML/NJ~\cite{Reppy:CML-book}.  Note that both the interface and
+implementation are new and may change in future releases.
+
+The main terminological difference is that CML events are called
+\textit{rendezvous} in Scheme~48.  For more information on programming
+with the CML abstractions, Reppy's book~\cite{Reppy:CML-book} is
+recommended.
+
+\subsection{Basic rendezvous combinators}
+
+The basic rendezvous combinators live in the \code{rendezvous}
+structure.
+%
+\begin{protos}
+\constproto{never-rv}{rendezvous}
+\proto{always-rv}{ value}{rendezvous}
+\end{protos}
+%
+\code{Never-rv} is a rendezvous that is never enabled for
+synchronization.  (It is the same as the \code{never} event in CML.)
+\code{Always-rv} returns a rendezvous that is elways enabled for
+synchronization, and always yields the same value \cvar{value}.  (This
+is the same as the \code{alwaysEvt} function in CML.)
+%
+\begin{protos}
+\proto{choose}{ rendezvous \ldots}{rendezvous}
+\end{protos}
+%
+\code{Choose} creates a rendezvous representing the choice of its
+arguments:  Synchronization on the resulting rendezvous will
+synchronize on one of the arguments to \code{choose}, depending on
+which becomes enabled first.  (This is the same as the \code{choose}
+function in CML.)
+%
+\begin{protos}
+\proto{wrap}{ rendezvous proc}{rendezvous}
+\end{protos}
+%
+\code{Wrap} wraps a post-synchronization procedure around \cvar{rendezvous}:
+When the resulting rendezvous is synchronized, \cvar{rendezvous} is
+synchronized, and the value it yields is passed to \cvar{proc}; the
+value returned by \cvar{proc} then is the result of the
+synchronization.  (This is the same as the CML \code{wrap} function.)
+%
+\begin{protos}
+\proto{guard}{ thunk}{rendezvous}
+\end{protos}
+%
+\code{Guard} delays the creation of a rendezvous until synchronization
+time: It returns a rendezvous that will, upon synchronization, turn
+into the rendezvous returned by \cvar{thunk}.  \code{Guard} can be
+used to perform pre-synchronization actions such as resource
+allocation.  (This is the same as the CML \code{guard} function.)
+%
+\begin{protos}
+\proto{with-nack}{ proc}{rendezvous}
+\end{protos}
+%
+\code{With-nack}, like \code{guard}, creates a delayed rendezvous: Upon
+synchronization, the rendezvous actually used is the one returned by
+\cvar{proc}.  In addition to the functionality offered by
+\code{guard}, \cvar{proc} receives, as an argument, another rendezvous
+which becomes enabled when \emph{another} rendezvous involved in the
+synchronization (via \code{choose}) is picked instead of the one
+produced by \cvar{proc}.  (This is the same as the CML \code{withNack}
+function.)
+%
+\begin{protos}
+\proto{sync}{ rendezvous}{value}
+\proto{select}{ rendezvous \ldots}{value}
+\end{protos}
+%
+\code{Sync} synchronizes the current thread on rendezvous
+\cvar{rendezvous}, returning the value it yields.  \code{Select}
+synchronizes on the choice of its argument; \code{(select $r_1$ \ldots
+  $r_n$)} is semantically equivalent to \code{(sync (choose select $r_1$ \ldots
+  $r_n$))}, but may be implemented more efficiently.  (These are the
+same as the CML functions \code{sync} and \code{select}.)
+
+\subsection{Synchronous channels}
+
+The \code{rendezvous-channels} structure contains abstractions for
+bidirectional, synchronous channels for communicating between two
+threads.
+%
+\begin{protos}
+\proto{make-channel}{}{channel}
+\proto{channel?}{ x}{boolean}
+\end{protos}
+%
+\code{Make-channel} creates a new synchronous channel.  (This is the
+same as the CML \code{channel} function.)  \code{Channel?} is the
+predicate for synchronous channels.
+%
+\begin{protos}
+\proto{send-rv}{ channel value}{rendezvous}
+\protonoresult{send}{ channel value}
+\end{protos}
+%
+\code{Send-rv} creates a rendezvous that, upon synchronization, sends
+message \cvar{value} on the synchronous channel \cvar{channel}.  The
+synchronization suceeds only when another thread attempts to receive a
+message from \cvar{channel}.  (This is the same as the CML
+\code{sendEvt} function.)  \code{Send} directly sends a message
+\cvar{value} on channel \cvar{channel}; \code{(send $c$ $v$)} is
+equivalent to \code{(sync (send-rv $c$ $v$))}.  (\code{Send} is the
+same as the CML \code{send} function.)
+%
+\begin{protos}
+\proto{receive-rv}{ channel}{rendezvous}
+\protonoresult{receive}{ channel}
+\end{protos}
+%
+\code{Receive-rv} creates a rendezvous which, upon synchronization,
+receives a message on channel \cvar{channel}.  (This is the same as
+the CML \code{recEvt} function.)  \code{Receive} directly
+receives a message on channel \cvar{channel}; \code{(receive $c$ $v$)} is
+equivalent to \code{(sync (receive-rv $c$ $v$))}.  (\code{Receive} is
+the same as the CML \code{recv} function.)
+
+\subsection{Synchronous variables}
+
+Two structures contain abstractions for synchronous variables: the
+\code{rendezvous-placeholders} structure for so-called
+\textit{placeholders} (write-once variables), and the
+\code{rendezvous-jars} structure for \textit{jars} (which allow
+multiple updates.)
+
+\subsubsection{Placeholders}
+%
+Placeholders are write-once variables.  The placeholders implemented
+by the \code{rendezvous-placeholders} structure offer equivalent
+functionality to the placeholders implemented by the
+\code{placeholders} structure (see Section~\ref{placeholders}), but
+additionally allow converting a placeholder into a rendezvous.  Note,
+however, that placeholders from \code{placeholders} are different from
+and not interchangable with placeholders from
+\code{rendezvous-placeholders}.
+%
+\begin{protos}
+\proto{make-placeholder}{}{placeholder}
+\proto{make-placeholder}{ id}{placeholder}
+\proto{placeholder?}{ x}{boolean}
+\end{protos}
+%
+\code{Make-placeholder} creates an empty placeholder.  (The optional
+\cvar{id} argument is only for debugging purposes; the discloser for
+placeholders prints it out if present.)  (This is the same as the CML
+\code{iVar} function.)  \code{Placeholder?} is the predicate for
+placeholders.
+%
+\begin{protos}
+\protonoresult{placeholder-set!}{ placeholder value}
+\end{protos}
+%
+\code{Placeholder-set!} places a value into a placeholder.  Doing this
+more than once signals an error.  (This is the same as the CML
+\code{iPut} function.)
+%
+\begin{protos}
+\proto{placeholder-value-rv}{ placeholder}{rendezvous}
+\proto{placeholder-value}{ placeholder}{value}
+\end{protos}
+%
+\code{Placeholder-value} extracts the value from the placeholder and
+returns it.  If the placeholder is empty, it blocks the current thread
+until it becomes full.  (This is the same as the CML \code{iGet}
+function.)  \code{Placeholder-value-rv} creates a rendezvous that
+will, upon synchronization, extrasct the value from the placeholder
+and yield it as a result.  (This is the same as the CML \code{iGetEvt}
+function.)
+
+\subsubsection{Jars}
+
+A jar is a synchronous variable which can have two states: full and
+empty.  It becomes full when a value it put into it; putting a value
+into a full jar is an error.  Conversely, it becomes empty when a
+value is taken out of it.  Trying to take a value out of an empty jar
+blocks until it becomes full.  (Jars are similar to ID-90
+M-structures.)  Jars live in the \code{rendezvous-jars} structure.
+%
+\begin{protos}
+\proto{make-jar}{}{jar}
+\proto{make-jar}{ id}{jar}
+\proto{jar?}{ x}{boolean}
+\end{protos}
+%
+\code{Make-jar} creates an empty jar.  (The optional \cvar{id}
+argument is only for debugging purposes; the discloser for jars prints
+it out if present.)  (This is the same as the CML \code{mVar}
+function.)  \code{Jar?} is the predicate for jars.
+
+\begin{protos}
+\protonoresult{jar-put!}{ jar value}
+\end{protos}
+%
+\code{Jar-put!} places a value into a jar if it is empty.  Applying
+\code{jar-put!} to a full jar is an error.  (This is the same as the
+CML \code{mPut} function.)
+%
+\begin{protos}
+\proto{jar-take-rv}{ placeholder}{rendezvous}
+\proto{jar-take}{ placeholder}{value}
+\end{protos}
+%
+\code{Jar-take} takes a value from a full jar, emptying it in the
+process.  If the jar is empty, \code{jar-take} blocks until it becomes
+full.  (This is the same as the CML \code{mTake} function.)
+\code{Jar-take-rv} creates a rendezvous that, upon synchronization,
+will extract the value from a jar and empty it in the process.  (This
+is the same as the CML \code{mTakeEvt} function.)
+
+\subsection{Timeouts}
+
+The \code{rendezvous-time} structure allows creating rendezvous for
+alarms and timeouts:
+%
+\begin{protos}
+\proto{after-time-rv}{ milliseconds}{rendezvous}
+\proto{at-real-time-rv}{ time}{rendezvous}
+\end{protos}
+%
+\code{After-time-rv} creates a rendezvous that becomes enabled at time
+interval \cvar{milliseconds} after synchronization.  (Actually,
+\cvar{milliseconds} is a minimum waiting time; the actual delay may be
+longer.)  (This is the same as the CML \code{timeOutEvt} function.)
+\code{At-real-time-rv} creates a rendezvous that becomes enabled at an
+absolute time specified by \cvar{time}; this absolute time is
+specified in the same way as the return value \code{real-time} from
+the \code{time} structure.  (This is the same as the CML
+\code{atTimeEvt} function.)
+
+\subsection{CML to Scheme correspondence}
+
+The following table lists the Scheme names that correspond to
+particular CML names.
+
+\W\begin{tabular}{ll}
+\T\setlongtables
+\T\begin{longtable}{ll}
+  CML name & Scheme name\\\hline
+  \multicolumn{2}{c}{\code{rendezvous}}\\
+  \code{never} & \code{never-rv}\\
+  \code{alwaysEvt} & \code{always-rv}\\
+  \code{choose} & \code{choose}\\
+  \code{wrap} & \code{wrap}\\
+  \code{guard} & \code{guard}\\
+  \code{withNack} & \code{with-nack}\\
+  \code{sync} & \code{sync}\\
+  \code{select} & \code{select}\\[1ex]
+  \multicolumn{2}{c}{\code{rendezvous-channels}}\\
+  \code{channel} & \code{make-channel}\\
+  \code{sendEvt} & \code{send-rv}\\
+  \code{send} & \code{send}\\
+  \code{recEvt} & \code{receive-rv}\\
+  \code{rec} & \code{receive}\\[1ex]
+  \multicolumn{2}{c}{\code{rendezvous-placeholders}}\\
+  \code{iVar} & \code{make-placeholder}\\
+  \code{iPut} & \code{placeholder-set!}\\
+  \code{iGet} & \code{placeholder-value}\\
+  \code{iGetEvt} & \code{placeholder-value-rv}\\[1ex]
+  \multicolumn{2}{c}{\code{rendezvous-jars}}\\
+  \code{mVar} & \code{make-jar}\\
+  \code{mTake} & \code{jar-take}\\
+  \code{mTakeEvt} & \code{jar-take-rv}\\
+  \code{mPut} & \code{jar-put!}\\[1ex]
+  \multicolumn{2}{c}{\code{rendezvous-time}}\\
+  \code{timeOutEvt} & \code{after-time-rv}\\
+  \code{atTimeEvt} & \code{at-real-time-rv}
+\W\end{tabular}
+\T\end{longtable}
 
 %%% Local Variables: 
 %%% mode: latex
