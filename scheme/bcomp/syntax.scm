@@ -77,8 +77,12 @@
 	(let ((form (expand-head (car forms) env))
 	      (more-forms (cdr forms)))
 	  (cond ((define? form)
-		 (loop more-forms
-		       (cons (expand-define form env) expanded)))
+		 (let* ((new-form (destructure-define form))
+			(temp (if new-form
+				  (expand-define new-form env)
+				  (syntax-error "ill-formed definition"
+						form))))
+		   (loop more-forms (cons temp expanded))))
 		((define-syntax? form)
 		 (loop more-forms
 		       (cons (make-node operator/define-syntax
@@ -361,7 +365,11 @@
 
 (define-expander 'define
   (lambda (op op-node exp env)
-    (expand (syntax-error "definition in expression context" exp) env)))
+    (expand (syntax-error (if (define? exp)
+			      "definition in expression context"
+			      "ill-formed definition")
+			  exp)
+	    env)))
 
 ; Remove generated names from quotations.
 
