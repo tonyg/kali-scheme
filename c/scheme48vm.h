@@ -42,13 +42,7 @@ extern void		s48_stack_setB(long offset, s48_value value);
 
 /* strings */
 
-S48_EXTERN void		s48_string_set(s48_value s, long i, long c);
-S48_EXTERN long		s48_string_ref(s48_value s, long i);
-S48_EXTERN s48_value	s48_string_length(s48_value s);
 S48_EXTERN s48_value	s48_allocate_string(long l);
-S48_EXTERN s48_value	s48_enter_string_latin_1(char* s);
-S48_EXTERN void		s48_copy_string_to_scheme_string_latin_1(char* s, long len, s48_value sch_s);
-S48_EXTERN void		s48_copy_scheme_string_to_string_latin_1(s48_value sch_s, char* s);
 
 /* called when writing an image */
 extern s48_value	s48_symbol_table(void);

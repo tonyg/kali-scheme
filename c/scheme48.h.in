@@ -59,6 +59,14 @@ S48_EXTERN void		s48_push_gc_rootsB(char *, long);
 S48_EXTERN char		s48_pop_gc_rootsB(void);
 S48_EXTERN char		s48_pop_gc_roots_up_to_markerB(char *);
 
+S48_EXTERN s48_value	s48_make_string(int, long);
+S48_EXTERN void		s48_string_set(s48_value s, long i, long c);
+S48_EXTERN long		s48_string_ref(s48_value s, long i);
+S48_EXTERN s48_value	s48_string_length(s48_value s);
+S48_EXTERN s48_value	s48_enter_string_latin_1(char* s);
+S48_EXTERN void		s48_copy_string_to_scheme_string_latin_1(char* s, long len, s48_value sch_s);
+S48_EXTERN void		s48_copy_scheme_string_to_string_latin_1(s48_value sch_s, char* s);
+
 S48_EXTERN s48_value	s48_enter_char(unsigned char);
 S48_EXTERN unsigned char s48_extract_char(s48_value);
 S48_EXTERN s48_value	s48_enter_scalar_value(long);
@@ -72,7 +80,6 @@ S48_EXTERN double	s48_extract_double(s48_value);
 S48_EXTERN s48_value	s48_cons(s48_value, s48_value);
 S48_EXTERN s48_value	s48_enter_byte_vector(char *, long);
 S48_EXTERN char *	s48_extract_byte_vector(s48_value);
-S48_EXTERN s48_value	s48_make_string(int, long);
 S48_EXTERN s48_value	s48_make_vector(int, s48_value);
 S48_EXTERN s48_value	s48_make_byte_vector(int);
 S48_EXTERN s48_value	s48_enter_byte_string(char *);
