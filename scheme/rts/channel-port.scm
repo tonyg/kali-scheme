@@ -128,18 +128,19 @@
 (define (empty-buffer! port necessary?)
   (let* ((cell (port-data port))
 	 (condvar (channel-cell-condvar cell)))
+
     (cond ((not (channel-cell-in-use? cell))
 	   (let ((buffer (port-buffer port))
 		 (count (provisional-port-index port)))
 	     (set-channel-cell-in-use?! cell #t)
-	     (send-some port 0)))
+	     (send-some port 0 necessary?)))
 	  ((condvar-has-value? condvar)
 	   (let ((sent (+ (condvar-value condvar)
 			  (channel-cell-sent cell))))
 	     (set-condvar-has-value?! condvar #f)
 	     (if (< sent
 		    (provisional-port-index port)) 
-		 (send-some port sent)
+		 (send-some port sent necessary?)
 		 (begin
 		   (provisional-set-port-index! port 0)
 		   (note-buffer-reuse! port)
@@ -153,7 +154,7 @@
 ; Try writing the rest of PORT's buffer. SENT characters have already been
 ; written out.
 
-(define (send-some port sent)
+(define (send-some port sent wait?)
   (let ((cell (port-data port)))
     (set-channel-cell-sent! cell sent)
     (channel-maybe-commit-and-write (channel-cell-ref cell)
@@ -161,7 +162,8 @@
 				    sent
 				    (- (provisional-port-index port)
 				       sent)
-				    (channel-cell-condvar cell))))
+				    (channel-cell-condvar cell)
+				    wait?)))
 
 (define output-channel-handler
   (make-buffered-output-port-handler
