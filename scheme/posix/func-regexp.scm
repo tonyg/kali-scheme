@@ -100,7 +100,7 @@
        (= 0 (set-no-case set))))
 
 (define (char->mask char)
-  (arithmetic-shift 1 (char->ascii char)))
+  (arithmetic-shift 1 (char->scalar-value char)))
 
 (define (char-in-set? char set)
   (not (zero? (bitwise-and (set-use-case set)
@@ -108,13 +108,14 @@
 
 (define char-limit 256)		; allow eight-bit characters
 
-; A vector mapping ASCII values to case-insensitive bitsets.
-; This is a massive kludge, as ASCII really only goes up to 127.
+; A vector mapping Latin-1 values to case-insensitive bitsets.
+; It's unclear how to make this work with Unicode while preserving
+; the underlying 8-bit POSIX API.
 
 (define no-case-char-masks
   (reduce ((count* i 0 char-limit))
 	  ((masks '()))
-    (cons (let ((ch (ascii->char i)))
+    (cons (let ((ch (scalar-value->char i)))
 	    (bitwise-ior (arithmetic-shift 1 i)
 			 (cond ((and (< i 128)
 				     (char-upper-case? ch))
@@ -138,7 +139,7 @@
     (list->vector (reverse sets))))
 
 (define (char->set char)
-  (vector-ref singleton-sets (char->ascii char)))
+  (vector-ref singleton-sets (char->scalar-value char)))
 
 ; Arguments can be strings or single characters.  We walk down all of the
 ; characters, or-ing their masks together.
@@ -162,7 +163,7 @@
   (values (bitwise-ior case (char->mask char))
 	  (bitwise-ior no-case
 		       (vector-ref no-case-char-masks
-				   (char->ascii char)))))
+				   (char->scalar-value char)))))
   
 (define (add-string-masks string case no-case)
   (reduce ((string* char string))
@@ -173,11 +174,11 @@
 ; Ranges.  Again, we loop through the ranges building up two masks.
 
 (define (range low high)
-  (or (real-ranges `(,low ,high) char->integer integer->ascii)
+  (or (real-ranges `(,low ,high) char->integer integer->scalar-value)
       (call-error "invalid argument" range low high)))
 
 (define (ranges . limits)
-  (or (real-ranges limits char->integer integer->ascii)
+  (or (real-ranges limits char->integer integer->scalar-value)
       (apply call-error "invalid argument" ranges limits)))
 
 (define (ascii-range low high)
@@ -188,17 +189,17 @@
   (or (real-ranges limits char->ascii identity)
       (apply call-error "invalid argument" ascii-ranges limits)))
 
-(define (integer->ascii i)
-  (char->ascii (integer->char i)))
+(define (integer->scalar-value i)
+  (char->scalar-value (integer->char i)))
 
 (define (identity i)
   i)
 
 ; LIMITS is a list of lists (<start-char> <end-char>), CHAR->INT returns an
-; integer given a character and INT->ASCII translates that integer to the
-; corresponding ASCII value.
+; integer given a character and INT->SCALAR-VALUE translates that integer to the
+; corresponding scalar value.
 
-(define (real-ranges limits char->int int->ascii)
+(define (real-ranges limits char->int int->scalar-value)
   (if (every char? limits)
       (let loop ((to-do limits) (case 0) (no-case 0))
 	(cond ((null? to-do)
@@ -213,12 +214,12 @@
 		     (reduce ((count* i start (+ end 1)))
 			     ((case case)
 			      (no-case no-case))
-			(let ((ascii (int->ascii i)))
+			(let ((scalar-value (int->scalar-value i)))
 			  (values (bitwise-ior case
-					       (arithmetic-shift 1 ascii))
+					       (arithmetic-shift 1 scalar-value))
 				  (bitwise-ior no-case
 					       (vector-ref no-case-char-masks
-							   ascii))))
+							   scalar-value))))
 			(loop (cddr to-do) case no-case)))))))
       #f))
 	       
@@ -260,9 +261,9 @@
 (define numeric      (range #\0 #\9))
 (define alphanumeric (union alphabetic numeric))
 (define punctuation  (set "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"))
-(define blank        (set #\space (ascii->char 9)))	;#\tab
+(define blank        (set #\space (scalar-value->char 9)))	;#\tab
 (define graphic      (union alphanumeric punctuation))
-(define whitespace   (apply set (map ascii->char
+(define whitespace   (apply set (map scalar-value->char
 				     '(32	;space
 				       9	;tab
 				       10	;newline
@@ -699,7 +700,7 @@
 ;  - a mask with the character and two or three adjacent characters
 ; If the character is present but not all of the bigger mask, then the character
 ; will not be inside a range and so must be removed and placed at the end of the
-; string.  This is complicated by #\] and #\^ being adjacent ASCII characters.
+; string.  This is complicated by #\] and #\^ having adjacent scalar values.
 ; If one is present then the four characters "\]^_" must be present to make sure
 ; the funny character is inside a range.
 ;
@@ -795,7 +796,8 @@
 (define (shift-down n)
   (arithmetic-shift n -1))
 
-; Turn RANGES, which is list of pairs and (<ascii start> . <ascii end>) ranges
+; Turn RANGES, which is list of pairs and
+; (<scalar value start> . <scalar value end>) ranges
 ; into a string, where the ranges become <start char>-<end char>.  Any
 ; characters in RANGES are put directly into the result.
 
@@ -803,13 +805,13 @@
   (if (and (null? (cdr ranges))
 	   (= (caar ranges)
 	      (cdar ranges)))
-      (string (ascii->char (caar ranges)))
+      (string (scalar-value->char (caar ranges)))
       (reduce ((list* range ranges))
 	      ((res '()))
 	(if (char? range)
 	    (cons range res)
-	    (let ((first (ascii->char (car range)))
-		  (last (ascii->char (cdr range))))
+	    (let ((first (scalar-value->char (car range)))
+		  (last (scalar-value->char (cdr range))))
 	      (case (- (cdr range) (car range))
 		((0)
 		 (cons first res))
@@ -954,7 +956,7 @@
 		    chars
 		    (loop (arithmetic-shift bits -1)
 			  (if (odd? bits)
-			      (cons (ascii->char i)
+			      (cons (scalar-value->char i)
 				    chars)
 			      chars))))))))
 

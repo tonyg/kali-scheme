@@ -306,7 +306,7 @@
 
 (define-structures ((regexps regexps-interface)
 		    (regexps-internal regexps-internal-interface))
-  (open scheme define-record-types mvlet ascii signals
+  (open scheme define-record-types mvlet ascii unicode signals
 	bitwise bigbit
 	reduce
 	(modify posix-regexps (rename (make-regexp make-posix-regexp)))
