@@ -88,7 +88,7 @@
 (define (vm-exception-opcode c)
   (car (condition-stuff c)))
 (define (vm-exception-reason c)
-  (cadr (condition-stuff c))))
+  (cadr (condition-stuff c)))
 (define (vm-exception-arguments c)
   (cddr (condition-stuff c)))
 
