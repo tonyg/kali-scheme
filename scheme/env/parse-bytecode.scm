@@ -60,7 +60,7 @@
         *bc-make-labels* '()
       (lambda ()
         (for-each 
-         pc->label 
+         (lambda (pc) (pc->label pc attribution))
          (debug-data-jump-back-dests (template-debug-data tem)))
         (receive (size protocol-arguments)
             (parse-protocol code 1 attribution)
