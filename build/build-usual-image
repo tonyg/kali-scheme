@@ -33,7 +33,7 @@ $vm -i $initial -a batch <<EOF
 ,structure more-structures more-structures-interface
 ,in debuginfo (read-debug-info "$srcdir/build/initial.debug")
 ,keep maps source files
-,translate =scheme48/ $lib/
+,translate =scheme48/ "$lib/"
 ,build ((*structure-ref package-commands-internal
 			'new-command-processor)
 	"(made by $USER on $date)"

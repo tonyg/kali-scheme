@@ -356,8 +356,8 @@ inst-script-interpreters:
 go:
 	echo '#!/bin/sh'	>$@ &&					\
 	echo			>>$@ &&					\
-	echo "lib=`pwd`"	>>$@ &&					\
-	echo 'exec $$lib/$(VM) -o $$lib/$(VM) -i $$lib/$(IMAGE) "$$@"'	\
+	echo "lib=\"`pwd`\""	>>$@ &&					\
+	echo 'exec "$$lib"/$(VM) -o "$$lib"/$(VM) -i "$$lib"/$(IMAGE) "$$@"'	\
 				>>$@ &&					\
 	chmod +x $@
 
