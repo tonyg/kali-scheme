@@ -133,6 +133,8 @@
 	(closure-count (fetch code (+ pc size))))
     (display #\space)
     (write total-count)
+    (display #\space)
+    (write closure-count)
     (let* ((pc (if (< 0 closure-count)
 		   (begin
 		     (display-flat-env-closures closure-count
@@ -152,15 +154,21 @@
 	    (count (+ closure-count frame-count)))
 	(let loop ((pc pc) (count count))
 	  (if (< count total-count)
-	      (let* ((more (fetch code pc))
-		     (offset (fetch code (+ pc size)))
-		     (indexes (get-offsets code pc size fetch more)))
+	      (let* ((env (fetch code pc))
+		     (count-here (fetch code (+ pc size)))
+		     (indexes (get-offsets code 
+					   (+ pc size size) 
+					   size 
+					   fetch 
+					   count-here)))
 		(display #\space)
-		(display offset)
-		(display #\space)
+		(display #\()
+		(display env)
+		(display " => ")
 		(display indexes)
-		(loop (+ pc (* (+ 2 more) size))
-		      (+ count more)))
+		(display #\))
+		(loop (+ pc (* (+ 2 count-here) size))
+		      (+ count count-here)))
 	      pc))))))
 
 (define (get-offsets code pc size fetch count)
@@ -171,15 +179,21 @@
        (reverse r))))
 
 (define (display-flat-env-closures count pc code level write-subs? size fetch)
+  (display "(closures from ")
+  (display (fetch code pc))
+  (display #\:)
   (do ((i 0 (+ i 1))
        (pc pc (+ pc size)))
       ((= i count))
+    (display #\space)
+    (display (fetch code pc)))
+  (display #\)))
 ;    (if write-subs?
 ;	(begin
 ;	  (newline-indent (* (+ level 1) 3))
 ;	  (really-disassemble (template-ref template (get-offset code pc))
 ;			      (+ level 1))))
-    (display " #f")))
+    
 
 ;----------------------------------------------------------------
 (define (display-entry-protocol code level)
