@@ -55,5 +55,10 @@ RESULT = ps_read_integer(PORT,&EOFP,&STATUS);
   RESULT = TTy >= 32 ? 0 : X << TTy; \
 }  
 
+#define PS_SHIFT_RIGHT_LOGICAL(X,Y,RESULT) \
+{                                          \
+  RESULT = ((unsigned long) X) >> Y;	   \
+}
+
 extern long s48_return_value, s48_run_machine();
 
