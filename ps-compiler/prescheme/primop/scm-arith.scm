@@ -1,67 +1,53 @@
 
 ; Arithmetic inference rules
 
-(define (arith-op-rule id args node depth)
-  (let ((type (make-arith-op-uvar id depth)))
-    (let loop ((args args))
-      (if (not (null? args))
-	  (begin
-	    (unify! type (infer-type args depth) node)
-	    (loop (cdr args)))))
-    (maybe-follow-uvar type)))
+(define (arith-op-rule args node depth return?)
+  (for-each (lambda (arg)
+	      (unify! (infer-type arg depth) type/integer node))
+	    args)
+  type/integer)
 
-(define (make-arith-op-rule id)
-  (lambda (args node depth return?)
-    (arith-op-rule id args node depth)))
-
-(define (make-arith-comparison-rule id)
-  (lambda (args node depth return?)
-    (arith-op-rule id args node depth)
-    type/boolean))
+(define (arith-comparison-rule args node depth return?)
+  (arith-op-rule args node depth return?)
+  type/boolean)
 
 (define (integer-binop-rule args node depth return?)
-  (check-arg-type args 0 type/int32 depth node)
-  (check-arg-type args 1 type/int32 depth node)
-  type/int32)
+  (check-arg-type args 0 type/integer depth node)
+  (check-arg-type args 1 type/integer depth node)
+  type/integer)
 
 (define (integer-monop-rule args node depth return?)
-  (check-arg-type args 0 type/int32 depth node)
-  type/int32)
+  (check-arg-type args 0 type/integer depth node)
+  type/integer)
 
 (define (integer-comparison-rule args node depth return?)
-  (check-arg-type args 0 type/int32 depth node)
+  (check-arg-type args 0 type/integer depth node)
   type/boolean)
 
 ;----------------------------------------------------------------
 ; Arithmetic
 
-(define-complex-primitive (+ . number?) +
-  (lambda (args node depth return?)
-    (if (null? args)
-	type/int7u
-	(arith-op-rule '+ args node depth)))
+(define-complex-primitive (+ . integer?) +
+  arith-op-rule
   (lambda (x y) (+ x y))
   (lambda (args type)
     (if (null? args)
-	(make-arith-literal-node type 0 0.0)
+	(make-literal-node 0 type/integer)
 	(n-ary->binary args
-		       (make-literal-node (arith-primop type '+ 'fl+))
+		       (make-literal-node (get-prescheme-primop '+))
 		       type))))
 
-(define-complex-primitive (* . number?) *
-  (lambda (args node depth return?)
-    (if (null? args)
-	type/int7u
-	(arith-op-rule '* args node depth)))
+(define-complex-primitive (* . integer?) *
+  arith-op-rule
   (lambda (x y) (* x y))
   (lambda (args type)
     (if (null? args)
-	(make-arith-literal-node type 1 1.0)
+	(make-literal-node 1)
 	(n-ary->binary args
-		       (make-literal-node (arith-primop type '* 'fl*))
+		       (make-literal-node (get-prescheme-primop '*))
 		       type))))
 
-(define-complex-primitive (- number? . number?)
+(define-complex-primitive (- integer? . integer?)
   (lambda args
     (if (or (null? (cdr args))
 	    (null? (cddr args)))
@@ -69,17 +55,21 @@
 	(user-error "error while evaluating: type error ~A" (cons '- args))))
   (lambda (args node depth return?)
     (case (length args)
-      ((1 2)
-       (arith-op-rule '- args node depth))
+      ((1)
+       (check-arg-type args 0 type/integer depth node)
+       type/integer)
+      ((2)
+       (check-arg-type args 0 type/integer depth node)
+       (check-arg-type args 1 type/integer depth node)
+       type/integer)
       (else
        (user-error "wrong number of arguments to - in ~S" (schemify node)))))
   (lambda (x y) (- x y))
   (lambda (args type)
-    (let ((primop (arith-primop type '- 'fl-)))
+    (let ((primop (get-prescheme-primop '-)))
       (if (null? (cdr args))
 	  (make-primop-call-node primop
-				 (list (make-arith-literal-node type 0 0.0)
-				       (car args))
+				 (list (make-literal-node 0) (car args))
 				 type)
 	  (make-primop-call-node primop args type)))))
 
@@ -93,100 +83,100 @@
 		    (cddr args))))))
 
 (define-syntax define-binary-primitive
-  (lambda (exp r c)
-    (let ((id (cadr exp)))
-      (call-with-values
-       (lambda ()
-	 (if (null? (cdddr exp))
-	     (values #f (caddr exp))
-	     (values (caddr exp) (car (cdddr exp)))))
-       (lambda (maybe-fl-id type-reconstruct)
-	 `(define-complex-primitive (,id number? number?) ,id
-	    ,type-reconstruct
-	    (lambda (x y) (,id x y))
-	    (lambda (args type)
-	      (make-primop-call-node
-	       ,(if maybe-fl-id
-		    `(arith-primop type ',id ',maybe-fl-id)
-		    `(get-prescheme-primop ',id))
-	       args
-	       type))))))))
+  (syntax-rules ()
+    ((define-binary-primitive id type-reconstruct)
+     (define-complex-primitive (id integer? integer?) id
+       type-reconstruct
+       (lambda (x y) (id x y))
+       (lambda (args type)
+	 (make-primop-call-node (get-prescheme-primop 'id) args type))))))
 
-(define-binary-primitive = fl= (make-arith-comparison-rule '=))
-(define-binary-primitive < fl< (make-arith-comparison-rule '<))
+(define-binary-primitive = arith-comparison-rule)
+(define-binary-primitive < arith-comparison-rule)
 
-(define-semi-primitive (>  number? number?) >
-  (make-arith-comparison-rule '>)
+(define-semi-primitive (>  integer? integer?) >
+  arith-comparison-rule
   (lambda (x y) (< y x)))
 
-(define-semi-primitive (<= number? number?) <=
-  (make-arith-comparison-rule '<=)
+(define-semi-primitive (<= integer? integer?) <=
+  arith-comparison-rule
   (lambda (x y) (not (< y x))))
 
-(define-semi-primitive (>= number? number?) >=
-  (make-arith-comparison-rule '>=)
+(define-semi-primitive (>= integer? integer?) >=
+  arith-comparison-rule
   (lambda (x y) (not (< x y))))
 
 (define-binary-primitive quotient  integer-binop-rule)
 (define-binary-primitive remainder integer-binop-rule)
 (define-binary-primitive modulo    integer-binop-rule)
 
-(define-primitive bitwise-and ((integer? type/int32) (integer? type/int32)) type/int32)
-(define-primitive bitwise-ior ((integer? type/int32) (integer? type/int32)) type/int32)
-(define-primitive bitwise-xor ((integer? type/int32) (integer? type/int32)) type/int32)
-(define-primitive bitwise-not ((integer? type/int32)) type/int32)
+(define-primitive bitwise-and
+  ((integer? type/integer) (integer? type/integer))
+  type/integer)
+
+(define-primitive bitwise-ior
+  ((integer? type/integer) (integer? type/integer))
+  type/integer)
+
+(define-primitive bitwise-xor
+  ((integer? type/integer) (integer? type/integer))
+  type/integer)
+
+(define-primitive bitwise-not
+  ((integer? type/integer))
+  type/integer)
 
 (define-primitive shift-left
-  ((integer? type/int32) (integer? type/int32))
-  type/int32
+  ((integer? type/integer) (integer? type/integer))
+  type/integer
   ashl)
 
 (define-primitive logical-shift-right
-  ((integer? type/int32) (integer? type/int32))
-  type/int32
+  ((integer? type/integer) (integer? type/integer))
+  type/integer
   lshr)
 
 (define-primitive arithmetic-shift-right
-  ((integer? type/int32) (integer? type/int32))
-  type/int32
+  ((integer? type/integer) (integer? type/integer))
+  type/integer
   ashr)
 
-(define-semi-primitive (abs number?) abs
-  (make-arith-op-rule 'abs)
+(define-semi-primitive (abs integer?) abs
+  arith-op-rule
   (lambda (n) (if (< n 0) (- 0 n) n)))
 
-(define-semi-primitive (zero? number?) zero?
-  (make-arith-comparison-rule 'zero?)
+(define-semi-primitive (zero? integer?) zero?
+  arith-comparison-rule
   (lambda (n) (= n 0)))
 
-(define-semi-primitive (positive? number?) positive?
-  (make-arith-comparison-rule 'positive?)
+(define-semi-primitive (positive? integer?) positive?
+  arith-comparison-rule
   (lambda (n) (< 0 n)))
 
-(define-semi-primitive (negative? number?) negative?
-  (make-arith-comparison-rule 'negative?)
+(define-semi-primitive (negative? integer?) negative?
+  arith-comparison-rule
   (lambda (n) (< n 0)))
 
-(define-semi-primitive (even? number?) even?
+(define-semi-primitive (even? integer?) even?
   integer-comparison-rule
   (lambda (n) (= 0 (remainder n 2))))
 
-(define-semi-primitive (odd? number?) odd?
+(define-semi-primitive (odd? integer?) odd?
   integer-comparison-rule
   (lambda (n) (not (even? n))))
   
-(define-semi-primitive (max number? . number?) max
-  (make-arith-op-rule 'max)
+(define-semi-primitive (max integer? . integer?) max
+  arith-op-rule
   (lambda (x y)
     (if (< x y) y x)))
   
-(define-semi-primitive (min number? . number?) min
-  (make-arith-op-rule 'max)
+(define-semi-primitive (min integer? . integer?) min
+  arith-op-rule
   (lambda (x y)
     (if (< x y) x y)))
 
-(define-semi-primitive (expt number? positive-integer?) expt
-  (make-arith-op-rule 'expt)
+(define-semi-primitive (expt integer? positive-integer?) expt
+  arith-op-rule
   (lambda (x y)
     (do ((r x (* r x))
 	 (y y (- y 1)))

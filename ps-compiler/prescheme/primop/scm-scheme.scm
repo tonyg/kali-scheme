@@ -64,6 +64,9 @@
 		       '(x1 x2 x3 x4 x5 x6 x7 x8 x9))))
       `(define-complex-primitive (,id . ,(map car args)) ,id
 	 (lambda (args node depth return?)
+	   (if (not (= (length args)
+		       ,(length args)))
+	       (user-error "wrong number of arguments in ~S" (schemify node)))
 	   ,@(do ((i 0 (+ i 1))
 		  (args args (cdr args))
 		  (res '() (cons `(check-arg-type args ,i ,(cadar args) depth node)
@@ -103,8 +106,8 @@
 
 (define-complex-primitive (eq? #f #f) eq?
   (lambda (args node depth return?)
-    (unify! (infer-type args depth)
-	    (infer-type (cdr args) depth)
+    (unify! (infer-type (car args) depth)
+	    (infer-type (cadr args) depth)
 	    node)
     type/boolean)
   (lambda (x y) (eq? x y))
@@ -122,23 +125,12 @@
        (>= n 0)
        (< n ascii-limit)))
 
-(define-complex-primitive (ascii->char ascii-value?) ascii->char
-  (lambda (args node depth return?)
-    (check-arg-type args 0 type/int32 depth node)   ; hmm
-    type/int8u)
-  (lambda (c) c)
-  (lambda (args type) (car args)))
-    
-(define-complex-primitive (char->ascii char?) char->ascii
-  (lambda (args node depth return?)
-    (check-arg-type args 0 type/int8u depth node)   ; hmm
-    type/int8u)
-  (lambda (c) c)
-  (lambda (args type) (car args)))
+(define-primitive ascii->char ((ascii-value? type/integer)) type/char)
+(define-primitive char->ascii ((char? type/char)) type/integer)
     
 (define (char-comparison-rule args node depth return?)
-  (check-arg-type args 0 type/int8u depth node)
-  (check-arg-type args 1 type/int8u depth node)
+  (check-arg-type args 0 type/char depth node)
+  (check-arg-type args 1 type/char depth node)
   type/boolean)
 
 (define-syntax define-char-comparison
@@ -176,8 +168,8 @@
   (lambda (args node depth return?)
     (let ((uvar (make-uvar 'v depth)))
       (make-nonpolymorphic! uvar)
-      (check-arg-type args 0 type/int32 depth node)
-      (check-arg-type args 1 uvar       depth node)
+      (check-arg-type args 0 type/integer depth node)
+      (check-arg-type args 1 uvar         depth node)
       (make-pointer-type uvar)))
   (lambda (size init)
     (make-vector size init))
@@ -190,7 +182,7 @@
   (lambda (args node depth return?)
     (let ((elt-type (make-uvar 'v depth)))
       (check-arg-type args 0 (make-pointer-type elt-type) depth node)
-      (check-arg-type args 1 type/int32 depth node)
+      (check-arg-type args 1 type/integer depth node)
       elt-type))
   (lambda (vector index)
     (vector-ref vector index))
@@ -202,7 +194,7 @@
   (lambda (args node depth return?)
     (let ((elt-type (make-uvar 'v depth)))
       (check-arg-type args 0 (make-pointer-type elt-type) depth node)
-      (check-arg-type args 1 type/int32 depth node)
+      (check-arg-type args 1 type/integer depth node)
       (check-arg-type args 2 elt-type depth node)
       type/unit))
   (lambda (vector index value)
@@ -210,15 +202,15 @@
   (lambda (args type)
     (make-primop-call-node (get-prescheme-primop 'vector-set!) args type)))
 
-(define-primitive make-string ((integer? type/int32)) type/string)
-(define-primitive string-length ((string? type/string)) type/int32)
+(define-primitive make-string ((integer? type/integer)) type/string)
+(define-primitive string-length ((string? type/string)) type/integer)
 
 (define-primitive string-ref
-  ((string? type/string) (integer? type/int32))
+  ((string? type/string) (integer? type/integer))
   type/char)
 
 (define-primitive string-set!
-  ((string? type/string) (integer? type/int32) (char? type/char))
+  ((string? type/string) (integer? type/integer) (char? type/char))
   type/unit)
 
 (define-complex-primitive (deallocate any?) (lambda (x) (values))
@@ -256,7 +248,7 @@
 (define-primitive current-output-port () type/output-port stdout)
 (define-primitive current-error-port  () type/output-port stderr)
 
-(define type/status type/int32)
+(define type/status type/integer)
 
 (let ((return (make-tuple-type (list type/input-port type/status))))
   (define-primitive open-input-file ((string? type/string)) return))
@@ -274,7 +266,7 @@
 (define-primitive peek-char ((input-port? type/input-port)) char-return-type)
 
 (define integer-return-type
-  (make-tuple-type (list type/int32 type/boolean type/status)))
+  (make-tuple-type (list type/integer type/boolean type/status)))
 
 (define-primitive read-integer ((input-port? type/input-port)) integer-return-type)
 
@@ -287,7 +279,7 @@
   type/status)
 
 (define-primitive write-integer
-  ((integer? type/int32) (output-port? type/output-port))
+  ((integer? type/integer) (output-port? type/output-port))
   type/status)
 
 (define-complex-primitive (newline output-port?) newline
@@ -311,10 +303,7 @@
 
 (define-complex-primitive (values . any?) values
   (lambda (args node depth return?)
-    (let loop ((args args) (types '()))
-      (if (null? args)
-	  (make-tuple-type (reverse types))
-	  (loop (cdr args) (cons (infer-type args depth) types)))))
+    (make-tuple-type (infer-types args depth)))
   #f
   (lambda (args type)
     (let ((node (make-node values-operator (cons 'values args))))
@@ -339,10 +328,10 @@
 	(user-error
 	 "second argument to CALL-WITH-VALUES must be a lambda node~%  ~S"
 	 (schemify node)))
-    (let* ((consumer-type (infer-type (cdr args) depth))
+    (let* ((consumer-type (infer-type (cadr args) depth))
 	   (arg-types (arrow-type-args consumer-type))
 	   (result-type (arrow-type-result consumer-type)))
-      (unify! (infer-type args depth)
+      (unify! (infer-type (car args) depth)
 	      (make-arrow-type '() (make-tuple-type arg-types))
 	      node)
       (if (not return?)  ; so we cause a check for illegal tuples
@@ -350,7 +339,8 @@
       result-type))
   #f
   (lambda (args type)
-    (let* ((tuple-type (arrow-type-result (node-ref (car args) 'type)))
+    (let* ((tuple-type (arrow-type-result
+ 			 (maybe-follow-uvar (node-ref (car args) 'type))))
 	   (node (make-node call-with-values-operator
 			    (list 'call-with-values
 				  (make-call-node (car args) '() tuple-type)
@@ -369,7 +359,7 @@
     (check-arg-type args 0 type/string depth node)
     (do ((args (cdr args) (cdr args)))
 	((null? args))
-      (check-arg-type args 0 type/int32 depth node))
+      (check-arg-type args 0 type/integer depth node))
     type/null)
   (lambda (error string)
     (error string))
@@ -408,16 +398,4 @@
 (define (var->name-node var)
   (make-reference-node ((structure-ref variable variable-name) var)
 		       (make-binding #f var #f)))
-
-(define (arith-primop type int float)
-  (get-prescheme-primop (if (eq? type type/float64)
-			    float
-			    int)))
-
-(define (make-arith-literal-node type int float)
-  (let ((node (make-literal-node (if (eq? type type/float64)
-				     float
-				     int))))
-    (node-set! node 'type type)
-    node))
 

@@ -4,7 +4,7 @@
   (files fact))
 
 (define-structures ((list (export test)))
-  (open prescheme)
+  (open prescheme ps-memory)
   (files list))
 
 (define-structures ((dispatch (export main)))

@@ -6,7 +6,7 @@
 ; This prints `Hello' and the first command argument, if any, then reads
 ; a line from standard input and prints it to standard output.
 
-(define (start arg in out error)
+(define (start arg in out error-out)
   (write-string "Hello " out)
   (if (vector? arg)
       (if (< 0 (vector-length arg))
@@ -16,11 +16,11 @@
   (newline out)
   0)
 
-(define (write-string string channel)
+(define (write-string string . channel-option)  ; test n-ary procedures
   (channel-maybe-write string
 		       0
 		       (string-length string)
-		       channel))
+		       (car channel-option)))
 
 (define (newline channel)
   (write-string "
@@ -61,4 +61,3 @@
 			 (string-set! to i (string-ref from i))
 			 (loop (+ i 1)))))))
     (loop 0)))
-

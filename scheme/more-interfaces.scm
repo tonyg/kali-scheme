@@ -78,14 +78,18 @@
 
 	  reset-command-input?  ; condition predicate 
 
+	  repl-data set-repl-data!
+
+	  terminate-command-processor!
 	  command-level
 	  command-level-threads
 	  command-level-paused-thread
-	  command-level-fluid
+	  command-level-repl-data
 	  command-level?))
 
 (define-interface basic-commands-interface
   (export exit
+	  exit-when-done
           go
 	  load
           help

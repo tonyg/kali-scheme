@@ -2,7 +2,9 @@
 ; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
 
 ; Byte-code assembler (Richard's version)
-
+;
+; This assembler can assemble the output of the disassembler.
+;
 ; (lap <spec> <insts>*)
 ; <spec> ::= <identifier> | (<identifier> <arg>*)
 ; <arg>  ::= <identifier>
@@ -31,19 +33,16 @@
     (let* ((exp (node-form node))
 	   (template (compile-lap (cadr exp) (cddr exp) cenv)))
       (fixup-template-refs! template)
-      (deliver-value (instruction-with-literal op/closure template)
+      (deliver-value (instruction-with-literal (enum op closure) template)
 		     cont))))
 
-(define template-marker (cons #f #f))
-
-(define (make-template-marker name)
-  (cons template-marker name))
-
-(define (template-marker? x)
-  (and (pair? x)
-       (eq? (car x) template-marker)))
-
-(define template-marker-name cdr)
+;----------------
+; To allow for circular templates, templates can be referred to by name
+; (the <identifier> in <spec> above).  This code fixes up the references
+; after assembly is otherwise complete.
+; 
+; The first LABEL recursively finds all named templates.  The second
+; replaces template markers with the appropriate template.
 
 (define (fixup-template-refs! template)
   (let ((templates '()))
@@ -69,6 +68,21 @@
 		 (error "no template of this name available"
 			(template-marker-name x)))))))))
 
+; Marking where a template should be inserted.
+
+(define template-marker (cons #f #f))
+
+(define (make-template-marker name)
+  (cons template-marker name))
+
+(define (template-marker? x)
+  (and (pair? x)
+       (eq? (car x) template-marker)))
+
+(define template-marker-name cdr)
+
+;----------------
+
 (define (compile-lap spec insts cenv)
   (let ((id (if (pair? spec) (car spec) spec))
 	(cenv (if (pair? spec) (bind-vars (cdr spec) cenv) cenv)))
@@ -76,7 +90,7 @@
     
 ; Assemble each instruction, keeping track of which ones use labels.
 ; STUFF is a list of lists of the form (<inst> <offset> . <preceding-insts>)
-; which indicates that <inst> uses a label, the it ends at <offset>, and is
+; which indicates that <inst> uses a label, that it begins at <offset>, and is
 ; preceded by <preceding-insts>.
 
 (define (really-compile-lap insts cenv)
@@ -84,20 +98,21 @@
     (cond ((null? insts)
 	   (fixup-lap-labels segments stuff labels))
 	  ((pair? (car insts))
+	   ;(format #t " ~D: ~S~%" offset (car insts))
 	   (call-with-values
 	    (lambda () (assemble-instruction (car insts) cenv))
 	    (lambda (segment label-use?)
-	      (let ((offset (+ offset (segment-size segment))))
+	      (let ((new-offset (+ offset (segment-size segment))))
 		(if label-use?
 		    (loop (cdr insts)
 			  '()
 			  `((,(car insts) ,offset . ,segments) . ,stuff)
-			  offset
+			  new-offset
 			  labels)
 		    (loop (cdr insts)
 			  (cons segment segments)
 			  stuff
-			  offset
+			  new-offset
 			  labels))))))
 	  ((or (symbol? (car insts))
 	       (integer? (car insts)))
@@ -139,6 +154,9 @@
    (lambda (inst ignore)
      inst)))
 
+; Return the high and low bytes of the distance between OFFSET and LABEL,
+; using the known label offsets in LABELS.
+
 (define (resolve-label offset labels)
   (lambda (label)
     (cond ((assoc label labels)
@@ -148,6 +166,10 @@
 			  (remainder delta byte-limit)))))
 	  (else
 	   (error "LAP label is not defined" label)))))
+
+;----------------
+; Actually do some assembly.  A few opcodes need special handling; most just
+; use the argument specifications from the architecture.
 
 (define (really-assemble-instruction inst cenv labels)
   (let ((opname (car inst))
@@ -165,13 +187,13 @@
 
 (define (assemble-special-op opname args cenv)
   (case opname
-    ((literal)
+    ((literal small-literal)
      (let* ((arg (car args))
 	    (arg (if (and (pair? arg)
 			  (eq? (car arg) 'quote))
 		     (cadr arg)
 		     arg)))
-       (instruction-with-literal op/literal arg)))
+       (instruction-with-literal (enum op literal) arg)))
     ((global)
      (lap-global #f (car args) cenv))
     ((set-global!)
@@ -184,19 +206,27 @@
      (if (null? (cdr args))
 	 (lap-set-local! (car args) cenv)
 	 #f))
+    ((protocol)
+     (apply instruction
+	    (enum op protocol)
+	    (assemble-protocol args)))
     (else
      #f)))
+
+; Lookup NAME in CENV to the location.
 
 (define (lap-global assign? name cenv)
   (let ((binding (lookup cenv name)))
     (if (and (binding? binding) (not (location? (binding-place binding))))
 	(error "LAP variable is not global" name)
 	(instruction-with-location
-	     (if assign? op/set-global! op/global)
+	     (if assign? (enum op set-global!) (enum op global))
 	     (get-location binding
 			   cenv
 			   name
 			   (if assign? usual-variable-type value-type))))))
+
+; Lookup NAME in CENV and pick out the appropriate local op.
 
 (define (lap-local name cenv)
   (let ((binding (lookup cenv name)))
@@ -207,12 +237,14 @@
 			(car level+over)))
 	       (over (cdr level+over)))
 	  (case back
-	    ((0) (instruction op/local0 over))
-	    ((1) (instruction op/local1 over))
-	    ((2) (instruction op/local2 over))
-	    (else (instruction op/local back over))))
+	    ((0) (instruction (enum op local0) over))
+	    ((1) (instruction (enum op local1) over))
+	    ((2) (instruction (enum op local2) over))
+	    (else (instruction (enum op local) back over))))
 	(error "LAP local variable is not locally bound" name))))
 	  
+; Same thing, except that there is only one opcode.
+
 (define (lap-set-local! name cenv)
   (let ((binding (lookup cenv name)))
     (if (and (binding? binding)
@@ -221,9 +253,66 @@
 	       (back (- (environment-level cenv)
 			(car level+over)))
 	       (over (cdr level+over)))
-	  (instruction op/set-local! back over))
+	  (instruction (enum op set-local!)
+		       back
+		       (quotient over byte-limit)
+		       (remainder over byte-limit)))
 	(error "LAP local variable is not locally bound" name))))
 
+; Assembling protocols.
+
+(define (assemble-protocol args)
+  (if (integer? (car args))
+      (let ((count (car args)))
+	(cond ((not (null? (cdr args)))
+	       (if (not (eq? (cadr args) '+))
+		   (error "unknown assembly protocol" args))
+	       (list two-byte-nargs+list-protocol
+		     (quotient count byte-limit)
+		     (remainder count byte-limit)))
+	      ((<= count maximum-stack-args)
+	       (list count))
+	      (else
+	       (list two-byte-nargs-protocol
+		     (quotient count byte-limit)
+		     (remainder count byte-limit)))))
+      (case (car args)
+	((args+nargs)
+	 (cons args+nargs-protocol (cdr args)))
+	((nary-dispatch)
+	 (cons nary-dispatch-protocol
+	       (parse-nary-dispatch (cdr args))))
+	((big-stack)
+	 (error "can't assemble big-stack protocol"))
+	(else
+	 (error "unknown assembly protocol" args)))))
+
+; This is fairly bogus, because it uses the targets as addresses instead
+; of treating them as labels.  Fixing this is too much work, seeing as
+; no-one is likely to use it.
+
+(define (parse-nary-dispatch targets)
+  (let ((results (vector 0 0 0 0)))
+    (warn "LAP compiler treats nary-dispatch targets as addresses, not as labels.")
+    (for-each (lambda (target)
+		(if (and (pair? target)
+			 (pair? (cdr target))
+			 (pair? (cddr target))
+			 (or (eq? (car target) '>2)
+			     (and (integer? (car target))
+				  (<= 0 (car target) 2)))
+			 (eq? (cadr target) '=>)
+			 (integer? (caddr target)))
+		    (vector-set! results
+				 (if (eq? (car target) '>2)
+				     3
+				     (car target))
+				 (caddr target))
+		    (error "bad nary-dispatch label in LAP" target)))
+	      targets)
+    (vector->list results)))
+
+;----------------
 ; This returns two values, the assembled instruction and a flag indicating
 ; whether or not the instruction used a label.
 
@@ -259,11 +348,20 @@
 	    ((nargs byte)
 	     (let ((byte (check-lap-arg args 'byte inst)))
 	       (loop (cdr specs) (cdr args) (cons byte ops) label-use?)))
+	    ((two-bytes)
+	     (let ((number (check-lap-arg args 'byte inst)))
+	       (loop (cdr specs) (cdr args)
+		     `(,(remainder number byte-limit)
+		       ,(quotient number byte-limit)
+		       . ,ops)
+		     label-use?)))
+	    ((junk)
+	     (loop (cdr specs) args (cons 0 ops) label-use?))
 	    (else
 	     (if (or (eq? (car specs) '+)
 		     (integer? (car specs)))
 		 (finish ops label-use?)
-		 (error "unknown opcode argument specification" (car specs)))))))))
+		 (error "LAP internal error, unknown opcode argument specification" (car specs)))))))))
 
 ; Compiler doesn't provide this so we hack it up.
 
@@ -305,14 +403,3 @@
       (else
        (error "LAP internal error, unknown LAP argument specifier" type)))))
 	    
-(define byte-limit (expt 2 bits-used-per-byte))
-
-(define op/closure (enum op closure))
-(define op/global  (enum op global))
-(define op/literal (enum op literal))
-(define op/local   (enum op local))
-(define op/local0  (enum op local0))
-(define op/local1  (enum op local1))
-(define op/local2  (enum op local2))
-(define op/set-global! (enum op set-global!))
-(define op/set-local!  (enum op set-local!))

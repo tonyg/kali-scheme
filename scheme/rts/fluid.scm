@@ -10,32 +10,45 @@
 ; environment, and allows for fast thread switching in a multitasking
 ; one.
 
-; current-thread and set-current-thread! access a special virtual
-; machine register.  On a multiprocessor, each processor has its own
-; current-thread register.  The run-time system stores the current
-; thread in this register.
+; CURRENT-THREAD and SET-CURRENT-THREAD! access a special virtual
+; machine register.  On a multiprocessor, each processor would have
+; its own current-thread register.  The run-time system stores the
+; current thread in this register.
 
 ; Here we define a particular thread record, but a different one is
 ; defined by the (uniprocessor) threads package.  The current thread
 ; may actually be any kind of record as long as its first component
 ; can be used by the fluid variable implementation to maintain the
-; deep-binding dynamic environment.  This is kind of gross but it is
-; motivated by efficiency concerns.
+; deep-binding dynamic environment and its second component can be
+; used by DYNAMIC-WIND.  This is kind of gross but it is motivated by
+; efficiency concerns.
 
 (define-record-type thread :thread
-  (make-thread dynamic-env)
-  (dynamic-env thread-dynamic-env))
+  (make-thread dynamic-env dynamic-point)
+  (dynamic-env thread-dynamic-env)
+  (dynamic-point thread-dynamic-point))
 
 (define (get-dynamic-env)
   (record-ref (current-thread) 1))
+
 (define (set-dynamic-env! env)
   (record-set! (current-thread) 1 env))
 
+; The dynamic-wind point used to be just an ordinary fluid variable, which
+; doesn't work well with threads.
+
+(define (get-dynamic-point)
+  (record-ref (current-thread) 2))
+
+(define (set-dynamic-point! point)
+  (record-set! (current-thread) 2 point))
+
 (define (initialize-dynamic-state!)
-  (set-current-thread! (make-thread (empty-dynamic-env))))
+  (set-current-thread! (make-thread (empty-dynamic-env) #f)))
 
-
+;----------------
 ; Dynamic environment
+; A dynamic environment is an alist where the cars are fluid records.
 
 (define (with-dynamic-env env thunk)
   (let ((saved-env (get-dynamic-env)))
@@ -50,8 +63,8 @@
 
 (define (empty-dynamic-env) '())
 
-
-; Fluids
+; Each fluid has a top-level value that is used when the fluid is unbound
+; in the current dynamic environment.
 
 (define-record-type fluid :fluid
   (make-fluid top)
@@ -75,11 +88,6 @@
 	(with-dynamic-env env (car args))
 	(loop (cddr args)
 	      (cons (cons (car args) (cadr args)) env)))))
-
-(define (fluid-lookup env f)
-  (let ((probe (assq f env)))
-    (if probe (cdr probe) (fluid-top-level-value f))))
-
 
 ; Initialize
 

@@ -11,7 +11,7 @@
 typedef long	scheme_value;
 
 extern scheme_value	extended_vm(long, scheme_value),
-			lookup_external_name(long, long);
+			lookup_external_name(char *, char *);
 
 #include "scheme48heap.h"
 #include "event.h"
@@ -23,13 +23,13 @@ extern scheme_value	extended_vm(long, scheme_value),
  * in scheme48heap.c.
  */
 
-extern long	ShpS,
-		SlimitS;
+extern char	*ShpS,
+		*SlimitS;
 
 #define	AVAILABLEp(cells)		(ShpS + ((cells)<<2) < SlimitS)
 
 
-static long	HHallocate_temp;
+static char	*HHallocate_temp;
 
 #define	ALLOCATE_SPACE(type, len)		\
 		(HHallocate_temp = ShpS,	\

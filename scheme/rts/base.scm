@@ -43,12 +43,6 @@
                              (else #f)))))))
         (else #f)))
 
-; Simple number stuff
-
-(define (> x y) (< y x))
-(define (<= x y) (not (< y x)))
-(define (>= x y) (not (< x y)))
-
 ; Messy because of inexact contagion.
 
 (define (max first . rest)

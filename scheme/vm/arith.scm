@@ -52,7 +52,7 @@
 	       (goto succ (enter-fixnum (- 0 c))))))))
 
 (define small*
-  (external "SMALL_MULTIPLY" (=> (int32 int32) int32) *))
+  (external "SMALL_MULTIPLY" (=> (integer integer) integer) *))
 
 ; Test cases for bits-per-cell = 28, bits-per-fixnum = 26
 

@@ -2,6 +2,42 @@
 
 Recent changes to Scheme 48.
 
+2/11/98  (version 0.50)
+         Fixed bug in closed-compiled version of READ-CHAR.
+	 Fixed negative-key bug in integer tables.
+
+11/18/97 (version 0.49)
+	 Removed some non-portable Kali code that had been accidentally
+	  included in c/extension.c.
+
+10/29/97 (version 0.48)
+         The VM's calling convention now has the caller doing protocol checking,
+	  instead of the callee.  The *NARGS* register no longer exists.
+	 Scheme's variable-arity procedures (APPLY, MAKE-VECTOR, +, -, etc.)
+	  are usually handled without raising an exception.  Calls with an
+	  `atypical' number of arguments are now much faster.
+	 Opcodes were added for >, <=, and >=.
+	 Procedures can take up to about 8k arguments.  The limit is determined
+	  by the value of AVAILABLE-STACK-SPACE in scheme/vm/arch.scm.
+         Compiler detects wrong number of arguments in ((lambda ...) ...).
+	 Removed the dynamic point from the dynamic environment to make
+          DYNAMIC-WIND behave reasonably with threads.
+	 KILL-THREAD! should work more reliably.
+	 The I/O primitives now pass OS error messages to the exception handlers.
+	 I/O errors when flushing buffers no longer crash the system.
+	 The Pre-Scheme compiler's hack for shadowing global variables with
+	  local copies is no longer used.
+	 Incompatible changes:
+	  The internal thread interface was simplified.
+	  There are some architecture changes; .image files will have to
+	   be rebuilt.
+          ACCESS-SCHEME-48 and scheme/misc/slib-init.scm have been removed
+	   (thanks to Mike Sperber's updating of slib).
+
+1/27/97	 (version 0.47)
+	 Fixed ,exit and added ,exit-when-done.
+	 CASE now uses EQV? exclusively.
+
 11/5/96	 (version 0.46)
 	 Fixed a few minor thread problems.
          opt/analyze.scm now writes to current-noise-port.

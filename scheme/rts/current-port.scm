@@ -3,8 +3,11 @@
 
 ; Current input, output, error, and noise ports.
 
-(define $current-input-port  (make-fluid #f))
-(define $current-output-port (make-fluid #f))
+; These two ports are needed by the VM for the READ-CHAR and WRITE-CHAR
+; opcodes.
+(define $current-input-port  (enum current-port-marker current-input-port))
+(define $current-output-port (enum current-port-marker current-output-port))
+
 (define $current-error-port  (make-fluid #f))
 (define $current-noise-port  (make-fluid #f))  ; defaults to the error port
 
@@ -61,55 +64,3 @@
 	((null? (cdr port-option)) (car port-option))
 	(else (error "read-mumble: too many arguments" port-option))))
 
-; Wrong-number-of-arguments handlers
-
-(define-wna-handler read-char
-  (lambda (args)
-    (if (null? args)
-	(read-char (input-port-option args))
-	(wna-lose read-char args))))
-
-(define-wna-handler peek-char
-  (lambda (args)
-    (if (null? args)
-	(peek-char (input-port-option args))
-	(wna-lose peek-char args))))
-
-(define-wna-handler write-char
-  (lambda (args)
-    (if (and (not (null? args))
-	     (null? (cdr args)))
-	(write-char (car args) (output-port-option (cdr args)))
-	(wna-lose write-char args))))
-
-;----------------
-; A poor man's WRITE for use in debugging
-
-(define (message . stuff)
-  (for-each (lambda (thing)
-	      (write-string (cond ((number? thing)
-				   (number->string thing))
-				  ((string? thing)
-				   thing)
-				  ((symbol? thing)
-				   (symbol->string thing))
-				  ((eq? thing #f)
-				   "#f")
-				  ((eq? thing #t)
-				   "#t")
-				  ((null? thing)
-				   "()")
-				  ((pair? thing)
-				   "(...)")
-				  ((vector? thing)
-				   "#(...)")
-				  ((char? thing)
-				   (string-append "#\\"
-						  (list->string (list thing))))
-				  ((procedure? thing)
-				   "#{procedure}")
-				  (else
-				   "???"))
-			    (current-error-port)))
-	    stuff)
-  (newline (current-error-port)))

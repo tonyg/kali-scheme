@@ -70,8 +70,17 @@
 	  unsigned-byte-ref unsigned-byte-set!
 	  word-ref word-set!
 
+	  address?
+	  null-address null-address?
+
+	  address+ address- address-difference
+	  address= address< address<= address> address>=
+	  address->integer integer->address
+
 	  copy-memory! memory-equal?
+
 	  char-pointer->string char-pointer->nul-terminated-string
+
 	  read-block write-block))
 
 (define-interface ps-receive-interface

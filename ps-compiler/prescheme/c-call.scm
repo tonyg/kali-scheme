@@ -17,14 +17,6 @@
     (and (= 1 (call-exits node))
 	 (not (goto-call? node)))))
 
-; What if this gets an undefined value?  xxxlimitationxxx
-
-(define (c-called-value node port)
-  (if (and (node? node)
-	   (reference-node? node))
-      (c-called-variable (reference-variable node) port)
-      (c-value node port)))
-
 (define (c-value node port)
   (cond ((string? node)
 	 (display node port))
@@ -64,7 +56,7 @@
 	   (display value port)))))
 
 (define (c-string-constant string port)
-  (display "((unsigned char *) \"" port)
+  (write-char #\" port)
   (do ((i 0 (+ i 1)))
       ((= i (string-length string)))
     (let ((char (string-ref string i)))
@@ -75,10 +67,12 @@
 	((#\")
 	 (write-char #\\ port)
 	 (write-char #\" port))
+	((#\\)
+	 (write-char #\\ port)
+	 (write-char #\\ port))
 	(else
 	 (write-char char port)))))
-  (write-char #\" port)
-  (write-char #\) port))
+  (write-char #\" port))
 
 ;	(case (base-type-size (maybe-follow-uvar type))
 ;	  ((1)
@@ -97,6 +91,9 @@
 ;	  (else
 ;	   (error "cannot translate literal type to C ~S" type)))
 
+; Cut down on the number of unnecessary parentheses.  We don't go so far as
+; to pay attention to C's precedence rules.
+
 (define (call-needs-parens? call)
   (and (not (and (eq? 'contents (primop-id (call-primop call)))
 		 (eq? 'global (literal-value (call-arg call loc/type)))))
@@ -105,6 +102,10 @@
 	      (call-node? parent)
 	      (not (eq? 'let
 			(primop-id (call-primop parent))))))))
+
+; Each local variable has a unique integer used to disambiguate in the
+; C code.  Using our own, instead of what variables already have, keeps
+; the numbers smaller and more readable.
 
 (define *c-variable-id* '0)
 
@@ -117,48 +118,39 @@
   (if (integer? (variable-generate var))
       (variable-generate var)
       (let ((id (next-c-variable-id)))
+	(set! *local-vars* (cons var *local-vars*))
 	(set-variable-generate! var id)
 	id)))
 
-(define (c-called-variable var port)
-  (really-c-variable var port #t #t))
-
 (define (c-variable var port)
-  (really-c-variable var port #t #f))
+  (really-c-variable var port #t))
 
 (define (c-variable-no-shadowing var port)
-  (really-c-variable var port #f #t))
+  (really-c-variable var port #f))
 
-(define (really-c-variable var port shadow? called?)
+(define (really-c-variable var port shadow?)
   (cond ((string? var)
 	 (display var port))
 	((symbol? var)
 	 (display var port))
 	((not (variable? var))
 	 (bug "funny value for C-VARIABLE ~S" var))
+	((not (variable-binder var))
+	 (cond ((and shadow?
+		     (memq? 'shadowed (variable-flags var)))
+		(writec port '#\R))
+	       ((generated-top-variable? var)
+		(writec port '#\H)))
+	 (write-c-identifier (variable-name var) port)
+	 (if (generated-top-variable? var)
+	     (display (c-variable-id var) port)))
 	(else
-	 (let* ((type (final-variable-type var))
-		(coerce? (and (not called?)
-			      (arrow-type? type))))
-	   (cond (coerce?
-		  (write-char #\( port)
-		  (write-c-coercion type port)))
-	   (cond ((not (variable-binder var))
-		  (cond ((and shadow?
-			      (memq? 'shadowed (variable-flags var)))
-			 (writec port '#\R))
-			((generated-top-variable? var)
-			 (writec port '#\H)))
-		  (write-c-identifier (variable-name var) port))
-		 (else
-		  (write-c-identifier (variable-name var) port)
-		  (write-char '#\_ port)
-;		  (if (= (c-variable-id var) 239)
-;		      (breakpoint "writing 239"))
-		  (display (c-variable-id var) port)
-		  (write-char '#\X port)))
-	   (cond (coerce?
-		  (write-char #\) port)))))))
+	 ;		  (if (= (c-variable-id var) 944)
+	 ;		      (breakpoint "writing 944"))
+	 (write-c-identifier (variable-name var) port)
+	 (write-char '#\_ port)
+	 (display (c-variable-id var) port)
+	 (write-char '#\X port))))
 
 ;==============================================================================;
 ; Scheme identifiers contain many characters that are not legal in C
@@ -189,7 +181,7 @@
     (string-set! string (char->ascii '#\.) '#\D)
     (string-set! string (char->ascii '#\=) '#\E)
     (string-set! string (char->ascii '#\>) '#\G)
-    ; used for hoisted procedures             H
+    ; used for flattened closures             H
     ; precedes C keywords                     K
     (string-set! string (char->ascii '#\<) '#\L)
     (string-set! string (char->ascii '#\?) '#\P)
@@ -280,9 +272,10 @@
 (define (c-assign-to-variable var port indent)
   (indent-to port indent)
   (cond ((or (not (variable? var))
-	     (and (used? var)
+	     (and (or (used? var)
+		      (global-variable? var))
 		  (not (eq? type/unit (final-variable-type var)))))
-	 (c-called-variable var port)  ; not called, but this suppreses coercion
+	 (c-variable var port)
 	 (display " = " port))))
 
 ;==============================================================================;

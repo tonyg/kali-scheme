@@ -5,14 +5,29 @@
 ; The stack grows from higher addresses to lower ones.
 ; *STACK-BEGIN* and *STACK-END* delimit the stack portion of memory.
 ; *STACK* points to the next unused cell on top of the stack.
-; *STACK-LIMIT* is then end of the currently usable stack space.
+; *STACK-LIMIT* is value against which stack requests are checked.  There is a
+;   buffer area between the limit and the actual end of the stack.  The buffer
+;   is large enough to contain the default procedure stack requirement plus the
+;   space needed to make a call to an exception plus an interrupts plus some
+;   slack for safety's sake.
+
+(define stack-slack
+  (cells->a-units
+    (+ default-stack-space
+       (+ continuation-stack-size 7)  ; exceptions need at most 7 values
+                                      ; (from examining the code)
+       (+ continuation-stack-size 7)  ; interrupts need at most 7 values
+                                      ; (also from examining the code)
+       32)))                          ; safety
+
+(define stack-warning-limit 30)
+
 ; *BOTTOM-OF-STACK* is a continuation that lies a the base of the stack.
 
 (define *stack-begin*     (unspecific))
 (define *stack-end*       (unspecific))
 (define *stack*           (unspecific))
 (define *stack-limit*     (unspecific))
-(define *bottom-of-stack* (unspecific))
 
 ; Current continuation
 (define *cont* (unspecific))
@@ -29,22 +44,42 @@
 ; When it is invoked it copies the next continuation out of the heap (if there
 ; is any such) and invokes that instead.
 
+(define *bottom-of-stack* (unspecific))
+
+; The supposedly unused space at the end of the stack is marked with this
+; value so that we can detect incursions.
+
+(define stack-marker #xf0f0f0f)
+
+; Initialize the stack and related registers.
+
 (define (initialize-stack start size)
-  (set! *stack-begin* start)
-  (set! *stack-end* (+ start (cells->a-units size)))
-  (set! *stack-limit* *stack-begin*)
-  (set! *stack* (the-pointer-before *stack-end*))
-  (set! *cont* false)
-  (set! *env* quiescent)
-  (push-continuation-on-stack (make-template-containing-ops
-			       (enum op get-cont-from-heap)
-			       (enum op return))
-			      (enter-fixnum 0)
-			      0
-			      universal-key)
-  (set! *bottom-of-stack* *cont*))
+  (let ((required-size (+ available-stack-space stack-slack)))
+    (receive (start size)
+	(if (>= size required-size)
+	    (values start size)
+	    (let ((stack (allocate-memory (cells->a-units required-size))))
+	      (if (null-address? stack)
+		  (error "out of memory, unable to continue"))
+	      (values stack required-size)))
+      (set! *stack-begin* start)
+      (set! *stack-end* (address+ start (cells->a-units size)))
+      (set! *stack-limit* (address+ *stack-begin* stack-slack))
+      (set! *stack* (the-pointer-before *stack-end*))
+      (set! *cont* false)
+      (set! *env* quiescent)
+      (do ((a start (address1+ a)))
+	  ((address= a *stack-end*))
+	(store! a stack-marker))
+      (push-continuation-on-stack (make-template-containing-ops
+				   (enum op get-cont-from-heap)
+				   (enum op return))
+				  (enter-fixnum 0)
+				  0)
+      (set! *bottom-of-stack* *cont*))))
 
 ; The amount of heap space required to initialize the stack.
+
 (define initial-stack-heap-space (op-template-size 2))
 
 (define (reset-stack-pointer base-continuation)
@@ -58,33 +93,24 @@
 
 (define (within-stack? p)
   (and (stob? p)
-       (addr>= p *stack-begin*)
-       (addr<= p *stack-end*)))
+       (>= p (address->integer *stack-begin*))
+       (<= p (address->integer *stack-end*))))
 
 (define (stack-size)
-  (- *stack-end* *stack-begin*))
-
-(define (available-on-stack? cells)
-  (addr> (addr- *stack* (cells->a-units cells)) *stack-limit*))
+  (address-difference *stack-end* *stack-begin*))
 
 ; The stob-overhead is to get room for one vector that is made.
 (define (current-stack-size)
-  (+ stob-overhead (a-units->cells (addr- *stack-end* *stack*))))
-
-; Value of *NARGS* indicating that the arguments overflowed the stack limit
-(define arg-stack-overflow-nargs (+ maximum-stack-args 1))
-
- ; Room for MAXIMUM-STACK-ARGS plus one for the procedure argument to op/apply
-(define maximum-stack-arg-count (+ maximum-stack-args 1))
+  (+ stob-overhead (a-units->cells (address-difference *stack-end* *stack*))))
 
 ; Add CELLS cells onto the stack.
 ; The stack grows towards negative memory.
 
 (define (add-cells-to-stack! cells)
-  (set! *stack* (addr- *stack* (cells->a-units cells))))
+  (set! *stack* (address- *stack* (cells->a-units cells))))
 
 (define (the-pointer-before x)
-  (addr- x (cells->a-units 1)))
+  (address- x (cells->a-units 1)))
 
 (define (push x)     ; check for overflow is done when continuations are pushed
   (store! *stack* x)
@@ -97,88 +123,46 @@
 ; Use the stack as a vector, with (STACK-REF 0) => current top of stack
 
 (define (stack-ref index)
-  (fetch (addr+ *stack* (cells->a-units (+ 1 index)))))
+  (fetch (address+ *stack* (cells->a-units (+ 1 index)))))
 
 (define (stack-set! index value)
-  (store! (addr+ *stack* (cells->a-units (+ 1 index))) value))
+  (store! (address+ *stack* (cells->a-units (+ 1 index))) value))
 
 (define (pointer-to-stack-arguments)
-  (addr+ *stack* (cells->a-units 1)))
+  (address+ *stack* (cells->a-units 1)))
 
 (define (remove-stack-arguments count)
   (add-cells-to-stack! (- 0 count)))
 
 (define (address-at-header stob)
-  (addr- (address-after-header stob) (cells->a-units 1)))
+  (address- (address-after-header stob) (cells->a-units 1)))
 
 ;----------------
-; Making sure that no one uses stack space without checking for overflow.
-; This checking is turned on only during debugging.
+; *STACK-LIMIT* is offset by DEFAULT-STACK-SPACE to make this test faster.
 
-; Returns a key.  Only the most recent key is valid for allocating storage.
-; UNIVERSAL-KEY is always valid.  See heap.scm for a description of how
-; preallocation and keys work.
+(define (ensure-default-procedure-space! ensure-space)
+  (if (address< *stack* *stack-limit*)
+      (begin
+	(copy-stack-into-heap (ensure-space (current-stack-size)))
+	(if (address< *stack* *stack-limit*)
+	    (error "Couldn't get default procedure space (how can this happen?)"))))
+  0)
 
-(define (ensure-stack-space space ensure-space)
+; Compiler is not allowed to use more than one stack's worth of space for
+; any given procedure.
+
+(define (ensure-stack-space! space ensure-space)
   (if (not (available-on-stack? space))
-      (copy-stack-into-heap (ensure-space (current-stack-size))))
-  (preallocate-stack-space space))
+      (begin
+	(copy-stack-into-heap (ensure-space (current-stack-size)))
+	(if (not (available-on-stack? space))
+	    (error "VM's stack is too small (how can this happen?)")))))
 
-(define (preallocate-stack-space space)
-  (cond (check-stack-preallocation?
-	 (set! *stack-key* (+ *stack-key* -1)) ;go down to distinguish from heap keys
-	 (set! *okayed-stack-space* space)
-	 *stack-key*)
-	(else 0)))
-
-(define check-stack-preallocation? #f)
-(define *stack-key* 0)
-(define *okayed-stack-space* 0)
-
-; Checks that KEY is the most recent key, and that the overflow check was
-; made for at least CELLS space.
-
-(define (check-stack-cons cells key)
-  (cond ((and check-stack-preallocation?
-	      (not (= key universal-key)))
-	 (if (not (and (= key *stack-key*)
-		       (>= *okayed-stack-space* cells)))
-	     (error "invalid stack key" key cells))
-	 (set! *okayed-stack-space* (- *okayed-stack-space* cells)))))
-
-; Space for an exception continuation is reserved on the stack to
-; ensure that pushing an exception continuation will not trigger a
-; garbage collection.  Exceptions occur at points where there are
-; live values that will not be found by the GC.
-
-(define (reserve-stack-space size)
-  (set! *stack-limit* (+ *stack-begin* (cells->a-units size))))
-
-(define (enable-stack-reserve)
-  (set! *stack-limit* *stack-begin*))
-
-(define *exception-space-used?* #t)
-
-(define (exception-frame-space exception-frame-size)
-  (if (and *exception-space-used?*
-	   (not (available-on-stack? exception-frame-size)))
-      (current-stack-size)
-      0))
-
-(define (reserve-exception-space exception-frame-size key)
-  (cond (*exception-space-used?*
-	 (if (not (available-on-stack? exception-frame-size))
-	     (error "no space on stack to reserve exception space"))
-	 (reserve-stack-space exception-frame-size)
-	 (set! *exception-space-used?* #f))))
-
-(define (allow-exception-consing exception-frame-size)
-  (cond ((not (available-on-stack? exception-frame-size))
-	 (enable-stack-reserve)
-	 (set! *exception-space-used?* #t)
-	 (if (not (available-on-stack? exception-frame-size))
-	     (error "insufficient space on stack for exception frame"))))
-  (preallocate-stack-space exception-frame-size))
+(define (available-on-stack? space)
+  (> (+ (a-units->cells			; space on the stack
+	   (address-difference *stack* *stack-limit*))
+	default-stack-space)            ; allow for *s-l*'s offset
+     (cells->a-units space)))
 
 ;----------------
 ; Setting the current continuation.
@@ -200,9 +184,9 @@
 
 (define (copy-continuation-from-heap! cont)
   (assert (continuation? cont))
-  (let* ((top (addr- (address-at-header *bottom-of-stack*)
-                     (addr1+ (cells->a-units (continuation-length cont)))))
-         (new-cont (address->stob-descriptor (addr1+ top))))
+  (let* ((top (address- (address-at-header *bottom-of-stack*)
+			(cells->a-units (+ 1 (continuation-length cont)))))
+         (new-cont (address->stob-descriptor (address1+ top))))
     (add-copy-cont-from-heap-stats cont)
     (set! *stack* (the-pointer-before top))
     (set! *cont* new-cont)
@@ -213,16 +197,11 @@
     (set-continuation-cont! new-cont *bottom-of-stack*)
     new-cont))
 
-(define stack-continuation-size
-  (+ (+ continuation-cells 1)     ; header
-     maximum-stack-arg-count))    ; pre-checking for pushed arguments
-
-(define (push-continuation-on-stack template pc arg-count key)
-  (check-stack-cons stack-continuation-size key)
+(define (push-continuation-on-stack template pc arg-count)
   (add-continuation-stats arg-count)
   (add-cells-to-stack! (+ 1 continuation-cells))
-  (store! (addr1+ *stack*) (make-continuation-header arg-count))
-  (let ((cont (address->stob-descriptor (addr1+ (addr1+ *stack*)))))
+  (store! (address1+ *stack*) (make-continuation-header arg-count))
+  (let ((cont (address->stob-descriptor (address2+ *stack*))))
     (set-continuation-pc!       cont pc)
     (set-continuation-template! cont template)
     (set-continuation-env!      cont *env*)
@@ -241,20 +220,20 @@
 		   (continuation-pc       cont))
     (set! *env*    (continuation-env      cont))
     (set! *cont*   (continuation-cont     cont))
-    (set! *stack* (addr+ (address-at-header cont)
-			 (cells->a-units continuation-cells)))))
+    (set! *stack* (address+ (address-at-header cont)
+			    (cells->a-units continuation-cells)))))
 
 ;----------------
 ; Support for multiple-value returns.
 
 (define (peek-at-current-continuation)
-  (if (addr= *cont* *bottom-of-stack*)
+  (if (= *cont* *bottom-of-stack*)
       (continuation-cont *bottom-of-stack*)
       *cont*))
 
 (define (skip-current-continuation!)
   (let ((next (continuation-cont *cont*)))
-    (if (addr= *cont* *bottom-of-stack*)
+    (if (= *cont* *bottom-of-stack*)
 	(set-continuation-cont! *cont* (continuation-cont next))
 	(set! *cont* next))))
 
@@ -266,11 +245,11 @@
 (define (copy-stack-into-heap key)
   (let ((arg-count (arguments-on-stack))
 	(top *stack*))
-    (preserve-continuation key (enum copy overflow))    
+    (preserve-continuation key (enum copy overflow))
     (really-move-args-above-cont! arg-count top)))
 
 (define (arguments-on-stack)
-  (do ((p (addr1+ *stack*) (addr1+ p))
+  (do ((p (address1+ *stack*) (address1+ p))
        (i 0 (+ i 1)))
       ((header? (fetch p))
        (if (= (fetch p) argument-limit-marker)
@@ -285,10 +264,10 @@
 
 (define (really-move-args-above-cont! nargs top-of-args)
   (let ((start-loc (the-pointer-before (address-at-header *cont*)))
-	(start-arg (addr+ top-of-args (cells->a-units nargs))))
+	(start-arg (address+ top-of-args (cells->a-units nargs))))
     (do ((loc start-loc (the-pointer-before loc))
 	 (arg start-arg (the-pointer-before arg)))
-	((addr<= arg top-of-args)
+	((address<= arg top-of-args)
 	 (set! *stack* loc))
       (store! loc (fetch arg)))))
 
@@ -332,12 +311,9 @@
 			 key)))
 	       (add-preserve-cont-stats new reason)
                (set-continuation-cont! previous new)
-               (loop (continuation-cont new) new)))))
-    (let ((cont (continuation-cont *bottom-of-stack*)))
-      (if (false? cont)
-	  (set! *cont* *bottom-of-stack*)
-	  (copy-continuation-from-heap! cont))
-      cont)))
+               (loop (continuation-cont new) new))))))
+  (set! *cont* *bottom-of-stack*)  
+  (continuation-cont *bottom-of-stack*))
 
 ;----------------
 ; Tracing the stack for garbage collection - first trace any arguments pushed
@@ -345,10 +321,26 @@
 ; each one along with its environment (if the environment has not yet been
 ; done).
 
+(define *stack-warning?* #t)
+
 (define (trace-stack trace-locations! trace-stob-contents! trace-value)
+  (if *stack-warning?*
+      (do ((a *stack-begin* (address1+ a)))
+	  ((not (= stack-marker (fetch a)))
+	   (let ((unused (a-units->cells (address-difference a *stack-begin*))))
+	     (if (< unused stack-warning-limit)
+		 (begin
+		   (newline (current-error-port))
+		   (write-string "[Alert: stack overconsumption ("
+				 (current-error-port))
+		   (write-integer unused (current-error-port))
+		   (write-string "); please inform the Scheme 48 implementors]"
+				 (current-error-port))
+		   (newline (current-error-port))
+		   (set! *stack-warning?* #f)))))))
   (let ((arg-count (arguments-on-stack)))
-    (trace-locations! (addr1+ *stack*)
-		      (addr+ *stack* (cells->a-units (+ arg-count 1)))))
+    (trace-locations! (address1+ *stack*)
+		      (address+ *stack* (cells->a-units (+ arg-count 1)))))
   (if (within-stack? *env*)
       (trace-env *env* trace-stob-contents!)
       (set! *env* (trace-value *env*)))

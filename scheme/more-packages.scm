@@ -47,7 +47,8 @@
 	fluids-internal         ; get-dynamic-env, set-dynamic-env!
 	syntactic		; for ## kludge
 	signals
-	structure-refs)
+	structure-refs
+	root-scheduler)		; scheme-exit-now
   (access threads		; thread?
 	  threads-internal      ; thread-continuation
 	  continuations         ; continuation?
@@ -65,6 +66,7 @@
 	scheduler
 	interrupts
 	weak
+	user-messages		; for debugging
 	signals			; error
 	i/o			; current-error-port
 	util                    ; unspecific
@@ -82,6 +84,7 @@
 	environments		; with-interaction-environment
 	evaluation		; eval, load-into
         ;; packages		; package?
+	root-scheduler		; scheme-exit-now
 	)
   (files (env basic-command)))
 
@@ -604,7 +607,7 @@
 	    innums
 	    inspector
 	    inspector-internal
-	    linked-queues
+	    ;linked-queues
 	    list-interfaces
 	    ;more-threads
 	    package-commands-internal

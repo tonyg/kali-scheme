@@ -1,17 +1,10 @@
 
 
-(define-record-type pair :pair
-  (cons car cdr)
-  (car int32 car)
-  (cdr pair cdr set-cdr!))
-
-(define null (unspecific))
-
-(define (null? x)
-  (eq? x null))
-
-(define (init)
-  (set! null (cons 0 null)))
+(define-data-type list
+  (pair? (cons car cdr)
+	 (car integer car set-car!)
+	 (cdr list    cdr set-cdr!))
+  (null? null))
 
 (define (member? list x)
   (let loop ((list list))
@@ -32,5 +25,3 @@
 	  (if (null? next)
 	      list
 	      (loop next list))))))
-
-

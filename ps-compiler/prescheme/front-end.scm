@@ -14,8 +14,8 @@
 				    (loop (cons f forms))))
 			      (else
 			       (reverse forms))))))
-	  (format #t "Adding coercions~%")
-	  (add-type-coercions (form-reducer forms))
+;	  (format #t "Adding coercions~%")
+;	  (add-type-coercions (form-reducer forms))
 	  sorted)))))
 
 (define (form-reducer forms)
@@ -98,6 +98,7 @@
 			    (get-package-variable-type value))
 			   (else
 			    (bug "unknown kind of form value ~S" value)))))
+    (set-form-value-type! form value-type)
     (cond ((not (variable-set!? var))
 	   (let ((type (cond ((eq? type/unknown (variable-type var))
 			      (let ((type (schemify-type value-type 0)))

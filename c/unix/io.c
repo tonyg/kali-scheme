@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <string.h>
+#include "io.h"
 
 #define	TRUE	(0 == 0)
 #define	FALSE	(! TRUE)
@@ -45,7 +46,7 @@ read_char(FILE *port)
 /* called when getc(port) returned EOF */
 
 char
-ps_read_char(FILE *port, bool *eofp, int *status, bool peekp)
+ps_read_char(FILE *port, bool *eofp, long *status, bool peekp)
 {
   bool errorp;
   int result;
@@ -180,10 +181,10 @@ write_integer(unsigned long n, FILE *port)
 }
 
 long
-ps_write_string(unsigned char *string, FILE *port)
+ps_write_string(char *string, FILE *port)
 {
 	while (TRUE) {
-		if (EOF != fputs((char *)string, port))
+		if (EOF != fputs(string, port))
 			return (0);
 		clearerr(port);
 		if (errno != EINTR)
@@ -233,12 +234,12 @@ ps_write_block(FILE *port, char *buffer, long count)
 }
 
 void
-ps_error(unsigned char *message, long count, ...)
+ps_error(char *message, long count, ...)
 {
   va_list ap;
 
   va_start(ap, count);
-  fputs((char *)message, stderr);
+  fputs(message, stderr);
   for(; count > 0; --count)
     fprintf(stderr, " %ld", va_arg(ap, long));
   putc('\n', stderr);
@@ -246,10 +247,9 @@ ps_error(unsigned char *message, long count, ...)
 }
 
 static FILE *
-ps_really_open_file(unsigned char *in_filename, long *status, char *mode)
+ps_really_open_file(char *filename, long *status, char *mode)
 {
 #define FILE_NAME_SIZE 1024
-  char *filename = (char *) in_filename; /* we get unsigned chars from the VM */
 
   char filename_temp[FILE_NAME_SIZE];
   char *expanded;
@@ -273,13 +273,13 @@ ps_really_open_file(unsigned char *in_filename, long *status, char *mode)
 }
 
 FILE *
-ps_open_input_file(unsigned char *name, long *status)
+ps_open_input_file(char *name, long *status)
 {
   return ps_really_open_file(name, status, "r");
 }
 
 FILE *
-ps_open_output_file(unsigned char *name, long *status)
+ps_open_output_file(char *name, long *status)
 {
   return ps_really_open_file(name, status, "w");
 }

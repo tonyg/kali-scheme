@@ -25,12 +25,10 @@
 */
 
 int
-ps_open_fd(unsigned char *in_filename, bool is_input, long *status)
+ps_open_fd(char *filename, bool is_input, long *status)
 {
 #define FILE_NAME_SIZE 1024
 #define PERMISSION 0666   /* read and write for everyone */
-
-  char *filename = (char *) in_filename; /* we get unsigned chars from the VM */
 
   char filename_temp[FILE_NAME_SIZE];
   char *expanded;
@@ -78,14 +76,12 @@ ps_close_fd(long fd_as_long)
   }
 }
 
-/* We cast `buf' here because that is easier than fixing the Pre-Scheme code. */
-
 long
-ps_read_fd(long fd_as_long, long buf_as_long, long max, bool waitp,
+ps_read_fd(long fd_as_long, char *buffer, long max, bool waitp,
 	   bool *eofp, bool *pending, long *status)
 {
   int got, ready;
-  void *buf = (void *)buf_as_long;
+  void *buf = (void *)buffer;
   int fd = (int)fd_as_long;
 
   struct timeval timeout;
@@ -141,11 +137,11 @@ ps_read_fd(long fd_as_long, long buf_as_long, long max, bool waitp,
 }
 
 long
-ps_write_fd(long fd_as_long, long buf_as_long, long max, bool *pending, long *status)
+ps_write_fd(long fd_as_long, char *buffer, long max, bool *pending, long *status)
 {
   int sent;
   int fd = (int)fd_as_long;
-  void *buf = (void *)buf_as_long;
+  void *buf = (void *)buffer;
 
   *pending = FALSE;
   *status = NO_ERRORS;
@@ -171,7 +167,9 @@ ps_abort_fd_op(long fd_as_long)
 {
   int fd = (int)fd_as_long;
 
-  remove_fd(fd);
+  if (!remove_fd(fd))
+    fprintf(stderr, "Error: ps_abort_fd_op, no pending operation on fd %d\n",
+	            fd);
   return 0;      /* because we do not actually do any I/O in parallel the
 		    status is always zero: no characters transfered. */
 }

@@ -49,21 +49,24 @@
 (define (restart value)
   (set! *val* value)
   (let loop ()
-    (let ((option (interpret)))
+    (let ((option (interpret *code-pointer*)))
       (cond ((= option (enum return-option exit))
 	     *val*)
 	    ((= option (enum return-option external-call))
 	     (set! *val* (((external "(long(*)())"  ; cast to a procedure
-				     (=> (int32) (=> (int32 int32) int32))
+				     (=> (integer) (=> (integer address) integer))
 				     (lambda (x) x))
 			   (fetch (address-after-header (external-value *val*))))
-			  *nargs*
+			  *external-call-nargs*
 			  (pointer-to-stack-arguments)))
-	     (remove-stack-arguments (+ *nargs* 1))  ; remove proc and args
+	     ; remove proc and args
+	     (remove-stack-arguments (+ *external-call-nargs* 1))
 	     (loop))
 	    (else
              (error "unknown VM return option" option)
 	     -1)))))
+
+(define *external-call-nargs*)
 
 (define-enumeration return-option
   (exit

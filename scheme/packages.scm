@@ -249,6 +249,7 @@
 	    silly
 	    source-file-names
 	    structure-refs
+	    user-messages
 	    vm-exposure
 	    write-images)
 	   :structure)))
@@ -260,7 +261,7 @@
 	    enum-case
 	    enumerated
 	    fluids
-	    linked-queues
+	    ;linked-queues
 	    locks
 	    queues
 	    scheduler

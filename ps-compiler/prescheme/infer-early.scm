@@ -13,7 +13,7 @@
   (let ((res (cond ((literal-node? node)
 		    (infer-literal-type node name))
 		   ((lambda-node? node)
-		    (infer-type (list node) 0))
+		    (infer-type node 0))
 		   ((name-node? node)
 		    (get-global-type (binding-place (node-ref node 'binding))))
 		   (else
@@ -27,24 +27,15 @@
 	   (let ((uvar (make-uvar name -1)))
 	     (do ((i 0 (+ i 1)))
 		 ((>= i (vector-length value)))
-	       (receive (type new-value)
-		   (type-check-thing (vector-ref value i))
-		 (if new-value (vector-set! value i new-value))
-		 (unify! uvar type value)))
+	       (unify! uvar (type-check-thing (vector-ref value i)) value))
 	     (make-pointer-type (maybe-follow-uvar uvar))))
 	  (else
-	   (infer-type (list node) 0)))))
+	   (infer-type node 0)))))
 
 (define (type-check-thing thing)
   (if (variable? thing)
-      (values (get-package-variable-type thing) #f)
-      (let ((type (literal-value-type thing)))
-	(if (lattice-type? type)
-	    (let ((exp (make-literal-node thing)))
-	      (node-set! exp 'type type)
-	      (values (make-constrained-type 'stob type -1 exp)
-		      exp))
-	    (values type #f)))))
+      (get-package-variable-type thing)
+      (literal-value-type thing)))
 
 (define literal-operator (get-operator 'literal))
 
@@ -79,20 +70,16 @@
 
 ;----------------------------------------------------------------
 
-(define (infer-type pair depth)
-  (infer-any-type pair depth #f))
+(define (infer-type node depth)
+  (infer-any-type node depth #f))
 
-(define (infer-any-type pair depth return?)
-  (let ((node (car pair)))
-    (receive (type coercion-name)
-	((operator-table-ref inference-rules (node-operator-id node))
-	 node
-	 depth
-	 return?)
-      (set-node-type! node type)
-      (if coercion-name
-	  (make-constrained-type coercion-name type depth pair)
-	  (maybe-follow-uvar type)))))
+(define (infer-any-type node depth return?)
+  (let ((type ((operator-table-ref inference-rules (node-operator-id node))
+	       node
+	       depth
+	       return?)))
+    (set-node-type! node type)
+    (maybe-follow-uvar type)))
 
 (define inference-rules
   (make-operator-table
@@ -111,20 +98,7 @@
     (infer-literal (cadr (node-form node)) node)))
 
 (define (infer-literal value node)
-  (let ((type (literal-value-type value)))
-    (values type
-	    (if (lattice-type? type)
-		(concatenate-symbol 'q
-				    (cond ((char? value)
-					   (char->ascii value))
-					  ((external-value? value)
-					   (external-value-string value))
-					  ((external-constant? value)
-					   (external-constant-name value))
-					  (else
-					   value)))
-					   
-		#f))))
+  (literal-value-type value))
 
 (define (literal-value-type value)
   (or (maybe-literal-value-type value)
@@ -134,15 +108,9 @@
   (cond ((boolean? value)
 	 type/boolean)
 	((char? value)
-	 type/int8u)
+	 type/char)
 	((integer? value)
-	 (if (< value 0)
-	     (if (< value -256)
-		 type/int32
-		 type/int8)
-	     (cond ((< value 128) type/int7u)
-		   ((< value 256) type/int8u)
-		   (else type/int32))))
+	 type/integer)
 	((string? value)
 	 type/string)
 	(((structure-ref eval-node unspecific?) value)
@@ -154,13 +122,13 @@
 	((external-value? value)
 	 (external-value-type value))
 	((external-constant? value)
-         type/int7u)
+         type/integer)
 	(else
 	 #f)))
 
 (define-inference-rule 'unspecific
   (lambda (node depth return?)
-    (values type/null #f)))
+    type/null))
 
 (define-inference-rule 'lambda
   (lambda (node depth return?)
@@ -169,11 +137,10 @@
 	   (var-types (map (lambda (name-node)
 			     (initialize-name-node-type name-node uid depth))
 			   (cadr exp)))
-	   (result (infer-any-type (cddr exp) depth #t)))
+	   (result (infer-any-type (caddr exp) depth #t)))
       ; stash the return type
       (set-lambda-node-return-type! node result)
-      (values (make-arrow-type var-types result)
-	      #f))))
+      (make-arrow-type var-types result))))
 	
 ; Create a new type variable for VAR.
 
@@ -194,18 +161,16 @@
 		    (node-type node))))
       (if (not type)
 	  (bug "name node ~S has no type" node))
-      (values (if (type-scheme? type)
-		  (instantiate-type-scheme type depth)
-		  type)
-	      (node-form node)))))
+      (if (type-scheme? type)
+	  (instantiate-type-scheme type depth)
+	  type))))
 
 (define-inference-rule 'primitive
   (lambda (node depth return?)
     (let ((type (get-global-type (cdr (node-form node)))))
-      (values (if (type-scheme? type)
-		  (instantiate-type-scheme type depth)
-		  type)
-	      (primitive-id (car (node-form node)))))))
+      (if (type-scheme? type)
+	  (instantiate-type-scheme type depth)
+	  type))))
 
 ; If no type is present, create a type variable.
 
@@ -224,12 +189,12 @@
 (define-inference-rule 'set!
   (lambda (node depth return?)
     (let* ((exp (node-form node))
-	   (type (infer-type (cddr exp) depth))
+	   (type (infer-type (caddr exp) depth))
 	   (binding (node-ref (cadr exp) 'binding)))
       (if (not binding)
 	  (error "SET! on a local variable ~S" (schemify node)))
       (unify! type (variable-type (binding-place binding)) node)
-      (values type/null #f))))
+      type/null)))
 
 (define-inference-rule 'call
   (lambda (node depth return?)
@@ -251,6 +216,7 @@
 
 (define name-node? (node-predicate 'name))
 (define lambda-node? (node-predicate 'lambda))
+(define literal-node? (node-predicate 'literal))
 (define primitive-node? (node-predicate 'primitive))
 
 (define (rule-for-let node depth proc args return?)
@@ -260,22 +226,20 @@
     (do ((names (cadr proc) (cdr names))
 	 (vals args (cdr vals)))
 	((null? names))
-      (let ((type (schemify-type (infer-type vals depth) depth)))
+      (let ((type (schemify-type (infer-type (car vals) depth) depth)))
 	(if (type-scheme? type)
 	    (set-node-type! (car names) type)
 	    (unify! (initialize-name-node-type (car names) uid depth)
 		    type
 		    node))))
-    (values (infer-any-type (cddr proc) depth return?) #f)))
+    (infer-any-type (caddr proc) depth return?)))
 
 (define (rule-for-primitives node depth primitive args return?)
-  (finish-call-type ((primitive-inference-rule primitive)
-		     args node depth return?)
-		    (primitive-id primitive)
-		    node))
-  
+  ((primitive-inference-rule primitive)
+     args node depth return?))
+
 (define (rule-for-unknown-calls node depth proc+args return?)
-  (let ((proc-type (infer-type proc+args depth))
+  (let ((proc-type (infer-type (car proc+args) depth))
 	(arg-types (infer-types (cdr proc+args) depth))
 	(return-type (if return?
 			 (make-tuple-uvar 'result depth)
@@ -285,31 +249,23 @@
 	    node)
 ;    (if (= 244 (uvar-id return-type))
 ;	(breakpoint "rule-for-unknown-calls"))
-    (finish-call-type (maybe-follow-uvar return-type)
-		      'call
-		      node)))
+    (maybe-follow-uvar return-type)))
   
 (define (infer-types nodes depth)
-  (do ((nodes nodes (cdr nodes))
-       (types '() (cons (infer-type nodes depth) types)))
-      ((null? nodes)
-       (reverse types))))
-
-(define (finish-call-type type name node)
-  (values type
-	  (if (or (uvar? type)
-		  (lattice-type? type))
-	      name
-	      #f)))
+  (map (lambda (node)
+	 (infer-type node depth))
+       nodes))
 
 (define-inference-rule 'begin
   (lambda (node depth return?)
     (let loop ((exps (cdr (node-form node))) (type type/unit))
       (if (null? exps)
-	  (values type #f)
+	  type
 	  (loop (cdr exps)
-		(infer-any-type exps depth (or (not (null? (cdr exps)))
-					       return?)))))))
+		(infer-any-type (car exps)
+				depth
+				(or (not (null? (cdr exps)))
+				    return?)))))))
 
 ; It would be nice if we could just try to unify the two arms and return
 ; type/unit if we lost, but unification has side-effects.
@@ -317,16 +273,16 @@
 (define-inference-rule 'if
   (lambda (node depth return?)
     (let* ((args (cdr (node-form node)))
-	   (true-type (infer-any-type (cdr args) depth return?))
-	   (false-type (infer-any-type (cddr args) depth return?)))
-      (unify! (infer-type args depth) type/boolean node)
+	   (true-type (infer-any-type (cadr args) depth return?))
+	   (false-type (infer-any-type (caddr args) depth return?)))
+      (unify! (infer-type (car args) depth) type/boolean node)
       (cond ((eq? true-type type/null)
-	     (values false-type #f))
+	     false-type)
 	    ((eq? false-type type/null)
-	     (values true-type #f))
+	     true-type)
 	    (else
 	     (unify! true-type false-type node)
-	     (values true-type #f))))))
+	     true-type)))))
 
 (define-inference-rule 'letrec
   (lambda (node depth return?)
@@ -341,7 +297,7 @@
 	(do ((names names (cdr names))
 	     (vals vals (cdr vals)))
 	    ((null? names))
-	  (unify! (infer-type vals depth)
+	  (unify! (infer-type (car vals) depth)
 		  (node-type (car names))
 		  node))
 	(for-each (lambda (name)
@@ -349,8 +305,7 @@
 		      (if (type-scheme? type)
 			  (set-node-type! name type))))
 		  names)
-	(values (infer-any-type (cddr form) depth return?)
-		#f)))))
+	(infer-any-type (caddr form) depth return?)))))
 
 ;--------------------------------------------------
 
@@ -378,7 +333,7 @@
 	(if *currently-checking*
 	    (format #t "~% while reconstructing the type of '~S'" *currently-checking*))
 	(error "type problem")))
-  (unify! (infer-type (list-tail args index) depth)
+  (unify! (infer-type (list-ref args index) depth)
 	  type
 	  exp))
 

@@ -33,9 +33,6 @@
 ; USEFUL-BITS-PER-WORD is not written in the image.
 (define useful-bits-per-word      30)
 
-; (define bits-used-per-byte 8)  -- defined in architecture module
-(define byte-limit (expt 2 bits-used-per-byte))
-
 (define unused-field-width 2)
 
 (define tag-field-width 2)

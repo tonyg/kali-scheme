@@ -18,32 +18,53 @@
 	(else
 	 (bug "Scheme primop ~A not found" id))))
 
+(define (add-scheme-primop! id primop)
+  (table-set! prescheme-primop-table id primop))
+
 (define-syntax define-scheme-primop
   (syntax-rules ()
+    ((define-scheme-primop id type)
+     (define-scheme-primop id #f type))
+    ((define-scheme-primop id side-effects type)
+     (define-scheme-primop id side-effects type default-simplifier))
     ((define-scheme-primop id side-effects type simplifier)
-     (table-set! prescheme-primop-table 'id
-		 (make-primop 'id #t side-effects simplifier
-			      (lambda (call) 1)
-			      type)))))
+     (define-polymorphic-scheme-primop
+       id side-effects (lambda (call) type) simplifier))))
+
+(define-syntax define-polymorphic-scheme-primop
+  (syntax-rules ()
+    ((define-polymorphic-scheme-primop id type)
+     (define-polymorphic-scheme-primop id #f type))
+    ((define-polymorphic-scheme-primop id side-effects type)
+     (define-polymorphic-scheme-primop id side-effects type default-simplifier))
+    ((define-scheme-primop id side-effects type simplifier)
+     (add-scheme-primop! 'id
+			 (make-primop 'id #t 'side-effects simplifier
+				      (lambda (call) 1)
+				      type)))))
 
 (define-syntax define-nonsimple-scheme-primop
   (syntax-rules ()
+    ((define-nonsimple-scheme-primop id)
+     (define-nonsimple-scheme-primop id #f))
+    ((define-nonsimple-scheme-primop id side-effects)
+     (define-nonsimple-scheme-primop id side-effects default-simplifier))
     ((define-nonsimple-scheme-primop id side-effects simplifier)
-     (table-set! prescheme-primop-table 'id
-		 (make-primop 'id #f side-effects simplifier
-			      (lambda (call) 1)
-			      'nontrivial-primop)))))
+     (add-scheme-primop! 'id
+			 (make-primop 'id #f 'side-effects simplifier
+				      (lambda (call) 1)
+				      'nontrivial-primop)))))
 
 (define-syntax define-scheme-cond-primop
   (syntax-rules ()
     ((define-scheme-cond-primop id simplifier expand simplify?)
-     (table-set! prescheme-primop-table 'id
-		 (make-conditional-primop 'id
-					  #f
-					  simplifier
-					  (lambda (call) 1)
-					  expand
-					  simplify?)))))
+     (add-scheme-primop! 'id
+			 (make-conditional-primop 'id
+						  #f
+						  simplifier
+						  (lambda (call) 1)
+						  expand
+						  simplify?)))))
 
 ;(define-prescheme! 'error  ; all four args must be present if used as value
 ;  (lambda (exp env)

@@ -2,7 +2,6 @@
 ; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
 ; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
 
-
 ; This is file data.scm.
 ; Requires DEFINE-ENUMERATION macro.
 
@@ -102,6 +101,9 @@
 ; These happen to work out, given our representation for fixnums.
 (define vm-= =)
 (define vm-< <)
+(define vm-> >)
+(define vm-<= <=)
+(define vm->= >=)
 
 ; Immediates
 ;  The number 8 is chosen to streamline 8-bit-byte-oriented implementations.
@@ -238,20 +240,19 @@
 ;  cell number of the first cell after the object's header cell.
 
 (define (address->stob-descriptor addr)
-  (set-descriptor-tag addr (enum tag stob)))
+  (set-descriptor-tag (address->integer addr) (enum tag stob)))
 
 (define stob-overhead 1)  ; header uses up one descriptor
 
 (define (address-after-header stob)
   (assert (stob? stob))
-  (- stob (enum tag stob)))
+  (integer->address (- stob (enum tag stob))))
 
 (define (address-at-header stob)
-  (addr- (address-after-header stob) (cells->a-units 1)))
+  (address- (address-after-header stob) (cells->a-units 1)))
 
 (define (stob-header stob)
   (fetch (address-at-header stob)))
 
 (define (stob-header-set! stob header)
   (store! (address-at-header stob) header))
-

@@ -14,13 +14,8 @@
 ;    scan-structures
 ;    scan-package
 ; These both return lists of (filename . node-list).
-;
-; Also defined here is SCAN-BODY, which scans a lambda-body for
-; internal definitions.  This is an independent mechanism.
-
 
 (define $note-file-package (make-fluid list)) ;Hook
-
 
 ; Scan a set of forms for definitions.
 

@@ -18,7 +18,7 @@
 	  eq?
 	  number? integer? rational? real? complex?
 	  exact? exact->inexact inexact->exact
-	  + - * / = <
+	  + - * / = < > <= >=
 	  quotient remainder
 	  floor numerator denominator
 	  real-part imag-part
@@ -208,9 +208,7 @@
 
 (define-interface scheme-level-1-adds-interface
   (export ((case delay quasiquote syntax-rules) :syntax)
-	  <= > >=
 	  abs
-;	  append  assoc assq assv
 	  append  assoc assv	  
 	  boolean?
 	  caaaar caaadr caadar caaddr caaar caadr caar
@@ -357,9 +355,10 @@
   (export initialize-dynamic-state!
 	  current-thread
 	  set-current-thread!
-	  get-dynamic-env
-	  set-dynamic-env!		;wind.scm
-	  fluid-lookup))		;wind.scm
+	  get-dynamic-env		; wind.scm, env/command-level.scm
+	  set-dynamic-env!		; wind.scm
+	  get-dynamic-point		; wind.scm
+	  set-dynamic-point!))		; wind.scm
 
 (define-interface enumerated-interface
   (export (define-enumeration :syntax)
@@ -375,7 +374,7 @@
 	  make-condition))
 
 (define-interface handle-interface
-  (export ignore-errors with-handler))
+  (export ignore-errors report-errors-as-warnings with-handler))
 
 (define-interface conditions-interface
   (export define-condition-type
@@ -416,9 +415,7 @@
 	  input-port?
 	  output-port?
 	  silently
-	  make-null-output-port
-
-	  message))     ;for debugging
+	  make-null-output-port))
 
 (define-interface i/o-internal-interface
   (export make-input-port
@@ -479,15 +476,15 @@
 	  thread-continuation           ;debugger
 	  thread-uid->thread            ;expensive!
 	  thread-scheduler set-thread-scheduler!
+	  set-thread-arguments!
 
 	  current-thread
 
 	  make-thread-queue
 	  thread-queue-empty?
 	  enqueue-thread!
-	  exclusively-enqueue-thread!
 	  dequeue-thread!
-	  remove-thread-from-queues!
+	  remove-thread-from-queue!
 
 	  event-pending?
 	  get-next-event!
@@ -506,8 +503,6 @@
 	  kill-thread!
 
 	  wake-some-threads
-
-	  message                       ; for debugging
 
 	  all-threads                   ; for command-levels
 
@@ -530,11 +525,9 @@
 (define-interface exceptions-interface
   (export define-exception-handler
 	  initialize-exceptions!
-	  make-opcode-generic!
+	  extend-opcode!
 	  signal-exception
-	  continuation-preview		;env/debug.scm
-	  define-wna-handler            ;rts/current-port.scm
-	  wna-lose))                    ;rts/current-port.scm
+	  continuation-preview))	;env/debug.scm
 
 (define-interface interrupts-interface
   (export initialize-interrupts!	;init.scm
@@ -568,16 +561,10 @@
 	  gobble-line))
 
 ; Level 2: the harder stuff.
-; Various primitives get promoted to n-ary at this point.
+; Various primitives get numeric types and promoted to n-ary at this point.
 
 (define-interface scheme-level-2-adds-interface
-  (export ((+ - * /)     (proc (&rest :number) :number))
-	  ((< = > <= >=) (proc (&rest :number) :boolean))
-	  (make-vector	 (proc (:exact-integer &opt :value) :vector))
-	  (make-string	 (proc (:exact-integer &opt :char) :string))
-	  ((write-char)  (proc (:char &opt :output-port) :unspecific))
-	  ((read-char peek-char char-ready?)
-	   (proc (&opt :input-port) :value))
+  (export (char-ready? (proc (&opt :input-port) :boolean))
 	  call-with-current-continuation
 	  call-with-input-file call-with-output-file
 	  current-input-port current-output-port
@@ -607,12 +594,14 @@
 	  continuation-arg-count
 	  continuation-cont
 	  continuation-env
-	  continuation-overhead		;foo
 	  continuation-pc
 	  continuation-template
 	  continuation-parent
 	  continuation?
-	  :continuation))
+	  :continuation
+
+	  exception-continuation?
+	  exception-continuation-exception))
 
 (define-interface templates-interface
   (export make-template
@@ -899,13 +888,15 @@
 
 (define-interface segments-interface
   (export attach-label
-	  byte-limit
+	  byte-limit two-byte-limit
+	  high-byte low-byte
 	  empty-segment
 	  instruction
 	  instruction-using-label
 	  instruction-with-literal
 	  instruction-with-location
 	  instruction-with-template
+	  computed-goto-instruction
 	  make-label
 	  note-environment
 	  note-source-code
@@ -923,8 +914,7 @@
 	  ))
 
 (define-interface compiler-interface
-  (export compile
-	  compile-and-run-file		;for LOAD
+  (export compile-and-run-file		;for LOAD
 	  compile-and-run-forms		;for EVAL
 	  compile-and-run-scanned-forms ;for eval.scm / ensure-loaded
 	  compile-file			;link/link.scm
@@ -1020,7 +1010,7 @@
   (export (enum :syntax)  ;So you don't have to remember to open ENUMERATED
 	  (enumerand->name :syntax)
 	  (name->enumerand :syntax)
-	  bits-used-per-byte
+	  bits-used-per-byte byte-limit
 	  (exception :enumeration)
 	  exception-count
 	  (interrupt :enumeration)
@@ -1036,7 +1026,20 @@
 	  (channel-status-option :enumeration)
 	  (time-option :enumeration)
 	  time-option-count
-	  (port-status-options :enumeration)))
+	  (port-status-options :enumeration)
+	  (current-port-marker :syntax)
+
+	  maximum-stack-args
+	  two-byte-nargs-protocol
+	  two-byte-nargs+list-protocol
+	  args+nargs-protocol
+	  big-stack-protocol
+	  nary-dispatch-protocol
+
+	  default-stack-space
+	  environment-stack-size
+	  continuation-stack-size
+	  available-stack-space))
 
 (define-interface display-conditions-interface
   (export display-condition		;command.scm

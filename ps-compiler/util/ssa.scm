@@ -8,7 +8,7 @@
 ; (FIND-JOINS <nodes> <node-temp>)
 ;  will return the list of nodes N for which there are (at least) two paths
 ;  ... N_0 M_0 ... M_i N and ... N_1 P_0 ... P_j N such that N_0 and N_1
-;  are distinct members of NODES and the M's and P's are disjoint sets.
+;  are distinct members of <nodes> and the M's and P's are disjoint sets.
 ;
 ; Algorithm from:
 ;   Efficiently computing static single assignment form and the control
@@ -42,7 +42,7 @@
     (find-frontiers! (car graph))
     (values)))
 
-; Turn the users graph into a NODE graph.
+; Turn the user's graph into a NODE graph.
 
 (define (real-graph->ssa-graph root successors temp set-temp!)
   (let ((uid (next-uid))

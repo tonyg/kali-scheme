@@ -79,12 +79,14 @@
 							maybe-force-output)
 	     port)))))
 	     
-; Flush PORT's output buffer if the port isn't locked.
+; Flush PORT's output buffer if the port is open and not locked.
 
 (define (maybe-force-output port)
   (cond ((maybe-obtain-lock (port-lock port))
-	 (if (open-output-port? port)
-	     (really-force-output port))
+	 (report-errors-as-warnings (lambda ()
+				      (really-force-output port))
+				    "error while flushing GC'ed port's buffer"
+				    port)
 	 (release-lock (port-lock port)))))
 
 ;----------------
@@ -148,16 +150,11 @@
 ; thread's continuation is munged to restore the port when the thread
 ; resumes.  Any buffered input is thrown away at that point (it could
 ; be saved away with the channel).
-; 
-; SPLICE-CONTINUATION! is passed as an argument to avoid a module dependency.
-; Any values being returned to OWNER are thrown away.  The assumption is that
-; no upcalls are done while the port is locked.  SPLICE-CONTINUATION! could
-; be hacked to fix the problem.
 ;
 ; If the port is locked by us or one of our ancestors there is no point in
 ; trying to grab it.
 
-(define (steal-channel-port! port splice-continuation!)
+(define (steal-channel-port! port)
   (if (channel? (port-data port))
       (begin
 	(disable-interrupts!)
@@ -166,10 +163,10 @@
 			 #f)))
 	  (if (and owner
 		   (not (running? owner)))
-	      (really-steal-channel-port! port owner splice-continuation!))
+	      (really-steal-channel-port! port owner))
 	  (enable-interrupts!)))))
 
-(define (really-steal-channel-port! port owner splice-continuation!)
+(define (really-steal-channel-port! port owner)
   (let ((lock (port-lock port))
 	(buffer (port-buffer port))
 	(index (port-index port))
@@ -184,7 +181,7 @@
     (set-port-lock! port (make-lock))
     (interrupt-thread owner
 		      (lambda results
-			(obtain-lock (port-lock port))
+			(obtain-port-lock port)
 			(cond ((output-port? port)
 			       (really-force-output port))
 			      ((< (port-index port)

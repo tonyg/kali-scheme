@@ -3,8 +3,8 @@
 
 ; Memory
 
-(define *memory* (unassigned))
-(define *hp* (unassigned))
+(define *memory*)
+(define *hp*)
 
 (define (initialize-memory! size)
   (set! *memory* (allocate-memory size))
@@ -14,7 +14,7 @@
 
 (define (allocate size)
   (let ((p *hp*))
-    (set! *hp* (+ *hp* size))
+    (set! *hp* (address+ *hp* size))
     p))
 
 (define (words->a-units x)
@@ -23,16 +23,16 @@
 ; Data
 
 (define tag-bits 1)
-(define tag-mask (- (ashl 1 tag-bits) 1))
+(define tag-mask (- (shift-left 1 tag-bits) 1))
 
 (define tag/fixnum 0)
 (define tag/pair   1)
 
 (define (enter-fixnum x)
-  (+ (ashl x tag-bits) tag/fixnum))
+  (+ (shift-left x tag-bits) tag/fixnum))
 
 (define (extract-fixnum x)
-  (ashr x tag-bits))
+  (arithmetic-shift-right x tag-bits))
 
 (define (make-predicate tag)
   (lambda (x)
@@ -43,11 +43,14 @@
 
 (define (make-accessor tag offset)
   (lambda (x)
-    (word-ref (+ (+ x (- 0 tag)) (words->a-units offset)))))
+    (word-ref (address+ (integer->address (+ x (- 0 tag)))
+			(words->a-units offset)))))
 
 (define (make-setter tag offset)
   (lambda (x v)
-    (word-set! (+ (+ x (- 0 tag)) (words->a-units offset)) v)))
+    (word-set! (address+ (integer->address (+ x (- 0 tag)))
+			 (words->a-units offset))
+	       v)))
 
 (define pair-size 16)   ; bytes
 
@@ -58,7 +61,7 @@
 (define set-tail! (make-setter tag/pair 1))
 
 (define (make-pair x y)
-  (let ((p (+ tag/pair (allocate pair-size))))
+  (let ((p (+ tag/pair (address->integer (allocate pair-size)))))
     (set-head! p x)
     (set-tail! p y)
     p))
@@ -91,28 +94,34 @@
                   (print-s-exp x out)
                   (write-char #\) out)))))))
 
-(define *input-port* (unassigned))
+(define *input-port*)
 (define *peeked-char?* #f)
-(define *peeked-char* (unassigned))
+(define *peeked-char*)
 
 (define (readc)
   (cond (*peeked-char?*
 	 (set! *peeked-char?* #f)
 	 *peeked-char*)
 	(else
-	 (ps-read-char *input-port*
-	   (lambda (ch) ch)
-	   (lambda () (ascii->char 0))))))
+	 (call-with-values
+	  (lambda ()
+	    (read-char *input-port*))
+	  (lambda (ch eof? status)
+	    (if eof? (ascii->char 0) ch))))))
 
 (define (peekc)
   (if *peeked-char?*
       *peeked-char*
-      (ps-read-char *input-port*
-	(lambda (ch)
-	  (set! *peeked-char?* #t)
-	  (set! *peeked-char* ch)
-	  ch)
-	(lambda () (ascii->char 0)))))
+      (call-with-values
+       (lambda ()
+	 (read-char *input-port*))
+       (lambda (ch eof? status)
+	 (if eof?
+	     (ascii->char 0)
+	     (begin
+	       (set! *peeked-char?* #t)
+	       (set! *peeked-char* ch)
+	       ch))))))
 
 (define (digit? ch)
   (let ((ch (char->ascii ch)))
@@ -161,6 +170,7 @@
      (readc)
      (read-list))
     ((#\))
+     (readc)
      null)
     ((#\.)
      (readc)       ; eat the dot

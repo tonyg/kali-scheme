@@ -10,15 +10,18 @@
 (define command-prefix #\,)
 
 ; Fire up the processor.
+;
+; The double-paren around the WITH-HANDLER is because it returns a
+; thunk which is the thing to do after the command-processor exits.
 
 (define (start-command-processor resume-args context start-thunk)
-  (with-handler command-loop-condition-handler
-    (lambda ()
-      (start-command-levels resume-args
-			    context
-			    start-thunk
-			    (command-loop-thunk #f)
-			    push-interrupt-level))))
+  ((with-handler command-loop-condition-handler
+     (lambda ()
+       (start-command-levels resume-args
+			     context
+			     start-thunk
+			     real-command-loop
+			     #f)))))	; no condition
 
 ; Entry for initialization & testing.
 
@@ -29,18 +32,6 @@
 			      (set-user-command-environment! command-env)))
 			   unspecific))
 
-; Starting a command-level when an interrupt occurs.
-; Because this is called by the scheduler it can't use the normal, up-call
-; version of PUSH-COMMAND-LEVEL.  Instead it is passed a special, non-up-call
-; PUSH-COMMAND-LEVEL.
-
-(define (push-interrupt-level why data push-command-level)
-  (real-command-loop (if (eq? why 'interrupt)
-			 (make-condition 'interrupt (list data))
-			 (make-condition 'error
-					 (list 'deadlocked)))
-		     push-command-level))
-
 ;----------------
 ; Command loop
 ; Called from:
@@ -50,39 +41,25 @@
 ; started.
 
 (define (command-loop condition)
-  (real-command-loop condition push-command-level))
+  (push-command-level real-command-loop condition))
 
-; We want PUSH-COMMAND-LEVEL to be called tail-recursively (to not confuse
-; the debugger), so we have to mess around with the dynamic-environment.
-
-(define (real-command-loop condition push-command-level)
-  (set-dynamic-env! (with-handler command-loop-condition-handler
-		      (lambda ()
-			(let-fluids $command-level-condition condition
-			    get-dynamic-env))))
-  (push-command-level (command-loop-thunk condition)))
-
-(define $command-level-condition (make-fluid #f))
-
-(define (command-level-condition level)
-  (command-level-fluid level $command-level-condition))
+(define command-level-condition command-level-repl-data)
 
 ; Install the handler, bind $NOTE-UNDEFINED to keep from annoying the user,
 ; display the condition and start reading commands.
 
-(define (command-loop-thunk condition)
-  (lambda ()
-    (let-fluids $note-undefined #f    ;useful
-	(lambda ()
-	  (display-command-level-condition condition)
-	  (let loop ()
-	    (let ((command (read-command-carefully (command-prompt)
-						   (form-preferred?)
-						   (command-input))))
-	      (showing-focus-object
-	       (lambda ()
-		 (execute-command command)))
-	      (loop)))))))
+(define (real-command-loop)
+  (let-fluids $note-undefined #f    ;useful
+      (lambda ()
+	(display-command-level-condition (command-level-condition (command-level)))
+	(let loop ()
+	  (let ((command (read-command-carefully (command-prompt)
+						 (form-preferred?)
+						 (command-input))))
+	    (showing-focus-object
+	     (lambda ()
+	       (execute-command command)))
+	    (loop))))))
 
 (define (display-command-level-condition condition)
   (if condition
@@ -101,6 +78,8 @@
   (let ((levels (command-levels)))
     (if (null? (cdr levels))
         (cond ((batch-mode?)
+	       ; perhaps this should use scheme-exit-now, but I'm
+	       ; worried that it is what handles normal EOF. (HCC)
 	       (exit-command-processor (lambda () 0)))
 	      ((y-or-n? "Exit Scheme 48" #t)
 	       (exit-command-processor (lambda () 1)))
@@ -131,7 +110,7 @@
              (begin (force-output (current-output-port)) ; keep synchronous
 	            (display-condition c (current-error-port))
                     (let ((status (if (error? c) 1 2)))
-                      (exit-command-processor (lambda () status))))
+                      (scheme-exit-now status)))
              (deal-with-condition c)))
 	((reset-command-input? c)
 	 (unspecific))			;proceed

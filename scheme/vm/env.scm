@@ -21,18 +21,11 @@
 
 ; Making new environments
 
-; How much heap space we will need.
-
-(define (stack-env-space count)
-  (+ (+ count 2)                  ; header & link to superior env
-     maximum-stack-arg-count))    ; pre-checking for pushed arguments
-
-(define (pop-args-into-env count key)
-  (check-stack-cons (stack-env-space count) key)
+(define (pop-args-into-env count)
   (push *env*)
   (push (make-header (enum stob vector) (cells->bytes (+ count 1))))
   (add-env-stats count)
-  (set! *env* (address->stob-descriptor (addr1+ (addr1+ *stack*)))))
+  (set! *env* (address->stob-descriptor (address2+ *stack*))))
 
 ; Alternative method for making environments - put the values into the heap.
 
@@ -41,9 +34,9 @@
 
 (define (pop-args-into-heap-env count key)
   (let ((stob (make-d-vector (enum stob vector) (+ count 1) key)))
-    (copy-memory! (addr1+ *stack*)
-		  (addr+ (cells->a-units 1)
-			 (address-after-header stob))
+    (copy-memory! (address1+ *stack*)
+		  (address+ (address-after-header stob)
+			    (cells->a-units 1))
 		  (cells->bytes count))
     (add-cells-to-stack! (- 0 count))
     (vm-vector-set! stob 0 *env*)

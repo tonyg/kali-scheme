@@ -194,14 +194,16 @@
 (define (vm-channel-abort channel)
   (let ((head *pending-channels-head*))
     (cond ((false? head)
-	   (enter-fixnum (channel-abort (channel-os-index channel))))
+	   (enter-fixnum (channel-abort
+			  (extract-fixnum (channel-os-index channel)))))
 	  ((vm-eq? channel head)
 	   (dequeue-channel!)
 	   (channel-os-status channel))
 	  (else
 	   (let loop ((ch (channel-next head)) (prev head))
 	     (cond ((false? ch)
-		    (enter-fixnum (channel-abort (channel-os-index channel))))
+		    (enter-fixnum (channel-abort
+				    (extract-fixnum (channel-os-index channel)))))
 		   ((vm-eq? ch channel)
 		    (if (vm-eq? ch *pending-channels-tail*)
 			(set! *pending-channels-tail* prev))

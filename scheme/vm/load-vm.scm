@@ -24,7 +24,7 @@
 ;
 ;  Breakpoint: Waiting
 ;  1> ,in interpreter (set! *pending-events?* #t)
-;  1> ,proceed 0
+;  1> ,proceed
 ;  (+ 2 3)                             ; this will be read by the loaded VM
 ;  Call to (schedule-interrupt 200)    ; output noise
 ;  Call to (schedule-interrupt 200)

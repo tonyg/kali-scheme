@@ -84,15 +84,23 @@
 (define-method &type-predicate ((t :extended-number-type))
   (extended-number-predicate t))
 
-
 ; Make all the numeric instructions be extensible.
 
+(define (make-opcode-generic! opcode mtable)
+  (let ((perform (method-table-get-perform mtable)))
+    (extend-opcode! opcode
+		    (lambda (lose)
+		      (set-final-method! mtable
+					 (lambda (next-method . args)
+					   (apply lose args)))
+		      (lambda args
+			((perform) args))))))
+		      
 (define-syntax define-opcode-extension
   (syntax-rules ()
     ((define-opcode-extension ?name ?table-name)
      (begin (define ?table-name (make-method-table '?name))
 	    (make-opcode-generic! (enum op ?name) ?table-name)))))
-
 
 (define-opcode-extension +              &+)
 (define-opcode-extension -              &-)
@@ -131,6 +139,22 @@
 (define-opcode-extension atan &atan)
 (define-opcode-extension sqrt &sqrt)
 
+; >, <=, and >= are all extended using the table for <.
+
+(let ((perform (method-table-get-perform &<)))
+  (extend-opcode! (enum op >)
+		  (lambda (lose)
+		    (lambda (x y)
+		      ((perform) (list y x)))))
+  (extend-opcode! (enum op <=)
+		  (lambda (lose)
+		    (lambda (x y)
+		      (not ((perform) (list y x))))))
+  (extend-opcode! (enum op >=)
+		  (lambda (lose)
+		    (lambda (x y)
+		      (not ((perform) (list x y)))))))
+		      
 ; Default methods.
 
 (define-method &integer?  (x) #f)

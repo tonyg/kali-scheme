@@ -101,12 +101,20 @@
   (files (bcomp ddata))
   (optimize auto-integrate))
 
+; Determining stack usage.
+
+(define-structure stack-check (export maximum-stack-use)
+  (open scheme-level-2 architecture code-vectors signals)
+  (files (bcomp stack-check))
+  (optimize auto-integrate))
+
 ; Compiler back end
 
 (define-structures ((segments segments-interface))
   (open scheme-level-2 code-vectors templates
 	debug-data
 	syntactic
+	stack-check
 	architecture
 	define-record-types
 	records   ; for debug-flags randomness

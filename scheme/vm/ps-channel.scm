@@ -6,32 +6,32 @@
 ; itself is intended to be portable.
 
 (define current-input-channel
-  (external "STDIN_FD" (=> () int32)))
+  (external "STDIN_FD" (=> () integer)))
 
 (define current-output-channel
-  (external "STDOUT_FD" (=> () int32)))
+  (external "STDOUT_FD" (=> () integer)))
 
 (define current-error-channel
-  (external "STDERR_FD" (=> () int32)))
+  (external "STDERR_FD" (=> () integer)))
 
 ; Converting between ports and channels.
 
 (define input-port->channel
-  (external "fileno" (=> (input-port) int32)))
+  (external "fileno" (=> (input-port) integer)))
 
 (define output-port->channel
-  (external "fileno" (=> (output-port) int32)))
+  (external "fileno" (=> (output-port) integer)))
 
 (define input-channel->port
-  (external "PS_INPUT_FDOPEN" (=> (int32) input-port int32)))
+  (external "PS_INPUT_FDOPEN" (=> (integer) input-port integer)))
 
 (define output-channel->port
-  (external "PS_OUTPUT_FDOPEN" (=> (int32) output-port int32)))
+  (external "PS_OUTPUT_FDOPEN" (=> (integer) output-port integer)))
 
 ; Opening and closing channels
 
 (define open-file-channel
-  (external "ps_open_fd" (=> ((^ int8u) boolean) int32 int32)))
+  (external "ps_open_fd" (=> ((^ char) boolean) integer integer)))
 
 (define (open-input-file-channel name)
   (open-file-channel name #t))
@@ -40,7 +40,7 @@
   (open-file-channel name #f))
 
 (define close-channel
-  (external "ps_close_fd" (=> (int32) int32)))
+  (external "ps_close_fd" (=> (integer) integer)))
 
 (define close-input-channel close-channel)
 (define close-output-channel close-channel)
@@ -62,14 +62,14 @@
 
 (define channel-read-block
   (external "ps_read_fd"
-	    (=> (int32 int32 int32 boolean) int32 boolean boolean int32)))
+	    (=> (integer address integer boolean) integer boolean boolean integer)))
 
 (define channel-write-block
   (external "ps_write_fd"
-	    (=> (int32 int32 int32) int32 boolean int32)))
+	    (=> (integer address integer) integer boolean integer)))
 
 (define channel-abort
-  (external "ps_abort_fd_op" (=> (int32) int32)))
+  (external "ps_abort_fd_op" (=> (integer) integer)))
 
 ;----------------------------------------------------------------
 ; Asynchronous external events
@@ -87,7 +87,7 @@
 ; Initialize the event system
 
 (define initialize-events
-  (external "interrupt_init" (=> () int32)))
+  (external "interrupt_init" (=> () integer)))
 
 ; True if an event is pending
 
@@ -99,12 +99,12 @@
 ; (currently this is always zero for i/o-completions).
 
 (define get-next-event
-  (external "get_next_event" (=> () int32 int32 int32)))
+  (external "get_next_event" (=> () integer integer integer)))
 
 ; Wait for the next event.  The two arguments are maximum time to wait and
 ; whether that time is in minutes (#T) or milliseconds (#F).
 
 (define wait-for-event
-  (external "wait_for_event" (=> (int32 boolean) unit)))
+  (external "wait_for_event" (=> (integer boolean) unit)))
 
 

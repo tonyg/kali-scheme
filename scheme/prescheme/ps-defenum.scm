@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1997 by NEC Research Institute, Inc.    See file COPYING.
+
 ; DEFINE-ENUMERATION macro hacked to use external (C enumeration) names
 ; instead of integers.
 

@@ -39,6 +39,33 @@
   (if (not (memq? child (node-successors parent)))
       (set-node-successors! parent (cons child (node-successors parent)))))
 
+; We want to find subsets of ALL-PROCS such that all elements of a subset
+; are always called with the same continuation.  (PROC->USES <proc>) returns
+; the references to <proc> that are calls, or #f if there are references that
+; are not calls.
+;
+; We proceed as follows:
+;  1. Partition the procs depending on whether all their calls are known or not.
+;  2. Build a call graph:
+;       Nodes represent either procedures or continuations.  If there is a
+;       tail-recursive call to procedure B in procedure A, then there is an
+;       edge from A to B.  For continuation C such that there is a call in
+;       procedure A to procedure B with that continuation, there are edges
+;       from A to C and from C to B.
+;         In other words, it is a call graph where the edges that represent
+;       non-tail-recursive calls are replaced by two edges, with a node for
+;       the continuation in between.
+;         There is a special root node (representing `outside'), that has
+;       edges to the nodes representing procedures whose call sites have not
+;       been identified.
+;  3. Determine the dominance frontiers in the graph.
+;  4. Find the nodes in the graph that are reachable from more than one
+;     continuation (the joins).
+;  5. Starting from each node that represents a continuation (the joins,
+;     procs whose calls aren't known, and the continuations themselves),
+;     find the set of nodes reachable from that node without going through
+;     some other continuation node.
+
 (define (find-jump-procs all-procs proc->uses)
   (for-each (lambda (l)
 	      (set-lambda-block! l (node-maker l #f)))
@@ -50,17 +77,16 @@
 	  (known-blocks (map lambda-block known))
 	  (procs-cell (list (map lambda-block unknown))))
       (note-calls! known conts-cell procs-cell proc->uses)
-      (let ((unknown-blocks (car procs-cell)))
+      (let ((unknown-blocks (car procs-cell))
+	    (conts (car conts-cell)))
 	(set-node-successors! root unknown-blocks)
 	(graph->ssa-graph! root node-successors node-temp set-node-temp!)
-	(let ((joins (find-joins (car conts-cell) node-temp)))
+	(let ((joins (find-joins (append conts unknown-blocks) node-temp)))
 	  (for-each (lambda (n)
 		      (set-node-join?! n #t))
 		    joins)
 	  (let* ((mergable (filter-map find-mergable
-				       (append joins
-					       unknown-blocks
-					       (car conts-cell))))
+				       (append joins unknown-blocks conts)))
 		 (useless  (filter (lambda (p)
 				     (not (or (node-join? (lambda-block p))
 					      (node-merged? (lambda-block p)))))
@@ -69,6 +95,8 @@
 			(set-lambda-block! p #f))
 		      all-procs)
 	    (values mergable useless)))))))
+
+; Walk KNOWN-PROCS adding edges to the call graph.
 
 (define (note-calls! known-procs conts-cell procs-cell proc->uses)
   (for-each (lambda (proc)
@@ -79,14 +107,20 @@
 			(proc->uses proc)))
 	    known-procs))
 
+; Add an edge from the node containing REF to PROC-NODE.  Tail calls add an
+; edge directly from the calling node, non-tail calls add an edge from the
+; successor to the calling node that represents the call's continuation.
+
 (define (note-call! proc-node ref conts-cell procs-cell)
   (let ((caller (get-lambda-block (containing-procedure ref) procs-cell)))
-    (if (calls-this-primop? (node-parent ref) 'tail-call)
-	(add-child! caller proc-node)
-	(note-non-tail-call! proc-node
-			     caller
-			     (call-arg (node-parent ref) 0)
-			     conts-cell))))
+    (add-child! (if (calls-this-primop? (node-parent ref) 'tail-call)
+		    caller
+		    (get-cont-block caller
+				    (call-arg (node-parent ref) 0)
+				    conts-cell))
+		proc-node)))
+
+; Get the block for lambda-node PROC, making a new one if necessary.
 
 (define (get-lambda-block proc procs-cell)
   (let ((block (lambda-block proc)))
@@ -97,18 +131,19 @@
 	  (set-car! procs-cell (cons new (car procs-cell)))
 	  new))))
 
-(define (note-non-tail-call! proc-node caller cont conts-cell)
-  (let loop ((succs (node-successors caller)))
-    (if (null? succs)
-	(let ((new (node-maker #f cont)))
-	  (set-car! conts-cell (cons new (car conts-cell)))
-	  (set-node-successors! new (list proc-node))
-	  (set-node-successors! caller (cons new (node-successors caller))))
-	(let ((node (car succs)))
-	  (if (and (node-cont node)
-		   (node-equal? cont (node-cont node)))
-	      (add-child! node proc-node)
-	      (loop (cdr succs)))))))
+; Get the successor to CALLER containing CONT, making it if necessary.
+
+(define (get-cont-block caller cont conts-cell)
+  (or (any (lambda (node)
+	     (and (node-cont node)
+		  (node-equal? cont (node-cont node))))
+	   (node-successors caller))
+      (let ((cont-node (node-maker #f cont)))
+	(set-car! conts-cell (cons cont-node (car conts-cell)))
+	(add-child! caller cont-node)
+	cont-node)))
+
+;----------------
 
 (define (find-mergable node)
   (let ((mergable (really-find-mergable node)))
@@ -124,9 +159,9 @@
 	res
 	(recur (cdr nodes)
 	       (let ((node (car nodes)))
-		 (cond ((or (node-join? node)     ; gets two or more continuations
-			    (node-merged? node)   ; already merged
-			    (node-cont node))     ; different continuation
+		 (cond ((or (node-join? node)    ; gets two or more continuations
+			    (node-merged? node)  ; already merged
+			    (node-cont node))    ; different continuation
 			res)
 ;		       ((node-cont node)          ; not a lambda
 ;			(recur (node-successors node) res))
@@ -155,49 +190,72 @@
 ; Part 3.  Turn JUMP-PROCS from procs to jumps.  CONT is the continuation they
 ; all receive, and is also turned into a jump.
 
-; This finds the least-common-ancestor of all of the calls to the
-; jump-procs and binds them and the continuation (if any) with a LETREC at
-; that point.  VARS are the variables to which JUMP-PROCS are bound.  If
-; there is a continuation some protocol adjustment may be required.
+; This creates a LETREC to bind all CONT and any of JUMP-PROCS that are
+; passed CONT directly and are bound abouve the LCA of all calls to JUMP-PROCS
+; that use CONT.  Then every jump-proc is changed from a proc lambda to a
+; jump lambda and has its continuation removed.  Returns are replaced with
+; jumps to CONT.  If CONT is not a variable some protocol adjustment may be
+; required.
 
 (define (procs->jumps jump-procs vars cont)
-;  (if (null? (filter (lambda (n)
-;                         (node-equal? cont (call-arg (node-parent n) 0)))
-;                       (apply append (map variable-refs vars))))
-;      (breakpoint "no calls"))
-  (let* ((proc (containing-procedure cont))
-	 (lca (least-common-ancestor
-	       (filter (lambda (n)
-			 (node-equal? cont (call-arg (node-parent n) 0)))
-		       (apply append (map variable-refs vars)))))
-	 (lca (if (call-node? lca) lca (node-parent lca)))
-	 (cvar (if (lambda-node? cont)
-		   (make-variable 'w (node-type cont))
-		   #f))
-	 (proc-cvar (car (lambda-variables proc))))
-    (receive (vars jump-procs)
-	(bound-above? lca vars jump-procs)
-      (for-each detach-bound-value vars jump-procs)
-      (cond ((lambda-node? cont)
-	     (determine-continuation-protocol cont jump-procs)
-	     (move cont (lambda (ignore) (make-literal-node '#f '#f)))
-	     (put-in-letrec (cons cvar vars) (cons cont jump-procs) lca)
-	     (change-lambda-type cont 'jump))
-	    (else
-	     (put-in-letrec vars jump-procs lca))))
-    (for-each proc-calls->jumps jump-procs)
-    (for-each (lambda (p)
-		(let* ((v (car (lambda-variables p)))
-		       (refs (variable-refs v)))
-		  (set-variable-refs! v '())
-		  (for-each (lambda (r)
-			      (if (lambda-node? cont)
-				  (return->jump (node-parent r) cvar cont)
-				  (replace r (make-reference-node proc-cvar))))
-			    refs)
-		  (remove-variable p v)))
-	      jump-procs)
-    (values)))
+  (receive (called-vars called-procs lca)
+      (find-cont-uses cont vars jump-procs)
+    (let ((proc (containing-procedure cont))
+	  (lca (if (call-node? lca) lca (node-parent lca)))
+	  (cvar (if (lambda-node? cont)
+		    (make-variable 'w (node-type cont))
+		    #f)))
+      (receive (called-vars called-procs)
+	  (bound-above? lca called-vars called-procs)
+	(for-each detach-bound-value called-vars called-procs)
+	(cond ((lambda-node? cont)
+	       (determine-continuation-protocol cont jump-procs)
+	       (move cont (lambda (ignore) (make-literal-node '#f '#f)))
+	       (put-in-letrec (cons cvar called-vars)
+			      (cons cont called-procs)
+			      lca)
+	       (change-lambda-type cont 'jump))
+	      (else
+	       (put-in-letrec called-vars called-procs lca))))
+      (for-each proc-calls->jumps jump-procs)
+      (for-each (lambda (p)
+		  (let* ((v (car (lambda-variables p)))
+			 (refs (variable-refs v)))
+		    (set-variable-refs! v '())
+		    (for-each (lambda (r)
+				(if (lambda-node? cont)
+				    (return->jump (node-parent r) cvar cont)
+				    (replace r (make-reference-node
+						(car (lambda-variables proc))))))
+			      refs)
+		    (remove-variable p v)))
+		jump-procs)
+      (values))))
+
+; Returns those of VALS and VARS where there is a call to the variable that
+; passes CONT as a continuation, or where the variable is not bound.  The
+; third values returned is the least-common-ancestor of all calls to VARS
+; that use CONT.
+
+(define (find-cont-uses cont vars vals)
+  (let loop ((vars vars) (vals vals) (r-vars '()) (r-vals '()) (uses '()))
+    (if (null? vars)
+	(values r-vars r-vals (least-common-ancestor uses))
+	(let ref-loop ((refs (variable-refs (car vars))) (my-uses uses))
+	  (cond ((not (null? refs))
+		 (ref-loop (cdr refs)
+			   (if (node-equal? cont
+					    (call-arg (node-parent (car refs)) 0))
+			       (cons (car refs) my-uses)
+			       my-uses)))
+		((and (variable-binder (car vars))
+		      (eq? my-uses uses))
+		 (loop (cdr vars) (cdr vals) r-vars r-vals uses))
+		(else
+		 (loop (cdr vars) (cdr vals)
+		       (cons (car vars) r-vars)
+		       (cons (car vals) r-vals)
+		       my-uses)))))))
 
 ; Return the list of VARS and VALS where the variable is either global
 ; or bound above CALL.

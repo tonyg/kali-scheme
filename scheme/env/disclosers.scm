@@ -40,11 +40,13 @@
                     '())))))
 
 (define-method &disclose ((obj :continuation))
-  (list 'continuation
-        (list 'pc (continuation-pc obj))
-        (let ((tem (continuation-template obj)))
-          (or (template-print-name tem) (template-id tem)))))
-
+  (list (if (exception-continuation? obj)
+	    'exception-continuation
+	    'continuation)
+	(list 'pc (continuation-pc obj))
+	(let ((tem (continuation-template obj)))
+	  (or (template-print-name tem) (template-id tem)))))
+  
 (define-method &disclose ((obj :code-vector))
   (list 'code-vector (code-vector-length obj))
 ; (cons 'code-vector
@@ -183,36 +185,49 @@
   (define-exception-discloser (enum op set-global!) disc))
 
 (let ((disc (lambda (opcode reason args)
-              (let ((proc (car args))
-                    (as (cadr args)))
-                (list 'error
-                      "wrong number of arguments"
-                      (error-form (or (if (closure? proc)
-                                          (or (template-print-name
-                                               (closure-template proc))
-                                              proc)
-                                          proc)
-                                      proc)
-                                  as))))))
-  (define-exception-discloser (enum op check-nargs=) disc)
-  (define-exception-discloser (enum op check-nargs>=) disc))
+	      (list 'error
+		    "LETREC variable used before its value has been produced"))))
+  (define-exception-discloser (enum op local0) disc)
+  (define-exception-discloser (enum op local1) disc)
+  (define-exception-discloser (enum op local2) disc)
+  (define-exception-discloser (enum op big-local) disc))
 
-(define-exception-discloser (enum op call)
-  (lambda (opcode reason args)
-    (list 'error
-          "attempt to call a non-procedure"
-          (map value->expression (cons (car args) (cadr args))))))
-	      
 (let ((disc (lambda (opcode reason args)
-	      (if (null? (car args))
-		  (list 'error
-			"returning zero values when one is expected"
-			'(values))
-		  (list 'error
-			"returning several values when only one is expected"
-			(error-form 'values (car args)))))))
+	      (list 'error
+		    (case reason
+		      ((bad-procedure)
+		       "attempt to call a non-procedure")
+		      ((wrong-number-of-arguments)
+		       "wrong number of arguments")
+		      ((wrong-type-argument)
+		       "wrong type argument")
+		      (else
+		       (symbol->string reason)))
+		    (map value->expression (cons (car args) (cadr args)))))))
+  (define-exception-discloser (enum op call) disc)
+  (define-exception-discloser (enum op big-call) disc)
+  (define-exception-discloser (enum op move-args-and-call) disc)
+  (define-exception-discloser (enum op with-continuation) disc)
+  (define-exception-discloser (enum op apply) disc)
+  (define-exception-discloser (enum op closed-apply) disc))
+
+(let ((disc (lambda (opcode reason args)
+	      (let ((proc (car args))
+		    (args (cadr args)))
+		(cond (proc
+		       (list 'error
+			     "returning wrong number of values"
+			     (cons proc args)))
+		      ((null? args)
+		       (list 'error
+			     "returning zero values when one is expected"
+			     '(values)))
+		      (else
+		       (list 'error
+			     "returning several values when only one is expected"
+			     (error-form 'values args))))))))
   (define-exception-discloser (enum op values) disc)
-  (define-exception-discloser (enum op return-values) disc))
+  (define-exception-discloser (enum op closed-values) disc))
 
 (let ((disc (lambda (opcode reason args)
               (let ((thing     (car args))
@@ -223,15 +238,14 @@
                                   stob-data)))
                   (list 'error
                         "exception"
-                        (error-form ((if (= opcode op/stored-object-ref)
+                        (error-form ((if (= opcode
+					    (enum op stored-object-ref))
                                          car
                                          cadr)
                                      (list-ref data (+ offset 3)))
                                     (cons thing rest))))))))
   (define-exception-discloser (enum op stored-object-ref) disc)
   (define-exception-discloser (enum op stored-object-set!) disc))
-
-(define op/stored-object-ref (enum op stored-object-ref))
 
 (let ((disc (lambda (opcode reason args)
               (let ((type (enumerand->name (car args) stob)))
@@ -263,6 +277,29 @@
 
 (define-exception-discloser (enum op stored-object-indexed-set!)
   (vector-exception-discloser 'set!))
+
+(define-exception-discloser (enum op get-cont-from-heap)
+  (lambda (opcode reason args)
+    (let ((value (car args))
+	  (continuation (cadr args)))
+      (if (not continuation)
+	  (list 'error
+		"exit status is not a small integer"
+		(value->expression value))
+	  (list 'error
+		"returning to a non-continuation"
+		(value->expression continuation))))))
+
+(define-exception-discloser (enum op ascii->char)
+  (lambda (opcode reason args)
+    (let ((value (car args)))
+      `(error
+	"exception"
+	"wrong-type-argument"
+	(ascii->char ,(value->expression value))
+	,@(if (integer? value)
+	      '("note: INTEGER->CHAR doesn't use ASCII; open ASCII and use ASCII->CHAR")
+	      '())))))
 
 ; Call-errors should print as (proc 'arg1 'arg2 ...)
 

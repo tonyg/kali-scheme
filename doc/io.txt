@@ -92,6 +92,7 @@ The fields of a port are:
  PORT-HANDLER: a record containing three procedures.  These handle
   printing the port, closing the port, and filling (for input ports)
   or emptying (for output ports) buffers.
+
  PORT-DATA: ?
   Whatever stuff the handler needs.
 
@@ -99,8 +100,11 @@ The fields of a port are:
   of i/o operations.
 
  PORT-BUFFER: a code-vector.  The input or output buffer of the port.
+
  PORT-INDEX: a fixnum.  The index of the next byte to read or written.
+
  PORT-LIMIT: a fixnum.  One past the end of the valid/available buffer space.
+
  PORT-PENDING-EOF?: true if the next read to this port should return EOF.
 
 Additional operations on ports:
@@ -112,9 +116,11 @@ Additional operations on ports:
  
  (WRITE-STRING string output-port)
     Write the characters in the string to the port.
+
  (WRITE-BLOCK string-or-code-vector start count output-port)
     The output counterpart to READ-BLOCK.  This always writes out the
     requested number of bytes.  Its return value is unspecified.
+
  (FORCE_OUTPUT output-port)
     Causes any buffered characters to be written out.
     

@@ -31,6 +31,7 @@
 #include <signal.h>
 #include <unistd.h>		/* setuid & setgid */
 #include <errno.h>
+#include <netdb.h>		/* gethostbyname */  /* Kali code */
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -76,8 +77,7 @@ extended_vm (long key, scheme_value value)
 
 #if defined(HAVE_SOCKET)
   case 20:
-    { extern int internet_stream_socket();
-      int s = internet_stream_socket();
+    { int s = internet_stream_socket();
       if (s < 0)
 	EXT_EXCEPTION;
       else
@@ -85,8 +85,7 @@ extended_vm (long key, scheme_value value)
     }
 
   case 21:
-    { extern int socket_bind(int, int);
-      int sock, port;
+    { int sock, port;
 
       if (!PAIRP(value) || !FIXNUMP(CAR(value)) || !FIXNUMP(CDR(value)))
 	EXT_EXCEPTION;
@@ -100,8 +99,7 @@ extended_vm (long key, scheme_value value)
     }
 
   case 22:
-    { extern int socket_accept(int);
-      int sock, fd;
+    { int sock, fd;
 
       if (!FIXNUMP(value))
 	EXT_EXCEPTION;

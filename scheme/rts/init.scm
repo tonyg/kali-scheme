@@ -26,7 +26,6 @@
 	                 (output-channel->port error 0)  ; zero-length buffer
 	     (lambda ()
 	       (with-threads
-		message
 		(lambda ()
 		  (root-scheduler thunk
 				  200           ; thread quantum, in msec

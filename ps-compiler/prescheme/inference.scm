@@ -14,13 +14,6 @@
 ;   depth (used for polymorphism), and MAYBE-ID is an optional unique
 ;   integer.
 ;
-; (make-constrained-type prefix type depth source)
-;   Create a new type variable that is greater than or equal to TYPE.
-;
-; (make-constrained-arith-monop-type prefix arg-type1 depth source)
-; (make-constrained-arith-binop-type prefix arg-type1 arg-type2 depth source)
-;   Create new types associated with arithmetic operations.
-;
 ; (schemify-type type depth)
 ;   Make TYPE polymorphic in any variables bound at DEPTH.
 ;

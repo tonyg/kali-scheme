@@ -264,16 +264,7 @@
 			       tower
 			       'user)))
     (set-package-integrate?! user #f)
-    (environment-define! user 'access-scheme-48 access-scheme-48)
     user))
-
-(define (access-scheme-48 name)		;For PSD and SLIB, ugh.
-  (case name
-    ((error) error)
-    ((ascii->char) ascii->char)
-    ((force-output) force-output)
-    ((current-error-port) current-error-port)
-    (else (call-error "unrecognized name" access-scheme-48 name))))
 
 ; Configuration package
 

@@ -12,12 +12,14 @@
 	   'scheme48-init
 	   "../scheme/vm/scheme48vm.c"
 	   '(header "#include \"scheme48vm.h\"")
-	   '(copy (fixnum-arithmetic quotient-carefully))
+	   '(copy (fixnum-arithmetic quotient-carefully)
+		  (interpreter push-continuation-on-stack))
 	   '(no-copy (interpreter interpret
+				  restart
 				  application-exception
 				  handle-interrupt
 				  uuo
-				  collect-saving-temp))
-	   '(shadow ((interpreter restart)
-		     (interpreter *val* *code-pointer*)
-		     (stack *stack* *env*))))))
+				  collect-saving-temp)))))
+;	   '(shadow ((interpreter restart)
+;		     (interpreter *val* *code-pointer*)
+;		     (stack *stack* *env*))))))

@@ -15,17 +15,17 @@
   (open prescheme)
   (begin
     (define extended-vm
-      (external "extended_vm" (=> (int32 int32) int32)))
+      (external "extended_vm" (=> (integer integer) integer)))
     (define lookup-external-name
-      (external "lookup_external_name" (=> (int32 int32) boolean)))
+      (external "lookup_external_name" (=> (address address) boolean)))
     (define schedule-interrupt 
-      (external "schedule_alarm_interrupt" (=> (int32) int32)))
+      (external "schedule_alarm_interrupt" (=> (integer) integer)))
     (define cheap-time
-      (external "CHEAP_TIME" (=> () int32)))
+      (external "CHEAP_TIME" (=> () integer)))
     (define real-time 
-      (external "real_time" (=> () int32 int32)))
+      (external "real_time" (=> () integer integer)))
     (define run-time 
-      (external "run_time" (=> () int32 int32)))))
+      (external "run_time" (=> () integer integer)))))
    
 (define-structures ((channel-io channel-interface)
 		    (events event-interface))

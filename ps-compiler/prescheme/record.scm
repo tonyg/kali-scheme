@@ -24,7 +24,7 @@
 
 ; Global table of record types.  Since we compile to a single C file the
 ; record types used within a single computation must have distinct names.
-; (This shoulrd really be a fluid.)
+; (This should really be a fluid.)
 
 (define *record-type-table* (make-symbol-table))
 

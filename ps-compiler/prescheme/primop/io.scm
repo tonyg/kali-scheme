@@ -1,37 +1,38 @@
 ; Copyright (c) 1994 Richard Kelsey.  See file COPYING.
 
 
-;(define-scheme-primop cast-to-long #f  default-simplifier)
+;(define-scheme-primop cast-to-long)
 
-(define (r type)
-  (lambda (call) type))
+(define-scheme-primop stdin  type/input-port)
+(define-scheme-primop stdout type/output-port)
+(define-scheme-primop stderr type/output-port)
 
-(define-scheme-primop stdin  #f  (r type/input-port)  default-simplifier)
-(define-scheme-primop stdout #f  (r type/output-port) default-simplifier)
-(define-scheme-primop stderr #f  (r type/output-port) default-simplifier)
+(define-nonsimple-scheme-primop read-char io)
+(define-nonsimple-scheme-primop peek-char io)
+(define-nonsimple-scheme-primop read-integer io)
 
-(define-nonsimple-scheme-primop read-char 'io default-simplifier)
-(define-nonsimple-scheme-primop peek-char 'io default-simplifier)
-(define-nonsimple-scheme-primop read-integer 'io default-simplifier)
+(define type/status type/integer)
 
-(define type/status type/int8u)
+(define-nonsimple-scheme-primop write-char io)
 
-(define-nonsimple-scheme-primop write-char 'io default-simplifier)
-(define-scheme-primop write-string  'io (r type/status)    default-simplifier)
-(define-scheme-primop write-integer 'io (r type/status)    default-simplifier)
+(define-scheme-primop write-string  io type/status)
+(define-scheme-primop write-integer io type/status)
+(define-scheme-primop force-output  io type/status)
 
-(define-scheme-primop force-output  'io (r type/status)    default-simplifier)
-(define-nonsimple-scheme-primop open-input-file  #f default-simplifier)
-(define-nonsimple-scheme-primop open-output-file #f default-simplifier)
-(define-scheme-primop close-input-port  'io (r type/status) default-simplifier)
-(define-scheme-primop close-output-port 'io (r type/status) default-simplifier)
+(define-nonsimple-scheme-primop open-input-file)
+(define-nonsimple-scheme-primop open-output-file)
 
-(define-scheme-primop  abort        'io (r type/unit)    default-simplifier)
-(define-nonsimple-scheme-primop error 'io default-simplifier)
-(define-scheme-primop error-string #f (r type/string) default-simplifier)
+(define-scheme-primop close-input-port  io type/status)
+(define-scheme-primop close-output-port io type/status)
 
-(define-scheme-primop call-external-value 'io (r type/int32) default-simplifier)
+(define-scheme-primop abort io type/unit)
 
-(define-nonsimple-scheme-primop read-block 'io default-simplifier)
-(define-scheme-primop write-block 'io (r type/status) default-simplifier)
+(define-nonsimple-scheme-primop error io)
+
+(define-scheme-primop error-string type/string)
+
+(define-scheme-primop call-external-value io type/integer)
+
+(define-nonsimple-scheme-primop read-block io)
+(define-scheme-primop write-block io type/status)
 

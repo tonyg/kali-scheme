@@ -10,17 +10,25 @@
   (for-each (lambda (f)
 	      (if (eq? (form-type f) 'lambda)
 		  (if (form-tail-called? f)
-		      (write-function-tail-prototype (form-var f) port)
-		      (write-function-prototype (form-var f) port))))
+		      (write-function-tail-prototype (form-var f)
+						     (form-exported? f)
+						     port)
+		      (write-function-prototype (form-var f)
+						(form-exported? f)
+						port))))
 	    forms))
 
-(define (write-function-tail-prototype var port)
+(define (write-function-tail-prototype var exported? port)
+  (if (not exported?)
+      (display "static " port))
   (display "long T" port)
   (write-c-identifier (variable-name var) port)
-  (display "(void)" port)
+  (display "(void);" port)
   (newline port))
 
-(define (write-function-prototype var port)
+(define (write-function-prototype var exported? port)
+  (if (not exported?)
+      (display "static " port))
   (receive (result args)
       (parse-arrow-type (final-variable-type var))
     (display-c-type result
@@ -41,16 +49,34 @@
     (display ");" port)
     (newline port)))
 
+; Write declarations for global variables.
+
+(define (write-global-variable-declarations forms port)
+  (for-each (lambda (form)
+	      (if (memq (form-type form)
+			'(stob initialize alias))
+		  (let* ((var (form-var form))
+			 (type (final-variable-type var)))
+		    (if (not (or (eq? type type/unit)
+				 (eq? type type/null)))
+			(really-write-variable-declaration
+			   var type (form-exported? form) port 0)))))
+	    forms))
+
+; Write general variable declarations.
+
 (define (write-variable-declarations vars port indent)
   (for-each (lambda (var)
 	      (let ((type (final-variable-type var)))
 		(if (not (or (eq? type type/unit)
 			     (eq? type type/null)))
-		    (really-write-variable-declaration var type port indent))))
+		    (really-write-variable-declaration var type #t port indent))))
 	    vars))
 
-(define (really-write-variable-declaration var type port indent)
+(define (really-write-variable-declaration var type exported? port indent)
   (indent-to port indent)
+  (if (not exported?)
+      (display "static " port))
   (display-c-type type
 		  (lambda (port)
 		    (c-variable-no-shadowing var port))
@@ -71,6 +97,7 @@
   (write-char #\) out))
   
 ; Searches through the type modifiers until the base type is found.
+; Unspecified result types are assumed to be `void'.
 
 (define (type->c-base-type type)
   (let ((type (maybe-follow-uvar type)))
@@ -81,7 +108,10 @@
 	   (type->c-base-type (pointer-type-to type)))
 	  ((arrow-type? type)
 	   (let ((res (arrow-type-result type)))
-	     (cond ((not (tuple-type? res))
+ 	     (cond ((and (uvar? res)
+ 			 (not (uvar-binding res)))
+ 		    type/unit)
+ 	           ((not (tuple-type? res))
 		    (type->c-base-type res))
 		   ((null? (tuple-type-types res))
 		    type/unit)
@@ -101,10 +131,9 @@
 	    (let ((type (lookup-type (car p))))
 	      (add-c-type-declaration! type (cadr p))))
 	  '((boolean "char")
-	    (int7u   "unsigned char")
-	    (int8    "signed char")
-	    (int8u   "unsigned char")
-	    (int32   "long")
+	    (char    "char")
+	    (integer "long")
+	    (address "char *")
 	    (input-port "FILE *")
 	    (output-port "FILE *")
 	    (unit    "void")
@@ -159,7 +188,11 @@
 
 (define (parse-return-type type)
   (cond ((not (tuple-type? type))
-	 (values type '()))
+	 (values (if (and (uvar? type)
+ 			  (not (uvar-binding type)))
+ 		     type/unit
+ 		     type)
+ 		 '()))
 	((null? (tuple-type-types type))
 	 (values type/unit '()))
 	(else
@@ -167,89 +200,19 @@
 		 (cdr (tuple-type-types type))))))
 
 ;------------------------------------------------------------
+; Collecting local variables.  Each is added to this list when it is first
+; used.
 
-(define (declare-local-vars node port)
-  (if (not (proc-lambda? node))
-      (write-variable-declarations (filter used? (lambda-variables node))
-				   port
-				   2))
-  (write-variable-declarations (gather-local-vars (lambda-body node)) port 2))
+(define *local-vars* '())
 
-; Walk NODE finding all of the local variables.  Some primops are given
-; explicit continuations because they need to generate C statements instead
-; of expressions.
-
-(define (gather-local-vars node)
-  (define (do-cont cont vars)
-    (do-call (lambda-body cont)
-	     (let ((new (filter (lambda (var)
-				  (or (used? var)
-				      (not (eq? (get-variable-type var)
-						type/unit))))
-				(lambda-variables cont))))
-	       (append new vars))))
-    
-  (define (do-call call vars)
-    (let* ((call (expand-nasty-c-primops! call))
-	   (args   (call-args   call))
-	   (exits  (call-exits  call)))
-      (cond ((or (= exits 0)
-		 (goto-call? call))
-	     (reverse! vars))
-	    ((> exits 1)
-	     (do ((i (- exits 1) (- i 1))
-		  (vars vars (do-cont (vector-ref args i) vars)))
-		 ((= i 0)
-		  (do-cont (vector-ref args 0) vars))))
-	    (else
-	     (let* ((cont (vector-ref args 0))
-		    (next (lambda-body cont)))
-	       (case (primop-id (call-primop call))
-		 ((let)
-		  (do-call next
-			   (append (gather-local-vars-in-let cont args) vars)))
-		 ((letrec1 letrec2)  ; no reasonable variables
-		  (do-call next vars))
-		 ((call unknown-call)
-		  ; extra result variables have to be declared even if not used
-		  (let ((cont-vars (lambda-variables cont)))
-		    (do-call next
-			     (append (if (used? (car cont-vars))
-					 cont-vars
-					 (cdr cont-vars))
-				     vars))))
-		 (else
-		  (do-cont cont vars))))))))
-
-  (do-call node '()))
-
-(define (gather-local-vars-in-let proc args)
-  (let loop ((i 1) (vs (lambda-variables proc)) (vars '()))
-    (cond ((>= i (vector-length args))
-	   vars)
-	  ((lambda-node? (vector-ref args i))
-	   (loop (+ i 1) (cdr vs) vars))
-	  (else
-	   (loop (+ i 1) (cdr vs)
-		 (if (used? (car vs))
-		     (cons (car vs) vars)
-		     vars))))))
-
-(define (goto-call? call)
-  (and (calls-this-primop? call 'unknown-tail-call)
-       (goto-protocol? (literal-value (call-arg call 2)))))
-
-(define (jumped-to? var)
-  (any? (lambda (n)
-	  (and (calls-this-primop? (node-parent n) 'jump)
-	       (= 0 (node-index n))))
-	(variable-refs var)))
+(define (declare-local-variables port)
+  (write-variable-declarations *local-vars* port 2))
 
 ; Some primops must be given continuations so that calls to them will
 ; be translated into separate C statements and so expand into arbitrarily
 ; complex chunks of C if necessary.
 
-(define (expand-nasty-c-primops! call)
+(define (fixup-nasty-c-primops! call)
   (let ((top call))
     (let label ((call call))
       (cond ((call-node? call)
@@ -257,7 +220,11 @@
 		      (nasty-c-primop-call? call))
 		 (set! top (expand-nasty-c-primop! call top)))
 	     (walk-vector label (call-args call)))))
-    top))
+    (do ((i 0 (+ i 1)))
+	((= i (call-arg-count top)))
+      (let ((arg (call-arg top i)))
+	(if (lambda-node? arg)
+	    (fixup-nasty-c-primops! (lambda-body arg)))))))
 
 (define (nasty-c-primop-call? call)
   (case (primop-id (call-primop call))
@@ -389,6 +356,13 @@
 	   (set! *next-type-uid* (+ id 1))
 	   (set! *type-uids* (cons (cons type id) *type-uids*))
 	   id))))
+
+;----------------------------------------------------------------
+; Random utility here for historical reasons.
+
+(define (goto-call? call)
+  (and (calls-this-primop? call 'unknown-tail-call)
+       (goto-protocol? (literal-value (call-arg call 2)))))
 
 ;----------------------------------------------------------------
 ; random type stuff

@@ -32,17 +32,16 @@
 
 ; This is for generic arithmetic, mostly
 
-(define make-opcode-generic!
-  (let ((except (lambda (opcode)
-		  (lambda (next-method . args)
-		    (apply signal-exception opcode #f args)))) ; lost our reason
-	(handler (lambda (perform)
-		   (lambda (opcode reason . args)
-		     ((perform) args)))))
-    (lambda (opcode mtable)
-      (set-final-method! mtable (except opcode))
-      (define-exception-handler opcode
-	(handler (method-table-get-perform mtable))))))
+(define (extend-opcode! opcode make-handler)
+  (let* ((except (lambda args
+		   (apply signal-exception
+			  opcode
+			  #f   ; lost our reason
+			  args)))
+	 (handler (make-handler except)))
+    (define-exception-handler opcode
+      (lambda (opcode reason . args)
+	(apply handler args)))))
 
 ; Raising and handling conditions.
 ; (fluid $condition-handlers) is a list of handler procedures.
@@ -134,6 +133,8 @@
 ;(define (error message . irritants)
 ;  (signal-condition (make-condition 'error (cons message irritants))))
 
+; Run THUNK, returning either the value returned by THUNK or any error
+; that occurs.
 
 (define (ignore-errors thunk)
   (call-with-current-continuation
@@ -144,7 +145,19 @@
 			  (next)))
 	thunk))))
 
+; Downgrade errors to warnings while executing THUNK.  Returns #T if an
+; error occured.
 
+(define (report-errors-as-warnings thunk message . irritants)
+  (let ((condition (ignore-errors
+		    (lambda ()
+		      (thunk)
+		      #f))))
+    (if condition
+	(begin
+	  (apply warn message (append irritants (list condition)))
+	  #t)
+	#f)))
 
 ; Define disclosers that are most important for error messages.
 

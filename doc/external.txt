@@ -3,8 +3,7 @@
 
 
 (GET-EXTERNAL string)
-Returns an external pointer to the given name.  A null will be added to the
-end of the name if there isn't already one.
+Returns an external pointer to the given name.
 
 (LOOKUP-ALL-EXTERNALS)
 Looks up all externals in the currently job.  Ideally this should be called
@@ -14,9 +13,7 @@ automatically on startup.
 Calls the external value, passing it the number of arguments (as a long),
 and a pointer to a C array containing the rest of the arguments (also
 a long).  Don't mess with the array, it is really the Scheme 48 argument
-stack.  The arguments are probably in reverse order, I can't remember.
-
-(NULL-TERMINATE string)
+stack.  The arguments are in reverse order.
 
 
 The file dynload.c contains the function s48_dynamic_load which can
@@ -55,7 +52,7 @@ Here is a transcript on SunOS 4.something:
     /usr/public/sun4/lib/scheme48/big/external.scm ..............
     ]
     > (define dynamic-load (get-external "s48_dynamic_load"))
-    > (external-call dynamic-load (null-terminate "test.so"))
+    > (external-call dynamic-load "test.so")
     #t
     > (define test (get-external "test"))
     > (external-call test "yow" 3)

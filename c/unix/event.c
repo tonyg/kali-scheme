@@ -13,34 +13,48 @@
 #define block_interrupts()
 #define allow_interrupts()
 
-static struct sigaction	keyboard_action;
-static struct sigaction	alarm_action;
 
 static void	when_keyboard_interrupt();
 static void	when_alarm_interrupt();
+static void     when_sigpipe_interrupt();
+static bool	setcatcher(int signum, void (*catcher)(int));
 static void	start_alarm_interrupts(void);
 
 
-int
+void
 sysdep_init(void)
 {
-  keyboard_action.sa_handler = when_keyboard_interrupt;
-  keyboard_action.sa_flags = 0;
-  sigemptyset(&keyboard_action.sa_mask);
+	if (!setcatcher(SIGINT, when_keyboard_interrupt)
+	    || !setcatcher(SIGALRM, when_alarm_interrupt)
+	    || !setcatcher(SIGPIPE, when_sigpipe_interrupt)) {
+	  fprintf(stderr,
+		  "Failed to install signal handlers, errno = %d\n",
+		  errno);
+	  exit(1);
+	}
+	start_alarm_interrupts();
+}
 
-  alarm_action.sa_handler = when_alarm_interrupt;
-  alarm_action.sa_flags = 0;
-  sigemptyset(&alarm_action.sa_mask);
 
-  if (0 != sigaction(SIGINT, &keyboard_action, NULL))
-    return errno;
+/*
+ * Unless a signal is being ignored, set up the handler.
+ * If we return FALSE, something went wrong and errno is set to what.
+ */
+static bool
+setcatcher(int signum, void (*catcher)(int))
+{
+	struct sigaction	sa;
 
-  if (0 != sigaction(SIGALRM, &alarm_action, NULL))
-    return errno;
-
-  start_alarm_interrupts();
-
-  return NO_ERRORS;
+	if (sigaction(signum, (struct sigaction *)NULL, &sa) != 0)
+		return (FALSE);
+	if (sa.sa_handler == SIG_IGN)
+		return (TRUE);
+	sa.sa_handler = catcher;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	if (sigaction(signum, &sa, (struct sigaction *)NULL) != 0)
+		return (FALSE);
+	return (TRUE);
 }
 
 extern unsigned char	Spending_eventsPS;
@@ -60,25 +74,37 @@ extern unsigned char	Spending_interruptPS;
 static long	keyboard_interrupt_count = 0;
 
 static void
-when_keyboard_interrupt()
+when_keyboard_interrupt(int ign)
 {
   keyboard_interrupt_count += 1;
   NOTE_EVENT;
-  /* The following might be necessary with signal(), but shouldn't be
-     with sigaction() (I think) */
-  /* sigaction(SIGINT, &keyboard_action, NULL); */
   return;
 }
 
-long		current_time = 0;	/* ticks since last timer-interrupt request */
+/*
+   We turn off SIGPIPE interrupts by installing a handler that does nothing.
+   Turning them off affects exec()'ed programs, so we don't want to do that.
+   Any actual pipe problems are caught when we try to read or write to them.
+
+   We thank Olin Shivers for this hack.
+*/
+
+static void
+when_sigpipe_interrupt(int ign)
+{
+  return;
+}
+
+long		current_time = 0; /* ticks since last timer-interrupt request */
 static long	alarm_time = -1;
 static long	poll_time = -1;
 static long	poll_interval = 5;
 
 static void
-when_alarm_interrupt()
+when_alarm_interrupt(int ign)
 {
   current_time += 1;
+  /* fprintf(stderr, "[tick]"); */
   if ((alarm_time >= 0 && alarm_time <= current_time) ||
       (poll_time >= 0 && poll_time <= current_time)) {
     NOTE_EVENT;
@@ -94,11 +120,10 @@ long
 schedule_alarm_interrupt(long delta)
 {
   long old;
-/*
+  /*
   fprintf(stderr, "<scheduling alarm for %ld + %ld>\n", current_time,
 	  delta/TICKS_PER_POLL);
-*/
-
+	  */
   /* get remaining time */
   if (alarm_time == -1)
     old = -1;
@@ -140,17 +165,20 @@ long run_time(long *ticks)
 {
   struct tms time_buffer;
   static long clock_tick = 0;
+  long cpu_time;
 
   if (clock_tick == 0)
     clock_tick = sysconf(_SC_CLK_TCK); /* POSIX.1, POSIX.2 */
   times(&time_buffer);		/* On Sun, getrusage() would be better */
-  *ticks = (time_buffer.tms_utime % clock_tick)
-	         * TICKS_PER_SECOND / clock_tick;
-  return time_buffer.tms_utime / clock_tick;
+
+  cpu_time = time_buffer.tms_utime + time_buffer.tms_stime;
+
+  *ticks = (cpu_time % clock_tick) * TICKS_PER_SECOND / clock_tick;
+  return cpu_time / clock_tick;
 }
 
 static void
-start_alarm_interrupts()
+start_alarm_interrupts(void)
 {
   struct itimerval new, old;
 
@@ -164,7 +192,7 @@ start_alarm_interrupts()
 }
 
 static void
-stop_alarm_interrupts()
+stop_alarm_interrupts(void)
 {
   struct itimerval new, old;
 
@@ -221,11 +249,14 @@ int
 get_next_event(long *ready_fd, long *status)
 {
 	int io_poll_status;
-
+	/*
+	fprintf(stderr, "[poll at %d (waiting for %d)]\n", current_time, alarm_time);
+	*/
 	if (keyboard_interrupt_count > 0) {
 		block_interrupts();
 		--keyboard_interrupt_count;
 		allow_interrupts();
+		/* fprintf(stderr, "[keyboard interrupt]\n"); */
 		return (KEYBOARD_INTERRUPT_EVENT);
 	}
 	if (poll_time != -1 && current_time >= poll_time) {
@@ -240,10 +271,12 @@ get_next_event(long *ready_fd, long *status)
 	if (there_are_ready_ports()) {
 		*ready_fd = next_ready_port();
 		*status = 0;   /* chars read or written */
+		/* fprintf(stderr, "[i/o completion]\n"); */
 		return (IO_COMPLETION_EVENT);
 	}
 	if (alarm_time != -1 && current_time >= alarm_time) {
 		alarm_time = -1;
+		/* fprintf(stderr, "[alarm]\n"); */
 		return (ALARM_EVENT);
 	}
 	block_interrupts();
@@ -421,9 +454,10 @@ add_fd(int fd, bool is_input)
 
 
 /*
- * Remove fd from any queues it is on.
+ * Remove fd from any queues it is on.  Returns true if the FD was on a queue
+ * and false if it wasn't.
  */
-void
+bool
 remove_fd(int fd)
 {
 	struct fd_struct	*data;
@@ -432,11 +466,11 @@ remove_fd(int fd)
 		fprintf(stderr, "ERROR: remove_fd fd %d not in [0, %d)\n",
 			fd,
 			FD_SETSIZE);
-		return;
+		return FALSE;
 	}
 	data = fds[fd];
 	if (data == NULL)
-		return;
+		return FALSE;
 	if (data->status == FD_PENDING) {
 		findrm(data, &pending);
 		if (pending.first == NULL)
@@ -445,6 +479,7 @@ remove_fd(int fd)
 		findrm(data, &ready);
 	free((void *)data);
 	fds[fd] = NULL;
+	return TRUE;
 }
 
 
@@ -454,6 +489,8 @@ wait_for_event(long max_wait, bool is_minutes)
 	int	status;
 	long	seconds,
 		ticks;
+
+	/* fprintf(stderr, "[waiting]\n"); */
 
 	stop_alarm_interrupts();
 	ticks = 0;

@@ -30,10 +30,15 @@
 ; Check SPEC type and then call OPEN-CHANNEL.
 
 (define-consing-primitive open-channel (any-> fixnum->)
-  (lambda (ignore) channel-size)
+  (lambda (ignore) (+ channel-size error-string-size))
   (lambda (spec mode key)
     (let* ((lose (lambda (reason)
 		   (raise-exception* reason 0 spec (enter-fixnum mode))))
+	   (os-lose (lambda (status)
+		      (raise-exception os-error 0
+				       spec
+				       (enter-fixnum mode)
+				       (get-error-string status key))))
 	   (win (lambda (index)
 		  (receive (channel reason)
 		      (make-registered-channel mode spec index key)
@@ -60,7 +65,7 @@
 		     ((eq? status (enum errors file-not-found))
 		      (lose (enum exception cannot-open-channel)))
 		     (else
-		      (lose (enum exception os-error))))))
+		      (os-lose status)))))
 	    (else
 	     (lose (enum exception wrong-type-argument)))))))
 
@@ -70,29 +75,48 @@
       (= mode (enum channel-status-option special-input))
       (= mode (enum channel-status-option special-output))))
 
-(define-primitive close-channel (channel->)
-  (lambda (channel)
+(define-consing-primitive close-channel (channel->)
+  (lambda (ignore) error-string-size)
+  (lambda (channel key)
     (if (open? channel)
-	(if (error? (close-channel! channel))
-	    (raise-exception os-error 0 channel)
-	    (goto return-unspecific 0))
+	(let ((status (close-channel! channel)))
+	  (if (error? status)
+	      (raise-exception os-error 0 channel (get-error-string status key))
+	      (goto no-result)))
 	(raise-exception wrong-type-argument 0 channel))))
 
 (define (channel-read-or-write read? proc)
-  (lambda (thing start count wait? channel)
-    (let* ((lose (lambda (reason)
-		   (if read?
-		       (raise-exception* reason 0
-					 thing
-					 (enter-fixnum start)
-					 (enter-fixnum count)
-					 (enter-boolean wait?)
-					 channel)
-		       (raise-exception* reason 0
-					 thing
-					 (enter-fixnum start)
-					 (enter-fixnum count)
-					 channel)))))
+  (lambda (thing start count wait? channel key)
+    (let ((lose (lambda (reason)
+		  (if read?
+		      (raise-exception*
+		         reason 0
+			 thing
+			 (enter-fixnum start)
+			 (enter-fixnum count)
+			 (enter-boolean wait?)
+			 channel)
+		      (raise-exception*
+		         reason 0
+			 thing
+			 (enter-fixnum start)
+			 (enter-fixnum count)
+			 channel))))
+	  (os-lose (lambda (status)
+		     (if read?
+			 (raise-exception os-error 0
+					  thing
+					  (enter-fixnum start)
+					  (enter-fixnum count)
+					  (enter-boolean wait?)
+					  channel
+					  (get-error-string status key))
+			 (raise-exception os-error 0
+					  thing
+					  (enter-fixnum start)
+					  (enter-fixnum count)
+					  channel
+					  (get-error-string status key))))))
       (if (and (if read?
 		   (and (input-channel? channel)
 			(not (immutable? thing)))
@@ -102,20 +126,20 @@
 	  (let ((length (if (vm-string? thing)
 			    (vm-string-length thing)
 			    (code-vector-length thing)))
-		(addr (+ (address-after-header thing) start)))
+		(addr (address+ (address-after-header thing) start)))
 	    (if (< length (+ start count))
 		(lose (enum exception index-out-of-range))
-		(proc channel addr count wait? lose)))
+		(proc channel addr count wait? lose os-lose)))
 	  (lose (enum exception wrong-type-argument))))))
 
 ; FETCH-STRING here avoids a type warning in the C code, but is not really
 ; the right thing.
 
-(define (do-channel-read channel start count wait? lose)
+(define (do-channel-read channel start count wait? lose os-lose)
   (receive (got eof? pending? status)
       (channel-read-block (extract-channel channel) start count wait?)
     (cond ((error? status)
-	   (lose (enum exception os-error)))
+	   (os-lose status))
 	  (eof?
 	   (goto return eof-object))
 	  (pending?
@@ -126,11 +150,11 @@
 
 ; WAIT? is ignored when writing.
 
-(define (do-channel-write channel start count wait? lose)
+(define (do-channel-write channel start count wait? lose os-lose)
   (receive (got pending? status)
       (channel-write-block (extract-channel channel) start count)
     (cond ((error? status)
-	   (lose (enum exception os-error)))
+	   (os-lose status))
 	  (pending?
 	   (disable-interrupts!)  ; keep the result pending for a moment
 	   (lose (enum exception pending-channel-i/o)))
@@ -141,64 +165,176 @@
   (extract-fixnum (channel-os-index channel)))
 
 (let ((do-it (channel-read-or-write #t do-channel-read)))
-  (define-primitive channel-maybe-read
+  (define-consing-primitive channel-maybe-read
     (any-> fixnum-> fixnum-> boolean-> channel->)
+    (lambda (ignore) error-string-size)
     do-it))
   
 (let ((do-it (channel-read-or-write #f do-channel-write)))	   
-  (define-primitive channel-maybe-write
+  (define-consing-primitive channel-maybe-write
     (any-> fixnum-> fixnum-> channel->)
-    (lambda (buffer start count channel)
-      (do-it buffer start count #f channel))))
+    (lambda (ignore) error-string-size)
+    (lambda (buffer start count channel key)
+      (do-it buffer start count #f channel key))))
 
 (define-primitive channel-abort (channel->)
   (lambda (channel)
     (goto return (vm-channel-abort channel))))
 
+; Copying error strings into the heap.
+
+(define max-error-string-length 256)
+
+(define error-string-size (vm-string-size max-error-string-length))
+
+(define (get-error-string status key)
+  (let* ((string (error-string status))
+	 (len (min (string-length string)
+		   max-error-string-length))
+	 (new (vm-make-string len key)))
+    (do ((i 0 (+ i 1)))
+	((= i len))
+      (vm-string-set! new i (string-ref string i)))
+    new))
+
 ;----------------------------------------------------------------
 ; Port instructions.
+;
+; These are only for speed.  If no port was supplied by the user they have
+; to look up the appropriate port in the current dynamic environments.
+; This is a complete hack, also done for speed.  See rts/current-port.scm
+; for the other end.
 
 (define (read-or-peek-char read?)
-  (lambda (port)
-    (let ((i (extract-fixnum (port-index port)))
-	  (l (extract-fixnum (port-limit port)))
-	  (b (port-buffer port)))
-      (cond ((or (vm-eq? (port-locked? port) true)
-		 (= i l))
-	     (raise-exception buffer-full/empty 0 port))
-	    (else
-	     (if read?
-		 (set-port-index! port (enter-fixnum (+ i 1))))
-	     (goto return-char (ascii->char (code-vector-ref b i))))))))
+  (lambda ()
+    (let ((port (if (= (code-byte 0) 0)
+		    *val*
+		    (get-current-port
+		      (enter-fixnum
+		        (enum current-port-marker current-input-port))))))
+      (if (and (port? port)
+	       (port-has-status? port
+				 (enum port-status-options open-for-input)))
+	  (let ((i (extract-fixnum (port-index port)))
+		(l (extract-fixnum (port-limit port)))
+		(b (port-buffer port)))
+	    (cond ((or (vm-eq? (port-locked? port) true)
+		       (= i l))
+		   (raise-exception buffer-full/empty 1 port))
+		  (else
+		   (if read?
+		       (set-port-index! port (enter-fixnum (+ i 1))))
+		   (goto continue-with-value
+			 (enter-char (ascii->char (code-vector-ref b i)))
+			 1))))
+	  (raise-exception wrong-type-argument 1 port)))))
 
 (let ((do-it (read-or-peek-char #t)))
-  (define-primitive read-char (open-input-port->) do-it))
+  (define-primitive read-char () do-it))
 
 (let ((do-it (read-or-peek-char #f)))
-  (define-primitive peek-char (open-input-port->) do-it))
+  (define-primitive peek-char () do-it))
 
-(define-primitive write-char (char-> open-output-port->)
-  (lambda (char port)
-    (let ((i (extract-fixnum (port-index port)))
-	  (b (port-buffer port)))
-      (cond ((or (vm-eq? (port-locked? port) true)
-		 (= i (code-vector-length b)))
-	     (raise-exception buffer-full/empty 0 (enter-char char) port))
-	    (else
-	     (set-port-index! port (enter-fixnum (+ i 1)))
-	     (code-vector-set! (port-buffer port) i (char->ascii char))
-	     (goto return-unspecific 0))))))
+(define-primitive write-char ()
+  (lambda ()
+    (receive (char port)
+	(if (= (code-byte 0) 0)
+	    (values (pop)
+		    *val*)
+	    (values *val*
+		    (get-current-port (enter-fixnum
+				       (enum current-port-marker current-output-port)))))
+      (if (and (vm-char? char)
+	       (port? port)
+	       (port-has-status? port
+				 (enum port-status-options open-for-output)))
+	  (let ((i (extract-fixnum (port-index port)))
+		(b (port-buffer port)))
+	    (cond ((or (vm-eq? (port-locked? port) true)
+		       (= i (code-vector-length b)))
+		   (raise-exception buffer-full/empty 1 char port))
+		  (else
+		   (set-port-index! port (enter-fixnum (+ i 1)))
+		   (code-vector-set! (port-buffer port)
+				     i
+				     (char->ascii (extract-char char)))
+		   (goto continue-with-value
+			 unspecific-value
+			 1))))
+	  (raise-exception wrong-type-argument 1 char port)))))
+	  
+; Do an ASSQ-like walk up the current dynamic environment, looking for
+; MARKER.
 
-; *** Our entry for the obscure comment of the year contest.
-;
-; Pclsring is the term in ITS for the mechanism that makes the operating system
-; appear to be a virtual machine.  The paradigm is that of the BLT instruction
-; on the PDP-10: its arguments are in a set of registers, and if the instruction
-; gets interrupted in the middle, the registers reflect the intermediate state;
-; the PC is set to the BLT instruction itself, and the process can be resumed
-; in the usual way.
-; For more on pclsring see `Pclsring: Keeping Process State Modular' by Alan
-; Bawden (ftp.ai.mit.edu:pub/alan/pclsr.memo).
+(define (get-current-port marker)
+  (let ((thread *current-thread*))
+    (if (and (record? thread)
+	     (< 1 (record-length thread)))
+	(let loop ((env (record-ref thread 1)))
+	  (cond ((not (and (vm-pair? env)
+			   (vm-pair? (vm-car env))))
+		 (if (vm-eq? env null)
+		     (enter-string "null")
+		     (enter-string "not pair")))
+		((vm-eq? marker (vm-car (vm-car env)))
+		 (vm-cdr (vm-car env)))
+		(else
+		 (loop (vm-cdr env)))))
+	(enter-string "bad record"))))
+
+;----------------
+; A poor man's WRITE for use in debugging.
+
+(define-primitive message (any->)
+  (lambda (stuff)
+    (let ((out (current-error-port)))
+      (let loop ((stuff stuff))
+	(if (vm-pair? stuff)
+	    (begin
+	      (message-element (vm-car stuff) out)
+	      (loop (vm-cdr stuff)))))
+      (newline out)))
+  return-unspecific)
+    
+(define (message-element thing out)
+  (cond ((fixnum? thing)
+	 (write-integer (extract-fixnum thing) out))
+	((vm-char? thing)
+	 (write-string "#\\" out)
+	 (write-char (extract-char thing) out))
+	((typed-record? thing)
+	 (write-string "#{" out)
+	 (write-string (extract-string (record-type-name thing)) out)
+	 (write-char #\} out))
+	(else
+	 (write-string (cond ((vm-string? thing)
+			      (extract-string thing))
+			     ((vm-symbol? thing)
+			      (extract-string (vm-symbol->string thing)))
+			     ((vm-boolean? thing)
+			      (if (extract-boolean thing) "#t" "#f"))
+			     ((vm-eq? thing null)
+			      "()")
+			     ((vm-pair? thing)
+			      "(...)")
+			     ((vm-vector? thing)
+			      "#(...)")
+			     ((closure? thing)
+			      "#{procedure}")
+			     (else
+			      "???"))
+		       out))))
+
+(define (typed-record? thing)
+  (and (record? thing)
+       (< 0 (record-length thing))
+       (let ((type (record-ref thing 0)))
+	 (and (record? type)
+	      (< 2 (record-length type))
+	      (vm-symbol? (record-ref type 2))))))
+
+(define (record-type-name record)
+  (vm-symbol->string (record-ref (record-ref record 0) 2)))
 
 (define-primitive copy-bytes! (any-> fixnum-> any-> fixnum-> fixnum->)
   (lambda (from from-index to to-index count)
@@ -209,18 +345,18 @@
 		(<= 0 from-index)
 		(<= 0 to-index)
 		(<= 0 count)
-		(addr<= (addr+ from-index count)
-			(if (vm-string? from)
-			    (vm-string-length from)
-			    (code-vector-length from)))
-		(addr<= (addr+ to-index count)
-			(if (vm-string? to)
-			    (vm-string-length to)
-			    (code-vector-length to))))
-	   (copy-memory! (addr+ (address-after-header from) from-index)
-			 (addr+ (address-after-header to) to-index)
+		(<= (+ from-index count)
+		    (if (vm-string? from)
+			(vm-string-length from)
+			(code-vector-length from)))
+		(<= (+ to-index count)
+		    (if (vm-string? to)
+			(vm-string-length to)
+			(code-vector-length to))))
+	   (copy-memory! (address+ (address-after-header from) from-index)
+			 (address+ (address-after-header to) to-index)
 			 count)
-	   (goto return-unspecific 0))
+	   (goto no-result))
 	  (else
 	   (raise-exception wrong-type-argument 0
 			    from (enter-fixnum from-index)
@@ -235,26 +371,34 @@
 
 ; Bug: finalizers for things in the image are ignored.
 
-(define-primitive write-image (string-> any-> string->)
-  (lambda (filename resume-proc comment-string)
-    (let* ((lose (lambda (reason)
+(define-consing-primitive write-image (string-> any-> string->)
+  (lambda (ignore) error-string-size)
+  (lambda (filename resume-proc comment-string key)
+    (let* ((lose (lambda (reason status)
 		   (raise-exception* reason 0
-				     filename resume-proc comment-string)))
-	   (port-lose (lambda (reason port)
+				     filename resume-proc comment-string
+				     (get-error-string status key))))
+	   (port-lose (lambda (reason status port)
 			(if (error? (close-output-port port))
 			    (error-message "Unable to close image file"))
-			(lose reason))))
+			(lose reason status))))
       (if (not (image-writing-okay?))
-	  (lose (enum exception unimplemented-instruction))
+	  (raise-exception unimplemented-instruction 0
+			   filename resume-proc comment-string)
 	  (receive (port status)
 	      (open-output-file (extract-string filename))
 	    (if (error? status)
-		(lose (enum exception cannot-open-channel))
-		(if (error? (write-string (extract-string comment-string) port))
-		    (port-lose (enum exception os-error) port)
-		    (if (error? (write-image resume-proc port mark-traced-channels-closed!))
-			(port-lose (enum exception os-error) port)
-			(if (error? (close-output-port port))
-			    (lose (enum exception os-error))
-			    (goto return-unspecific 0))))))))))
+		(lose (enum exception cannot-open-channel) status)
+		(let ((status (write-string (extract-string comment-string) port)))
+		  (if (error? status)
+		      (port-lose (enum exception os-error) status port)
+		      (let ((status (write-image resume-proc
+						 port
+						 mark-traced-channels-closed!)))
+			(if (error? status)
+			    (port-lose (enum exception os-error) status port)
+			    (let ((status (close-output-port port)))
+			      (if (error? status)
+				  (lose (enum exception os-error) status)
+				  (goto no-result)))))))))))))
 

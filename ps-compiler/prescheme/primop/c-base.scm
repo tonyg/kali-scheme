@@ -133,7 +133,7 @@
     ; T is the marker for the tail-call version of the procedure
     (indent-to port indent)
     (display "return((long)T" port)
-    (c-called-value proc port)
+    (c-value proc port)
     (display ");" port)))
 
 (define (global-lambda var)
@@ -145,16 +145,25 @@
 	(bug "value of ~S, called using goto, is not a known procedure"
 	       var))))
 
+; C requires that we dereference all but calls to global functions.
+; Calls to literals are macros that must take care of themselves.
+
 (define (generate-c-call call start port indent)
   (let ((vars (lambda-variables (call-arg call 0)))
         (args (call-args call))
         (proc (call-arg call 1)))
-    (cond ((and (global-reference? proc)
-		(memq? 'tail-called (variable-flags (reference-variable proc))))
-	   (call-with-driver-loop call start port indent (car vars)))
-	  (else
+    (if (and (global-reference? proc)
+	     (memq? 'tail-called (variable-flags (reference-variable proc))))
+	(call-with-driver-loop call start port indent (car vars))
+	(let ((deref? (or (and (reference-node? proc)
+			       (variable-binder (reference-variable proc)))
+			  (call-node? proc))))
 	   (c-assign-to-variable (car vars) port indent)
-	   (c-called-value proc port)
+	   (if deref?
+	       (display "(*" port))
+	   (c-value proc port)
+	   (if deref?
+	       (writec port #\)))
 	   (write-value+result-var-list args start (cdr vars) port)))
     (writec port #\;)
     (values)))
@@ -167,7 +176,7 @@
 			    (variable-flags (reference-variable proc)))))
 	   (indent-to port indent)
 	   (display "return " port)
-	   (c-called-value proc port)
+	   (c-value proc port)
 	   (write-value-list-with-extras args start *extra-tail-call-args* port))
 	  (*doing-tail-called-procedure?*
 	   (generate-goto-call call start port indent))

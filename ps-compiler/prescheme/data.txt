@@ -34,3 +34,40 @@ Hacks like
    ... baz is not a bar ...
 
 won't work.
+
+----------------
+
+New plan.  Use functions for pattern matching, with a suitable macro.
+
+(define-data-type list delistify match-list
+  (null? null)
+  (pair?
+   (cons car cdr)
+   (car type car set-car!)
+   (cdr pair cdr set-cdr!)))
+
+Defines null as 0 and pairs as before.
+NULL? and PAIR? are only available at load time.  There is also a
+deconstructor DELISTIFY: [b list, [] -> a , [b, b list] -> a] -> a
+
+(define (map f l)
+  (delistify l
+    (lambda ()
+      null)
+    (lambda (car cdr)
+      (cons (f car) (map f cdr)))))
+
+Or, with syntax,
+
+(define (map f l)
+  (match-list l
+    ((null)
+     null)
+    ((cons car cdr)
+     (cons (f car) (map f cdr)))))
+
+This requires no change at all for the type checker.  Hee Wack!
+
+
+
+

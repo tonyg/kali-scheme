@@ -9,15 +9,28 @@
 (define (run exp)
   (evaluate-and-select exp (environment-for-commands)))
 
-; exit
+; exit-when-done
 
-(define-command-syntax 'exit "[<status>]" "leave Scheme" '(&opt expression))
+(define-command-syntax 'exit-when-done "[<status>]"
+  "leave Scheme after all threads finish"
+  '(&opt expression))
+
+(define (exit-when-done . exp-option)
+  (let ((status (if (null? exp-option)
+                    0
+                    (evaluate (car exp-option) (environment-for-commands)))))
+    (terminate-command-processor! status)))
+
+(define-command-syntax 'exit
+		       "[<status>]"
+		       "leave Scheme now"
+		       '(&opt expression))
 
 (define (exit . exp-option)
   (let ((status (if (null? exp-option)
                     0
                     (evaluate (car exp-option) (environment-for-commands)))))
-    (exit-command-processor (lambda () status))))
+    (scheme-exit-now status)))
 
 ; go
 

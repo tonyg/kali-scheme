@@ -21,7 +21,7 @@
 	      (newline)
 	      (display "Copyright (c) 1994 by Richard Kelsey.")
 	      (newline)
-	      (display "Copyright (c) 1996 by NEC Research Institute.")
+	      (display "Copyright (c) 1997 by NEC Research Institute.")
 	      (newline)
 	      (display "Please report bugs to pre-scheme@martigny.ai.mit.edu.")
 	      (newline)

@@ -1,4 +1,5 @@
 #include <errno.h>
+#include "io.h"
 
 #define PS_READ_CHAR(PORT,RESULT,EOFP,STATUS)		\
 {							\
@@ -38,18 +39,6 @@ RESULT = ps_read_integer(PORT,&EOFP,&STATUS);
     STATUS = 0; }					\
 }
 
-extern FILE *ps_open_input_file(unsigned char *, long *);
-extern FILE *ps_open_output_file(unsigned char *, long *);
-extern long ps_close(FILE *);
-extern char ps_read_char(FILE *, unsigned char *, long *, char);
-extern long ps_read_integer(FILE *, unsigned char *, long *);
-extern long ps_write_char(char, FILE *);
-extern long ps_write_integer(long, FILE *);
-extern long ps_write_string(unsigned char *, FILE *);
-extern long ps_read_block(FILE *, char *, long, unsigned char *, long *);
-extern long ps_write_block(FILE *, char *, long);
-extern unsigned char *ps_error_string(long);
-extern void ps_error(unsigned char *, ...);
 
 /* C shifts may not work if the amount is greater than the machine word size */
 /* Patched by JAR 6/6/93 */

@@ -207,4 +207,4 @@
 
 (define make-string-table  (make-table-maker string=? string-hash))
 (define make-symbol-table  (make-table-maker eq?      symbol-hash))
-(define make-integer-table (make-table-maker =	      (lambda (x) x)))
+(define make-integer-table (make-table-maker =	      (lambda (x) (abs x))))

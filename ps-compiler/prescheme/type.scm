@@ -4,8 +4,6 @@
 (define-record-type base-type
   (name
    uid       ; an integer
-   kind      ; INTEGER, FLOAT, or #f
-   size      ; number of bytes
    )
   ())
 
@@ -23,8 +21,8 @@
 
 (define base-type-table (make-table))
 
-(define (make-base-type name kind size)
-  (let ((type (base-type-maker name (next-base-type-uid) kind size)))
+(define (make-base-type name)
+  (let ((type (base-type-maker name (next-base-type-uid))))
     (table-set! base-type-table name type)
     type))
 
@@ -33,85 +31,27 @@
 	 => identity)
 	(else #f)))
 
-;  0 <= x <= 127  (intersection of int8 and int8u, for constants)
-(define type/int7u        (make-base-type 'int7u   'int   1))
+(define type/integer      (make-base-type 'integer))
+(define type/float        (make-base-type 'float))
 
-(define type/int8         (make-base-type 'int8    'int   1))
-(define type/int8u        (make-base-type 'int8u   'int   1))
-(define type/int32        (make-base-type 'int32   'int   4))
-(define type/float64      (make-base-type 'float64 'float 8))
-
-(define type/null         (make-base-type 'null     #f #f))  ; no value
-(define type/unit         (make-base-type 'unit     #f #f))  ; single value
-(define type/boolean      (make-base-type 'boolean  #f #f))
-(define type/undetermined (make-base-type '?        #f #f))
-(define type/input-port   (make-base-type 'input-port  #f #f))
-(define type/output-port  (make-base-type 'output-port #f #f))
-
-(define type/char type/int8u)
+(define type/null         (make-base-type 'null))  ; no value
+(define type/unit         (make-base-type 'unit))  ; single value
+(define type/boolean      (make-base-type 'boolean))
+(define type/undetermined (make-base-type '?))
+(define type/input-port   (make-base-type 'input-port))
+(define type/output-port  (make-base-type 'output-port))
+(define type/address      (make-base-type 'address))
+(define type/char         (make-base-type 'char))
 
 (define (make-atomic-type name)
-  (base-type-maker name (next-base-type-uid) #f #f))
+  (base-type-maker name (next-base-type-uid)))
 
 (define type/unknown type/undetermined) ; an alias
-
-(define pointer-size 4) ; bytes in a pointer
-
-(define (coercable-type? x)
-  (and (base-type? x)
-       (or (eq? (base-type-kind x) 'int)
-	   (eq? (base-type-kind x) 'float))))
-
-(define lattice-type? coercable-type?)
-
-(define (type>= type1 type2)
-  (let ((type1 (maybe-follow-uvar type1))
-	(type2 (maybe-follow-uvar type2)))
-    (or (eq? type1 type2)
-	(if (base-type? type1)
-	    (and (base-type? type2)
-		 (base-type> type1 type2))
-	    (type-eq? type1 type2)))))
-
-(define (type> type1 type2)
-  (not (type>= type2 type1)))
-
-; This should probably be encoded in some more reasonable way.
-
-(define (base-type> type1 type2)
-  (if (or (not (base-type? type1))
-	  (not (base-type? type2)))
-      #f
-      (case (base-type-name type1)
-	((float64)
-	 (not (eq? (base-type-name type2) 'float64)))
-	((int32)
-	 (and (eq? (base-type-kind type2) 'int)
-	      (> 4 (base-type-size type2))))
-        ((int8 int8u)
-	 (eq? (base-type-name type2) 'int7u))
-	(else
-	 #f))))
-
-(define (base-type>= type1 type2)
-  (not (base-type> type2 type1)))
 
 (define (type-name type)
   (if (base-type? type)
       (base-type-name type)
       (error "type has no name ~S" type)))
-
-; Return the join of two types (which must be EQ? or coercable types).
-
-(define (join-types type1 type2)
-  (cond ((or (not type2)
-	     (eq? type1 type2))
-	 type1)
-	((or (not type1)
-	     (base-type> type1 type2))
-	 type2)
-	(else
-	 type1)))
 
 (define (make-base-type-table)
   (let ((elts (make-vector *next-base-type-uid* #f)))
@@ -192,8 +132,7 @@
 (define (pointer-type-to pointer-type)
   (car (other-type-subtypes pointer-type)))
 
-(define type/string (make-pointer-type type/int8u))
-(define type/byte-pointer (make-pointer-type type/int8u))
+(define type/string (make-pointer-type type/char))
 
 ; Tuple (used for arguments and returning multiple values)
 
@@ -248,23 +187,6 @@
 
 ;--------------------------------------------------
 
-(define (print-relation-list list select)
-  (for-each (lambda (rel)
-	      (let ((dest (maybe-follow-uvar (select rel))))
-		(if (uvar? dest)
-		    (format #t " ~S~S" (uvar-prefix dest) (uvar-id dest))
-		    (format #t " ~S" dest))))
-	    list)
-  (newline))
-
-(define (show-constraints)
-  (for-each (lambda (uvar)
-	      (cond ((not (uvar-binding uvar))
-		     (format #t "~S~S~%" (uvar-prefix uvar) (uvar-id uvar))
-		     (print-relation-list (uvar-sources uvar) relation-source)
-		     (print-relation-list (uvar-sinks uvar) relation-sink))))
-	    *constrained-uvars*))
-		     
 (define (display-type type port)
 
   (define (do-list list)

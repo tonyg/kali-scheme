@@ -18,15 +18,10 @@
     (c-value (call-arg call 1) port)
     (format port ")")))
 
-(define-local-syntax (define-c-int-binop-generator id c-op)
-  `(define-c-generator ,id #t
-     (lambda (call port indent)
-       (simple-c-primop ,c-op call port))))
-
-(define-c-int-binop-generator remainder "%")
-(define-c-int-binop-generator bitwise-and "&")
-(define-c-int-binop-generator bitwise-ior "|")
-(define-c-int-binop-generator bitwise-xor "^")
+(define-c-arith-binop-generator remainder "%")
+(define-c-arith-binop-generator bitwise-and "&")
+(define-c-arith-binop-generator bitwise-ior "|")
+(define-c-arith-binop-generator bitwise-xor "^")
 
 (define-c-generator ashl #t
   (lambda (call port indent)
@@ -85,14 +80,14 @@
   (lambda (call port indent)
     (c-value (call-arg call 0) port)))
     
-(define-c-generator sign-extend #t
-  (lambda (call port indent)
-    (display "((long) " port)
-    (c-value (call-arg call 0) port)
-    (display ")" port)))
-
-(define-c-generator zero-extend #t
-  (lambda (call port indent)
-    (display "((unsigned long) " port)
-    (c-value (call-arg call 0) port)
-    (display ")" port)))
+;(define-c-generator sign-extend #t
+;  (lambda (call port indent)
+;    (display "((long) " port)
+;    (c-value (call-arg call 0) port)
+;    (display ")" port)))
+;
+;(define-c-generator zero-extend #t
+;  (lambda (call port indent)
+;    (display "((unsigned long) " port)
+;    (c-value (call-arg call 0) port)
+;    (display ")" port)))

@@ -77,16 +77,16 @@
      (let* ((location-info (make-table))
 	    (generator (make-location-generator location-info
 						(if *debug-linker?* 10000 0)))
-	    (thunks (compile-structures structs
-					generator
-					package->environment))
+	    (templates (compile-structures structs
+					   generator
+					   package->environment))
 	    (p (make-simple-package structs #f #f))
 	    (r (noting-undefined-variables p
 					   (lambda ()
 					     (set-package-get-location! p generator)
 					     (compile-form (make-resumer) p)))))
        (let ((startup (make-closure 
-		       (make-startup-procedure thunks r)
+		       (make-startup-procedure templates r)
 		       0)))
 	 (if *debug-linker?* (set! *loser* startup))
 	 (write-image-file startup
@@ -99,7 +99,7 @@
 ;
 
 (define (compile-structures structs generator package->env)
-  (let ((thunks '())
+  (let ((templates '())
 	(out (current-output-port)))
     (scan-structures
 	   structs
@@ -108,15 +108,15 @@
 	     #t)
 	   (lambda (stuff p)  ;stuff = pair (file . (node1 node2 ...))
 	     (for-each (lambda (file+forms)
-			 (set! thunks
+			 (set! templates
 			       (cons (compile-scanned-forms (cdr file+forms)
 							    p
 							    (car file+forms)
 							    out
 							    (package->env p))
-				     thunks)))
+				     templates)))
 		       stuff)))
-    (reverse thunks)))
+    (reverse templates)))
 
 ; Locations in new image will have their own sequence of unique id's.
 

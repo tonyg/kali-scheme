@@ -100,7 +100,8 @@
 	type-variables     ; make-arith-op-uvar
 	record-types
 	prescheme ps-memory
-	ps-types external-constants
+	ps-types external-constants external-values
+	locations
 	eval-node)  ; closure?  (to keep them from being made immutable)
   (access variable)   ; variable-name
   (files (primop scm-scheme)
@@ -194,11 +195,12 @@
 	external-values external-constants
 	locations     ; for imported constants
 	forms)        ; for inserting coercions in forms
-  (access eval-node)       ; unspecific?
+  (access eval-node)  ; unspecific?
   (for-syntax (open big-scheme scheme))
   (files inference
 	 infer-early
-	 finalize))
+	 ;finalize
+	 ))
 
 (define-structures ((node-types (export instantiate-type&value
 					make-monomorphic!)))
@@ -277,6 +279,7 @@
 	inference          ; get-variable-type
 	inference-internal ; literal-value-type
 	protocol           ; goto-protocol?
+	i/o		   ; force-output
 	record-types
 	external-values
 	external-constants

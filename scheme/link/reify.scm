@@ -96,7 +96,7 @@
 		    ',(structure-name thing)))
 		(lambda ()
 		  (process-exports thing p-form)
-		  (write-char #\.)
+		  (write-char #\. (current-output-port))
 		  (force-output (current-output-port))))))
 	((null? thing) ''())
 	((pair? thing)

@@ -23,11 +23,7 @@
    call))                             ; result of the literal.  Maybe these
                                       ; should be left out. 
 
-(define int-type
-  (lambda (call)
-    type/int32))
-
-(define-scheme-primop + #f int-type simplify-add)
+(define-scheme-primop + #f type/integer simplify-add)
 
 (define (simplify-subtract call)
   (simplify-args call 0)
@@ -41,7 +37,7 @@
     ((- (+ 'a x) (+ 'b y)) (- (+ '(- a b) x) y)))
    call))
 
-(define-scheme-primop - #f int-type simplify-subtract)
+(define-scheme-primop - #f type/integer simplify-subtract)
 
 ; This should check for multiply by powers of 2 (other constants can be
 ; done later).
@@ -63,8 +59,8 @@
 	   ((* 'a (* 'b x)) (* x '(* a b))))
 	  call))))
 
-(define-scheme-primop * #f int-type simplify-multiply)
-(define-scheme-primop small* #f int-type simplify-multiply)
+(define-scheme-primop *      #f type/integer simplify-multiply)
+(define-scheme-primop small* #f type/integer simplify-multiply)
 
 (define (simplify-quotient call)
   (simplify-args call 0)
@@ -93,8 +89,8 @@
 		((odd? v)
 		 (if (= v 1) i #f)))))))
 
-(define-scheme-primop quotient 'exception int-type simplify-quotient)
-(define-scheme-primop remainder 'exception int-type default-simplifier)
+(define-scheme-primop quotient  exception type/integer simplify-quotient)
+(define-scheme-primop remainder exception type/integer)
 
 (define (simplify-ashl call)
   (simplify-args call 0)
@@ -132,9 +128,9 @@
                                                ; having been constant folded
    call))
 
-(define-scheme-primop ashl #f int-type simplify-ashl)
-(define-scheme-primop ashr #f int-type simplify-ashr)
-(define-scheme-primop lshr #f int-type simplify-lshr)
+(define-scheme-primop ashl #f type/integer simplify-ashl)
+(define-scheme-primop ashr #f type/integer simplify-ashr)
+(define-scheme-primop lshr #f type/integer simplify-lshr)
 
 (define (simplify-bitwise-and call)
   (simplify-args call 0)
@@ -168,10 +164,10 @@
     ((bitwise-not 'a) '(bitwise-not a)))
    call))
 
-(define-scheme-primop bitwise-and #f int-type simplify-bitwise-and)
-(define-scheme-primop bitwise-ior #f int-type simplify-bitwise-ior)
-(define-scheme-primop bitwise-xor #f int-type simplify-bitwise-xor)
-(define-scheme-primop bitwise-not #f int-type simplify-bitwise-not)
+(define-scheme-primop bitwise-and #f type/integer simplify-bitwise-and)
+(define-scheme-primop bitwise-ior #f type/integer simplify-bitwise-ior)
+(define-scheme-primop bitwise-xor #f type/integer simplify-bitwise-xor)
+(define-scheme-primop bitwise-not #f type/integer simplify-bitwise-not)
 
 (define (simplify-= call)
   (simplify-args call 0)
@@ -240,19 +236,15 @@
 	      (breakpoint "ascii->char is applied to a non-integer literal ~S"
 			  value))))))
 
-(define small-int-type
-  (lambda (call)
-    type/int8u))
+(define-scheme-primop char->ascii #f type/integer simplify-char->ascii)
+(define-scheme-primop ascii->char #f type/integer simplify-ascii->char)
 
-(define-scheme-primop char->ascii #f small-int-type simplify-char->ascii)
-(define-scheme-primop ascii->char #f small-int-type simplify-ascii->char)
-
-(define (simplify-sign-extend call)
-  (simplify-args call 0)
-  (let ((value (call-arg call 0)))
-    (cond ((literal-node? value)
-	   (set-literal-type! value type/int32)
-	   (replace call (detach value))))))
-
-(define-scheme-primop sign-extend #f int-type simplify-sign-extend)
-(define-scheme-primop zero-extend #f int-type simplify-sign-extend)
+;(define (simplify-sign-extend call)
+;  (simplify-args call 0)
+;  (let ((value (call-arg call 0)))
+;    (cond ((literal-node? value)
+;           (set-literal-type! value type/integer)
+;           (replace call (detach value))))))
+;
+;(define-scheme-primop sign-extend #f type/integer simplify-sign-extend)
+;(define-scheme-primop zero-extend #f type/integer simplify-sign-extend)

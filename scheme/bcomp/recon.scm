@@ -327,11 +327,14 @@
 (declare-operator-type '(numerator denominator)
                        (proc (rational-type) integer-type))
 
-(declare-operator-type '(+ * - /)
-                       (proc (number-type number-type) number-type))
+(declare-operator-type '(+ *)
+                       (proc (&rest number-type) number-type))
 
-(declare-operator-type '(= <)
-                       (proc (real-type real-type) boolean-type))
+(declare-operator-type '(- /)
+                       (proc (number-type &opt number-type) number-type))
+
+(declare-operator-type '(= < > <= >=)
+                       (proc (real-type real-type &rest real-type) boolean-type))
 
 (declare-operator-type '(make-polar make-rectangular)
                        (proc (real-type real-type) complex-type))
@@ -342,8 +345,10 @@
 (declare-operator-type '(bitwise-not)
                        (proc (exact-integer-type) exact-integer-type))
 
-(declare-operator-type '(bitwise-and bitwise-ior bitwise-xor
-                         arithmetic-shift)
+(declare-operator-type '(bitwise-and bitwise-ior bitwise-xor)
+		       (proc (&rest exact-integer-type) exact-integer-type))
+
+(declare-operator-type '(arithmetic-shift)
                        (proc (exact-integer-type exact-integer-type)
                              exact-integer-type))
 

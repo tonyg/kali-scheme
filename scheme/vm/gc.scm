@@ -10,8 +10,8 @@
 (define (in-oldspace? descriptor)
   (and (stob? descriptor)
        (let ((a (address-after-header descriptor)))
-         (and (addr>= a *oldspace-begin*)
-              (addr< a *oldspace-end*)))))
+         (and (address>= a *oldspace-begin*)
+              (address< a *oldspace-end*)))))
 
 ; The interface to the GC consists of
 ; (BEGIN-COLLECTION)                        ; call first
@@ -27,8 +27,8 @@
 (define *gc-count* 0)
 (define (gc-count) *gc-count*)
 
-(define *saved-hp* 0)
-(define *saved-limit* 0)
+(define *saved-hp*)
+(define *saved-limit*)
 
 (define (begin-collection)
   (swap-spaces)
@@ -36,7 +36,7 @@
   (set! *saved-hp* *hp*)
   (set! *limit* *newspace-end*)
   (set! *hp* *newspace-begin*)
-  (set! *weak-pointer-hp* -1))
+  (set! *weak-pointer-hp* null-address))
 
 (define (swap-spaces)
   (let ((b *newspace-begin*))
@@ -62,14 +62,14 @@
   (set! *limit* *saved-limit*)
   (set! *hp* *saved-hp*)
   (let loop ((addr *newspace-begin*))
-    (if (addr< addr *hp*)
+    (if (address< addr *hp*)
 	(let* ((d (fetch addr))
 	       (h (if (header? d)
 		      d
 		      (let ((h (stob-header d)))
 			(store! addr h)            ; mend heart
 			h))))
-	  (loop (addr1+ (addr+ addr (header-a-units h))))))))
+	  (loop (address1+ (address+ addr (header-a-units h))))))))
 
 ; Complete a GC after all roots have been traced.
 ; Need to trace the procedures in the finalize list.
@@ -91,26 +91,26 @@
   (let loop ((start start))
     (let ((end *hp*))
       (trace-locations! start end)
-      (cond ((addr>= *hp* *limit*)
+      (cond ((address>= *hp* *limit*)
 	     (error "GC error: ran out of space in new heap"))
-	    ((addr< end *hp*)
+	    ((address< end *hp*)
 	     (loop end))))))
 
 (define (trace-stob-contents! stob)
   (let ((start (address-after-header stob))
 	(size (bytes->a-units (header-length-in-bytes (stob-header stob)))))
-    (trace-locations! start (addr+ start size))))
+    (trace-locations! start (address+ start size))))
 
 ; Copy everything pointed to from somewhere between START (inclusive)
 ; and END (exclusive).
 
 (define (trace-locations! start end)
   (let loop ((addr start) (frontier *hp*))
-    (if (addr< addr end)
+    (if (address< addr end)
 	(let ((thing (fetch addr))
-	      (next (addr1+ addr)))
+	      (next (address1+ addr)))
 	  (cond ((b-vector-header? thing)
-		 (loop (addr+ next (header-a-units thing)) frontier))
+		 (loop (address+ next (header-a-units thing)) frontier))
 		((in-oldspace? thing)
 		 (receive (new-thing frontier)
 		     (real-copy-object thing frontier)
@@ -141,14 +141,14 @@
 	   (copy-weak-pointer thing frontier))
 	  (else
 	   (store! frontier h)
-	   (let* ((data-addr (addr+ frontier (cells->a-units stob-overhead)))
+	   (let* ((data-addr (address+ frontier (cells->a-units stob-overhead)))
 		  (new (address->stob-descriptor data-addr)))
 	     (stob-header-set! thing new) ;***Break heart
 	     (copy-memory! (address-after-header thing)
 			   data-addr
 			   (header-length-in-bytes h))
 	     (values new
-		     (addr+ data-addr (header-a-units h))))))))
+		     (address+ data-addr (header-a-units h))))))))
 
 ;----------------------------------------------------------------
 ; Dealing with the list of finalizers.
@@ -216,21 +216,21 @@
 	    i)))))
 
 (define (vm-car pair)
-  (fetch (addr+ (address-after-header pair)
-		(cells->a-units (pair-offset car)))))
+  (fetch (address+ (address-after-header pair)
+		   (cells->a-units (pair-offset car)))))
 
 (define (vm-cdr pair)
-  (fetch (addr+ (address-after-header pair)
-		(cells->a-units (pair-offset cdr)))))
+  (fetch (address+ (address-after-header pair)
+		   (cells->a-units (pair-offset cdr)))))
 
 (define (vm-set-car! pair value)
-  (store! (addr+ (address-after-header pair)
-		 (cells->a-units (pair-offset car)))
+  (store! (address+ (address-after-header pair)
+		    (cells->a-units (pair-offset car)))
           value))
 
 (define (vm-set-cdr! pair value)
-  (store! (addr+ (address-after-header pair)
-		 (cells->a-units (pair-offset cdr)))
+  (store! (address+ (address-after-header pair)
+		    (cells->a-units (pair-offset cdr)))
           value))
 
 ;----------------------------------------------------------------
@@ -240,8 +240,8 @@
 ; scanned after the main GC has finished.  They have their own heap pointer
 ; and heap limit.
 
-(define *weak-pointer-hp* -1)
-(define *weak-pointer-limit* 0)
+(define *weak-pointer-hp*)
+(define *weak-pointer-limit*)
 
 ; header + one slot
 (define weak-pointer-size 2)
@@ -265,14 +265,14 @@
 				1))))  ; don't count the header
 
 (define (copy-weak-pointer weak frontier)
-  (let ((frontier (if (or (= -1 *weak-pointer-hp*)
-			  (>= *weak-pointer-hp* *weak-pointer-limit*))
+  (let ((frontier (if (or (null-address? *weak-pointer-hp*)
+			  (address>= *weak-pointer-hp* *weak-pointer-limit*))
 		      (allocate-more-weak-pointer-space frontier)
 		      frontier)))
     (let ((new (address->stob-descriptor
-		(addr+ *weak-pointer-hp* (cells->a-units stob-overhead)))))
-      (store! (addr1+ *weak-pointer-hp*) (fetch (address-after-header weak)))
-      (set! *weak-pointer-hp* (addr1+ (addr1+ *weak-pointer-hp*)))
+		(address+ *weak-pointer-hp* (cells->a-units stob-overhead)))))
+      (store! (address1+ *weak-pointer-hp*) (fetch (address-after-header weak)))
+      (set! *weak-pointer-hp* (address2+ *weak-pointer-hp*))
       (stob-header-set! weak new) ;***Break heart
       (values new frontier))))
 
@@ -282,11 +282,11 @@
 
 (define (allocate-more-weak-pointer-space frontier)
   (let ((old *weak-pointer-hp*)
-	(new-frontier (+ frontier weak-pointer-alloc-quantum)))
+	(new-frontier (address+ frontier weak-pointer-alloc-quantum)))
     (set! *weak-pointer-hp* frontier)
     (set! *weak-pointer-limit* new-frontier)
     (store! *weak-pointer-hp* weak-alloc-area-header)
-    (store! (addr1+ (addr1+ *weak-pointer-hp*)) old)
+    (store! (address2+ *weak-pointer-hp*) (address->integer old))
     new-frontier))
 
 ; If any weak pointers were found, then get the limits of the most recently
@@ -294,34 +294,35 @@
 ; on the unused portion of the block the most recent block.
 
 (define (clean-weak-pointers)
-  (if (not (= *weak-pointer-hp* -1))
-      (let ((start (addr- *weak-pointer-limit* weak-pointer-alloc-quantum))
+  (if (not (null-address? *weak-pointer-hp*))
+      (let ((start (address- *weak-pointer-limit* weak-pointer-alloc-quantum))
 	    (end *weak-pointer-hp*))
 	(scan-weak-pointer-blocks start end)
-	(if (not (>= end *weak-pointer-limit*))
-	    (let ((unused-portion (addr- *weak-pointer-limit* (addr1+ end))))
+	(if (not (address>= end *weak-pointer-limit*))
+	    (let ((unused-portion (address-difference *weak-pointer-limit*
+						      (address1+ end))))
 	      (store! end (make-header (enum stob code-vector)
 				       (cells->bytes
 					(a-units->cells unused-portion)))))))))
 
 (define (scan-weak-pointer-blocks start end)
   (let loop ((start start) (end end))
-    (let ((next (fetch (addr1+ (addr1+ start)))))
+    (let ((next (integer->address (fetch (address2+ start)))))
       (scan-weak-pointer-block start end)
-      (if (not (= next -1))
-	  (loop (addr- next weak-pointer-alloc-quantum) next)))))
+      (if (not (null-address? next))
+	  (loop (address- next weak-pointer-alloc-quantum) next)))))
 
 ; Go from START to END putting headers on the weak pointers and seeing if
 ; their contents were traced.
 
 (define (scan-weak-pointer-block start end)
-  (do ((scan start (addr1+ (addr1+ scan))))
-      ((>= scan end))
+  (do ((scan start (address2+ scan)))
+      ((address>= scan end))
     (store! scan weak-pointer-header)
-    (let ((value (fetch (addr1+ scan))))
+    (let ((value (fetch (address1+ scan))))
       (if (and (in-oldspace? value)
 	       (stob? value))
-	  (store! (addr1+ scan)
+	  (store! (address1+ scan)
 		  (let ((h (stob-header value)))
 		    (if (stob? h) h false)))))))
 

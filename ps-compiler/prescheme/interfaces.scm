@@ -3,6 +3,7 @@
 (define-interface ps-primop-interface
   (export get-prescheme-primop
           (define-scheme-primop :syntax)
+          (define-polymorphic-scheme-primop :syntax)
           (define-nonsimple-scheme-primop :syntax)
           (define-scheme-cond-primop :syntax)
 
@@ -15,12 +16,13 @@
           (define-c-generator :syntax)))
 
 (define-interface ps-type-interface
-  (export type/int7u
-          type/int8
-          type/int8u
-          type/int32
-          type/float64
+  (export ;type/int7u
+          ;type/int8
+          ;type/int8u
+          type/integer
+          type/float
 	  type/char
+	  type/address
 
           type/null
           type/unit
@@ -30,7 +32,6 @@
           type/output-port
 
           type/unknown
-          type/byte-pointer
           type/string
 
           other-type?
@@ -68,14 +69,14 @@
           make-nonpolymorphic!
 
           type-scheme-free-uvars           ; for error messages
-          type-scheme-lattice-uvars
-          type-scheme-type
+;          type-scheme-lattice-uvars
+;          type-scheme-type
 
           type-eq?
-          type>
-          type>=
+;          type>
+;          type>=
 
-          lattice-type?
+;          lattice-type?
 
 	  expand-type-spec
 
@@ -88,35 +89,21 @@
 
 (define-interface type-variable-interface
   (export make-uvar
-	  make-arith-op-uvar
 	  make-tuple-uvar
           uvar?
           maybe-follow-uvar
-          set-uvar-source!
+          uvar-source set-uvar-source!
 
           reset-type-vars!
 
           uvar-binding set-uvar-binding!
-          uvar-sources
-          uvar-sinks
           uvar-prefix
           uvar-id
-          uvar-arith-op?
 	  uvar-temp set-uvar-temp!
 
           bind-uvar!
 
           unique-id
-
-          make-constrained-type
-
-          relation-source
-          relation-sink
-          relation-site
-          relation-temp set-relation-temp!
-
-          constrained-uvars
-	  uvar-constraint-count
           ))
 
 (define-interface record-type-interface
@@ -134,13 +121,13 @@
   (export infer-definition-type
 	  get-package-variable-type
 	  get-variable-type
-          add-type-coercions
+          ;add-type-coercions
 	  node-type
 	  lambda-node-return-type))
 
 (define-interface inference-internal-interface
   (export unify!
-	  infer-type
+	  infer-type infer-types
           check-arg-type
           literal-value-type
           ))
@@ -150,6 +137,8 @@
           form?
           form-value
           set-form-value!
+	  form-value-type
+	  set-form-value-type!
 	  node-form
           set-form-node!
           set-form-integrate!
@@ -208,7 +197,6 @@
           form-type
           c-assign-to-variable
           write-c-identifier
-          c-called-value
           write-value-list
 	  write-value-list-with-extras
           write-value+result-var-list

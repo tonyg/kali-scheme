@@ -17,6 +17,8 @@
    (aliases   '())  ; variables that are aliases for this one
    (shadowed  '())  ; package variables that should be shadowed here
 
+   value-type       ; value's type
+
    (dependency-index #f) ; index of this form in the data dependent order
 
    lambdas          ; list of all non-cont lambdas in this form
@@ -291,7 +293,15 @@
 
 (define (expand-and-simplify-literal node form)
   (let ((value (literal-value node)))
-    (cond ((atomic? value)
+    (cond ((unspecific? value)
+	   (format #t "~%Warning: variable `~S' has no value and is not SET!~%"
+		   (form-name form))
+	   (set-form-value! form node)
+	   (set-form-lambdas! form '())
+	   (set-form-integrate! form 'no)
+	   (set-form-type! form 'unused)
+           "constant")
+	  ((atomic? value)
 	   (add-known-form-value! form node)
 	   (set-form-value! form node)
 	   (set-form-lambdas! form '())
@@ -620,7 +630,7 @@
 
 (define (computed-goto-tail-exit node protocol cont-var arg-vars)
   (let ((args (map make-reference-node arg-vars)))
-    (let-nodes ((l1 () (unknown-tail-call 1 (* cont-var)
+    (let-nodes ((l1 () (unknown-tail-call 0 (* cont-var)
 					  node
 					  '(protocol #f) . args)))
       l1)))

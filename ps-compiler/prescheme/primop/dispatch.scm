@@ -154,18 +154,16 @@
 
 ; (MAKE-DISPATCH-TABLE <size> <default>)
 
-(define-scheme-primop make-dispatch-table 'allocate default-simplifier)
+(define-scheme-primop make-dispatch-table allocate)
 
 ; ($DEFINE-DISPATCH! <table> <index> <procedure>)
 
-(define-nonsimple-scheme-primop define-dispatch! 'write default-simplifier)
+(define-nonsimple-scheme-primop define-dispatch! write)
 
 ; ($DISPATCH <cont> <table>)
 
-(define-nonsimple-scheme-primop dispatch #f default-simplifier)
+(define-nonsimple-scheme-primop dispatch)
 
 ; (COMPUTED-GOTO <exit0> <exit1> ... <exitN> <dispatch-value>)
 
-(define-nonsimple-scheme-primop computed-goto #f default-simplifier)
-
-
+(define-nonsimple-scheme-primop computed-goto)

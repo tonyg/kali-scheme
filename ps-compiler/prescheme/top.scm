@@ -80,7 +80,7 @@
 	(format #t ": "))
     (display-type (variable-type (form-var form))
 		  (current-output-port))
-    (newline)))
+    (newline (current-output-port))))
 
 ;--------------------------------------------------
 
@@ -168,7 +168,7 @@
 			  (car command))))
 	   (if (not caller)
 	       (format #t "Bad command: no definition for ~S~%"
-		       (car command)))
+		       (cadr command)))
 	   (values #f #f))
 	  ((or (null? refs) (not node) (not (lambda-node? node)))
 	   (if (null? refs)
@@ -251,7 +251,7 @@
 	  (variable-name var) (form-name form) (form-name form))
   (format #t "  assuming the type of argument `~S' of procedure `~S' is `long'.~%"
 	  (variable-name var) (form-name form))
-  (set-variable-type! var type/int32))
+  (set-variable-type! var type/integer))
 
 ;--------------------------------------------------
 

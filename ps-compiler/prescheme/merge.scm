@@ -41,10 +41,14 @@
 ; Note that OTHERS should be merged with FORM.
 
 (define (do-merge form others)
-  (let ((form (form-head form)))
+  (let ((form (form-head form))
+	(secondary (apply append (map form-merged others))))
     (set-form-merged! form (append others
-				   (apply append (map form-merged others))
+				   secondary
 				   (form-merged form)))
+    (for-each (lambda (f)
+		(set-form-head! f form))
+	      secondary)
     (for-each (lambda (f)
 		(set-form-head! f form)
 		(set-form-status! f 'merged)
@@ -160,23 +164,21 @@
 	  (else
 	   (let* ((r (car refs))
 		  (f (node-form (car refs))))
-	     (cond ((or (calls-this-primop? (node-parent r) 'tail-call)
-			(calls-this-primop? (node-parent r) 'unknown-tail-call))
-		    (loop (cdr refs)
-			  clients
-			  (add-to-client-list tail-clients r form f
-					      form-tail-providers
-					      set-form-tail-providers!)
-			  okay?))
-		   (else
-		    (if (eq? 'raise (form-name form))
-			(breakpoint "non-tail call to RAISE"))
-		    (loop (cdr refs)
-			  (add-to-client-list clients r form f
-					      form-providers
-					      set-form-providers!)
-			  tail-clients
-			  (and okay? (called-node? r))))))))))
+ 	     (if (and (called-node? r)
+ 		      (or (calls-this-primop? (node-parent r) 'tail-call)
+ 			  (calls-this-primop? (node-parent r) 'unknown-tail-call)))
+ 		 (loop (cdr refs)
+ 		       clients
+ 		       (add-to-client-list tail-clients r form f
+ 					   form-tail-providers
+ 					   set-form-tail-providers!)
+ 		       okay?)
+ 		 (loop (cdr refs)
+ 		       (add-to-client-list clients r form f
+ 					   form-providers
+ 					   set-form-providers!)
+ 		       tail-clients
+ 		       (and okay? (called-node? r)))))))))
 
 (define (add-to-client-list client-list ref form f getter setter)
   (cond ((assq f client-list)
@@ -280,13 +282,14 @@
   (let ((call (node-parent ref)))
     (if (or (calls-this-primop? call 'tail-call)
 	    (calls-this-primop? call 'unknown-tail-call))
-	(let ((type (arrow-type-result (reference-type (call-arg call 1)))))
+	(let ((type (arrow-type-result (node-type (call-arg call 1)))))
 	  (move (call-arg call 0)
 		(lambda (cont)
 		  (let-nodes ((new-cont ((v type)) (return 0 cont (* v))))
 		    new-cont)))
 	  (set-call-exits! call 1)
-	  (set-call-primop! call (get-primop (enum primop call)))))))
-
-  
+	  (set-call-primop! call
+			    (get-primop (if (calls-this-primop? call 'tail-call)
+					    (enum primop call)
+					    (enum primop unknown-call))))))))
   

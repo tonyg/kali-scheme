@@ -61,4 +61,6 @@
 		      (if (null? returner-option)
 			  yow
 			  `(goto ,(car returner-option) ,yow)))
-		   (raise-exception wrong-type-argument 0 . ,places)))))))))
+		   (raise-exception wrong-type-argument
+				    0
+				    . ,places)))))))))

@@ -1,6 +1,8 @@
 ; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
 ; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
 
+; This file is no longer used.
+
 ; Queues implemented as doubly linked lists (because the thread package needs
 ; to delete queue entries quickly).
 

@@ -118,25 +118,13 @@
 (define (simplify-unspecific call)
   (replace call (make-undefined-literal)))
 
-(define-scheme-primop unspecific #f
-  (lambda (call) type/null)
-  simplify-unspecific)
+(define-scheme-primop unspecific #f type/null simplify-unspecific)
 
-(define-scheme-primop uninitialized-value #f
-  (lambda () type/null)
-  default-simplifier)
+(define-scheme-primop uninitialized-value type/null)
+(define-scheme-primop null-pointer?       type/boolean)
+(define-scheme-primop null-pointer        type/boolean) ; type can't be right
 
-(define-scheme-primop null-pointer? #f
-  (lambda (call) type/boolean)
-  default-simplifier)
-
-(define-scheme-primop null-pointer #f
-  (lambda (call) type/boolean)
-  default-simplifier)
-
-(define-scheme-primop eq? #f
-  (lambda (call) type/boolean)
-  default-simplifier) ; should have a simplifier
+(define-scheme-primop eq? type/boolean)  ; should have a simplifier
 
 ;(define (exp->type exp)
 ;  (if (quote-exp? exp)

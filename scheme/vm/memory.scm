@@ -48,20 +48,11 @@
 (define (bytes->a-units byte-count)
   (cells->a-units (bytes->cells byte-count)))
 
-; The following operations work on addresses (which just happen to be
-; implemented as fixnums).
+(define (address1+ x)
+  (address+ x addressing-units-per-cell))
 
-(define addr+ +)
-(define addr- -)             ; subtracting a constant
-(define addr-difference -)   ; subtracting another pointer
-(define addr=  = )
-(define addr<  < )
-(define addr<= <=)
-(define addr>  > )
-(define addr>= >=)
-
-(define (addr1+ x)
-  (addr+ x addressing-units-per-cell))
+(define (address2+ x)
+  (address1+ (address1+ x)))
 
 ; Memory access
 
@@ -74,11 +65,11 @@
 
 ; Size of memory in cells.
 (define (memory-size)
-  (a-units->cells (addr-difference *memory-end* *memory-begin*)))
+  (a-units->cells (address-difference *memory-end* *memory-begin*)))
 
 (define (create-memory size initial-value)   ;size in cells
   (let ((size (cells->a-units size)))
-    (cond ((not (= size (addr-difference *memory-end* *memory-begin*)))
+    (cond ((not (= size (address-difference *memory-end* *memory-begin*)))
 	   (if (not (= *memory-end* 0))
 	       (deallocate-memory *memory*))
            (set! *memory* (allocate-memory size))

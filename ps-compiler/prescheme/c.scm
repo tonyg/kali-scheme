@@ -14,15 +14,7 @@
     (write-c-header header out)
     (write-function-prototypes forms out)
     (write-global-arg-variable-declarations forms out)
-    (write-c-decls
-     (filter-map (lambda (f)
-                   (if (or (eq? (form-type f) 'stob)
-			   (eq? (form-type f) 'initialize)
-			   (eq? (form-type f) 'alias))
-                       (form-var f)
-                       '#f))
-                 forms)
-     out)
+    (write-global-variable-declarations forms out)
     (newline out)
     (for-each (lambda (f)
 		(case (form-type f)
@@ -56,6 +48,7 @@
 			(write-initialize (form-var f) (form-value f) out))
 		       ((stob)
 			(write-stob (form-var f)
+				    (form-value-type f)
 				    (lambda-body (form-value f))
 				    out))))
 		   forms)
@@ -124,11 +117,6 @@
   (write-c-identifier initname out)
   (format out "(void)~%{"))
 
-; Write declarations for VARS
-
-(define (write-c-decls vars port)
-  (write-variable-declarations vars port '0))
-
 ; Write the end of the initialization code
 
 (define (write-c-main-end out)
@@ -144,10 +132,8 @@
 	      (else
 	       (error "unknown kind of initial value ~S" value)))
       (cond ((not (unspecific? value))
-	     (newline out)
-	     (c-variable var out)
-	     (format out " = ")
-	     (if (not (type>= wants has))
+	     (c-assign-to-variable var out 0)
+	     (if (not (type-eq? wants has))
 		 (write-c-coercion wants out))
 	     (cond ((input-port? value)
 		    (display "0" out))
@@ -159,13 +145,10 @@
 		    (c-literal-value value has out)))
 	     (writec out '#\;))))))
 
-(define (write-stob var call out)
+(define (write-stob var type call out)
   (let ((value (literal-value (call-arg call 0)))
-	(type (literal-type (call-arg call 0)))
 	(wants (final-variable-type var)))
-    (newline out)
-    (c-variable (variable-name var) out)
-    (format out " = ")
+    (c-assign-to-variable var out 0)
     (cond ((vector? value)
 	   (if (not (type-eq? type wants))
 	       (write-c-coercion wants out))
@@ -182,7 +165,7 @@
 	       (newline out)
 	       (c-variable var out)
 	       (format out "[~D] = " i)
-	       (if (not (type>= (pointer-type-to type) has))
+	       (if (not (type-eq? (pointer-type-to type) has))
 		   (write-c-coercion (pointer-type-to type) out))
 	       (c-value elt out)
 	       (write-char #\; out))))
@@ -193,9 +176,10 @@
 ; Writing out a procedure.
 
 (define (proc->c name form rename-vars port maybe-merged-count)
-  (let ((top     (form-value form))
-	(merged  (form-merged form))
-	(tail?   (form-tail-called? form))
+  (let ((top       (form-value form))
+	(merged    (form-merged form))
+	(tail?     (form-tail-called? form))
+	(exported? (form-exported? form))
 	(lambda-kids lambda-block))        ; filled in by the hoist code
     (let ((lambdas (filter (lambda (l)
 			     (not (proc-lambda? l)))
@@ -203,7 +187,7 @@
       (if maybe-merged-count
 	  (merged-proc->c name top lambdas merged maybe-merged-count port tail?)
 	  (real-proc->c name (form-var form) top lambdas
-			merged rename-vars port tail?))
+			merged rename-vars port tail? exported?))
       (values))))
 
 (define (write-merged-form form port)
@@ -221,7 +205,7 @@
 ; 3. write out the body
 ; 4. write out all of the label lambdas
 
-(define (real-proc->c id var top lambdas merged rename-vars port tail?)
+(define (real-proc->c id var top lambdas merged rename-vars port tail? exported?)
   (let ((vars (cdr (lambda-variables top)))
 	(return-type (final-variable-type (car (lambda-variables top))))
 	(all-lambdas (append lambdas (gather-merged-lambdas merged)))
@@ -237,7 +221,7 @@
 		((= i 0)
 		 args))))
     (set! *jumps-to-do* '())
-    (write-procedure-header id return-type vars port tail?)
+    (write-procedure-header id return-type vars port tail? exported?)
     (write-char '#\{ port)
     (newline port)
     (for-each (lambda (v)
@@ -246,25 +230,29 @@
     (write-arg-variable-declarations all-lambdas merged port)      
     (write-rename-variable-declarations rename-vars port)
     (write-merged-declarations merged port)
-    (declare-local-vars top port)
-    (for-each (lambda (node)
-		(declare-local-vars node port))
-	      all-lambdas)
+    (fixup-nasty-c-primops! (lambda-body top))
     (for-each (lambda (form)
 		(write-merged-decls form port))
 	      merged)
-    (if tail? 
-	(write-global-argument-initializers (cdr (lambda-variables top))
-					    port 2))
-    (format port "~% {")
     (clear-lambda-generated?-flags lambdas)
-    (write-c-block (lambda-body top) port 2)
-    (write-jump-lambdas port 0)
-    (for-each (lambda (f)
-		(write-merged-form f port))
-	      (reverse merged))  ; makes for more readable output
-    (write-char '#\} port)
-    (newline port)
+    (set! *local-vars* '())
+    (let ((body (call-with-string-output-port
+		 (lambda (temp-port)
+		   (let ((temp-port (make-tracking-output-port temp-port)))
+		     (write-c-block (lambda-body top) temp-port 2)
+		     (write-jump-lambdas temp-port 0)
+		     (for-each (lambda (f)
+				 (write-merged-form f temp-port))
+			       (reverse merged))  ; makes for more readable output
+		     (newline temp-port)
+		     (force-output temp-port))))))
+      (declare-local-variables port)
+      (if tail? 
+	  (write-global-argument-initializers (cdr (lambda-variables top))
+					      port 2))
+      (format port "~% {")
+      (display body port)
+      (write-char '#\} port))
     (for-each (lambda (v)
 		(set-variable-flags! v (delq! 'shadowed (variable-flags v))))
 	      rename-vars)
@@ -367,11 +355,13 @@
 	(tuple-type-types type)
 	(list type))))
 
-(define (write-procedure-header id return-type vars port tail?)
+(define (write-procedure-header id return-type vars port tail? exported?)
   (newline port)
+  (if (not exported?)
+      (display "static " port))
   (receive (first rest)
       (parse-return-type return-type)
-    (display-c-type (if tail? type/int32 first)
+    (display-c-type (if tail? type/integer first)
 		    (lambda (port)
 		      (if tail? (write-char #\T port))
 		      (display id port))
@@ -401,7 +391,7 @@
 				  (lambda (port)
 				    (if (pair? var)
 					(format port "TT~D" (car var))
-					(c-called-variable var port)))
+					(c-variable var port)))
 				  port))))
     (cond ((null? vars)
 	   (values))

@@ -209,4 +209,5 @@
   (or (number? x)
       (symbol? x)
       (external-constant? x)
+      (external-value? x)
       (boolean? x)))

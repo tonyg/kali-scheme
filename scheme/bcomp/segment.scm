@@ -20,7 +20,8 @@
 				     pc-in-parent)))
     (let-fluid $debug-data debug-data
       (lambda ()
-	(let ((maps (emit-with-environment-maps! astate segment)))
+	(let* ((maps (emit-with-environment-maps! astate segment))
+	       (cv (check-stack-use cv)))
 	  (set-debug-data-env-maps! debug-data maps)
 	  (make-immutable! cv)
 	  (segment-data->template cv
@@ -34,8 +35,30 @@
     (do ((lits literals (cdr lits))
 	 (i template-overhead (+ i 1)))
 	((null? lits) template)
-      (template-set! template i (car lits)))))
+      (template-set! template i (car lits)))
+    template))
 
+; If CV needs more than the default allotment of stack space replace its
+; protocol with one that checks that the needed space is available.  The
+; original protocol is preserved at the end of the new code vector (to
+; preserve the debugging indicies into the original).
+
+(define (check-stack-use cv)
+  (let ((uses (maximum-stack-use cv)))
+    (cond ((<= uses default-stack-space)
+	   cv)
+	  ((<= uses available-stack-space)
+	   (let* ((length (code-vector-length cv))
+		  (new (make-code-vector (+ length 3) 0)))
+	     (do ((i 0 (+ i 1)))
+		 ((= i length))
+	       (code-vector-set! new i (code-vector-ref cv i)))
+	     (code-vector-set! new length (code-vector-ref cv 1))
+	     (code-vector-set! new 1 big-stack-protocol)
+	     (code-vector-set2! new (+ length 1) uses)
+	     new))
+	  (else
+	   (error "VM limit exceeded: procedure requires too much stack space")))))
 
 ; "astate" is short for "assembly state"
 
@@ -72,8 +95,8 @@
 
 (define (emit-literal! a thing)
   (let ((index (literal->index a thing)))
-    (emit-byte! a (quotient index byte-limit))
-    (emit-byte! a (remainder index byte-limit))))
+    (emit-byte! a (high-byte index))
+    (emit-byte! a (low-byte index))))
 
 (define (emit-segment! astate segment)
   ((segment-emitter segment) astate))
@@ -123,8 +146,8 @@
 
 ; Literals are obtained from the template.
 
-(define (instruction-with-literal opcode thing)
-  (make-segment 3
+(define (instruction-with-literal opcode thing . operands)
+  (make-segment (+ 3 (length operands))
 		(lambda (astate)
 		  (let ((index (literal->index astate thing)))
 		    (if (and (= opcode (enum op literal))
@@ -135,8 +158,11 @@
 			  (emit-byte! astate 0))
 			(begin
 			  (emit-byte! astate opcode)
-			  (emit-byte! astate (quotient index byte-limit))
-			  (emit-byte! astate (remainder index byte-limit))))))))
+			  (emit-byte! astate (high-byte index))
+			  (emit-byte! astate (low-byte index))))
+		    (for-each (lambda (operand)
+				(emit-byte! astate operand))
+			      operands)))))
 
 ; So are locations.
 
@@ -162,9 +188,12 @@
 						    (astate-pc astate)
 						    (fluid $debug-data))))))
 
-; Labels.  Each label maintains a list of pairs (instr . origin).
+; Labels.  Each label maintains a list of pairs (location . origin).
 ; Instr is the index of the first of two bytes that will hold the jump
 ; target offset, and the offset stored will be (- jump-target origin).
+;
+; The car of a forward label is #F, the car of a backward label is the
+; label's PC.
 
 (define (make-label) (list #f))
 
@@ -172,13 +201,48 @@
   (let ((segment (apply instruction opcode 0 0 rest)))
     (make-segment (segment-size segment)
 		  (lambda (astate)
-		    (let ((instr (+ (astate-pc astate) 1)))
+		    (let* ((origin (astate-pc astate))
+			   (location (+ origin 1)))
 		      (emit-segment! astate segment)
 		      (if (car label)
-			  (warn "backward jumps not supported")
+			  (insert-label! (astate-code-vector astate)
+					 location
+					 (- (car label) origin))
 			  (set-cdr! label
-				    (cons (cons instr (astate-pc astate))
+				    (cons (cons location origin)
 					  (cdr label)))))))))
+
+; computed-goto
+; # of labels
+; label0
+; label1
+; ...
+
+(define computed-goto-label-size 2)
+
+(define (computed-goto-instruction labels)
+  (let* ((count (length labels))
+	 (segment (instruction (enum op computed-goto) count)))
+    (make-segment (+ (segment-size segment)
+		     (* count computed-goto-label-size))
+		  (lambda (astate)
+		    (let ((base-address (astate-pc astate)))
+		      (emit-segment! astate segment)
+		      (set-astate-pc! astate
+				      (+ (astate-pc astate)
+					 (* count computed-goto-label-size)))
+		      (do ((location (+ base-address 2)
+				     (+ location computed-goto-label-size))
+			   (labels labels (cdr labels)))
+			  ((null? labels))
+			(let ((label (car labels)))
+			  (if (car label)
+			      (warn "backward jumps not supported")
+			      (set-cdr! label
+					(cons (cons location base-address)
+					      (cdr label)))))))))))
+
+; LABEL is the label for SEGMENT.  The current PC is used as the value of LABEL.
 
 (define (attach-label label segment)
   (make-segment
@@ -187,22 +251,27 @@
        (let ((pc (astate-pc astate))
 	     (cv (astate-code-vector astate)))
 	 (for-each (lambda (instr+origin)
-		     (let ((instr (car instr+origin))
-			   (origin (cdr instr+origin)))
-		       (let ((offset (- pc origin)))
-			 (code-vector-set! cv instr
-					   (quotient offset byte-limit))
-			 (code-vector-set! cv (+ instr 1)
-					   (remainder offset byte-limit)))))
+		     (insert-label! cv
+				    (car instr+origin)
+				    (- pc (cdr instr+origin))))
 		   (cdr label))
 	 (set-car! label pc)
 	 (emit-segment! astate segment)))))
 
-; byte-limit is larger than the largest value that will fit in one opcode
-; byte.
+(define (insert-label! cv location offset)
+  (code-vector-set2! cv location offset))
 
-(define byte-limit (expt 2 bits-used-per-byte))
+(define (code-vector-set2! cv i value)
+  (code-vector-set! cv i       (high-byte value))
+  (code-vector-set! cv (+ i 1) (low-byte  value)))
+
 (define two-byte-limit (expt 2 (* 2 bits-used-per-byte)))
+
+(define (high-byte n)
+  (quotient n byte-limit))
+
+(define (low-byte n)
+  (remainder n byte-limit))
 
 ; Special segments for maintaining debugging information.  Not
 ; essential for proper functioning of compiler.

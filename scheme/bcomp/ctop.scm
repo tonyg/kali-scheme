@@ -79,20 +79,22 @@
 		   (package->environment p)
 		   (car env-option)))))
     (segment->template
-     (if (null? scanned-forms)
-	 (deliver-value (instruction (enum op unspecific))
-			(return-cont #f))
-	 (let recur ((scanned-forms scanned-forms))
-	   (if (null? (cdr scanned-forms))
-	       (compile-scanned-form (car scanned-forms) cenv
-				     (return-cont #f) noisy?)
-	       (careful-sequentially 
+     (sequentially
+      (instruction (enum op protocol) 0) ; no arguments passed
+      (if (null? scanned-forms)
+	  (deliver-value (instruction (enum op unspecific))
+			 (return-cont #f))
+	  (let recur ((scanned-forms scanned-forms))
+	    (if (null? (cdr scanned-forms))
 		(compile-scanned-form (car scanned-forms) cenv
-				      an-ignore-values-cont noisy?)
-		;; Cf. compile-begin
-		(recur (cdr scanned-forms))
-		0
-		(return-cont #f)))))
+				      (return-cont #f) noisy?)
+		(careful-sequentially 
+		 (compile-scanned-form (car scanned-forms) cenv
+				       an-ignore-values-cont noisy?)
+		 ;; Cf. compile-begin
+		 (recur (cdr scanned-forms))
+		 0
+		 (return-cont #f))))))
      filename
      #f					;pc-in-segment = #f
      (- 0 (package-uid p)))))
@@ -101,11 +103,7 @@
 
 (define (compile-scanned-form node cenv cont noisy?)
   (cond ((define-node? node)
-	 (let ((segment (compile-definition node cenv cont noisy?)))
-	   ;(if noisy?   ;; dots don't come out right with EXPAND's reordering
-	   ;    (begin (write-char #\. noisy?)
-	   ;      (force-output noisy?)))
-	   segment))
+	 (compile-definition node cenv cont noisy?))
 	((define-syntax-node? node)
 	 (deliver-value (instruction (enum op unspecific)) cont))
 	(else
@@ -242,31 +240,29 @@
 	((structure? cenv) (structure-package cenv))))
 
 ; --------------------
-; Make a startup procedure from a list of initialization thunks.  This
+; Make a startup procedure from a list of initialization templates.  This
 ; is only used by the static linker.
 
 (define (make-startup-procedure inits resumer)
   (let ((nargs 4))
     (segment->template
+     (sequentially
+      (instruction (enum op protocol) nargs)
       (reduce (lambda (init seg)
 		(sequentially
 		 (maybe-push-continuation
-		  (sequentially
-		   (instruction-with-literal (enum op closure) init)
-		   (instruction (enum op call) 0))
-		  nargs
-		  an-ignore-values-cont)
+		   (instruction-with-literal (enum op call-template) init 0)
+		   nargs
+		   an-ignore-values-cont)
 		 seg))
 	      (sequentially
 	       (maybe-push-continuation
-		  (sequentially
-		   (instruction-with-literal (enum op closure) resumer)
-		   (instruction (enum op call) 0))
-		  nargs
-		  (fall-through-cont #f #f))
+		 (instruction-with-literal (enum op call-template) resumer 0)
+		 nargs
+		 (fall-through-cont #f #f))
 	       ;; was (compile resumer p nargs (fall-through-cont))
 	       (instruction (enum op call) nargs))
-	      inits)
+	      inits))
       #f #f #f)))
 
 (define an-ignore-values-cont (ignore-values-cont #f #f))

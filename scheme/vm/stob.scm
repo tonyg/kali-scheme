@@ -9,7 +9,7 @@
 (define (make-stob type len key)
   (let ((addr (allocate-space type (+ len (cells->bytes stob-overhead)) key)))
     (store! addr (make-header type len))
-    (address->stob-descriptor (addr+ addr (cells->bytes stob-overhead)))))
+    (address->stob-descriptor (address+ addr (cells->bytes stob-overhead)))))
 
 (define (make-d-vector type len key)
   (make-stob type (cells->bytes len) key))
@@ -23,7 +23,7 @@
 			       (+ (header-length-in-bytes header)
 				  (cells->bytes stob-overhead))
 			       key))
-	 (data-addr (addr+ addr (cells->bytes stob-overhead))))
+	 (data-addr (address+ addr (cells->bytes stob-overhead))))
     (store! addr header)
     (copy-memory! contents data-addr (header-length-in-bytes header))
     (address->stob-descriptor data-addr)))
@@ -59,17 +59,17 @@
 
 (define (d-vector-ref x index)
   (assert (valid-index? index (d-vector-length x)))
-  (fetch (addr+ (address-after-header x) (cells->a-units index))))
+  (fetch (address+ (address-after-header x) (cells->a-units index))))
 
 (define (d-vector-set! x index value)
   (assert (valid-index? index (d-vector-length x)))
-  (let ((addr (addr+ (address-after-header x) (cells->a-units index))))
+  (let ((addr (address+ (address-after-header x) (cells->a-units index))))
     (write-barrier addr value)
     (store! addr value)))
 
 (define (d-vector-init! x index value)
   (assert (valid-index? index (d-vector-length x)))
-  (store! (addr+ (address-after-header x) (cells->a-units index))
+  (store! (address+ (address-after-header x) (cells->a-units index))
           value))
 
 ; B-vector = vector of bytes.
@@ -85,11 +85,11 @@
 
 (define (b-vector-ref b-vector index)
   (assert (valid-index? index (b-vector-length b-vector)))
-  (fetch-byte (addr+ (address-after-header b-vector) index)))
+  (fetch-byte (address+ (address-after-header b-vector) index)))
 
 (define (b-vector-set! b-vector index value)
   (assert (valid-index? index (b-vector-length b-vector)))
-  (store-byte! (addr+ (address-after-header b-vector) index) value))
+  (store-byte! (address+ (address-after-header b-vector) index) value))
 
 ; Various utilities
 

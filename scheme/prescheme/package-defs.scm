@@ -1,3 +1,5 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1997 by NEC Research Institute, Inc.    See file COPYING.
 
 (define-structures ((prescheme prescheme-interface)
 		    (ps-memory ps-memory-interface)

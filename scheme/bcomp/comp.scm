@@ -85,21 +85,27 @@
   (lambda (node cenv depth cont)
     (let* ((binding (name-node-binding node cenv))
 	   (name (node-form node)))
-      (deliver-value (if (and (binding? binding)
-			      (pair? (binding-place binding)))
-			 (let* ((level+over (binding-place binding))
-				(back (- (environment-level cenv)
-					 (car level+over)))
-				(over (cdr level+over)))
-			   (case back
-			     ((0) (instruction (enum op local0) over)) ;+++
-			     ((1) (instruction (enum op local1) over)) ;+++
-			     ((2) (instruction (enum op local2) over)) ;+++
-			     (else (instruction (enum op local) back over))))
-			 (instruction-with-location
-			        (enum op global)
-				(get-location binding cenv name value-type)))
-		     cont))))
+      (deliver-value
+         (if (and (binding? binding)
+		  (pair? (binding-place binding)))
+	     (let* ((level+over (binding-place binding))
+		    (back (- (environment-level cenv)
+			     (car level+over)))
+		    (over (cdr level+over)))
+	       (if (>= over byte-limit)
+		   (instruction (enum op big-local)
+				back
+				(high-byte over)
+				(low-byte over))
+		   (case back
+		     ((0) (instruction (enum op local0) over)) ;+++
+		     ((1) (instruction (enum op local1) over)) ;+++
+		     ((2) (instruction (enum op local2) over)) ;+++
+		     (else (instruction (enum op local) back over)))))
+	     (instruction-with-location
+	      (enum op global)
+	      (get-location binding cenv name value-type)))
+	 cont))))
 
 ; Assignment
 
@@ -117,7 +123,8 @@
 	    (let ((level+over (binding-place binding)))
 	      (instruction (enum op set-local!)
 			   (- (environment-level cenv) (car level+over))
-			   (cdr level+over)))
+			   (high-byte (cdr level+over))
+			   (low-byte (cdr level+over))))
 	    (instruction-with-location (enum op set-global!)
 	      (get-location binding cenv name usual-variable-type)))
 	cont)))))
@@ -143,7 +150,6 @@
 		     (compile (cadddr exp) cenv depth cont))
        (attach-label join-label
 		     empty-segment)))))
-
 
 (define-compilator 'begin syntax-type
   (lambda (node cenv depth cont)
@@ -194,14 +200,23 @@
   (let* ((proc-exp (node-form proc-node))
 	 (formals (cadr proc-exp))
 	 (body (cddr proc-exp)))
-    (if (null? formals)
-	(compile-body body cenv depth cont) ;+++
-	(maybe-push-continuation
-	 (sequentially 
-	  (push-all-with-names args formals cenv 0)
-	  (compile-lambda-code formals body cenv (cont-name cont)))
-	 depth
-	 cont))))
+    (cond ((not (= (length formals)
+		   (length args)))
+	   (generate-trap cont
+			  "wrong number of arguments"
+			  (cons (schemify proc-node cenv)
+				(map (lambda (arg)
+				       (schemify arg cenv))
+				     args))))
+	  ((null? formals)
+	   (compile-body body cenv depth cont)) ;+++
+	  (else
+	   (maybe-push-continuation
+	    (sequentially 
+	     (push-all-with-names args formals cenv 0)
+	     (compile-lambda-code formals body cenv (cont-name cont)))
+	    depth
+	    cont)))))
 
 ; Compile a call to a computed procedure.
 
@@ -212,16 +227,26 @@
 				       cenv
 				       (length (cdr exp))
 				       (fall-through-cont node 0))
-			      (instruction (enum op call) (length (cdr exp))))))
+			      (let ((nargs (length (cdr exp))))
+				(if (> nargs maximum-stack-args)
+				    (instruction (enum op big-call)
+						 (high-byte nargs)
+						 (low-byte nargs))
+				    (instruction (enum op call) nargs))))))
       (maybe-push-continuation call depth cont))))
 
 (define (maybe-push-continuation code depth cont)
   (if (return-cont? cont) 
       code
       (let ((label (make-label)))
-	(sequentially (instruction-using-label (enum op make-cont)
-					       label
-					       depth)
+	(sequentially (if (>= depth byte-limit)
+			  (instruction-using-label (enum op make-big-cont)
+						   label
+						   (high-byte depth)
+						   (low-byte depth))
+			  (instruction-using-label (enum op make-cont)
+						   label
+						   depth))
 		      (note-source-code (cont-source-info cont)
 					code)
 		      (attach-label label
@@ -269,14 +294,23 @@
 
 (define (compile-lambda exp cenv body-name)
   (let* ((formals (cadr exp))
-	 (nargs (number-of-required-args formals)))
+	 (nargs (number-of-required-args formals))
+	 (fast-protocol? (and (<= nargs maximum-stack-args)
+			      (not (n-ary? formals)))))
     (sequentially
-     ;; Check number of arguments
-     (if (n-ary? formals)
-	 (if (pair? formals)
-	     (instruction (enum op check-nargs>=) nargs)
-	     empty-segment)		;+++ (lambda x ...) needs no check
-	 (instruction (enum op check-nargs=) nargs))
+     ;; Insert protocol
+     (cond (fast-protocol?
+	    (instruction (enum op protocol) nargs))
+	   ((<= nargs available-stack-space)
+	    (instruction (enum op protocol)
+			 (if (n-ary? formals)
+			     two-byte-nargs+list-protocol
+			     two-byte-nargs-protocol)
+			 (high-byte nargs)
+			 (low-byte nargs)))
+	   (else
+	    (error "compiler bug: too many formals"
+		   (schemify exp))))
      (compile-lambda-code formals (cddr exp) cenv body-name))))
 
 ; name isn't the name of the procedure, it's the name to be given to
@@ -290,13 +324,13 @@
 		    (return-cont name))
       ;; (if (node-ref node 'no-inferior-lambdas) ...)
       (sequentially
-       (let ((nargs (number-of-required-args formals)))
-	 (if (n-ary? formals)
-	     (sequentially
-	      (instruction (enum op make-rest-list) nargs)
-	      (instruction (enum op push))
-	      (instruction (enum op make-env) (+ nargs 1)))
-	     (instruction (enum op make-env) nargs)))
+       (let* ((nargs (number-of-required-args formals))
+	      (nargs (if (n-ary? formals)
+			 (+ nargs 1)
+			 nargs)))
+	 (instruction (enum op make-env)
+		      (high-byte nargs)
+		      (low-byte nargs)))
        (let* ((vars (normalize-formals formals))
 	      (cenv (bind-vars (reverse vars) cenv)))
 	 (note-environment
@@ -414,14 +448,24 @@
 ;     can give that lambda that name.
 ;   (i . node) - the value being computed is the i'th subexpression of the node.
 
+; Need to add:
+; continuation-stack-size
+; maximum-stack-cell
+; Doing a push requires checking the current stack size against the maximum
+; stack size.
+; Or, just have a max stack depth cell and leave it up to its creator to check
+; it against the last one.
+; Ops that need to check are those that push: op/push, make-continuation,
+; make-environment, etc.  Check in the VM.  Doesn't look too bad.
+
 (define (make-cont seg source-info) (cons seg source-info))
 (define cont-segment car)
 (define cont-source-info cdr)
 
-; Eventually we may be able to optimize jumps to jumps.  Can't yet.
-;(define (make-jump-cont jump cont)
+; We could probably be able to optimize jumps to jumps.
+;(define (make-jump-cont label cont)
 ;  (if (fall-through-cont? cont)
-;      (make-cont jump (cont-name cont))
+;      (make-cont label (cont-name cont))
 ;      cont))
 
 (define return-cont-segment (instruction (enum op return)))
@@ -432,7 +476,7 @@
 (define (return-cont? cont)
   (eq? (cont-segment cont) return-cont-segment))
 
-; Fall through into next instruction
+; Fall through into next instruction while compiling the I'th part of NODE.
 
 (define (fall-through-cont node i)
   (make-cont empty-segment (cons i node)))
@@ -542,10 +586,12 @@
   (maybe-push-continuation
    (sequentially (instruction-with-template
 		  (enum op closure)
-		  (if (return-cont? cont)
-		      seg
-		      (sequentially seg
-				    (instruction (enum op return))))
+		  (sequentially
+		   (instruction (enum op protocol) 0)
+		   (if (return-cont? cont)
+		       seg
+		       (sequentially seg
+				     (instruction (enum op return)))))
 		  #f)
 		 (instruction (enum op call) 0))
    0

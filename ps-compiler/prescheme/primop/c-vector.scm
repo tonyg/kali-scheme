@@ -40,7 +40,7 @@
 (define-c-generator make-string #t
   (lambda (call port indent)
     ; calloc is used as a hack to get a zero at the end
-    (format port "(unsigned char *)calloc( 1, 1 + ")
+    (format port "(char *)calloc( 1, 1 + ")
     (c-value (call-arg call 0) port)
     (format port ")")))
 
@@ -100,7 +100,7 @@
 
 (define-c-generator allocate-memory #t
   (lambda (call port indent)
-    (write-c-coercion type/int32 port)
+    (write-c-coercion type/address port)
     (format port "malloc(") 
     (c-value (call-arg call 0) port)
     (format port ")")))
@@ -114,6 +114,34 @@
 (define-c-generator deallocate-memory #t
   (lambda (call port indent)
     (format port "free(") 
+    (c-value (call-arg call 0) port)
+    (format port ")")))
+
+(define-c-generator address+ #t
+  (lambda (call port indent)
+    (simple-c-primop "+" call port)))
+  
+(define-c-generator address-difference #t
+  (lambda (call port indent)
+    (simple-c-primop "-" call port)))
+
+(define-c-generator address= #t
+  (lambda (call port indent)
+    (simple-c-primop "==" call port)))
+
+(define-c-generator address< #t
+  (lambda (call port indent)
+    (simple-c-primop "<" call port)))
+
+(define-c-generator address->integer #t
+  (lambda (call port indent)
+    (format port "((long) ") 
+    (c-value (call-arg call 0) port)
+    (format port ")")))
+
+(define-c-generator integer->address #t
+  (lambda (call port indent)
+    (format port "((char *) ") 
     (c-value (call-arg call 0) port)
     (format port ")")))
 
@@ -175,13 +203,13 @@
 
 (define-c-generator char-pointer->string #t
   (lambda (call port indent)
-    (format port "((unsigned char *)") 
+    (format port "((char *)") 
     (c-value (call-arg call 0) port)
     (format port ")")))
 
 (define-c-generator char-pointer->nul-terminated-string #t
   (lambda (call port indent)
-    (format port "((unsigned char *)") 
+    (format port "((char *)") 
     (c-value (call-arg call 0) port)
     (format port ")")))
 

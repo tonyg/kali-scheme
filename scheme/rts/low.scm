@@ -161,3 +161,7 @@
 				      (- count sent)
 				      channel))))))
 
+; Writing debugging messages.
+
+(define (user-message . stuff)
+  (message stuff))

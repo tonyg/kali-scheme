@@ -162,8 +162,8 @@
 	(obtain-port-lock port)
 	(if (open-input-port? port)
 	    (begin
-	      ((port-handler-close (port-handler port)) (port-data port))
-	      (make-input-port-closed! port)))
+	      (make-input-port-closed! port)
+	      ((port-handler-close (port-handler port)) (port-data port))))
 	(release-port-lock port))
       (call-error "invalid argument" close-input-port port)))
 
@@ -175,8 +175,8 @@
 	(if (open-output-port? port)
 	    (begin
 	      (really-force-output port)
-	      ((port-handler-close (port-handler port)) (port-data port))
-	      (make-output-port-closed! port)))
+	      (make-output-port-closed! port)
+	      ((port-handler-close (port-handler port)) (port-data port))))
 	(release-port-lock port))
       (call-error "invalid argument" close-output-port port)))
 
@@ -540,12 +540,33 @@
                  (release-port-lock port)
                  (loop (cdr next) next thunks))
                 ((< 0 (port-index port))              ; non-empty
-                 (loop (cdr next) next (cons (make-forcing-thunk port) thunks)))
+                 (release-port-lock port)
+                 (loop (cdr next) next
+		       (cons (make-forcing-thunk port)
+			     thunks)))
                 (else                                 ; empty
                  (release-port-lock port)
                  (loop (cdr next) next thunks)))))))
 
+; Write out PORT's buffer.  If a problem occurs it is reported and PORT
+; is closed.
+
 (define (make-forcing-thunk port)
   (lambda ()
-    (empty-port-buffer! port)
-    (release-port-lock port)))
+    (if (and (report-errors-as-warnings
+	      (lambda ()
+		(if (maybe-obtain-port-lock port)
+		    (begin
+		      (really-force-output port)
+		      (release-port-lock port))))
+	      "error when flushing buffer; closing port"
+	      port)
+	     (open-output-port? port))
+	(report-errors-as-warnings
+	   (lambda ()
+	     (make-output-port-closed! port)
+	     ((port-handler-close (port-handler port)) (port-data port)))
+	   "error when closing port"
+	   port))))
+	
+			       

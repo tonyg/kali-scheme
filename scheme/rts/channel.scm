@@ -14,12 +14,17 @@
   (set-interrupt-handler! (enum interrupt i/o-completion)
 			  i/o-completion-handler))
 
+; The warning message is printed using USER-MESSAGE because to try to make
+; sure it appears in spite of whatever problem's the I/O system is having.
+
 (define (i/o-completion-handler channel status enabled-interrupts)
   (let ((queue (i/o-wait-queue channel)))
     (if (thread-queue-empty? queue)
-	(spawn-on-root
-	 (lambda ()
-	   (warn "dropping ignored channel i/o result" channel status)))
+	(user-message "Warning: dropping ignored channel i/o result {Channel "
+		      (channel-os-index channel)
+		      " "
+		      (channel-id channel)
+		      "}")
 	(begin
 	  (decrement-i/o-wait-count!)
 	  (make-ready (dequeue-thread! queue) status)))))
@@ -45,8 +50,7 @@
 	  (warn "channel has two pending operations" channel)
 	  (terminate-current-thread)))))
 
-; Abort any pending operation on by OWNER on CHANNEL.  We first process
-; the request queues as OWNER may be on one.
+; Abort any pending operation on by OWNER on CHANNEL.
 ; Called with interrupts disabled.
   
 (define (steal-channel! channel owner)
@@ -56,7 +60,7 @@
 	(let ((thread (dequeue-thread! queue)))
 	  (cond ((eq? thread owner)
 		 (decrement-i/o-wait-count!)
-		 (channel-abort channel))
+                 (channel-abort channel))
 		(else
 		 (warn "channel in use by other than port owner" channel)
 		 (enqueue-thread! queue thread)
@@ -66,20 +70,24 @@
 ; exception occurs.
 
 (define-exception-handler (enum op channel-maybe-read)
-  (lambda (opcode reason buffer start count wait? channel)
+  (lambda (opcode reason buffer start count wait? channel . maybe-os-message)
     (if (= reason (enum exception pending-channel-i/o))
 	(wait-for-channel channel)
 	(begin
 	  (enable-interrupts!)
-	  (signal-exception opcode reason buffer start count wait? channel)))))
+ 	  (apply signal-exception
+ 		 opcode reason buffer start count wait? channel
+ 		 maybe-os-message)))))
 
 (define-exception-handler (enum op channel-maybe-write)
-  (lambda (opcode reason buffer start count channel)
+  (lambda (opcode reason buffer start count channel . maybe-os-message)
     (if (= reason (enum exception pending-channel-i/o))
 	(wait-for-channel channel)
 	(begin
 	  (enable-interrupts!)
-	  (signal-exception opcode reason buffer start count channel)))))
+ 	  (apply signal-exception
+ 		 opcode reason buffer start count channel
+ 		 maybe-os-message)))))
 
 ; Two session slots
 ;   - the number of threads waiting for I/O completion events

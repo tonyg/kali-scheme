@@ -48,7 +48,7 @@
 
 (define-structures ((stack stack-interface)
 		    (environment environment-interface))
-  (open prescheme vm-utilities
+  (open prescheme vm-utilities ps-receive ps-memory
 	vm-architecture memory data stob struct allocation)
   ;(optimize auto-integrate)
   (files stack env))
@@ -66,10 +66,9 @@
 	memory data stob struct allocation vmio
 	heap stack environment external fixnum-arithmetic)
   (for-syntax (open scheme destructuring signals))
-  (files interp define-primitive prim interrupt prim-io resume)
+  (files interp call define-primitive prim interrupt prim-io resume)
   ;(optimize auto-integrate)
-  (begin
-    (define (write-instruction template pc) 0))) ; stub
+  )
 
 (define-structure enum-case (export (enum-case :syntax))
   (open prescheme)

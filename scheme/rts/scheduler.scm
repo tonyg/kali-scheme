@@ -11,19 +11,20 @@
   (call-with-values
    (lambda ()
      (event-handler #f 0 (enum event-type blocked) '()))
-   (lambda (thread args time)
+   (lambda (thread time)
      (if thread
-	 (let loop ((thread thread) (args args) (time time))
+	 (let loop ((thread thread) (time time))
 	   (call-with-values
 	    (lambda ()
-	      (run thread time args))
+	      (run thread time))
 	    (lambda (time-left event . event-data)
 	      (call-with-values
 	       (lambda ()
 		 (event-handler thread time-left event event-data))
-	       (lambda (thread args time)
-		 (if thread (loop thread args time)))))))))))
-
+	       (lambda (thread time)
+		 (if thread
+		     (loop thread time)))))))))))
+	    
 ; Same thing, with the addition of a housekeeping thunk that gets
 ; run periodically.
 
@@ -31,13 +32,15 @@
   (call-with-values
    (lambda ()
      (event-handler #f 0 (enum event-type blocked) '()))
-   (lambda (thread args time)
+   (lambda (thread time)
      (if thread
-	 (let loop ((thread thread) (args args) (time time) (hk-time delay))
+	 (let loop ((thread thread) (time time) (hk-time delay))
 	   (call-with-values
 	    (lambda ()
-	      (run thread time args))
+	      (run thread time))
 	    (lambda (time-left event . event-data)
+	      (if (not (integer? time-left))
+		  (user-message "[Losing time " time-left "]"))
 	      (let ((hk-time (let ((temp (- hk-time (- time time-left))))
 			       (if (<= temp 0)
 				   (begin
@@ -47,9 +50,9 @@
 		(call-with-values
 		 (lambda ()
 		   (event-handler thread time-left event event-data))
-		 (lambda (thread args time)
+		 (lambda (thread time)
 		   (if thread
-		       (loop thread args time hk-time))))))))))))
+		       (loop thread time hk-time))))))))))))
 
 ; An event-handler that does round-robin scheduling.
 ; Arguments:
@@ -74,7 +77,7 @@
        (decrement-counter! thread-count)
        (next-thread))
       ((out-of-time)
-       (exclusively-enqueue-thread! runnable thread '())
+       (enqueue-thread! runnable thread)
        (next-thread))
 
       ;; the thread keeps running
@@ -83,24 +86,24 @@
 	(lambda ()
 	  (apply upcall-handler event-data))
 	(lambda results
-	  (values thread results time-left))))
+	  (set-thread-arguments! thread results)
+	  (values thread time-left))))
       (else
        (asynchronous-event-handler event event-data)
-       (values thread '() time-left))))
+       (values thread time-left))))
 
   ;; We call EVENT-HANDLER first so that it can override the default behavior
   (define (asynchronous-event-handler event event-data)
     (or (event-handler event event-data)
 	(enum-case event-type event
 	  ((runnable)
-	   (exclusively-enqueue-thread! runnable (car event-data) (cdr event-data)))
+	   (enqueue-thread! runnable (car event-data)))
 	  ((spawned)
 	   (increment-counter! thread-count)
-	   (exclusively-enqueue-thread! runnable
-					(make-thread (car event-data)
-						     dynamic-env
-						     (cadr event-data))
-					'()))
+	   (enqueue-thread! runnable
+			    (make-thread (car event-data)
+					 dynamic-env
+					 (cadr event-data))))
 	  ((no-event)
 	   (values))
 	  (else
@@ -120,12 +123,9 @@
 		 ((wait)
 		  (next-thread))
 		 (else
-		  (values #f '() 0)))))   ; scheduler quits
-	(real-next-thread)))
-
-  (define (real-next-thread)	       
-    (let ((pair (dequeue-thread! runnable)))
-      (values (car pair) (cdr pair) quantum)))
+		  (values #f 0)))))   ; scheduler quits
+	(values (dequeue-thread! runnable)
+		quantum)))
 
   thread-event-handler)
 

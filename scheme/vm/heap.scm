@@ -6,8 +6,8 @@
 ;  storage should be allocated.  Both of these are addresses (not
 ;  descriptors).
 
-(define *hp* 0)
-(define *limit* 0)
+(define *hp*)
+(define *limit*)
 
 ; These are all in address units
 (define *newspace-begin* (unspecific))
@@ -18,24 +18,24 @@
 (define (initialize-heap start size)
   (let ((semisize (cells->a-units (quotient size 2))))
     (set! *newspace-begin* start)
-    (set! *newspace-end* (addr+ *newspace-begin* semisize))
+    (set! *newspace-end* (address+ *newspace-begin* semisize))
     (set! *oldspace-begin* *newspace-end*)
-    (set! *oldspace-end* (addr+ *oldspace-begin* semisize))
+    (set! *oldspace-end* (address+ *oldspace-begin* semisize))
     (set! *hp* *newspace-begin*)
     (set! *limit* *newspace-end*)))
 
 (define (available? cells)
-  (addr< (addr+ *hp* (cells->a-units cells)) *limit*))
+  (address< (address+ *hp* (cells->a-units cells)) *limit*))
 
 (define (available)
-  (a-units->cells (addr- *limit* *hp*)))
+  (a-units->cells (address-difference *limit* *hp*)))
 
 (define (heap-size)
-  (- *newspace-end* *newspace-begin*))
+  (address-difference *newspace-end* *newspace-begin*))
 
 (define (store-next! descriptor)
   (store! *hp* descriptor)
-  (set! *hp* (addr1+ *hp*)))
+  (set! *hp* (address1+ *hp*)))
 
 ; Pre-Allocation
 ;
@@ -91,11 +91,11 @@
 		   (error "invalid heap key" key cells))
 	       (set! *okayed-space* (- *okayed-space* cells))))))
   (let ((new *hp*))
-    (set! *hp* (addr+ *hp* (bytes->a-units len)))
+    (set! *hp* (address+ *hp* (bytes->a-units len)))
     new))
 
 (define (write-barrier address value)
-  (+ address value)  ; for the type checker
+  (address+ address value)  ; for the type checker
   (unspecific))
 
 ;----------------
@@ -122,8 +122,8 @@
     (cond ((>= i count)
 	   #t)
 	  ((proc (vector-ref areas i)
-		 (+ (vector-ref areas i)
-		    (vector-ref sizes i)))
+		 (address+ (vector-ref areas i)
+			   (vector-ref sizes i)))
 	   (loop (+ i 1)))
 	  (else
 	   #f))))
@@ -143,15 +143,15 @@
   (lambda (start end)
     (let ((type *finding-type*))
       (let loop ((addr start))
-	(cond ((addr< addr end)
+	(cond ((address< addr end)
 	       (let ((d (fetch addr)))
 		 (cond ((not (header? d))
 			(write-string "heap is in an inconsistent state."
 				      (current-error-port))
 			#f)
 		       ((or (not (= type (header-type d)))
-			    (proc (address->stob-descriptor (addr1+ addr))))
-			(loop (addr1+ (addr+ addr (header-a-units d)))))
+			    (proc (address->stob-descriptor (address1+ addr))))
+			(loop (address1+ (address+ addr (header-a-units d)))))
 		       (else
 			#f))))
 	      (else
@@ -185,9 +185,9 @@
 	(cond ((and (proc *newspace-begin* start-hp)
 		    (walk-impure-areas proc)
 		    (walk-pure-areas proc))
-	       (let ((size (addr- *hp* (addr1+ start-hp))))
+	       (let ((size (address-difference *hp* (address1+ start-hp))))
 		 (store! start-hp (make-header (enum stob vector) size) )
-		 (address->stob-descriptor (addr1+ start-hp))))
+		 (address->stob-descriptor (address1+ start-hp))))
 	      (else
 	       (set! *hp* start-hp) ; out of space, so undo and give up
 	       false))))))
@@ -256,13 +256,17 @@
   (write-check (write-string architecture-version port))
   (write-check (write-char #\newline port))
   (write-heap-integer bytes-per-cell port)
-  (write-heap-integer (a-units->cells *newspace-begin*) port)
-  (write-heap-integer (a-units->cells *hp*) port)
+  (write-heap-integer (a-units->cells (address->integer *newspace-begin*)) port)
+  (write-heap-integer (a-units->cells (address->integer *hp*)) port)
   (write-heap-integer restart-proc port)
   (write-check (write-page port))
   (store! *hp* 1)  ; used to detect endianess of image
-  (write-check (write-block port *hp* (- (addr1+ *hp*) *hp*)))
-  (write-check (write-block port *newspace-begin* (- *hp* *newspace-begin*)))
+  (write-check (write-block port
+			    *hp*
+			    (address-difference (address1+ *hp*) *hp*)))
+  (write-check (write-block port
+			    *newspace-begin*
+			    (address-difference *hp* *newspace-begin*)))
   *status*)
 
 ; Make sure the image file is okay and return the size of the heap it
@@ -304,8 +308,12 @@
 	   (read-check (read-newline port)) ; version starts on next line
 	   (let* ((same-version? (read-check (check-image-version port) #f))
 		  (old-bytes-per-cell (read-check (read-integer port))))
-	     (set! *old-begin* (cells->a-units (read-check (read-integer port))))
-	     (set! *old-hp* (cells->a-units (read-check (read-integer port))))
+	     (set! *old-begin*
+		   (integer->address
+		     (cells->a-units (read-check (read-integer port)))))
+	     (set! *old-hp*
+		   (integer->address
+		     (cells->a-units (read-check (read-integer port)))))
 	     (set! *startup-proc* (read-check (read-integer port)))
 	     (set! *image-port* port)
 	     (read-check (read-page port)) ; read to beginning of heap
@@ -319,7 +327,7 @@
 		   ((not (= old-bytes-per-cell bytes-per-cell))
 		    (read-lost "Incompatible bytes-per-cell in image" port))
 		   (else
-		    (- *old-hp* *old-begin*))))))))
+		    (address-difference *old-hp* *old-begin*))))))))
 
 (define (read-page port)
   (read-this-character page-character port))
@@ -372,14 +380,14 @@
 		 (read-lost "Unable to correct byte order" port)))))))
 
 (define (really-read-image port reverse? startup-space)
-  (let* ((delta (- *hp* *old-begin*))
-	 (new-hp (+ *old-hp* delta))
+  (let* ((delta (address-difference *hp* *old-begin*))
+	 (new-hp (address+ *old-hp* delta))
 	 (new-limit *newspace-end*)
 	 (start *hp*))
-    (if (addr>= (+ startup-space new-hp) new-limit)
+    (if (address>= (address+ new-hp startup-space) new-limit)
 	(read-lost "Heap not big enough to restore this image" port)
 	(receive (okay? string)
-	    (image-read-block port (- *old-hp* *old-begin*))
+	    (image-read-block port (address-difference *old-hp* *old-begin*))
 	  (receive (ch eof? status)
 	      (read-char port)
 	    (cond ((not okay?)
@@ -425,37 +433,38 @@
 
 (define (reverse-descriptor-byte-order! addr)
   (let ((x (fetch-byte addr)))
-    (store-byte! addr (fetch-byte (addr+ addr 3)))
-    (store-byte! (addr+ addr 3) x))
-  (let ((x (fetch-byte (addr+ addr 1))))
-    (store-byte! (addr+ addr 1) (fetch-byte (addr+ addr 2)))
-    (store-byte! (addr+ addr 2) x)))
+    (store-byte! addr (fetch-byte (address+ addr 3)))
+    (store-byte! (address+ addr 3) x))
+  (let ((x (fetch-byte (address+ addr 1))))
+    (store-byte! (address+ addr 1) (fetch-byte (address+ addr 2)))
+    (store-byte! (address+ addr 2) x)))
 
 (define (reverse-byte-order! start end)
   (error-message "Correcting byte order of resumed image.")
   (let loop ((ptr start))
-    (if (addr< ptr end)
+    (if (address< ptr end)
 	(begin
 	  (reverse-descriptor-byte-order! ptr)
 	  (loop (let ((value (fetch ptr))
-		      (next (addr1+ ptr)))
+		      (next (address1+ ptr)))
 		  (if (b-vector-header? value)
-		      (addr+ next (header-a-units value))
+		      (address+ next (header-a-units value))
 		      next)))))))
 
 (define (adjust descriptor delta)
   (if (stob? descriptor)
-      (address->stob-descriptor (addr+ (address-after-header descriptor) delta))
+      (address->stob-descriptor
+        (address+ (address-after-header descriptor) delta))
       descriptor))
 
 (define (relocate-image delta start end)
   (let loop ((ptr start))
-    (if (addr< ptr end)
+    (if (address< ptr end)
 	(let ((d (adjust (fetch ptr) delta)))
 	  (store! ptr d)
 	  (loop (if (b-vector-header? d)
-		    (addr+ (addr1+ ptr) (header-a-units d))
-		    (addr1+ ptr)))))))
+		    (address+ (address1+ ptr) (header-a-units d))
+		    (address1+ ptr)))))))
 
 ; The page character is used to mark the ends of the user and prelude sections
 ; of image files.

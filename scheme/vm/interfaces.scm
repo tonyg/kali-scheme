@@ -14,8 +14,7 @@
 (define-interface vm-architecture-interface
   (export architecture-version
           (enum :syntax) ;so you don't have to remember to open enumerated
-	  bits-used-per-byte
-	  maximum-stack-args
+	  bits-used-per-byte byte-limit
 	  (interrupt :syntax)
 	  interrupt-count
 	  (memory-status-option :syntax)
@@ -30,6 +29,19 @@
 	  (time-option :syntax)
 	  (channel-status-option :syntax)
 	  (port-status-options :syntax)
+	  (current-port-marker :syntax)
+
+	  maximum-stack-args
+	  two-byte-nargs-protocol
+	  two-byte-nargs+list-protocol
+	  args+nargs-protocol
+	  big-stack-protocol
+	  nary-dispatch-protocol
+
+	  default-stack-space
+	  environment-stack-size
+	  continuation-stack-size
+	  available-stack-space
 	  ))
 
 ; Memory
@@ -43,7 +55,12 @@
 	  a-units->cells
 	  cells->a-units
 	  bytes->a-units
-	  addr+ addr- addr1+ addr= addr< addr<= addr> addr>= 
+	  address+ address- address1+ address2+
+	  address-difference
+	  address= address< address<= address> address>=
+	  address->integer integer->address
+
+	  null-address null-address?
 
 	  fetch fetch-byte
 	  store! store-byte!
@@ -64,7 +81,7 @@
 	  bits-per-fixnum greatest-fixnum-value
 	  too-small-for-fixnum? too-big-for-fixnum?
 	  descriptor->fixnum
-	  vm-= vm-<
+	  vm-= vm-< vm-> vm-<= vm->=
 
 	  undefined?
 	  true false eof-object null unspecific-value quiescent
@@ -125,6 +142,9 @@
 	  write-image
 
 	  find-all find-all-records
+
+	  *hp*		; to keep these from being `static' in C, as
+	  *limit*	; references are introduced elsewhere via a C macro
 	  ))
 
 (define-interface heap-init-interface
@@ -222,7 +242,7 @@
 (define-interface environment-interface
   (export current-env set-current-env!
 	  env-ref env-set! env-parent env-back
-	  stack-env-space pop-args-into-env
+	  pop-args-into-env
           heap-env-space pop-args-into-heap-env
 	  current-env-size preserve-current-env
 	  ))
@@ -232,12 +252,10 @@
 	  
 	  reset-stack-pointer stack-size
 	  push pop stack-ref stack-set!
-	  arg-stack-overflow-nargs
 
-          ensure-stack-space
-	  reserve-exception-space allow-exception-consing
+          ensure-stack-space!
+	  ensure-default-procedure-space!
 
-	  stack-continuation-size
 	  push-continuation-on-stack
 	  pop-continuation-from-stack
 
@@ -297,5 +315,9 @@
 	  call-startup-procedure
 	  restart
 	  set-extension-value!
-	  note-event))
+	  note-event
+	  *extension-value*
+	  *pending-events?*
+	  *pending-interrupt?*
+	  ))
 

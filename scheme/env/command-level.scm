@@ -41,7 +41,8 @@
 
 ; (set-fluid! $user-context (make-user-context unspecific)) ;Bad for GC
 
-(define (user-context) (fluid $user-context))
+(define (user-context)
+  (fluid $user-context))
 
 ; Add a new slot to the user context.
 
@@ -52,11 +53,17 @@
   (let ((probe (fluid $user-context)))
     (if probe (table-set! probe name (initializer))))
   (lambda ()
-    (table-ref (user-context) name)))
+    (table-ref (or (user-context)
+		   (error "command interpreter not initialized - no user context"
+			  name))
+	       name)))
 
 (define (user-context-modifier name)
   (lambda (new)
-    (table-set! (user-context) name new)))
+    (table-set! (or (user-context)
+		    (error "command interpreter not initialized - no user context"
+			   name))
+		name new)))
 
 ; If true exceptions cause a new command level to be pushed.
 
@@ -68,18 +75,21 @@
 
 ; This is a record stored in the fluid $SESSION.
 ; It has the command interpreter's ports, the most recent values returned
-; by a command, and the batch-mode and break-on-warnings switches.
+; by a command, an exit status, and the batch-mode and break-on-warnings
+; switches.
 
 (define-record-type session :session
   (make-session command-thread
                 input-port output-port error-port
 		focus-values
+		exit-status
 		batch-mode? break-on-warnings?)
   (command-thread session-command-thread)
   (input-port session-input-port)
   (output-port session-output-port)
   (error-port session-error-port)
   (focus-values session-focus-values set-session-focus-values!)
+  (exit-status session-exit-status set-session-exit-status!)
   (batch-mode? session-batch-mode? set-session-batch-mode?!)
   (break-on-warnings? session-break-on-warnings? set-session-break-on-warnings?!))
 
@@ -102,13 +112,19 @@
 (define set-batch-mode?! (session-modifier set-session-batch-mode?!))
 (define break-on-warnings? (session-accessor session-break-on-warnings?))
 (define set-break-on-warnings?! (session-modifier set-session-break-on-warnings?!))
+(define exit-status (session-accessor session-exit-status))
+(define set-exit-status! (session-modifier set-session-exit-status!))
 
 ; Log in
 
 (define (with-new-session context iport oport eport resume-args batch? thunk)
   (let-fluids $user-context context
 	      $session (make-session (current-thread)
-				     iport oport eport resume-args batch? #f)
+				     iport oport eport
+				     resume-args
+				     #f            ; no exit status yet
+				     batch?
+				     #f)           ; don't break on warnings
     thunk))
 
 ;----------------
@@ -116,28 +132,31 @@
 
 (define-record-type command-level :command-level
   (really-make-command-level queue thread-counter dynamic-env
-			     levels throw repl-thunk paused threads)
+			     levels throw repl-thunk repl-data paused threads)
   command-level?
-  (queue command-level-queue)                    ; queue of runnable threads
-  (thread-counter command-level-thread-counter)  ; count of extant threads
-  (dynamic-env command-level-dynamic-env)        ; used for spawns
-  (levels command-level-levels)                  ; levels above this one
-  (throw command-level-throw)                    ; exit from this level
-  (repl-thunk command-level-repl-thunk)          ; thunk to (re)start level
+  (queue command-level-queue)                   ; queue of runnable threads
+  (thread-counter command-level-thread-counter) ; count of extant threads
+  (dynamic-env command-level-dynamic-env)       ; used for spawns
+  (levels command-level-levels)                 ; levels above this one
+  (throw command-level-throw)                   ; exit from this level
+  (repl-thunk command-level-repl-thunk)         ; thunk to (re)start level
+  (repl-data command-level-repl-data set-command-level-repl-data!)
+						; data used by REPL
   (repl-thread command-level-repl-thread set-command-level-repl-thread!)
-                                             ; thread running the REPL
+						; thread running the REPL
   (paused command-level-paused-thread set-command-level-paused-thread!)
-                                             ; thread that pushed next level
+						; thread that pushed next level
   (threads x-command-level-threads set-command-level-threads!))
-                             ; lazily generated list of this level's threads
+				; lazily generated list of this level's threads
 
-(define (make-command-level repl-thunk dynamic-env levels throw)
+(define (make-command-level repl-thunk repl-data dynamic-env levels throw)
   (let ((level (really-make-command-level (make-thread-queue)
 					  (make-counter)
 					  dynamic-env
 					  levels
 					  throw
 					  repl-thunk
+					  repl-data
 					  #f      ; paused thread
 					  #f)))   ; undetermined thread list
     (spawn-repl-thread! level)
@@ -151,7 +170,7 @@
   (let ((thread (make-thread thunk (command-level-dynamic-env level) id)))
     (set-thread-scheduler! thread (command-thread))
     (set-thread-data! thread level)
-    (exclusively-enqueue-thread! (command-level-queue level) thread '())
+    (enqueue-thread! (command-level-queue level) thread)
     (increment-counter! (command-level-thread-counter level))
     thread))
 
@@ -184,57 +203,47 @@
 		(set-command-level-threads! level (make-weak-pointer es))
 		es))))))
 
-; Get the value of FLUID in LEVEL's dynamic environment.
-
-(define (command-level-fluid level fluid)
-  (fluid-lookup (command-level-dynamic-env level) fluid))
-
 ;----------------
 ; Entry point
 
 ; Starting the command processor.  This arranges for an interrupt if the heap
 ; begins to fill up or when a keyboard interrupts occurs, starts a new session,
 ; runs an initial thunk and then pushes a command level.
-;
-; The double-paren around the WITH-NEW-SESSION is because it returns a
-; continuation which is the thing to do after the command-processor exits.
 
 (define (start-command-levels resume-args context
-			      start-thunk repl-thunk interrupt-repl-proc)
-    (notify-on-interrupts (current-thread) interrupt-repl-proc)
-    ((with-new-session context
-		       (current-input-port)
-		       (current-output-port)
-		       (current-error-port)
-		       resume-args
-		       (and (pair? resume-args)
-			    (equal? (car resume-args) "batch"))
-	(lambda ()
-	  (start-thunk)
-	  (let ((thunk (really-push-command-level repl-thunk
-						  (get-dynamic-env)
-						  '())))
-	    (ignore-further-interrupts)
-	    thunk)))))
+			      start-thunk repl-thunk repl-data)
+  (notify-on-interrupts (current-thread))
+  (with-new-session context
+		    (current-input-port)
+		    (current-output-port)
+		    (current-error-port)
+		    resume-args
+		    (and (pair? resume-args)
+			 (equal? (car resume-args) "batch"))
+    (lambda ()
+      (start-thunk)
+      (let ((thunk (really-push-command-level repl-thunk
+					      repl-data
+					      (get-dynamic-env)
+					      '())))
+	(ignore-further-interrupts)
+	thunk))))
 
-(define (notify-on-interrupts thread interrupt-repl-proc)
+(define (notify-on-interrupts thread)
   (set-interrupt-handler! (enum interrupt keyboard)
 			  (lambda stuff
 			    (schedule-event thread
 					    (enum event-type interrupt)
-					    (enum interrupt keyboard)
-					    interrupt-repl-proc)))
+					    (enum interrupt keyboard))))
   (call-before-heap-overflow!
    (lambda stuff
      (schedule-event thread
 		     (enum event-type interrupt)
-		     (enum interrupt post-gc)
-		     interrupt-repl-proc)))
+		     (enum interrupt post-gc))))
   (call-when-deadlocked!
    (lambda stuff
      (schedule-event thread
-		     (enum event-type deadlock)
-		     interrupt-repl-proc))))
+		     (enum event-type deadlock)))))
 
 (define (ignore-further-interrupts)
   (set-interrupt-handler! (enum interrupt keyboard)
@@ -253,11 +262,12 @@
 ; The double-paren around the CWCC is because it returns a continuation which
 ; is the thing to do after the command level exits.
 
-(define (really-push-command-level repl-thunk dynamic-env levels)
+(define (really-push-command-level repl-thunk repl-data dynamic-env levels)
   ((call-with-current-continuation
      (lambda (throw)
        (let ((*out?* #f)
-	     (level (make-command-level repl-thunk dynamic-env levels throw)))
+	     (level (make-command-level repl-thunk repl-data dynamic-env
+					levels throw)))
 	 (dynamic-wind
 	  (lambda ()
 	    (if *out?*
@@ -275,9 +285,9 @@
     (for-each (lambda (thread)
 		(if (thread-continuation thread)
 		    (begin
-		      (remove-thread-from-queues! thread)
+                      (remove-thread-from-queue! thread)
 		      (interrupt-thread thread terminate-current-thread)
-		      (exclusively-enqueue-thread! queue thread '()))))
+		      (enqueue-thread! queue thread))))
 	      threads)
     (dynamic-wind
      (lambda ()
@@ -308,9 +318,10 @@
 (define (run-command-level level terminating?)
   (if (not terminating?)
       (begin
-	(steal-channel-port! (command-input) interrupt-thread)
-	(steal-channel-port! (command-output) interrupt-thread)
-	(steal-channel-port! (command-error-output) interrupt-thread)))
+	(set-exit-status! #f)
+	(steal-channel-port! (command-input))
+	(steal-channel-port! (command-output))
+	(steal-channel-port! (command-error-output))))
   (run-threads
     (round-robin-event-handler (command-level-queue level)
 			       command-quantum
@@ -339,43 +350,33 @@
 		  (error "non-command-level thread restarted on a command level"
 			 thread))
 		 ((memq level levels)
-		  (exclusively-enqueue-thread! (command-level-queue level)
-					       thread
-					       (cdr args))))
+		  (enqueue-thread! (command-level-queue level)
+				   thread))
+		 (else
+		  (warn "dropping thread from exited command level"
+			thread)))
 	   #t))
 	((interrupt)
 	 (if terminating?
 	     (warn "Interrupted while unwinding terminated level's threads."))
-	 (quit-or-push-level 'interrupt (car args) (cadr args) levels)
+	 (quit-or-push-level (make-condition 'interrupt args) levels)
 	 #t)
 	((deadlock)
 	 (if terminating?
 	     (warn "Deadlocked while unwinding terminated level's threads."))
-	 (quit-or-push-level 'deadlocked (unspecific) (car args) levels)
+ 	 (quit-or-push-level (make-condition 'error (list 'deadlocked))
+ 			     levels)
 	 #t)
 	(else
 	 #f)))))
 
-; There are two dynamic environments that we need to take care of.  First
-; we install the one for spawned threads, to allow REPL-PROC to add whatever
-; it needs.  We then save that one for spawning threads and install the
-; command-levels dyanmic environment before calling REALLY-PUSH-COMMAND-LEVEL.
-;
-; When exiting in batch mode two thunks are needed to get past two different
-; restart points at the top level.
-
-(define (quit-or-push-level why data repl-proc levels)
+(define (quit-or-push-level condition levels)
   (if (batch-mode?)
       ((command-level-throw (last levels)) (lambda () (lambda () 0)))
-      (let ((levels-env (get-dynamic-env)))
-	(set-dynamic-env! (command-level-dynamic-env (car levels)))
-	(repl-proc
-	 why
-	 data
-	 (lambda (thunk)
-	   (let ((spawn-env (get-dynamic-env)))
-	     (set-dynamic-env! levels-env)
-	     (really-push-command-level thunk spawn-env levels)))))))
+       (really-push-command-level (command-level-repl-thunk (last levels))
+				  condition
+				  (command-level-dynamic-env (car levels))
+				  levels)))
 
 ; Wait for events if there are blocked threads, otherwise add a new REPL
 ; thread if we aren't on the way out.
@@ -384,6 +385,8 @@
   (lambda ()
     (cond ((< 0 (counter-value (command-level-thread-counter level)))
 	   (wait))
+	  ((exit-status)
+	   (exit-levels level (exit-status)))
 	  (terminating?
 	   #f)
 	  (else
@@ -391,11 +394,22 @@
 	   (spawn-repl-thread! level)
 	   #t))))
 
-; Four different upcalls:
-;  (command-levels)  ->  return the current command levels
-;  (throw-to-command-level level thunk)        ; exit from LEVEL and calls THUNK
-;  (push-command-level repl-thunk dynamic-env) ; push a new command level
-;  (restart-repl)    ->  kill the current REPL and restart it
+; Leave the command-level system with STATUS.
+
+(define (exit-levels level status)
+  (let ((top-level (last (cons level (command-level-levels level)))))
+    ((command-level-throw top-level)
+       (lambda () (lambda () status)))))
+
+; Upcalls:
+; return the current command levels
+;  (command-levels)  ->  list of levels
+; exit from LEVEL and calls THUNK
+;  (throw-to-command-level level thunk)
+; push a new command level
+;  (push-command-level repl-thunk repl-data dynamic-env)
+; stop running a repl
+;  (terminate-repl status)
 
 (define (command-level-upcall-handler level)
   (let ((levels (cons level (command-level-levels level))))
@@ -408,13 +422,37 @@
 	    ((eq? token push-command-level-token)
 	     ; arguments are CALLING-THREAD REPL-THUNK DYNAMIC-ENV
 	     (set-command-level-paused-thread! level (car args))
-	     (really-push-command-level (cadr args) (caddr args) levels))
+ 	     (really-push-command-level (cadr args) (caddr args) (cadddr args)
+ 					levels))
+	    ((eq? token terminate-repl-token)
+	     (set-exit-status! (car args))
+	     (let ((repl-thread (command-level-repl-thread level)))
+	       (if repl-thread
+		   (begin 
+		     (set-command-level-repl-thread! level #f)
+		     (kill-thread! repl-thread)))))
+ 	    ((eq? token repl-data-token)
+ 	     (command-level-repl-data level))
+ 	    ((eq? token set-repl-data!-token)
+ 	     (set-command-level-repl-data! level (car args)))
 	    (else
 	     (propogate-upcall thread token args))))))
 
 (define command-levels-token (list 'command-levels-token))
 (define push-command-level-token (list 'push-command-level-token))
 (define throw-to-command-level-token (list 'throw-to-command-level-token))
+(define terminate-repl-token (list 'terminate-repl-token))
+(define repl-data-token (list 'repl-data-token))
+(define set-repl-data!-token (list 'set-repl-data!-token))
+
+(define (repl-data)
+  (upcall repl-data-token))
+
+(define (set-repl-data! value)
+  (upcall set-repl-data!-token value))
+
+(define (terminate-command-processor! status)
+  (upcall terminate-repl-token status))
 
 (define (command-levels)
   (upcall command-levels-token))
@@ -427,8 +465,8 @@
 
 ; Command level control
 
-(define (push-command-level thunk)
-  (upcall push-command-level-token (current-thread) thunk (get-dynamic-env)))
+(define (push-command-level thunk data)
+  (upcall push-command-level-token (current-thread) thunk data (get-dynamic-env)))
 
 (define (throw-to-command-level level thunk)
   (upcall throw-to-command-level-token level thunk))
@@ -440,6 +478,7 @@
    level
    (lambda ()
      (really-push-command-level (command-level-repl-thunk level)
+				(command-level-repl-data level)
 				(command-level-dynamic-env level)
 				(command-level-levels level)))))
 
@@ -473,4 +512,5 @@
 	(spawn-repl-thread! level))
     (kill-thread! paused)
     (set-command-level-paused-thread! level #f)))
+
 

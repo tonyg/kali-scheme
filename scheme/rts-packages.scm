@@ -73,7 +73,8 @@
 	methods         ; &disclose :input-port :output-port
 	interrupts      ; {en|dis}able-interrupts!
 	number-i/o      ; number->string for debugging
-	exceptions)     ; wrong-number-of-args stuff
+	exceptions      ; wrong-number-of-args stuff
+	handle)		; report-errors-as-warnings
   (files (rts port) (rts current-port))
   (optimize auto-integrate))
 
@@ -84,8 +85,10 @@
 	exceptions interrupts
 	ascii ports util
 	session-data
-	structure-refs)
-  (access primitives)  ; add-finalizer
+	structure-refs
+	user-messages	; for error messages
+	handle)		; report-errors-as-warnings
+  (access primitives)	; add-finalizer
   (files (rts channel-port) (rts channel)))
 
 (define-structure conditions conditions-interface
@@ -134,7 +137,7 @@
   (optimize auto-integrate))
 
 (define-structure continuations continuations-interface
-  (open scheme-level-1 primitives templates methods)
+  (open scheme-level-1 primitives templates methods architecture code-vectors)
   (files (rts continuation))
   (optimize auto-integrate))
 
@@ -169,21 +172,17 @@
 	conditions	  ;make-exception, etc.
 	primitives	  ;set-exception-handlers!, etc.
 	wind		  ;CWCC
-	util		  ;reduce used in xprim.scm
 	methods
 	meta-methods
 	more-types
-	;; low-level	  ;halt
+	architecture
 	vm-exposure	  ;primitive-catch
 	templates	  ;template-code, template-info
 	continuations	  ;continuation-pc, etc.
 	locations	  ;location?, location-id
 	closures	  ;closure-template
-	architecture
-	bitwise		  ; for checking n-ary procedures
 	number-i/o)       ; number->string, for backtrace
-  (files (rts exception)  ; Needs generic, arch
-	 (rts xprim)))	  ; Needs arch, exceptions.  Support (+ x y z), etc.
+  (files (rts exception)))  ; Needs generic, arch
 
 (define-structure interrupts interrupts-interface
   (open scheme-level-1
@@ -210,24 +209,29 @@
 	loopholes               ;for converting #f to a continuation
 	architecture            ;time-option
 	session-data
+	user-messages
 	structure-refs)
-  (access linked-queues
-	  primitives)           ;time current-thread set-current-thread! etc.
+  (access primitives)           ;time current-thread set-current-thread! etc.
   (optimize auto-integrate)
   (files (rts thread) (rts sleep)))
 
 (define-structure scheduler scheduler-interface
   (open scheme-level-1 threads threads-internal enumerated enum-case
-	i/o                     ;message, for debugging
+	user-messages
 	signals)       		;error
   (files (rts scheduler)))
 
 (define-structure root-scheduler (export root-scheduler
 					 spawn-on-root
+					 scheme-exit-now
 					 call-when-deadlocked!)
   (open scheme-level-1 threads threads-internal scheduler structure-refs
 	session-data
 	signals        		;error
+	handle			;with-handler
+	i/o			;current-error-port
+	conditions		;warning?, error?
+	writing			;display
 	i/o-internal            ;output-port-forcer, output-forcer-id
 	fluids-internal         ;get-dynamic-env
 	interrupts              ;with-interrupts-inhibited
@@ -258,13 +262,14 @@
   (files (big queue))
   (optimize auto-integrate))
 
-(define-structure linked-queues (compound-interface 
-				 queues-interface
-				 (export delete-queue-entry!
-					 queue-head))
-  (open scheme-level-1 define-record-types signals primitives)
-  (files (big linked-queue))
-  (optimize auto-integrate))
+; No longer used
+;(define-structure linked-queues (compound-interface 
+;                                 queues-interface
+;                                 (export delete-queue-entry!
+;                                         queue-head))
+;  (open scheme-level-1 define-record-types signals primitives)
+;  (files (big linked-queue))
+;  (optimize auto-integrate))
 
 (define-structure locks locks-interface
   (open scheme-level-1 define-record-types interrupts threads threads-internal)

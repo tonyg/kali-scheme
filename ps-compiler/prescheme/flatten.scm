@@ -95,8 +95,11 @@
     var))
 
 (define (generate-top-variable maybe-id)
-  (let ((var (make-global-variable (or maybe-id
-				       (concatenate-symbol 'top. (next-top-id)))
+  (let ((var (make-global-variable (concatenate-symbol
+				      (if maybe-id
+					  (schemify maybe-id)
+					  'top.)
+				      (next-top-id))
 				   type/undetermined)))
     (set-variable-flags! var
 			 (cons 'generated-top-variable

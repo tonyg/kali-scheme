@@ -117,9 +117,9 @@ c/main.o: c/main.c
 		$(CPPFLAGS) $(DEFS) c/main.c
 
 c/scheme48vm.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h c/event.h \
-			c/fd-io.h
+			c/io.h c/fd-io.h
 c/scheme48heap.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h c/event.h \
-			c/fd-io.h
+			c/io.h c/fd-io.h
 c/extension.o: c/sysdep.h $(FAKEHS) c/scheme48.h c/socket.h
 c/unix/event.o: c/sysdep.h $(FAKEHS) c/scheme48vm.h c/scheme48heap.h \
 			c/event.h c/fd-io.h
@@ -129,6 +129,7 @@ c/unix/dynamo.o: c/sysdep.h $(FAKEHS) c/scheme48.h
 c/unix/socket.o: c/sysdep.h $(FAKEHS) c/scheme48vm.h c/scheme48heap.h \
 			c/event.h c/fd-io.h c/socket.h 
 c/unix/misc.o: c/sysdep.h $(FAKEHS)
+c/unix/io.o: c/io.h
 c/fake/strerror.o: c/fake/strerror.h
 
 # --------------------
@@ -397,6 +398,13 @@ scheme/debug/tiny.image: $(LINKER_IMAGE) scheme/debug/tiny-packages.scm \
 	($(START_LINKER); \
 	 echo \(load-configuration \"scheme/debug/tiny-packages.scm\"\); \
 	 echo \(link-simple-system \'\(scheme/debug tiny\) \'start tiny-system\)) \
+	| $(LINKER)
+
+scheme/debug/low-test.image: $(LINKER_IMAGE) scheme/debug/low-test-packages.scm \
+		  scheme/debug/low-test.scm
+	($(START_LINKER); \
+	 echo \(load-configuration \"scheme/debug/low-test-packages.scm\"\); \
+	 echo \(link-simple-system \'\(scheme/debug low-test\) \'start low-test-system\)) \
 	| $(LINKER)
 
 scheme/debug/little.image: $(LINKER_IMAGE) $(CONFIG_FILES) scheme/debug-packages.scm

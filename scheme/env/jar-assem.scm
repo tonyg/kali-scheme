@@ -131,4 +131,3 @@
        operands
        arg-specs))
 
-(define byte-limit (expt 2 bits-used-per-byte))

@@ -42,7 +42,7 @@
   (lambda (exp r c)
     (let ((clauses (cdr exp)))
       (if (or (null? clauses)
-	      (not (every pair? clauses)))
+	      (not (every list? clauses)))
 	  exp
 	  (car (let recur ((clauses clauses))
 		 (if (null? clauses)
@@ -58,11 +58,13 @@
 					  ,@more))
 			      ((c (cadr clause) (r '=>))
 			       (let ((temp (r 'temp)))
-				 `(,(r 'let)
-				   ((,temp ,(car clause)))
-				   (,(r 'if) ,temp
-					     (,(caddr clause) ,temp)
-					     ,@more))))
+				 (if (null? (cddr clause))
+				     exp
+				     `(,(r 'let)
+				       ((,temp ,(car clause)))
+				       (,(r 'if) ,temp
+						 (,(caddr clause) ,temp)
+						 ,@more)))))
 			      (else
 			       `(,(r 'if) ,(car clause)
 					  (,(r 'begin) ,@(cdr clause))
@@ -76,24 +78,36 @@
 	(let ((specs (cadr exp))
 	      (end (caddr exp))
 	      (body (cdddr exp))
-	      ;; (if (and (list? specs) (every do-spec? specs) (pair? end)))
 	      (%loop (r 'loop))
 	      (%letrec (r 'letrec))
 	      (%lambda (r 'lambda))
 	      (%cond (r 'cond)))
-	  `(,%letrec ((,%loop
-		       (,%lambda ,(map car specs)
-			   (,%cond ,end
-				   (else ,@body
-					 (,%loop
-					  ,@(map (lambda (spec)
-						   (if (null? (cddr spec))
-						       (car spec)
-						       (caddr spec)))
-						 specs)))))))
-		(,%loop ,@(map cadr specs))))
+	  (if (and (list? specs)
+		   (every do-spec? specs)
+		   (list? end))
+	      `(,%letrec ((,%loop
+			   (,%lambda ,(map car specs)
+				     (,%cond ,end
+					     (else ,@body
+						   (,%loop
+						    ,@(map (lambda (spec)
+							     (if (null? (cddr spec))
+								 (car spec)
+								 (caddr spec)))
+							   specs)))))))
+			 (,%loop ,@(map cadr specs)))
+	      exp))
 	exp))
   '(letrec lambda cond))
+
+(define (do-spec? s)
+  (and (pair? s)
+       (name? (car s))
+       (pair? (cdr s))
+       (let ((rest (cddr s)))
+	 (or (null? rest)
+	     (and (pair? rest)
+		  (null? (cdr rest)))))))
 
 (define-usual-macro 'let
   (lambda (exp r c)
@@ -146,25 +160,33 @@
 (define-usual-macro 'or
   (lambda (exp r c)
     (let ((disjuncts (cdr exp)))
-      (cond ((null? disjuncts) #f)  ;not '#f
-	    ((null? (cdr disjuncts)) (car disjuncts))
-	    (else (let ((temp (r 'temp)))
-		    `(,(r 'let) ((,temp ,(car disjuncts)))
-		       (,(r 'if) ,temp
-			   ,temp
-			   (,(r 'or) ,@(cdr disjuncts)))))))))
+      (cond ((null? disjuncts)
+	     #f)  ;not '#f
+	    ((not (pair? disjuncts))
+	     exp)
+	    ((null? (cdr disjuncts))
+	     (car disjuncts))
+	    (else
+	     (let ((temp (r 'temp)))
+	       `(,(r 'let) ((,temp ,(car disjuncts)))
+		  (,(r 'if) ,temp
+			    ,temp
+			    (,(r 'or) ,@(cdr disjuncts)))))))))
   '(let if or))
-
 
 ; CASE needs auxiliary MEMV.
 
 (define-usual-macro 'case
   (lambda (exp r c)
-    (if (pair? (cdr exp))
+    (if (and (list? (cdr exp))
+	     (every (lambda (clause)
+		      (case-clause? clause c (r 'else)))
+		    (cddr exp)))
 	(let ((key (cadr exp))
 	      (clauses (cddr exp))
 	      (temp (r 'temp))
-	      (%eqv? (r 'eq?))   ;+++ This will lose with non-fixnum numbers.
+	      (%eqv? (r 'eqv?))
+	      (%eq? (r 'eq?))     ;+++ hack for symbols
 	      (%memv (r 'memv))
 	      (%quote (r 'quote))
 	      (%else (r 'else)))
@@ -177,14 +199,22 @@
 			       ((null? (car clause))
 				#f)
 			       ((null? (cdar clause)) ;+++
-				`(,%eqv? ,temp (,%quote ,(caar clause))))
+				`(,(if (symbol? (caar clauses)) %eq? %eqv?)
+				    ,temp
+				    (,%quote ,(caar clause))))
 			       (else
 				`(,%memv ,temp (,%quote ,(car clause)))))
 			,@(cdr clause)))
 		    clauses))))
 	exp))
-  '(let cond eqv? memv quote))
+  '(let cond eqv? eq? memv quote))
 
+(define (case-clause? c compare %else)
+  (and (list? c)
+       (let ((head (car c)))
+	 (or (null? head)
+	     (compare head %else)
+	     (list? head)))))
 
 ; Quasiquote
 

@@ -32,7 +32,7 @@
 
 (define (return val)
   (set! *val* val)
-  (goto interpret))
+  (goto continue 0))
 
 (define return-any return)
 
@@ -48,6 +48,10 @@
 (define (return-unspecific x)
   x ;ignored
   (goto return unspecific-value))
+
+(define (no-result)
+  (goto return unspecific-value))
+
 
 ; Scalar primitives
 
@@ -113,12 +117,11 @@
 
 (define-primitive exact?      (number->) (lambda (n) #t) return-boolean)
 (define-primitive real-part   (number->) (lambda (n) (goto return n)))
-(define-primitive imag-part   (number->) (lambda (n)
-					   (goto return (enter-fixnum 0))))
+(define-primitive imag-part   (number->) (lambda (n) 0) return-fixnum)
 (define-primitive floor       (number->) (lambda (n) (goto return n)))
 (define-primitive numerator   (number->) (lambda (n) (goto return n)))
-(define-primitive denominator (number->) (lambda (n)
-					   (goto return (enter-fixnum 1))))
+(define-primitive denominator (number->) (lambda (n) 1) return-fixnum)
+
 (define-primitive angle (number->)
   (lambda (n)
     (if (>= n 0)
@@ -140,7 +143,8 @@
   (syntax-rules ()
     ((define-punt-primitive op)
      (define-primitive op (number->)
-       (lambda (n) (raise-exception arithmetic-overflow 0 n))))))
+       (lambda (n)
+	 (raise-exception arithmetic-overflow 0 n))))))
 
 (define-punt-primitive exact->inexact)
 (define-punt-primitive inexact->exact)
@@ -176,8 +180,11 @@
 (define-primitive /         (number->  number->) (arith divide-carefully))
 (define-primitive quotient  (integer-> integer->) (arith quotient-carefully))
 (define-primitive remainder (integer-> integer->) (arith remainder-carefully))
-(define-primitive =         (number->  number->) vm-= return-boolean)
-(define-primitive <         (real->    real->)   vm-< return-boolean)
+(define-primitive =         (number->  number->) vm-=  return-boolean)
+(define-primitive <         (real->    real->)   vm-<  return-boolean)
+(define-primitive >         (real->    real->)   vm->  return-boolean)
+(define-primitive <=        (real->    real->)   vm-<= return-boolean)
+(define-primitive >=        (real->    real->)   vm->= return-boolean)
 (define-primitive arithmetic-shift (number-> number->)
   (arith shift-carefully))
 
@@ -207,15 +214,18 @@
 (define-primitive stored-object-has-type?
   (any->)
   (lambda (x)
-    (stob-of-type? x (next-byte)))
-  return-boolean)
+    (goto continue-with-value
+	  (enter-boolean (stob-of-type? x (code-byte 0)))
+	  1)))
 
 (define-primitive stored-object-length
   (any->)
   (lambda (stob)
-    (let ((type (next-byte)))
+    (let ((type (code-byte 0)))
       (if (stob-of-type? stob type)
-	  (goto return-fixnum (d-vector-length stob))
+	  (goto continue-with-value
+		(enter-fixnum (d-vector-length stob))
+		1)
 	  (raise-exception wrong-type-argument 1 stob (enter-fixnum type))))))
   
 ; Fixed sized objects
@@ -223,10 +233,12 @@
 (define-primitive stored-object-ref
   (any->)
   (lambda (stob)
-    (let* ((type (next-byte))
-	   (offset (next-byte)))
+    (let ((type (code-byte 0))
+	  (offset (code-byte 1)))
       (if (stob-of-type? stob type)
-	  (goto return (d-vector-ref stob offset))
+	  (goto continue-with-value
+		(d-vector-ref stob offset)
+		2)
 	  (raise-exception wrong-type-argument 2
 			   stob
 			   (enter-fixnum type)
@@ -235,12 +247,14 @@
 (define-primitive stored-object-set!
   (any-> any->)
   (lambda (stob value)
-    (let* ((type (next-byte))
-	   (offset (next-byte)))
+    (let ((type (code-byte 0))
+	  (offset (code-byte 1)))
       (cond ((and (stob-of-type? stob type)
 		  (not (immutable? stob)))
 	     (d-vector-set! stob offset value)
-	     (goto return unspecific-value))
+	     (goto continue-with-value
+		   unspecific-value
+		   2))
 	    (else
 	     (raise-exception wrong-type-argument 2
 			      stob
@@ -252,20 +266,22 @@
 
 (define-primitive stored-object-indexed-ref (any-> any->)
   (lambda (stob index)
-    (let ((type (next-byte)))
+    (let ((type (code-byte 0)))
       (cond ((or (not (fixnum? index))
 	         (not (stob-of-type? stob type)))
 	     (raise-exception wrong-type-argument 1
 			      stob (enter-fixnum type) index))
 	    ((valid-index? (extract-fixnum index) (d-vector-length stob))
-	     (goto return (d-vector-ref stob (extract-fixnum index))))
+	     (goto continue-with-value
+		   (d-vector-ref stob (extract-fixnum index))
+		   1))
 	    (else
 	     (raise-exception index-out-of-range 1
 			      stob (enter-fixnum type) index))))))
 
 (define-primitive stored-object-indexed-set! (any-> any-> any->)
   (lambda (stob index value)
-    (let ((type (next-byte)))
+    (let ((type (code-byte 0)))
       (cond ((or (not (fixnum? index))
 		 (not (stob-of-type? stob type))
 		 (immutable? stob))
@@ -273,7 +289,7 @@
 			      stob (enter-fixnum type) index value))
 	    ((valid-index? (extract-fixnum index) (d-vector-length stob))
 	     (d-vector-set! stob (extract-fixnum index) value)
-	     (goto return unspecific-value))
+	     (goto continue-with-value unspecific-value 1))
 	    (else
 	     (raise-exception index-out-of-range 1
 			      stob (enter-fixnum type) index value))))))
@@ -302,7 +318,7 @@
 			    record type (enter-fixnum index) value))
 	  ((valid-index? index (record-length record))
 	   (record-set! record index value)
-	   (goto return unspecific-value))
+	   (goto no-result))
 	  (else
 	   (raise-exception index-out-of-range 0
 			    record type (enter-fixnum index) value)))))
@@ -311,35 +327,41 @@
 
 (define-primitive make-stored-object ()
   (lambda ()
-    (let* ((key (ensure-space (cells->bytes (+ stob-overhead (this-byte)))))
-	   (len (next-byte))  ; can't consume this byte until after ENSURE-SPACE
-	   (new (make-d-vector (next-byte) len key)))
+    (let* ((len (code-byte 0))
+	   (key (ensure-space (cells->bytes (+ stob-overhead len))))
+	   (new (make-d-vector (code-byte 1) len key)))
       (cond ((>= len 1)
 	     (d-vector-init! new (- len 1) *val*)
 	     (do ((i (- len 2) (- i 1)))
 		 ((> 0 i)
 		  (unspecific))  ; for the type checker!
 	       (d-vector-init! new i (pop)))))
-      new))
-  return)
+      (goto continue-with-value new 2))))
 
 ; This is for the closed compiled versions of VECTOR and RECORD.
+; *stack* = arg0 arg1 ... argN rest-list N+1 total-nargs
 
 (define-primitive closed-make-stored-object ()
   (lambda ()
-    (let* ((len *nargs*)
+    (let* ((len (extract-fixnum (pop)))
 	   (key (ensure-space (cells->bytes (+ stob-overhead len))))
-	   (new (make-d-vector (next-byte) len key)))
-      (do ((i (- len 1) (- i 1)))
+	   (new (make-d-vector (code-byte 0) len key))
+	   (stack-nargs (extract-fixnum (pop)))
+	   (rest-list (pop)))
+      (do ((i (- stack-nargs 1) (- i 1)))
 	  ((> 0 i)
 	   (unspecific))  ; for the type checker!
 	(d-vector-init! new i (pop)))
-      new))
-  return)
+      (do ((i stack-nargs (+ i 1))
+	   (rest-list rest-list (vm-cdr rest-list)))
+	  ((vm-eq? rest-list null)
+	   (unspecific))  ; for the type checker!
+	(d-vector-init! new i (vm-car rest-list)))
+      (goto continue-with-value new 1))))
 
 (define-primitive make-vector-object (any-> any->)
   (lambda (len init)
-    (let ((type (next-byte)))
+    (let ((type (code-byte 0)))
       (if (fixnum? len)
 	  (let* ((len (extract-fixnum len))
 		 (size (vm-vector-size len)))
@@ -347,17 +369,17 @@
 		    (> size max-stob-size-in-cells))
 		(raise-exception wrong-type-argument 1
 				 (enter-fixnum type) (enter-fixnum len) init)
-		(maybe-ensure-space-saving-temp size init
-		  (lambda (okay? key init)
-		    (if (not okay?)
-			(raise-exception heap-overflow 1
-					 (enter-fixnum type) (enter-fixnum len)
-					 init)
-			(let ((v (make-d-vector type len key)))
-			  (do ((i (- len 1) (- i 1)))
-			      ((< i 0))
-			    (d-vector-set! v i init))
-			  (goto return v)))))))
+		(receive (okay? key init)
+		    (maybe-ensure-space-saving-temp size init)
+		  (if (not okay?)
+		      (raise-exception heap-overflow 1
+				       (enter-fixnum type) (enter-fixnum len)
+				       init)
+		      (let ((v (make-d-vector type len key)))
+			(do ((i (- len 1) (- i 1)))
+			    ((< i 0))
+			  (d-vector-set! v i init))
+			(goto continue-with-value v 1))))))
 	  (raise-exception wrong-type-argument 1
 			   (enter-fixnum type) len init)))))
 
@@ -392,7 +414,7 @@
 			    vector (enter-fixnum index) (enter-elt char)))
 	  ((valid-index? index (length vector))
 	   (setter vector index char)
-	   (goto return unspecific-value))
+	   (goto no-result))
 	  (else
 	   (raise-exception index-out-of-range 0
 			    vector (enter-fixnum index) (enter-elt char))))))
@@ -410,18 +432,16 @@
 	      (> size max-stob-size-in-cells))
 	  (raise-exception wrong-type-argument 0
 			   (enter-fixnum len) (enter-elt init))
-	  (maybe-ensure-space-saving-temp
-	   size
-	   (enter-fixnum 0)
-	   (lambda (okay? key ignore)
-	     (if (not okay?)
-		 (raise-exception heap-overflow 0
-				  (enter-fixnum len) (enter-elt init))
-		 (let ((vector (maker len key)))
-		   (do ((i (- len 1) (- i 1)))
-		       ((< i 0))
-		     (setter vector i init))
-		   (goto return vector)))))))))
+	  (receive (okay? key ignore)
+	      (maybe-ensure-space-saving-temp size (enter-fixnum 0))
+	    (if (not okay?)
+		(raise-exception heap-overflow 0
+				 (enter-fixnum len) (enter-elt init))
+		(let ((vector (maker len key)))
+		  (do ((i (- len 1) (- i 1)))
+		      ((< i 0))
+		    (setter vector i init))
+		  (goto return vector))))))))
 
 (let ((proc (byte-vector-maker vm-string-size
 			       vm-make-string
@@ -447,8 +467,8 @@
     (cond ((not value)
 	   (set-contents! loc unbound-marker))
 	  ((undefined? (contents loc))
-	   (set-contents! loc unassigned-marker)))
-    (goto return unspecific-value)))
+	   (set-contents! loc unassigned-marker))))
+  return-unspecific)
 
 (define-primitive immutable? (any->) immutable? return-boolean)
 
@@ -487,7 +507,7 @@
   (let loop ((table table) (symbols symbols) (first? #t))
     (let index-loop ((i 0))
       (cond ((= i (vm-vector-length symbols))
-	     (goto return unspecific-value))
+	     (goto no-result))
 	    ((available? vm-pair-size)
 	     (let ((key (preallocate-space vm-pair-size)))
 	       (add-to-symbol-table (vm-vector-ref symbols i) table key)
@@ -531,7 +551,7 @@
   (lambda ()
     (set! *val* unspecific-value)
     (collect)
-    (goto return unspecific-value)))
+    (goto continue 0)))
 
 (define-consing-primitive add-finalizer! (any-> any->)
   (lambda (n) (* 2 vm-pair-size))
@@ -547,7 +567,7 @@
 		 (vm-cons (vm-cons stob proc key)
 			  *finalizer-alist*
 			  key))
-	   (goto return unspecific-value)))))
+	   (goto no-result)))))
 
 (define-primitive memory-status (fixnum-> any->)
   (lambda (key other)
@@ -555,16 +575,15 @@
       ((pointer-hash)
        (goto return (descriptor->fixnum other)))
       ((available)
-       (goto return (enter-fixnum (available))))
+       (goto return-fixnum (available)))
       ((heap-size)
-       (goto return (enter-fixnum (bytes->cells (heap-size)))))
+       (goto return-fixnum (bytes->cells (heap-size))))
       ((stack-size)
-       (goto return (enter-fixnum (stack-size))))
+       (goto return-fixnum (stack-size)))
       ((gc-count)
-       (goto return (enter-fixnum (gc-count))))
+       (goto return-fixnum (gc-count)))
       ((expand-heap!)
-       (raise-exception unimplemented-instruction 0
-			(enter-fixnum key) other))
+       (raise-exception unimplemented-instruction 0 (enter-fixnum key) other))
       (else
        (raise-exception bad-option 0 (enter-fixnum key) other)))))
 
@@ -572,7 +591,7 @@
   (lambda (option other)
     (enum-case time-option option
       ((cheap-time)
-       (goto return (enter-fixnum (cheap-time))))
+       (goto return-fixnum (cheap-time)))
       ((run-time)
        (receive (seconds mseconds)
 	   (run-time)
@@ -595,12 +614,12 @@
 		       (enter-fixnum option)
 		       (enter-fixnum seconds)
 		       (enter-fixnum mseconds))
-      (goto return (enter-fixnum (+ (* seconds 1000) mseconds)))))
+      (goto return-fixnum (+ (* seconds 1000) mseconds))))
 
 (define-primitive schedule-interrupt (fixnum->)
   (lambda (delta)
     (clear-interrupt! (enum interrupt alarm))
-    (goto return (enter-fixnum (schedule-interrupt delta)))))
+    (goto return-fixnum (schedule-interrupt delta))))
 
 ; Convert from the user's exponent to the system's.
 
@@ -623,22 +642,31 @@
 	       (code-vector? value)
 	       (lookup-external-name (address-after-header name)
 				     (address-after-header value)))
-	  (goto return unspecific-value)
+	  (goto no-result)
 	  (raise-exception unbound-external-name 0 external)))))
 
 ; The arguments have been pushed on the stack after the procedure.
+; *stack* = procedure arg1 ... argN rest-list N+1 total-nargs
+;
 ; The top-level driver loop removes the procedure and the arguments from
 ; the stack.
 
 (define-primitive external-call ()
   (lambda ()
-    (let ((proc (stack-ref (- *nargs* 1))))
-      (cond ((not (external? proc))    ; lots of junk on the stack...
-	     (raise-exception wrong-type-argument 0 proc))
-	    (else
-	     (set! *nargs* (- *nargs* 1))      ; don't count the procedure
-	     (set! *val* proc)
-	     (enum return-option external-call))))))  ; return to driver loop
+    (let* ((nargs (extract-fixnum (pop)))
+	   (stack-nargs (extract-fixnum (pop)))
+	   (rest-list (pop)))
+      (do ((rest-list rest-list (vm-cdr rest-list)))
+	  ((vm-eq? rest-list null))
+	(push (vm-car rest-list)))
+      (let ((proc (stack-ref (- nargs 1))))
+	(cond ((not (external? proc))    ; lots of junk on the stack...
+	       (raise-exception wrong-type-argument 0 proc))
+	      (else
+	       (set! *external-call-nargs* (- nargs 1)) ; don't count proc
+	       (set! *val* proc)
+	       (set! *code-pointer* (address+ *code-pointer* 1))
+	       (enum return-option external-call))))))) ; return to driver loop
 
 (define-enumeration vm-extension-status
   (okay
@@ -655,8 +683,7 @@
 	    ((vm-eq? status (enum vm-extension-status exception))
 	     (raise-exception extension-exception 0 (enter-fixnum key) value))
 	    (else
-	     (raise-exception extension-return-error 0
-			      (enter-fixnum key) value))))))
+	     (raise-exception extension-return-error 0 (enter-fixnum key) value))))))
 
 ; This is exported to keep *EXTENSION-VALUE* from being eliminated by the
 ; compiler.
@@ -675,9 +702,8 @@
 
 (define-primitive set-current-thread! (any->)
   (lambda (state)
-    (set! *current-thread* state)
-    unspecific-value)
-  return-any)
+    (set! *current-thread* state))
+  return-unspecific)
 
 (define-primitive session-data ()
   (lambda () *session-data*)
@@ -685,9 +711,8 @@
 
 (define-primitive set-session-data! (any->)
   (lambda (state)
-    (set! *session-data* state)
-    unspecific-value)
-  return-any)
+    (set! *session-data* state))
+  return-unspecific)
 
 ; Unnecessary primitives
 
@@ -704,7 +729,8 @@
         (let ((obj (vm-make-string n k)))
           (do ((l l (vm-cdr l))
                (i (- n 1) (- i 1)))
-              ((< i 0) (goto return obj))
+              ((< i 0)
+	       (goto return obj))
             (vm-string-set! obj i (extract-char (vm-car l))))))))
 
 (define-primitive string-hash (string->) vm-string-hash return-fixnum)

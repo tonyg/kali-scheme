@@ -7,7 +7,6 @@
 
 ;;;; Dynamic-wind
 
-
 ; This is a version of dynamic-wind that tries to do "the right thing"
 ; in the presence of multiple threads of control.
 ; This definition of "the right thing" is due to Pavel Curtis, and is
@@ -25,34 +24,38 @@
 ; Each thread starts out in the root state, but continuations capture
 ; the state where they're created.
 
-
 ; Dynamic-wind
 
 (define (dynamic-wind in body out)
   (in)
-  (let ((results (let-dynamic-point (let ((here (get-dynamic-point)))
-				      (make-point (+ (point-depth here) 1)
-						  in
-						  out
-						  (get-dynamic-env)
-						  here))
-		   (lambda ()
-		     (call-with-values body list)))))
-    (out)
-    (apply values results)))
+  (let ((here (get-dynamic-point)))
+    (set-dynamic-point! (make-point (if here
+					(+ (point-depth here) 1)
+					1)
+				    in
+				    out
+				    (get-dynamic-env)
+				    here))
+    (let ((results (call-with-values body list)))
+      (set-dynamic-point! here)
+      (out)
+      (apply values results))))
 
 ; call-with-current-continuation
 
 (define (call-with-current-continuation proc)
   (primitive-cwcc
     (lambda (cont)
-      (let ((env (get-dynamic-env)))
-	(proc (continuation->procedure cont env)))))) ;don't close over proc
+      (let ((env (get-dynamic-env))
+	    (point (get-dynamic-point)))
+	;; don't close over PROC
+	(proc (continuation->procedure cont env point))))))
 
-(define (continuation->procedure cont env)
+(define (continuation->procedure cont env point)
   (lambda results
-    (travel-to-point! (get-dynamic-point) (env-dynamic-point env))
+    (travel-to-point! (get-dynamic-point) point)
     (set-dynamic-env! env)
+    (set-dynamic-point! point)
     (with-continuation cont
       (lambda () (apply values results)))))
 
@@ -67,19 +70,7 @@
   (dynamic-env point-dynamic-env)
   (parent point-parent))
 
-(define root-point			;Shared among all state spaces
-  (make-point 0
-	      (lambda () (error "winding in to root!"))
-	      (lambda () (error "winding out of root!"))
-	      '() ;(empty-dynamic-env)	;Should never be seen
-	      #f))
-
-(define $dynamic-point (make-fluid root-point))
-(define (get-dynamic-point) (fluid $dynamic-point))
-(define (env-dynamic-point env)
-  (fluid-lookup env $dynamic-point))
-(define (let-dynamic-point point thunk)
-  (let-fluid $dynamic-point point thunk))
+; To make the modularity simpler, and to help Kali, the root point is #F.
 
 ; Go to a point in state space.  This involves running out-thunks from
 ; the current point out to its common ancestor with the target, and
@@ -87,15 +78,18 @@
 
 (define (travel-to-point! here target)
   (cond ((eq? here target) 'done)
-	((< (point-depth here)
-	    (point-depth target))
+	((or (not here)             ; HERE has reached the root.
+	     (and target
+		  (< (point-depth here)
+		     (point-depth target))))
 	 (travel-to-point! here (point-parent target))
 	 (set-dynamic-env! (point-dynamic-env target))
+	 (set-dynamic-point! target)
 	 ((point-in target)))
 	(else
 	 (set-dynamic-env! (point-dynamic-env here))
+	 (set-dynamic-point! here)
 	 ((point-out here))
 	 (travel-to-point! (point-parent here) target))))
-
 
 ; (put 'let-dynamic-point 'scheme-indent-hook 1)
