@@ -249,11 +249,12 @@
 	(code-vector-set! code 1 0)	; no arguments       - for disassembler
 	(code-vector-set! code 2 #b00)	; no env or template - for disassembler
 	(code-vector-set! code 3 (enum op cont-data))	;    - etc.
-	(code-vector-set! code 4 0)
-	(code-vector-set! code 5 8)		; low byte of return offset
+	(code-vector-set! code 4 0)             ; high byte of size  
+	(code-vector-set! code 5 8)		; low byte of size
+                                                ; no mask 
 	(code-vector-set! code 6 0)		; high byte of offset
 	(code-vector-set! code 7 return-code-pc); low byte of offset
-	(code-vector-set! code 8 0)		; GC mask - all pointers
+	(code-vector-set! code 8 0)		; GC mask size
 	(code-vector-set! code 9 (high-byte frame-size))
 	(code-vector-set! code 10 (low-byte frame-size))
 	(code-vector-set! code 11 (enum op protocol))
