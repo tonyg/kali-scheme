@@ -293,6 +293,18 @@
         architecture)   ;(enum op global)
   (files (env shadow)))     ;Exception handler to support package system
 
+(define-structure parse-bytecode (export parse-template
+                                         parse-template-code)
+  (open scheme
+        templates
+        code-vectors byte-vectors
+        architecture
+        enumerated
+        signals
+        closures
+        continuations
+        define-record-types)
+  (files parse-bytecode))
 
 ; Disassembler
 
