@@ -175,7 +175,7 @@
 (define (condition)
   (let ((c (command-level-condition (command-level))))
     (if c
-	(set-focus-object! c)
+	(set-command-results! (list c) #t)
 	(write-line "no condition" (command-output)))))
 
 ; Toggling various boolean flags.
