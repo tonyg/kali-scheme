@@ -98,9 +98,10 @@ FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
 
 # Sources:
 
-CONFIG_FILES = scheme/interfaces.scm scheme/vm/shared-interfaces.scm	\
-	       scheme/low-packages.scm scheme/rts-packages.scm		\
-	       scheme/comp-packages.scm
+CONFIG_FILES = scheme/interfaces.scm scheme/packages.scm \
+	       scheme/vm/shared-interfaces.scm	\
+	       scheme/low-packages.scm scheme/rts-packages.scm \
+	       scheme/comp-packages.scm scheme/initial-packages.scm
 
 # Rules:
 
@@ -228,6 +229,7 @@ c/fake/strerror.o: c/fake/strerror.h
 $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 		scheme/link-packages.scm scheme/env-packages.scm \
 		scheme/more-packages.scm \
+		scheme/posix/packages.scm scheme/srfi/packages.scm \
 		$(usual-files) build/initial.debug build/build-usual-image
 	$(srcdir)/build/build-usual-image $(srcdir) "`(cd $(srcdir) && echo $$PWD)`/scheme" '$(IMAGE)' './$(VM)' \
 		'$(INITIAL)'
