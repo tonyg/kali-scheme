@@ -226,12 +226,13 @@ c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
 		$(CPPFLAGS) $(DEFS) $(srcdir)/c/main.c
 
 c/scheme48vm.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
-			c/scheme48image.h c/event.h \
+			c/scheme48image.h c/bignum.h c/event.h \
 			c/io.h c/fd-io.h c/scheme48vm-prelude.h
 c/scheme48heap.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h c/event.h \
 			c/io.h c/fd-io.h
 c/scheme48read-image.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h
 c/scheme48write-image.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h
+c/bignum.o: c/bignum.h c/bignumint.h c/scheme48.h
 c/extension.o: c/sysdep.h $(FAKEHS) c/scheme48.h c/scheme48vm.h
 c/external.o: c/sysdep.h $(FAKEHS) c/scheme48.h
 c/unix/sysexits.o: c/sysdep.h $(FAKEHS) c/scheme48.h

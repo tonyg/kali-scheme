@@ -44,7 +44,7 @@ MIT in each case. */
 
 #include "scheme48.h"
 
-typedef long * bignum_type;
+typedef void * bignum_type;
 #define BIGNUM_OUT_OF_BAND ((bignum_type) 0)
 
 enum bignum_comparison
@@ -66,7 +66,7 @@ extern bignum_type s48_bignum_subtract(bignum_type, bignum_type);
 extern bignum_type s48_bignum_negate(bignum_type);
 extern bignum_type s48_bignum_multiply(bignum_type, bignum_type);
 extern int s48_bignum_divide(bignum_type numerator, bignum_type denominator,
-			     bignum_type * quotient, bignum_type * remainder);
+			     void * quotient, void * remainder);
 extern bignum_type s48_bignum_quotient(bignum_type, bignum_type);
 extern bignum_type s48_bignum_remainder(bignum_type, bignum_type);
 extern bignum_type s48_long_to_bignum(long);

@@ -42,7 +42,7 @@ MIT in each case. */
 
 #include "bignum.h"
 #include "bignumint.h"
-#include "limits.h"
+#include <limits.h>
 #include "scheme48.h"	// for S48_GC_PROTECT_GLOBAL
 #include <stdio.h>
 
@@ -262,8 +262,8 @@ s48_bignum_multiply(bignum_type x, bignum_type y)
   return (bignum_multiply_unsigned (x, y, negative_p));
 }
 
-int
-s48_bignum_divide(bignum_type numerator, bignum_type denominator,
+static int
+bignum_divide(bignum_type numerator, bignum_type denominator,
 		  bignum_type * quotient, bignum_type * remainder)
 {
   if (BIGNUM_ZERO_P (denominator))
@@ -330,6 +330,13 @@ s48_bignum_divide(bignum_type numerator, bignum_type denominator,
 	}
     }
   return (0);
+}
+
+int
+s48_bignum_divide(bignum_type numerator, bignum_type denominator,
+		  void* quotient, void * remainder)
+{
+  return bignum_divide(numerator, denominator, quotient, remainder);
 }
 
 bignum_type

@@ -11,6 +11,7 @@
 #include "scheme48vm.h"
 #include "scheme48heap.h"
 #include "scheme48image.h"
+#include "bignum.h"
 #include "event.h"
 #include "fd-io.h"
 
