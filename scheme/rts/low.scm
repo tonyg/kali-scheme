@@ -25,11 +25,8 @@
 			(cons x '()))))))
   (scalar-value->char x))
 
-; Characters are not represented in ASCII.  Using a different encoding
-; helps to catch portability problems.
-
-(define (char->integer c) (+ (char->ascii c) 1000))
-(define (integer->char n) (ascii->char (- n 1000)))
+(define (char->integer c) (char->scalar-value c))
+(define (integer->char n) (scalar-value->char n))
 
 (define ascii-limit 256)		;for reader
 ; space, horizontal tab, line feed (= newline), vertical tab, form feed, and
