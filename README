@@ -50,6 +50,8 @@ listed here):
       debug/		debugging utilities, tests, etc.
       misc/		very miscellaneous things (e.g. AMB operator)
       posix/		interface to POSIX system calls
+      srfi/		SRFI implementations
+      sort/		sorting libraries
     ps-compiler/	Pre-Scheme -> C compiler
     c/			c source files
       sysdep.h.in	input to configure
@@ -76,8 +78,8 @@ listed here):
       event.h		header file for OS interface
       io.h		ditto
       fd-io.h		ditto
-      socket.c		socket support
-      dynamo.c		dynamic loading support
+      srfi-27.c         C-side support for SRFI 27 (random bits)
+      asm-glue.c	support code for (upcoming) native code
       unix/             Unix-specific source files
       unix.h		header file for unix/* files
       posix/		C half of interface to POSIX system calls

@@ -3,8 +3,8 @@ file to your /tmp directory, and then issue the following shell
 commands:
 
   cd /usr/local/src
-  gunzip </tmp/scheme48-0.55.tgz | tar xf -
-  cd scheme48-0.55
+  gunzip </tmp/scheme48-1.1.tgz | tar xf -
+  cd scheme48-1.1
   ./configure
   make install
 
