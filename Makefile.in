@@ -620,7 +620,7 @@ c/old-scheme48.h: scheme/vm/interp/arch.scm scheme/vm/data/data.scm \
 # know what you are doing.
 # Afterwards, you should probably make c/scheme48.h.
 i-know-what-i-am-doing:
-	cd ps-compiler &&						     \
+	cd $(srcdir)/ps-compiler &&						     \
 	(echo ',batch';							     \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
