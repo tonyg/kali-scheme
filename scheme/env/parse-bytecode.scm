@@ -55,6 +55,18 @@
                     (lp (+ i 1) ((attribution-template-literal attribution) literal i state))))))))
 
 (define (parse-template-code tem code state attribution)
+  (with-template 
+   tem code state attribution
+   (lambda (pc length state)
+     (let loop ((pc pc)
+                (state state))
+       (if (< pc length)
+           (receive (size state)
+               (parse-instruction tem code pc state attribution)
+             (loop (+ pc size) state))
+           state)))))
+
+(define (with-template tem code state attribution fun)
   (let ((length (template-code-length code)))
     (let-fluid 
         *bc-make-labels* '()
@@ -71,14 +83,11 @@
                 ((2) (values #t #f))
                 ((3) (values #t #t))
                 (else (error "invalid init-template spec" (code-vector-ref code (+ size 1)))))
-            (let loop ((pc (+ size 2)) 
-                       (state ((attribution-init-template attribution) 
-                               state tem protocol-arguments push-template? push-env?)))
-              (if (< pc length)
-                  (receive (size state)
-                      (parse-instruction tem code pc state attribution)
-                    (loop (+ pc size) state))
-                  state))))))))
+            (fun (+ size 2)
+                 length
+                 ((attribution-init-template attribution) 
+                  state tem protocol-arguments push-template? push-env?))))))))
+          
 
 (define (parse-instruction template code pc state attribution)
   (let* ((opcode (code-vector-ref code pc))
@@ -196,7 +205,7 @@
 
 
 ; Parse a protocol, returning the number of bytes of instruction stream that
-; were consumed.
+; were consumed. PC has to point behind the PRTOCOL opcode
 
 (define (parse-protocol code pc attribution)
   (let ((protocol (code-vector-ref code pc)))
@@ -212,9 +221,11 @@
         ((= protocol ignore-values-protocol)
          (values 1 (list protocol)))
         ((= protocol call-with-values-protocol)
-         (values 3 (list protocol 
-                         (pc->label (+ (get-offset code (+ pc 1)) pc)
-                                    attribution))))
+         (let ((offset (get-offset code (+ pc 1))))
+           (values 3 (list protocol 
+                           (pc->label (+ offset pc)
+                                      attribution)
+                           (zero? offset)))))
         ((= protocol args+nargs-protocol)
          (values 2 (list protocol (code-vector-ref code (+ pc 1)))))
         ((= protocol nary-dispatch-protocol)
@@ -239,18 +250,21 @@
 
   (map maybe-parse-one-dispatch (list 3 4 5 2)))
 
+(define (protocol-protocol p-args)
+  (car p-args))
+
 (define (n-ary-protocol? p-args)
   (let ((protocol (car p-args)))
     (if (or (= protocol two-byte-nargs+list-protocol)
-            (and (= protocol big-stack-protocol)
-                 (n-ary-protocol? (cadr p-args)))
             (= protocol call-with-values-protocol)
             (= protocol ignore-values-protocol))
         #t
         (if (or (<= protocol maximum-stack-args)
                 (= protocol two-byte-nargs-protocol))
             #f
-            (error "unknown protocol in n-ary-protocol?" p-args)))))
+            (if (= protocol big-stack-protocol)
+                (n-ary-protocol? (cadr p-args))
+                (error "unknown protocol in n-ary-protocol?" p-args))))))
 
 (define (protocol-nargs p-args)
   (let ((protocol (car p-args)))
@@ -267,11 +281,22 @@
           ((= protocol ignore-values-protocol)
            0)
           ((= protocol call-with-values-protocol)
-           #f)
+           (error "call-with-values-protocol in protocol-nargs"))
 	  (else
 	   (error "unknown protocol in protocol-nargs" p-args)))))
 
+(define (protocol-cwv-tailcall? p-args)
+  (let ((protocol (protocol-protocol p-args)))
+    (if (not (= protocol call-with-values-protocol))
+        (error "invalid protocol in protocol-cwv-tailcall?" protocol))
+    (caddr p-args)))
 
+(define (call-with-values-protocol-target p-args)
+  (let ((protocol (protocol-protocol p-args)))
+    (if (not (= protocol call-with-values-protocol))
+        (error "invalid protocol in protocol-cwv-tailcall?" protocol))
+    (cadr p-args)))
+  
 ; Generic opcode argument parser
 
 (define (parse-opcode-args op start-pc code template attribution)
@@ -342,7 +367,10 @@
      ((small-index)
       (code-vector-ref code pc))
      ((offset)
-      (pc->label (+ start-pc (get-offset code pc)) attribution))
+      (let ((offset (get-offset code pc)))
+        (if (zero? offset)
+            #f
+            (pc->label (+ start-pc offset) attribution))))
      ((offset-)
       (pc->label (- start-pc (get-offset code pc)) attribution))
      ((stob)

@@ -296,10 +296,14 @@
 (define-interface parse-bytecode-interface
   (export parse-template
           parse-template-code
+          parse-instruction
+          parse-protocol
+          with-template
           make-attribution
           make-opcode-table
           opcode-table-set!
-          protocol-nargs n-ary-protocol?          
+          protocol-protocol protocol-nargs n-ary-protocol? 
+          protocol-cwv-tailcall? call-with-values-protocol-target
           env-data? env-data-total-count env-data-frame-offsets
           env-data-maybe-template-index env-data-closure-offsets 
           env-data-env-offsets
