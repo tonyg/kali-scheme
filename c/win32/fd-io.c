@@ -118,9 +118,9 @@ size_t stream_descriptors_max_size;
 static void
 setup_stream_descriptor(stream_descriptor_t* stream_descriptor, long fd)
 {
-  stream_descriptors->is_free = PSTRUE;
-  stream_descriptors->callback_data.fd = fd;
-  stream_descriptors->callback_data.buffer = NULL;
+  stream_descriptor->is_free = PSTRUE;
+  stream_descriptor->callback_data.fd = fd;
+  stream_descriptor->callback_data.buffer = NULL;
 }
 
 
