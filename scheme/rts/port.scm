@@ -331,6 +331,56 @@
       (call-error "invalid argument"
 		  make-unbuffered-output-port handler data)))
 
+(define (make-one-byte-handler write-block)
+  (lambda (port byte)
+    (let ((buffer (port-buffer port)))
+      (byte-vector-set! buffer 0 byte)
+      (let loop ()
+	(if (= 0 (write-block port buffer 0 1))
+	    (loop))))))
+
+(define (make-one-char-handler write-block)
+  (lambda (port ch)
+    (let ((buffer (port-buffer port))
+	  (encode-char
+	   (text-codec-encode-char-proc (port-text-codec port))))
+      (let ((encode-count
+	     (atomically
+	      (call-with-values
+		  (lambda ()
+		    (encode-char ch
+				 buffer 0 (byte-vector-length buffer)))
+		(lambda (ok? encode-count)
+		  ;; OK? must be true
+		  encode-count)))))
+	(let loop ((index 0))
+	  (let* ((to-write (- encode-count index))
+		 (written
+		  (write-block port buffer index to-write)))
+	    (if (< written to-write)
+		(loop (+ index written)))))))))
+
+(define (make-write-block-handler write-block)
+  (lambda (port buffer start count)
+    (let loop ((sent 0))
+      (let ((sent (+ sent
+		     (write-block port
+				  buffer
+				  (+ start sent)
+				  (- count sent)))))
+	(if (< sent count)
+	    (loop sent))))))
+
+(define (make-unbuffered-output-port-handler discloser closer! write-block ready?)
+  (make-port-handler discloser
+		     closer!
+		     (make-one-byte-handler write-block)
+		     (make-one-char-handler write-block)
+		     (make-write-block-handler write-block)
+		     ready?
+		     (lambda (port error-if-closed?)	; output forcer
+		       (unspecific))))
+
 ;----------------
 ; Output ports that just discard any output.
 

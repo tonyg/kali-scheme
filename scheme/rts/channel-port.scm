@@ -302,60 +302,17 @@
 	    (periodically-flushed-ports)))
 
 ;----------------
-; Unbuffered output ports.
+; Unbuffered output channel ports.
 ; This is used for the initial current-error-port.
 
-(define (one-byte-handler port byte)
-  (let ((channel (channel-cell-ref (port-data port)))
-	(buffer (port-buffer port)))
-    (byte-vector-set! buffer 0 byte)
-    (let loop ()
-      (if (= 0 (channel-write channel buffer 0 1))
-	  (loop)))))
-
-(define (one-char-handler port ch)
-  (let ((channel (channel-cell-ref (port-data port)))
-	(buffer (port-buffer port))
-	(encode-char
-	 (text-codec-encode-char-proc (port-text-codec port))))
-    (let ((encode-count
-	   (atomically
-	    (call-with-values
-		(lambda ()
-		  (encode-char ch
-			       buffer 0 (byte-vector-length buffer)))
-	      (lambda (ok? encode-count)
-		;; OK? must be true
-		encode-count)))))
-      (let loop ((index 0))
-	(let* ((to-write (- encode-count index))
-	       (written
-		(channel-write channel buffer index to-write)))
-	  (if (< written to-write)
-	      (loop (+ index written))))))))
-
-(define (write-block-handler port buffer start count)
-  (let ((channel (channel-cell-ref (port-data port))))
-    (let loop ((sent 0))
-      (let ((sent (+ sent
-		     (channel-write channel
-				    buffer
-				    (+ start sent)
-				    (- count sent)))))
-	(if (< sent count)
-	    (loop sent))))))
-
 (define unbuffered-output-handler
-  (make-port-handler (lambda (port)
-		       (list 'output-port
-			     (channel-cell-ref (port-data port))))
-		     (lambda (port)
-		       (port-channel-closer (port-data port)))
-		     one-byte-handler
-		     one-char-handler
-		     write-block-handler
-		     (lambda (port)			; ready
-		       (channel-ready? (channel-cell-ref (port-data port))))
-		     (lambda (port error-if-closed?)	; output forcer
-		       (unspecific))))
-
+  (make-unbuffered-output-port-handler (lambda (port)
+					 (list 'output-port
+					       (channel-cell-ref (port-data port))))
+				       (lambda (port)
+					 (port-channel-closer (port-data port)))
+				       (lambda (port buffer start count)
+					 (channel-write (channel-cell-ref (port-data port))
+							buffer start count))
+				       (lambda (port)			; ready
+					 (channel-ready? (channel-cell-ref (port-data port))))))
