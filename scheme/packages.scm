@@ -311,6 +311,7 @@
 	    records-internal
 	    root-scheduler
 	    session-data
+	    text-codecs
 	    threads-internal
 	    vm-exceptions
 	    usual-resumer
