@@ -134,15 +134,15 @@
   (pending-interrupts-clear!)
   (set! s48-*pending-interrupt?* #f))
 
-;(define-opcode poll
-;  (if (and (interrupt-flag-set?)
-;           (pending-interrupt?))
-;      (begin
-;        (push-simple-continuation! (address+ *code-pointer*
-;                                             (code-offset 0)))
-;        (push-native-interrupt-continuation)
-;        (goto find-and-call-interrupt-handler))
-;      (goto continue 2)))
+(define-opcode poll
+  (if (and (interrupt-flag-set?)
+           (pending-interrupt?))
+      (begin
+        (push-continuation! (address+ *code-pointer*
+				      (code-offset 0)))
+        (push-native-interrupt-continuation)
+        (goto find-and-call-interrupt-handler))
+      (goto continue 2)))
 	    
 ; Return from a call to an interrupt handler.
 
