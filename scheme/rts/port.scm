@@ -2,28 +2,29 @@
 
 ; Ports and port handlers
 
-; See doc/io.txt for a description of the i/o system, including ports,
-; port handlers, and so forth.
-
 ;  (discloser <port>) -> (<symbol> <value> ...)
 ;  (close <port>) -> whatever
 ;
 ; Input ports
 ;  (byte <port> <read?> <count>) -> <byte> ...
+;  (char <port> <read?>) -> <char>
 ;  (block <port> <buffer> <start> <count>) -> <byte count>
 ;  (ready? <port>) -> <boolean>
 ;
 ; Output ports
 ;  (byte <port> <byte>) -> whatever
+;  (char <port> <char>) -> whatever
 ;  (block <port> <buffer> <start> <count>) -> whatever
+;  (ready? <port>) -> <boolean>
 ;  (force-output <port>) -> whatever
 
 (define-record-type port-handler :port-handler
-  (make-port-handler discloser close byte block ready? force)
+  (make-port-handler discloser close byte char block ready? force)
   port-handler?
   (discloser port-handler-discloser)
   (close     port-handler-close)
   (byte      port-handler-byte)
+  (char	     port-handler-char)
   (block     port-handler-block)
   (ready?    port-handler-ready?)
   (force     port-handler-force))		; only used for output
@@ -93,16 +94,19 @@
 ; and then call the appropriate handler procedure.
 
 (define (real-read-char port)
-  ((text-codec-input-char-proc (port-text-codec port))
-   port #t))
+  (if (open-input-port? port)
+      ((port-handler-char (port-handler port)) port #t)
+      (call-error "invalid argument" read-char port)))
 
 (define (real-peek-char port)
-  ((text-codec-input-char-proc (port-text-codec port))
-   port #f))
+  (if (open-input-port? port)
+      ((port-handler-char (port-handler port)) port #f)
+      (call-error "invalid argument" peek-char port)))
 
 (define (real-write-char char port)
-  ((text-codec-write-char-proc (port-text-codec port))
-   char port))
+  (if (open-output-port? port)
+      ((port-handler-char (port-handler port)) port char)
+      (call-error "invalid argument" write-char port)))
 
 ; See if there is a character available.  BYTE-READY? itself is defined
 ; in current-ports.scm as it needs CURRENT-INPUT-PORT when called with
@@ -114,15 +118,15 @@
          port)
       (call-error "invalid argument" real-byte-ready? port)))
 
-(define (real-peek-bytes count port)
+(define (real-peek-byte count port)
   (if (open-input-port? port)
-      ((port-handler-byte (port-handler port)) port #f count)
-      (call-error "invalid argument" real-peek-bytes port)))
+      ((port-handler-byte (port-handler port)) port #f)
+      (call-error "invalid argument" peek-byte port)))
 
-(define (real-read-bytes count port)
+(define (real-read-byte count port)
   (if (open-input-port? port)
-      ((port-handler-byte (port-handler port)) port #t count)
-      (call-error "invalid argument" real-read-bytes port)))
+      ((port-handler-byte (port-handler port)) port #t)
+      (call-error "invalid argument" read-byte port)))
 
 ; Reading in a block of characters at once.
 
@@ -304,7 +308,7 @@
 		 open-output-port-status
 		 #f		; lock     (not used in unbuffered ports)
 		 data
-		 #f		; buffer
+		 (make-byte-vector 128 0) ; buffer
 		 #f		; index
 		 #f		; limit
 		 #f)            ; pending-eof?
@@ -320,6 +324,8 @@
       (list 'null-output-port))
     make-output-port-closed!		; close
     (lambda (port byte)			; one-byte (we just empty the buffer)
+      (set-port-index! port 0))
+    (lambda (port char)                 ; one-char (we just empty the buffer)
       (set-port-index! port 0))
     (lambda (port buffer start count)	; write-block
       count)

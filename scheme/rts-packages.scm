@@ -99,8 +99,16 @@
 	default-string-encodings)
   (files (rts file-name)))
 
+(define-structure text-codecs text-codecs-interface
+  (open scheme-level-1
+	define-record-types
+	bitwise
+	unicode
+	proposals)
+  (files (rts text-codec))
+  (optimize auto-integrate))
+
 (define-structures ((i/o i/o-interface)
-		    (i/o-codecs i/o-codecs-interface)
 		    (i/o-internal i/o-internal-interface))
   (open scheme-level-1 simple-signals fluids
 	architecture
@@ -113,10 +121,10 @@
 	debug-messages	; for error messages
 	methods         ; &disclose :input-port :output-port
 	number-i/o      ; number->string for debugging
+	text-codecs
 	handle		; report-errors-as-warnings
 	vm-exceptions)     ; wrong-number-of-args stuff
-  (files (rts chario)
-	 (rts port)
+  (files (rts port)
 	 (rts port-buffer)
 	 (rts current-port))
   (optimize auto-integrate))
@@ -138,7 +146,7 @@
 (define-structure channel-ports channel-ports-interface
   (open scheme-level-1 byte-vectors define-record-types ascii
 	ports
-	i/o i/o-internal
+	i/o i/o-internal text-codecs
 	channels channel-i/o
 	file-names
 	proposals

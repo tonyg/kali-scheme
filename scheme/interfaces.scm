@@ -63,6 +63,7 @@
 	  continuation-set!
 	  continuation?
 	  copy-bytes!
+	  copy-string-chars!
 	  current-thread		;fluids threads
 	  double?
 	  eof-object                    ;i/o-internal re-exports this
@@ -565,8 +566,13 @@
 	  silently
 	  make-null-output-port))
 
-(define-interface i/o-codecs-interface
-  (export null-text-codec
+(define-interface text-codecs-interface
+  (export text-codec? make-text-codec
+	  text-codec-name
+	  text-codec-decode-char-proc
+	  text-codec-encode-char-proc
+
+	  null-text-codec
 	  latin-1-codec
 	  utf-8-codec))
 

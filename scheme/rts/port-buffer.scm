@@ -4,7 +4,7 @@
   (if (and (okay-buffer? buffer index limit)
 	   (port-handler? handler))
       (make-port handler
-		 latin-1-codec
+		 utf-8-codec
 		 (bitwise-ior input-port-mask open-input-port-mask)
 		 #f		; timestamp (was lock)
 		 data
@@ -20,7 +20,7 @@
 	   (> limit 0)
 	   (port-handler? handler))
       (make-port handler
-		 latin-1-codec
+		 utf-8-codec
 		 open-output-port-status
 		 #f		; timestamp (was lock)
 		 data
@@ -63,7 +63,8 @@
 			 (make-input-port-closed! port)
 			 (or (closer! (port-data port))
 			     (lose))))
-		     (make-byte-input buffer-filler!)
+		     (make-one-byte-input buffer-filler!)
+		     (make-one-char-input buffer-filler!)
 		     (make-read-block buffer-filler!)
 		     (make-byte-ready? ready? #t)
 		     #f))			; force
@@ -86,19 +87,10 @@
 
 ;----------------
 
-; The READ? argument says whether we're doing a READ or a PEEK.  We
-; return COUNT bytes.  There must be space for that many bytes in the
-; buffer.  If there's an EOF before COUNT bytes, still COUNT values
-; will be returned: the first will be the available bytes, followed by
-; EOFs.  (We don't cater to the fact that you may have <byte> <eof>
-; <byte> because that likely won't matter for character decoding,
-; which is what this is for.)
+; The READ? argument says whether we're doing a READ or a PEEK.
 
-; This is so complicated mainly because R5RS didn't really anticipate
-; multi-byte character encodings.
-
-(define (make-byte-input buffer-filler!)
-  (lambda (port read? count)
+(define (make-one-byte-input buffer-filler!)
+  (lambda (port read?)
     (with-new-proposal (lose)
       (let ((index (provisional-port-index port))
 	    (limit (provisional-port-limit port)))
@@ -107,66 +99,90 @@
 	       (call-error "invalid argument"
 			   (if read? read-byte peek-byte)
 			   port))
-	      ((<= (+ index count) limit)
+	      ((< index limit)
 	       (if read?
-		   (provisional-set-port-index! port (+ index count)))
-	       (if (= count 1)
-		   (let ((b (provisional-byte-vector-ref (port-buffer port)
-							 index)))
-		     (if (maybe-commit)
-			 b
-			 (lose)))
-		   (let* ((buffer (port-buffer port))
-			  (bytes
-			   (let recur ((offset 0))
-			     (if (>= offset count)
-				 '()
-				 (cons (provisional-byte-vector-ref buffer (+ index offset))
-				       (recur (+ 1 offset)))))))
-		     (if (maybe-commit)
-			 (apply values bytes)
-			 (lose)))))
+		   (provisional-set-port-index! port (+ 1 index)))
+	       (let ((b (provisional-byte-vector-ref (port-buffer port)
+						     index)))
+		 (if (maybe-commit)
+		     b
+		     (lose))))
 	      ((provisional-port-pending-eof? port)
 	       (if read?
 		   (provisional-set-port-pending-eof?! port #f))
-	       (if (= count 1)
-		   (if (maybe-commit)
-		       (eof-object)
-		       (lose))
-		   (let ((buffer (port-buffer port)))
-		     (apply values
-			    (let recur ((offset 0))
-			      (cond
-			       ((>= offset count) '())
-			       ((>= (+ index offset) limit)
-				(cons (eof-object) (recur (+ 1 offset))))
-			       (else
-				(cons (provisional-byte-vector-ref buffer (+ index offset))
-				      (recur (+ 1 offset))))))))))
+	       (if (maybe-commit)
+		   (eof-object)
+		   (lose)))
 	      (else
-	       (cond
-		((= index limit)
-		 ;; we have zilch
-		 (provisional-set-port-index! port 0)
-		 (provisional-set-port-limit! port 0))
-		((not (zero? index))
-		 ;; we have something, but it's not at the beginning
-
-		 ;; (We may have enough space left at the end, but we
-		 ;; don't bother checking.  This may be worthwhile at
-		 ;; some point.)
-
-		 (let ((buffer (port-buffer port)))
-		   ;; copy what we have to the beginning so there's space at the end
-		   ;; we can try to fill
-		   ;; (debug-message "aligning port buffer")
-		   (attempt-copy-bytes! buffer index
-					buffer 0
-					(- limit index))
-		   (provisional-set-port-index! port 0)
-		   (provisional-set-port-limit! port (- limit index)))))
+	       (provisional-set-port-index! port 0)
+	       (provisional-set-port-limit! port 0)
 	       (buffer-filler! port #t)
 	       (lose)))))))
+
+(define (make-one-char-input buffer-filler!)
+  (lambda (port read?)
+    (let ((decode-char
+	   (text-codec-decode-char-proc (port-text-codec port))))
+      (with-new-proposal (lose)
+	(let ((index (provisional-port-index port))
+	      (limit (provisional-port-limit port)))
+	  
+	  (define (consume&deliver decode-count ch)
+	    (if read?
+		(provisional-set-port-index! port
+					     (+ index decode-count)))
+	    (if (maybe-commit)
+		ch
+		(lose)))
+
+	  (cond ((not (open-input-port? port))
+		 (remove-current-proposal!)
+		 (call-error "invalid argument"
+			     (if read? read-byte peek-byte)
+			     port))
+		((< index limit)
+		 (let ((buffer (port-buffer port)))
+		   (call-with-values
+		       (lambda ()
+			 (decode-char buffer index (- limit index)))
+		     (lambda (ch decode-count)
+		       (cond
+			(ch
+			 (consume&deliver decode-count ch))
+			((or (not decode-count) ; decoding error
+			     (provisional-port-pending-eof? port)) ; partial char
+			 (consume&deliver 1 #\?))
+			;; need at least DECODE-COUNT bytes
+			(else
+			 (if (> decode-count
+				(- (byte-vector-length buffer)
+				   limit))
+			      
+			     ;; copy what we have to the
+			     ;; beginning so there's space at the
+			     ;; end we can try to fill
+			     (begin
+			       ;; (debug-message "aligning port buffer")
+			       (attempt-copy-bytes! buffer index
+						    buffer 0
+						    (- limit index))
+			       (provisional-set-port-index! port 0)
+			       (provisional-set-port-limit! port (- limit index))))
+			 (buffer-filler! port #t)
+			 (lose)))))))
+		((provisional-port-pending-eof? port)
+		 (if read?
+		     (provisional-set-port-pending-eof?! port #f))
+		 (if (maybe-commit)
+		     (eof-object)
+		     (lose)))
+		(else
+		 (if (= index limit)	; we have zilch
+		     (begin
+		       (provisional-set-port-index! port 0)
+		       (provisional-set-port-limit! port 0)))
+		 (buffer-filler! port #t)
+		 (lose))))))))
 
 ;----------------
 ; See if there is a byte available.
@@ -287,6 +303,7 @@
 		       (discloser (port-data port)))
 		     (make-closer closer! buffer-emptier!)
 		     (make-one-byte-output buffer-emptier!)
+		     (make-one-char-output buffer-emptier!)
 		     (make-write-block buffer-emptier!)
 		     (make-byte-ready? ready? #f)
 		     (make-forcer buffer-emptier!)))
@@ -328,6 +345,39 @@
 	       (set-port-flushed?! port #t)
 	       (buffer-emptier! port #t)
 	       (lose)))))))
+
+(define (make-one-char-output buffer-emptier!)
+  (lambda (port ch)
+    (let ((encode-char
+	   (text-codec-encode-char-proc (port-text-codec port))))
+      (with-new-proposal (lose)
+	(let ((index (provisional-port-index port))
+	      (limit (byte-vector-length (port-buffer port))))
+	  (cond ((not (open-output-port? port))
+		 (remove-current-proposal!)
+		 (call-error "invalid argument" write-byte port))
+		((< index limit)
+		 (call-with-values
+		     (lambda ()
+		       (encode-char ch
+				    (port-buffer port)
+				    index (- limit index)))
+		   (lambda (ok? encode-count)
+		     (cond
+		      (ok?
+		       (provisional-set-port-index! port (+ index encode-count))
+		       (or (maybe-commit)
+			   (lose)))
+		      (encode-count	; need more space
+		       (set-port-flushed?! port #t)
+		       (buffer-emptier! port #t)
+		       (lose))
+		      (else		; encoding error
+		       'lose)))))
+		(else
+		 (set-port-flushed?! port #t)
+		 (buffer-emptier! port #t)
+		 (lose))))))))
 
 ; We have the following possibilities:
 ;  - the port is no longer open
