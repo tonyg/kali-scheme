@@ -560,6 +560,7 @@
 	  s48-set-native-protocol!
 	  
 	  *code-pointer*
+	  *last-code-called*
 	  *val*
 	  ))
 
@@ -625,6 +626,7 @@
 	  *val*
 	  *cont*
 	  *stack*
+	  *last-code-called*
 	  s48-*stack-limit*
 	  s48-*native-protocol*
 	  s48-set-native-protocol!
