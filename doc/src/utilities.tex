@@ -1225,6 +1225,842 @@ The only inefficiencies in this code are the \code{final} and \code{continue}
 The macro expander could do the substitution for \code{continue} when there
  is no explicit proceed variable, as in this case, but not in general.
 
+\section{Sorting lists and vectors}
+\label{sort}
+
+(This section, as the libraries it describes, was written mostly by
+Olin Shivers for the draft of SRFI~32.)
+
+%% Olin Shivers
+%% First draft: 1998/10/19
+%% Last update: 2002/7/21
+
+%% [Todo: del-list-neighbor-dups!
+%%        vector-copy -> subvector
+%%        use srfi-23 for reporting errors
+%%        use srfi-16 for n-aries?
+
+The sort libraries in Scheme~48 include
+%
+\begin{itemize}
+\item vector insert sort (stable)
+\item vector heap sort
+%    - Vector quick sort (with median-of-3 pivot picking)
+\item vector merge sort (stable)
+\item pure and destructive list merge sort (stable)
+\item stable vector and list merge
+\item miscellaneous sort-related procedures: vector and list merging, 
+  sorted predicates, vector binary search, vector and list 
+  delete-equal-neighbor procedures.
+\item a general, non-algorithmic set of procedure names for general sorting
+  and merging
+\end{itemize}
+
+\subsection{Design rules}
+
+\paragraph{What vs. how}
+
+There are two different interfaces: ``what'' (simple) and ``how'' (detailed).
+
+\begin{description}
+\item[Simple] you specify semantics: datatype (list or vector), 
+  mutability, and stability.
+  
+\item[Detailed] you specify the actual algorithm (quick, heap,
+  insert, merge). Different algorithms have different properties,
+  both semantic and pragmatic, so these exports are necessary.
+  
+  It is necessarily the case that the specifications of these procedures
+  make statements about execution ``pragmatics.'' For example, the sole
+  distinction between heap sort and quick sort---both of which are
+  provided by this library----is one of execution time, which is not a
+  ``semantic'' distinction. Similar resource-use statements are made about
+  ``iterative'' procedures, meaning that they can execute on input of
+  arbitrary size in a constant number of stack frames.
+\end{description}
+
+\paragraph{Consistency across procedure signatures}
+
+The two interfaces share common procedure signatures wherever
+possible, to facilitate switching a given call from one procedure
+to another.
+        
+\paragraph{Less-than parameter first, data parameter after}
+
+These procedures uniformly observe the following parameter order:
+the data to be sorted comes after the comparison procedure.
+That is, we write
+%
+\begin{alltt}
+  (sort \(<\) \var{list})
+\end{alltt}
+%
+not
+%
+\begin{alltt}
+  (sort \var{list} \(<\))
+\end{alltt}
+%
+
+\paragraph{Ordering, comparison procedures and stability}
+
+These routines take a $<$ comparison procedure, not a $\leq$ comparison
+procedure, and they sort into increasing order. The difference between
+a $<$ spec and a $\leq$ spec comes up in two places: 
+
+\begin{itemize}
+\item the definition of an ordered or sorted data set, and
+\item the definition of a stable sorting algorithm.
+%\item correctness of quicksort. NOTE "two" above
+\end{itemize}
+%
+
+We say that a data set (a list or vector) is \textit{sorted} or
+\textit{ordered} if it contains no adjacent pair of values $\ldots x,
+y \ldots$ such that $y < x$.
+
+In other words, scanning across the data never takes a ``downwards'' step.
+
+If you use a $\leq$ procedure where these algorithms expect a $<$
+procedure, you may not get the answers you expect. For example,
+the \code{list-sorted?} procedure will return false if you pass it a $\leq$ comparison
+procedure and an ordered list containing adjacent equal elements.
+
+A ``stable'' sort is one that preserves the pre-existing order of equal
+elements. Suppose, for example, that we sort a list of numbers by 
+comparing their absolute values, i.e., using comparison procedure
+%
+\begin{verbatim}
+(lambda (x y) (< (abs x) (abs y)))
+\end{verbatim}
+%
+If we sort a list that contains both 3 and -3: \[\ldots 3, \ldots, -3 \ldots\]
+then a stable sort is an algorithm that will not swap the order
+of these two elements, that is, the answer is guaranteed to to look like
+\[\ldots 3, -3 \ldots\]
+not
+\[\ldots -3, 3 \ldots\]
+Choosing $<$ for the comparison procedure instead of $\leq$ affects
+how stability is coded. Given an adjacent pair $x, y$, \code{(<
+  $y$ $x$)} means ``$x$ should be moved in front of $x$''---otherwise,
+leave things as they are. So using a $\leq$ procedure where a $<$
+procedure is expected will \emph{invert} stability.
+
+This is due to the definition of equality, given a $<$ comparator:
+\begin{verbatim}
+    (and (not (< x y))
+         (not (< y x)))
+\end{verbatim}
+The definition is rather different, given a $\leq$ comparator:
+\begin{verbatim}
+    (and (<= x y)
+         (<= y x))
+\end{verbatim}
+%
+A ``stable'' merge is one that reliably favors one of its data sets
+when equal items appear in both data sets. \emph{All merge operations in
+this library are stable}, breaking ties between data sets in favor
+of the first data set---elements of the first list come before equal 
+elements in the second list.
+
+So, if we are merging two lists of numbers ordered by absolute value,
+the stable merge operation \code{list-merge}
+\begin{verbatim}
+    (list-merge (lambda (x y) (< (abs x) (abs y)))
+                '(0 -2 4 8 -10) '(-1 3 -4 7))
+\end{verbatim}
+reliably places the 4 of the first list before the equal-comparing -4
+  of the second list:
+\begin{verbatim}
+    (0 -1 -2 4 -4 7 8 -10)
+\end{verbatim}
+%
+  Some sort algorithms will \emph{not work correctly} if given a $\leq$
+  when they expect a $<$ comparison (or vice-versa).
+
+%% For example,
+%%   violating quicksort's spec may cause it to produce wrong answers,
+%%   diverge, raise an error, or do some fourth thing. To see why,
+%%   consider the left-scan part of the standard quicksort partition
+%%   step: (let ((i (let scan ((i i)) (if (elt< (vector-ref v i) pivot)
+%%   (scan (+ i 1)) i)))) ...)  Consider applying this loop to a vector
+%%   of all zeroes (hence, PIVOT, as well, is zero), but erroneously
+%%   using \verb|<=| for the ELT< procedure. The loop will scan right off
+%%   the end of the vector, producing a vector-index error.  The
+%%   guarantee that the scan loop will terminate before running off the
+%%   end of the vector depends critically upon ELT< performing as a true,
+%%   irreflexive $<$ relation. Running off the end of the vector is only
+%%   one of a variety of possibly ways to lose---other, variant
+%%   implementations of quicksort can, instead, loop forever on some data
+%%   sets if ELT< is a $\leq$ predicate.
+
+In short, if your comparison procedure $f$ answers true to \code{($f$ x x)}, then 
+\begin{itemize}
+\item using a stable sorting or merging algorithm will not give you a
+  stable sort or merge, 
+\item \code{list-sorted?} may surprise you.
+% \item quicksort may fail in a variety of possible ways.
+\end{itemize}
+Note that  you can synthesize a $<$ procedure from a $\leq$ procedure with
+\begin{verbatim}
+    (lambda (x y) (not (<= y x)))
+\end{verbatim}
+if need be. 
+
+Precise definitions give sharp edges to tools, but require care in use. 
+``Measure twice, cut once.''
+
+%% I have adopted the choice of $<$ from Common Lisp. One would assume
+%% the definers of Common Lisp had a good reason for adopting $<$ instead
+%% of $\leq$, but canvassing several of the principal actors in the
+%% definition process has turned up no better reason than ``an arbitrary
+%% but consistent choice.'' At minimum, then, these libraries extend the
+%% coverage of that consistent choice.
+
+\paragraph{All vector operations accept optional subrange parameters}
+
+The vector operations specified below all take optional
+\code{start}/\code{end} arguments indicating a selected subrange
+of a vector's elements. If a \code{start} parameter or
+\code{start}/\code{end} parameter pair is given to such a
+procedure, they must be exact, non-negative integers, such that
+%
+\begin{displaymath}
+    0 \leq \var{start} \leq \var{end} \leq \code{(vector-length \var{vector})}
+\end{displaymath}
+%
+where \var{vector} is the related vector parameter. If not specified,
+they default to 0 and the length of the vector, respectively. They are
+interpreted to select the range $[\var{start},\var{end})$, that
+is, all elements from index \var{start} (inclusive) up to, but not
+including, index \var{end}.
+
+\paragraph{Required vs.\ allowed side-effects}
+
+\code{List-sort!} and \code{List-stable-sort!} are allowed, but
+not required, to alter their arguments' cons cells to construct the
+result list. This is consistent with the what-not-how character of the
+group of procedures to which they belong (the \code{sorting} structure).
+
+The \code{list-delete-neighbor-dups!}, \code{list-merge!} and
+\code{list-merge-sort!} procedures, on the other hand, provide
+specific algorithms, and, as such, explicitly commit to the use of
+side-effects on their input lists in order to guarantee their key
+algorithmic properties (e.g., linear-time operation).
+
+\subsection{Procedure specification}
+
+\begin{center}
+\begin{tabular}{ll}
+Structure name & Functionality\\\hline
+\code{sorting} & General sorting for lists and vectors\\
+\code{sorted} & Sorted predicates for lists and vectors\\
+\code{list-merge-sort}& List merge sort\\
+\code{vector-merge-sort} & Vector merge sort\\
+\code{vector-heap-sort} & Vector heap sort\\
+%\code{vector-quick-sort} & Vector quick sort\\
+\code{vector-insert-sort} & Vector insertion sort\\
+\code{delete-neighbor-duplicates} & List and vector delete neighbor duplicates\\
+\code{binary-searches} & Vector binary search
+ \end{tabular}
+\end{center}
+%
+Note that there is no ``list insert sort'' package, as you might as well always
+use list merge sort. The reference implementation's destructive list merge
+sort will do fewer \code{set-cdr!}s than a destructive insert sort.
+
+\paragraph{Procedure naming and functionality}
+
+Almost all of the procedures described below are variants of two basic
+operations: sorting and merging. These procedures are consistently named
+by composing a set of basic lexemes to indicate what they do.
+\begin{center}
+
+\begin{tabular}{lp{0.8\textwidth}}
+Lexeme & Meaning\\\hline
+\code{sort}&    The procedure sorts its input data set by some $<$ comparison procedure.
+\\
+\code{merge}&   The procedure merges two ordered data sets into a single ordered
+          result.
+\\
+\code{stable} & This lexeme indicates that the sort is a stable one.
+\\
+\code{vector}& The procedure operates upon vectors.
+\\
+\code{list} &   The procedure operates upon lists.
+\\
+\code{!}      &  Procedures that end in \code{!} are allowed, and sometimes required, 
+          to reuse their input storage to construct their answer.
+\end{tabular}
+\end{center}
+
+\paragraph{Types of parameters and return values}
+
+In the procedures specified below,
+%
+\begin{itemize}
+\item A \code{<} or \code{=} parameter is a procedure accepting
+  two arguments taken from the specified procedure's data set(s), and
+  returning a boolean;
+\item \code{Start} and \code{end} parameters are exact, non-negative integers that 
+  serve as vector indices selecting a subrange of some associated vector.
+  When specified, they must satisfy the relation
+  \begin{displaymath}
+    0 \leq \var{start} \leq \var{end} \leq \code{(vector-length \var{vector})}
+  \end{displaymath}
+  where \var{vector} is the associated vector.
+\end{itemize}
+%
+Passing values to procedures with these parameters that do not satisfy
+these types is an error.
+
+If a procedure is said to return ``unspecified,'' this means that
+nothing at all is said about what the procedure returns, not even the
+number of return values. Such a procedure is not even required to be
+consistent from call to call in the nature or number of its return
+values. It is simply required to return a value (or values) that may
+be passed to a command continuation, e.g.  as the value of an
+expression appearing as a non-terminal subform of a \code{begin}
+expression. Note that in R$^5$RS, this restricts such a procedure to
+returning a single value; non-R$^5$RS systems may not even provide this
+restriction.
+
+\subsubsection{\code{sorting}---general sorting package}
+
+This library provides basic sorting and merging functionality suitable for
+general programming. The procedures are named by their semantic properties,
+i.e., what they do to the data (sort, stable sort, merge, and so forth).
+
+\begin{protos}
+  \proto{list-sorted?}{ $<$ list}{boolean} 
+  \proto{list-merge}{ $<$ list$_1$ list$_2$}{list}
+  \proto{list-merge!}{ $<$ list$_1$ list$_2$}{list}
+  \proto{list-sort}{ $<$ lis}{list}
+  \proto{list-sort!}{ $<$ lis}{list}
+  \proto{list-stable-sort}{  $<$ list}{list}
+  \proto{list-stable-sort!}{ $<$ list}{list}
+  \proto{list-delete-neighbor-dups}{  $=$ list}{list}
+  \proto{vector-sorted?}{ $<$ v [start [end]]}{boolean}
+  \proto{vector-merge}{ $<$ v$_1$ v$_2$ [start$1$ [end$1$ [start$2$ [end$2$]]]]}{vector}
+  \protonoresult{vector-merge!}{ $<$ v v$_1$ v$_2$ [start [start$1$ [end$1$ [start$2$ [end$2$]]]]]}
+  \proto{vector-sort}{ $<$ v [start [end]]}{vector}
+  \protonoresult{vector-sort!}{ $<$ v [start [end]]}
+  \proto{vector-stable-sort}{ $<$ v [start [end]]}{vector}
+  \protonoresult{vector-stable-sort!}{ $<$ v [start [end]]}
+  \proto{vector-delete-neighbor-dups}{ $=$ v [start [end]]}{vector}
+\end{protos}
+
+\begin{center}
+\begin{tabular}{ll}
+Procedure &Suggested algorithm
+\\\hline
+\code{list-sort} & vector heap or quick\\
+\code{list-sort!} & list merge sort\\
+\code{list-stable-sort} & vector merge sort\\
+\code{list-stable-sort!} & list merge sort\\
+\code{vector-sort} & heap or quick sort\\
+\code{vector-sort!} or quick sort\\
+\code{vector-stable-sort} & vector merge sort\\
+\code{vector-stable-sort!} merge sort
+\end{tabular}
+\end{center}
+%
+\code{List-Sorted?} and \code{vector-sorted?} return true if their
+input list or vector is in sorted order, as determined by their \var{$<$}
+comparison parameter.
+
+All four merge operations are stable: an element of the initial list
+\var{list$_1$} or vector \var{vector$_1$} will come before an
+equal-comparing element in the second list \var{list$_2$} or vector
+\var{vector$_2$} in the result.
+
+The procedures
+%
+\begin{itemize}
+\item \code{list-merge}
+\item \code{list-sort}
+\item \code{list-stable-sort}
+\item \code{list-delete-neighbor-dups}
+\end{itemize}
+%
+do not alter their inputs and are allowed to return a value that shares 
+a common tail with a list argument.
+
+The procedure
+\begin{itemize}
+\item \code{list-sort!}
+\item \code{list-stable-sort!}
+\end{itemize}
+%
+are ``linear update'' operators---they are allowed, but not required, to
+alter the cons cells of their arguments to produce their results. 
+
+On the other hand, the \code{list-merge!} procedure 
+make only a single, iterative, linear-time pass over its argument
+list, using \code{set-cdr!}s to rearrange the cells of the list
+into the final result ---it works ``in place.'' Hence, any cons cell
+appearing in the result must have originally appeared in an input. The
+intent of this iterative-algorithm commitment is to allow the
+programmer to be sure that if, for example, \code{list-merge!} is asked to
+merge two ten-million-element lists, the operation will complete
+without performing some extremely (possibly twenty-million) deep
+recursion.
+
+The vector procedures
+%
+\begin{itemize}
+\item \code{vector-sort}
+\item \code{vector-stable-sort}
+\item \code{vector-delete-neighbor-dups}
+\end{itemize}
+%
+do not alter their inputs, but allocate a fresh vector for their result,
+of length $\var{end} - \var{start}$. 
+
+The vector procedures
+%
+\begin{itemize}
+\item \code{vector-sort!}
+\item \code{vector-stable-sort!}
+\end{itemize}
+%
+sort their data in-place. (But note that \code{vector-stable-sort!}
+may allocate temporary storage proportional to the size of the
+input
+%%---I am not aware of $O(n \log(n))$ stable vector-sorting
+%%algorithms that run in constant space
+.)
+
+\code{Vector-merge} returns a vector of length $(\var{end$_1$}-\var{start$_1$}+(\var{end$_2$}-\var{start$_2$})$.
+    
+\code{Vector-merge!} writes its result into vector \var{v},
+beginning at index \var{start}, for indices less than \(\var{end} =
+\var{start} + (\var{end$_1$}-\var{start$_1$}) +
+(\var{end$_2$}-\var{start$_2$})\). The target subvector
+  $\var{v}[\var{start},\var{end})$ may not overlap either source
+subvector $\var{vector$_1$}[\var{start$_1$},\var{end$_1$})$ $\var{vector$_2$}[\var{start$_2$},\var{end$_2$})$.
+
+The \code{\ldots-delete-neighbor-dups-\ldots} procedures:
+These procedures delete adjacent duplicate elements from a list or a
+vector, using a given element-equality procedure. The first/leftmost
+element of a run of equal elements is the one that survives. The list or
+vector is not otherwise disordered.
+    
+These procedures are linear time---much faster than the $O(n^2)$ general
+duplicate-element deletors that do not assume any ``bunching'' of elements
+(such as the ones provided by SRFI~1). If you want to delete duplicate
+elements from a large list or vector, you can sort the elements to bring
+equal items together, then use one of these procedures, for a total time
+of $O(n\log(n))$.
+    
+The comparison procedure \(=\) passed to these procedures is always
+applied
+%
+\code{($=$ $x$ $y$)}
+%
+where $x$ comes before $y$ in the containing list or vector.
+
+\begin{itemize}
+\item \code{List-delete-neighbor-dups} does not alter its input list; its answer
+  may share storage with the input list.
+\item \code{Vector-delete-neighbor-dups} does not alter its input vector, but
+  rather allocates a fresh vector to hold the result.
+\end{itemize}
+%
+Examples:
+%
+\begin{alltt}
+(list-delete-neighbor-dups = '(1 1 2 7 7 7 0 -2 -2))
+  \(\Longrightarrow\) (1 2 7 0 -2)
+
+(vector-delete-neighbor-dups = '#(1 1 2 7 7 7 0 -2 -2))
+  \(\Longrightarrow\) #(1 2 7 0 -2)
+
+(vector-delete-neighbor-dups = '#(1 1 2 7 7 7 0 -2 -2) 3 7)
+  \(\Longrightarrow\) #(7 0 -2)
+
+\end{alltt}
+         
+\subsubsection{Algorithm-specific sorting packages}
+
+These packages provide more specific sorting functionality, that is,
+specific committment to particular algorithms that have particular
+pragmatic consequences (such as memory locality, asymptotic running time)
+beyond their semantic behaviour (sorting, stable sorting, merging, etc.).
+Programmers that need a particular algorithm can use one of these packages.
+
+\paragraph{\code{sorted}---sorted predicates}
+%
+\begin{protos}
+  \proto{list-sorted?}{ $<$ list}{boolean}
+  \proto{vector-sorted?}{ $<$ vector}{boolean}
+  \proto{vector-sorted?}{ $<$ vector start}{boolean}
+  \proto{vector-sorted?}{ $<$ vector start end}{boolean}
+\end{protos}
+
+Return \code{\#f} iff there is an adjacent pair \(\ldots x, y \ldots\) in the input
+list or vector such that $y < x$. The optional \var{start}/\var{end} range 
+arguments restrict \code{vector-sorted?} to the indicated subvector.
+
+\paragraph{\code{list-merge-sort}---list merge sort}
+%
+\begin{protos}
+  \proto{list-merge-sort}{ $<$ list}{list}
+  \proto{list-merge-sort!}{ $<$ list}{list}
+  \proto{list-merge}{ list$_1$ $<$ list$_2$}{list}
+  \proto{list-merge!}{ list$_1$ $<$ list$_2$}{list}
+\end{protos}
+%
+The sort procedures sort their data using a list merge sort, which is
+stable. (The reference implementation is, additionally, a ``natural'' sort.
+See below for the properties of this algorithm.)
+
+The \code{!} procedures are destructive---they use \code{set-cdr!}s to
+rearrange the cells of the lists into the proper order. As such, they
+do not allocate any extra cons cells---they are ``in place'' sorts.
+%% Additionally, \code{list-merge!} is iterative---it can operate on
+%% arguments of arbitrary size with a constant number of stack frames.
+
+The merge operations are stable: an element of \var{list$_1$} will
+come before an equal-comparing element in \var{list$_2$} in the result
+list.
+
+\paragraph{\code{vector-merge-sort}---vector merge sort}
+
+\begin{protos}
+  \proto{vector-merge-sort}{ $<$ vector [start [end [temp]]]}{vector}
+  \protonoresult{vector-merge-sort!}{ $<$ vector [start [end [temp]]]}
+  \proto{vector-merge}{ $<$ vector$_1$ vector$_2$ [start$_1$ [end$_1$ [start$_2$ [end$_2$]]]]}{vector}
+  \protonoresult{vector-merge!}{ $<$ vector vector$_1$ vector$_2$ [start [start$_1$ [end$_1$ [start$_2$ [end$_2$]]]]]}
+\end{protos}
+%
+The sort procedures sort their data using vector merge sort, which is
+stable. (The reference implementation is, additionally, a ``natural'' sort.
+See below for the properties of this algorithm.)
+
+The optional \var{start}/\var{end} arguments provide for sorting of subranges, and
+default to 0 and the length of the corresponding vector.
+    
+Merge-sorting a vector requires the allocation of a temporary
+``scratch'' work vector for the duration of the sort. This scratch
+vector can be passed in by the client as the optional \var{temp}
+argument; if so, the supplied vector must be of size $\leq \var{end}$,
+and will not be altered outside the range [start,end). If not
+supplied, the sort routines allocate one themselves.
+
+The merge operations are stable: an element of \var{vector$_1$} will
+come before an equal-comparing element in \var{vector$_2$} in the
+result vector.
+
+\begin{itemize}
+\item 
+\code{Vector-merge-sort!} leaves its result in
+\(\var{vector}[\var{start},\var{end})\).
+\item   
+\code{Vector-merge-sort} returns a vector of length
+\(\var{end}-\var{start}\).
+\item 
+\code{Vector-merge} returns a vector of length
+\((\var{end$_1$}-\var{start$_1$})+(\var{end$_2$}-\var{start$_2$})\).
+\item 
+\code{Vector-merge!} writes its result into \var{vector}, beginning
+at index \var{start},
+for indices less than \(\var{end} =\var{start} +
+(\var{end$_1$}-\var{start$_1$}) + (\var{end$_2$}-\var{start$_2$})\).
+The target subvector
+\[\var{vector}[\var{start},\var{end})\]
+may not overlap either source subvector
+\[\var{vector$_1$}[\var{start$_1$},\var{end$_1$}), \textrm{ or }
+\var{vector$_2$}[\var{start$_2$},\var{end$_2$}).\]
+\end{itemize}
+
+\paragraph{\code{vector-heap-sort}---vector heap sort}
+
+\begin{protos}
+\proto{vector-heap-sort}{ $<$ vector [start [end]]}{vector}
+\protonoresult{vector-heap-sort!}{ $<$ vector [start [end]]}
+\end{protos}
+%
+These procedures sort their data using heap sort, 
+which is not a stable sorting algorithm.
+    
+\code{Vector-heap-sort} returns a vector of length \(\var{end}-\var{start}\). 
+\code{Vector-heap-sort!} is in-place, leaving its result in
+\(\var{vector}[\var{start},\var{end})\).
+
+%% vector-quick-sort-lib - vector quick sort
+%%     quick-sort   < v [start end] -> vector
+%%     quick-sort!  < v [start end] -> unspecified
+%%     quick-sort3! c v [start end] -> unspecified
+
+%%     These procedures sort their data using quick sort, 
+%%     which is not a stable sorting algorithm.
+    
+%%     QUICK-SORT returns a vector of length END-START. 
+%%     QUICK-SORT! is in-place, leaving its result in V[start,end).
+
+%%     QUICK-SORT3! is a variant of quick-sort that takes a three-way
+%%     comparison procedure C. C compares a pair of elements and returns
+%%     an exact integer whose sign indicates their relationship:
+%%       (c x y) < 0   =>   x<y
+%%       (c x y) = 0   =>   x=y
+%%       (c x y) > 0   =>   x>y
+%%     To help remember the relationship between the sign of the result and
+%%     the relation, use the procedure - as the model for C: (- x y) < 0
+%%     means that x < y; (- x y) > 0 means that x > y.
+
+%%     The extra discrimination provided by the three-way comparison can
+%%     provide significant speedups when sorting data sets with many duplicates,
+%%     especially when the comparison procedure is relatively expensive (e.g.,
+%%     comparing long strings).
+
+%%     WARNING: Some sort algorithms, such as insertion sort or heap sort,
+%%     can tolerate being passed a <= comparison procedure when they expect a < 
+%%     procedure---insertion and merge sort may simply invert stability; and
+%%     heap sort will run a bit slower, but otherwise produce a correct answer.
+
+%%     Quicksort, however, is much more critically sensitive to the distinction
+%%     between a < and a <= comparison. If QUICK-SORT or QUICK-SORT! expect a <
+%%     comparison procedure, and are erroneously given a <= procedure, they may,
+%%     depending on implementation, produce an unsorted result, go into an 
+%%     infinite loop, cause a run-time error, occasionally produce a correct
+%%     result, or do some fifth thing.
+
+%%     Implementors may wish to write QUICKSORT3! so that it (a) tests the
+%%     comparison procedure (by checking that (c v[start] v[start]) produces
+%%     false), or (b) is tolerant of an erroneous <= procedure, or (c) both.
+%%     Clients of this procedure, however, should not count on this.
+
+\paragraph{\code{vector-insert-sort}---vector insertion sort}
+
+\begin{protos}
+\proto{vector-insert-sort}{ $<$ vector [start [end]]}{vector}
+\protonoresult{vector-insert-sort!}{ $<$ vector [start [end]]}
+\end{protos}
+%
+These procedures stably sort their data using insertion sort.
+%
+\begin{itemize}
+\item \code{Vector-insert-sort} returns a vector of length \(\var{end}-\var{start}\).
+\item \code{Vector-insert-sort!} is in-place, leaving its result in
+  \(\var{vector}[\var{start},\var{end})\).
+\end{itemize}
+
+\paragraph{\code{delete-neighbor-duplicates}---list and vector
+  delete neighbor duplicates}
+
+\begin{protos}
+  \proto{list-delete-neighbor-dups}{ $=$ list}{list}
+  \proto{list-delete-neighbor-dups!}{ $=$ list}{list}
+  \proto{vector-delete-neighbor-dups}{ $=$ vector [start [end]]}{vector}
+  \proto{vector-delete-neighbor-dups!}{ $=$ vector [start [end]]}{end$'$}
+\end{protos}
+%
+These procedures delete adjacent duplicate elements from a list or
+a vector, using a given element-equality procedure $=$. The first/leftmost
+element of a run of equal elements is the one that survives. The list
+or vector is not otherwise disordered.
+
+These procedures are linear time---much faster than the $O(n^2)$ general
+duplicate-element deletors that do not assume any ``bunching'' of elements
+(such as the ones provided by SRFI~1). If you want to delete duplicate
+elements from a large list or vector, you can sort the elements to bring
+equal items together, then use one of these procedures, for a total time
+of $O(n\log(n))\).
+    
+The comparison procedure = passed to these procedures is always applied
+\begin{alltt}
+(\(=\) \(x\) \(y\))
+\end{alltt}
+where $x$ comes before $y$ in the containing list or vector.
+%
+\begin{itemize}
+\item 
+\code{List-delete-neighbor-dups} does not alter its input list; its
+answer may share storage with the input list.
+\item 
+\code{Vector-delete-neighbor-dups} does not alter its input vector, but
+rather allocates a fresh vector to hold the result.
+\item
+\code{List-delete-neighbor-dups!} is permitted, but not required, to
+mutate its input list in order to construct its answer.
+\item
+\code{Vector-delete-neighbor-dups!} reuses its input vector to hold the
+answer, packing its answer into the index range
+\([\var{start},\var{end$'$})\), where
+\var{end$'$} is the non-negative exact integer returned as its value. It
+returns \var{end$'$} as its result. The vector is not altered outside the range
+\([\var{start},\var{end$'$})\).
+\end{itemize}
+%
+Examples:
+%
+\begin{alltt}
+(list-delete-neighbor-dups = '(1 1 2 7 7 7 0 -2 -2))
+  \(\Longrightarrow\) (1 2 7 0 -2)
+
+(vector-delete-neighbor-dups = '#(1 1 2 7 7 7 0 -2 -2))
+  \(\Longrightarrow\) #(1 2 7 0 -2)
+
+(vector-delete-neighbor-dups = '#(1 1 2 7 7 7 0 -2 -2) 3 7)
+  \(\Longrightarrow\) #(7 0 -2)
+
+;; Result left in v[3,9):
+(let ((v (vector 0 0 0 1 1 2 2 3 3 4 4 5 5 6 6)))
+  (cons (vector-delete-neighbor-dups! = v 3)
+        v))
+   \(\Longrightarrow\) (9 . #(0 0 0 1 2 3 4 5 6 4 4 5 5 6 6))
+\end{alltt}
+
+\paragraph{\code{binary-searches}---vector binary search}
+
+\begin{protos}
+\proto{vector-binary-search}{ $<$ elt-$>$key key vector [start [end]]}{integer or {\tt \#f}}
+\proto{vector-binary-search3}{ compare-proc vector [start [end]]}{integer or {\tt \#f}}
+\end{protos}
+
+\code{vector-binary-search} searches \var{vector} in range
+\([\var{start},\var{end})\) (which default to 0 and the length of
+\var{vector}, respectively) for an element whose
+associated key is equal to \var{key}. The procedure \var{elt-$>$key} is used to map
+an element to its associated key. The elements of the vector are assumed
+to be ordered by the $<$ relation on these keys. That is, 
+%
+\begin{alltt}
+(vector-sorted? (lambda (x y) (\(<\) (\var{elt-$>$key} x) (\var{elt-$>$key} y)))
+                \var{vector} \var{start} \var{end}) \(\Longrightarrow\) true
+\end{alltt}
+%
+An element \var{e} of \var{vector} is a match for \var{key} if it's
+neither less nor greater than the key:
+%
+\begin{alltt}
+(and (not (\(<\) (\var{elt-$>$key} \var{e}) \var{key}))
+     (not (\(<\) \var{key} (\var{elt-$>$key} \var{e}))))
+\end{alltt}
+%
+If there is such an element, the procedure returns its index in the
+vector as an exact integer. If there is no such element in the searched 
+range, the procedure returns false.
+%
+\begin{alltt}
+(vector-binary-search < car 4 '#((1 . one) (3 . three)
+                                 (4 . four) (25 . twenty-five)))
+\(\Longrightarrow\) 2
+
+(vector-binary-search < car 7 '#((1 . one) (3 . three)
+                                 (4 . four) (25 . twenty-five)))
+\(\Longrightarrow\) #f
+\end{alltt}    
+%
+\code{Vector-binary-search3} is a variant that uses a three-way comparison
+procedure \var{compare-proc}. \var{Compare-proc} compares its
+parameter to the search key, and returns an
+exact integer whose sign indicates its relationship to the search key.
+%
+\begin{displaymath}
+  \begin{array}{rclcrcl}
+      (\var{compare-proc}~x) &<& 0& \Rightarrow&  x &<& \var{search-key}\\
+      (\var{compare-proc}~x) &=& 0& \Rightarrow&  x &=& \var{search-key}\\
+      (\var{compare-proc}~x) &>& 0& \Rightarrow&  x &>& \var{search-key}
+  \end{array}
+\end{displaymath}
+%
+\begin{alltt}
+(vector-binary-search3 (lambda (elt) (- (car elt) 4))
+                       '#((1 . one) (3 . three)
+                          (4 . four) (25 . twenty-five)))
+\(\Longrightarrow\) 2
+\end{alltt}
+% 
+%% Rationale:
+%% %
+%% \begin{itemize}
+%% \item Why isn't \code{vector-binary-search}'s \var{elt-$>$key}
+%%   computation simply absorbed into the $<$ procedure? It is separated
+%%   out because the $<$ procedure is
+%%   applied twice inside the binary-search inner loop, once with the search
+%%   key for the first argument and the element key for the second argument,
+%%   and once, with the reverse argument order. This is not necessary for
+%%   \code{vector-binary-search3}.
+%% \item When a comparison operation is able to produce a three-way
+%%   discrimination, the inner loop of the binary search can trim the number
+%%   of per-iteration comparisons from an average of 1.5 to a guaranteed
+%%   single comparison per iteration. This can be a significant savings when
+%%   searching with an expensive comparison operation (e.g., one that
+%%   uses string compare, sends email, references a database, or queries
+%%   a network service such as a web server).
+%% \item Failure is signaled by false (rather than, say, -1) so that searches
+%%   can be used in conditional forms such as
+%% \begin{verbatim}
+%%         (or (vector-binary-search ...) ...)
+%% \end{verbatim}
+%%   or
+%% \begin{verbatim}
+%%         (cond ((vector-binary-search ...) => index-consumer)
+%%               ...)
+%% \end{verbatim}
+%% \end{itemize}
+
+\subsection{Algorithmic properties}
+
+Different sort and merge algorithms have different properties.
+Choose the algorithm that matches your needs:
+
+\begin{description}
+\item[Vector insert sort]
+  Stable, but only suitable for small vectors---$O(n^2)$.
+%% \item[Vector quick sort]
+%%   Not stable. Is fast on average---$O(n\log(n))$---but has bad worst-case
+%%   behaviour. Has good memory locality for big vectors (unlike heap sort). 
+%%   A clever pivot-picking trick (median of three samples) helps avoid 
+%%   worst-case behaviour, but pathological cases can still blow up.
+\item[Vector heap sort]
+  Not stable. Guaranteed fast---$O(n\log(n))$ \emph{worst} case. Poor
+  locality on large vectors. A very reliable workhorse.
+\item[Vector merge sort]
+    Stable. Not in-place---requires a temporary buffer of equal size. 
+    Fast---$O(n\log(n))$---and has good memory locality for large vectors.
+    
+    The implementation of vector merge sort provided by this
+    implementation is, additionally, a ``natural'' sort, meaning that it
+    exploits existing order in the input data, providing $O(n)$ best case.
+\item[Destructive list merge sort]
+    Stable, fast and in-place (i.e., allocates no new cons cells). ``Fast''
+    means $O(n\log(n))$ worse-case, and substantially better if the data
+    is already mostly ordered, all the way down to linear time for
+    a completely-ordered input list (i.e., it is a ``natural'' sort).
+
+    Note that sorting lists involves chasing pointers through memory, which
+    can be a loser on modern machine architectures because of poor cache and
+    page locality.
+%%     Pointer \emph{writing}, which is what the
+%%     \code{set-cdr!}s of a destructive list-sort algorithm do, is
+%%     even worse, especially if your Scheme has a generational GC---the
+%%     writes will thrash the write-barrier.
+    Sorting vectors has inherently better locality.
+    
+    This implementation's destructive list merge and merge sort
+    implementations are opportunistic---they avoid redundant
+    \code{set-cdr!}s, and try to take long
+    already-ordered runs of list structure as-is when doing the merges.
+\item[Pure list merge sort]
+  Stable and fast---$O(n\log(n))$ worst-case, and possibly $O(n)$,
+  depending upon the input list (see discussion above).
+\end{description}
+
+\begin{center}
+  \begin{tabular}{lllll}
+Algorithm &    Stable? & Worst case &  Average case &  In-place\\
+\hline
+Vector insert & Yes&      $O(n^2)$ &     $O(n^2)$&        Yes\\
+Vector quick  & No &      $O(n^2)$  &    $O(n\log(n))$&     Yes\\
+Vector heap   & No &      $O(n\log(n))$&   $O(n\log(n))$&     Yes\\
+Vector merge  & Yes&      $O(n\log(n))$&   $O(n\log(n))$&     No\\
+List merge    & Yes&      $O(n\log(n))$&   $O(n\log(n))$&     Either
+\end{tabular}
+\end{center}
+
 \section{Regular expressions}
 \label{regexp-adt}
 
