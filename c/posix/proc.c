@@ -169,7 +169,7 @@ lookup_pid(pid_t c_pid)
 static s48_value
 lookup_record(s48_value *the_list_loc, int offset, s48_value key)
 {
-  bool		cleanup_p = FALSE;
+  int		cleanup_p = 0;
   s48_value	the_list = *the_list_loc;
 
   /* Clear out initial dropped weaks */
@@ -179,7 +179,7 @@ lookup_record(s48_value *the_list_loc, int offset, s48_value key)
 
   if (the_list != *the_list_loc) {
     *the_list_loc = the_list;
-    cleanup_p = TRUE; }
+    cleanup_p = 1; }
 
   if (the_list == S48_NULL)
     return S48_FALSE;			/* Nothing */
@@ -201,7 +201,7 @@ lookup_record(s48_value *the_list_loc, int offset, s48_value key)
 	s48_value first = S48_UNSAFE_WEAK_POINTER_REF(S48_UNSAFE_CAR(next));
 	if (first == S48_FALSE) {
 	  S48_UNSAFE_SET_CDR(prev, S48_UNSAFE_CDR(next));
-	  cleanup_p = TRUE; }
+	  cleanup_p = 1; }
 	else if (key == S48_UNSAFE_RECORD_REF(first, offset))
 	  found = first;
 	else
@@ -440,7 +440,7 @@ s48_os_signal_pending(void)
 
   if (next_interrupt == 0) {
     allow_interrupts();
-    return FALSE; }
+    return 0; }
   else {
     s48_value interrupt_list = S48_NULL;
     S48_DECLARE_GC_PROTECT(1);
@@ -457,7 +457,7 @@ s48_os_signal_pending(void)
 
     next_interrupt = 0;
     allow_interrupts();
-    return TRUE; }
+    return 1; }
 }
 
 /*

@@ -9,10 +9,7 @@
 #include "io.h"
 #include "scheme48.h"
 #include "unix.h"
-
-#define	TRUE	(0 == 0)
-#define	FALSE	(! TRUE)
-#define	bool	char
+#include "c-mods.h"
 
 /* read a character while ignoring interrupts */
 
@@ -36,7 +33,7 @@ s48_read_char(FILE *port)
 {
   int result;
 
-  while(TRUE) {
+  while(1) {
     if (ferror(port) && errno == EINTR) {
       clearerr(port);
       result = getc(port);
@@ -49,38 +46,38 @@ s48_read_char(FILE *port)
 /* called when getc(port) returned EOF */
 
 char
-ps_read_char(FILE *port, bool *eofp, long *status, bool peekp)
+ps_read_char(FILE *port, psbool *eofp, long *status, psbool peekp)
 {
-  bool errorp;
+  psbool errorp;
   int result;
 
   result = s48_read_char(port);     /* read past any interruptions */
   if (result != EOF) {
     if (peekp)
       ungetc(result, port);
-    *eofp = FALSE;
+    *eofp = PSFALSE;
     *status = NO_ERRORS;
     return result; }
   else {
     errorp = ferror(port);
     clearerr(port);
     if (errorp) {
-      *eofp = FALSE;
+      *eofp = PSFALSE;
       *status = errno;
       return 0; }
     else {
-      *eofp = TRUE;
+      *eofp = PSTRUE;
       *status = NO_ERRORS;
       return 0; } }
 }
 
 long
-ps_read_integer(FILE *port, bool *eofp, long *status)
+ps_read_integer(FILE *port, psbool *eofp, long *status)
 {
   long result;
   int ch;
-  bool negate;
-  bool errorp;
+  psbool negate;
+  psbool errorp;
 
   /* eat whitespace */
   do { READ_CHAR(port, ch); }
@@ -88,23 +85,23 @@ ps_read_integer(FILE *port, bool *eofp, long *status)
 
   /* read optional sign */
   if (ch == '-') {
-    negate = TRUE;
+    negate = PSTRUE;
     READ_CHAR(port, ch); }
   else
-    negate = FALSE;
+    negate = PSFALSE;
 
   if (ch < '0' || '9' < ch) {
     if (ch != EOF) {
-      *eofp = FALSE;
+      *eofp = PSFALSE;
       *status = EINVAL; }  /* has to be something */
     else {
       errorp = ferror(port);
       clearerr(port);
       if (errorp) {
-	*eofp = FALSE;
+	*eofp = PSFALSE;
 	*status = errno; }
       else {
-	*eofp = TRUE;
+	*eofp = PSTRUE;
 	*status = 0; } }
     result = 0; }
   else {
@@ -116,7 +113,7 @@ ps_read_integer(FILE *port, bool *eofp, long *status)
       result = (10 * result) + (ch - '0'); }
     if (ch != EOF)
       ungetc(ch, port);
-    *eofp = FALSE;
+    *eofp = PSFALSE;
     *status = 0; }
   return (negate ? -result : result);
 }
@@ -139,7 +136,7 @@ long
 ps_write_char(char ch, FILE *port)
 {
 
-  while(TRUE) {
+  while(1) {
     clearerr(port);
     if (errno != EINTR)
       return errno;
@@ -184,7 +181,7 @@ ps_write_integer(long n, FILE *port)
 long
 ps_write_string(char *string, FILE *port)
 {
-	while (TRUE) {
+	while (1) {
 		if (EOF != fputs(string, port))
 			return (0);
 		clearerr(port);
@@ -194,15 +191,15 @@ ps_write_string(char *string, FILE *port)
 }
 
 long
-ps_read_block(FILE *port, char *buffer, long count, bool *eofp, long *status)
+ps_read_block(FILE *port, char *buffer, long count, psbool *eofp, long *status)
 {
   int got = 0;
-  bool errorp;
+  psbool errorp;
 
-  while(TRUE) {
+  while(1) {
     got += fread(buffer, sizeof(char), count - got, port);
     if (got == count) {
-      *eofp = FALSE;
+      *eofp = PSFALSE;
       *status = NO_ERRORS;
       return got;}
     else if (ferror(port) && errno == EINTR)
@@ -223,7 +220,7 @@ ps_write_block(FILE *port, char *buffer, long count)
 {
   int sent = 0;
 
-  while(TRUE) {
+  while(1) {
     sent += fwrite(buffer, sizeof(char), count - sent, port);
     if (sent == count)
       return NO_ERRORS;

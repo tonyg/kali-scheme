@@ -32,7 +32,7 @@
 */
 
 int
-ps_open_fd(char *filename, bool is_input, long *status)
+ps_open_fd(char *filename, psbool is_input, long *status)
 {
 #define FILE_NAME_SIZE 1024
 #define PERMISSION 0666   /* read and write for everyone */
@@ -56,7 +56,7 @@ ps_open_fd(char *filename, bool is_input, long *status)
     mode = PERMISSION; }
 
   /* keep trying if interrupted */
-  while(TRUE) {
+  while(1) {
     int fd = open(expanded, flags, mode);
     if (fd != -1) {
       *status = NO_ERRORS;
@@ -73,7 +73,7 @@ ps_close_fd(long fd_as_long)
   int fd = (int)fd_as_long;
 
   /* keep retrying if interrupted */
-  while(TRUE) {
+  while(1) {
     int status = close(fd);
     if (status != -1) {
       s48_remove_fd(fd);
@@ -83,7 +83,7 @@ ps_close_fd(long fd_as_long)
   }
 }
 
-bool ps_check_fd(long fd_as_long, bool is_read, long *status)
+psbool ps_check_fd(long fd_as_long, psbool is_read, long *status)
 {
   int fd = (int)fd_as_long;
   int ready;
@@ -97,24 +97,24 @@ bool ps_check_fd(long fd_as_long, bool is_read, long *status)
 
   *status = NO_ERRORS;
 
-  while(TRUE) {
+  while(1) {
     ready = select(fd + 1,
 		   is_read ? &fds : NULL,
 		   is_read ? NULL : &fds,
 		   &fds,
 		   &timeout);
     if (ready == 0)
-	return FALSE;
+	return PSFALSE;
     else if (ready == 1)
-	return TRUE;
+	return PSTRUE;
     else if (errno != EINTR) {
 	*status = errno;
-	return FALSE; } } 
+	return PSFALSE; } } 
 }
 
 long
-ps_read_fd(long fd_as_long, char *buffer, long max, bool waitp,
-	   bool *eofp, bool *pending, long *status)
+ps_read_fd(long fd_as_long, char *buffer, long max, psbool waitp,
+	   psbool *eofp, psbool *pending, long *status)
 {
   int got, ready;
   void *buf = (void *)buffer;
@@ -128,17 +128,17 @@ ps_read_fd(long fd_as_long, char *buffer, long max, bool waitp,
   timerclear(&timeout);
 
   /* for the normal return */
-  *eofp = FALSE;
-  *pending = FALSE;
+  *eofp = PSFALSE;
+  *pending = PSFALSE;
   *status = NO_ERRORS;
 
-  while(TRUE) {
+  while(1) {
     ready = select(fd + 1, &readfds, NULL, &readfds, &timeout);
     if (ready == 0) {
       if (!waitp)
 	return 0;
-      else if (s48_add_pending_fd(fd, TRUE)) {
-	*pending = TRUE;
+      else if (s48_add_pending_fd(fd, PSTRUE)) {
+	*pending = PSTRUE;
 	return 0; }
       else {
 	*status = ENOMEM;    /* as close as POSIX gets */
@@ -154,15 +154,15 @@ ps_read_fd(long fd_as_long, char *buffer, long max, bool waitp,
       if (got > 0) {       /* all is well */
 	return got; }
       else if (got == 0) { /* end of file */
-	*eofp = TRUE;
+	*eofp = PSTRUE;
 	return 0; }
       else if (errno == EINTR) {			/* HCC */
 	return 0; }
       else if (errno == EAGAIN) {			/* HCC */
 	if (!waitp)
 	  return 0;
-	else if (s48_add_pending_fd(fd, TRUE)) {
-	  *pending = TRUE;
+	else if (s48_add_pending_fd(fd, PSTRUE)) {
+	  *pending = PSTRUE;
 	  return 0; }
 	else {
 	  *status = ENOMEM;    /* as close as POSIX gets */
@@ -173,21 +173,21 @@ ps_read_fd(long fd_as_long, char *buffer, long max, bool waitp,
 }
 
 long
-ps_write_fd(long fd_as_long, char *buffer, long max, bool *pending, long *status)
+ps_write_fd(long fd_as_long, char *buffer, long max, psbool *pending, long *status)
 {
   int sent;
   int fd = (int)fd_as_long;
   void *buf = (void *)buffer;
 
-  *pending = FALSE;
+  *pending = PSFALSE;
   *status = NO_ERRORS;
 
   sent = write(fd, buf, max);
   if (sent > 0)
     {}
   else if (errno == EINTR || errno == EAGAIN) {		/* HCC */
-    if (s48_add_pending_fd(fd, FALSE))
-      *pending = TRUE;
+    if (s48_add_pending_fd(fd, PSFALSE))
+      *pending = PSTRUE;
     else
       *status = ENOMEM;    /* as close as POSIX gets */
     sent = 0; }

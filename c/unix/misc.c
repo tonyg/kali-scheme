@@ -11,9 +11,6 @@
 #include "sysdep.h"
 
 
-#define TRUE  (0 == 0)
-#define FALSE (0 == 1)
-
 /*
    Expanding Unix filenames
    Unix Sucks

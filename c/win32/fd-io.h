@@ -15,10 +15,10 @@ typedef struct
 
   /* for successive calls in the main thread;
      only set and read from there */
-  bool checking; 
+  psbool checking; 
 
   /* in */
-  bool abort;
+  psbool abort;
   char* buffer;
   size_t requested;
 
@@ -27,8 +27,8 @@ typedef struct
 
   /* out */
   size_t available; /* bytes written, readers only */
-  bool eof; /* readers only */
-  bool error;
+  psbool eof; /* readers only */
+  psbool error;
   DWORD error_code;
 } file_thread_data_t;
 
@@ -44,7 +44,7 @@ struct callback_data {
 typedef struct {
   enum stream_descriptor_type type;
 
-  bool is_free;
+  psbool is_free;
 
   union {
 

@@ -9,11 +9,6 @@
 
 #include <windows.h>
 
-#undef TRUE
-#define TRUE  (0 == 0)
-#undef FALSE
-#define FALSE (0 == 1)
-
 /*
    Expanding Windows filenames
    Windows Sucks.  Unix Sucks.  C Sucks.

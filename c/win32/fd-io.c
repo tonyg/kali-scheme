@@ -27,10 +27,10 @@ typedef struct
 
   /* for successive calls in the main thread;
      only set and read from there */
-  bool checking; 
+  psbool checking; 
 
   /* in */
-  bool abort;
+  psbool abort;
   char* buffer;
   size_t requested;
 
@@ -39,8 +39,8 @@ typedef struct
 
   /* out */
   size_t available; /* bytes written, readers only */
-  bool eof; /* readers only */
-  bool error;
+  psbool eof; /* readers only */
+  psbool error;
   DWORD error_code;
 } file_thread_data_t;
 
@@ -56,7 +56,7 @@ typedef struct {
 typedef struct {
   enum stream_descriptor_type type;
 
-  bool is_free;
+  psbool is_free;
 
   union {
 
@@ -164,7 +164,7 @@ initialize_stream_descriptor(stream_descriptor_t* stream_descriptor,
 {
 
   stream_descriptor->type = type;
-  stream_descriptor->is_free = FALSE;
+  stream_descriptor->is_free = PSFALSE;
 
   /* #### this should probably move to the caller */
 
@@ -239,7 +239,7 @@ allocate_fd(enum stream_descriptor_type type)
      actually fits Windows quite closely. */
 
 int
-ps_open_fd(char *filename, bool is_input, long *status)
+ps_open_fd(char *filename, psbool is_input, long *status)
 {
 #define FILE_NAME_SIZE 1024
 #define PERMISSION 0666   /* read and write for everyone */
@@ -320,7 +320,7 @@ reader_thread_proc(LPVOID lpParameter)
       if (ReadFile(thread_data->file_handle, thread_data->buffer,
 		   thread_data->requested, &n_read, NULL))
 	{
-	  thread_data->error = FALSE;
+	  thread_data->error = PSFALSE;
 	  thread_data->available = n_read;
 	  /* kludge: pressing Ctrl-C looks like EOF on stdin */
 	  if ((n_read == 0)  && (file_type != FILE_TYPE_CHAR))
@@ -383,12 +383,12 @@ writer_thread_proc(LPVOID lpParameter)
       if (WriteFile(thread_data->file_handle, thread_data->buffer,
 		    thread_data->requested, &n_written, NULL))
 	{
-	  thread_data->error =FALSE;
+	  thread_data->error = PSFALSE;
 	  thread_data->available = n_written;
 	}
       else
 	{
-	  thread_data->error = TRUE;
+	  thread_data->error = PSTRUE;
 	  thread_data->error_code = GetLastError();
 	}
       
@@ -443,17 +443,17 @@ start_reader_slash_writer_thread(HANDLE file_handle,
   HANDLE thread_handle;
   DWORD id;
 
-  thread_data->abort = FALSE;
+  thread_data->abort = PSFALSE;
 
   thread_data->available = 0;
 
-  thread_data->error = FALSE;
-  thread_data->eof = FALSE;
+  thread_data->error = PSFALSE;
+  thread_data->eof = PSFALSE;
   
   thread_data->file_handle = file_handle;
   thread_data->check_semaphore = create_mutex_semaphore();
 
-  thread_data->checking = FALSE;
+  thread_data->checking = PSFALSE;
   
   thread_handle = CreateThread(NULL, /* lpThreadAttributes */
 			       4096, /* dwStackSize, */
@@ -473,7 +473,7 @@ start_reader_slash_writer_thread(HANDLE file_handle,
 
 
 static void
-open_special_fd(HANDLE handle, size_t fd, bool is_input)
+open_special_fd(HANDLE handle, size_t fd, psbool is_input)
 {
   stream_descriptor_t* stream_descriptor;
 
@@ -542,8 +542,8 @@ ps_close_fd(long fd)
   return -1; /* shouldn't happen */
 }
 
-extern bool s48_is_pending(long);
-extern void s48_add_ready_fd(long, bool, long);
+extern psbool s48_is_pending(long);
+extern void s48_add_ready_fd(long, psbool, long);
 
 /* This is called as the result of a completed read operation; either
    from the overlapped I/O completion routine, or from the callback
@@ -563,7 +563,7 @@ read_done(DWORD dwErr,
       case STREAM_FILE_REGULAR:
 	{
 	  /* ps_check_fd doesn't go through this */
-	  s48_add_ready_fd(fd, TRUE, (long)0); /* *not* bytes_read */
+	  s48_add_ready_fd(fd, PSTRUE, (long)0); /* *not* bytes_read */
 	  stream_descriptor->file_regular_data.current_offset += bytes_read;
 	  break;
 	}
@@ -572,16 +572,16 @@ read_done(DWORD dwErr,
 	  file_thread_data_t* thread_data =
 	    &(stream_descriptor->file_special_data.thread_data);
 	  if (thread_data->checking) /* ps_check_fd */
-	    thread_data->checking = FALSE;
+	    thread_data->checking = PSFALSE;
 	  else
 	    /* regular read */
-	    s48_add_ready_fd(fd, TRUE, (long)0); /* *not* bytes_read */
+	    s48_add_ready_fd(fd, PSTRUE, (long)0); /* *not* bytes_read */
 	  break;
 	}
       case STREAM_SOCKET:
 	{
 	  /* ps_check_fd doesn't go through this */
-	  s48_add_ready_fd(fd, TRUE, (long)0); /* *not* bytes_read */
+	  s48_add_ready_fd(fd, PSTRUE, (long)0); /* *not* bytes_read */
 	  break;
 	}
       }
@@ -629,7 +629,7 @@ recv_completed(DWORD dwErr, DWORD cbBytesRead, LPOVERLAPPED lpOverLap, DWORD dwF
   read_completed(dwErr, cbBytesRead, lpOverLap);
 }
 
-bool ps_check_fd(long fd, bool is_read, long *status)
+psbool ps_check_fd(long fd, psbool is_read, long *status)
 {
   stream_descriptor_t* stream_descriptor = &(stream_descriptors[fd]);
 
@@ -644,7 +644,7 @@ bool ps_check_fd(long fd, bool is_read, long *status)
 	return is_read;
 
       /* #### this probably doesn't really work */
-      return (WaitForSingleObject(handle, 0) == WAIT_OBJECT_0) ? TRUE : FALSE;
+      return (WaitForSingleObject(handle, 0) == WAIT_OBJECT_0) ? PSTRUE : PSFALSE;
     }
   case STREAM_FILE_SPECIAL:
     {
@@ -670,7 +670,7 @@ bool ps_check_fd(long fd, bool is_read, long *status)
 	  thread_data->checking = TRUE;
 	  ReleaseSemaphore(thread_data->check_semaphore, 1, NULL);
 	}
-      return FALSE;
+      return PSFALSE;
     }
   case STREAM_SOCKET:
     {
@@ -700,10 +700,10 @@ bool ps_check_fd(long fd, bool is_read, long *status)
 		      (LPOVERLAPPED)callback_data,
 		      NULL)
 	      == 0)
-	? TRUE : FALSE;
+	? PSTRUE : PSFALSE;
     }
   }
-  return FALSE; /* shouldn't happen */
+  return PSFALSE; /* shouldn't happen */
 }
 
 
@@ -721,15 +721,15 @@ bool ps_check_fd(long fd, bool is_read, long *status)
 */
 
 long
-ps_read_fd(long fd, char *buffer, long max, bool waitp,
-	   bool *eofp, bool *pending, long *status)
+ps_read_fd(long fd, char *buffer, long max, psbool waitp,
+	   psbool *eofp, psbool *pending, long *status)
 {
   stream_descriptor_t* stream_descriptor = &(stream_descriptors[fd]);
   callback_data_t* callback_data = &(stream_descriptor->callback_data);
 
   /* for the normal return */
-  *eofp = FALSE;
-  *pending = FALSE;
+  *eofp = PSFALSE;
+  *pending = PSFALSE;
   *status = NO_ERRORS;
 
   // ### waitp */
@@ -914,7 +914,7 @@ write_done(DWORD dwErr,
 	  break;
 	}
       }
-      s48_add_ready_fd(fd, FALSE, (long)bytes_written);
+      s48_add_ready_fd(fd, PSFALSE, (long)bytes_written);
     }
   else
     {
@@ -954,7 +954,7 @@ send_completed(DWORD dwErr, DWORD cbTransferred, LPOVERLAPPED lpOverLap, DWORD d
 }
 
 long
-ps_write_fd(long fd, char *buffer, long max, bool *pending, long *status)
+ps_write_fd(long fd, char *buffer, long max, psbool *pending, long *status)
 {
   stream_descriptor_t* stream_descriptor = &(stream_descriptors[fd]);
   callback_data_t* callback_data = &(stream_descriptor->callback_data);
@@ -978,7 +978,7 @@ ps_write_fd(long fd, char *buffer, long max, bool *pending, long *status)
 			(LPOVERLAPPED)callback_data,
 			write_completed))
 	  {
-	    if (!s48_add_pending_fd(fd, FALSE))
+	    if (!s48_add_pending_fd(fd, PSFALSE))
 	      {
 		*status = 4711; //#### out of memory, need symbolic constant
 		return 0;
@@ -989,7 +989,7 @@ ps_write_fd(long fd, char *buffer, long max, bool *pending, long *status)
 	  }
 	else
 	  {
-	    *pending = FALSE;
+	    *pending = PSFALSE;
 	    *status = (int) GetLastError();
 	  }
 	return 0; /* we always wait for the callback */
@@ -1003,7 +1003,7 @@ ps_write_fd(long fd, char *buffer, long max, bool *pending, long *status)
 	thread_data->callback_thread = s48_main_thread;
 	thread_data->callback = write_callback;
 	ReleaseSemaphore(thread_data->check_semaphore, 1, NULL);
-	if (!s48_add_pending_fd(fd, FALSE))
+	if (!s48_add_pending_fd(fd, PSFALSE))
 	  {
 	    *status = 4711; //#### out of memory, need symbolic constant
 	    return 0;
@@ -1038,7 +1038,7 @@ ps_write_fd(long fd, char *buffer, long max, bool *pending, long *status)
 	    | (WSAGetLastError() == WSA_IO_PENDING))
 	  {
 	    /* success */
-	    if (!s48_add_pending_fd(fd, FALSE))
+	    if (!s48_add_pending_fd(fd, PSFALSE))
 	      {
 		*status = 4711; //#### out of memory, need symbolic constant
 		return 0;
@@ -1048,7 +1048,7 @@ ps_write_fd(long fd, char *buffer, long max, bool *pending, long *status)
 	  }
 	else
 	  {
-	    *pending = FALSE;
+	    *pending = PSFALSE;
 	    *status = (int) WSAGetLastError();
 	  }
 	return 0; /* we always wait for the callback */
@@ -1352,7 +1352,7 @@ accept_callback(DWORD dwParam)
   stream_descriptor_t* stream_descriptor = (stream_descriptor_t*)dwParam;
   callback_data_t* callback_data = &(stream_descriptor->callback_data);
 
-  s48_add_ready_fd(callback_data->fd, TRUE, (long)0);
+  s48_add_ready_fd(callback_data->fd, PSTRUE, (long)0);
 }
 
 /*
@@ -1531,7 +1531,7 @@ connect_callback(DWORD dwParam)
   stream_descriptor_t* stream_descriptor = (stream_descriptor_t*)dwParam;
   callback_data_t* callback_data = &(stream_descriptor->callback_data);
 
-  s48_add_ready_fd(callback_data->fd, FALSE, (long)0);
+  s48_add_ready_fd(callback_data->fd, PSFALSE, (long)0);
 }
 
 static s48_value

@@ -187,7 +187,7 @@ typedef struct fd_struct {
  int	fd,			/* file descriptor */
 	status;			/* one of the FD_* constants */
  long   chars_processed;
- bool	is_input;		/* iff input */
+ psbool is_input;		/* iff input */
  struct fd_struct	*next;	/* next on same queue */
 } fd_struct;
 
@@ -256,7 +256,7 @@ addque(fd_struct *entry, fdque *que)
 }
 
 
-static bool
+static psbool
 there_are_ready_ports(void)
 {
   return (ready.first != NULL);
@@ -276,11 +276,11 @@ next_ready_port(long* chars_processed)
 
 /*
  * Put fd on to the queue of ports with ready operations.
- * Return TRUE if successful, and FALSE otherwise.
+ * Return PSTRUE if successful, and PSFALSE otherwise.
  */
 
-bool
-s48_add_ready_fd(long fd, bool is_input, long chars_processed)
+psbool
+s48_add_ready_fd(long fd, psbool is_input, long chars_processed)
 {
   fd_struct* data = fds[fd];  /* we created this before */
 
@@ -288,19 +288,19 @@ s48_add_ready_fd(long fd, bool is_input, long chars_processed)
   data->chars_processed = chars_processed;
 
   if (data->status == FD_READY)
-    return (TRUE); /* fd is already ready */
+    return (PSTRUE); /* fd is already ready */
 
   data->status = FD_READY;
   addque(data, &ready);
 
-  return TRUE;
+  return PSTRUE;
 }
 
 /*
  * Add a new fd_struct for fd.
  */
 static fd_struct	*
-add_fd(long fd, bool is_input)
+add_fd(long fd, psbool is_input)
 {
   struct fd_struct	*new;
 
@@ -316,7 +316,7 @@ add_fd(long fd, bool is_input)
 }
 
 static fd_struct	*
-get_or_create_fd_struct(long fd, bool is_input)
+get_or_create_fd_struct(long fd, psbool is_input)
 {
   if (fds[fd] == NULL)
     return add_fd(fd, is_input);
@@ -324,8 +324,8 @@ get_or_create_fd_struct(long fd, bool is_input)
     return fds[fd];
 }
 
-bool
-s48_add_pending_fd(int fd, bool is_input)
+psbool
+s48_add_pending_fd(int fd, psbool is_input)
 {
   fd_struct* data = get_or_create_fd_struct(fd, is_input);
   if (data)
@@ -336,14 +336,14 @@ s48_add_pending_fd(int fd, bool is_input)
 	  if (poll_time == -1)
 	    poll_time = s48_current_time + poll_interval;
 	}
-      return TRUE;
+      return PSTRUE;
     }
   else
-    return FALSE;
+    return PSFALSE;
     
 }
 
-bool
+psbool
 s48_is_pending(long fd)
 {
   return (fds[fd] != NULL) && (fds[fd]->status == FD_PENDING);
@@ -354,7 +354,7 @@ s48_is_pending(long fd)
  * Remove fd from any queues it is on.  Returns true if the FD was on a queue
  * and false if it wasn't.
  */
-bool
+psbool
 s48_remove_fd(int fd)
 {
   struct fd_struct	*data;
@@ -363,11 +363,11 @@ s48_remove_fd(int fd)
     fprintf(stderr, "ERROR: s48_remove_fd fd %d not in [0, %d)\n",
 	    fd,
 	    FD_SETSIZE);
-    return FALSE;
+    return PSFALSE;
   }
   data = fds[fd];
   if (data == NULL)
-    return FALSE;
+    return PSFALSE;
   if (data->status == FD_PENDING) {
     /* the callback will see this and no-op */
     data->status = FD_QUIESCENT;
@@ -458,12 +458,12 @@ s48_get_next_event(long *ready_fd, long *status)
   if ((keyboard_interrupt_count == 0)
       &&  (alarm_time == -1 || s48_current_time < alarm_time)
       &&  (poll_time == -1 || s48_current_time < poll_time))
-    s48_Spending_eventsPS = FALSE;
+    s48_Spending_eventsPS = PSFALSE;
   return (NO_EVENT);
 }
 
 int
-s48_wait_for_event(long max_wait, bool is_minutes)
+s48_wait_for_event(long max_wait, psbool is_minutes)
 {
   int	status;
 

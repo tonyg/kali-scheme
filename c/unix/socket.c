@@ -270,7 +270,7 @@ s48_accept(s48_value channel, s48_value retry_p)
   if ((errno != EWOULDBLOCK) && (errno != EINTR) && (errno != EAGAIN))
     s48_raise_os_error(errno);
 
-  if (! s48_add_pending_fd(socket_fd, TRUE))
+  if (! s48_add_pending_fd(socket_fd, PSTRUE))
     s48_raise_out_of_memory_error();
 
   return S48_FALSE;
@@ -355,7 +355,7 @@ s48_connect(s48_value channel,
       && errno != EINPROGRESS && errno != EAGAIN)
     s48_raise_os_error(errno);
 
-  if (! (s48_add_pending_fd(socket_fd, FALSE)))
+  if (! (s48_add_pending_fd(socket_fd, PSFALSE)))
     s48_raise_out_of_memory_error();
 
   return S48_FALSE;
@@ -508,7 +508,7 @@ s48_udp_receive(s48_value channel, s48_value buffer)
       && errno != EINPROGRESS && errno != EAGAIN)
     s48_raise_os_error(errno);
 
-  if (! (s48_add_pending_fd(socket_fd, TRUE)))
+  if (! (s48_add_pending_fd(socket_fd, PSTRUE)))
     s48_raise_out_of_memory_error();
 
   return S48_FALSE;
@@ -555,7 +555,7 @@ s48_udp_send(s48_value channel,
       && errno != EINPROGRESS && errno != EAGAIN)
     s48_raise_os_error(errno);
 
-  if (! (s48_add_pending_fd(socket_fd, FALSE)))
+  if (! (s48_add_pending_fd(socket_fd, PSFALSE)))
     s48_raise_out_of_memory_error();
 
   return S48_FALSE;
@@ -601,7 +601,7 @@ lookup_connection(struct in_addr address, unsigned long port)
   unsigned long hash = address_hash(address, port);
   int		i = hash & connections_index_mask;
 
-  while (TRUE) {
+  while (1) {
     s48_value	search = S48_UNSAFE_VECTOR_REF(connections, i);
     if (search == S48_FALSE)
       return add_new_connection(i, address, port);

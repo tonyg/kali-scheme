@@ -168,16 +168,16 @@ posix_readdir(s48_value svdir)
  * keep trying until we run out of memory.
  */
 
-bool going = FALSE;
-bool second = FALSE;
+int going = 0;
+int second = 0;
 
 static s48_value
 posix_working_directory(s48_value new_wd)
 {
   if (second)
-    going = TRUE;
+    going = 1;
   else
-    second = TRUE;
+    second = 1;
 
   if (new_wd == S48_FALSE) {
     char	*status;

@@ -23,7 +23,7 @@
 void		s48_when_keyboard_interrupt(int ign);
 void		s48_when_alarm_interrupt(int ign);
 static void     when_sigpipe_interrupt(int ign);
-bool		s48_setcatcher(int signum, void (*catcher)(int));
+psbool		s48_setcatcher(int signum, void (*catcher)(int));
 void		s48_start_alarm_interrupts(void);
 
 void
@@ -42,24 +42,24 @@ s48_sysdep_init(void)
 
 /*
  * Unless a signal is being ignored, set up the handler.
- * If we return FALSE, something went wrong and errno is set to what.
+ * If we return PSFALSE, something went wrong and errno is set to what.
  */
 
-bool
+psbool
 s48_setcatcher(int signum, void (*catcher)(int))
 {
   struct sigaction	sa;
 
   if (sigaction(signum, (struct sigaction *)NULL, &sa) != 0)
-    return (FALSE);
+    return (PSFALSE);
   if (sa.sa_handler == SIG_IGN)
-    return (TRUE);
+    return (PSTRUE);
   sa.sa_handler = catcher;
   sigemptyset(&sa.sa_mask);
   sa.sa_flags = 0;
   if (sigaction(signum, &sa, (struct sigaction *)NULL) != 0)
-    return (FALSE);
-  return (TRUE);
+    return (PSFALSE);
+  return (PSTRUE);
 }
 
 static long	keyboard_interrupt_count = 0;
@@ -147,10 +147,10 @@ s48_real_time(long *ticks)
 {
   struct timeval tv;
   static struct timeval tv_orig;
-  static int initp = FALSE;
+  static int initp = PSFALSE;
   if (!initp) {
     gettimeofday(&tv_orig, NULL);
-    initp = TRUE;
+    initp = PSTRUE;
   };
   gettimeofday(&tv, NULL);
   *ticks = (tv.tv_usec - tv_orig.tv_usec)/(1000000/TICKS_PER_SECOND);
@@ -238,9 +238,9 @@ s48_stop_alarm_interrupts(void)
  *                  (values (enum event-type no-event) #f))))))
  */
 
-static bool	there_are_ready_ports(void);
+static psbool	there_are_ready_ports(void);
 static int	next_ready_port(void);
-static int	queue_ready_ports(bool wait, long seconds, long ticks);
+static int	queue_ready_ports(psbool wait, long seconds, long ticks);
 
 int
 s48_get_next_event(long *ready_fd, long *status)
@@ -259,7 +259,7 @@ s48_get_next_event(long *ready_fd, long *status)
     return (KEYBOARD_INTERRUPT_EVENT);
   }
   if (poll_time != -1 && s48_current_time >= poll_time) {
-    io_poll_status = queue_ready_ports(FALSE, 0, 0);
+    io_poll_status = queue_ready_ports(PSFALSE, 0, 0);
     if (io_poll_status == NO_ERRORS)
       poll_time = s48_current_time + poll_interval;
     else {
@@ -284,7 +284,7 @@ s48_get_next_event(long *ready_fd, long *status)
   if ((keyboard_interrupt_count == 0)
       &&  (alarm_time == -1 || s48_current_time < alarm_time)
       &&  (poll_time == -1 || s48_current_time < poll_time))
-    s48_Spending_eventsPS = FALSE;
+    s48_Spending_eventsPS = PSFALSE;
   allow_interrupts();
   return (NO_EVENT);
 }
@@ -303,7 +303,7 @@ s48_get_next_event(long *ready_fd, long *status)
 typedef struct fd_struct {
  int	fd,			/* file descriptor */
 	status;			/* one of the FD_* constants */
- bool	is_input;		/* iff input */
+ psbool	is_input;		/* iff input */
  struct fd_struct	*next;	/* next on same queue */
 } fd_struct;
 
@@ -332,7 +332,7 @@ static fdque	ready = {
 static void		findrm(fd_struct *entry, fdque *que);
 static fd_struct	*rmque(fd_struct **link, fdque *que);
 static void		addque(fd_struct *entry, fdque *que);
-static fd_struct	*add_fd(int fd, bool is_input);
+static fd_struct	*add_fd(int fd, psbool is_input);
 
 
 /*
@@ -384,7 +384,7 @@ addque(fd_struct *entry, fdque *que)
 }
 
 
-static bool
+static psbool
 there_are_ready_ports(void)
 {
   return (ready.first != NULL);
@@ -404,10 +404,10 @@ next_ready_port(void)
 
 /*
  * Put fd on to the queue of ports with pending operations.
- * Return TRUE if successful, and FALSE otherwise.
+ * Return PSTRUE if successful, and PSFALSE otherwise.
  */
-bool
-s48_add_pending_fd(int fd, bool is_input)
+psbool
+s48_add_pending_fd(int fd, psbool is_input)
 {
   fd_struct	*data;
 
@@ -415,18 +415,18 @@ s48_add_pending_fd(int fd, bool is_input)
     fprintf(stderr, "ERROR: add_pending fd %d not in [0, %d)\n",
 	    fd,
 	    FD_SETSIZE);
-    return (FALSE);
+    return (PSFALSE);
   }
   data = fds[fd];
   if (data == NULL) {
     data = add_fd(fd, is_input);
     if (data == NULL)
-      return (FALSE); }		/* no more memory */
+      return (PSFALSE); }		/* no more memory */
 
   data->is_input = is_input;
 
   if (data->status == FD_PENDING)
-    return (TRUE);			/* fd is already pending */
+    return (PSTRUE);			/* fd is already pending */
 
   if (data->status == FD_READY)
     findrm(data, &ready);
@@ -434,7 +434,7 @@ s48_add_pending_fd(int fd, bool is_input)
   addque(data, &pending);
   if (poll_time == -1)
     poll_time = s48_current_time + poll_interval;
-  return TRUE;
+  return PSTRUE;
 }
 
 
@@ -442,7 +442,7 @@ s48_add_pending_fd(int fd, bool is_input)
  * Add a new fd_struct for fd.
  */
 static fd_struct	*
-add_fd(int fd, bool is_input)
+add_fd(int fd, psbool is_input)
 {
   struct fd_struct	*new_fd;
 
@@ -462,7 +462,7 @@ add_fd(int fd, bool is_input)
  * Remove fd from any queues it is on.  Returns true if the FD was on a queue
  * and false if it wasn't.
  */
-bool
+psbool
 s48_remove_fd(int fd)
 {
   struct fd_struct	*data;
@@ -471,11 +471,11 @@ s48_remove_fd(int fd)
     fprintf(stderr, "ERROR: s48_remove_fd fd %d not in [0, %d)\n",
 	    fd,
 	    FD_SETSIZE);
-    return FALSE;
+    return PSFALSE;
   }
   data = fds[fd];
   if (data == NULL)
-    return FALSE;
+    return PSFALSE;
   if (data->status == FD_PENDING) {
     findrm(data, &pending);
     if (pending.first == NULL)
@@ -484,12 +484,12 @@ s48_remove_fd(int fd)
     findrm(data, &ready);
   free((void *)data);
   fds[fd] = NULL;
-  return TRUE;
+  return PSTRUE;
 }
 
 
 int
-s48_wait_for_event(long max_wait, bool is_minutes)
+s48_wait_for_event(long max_wait, psbool is_minutes)
 {
   int	status;
   long	seconds,
@@ -510,7 +510,7 @@ s48_wait_for_event(long max_wait, bool is_minutes)
   if (keyboard_interrupt_count > 0)
     status = NO_ERRORS;
   else {
-    status = queue_ready_ports(TRUE, seconds, ticks);
+    status = queue_ready_ports(PSTRUE, seconds, ticks);
     if (there_are_ready_ports())
       NOTE_EVENT;
   }
@@ -526,7 +526,7 @@ s48_wait_for_event(long max_wait, bool is_minutes)
  * The returned value is a status code.
  */
 static int
-queue_ready_ports(bool wait, long seconds, long ticks)
+queue_ready_ports(psbool wait, long seconds, long ticks)
 {
   fd_set	reads,
     		writes,
@@ -561,7 +561,7 @@ queue_ready_ports(bool wait, long seconds, long ticks)
     }
   else
     timerclear(&tv);
-  while(TRUE) {
+  while(1) {
     left = select(limfd, &reads, &writes, &alls, tvp);
     if (left > 0) {
       fdpp = &pending.first;

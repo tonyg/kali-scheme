@@ -1,8 +1,8 @@
 enum event_enum { KEYBOARD_INTERRUPT_EVENT, IO_COMPLETION_EVENT, ALARM_EVENT,
 		    OS_SIGNAL_EVENT, ERROR_EVENT, NO_EVENT };
 
-extern bool s48_add_pending_fd(int fd, bool is_input);
-extern bool s48_remove_fd(int fd);
+extern psbool s48_add_pending_fd(int fd, psbool is_input);
+extern psbool s48_remove_fd(int fd);
 
 extern long s48_schedule_alarm_interrupt(long delta);
 extern void s48_start_alarm_interrupts(void);
@@ -10,7 +10,7 @@ extern void s48_stop_alarm_interrupts(void);
 
 extern long s48_run_time(long *mseconds);
 extern long s48_real_time(long *mseconds);
-extern int  s48_wait_for_event(long max_wait, bool is_minutes);
+extern int  s48_wait_for_event(long max_wait, psbool is_minutes);
 extern int  s48_get_next_event(long *ready_fd, long *status);
 
 /* these are here only for the CHEAP_TIME() macro */

@@ -1,10 +1,6 @@
 
-#ifndef TRUE
-#define TRUE  (0 == 0)
-#endif
+#define PSTRUE  (0 == 0)
 
-#ifndef FALSE
-#define FALSE (0 == 1)
-#endif
+#define PSFALSE (0 == 1)
 
-#define	bool  char		/* boolean type */
+#define	psbool  char		/* boolean type */

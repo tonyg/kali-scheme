@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include "sysdep.h"
 #include "scheme48.h"
+#include "c-mods.h"
+
 #if defined(HAVE_DLOPEN)
  #include <dlfcn.h>
 #else
@@ -22,11 +24,6 @@
 #else
 #define	DLOPEN_MODE	(1)
 #endif
-
-#define	bool		char		/* boolean type */
-#define	TRUE		(0 == 0)
-#define	FALSE		(! TRUE)
-
 
 /*
  * Linked list of dynamically loaded libraries.
@@ -42,7 +39,7 @@ static s48_value	s48_external_lookup(s48_value svname, s48_value svlocp),
 			s48_old_external_call(s48_value svproc, s48_value svargv),
 			s48_dynamic_load(s48_value filename);
 static long		lookup_external_name(char *name, long *locp);
-static bool		dynamic_load(char *name);
+static psbool		dynamic_load(char *name);
 
 
 /*
@@ -61,8 +58,8 @@ s48_init_external_lookup(void)
  * Glue between Scheme48 types and C types for external name lookup.
  * Look up svname (either in a dynamically loaded library, or in the
  * running executable).
- * On success we return TRUE, having set *(long *)svlocp to the location.
- * On failure, we return FALSE.
+ * On success we return PSTRUE, having set *(long *)svlocp to the location.
+ * On failure, we return PSFALSE.
  */
 static s48_value
 s48_external_lookup(s48_value svname, s48_value svlocp)
@@ -100,8 +97,8 @@ s48_old_external_call(s48_value svproc, s48_value svargv)
 /*
  * Lookup an external name (either in a dynamically loaded library, or
  * in the running executable).
- * On success we return TRUE, having set *(long *)locp to the location.
- * On failure, we return FALSE.
+ * On success we return PSTRUE, having set *(long *)locp to the location.
+ * On failure, we return PSFALSE.
  */
 static long
 lookup_external_name(char *name, long *locp)
@@ -114,20 +111,20 @@ lookup_external_name(char *name, long *locp)
 		res = dlsym(dp->handle, name);
 		if (dlerror() == NULL) {
 			*locp = (long)res;
-			return (TRUE);
+			return (PSTRUE);
 		}
 	}
 	if (self == NULL) {
 		self = dlopen((char *)NULL, DLOPEN_MODE);
 		if (dlerror() != NULL)
-			return (FALSE);
+			return (PSFALSE);
 	}
 	res = dlsym(self, name);
 	if (dlerror() == NULL) {
 		*locp = (long)res;
-		return (TRUE);
+		return (PSTRUE);
 	}
-	return (FALSE);
+	return (PSFALSE);
 }
 
 
@@ -152,7 +149,7 @@ s48_dynamic_load(s48_value filename)
 }
 
 
-static bool
+static psbool
 dynamic_load(char *name)
 {
 	struct dlob	**dpp,
@@ -164,27 +161,27 @@ dynamic_load(char *name)
 		if (dp == NULL) {
 			handle = dlopen(name, DLOPEN_MODE);
 			if (handle == NULL)
-				return (FALSE);
+				return (PSFALSE);
 			dp = (struct dlob *)malloc(sizeof(*dp) + strlen(name) + 1);
 			if (dp == NULL) {
 				dlclose(handle);
-				return (FALSE);
+				return (PSFALSE);
 			}
 			dp->next = dlobs;
 			dlobs = dp;
 			dp->name = (char *)(dp + 1);
 			strcpy(dp->name, name);
 			dp->handle = handle;
-			return (TRUE);
+			return (PSTRUE);
 		} else if (strcmp(name, dp->name) == 0) {
 			dlclose(dp->handle);
 			dp->handle = dlopen(name, DLOPEN_MODE);
 			if (dp->handle == NULL) {
 				*dpp = dp->next;
 				free((void *)dp);
-				return (FALSE);
+				return (PSFALSE);
 			}
-			return (TRUE);
+			return (PSTRUE);
 		}
 	}
 }
