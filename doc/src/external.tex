@@ -1,40 +1,4 @@
-
-%\htmltitle{Mixing Scheme 48 and C}
-%\htmladdress{\begin{rawhtml}<a href="http://www-pu.informatik.uni-tuebingen.de/users/sperber/">Mike
-%  Sperber</a>, <a href="http://www.neci.nj.nec.com/homepages/kelsey/">Richard Kelsey</a>\end{rawhtml}}
-%
-%\title{Using C code with Scheme 48}
-%\author{Mike Sperber\\\texttt{\small sperber@informatik.uni-tuebingen.de}\\
-%  Richard Kelsey\\\texttt{\small kelsey@research.nj.nec.com}
-%  }
-%
-%\makeindex
-%
-%\begin{document}
-%
-%\maketitle
-%
-%\begin{abstract}
-
-% What is all this, you ask?
-% We provide three different titles:
-%    - for the table of contents, which has the extra authors
-%    - for links, which doesn't
-%    - for the page, which does, but on two lines
-% The html \chapter command takes a second optional argument, which is the
-% title to use in the ToC.
-
-\texonly{
-\chapter[Mixing Scheme 48 and C {\rm\ \ Mike Sperber and Richard Kelsey}]
-{Mixing Scheme 48 and C \\ {\large Mike Sperber and Richard Kelsey}}
-}
-
-\htmlonly{
-\chapter[Mixing Scheme 48 and C]%
-[Mixing Scheme 48 and C %
-\htmlsym{nbsp}\htmlsym{nbsp} {\it Mike Sperber and Richard Kelsey}]
-{Mixing Scheme 48 and C \\ {\large Mike Sperber and Richard Kelsey}}
-}
+\chapter{Mixing Scheme 48 and C}
 \label{external-chapter}
 
 This chapter describes an interface for calling C functions
@@ -44,8 +8,6 @@ Scheme~48 manages stub functions in C that
  negotiate between the calling conventions of Scheme and C and the
  memory allocation policies of both worlds.
 No stub generator is available yet, but writing stubs is a straightforward task.
-
-%\end{abstract}
 
 \section{Available facilities}
 \label{sec:facilities}
