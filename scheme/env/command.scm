@@ -231,7 +231,7 @@
     (display tag)
     1)))
 
-(define EX_SOFTWARE (shared-binding-ref (lookup-imported-binding "EX_SOFTWARE")))
+(define (EX_SOFTWARE) (shared-binding-ref (lookup-imported-binding "EX_SOFTWARE")))
 
 (define (with-srfi-22-error-handling thunk)
   (call-with-current-continuation
@@ -241,7 +241,7 @@
 	(if (error? c)
 	    (begin
 	      (display-condition c (current-error-port))
-	      (k EX_SOFTWARE))
+	      (k (EX_SOFTWARE)))
 	    (punt)))
       (lambda ()
 	(thunk)
