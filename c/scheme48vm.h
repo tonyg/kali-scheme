@@ -23,7 +23,7 @@ extern char		s48_Spending_eventsPS;
 extern char *		s48_Sstack_limitS;
 extern void		s48_disable_interruptsB(void);
 extern void		s48_enable_interruptsB(void);
-extern void		s48_set_os_signal(s48_value type, s48_value argument);
+extern void		s48_set_os_signals(s48_value list);
 extern void		s48_reset_interruptsB();
 
 /* imported and exported bindings */	  

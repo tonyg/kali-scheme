@@ -73,11 +73,14 @@ static s48_value	posix_unnamed_signal_marker_binding = S48_FALSE;
 
 /*
  * Queue of received interrupts that need to be passed on to Scheme.
- * Kept as list with pointers to the first and last pairs.
+ * Kept in a finite array to avoid consing.
  */
 
-static s48_value	interrupt_head = S48_NULL;
-static s48_value	interrupt_tail = S48_NULL;
+/* Arbitrary size of the queue */
+#define INTERRUPT_QUEUE_LENGTH 32
+
+static int      interrupt_queue [INTERRUPT_QUEUE_LENGTH];
+static int	next_interrupt = 0;
 
 /*
  * Install all exported functions in Scheme48.
@@ -117,8 +120,6 @@ s48_init_posix_proc(void)
 
   S48_GC_PROTECT_GLOBAL(child_pids);
   S48_GC_PROTECT_GLOBAL(unnamed_signals);
-  S48_GC_PROTECT_GLOBAL(interrupt_head);
-  S48_GC_PROTECT_GLOBAL(interrupt_tail);
 
   signal_map_init();
 }
@@ -415,15 +416,12 @@ add_dot_slash(char *name)
 static void
 queue_interrupt(int signum)
 {
-  s48_value		sch_signum = S48_UNSAFE_ENTER_FIXNUM(signum);
-  s48_value		pair = s48_cons(sch_signum, S48_NULL);
-
-  if (interrupt_head == S48_NULL)
-    interrupt_head = pair;
-  else
-    S48_UNSAFE_SET_CDR(interrupt_tail, pair);
-  
-  interrupt_tail = pair;
+  if (next_interrupt == INTERRUPT_QUEUE_LENGTH){
+    perror("Interrupt queue overflow -- report to Scheme 48 maintainers.");
+    exit(-1); 
+  }
+  interrupt_queue[next_interrupt] = signum;
+  next_interrupt++;
 }
 
 /*
@@ -433,17 +431,21 @@ queue_interrupt(int signum)
 int
 s48_os_signal_pending(void)
 {
+  int i;
+  s48_value interrupt_list = S48_NULL;
   block_interrupts();
 
-  if (interrupt_head == S48_NULL) {
+  if (next_interrupt == 0) {
     allow_interrupts();
     return FALSE; }
   else {
-    s48_set_os_signal(S48_UNSAFE_CAR(interrupt_head),
-		      S48_UNSAFE_ENTER_FIXNUM(0));
-    interrupt_head = S48_UNSAFE_CDR(interrupt_head);
-    if (interrupt_head == S48_NULL)
-      interrupt_tail = S48_NULL;
+    /* turn the queue into a scheme list and preserve the order */
+    for (i = next_interrupt; i > 0 ; i--)
+      interrupt_list = s48_cons (s48_enter_fixnum (interrupt_queue  [i - 1]),
+				 interrupt_list);
+    s48_set_os_signals(interrupt_list);
+		      
+    next_interrupt = 0;
     allow_interrupts();
     return TRUE; }
 }

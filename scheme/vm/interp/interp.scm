@@ -72,6 +72,7 @@
 
   (set! *pending-interrupts* 0)
   (set! s48-*pending-interrupt?* #f)
+  (set! *os-signal-list* null)
   (set! *interrupted-template* false)
   unspecific-value)
 
@@ -98,8 +99,7 @@
     (set! *call-with-values-return-code*
 	  (s48-trace-value *call-with-values-return-code*))
     (set! *interrupted-template*  (s48-trace-value *interrupted-template*))
-    (set! *os-signal-type*        (s48-trace-value *os-signal-type*))
-    (set! *os-signal-argument*    (s48-trace-value *os-signal-argument*))
+    (set! *os-signal-list*        (s48-trace-value *os-signal-list*))
 
     (shared-set! *session-data*
 		 (s48-trace-value (shared-ref *session-data*)))

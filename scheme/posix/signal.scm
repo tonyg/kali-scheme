@@ -296,7 +296,7 @@
 ; Find the list of signals for OS-NUMBER and then deliver the signal to each.
 ; If no one really wants it we tell the OS layer to stop delivering it to us.
 
-(define (os-signal-handler os-number ignored enabled-interrupts)
+(define (os-signal-handler os-number enabled-interrupts)
   (if (= os-number (signal-os-number (signal chld)))
       (process-terminated-children))
   (let ((mapper (session-data-ref os-signal-map)))
