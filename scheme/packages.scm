@@ -313,6 +313,7 @@
   
 (define-interface compiler-structures-interface
   (export ((analysis
+	    bc-generation
 	    bindings
 	    compiler
 	    compiler-envs

@@ -959,12 +959,13 @@
 	  instruction
 	  instruction-using-label
 	  using-optional-label
+	  jump-instruction
 	  computed-goto-instruction
 	  continuation-data
 	  make-label
 	  note-environment
 	  note-source-code
-	  segment->template
+	  segment->cv segment->template
 	  segment-size
 	  sequentially
 	  with-package-key))
@@ -976,6 +977,14 @@
 	  define-compilator		;assem.scm
 	  deliver-value			;assem.scm
 	  ))
+
+(define-interface bc-generation-interface
+  (export call-instruction
+	  stack-ref-instruction
+	  stack-set!-instruction
+	  stack-indirect-instruction
+	  integer-literal-instruction
+	  push-instruction))
 
 (define-interface frames-interface
   (export make-frame

@@ -161,7 +161,8 @@
 
 ; The compiler itself.
 
-(define-structure compiler compiler-interface
+(define-structures ((compiler compiler-interface)
+		    (bc-generation bc-generation-interface))
   (open scheme-level-2 util signals
 	features		;force-output
 	enumerated		;enumerand->name

@@ -6,7 +6,8 @@
 (define segment-size car);number of bytes that will be taken in the code vector
 (define segment-emitter cdr)
 
-(define (segment->template segment frame)
+
+(define (segment->cv segment frame)
   (let* ((big-stack? (check-stack-use (frame-size frame)))
 	 (cv (make-code-vector (+ (segment-size segment)
 				  (if big-stack? 3 0))
@@ -18,6 +19,10 @@
     (set-debug-data-env-maps! (frame-debug-data frame)
 			      (astate-env-maps astate))
     (make-immutable! cv)
+    cv))
+
+(define (segment->template segment frame)
+  (let ((cv (segment->cv segment frame)))
     (segment-data->template cv
 			    (debug-data->info (frame-debug-data frame))
 			    (reverse (frame-literals frame)))))
@@ -147,7 +152,7 @@
 		    (emit-byte! astate (low-byte depth))))))
 
 ; Labels.  Each label maintains a list of pairs (location . origin).
-; Instr is the index of the first of two bytes that will hold the jump
+; Location is the index of the first of two bytes that will hold the jump
 ; target offset, and the offset stored will be (- jump-target origin).
 ;
 ; The car of a forward label is #F, the car of a backward label is the
@@ -165,12 +170,36 @@
 			   (location (+ origin (segment-size before))))
 		      (emit-segment! astate segment)
 		      (if (car label)
+			  ;; backward label
 			  (insert-label! (astate-code-vector astate)
 					 location
 					 (- (car label) origin))
+			  ;; forward label
 			  (set-cdr! label
 				    (cons (cons location origin)
 					  (cdr label)))))))))
+
+(define (jump-instruction label)
+  (make-segment 3
+		(lambda (astate)
+		  (let* ((origin (astate-pc astate))
+			 (label-location (+ origin 1)))
+		    (cond
+		     ((car label)
+		      => (lambda (label-pc)
+			   ;; backward label
+			   (emit-byte! astate (enum op jump-back))
+			   (insert-label! (astate-code-vector astate)
+					  label-location
+					  (- origin label-pc))))
+		     (else
+		      ;; forward label
+		      (begin
+			(emit-byte! astate (enum op jump))
+			(set-astate-pc! astate (+ (astate-pc astate) 2))
+			(set-cdr! label
+				  (cons (cons label-location origin)
+					(cdr label))))))))))
 
 (define (instruction-using-label opcode label . rest)
   (label-reference (instruction opcode)
