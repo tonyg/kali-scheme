@@ -191,11 +191,6 @@
 		"undumpable records written in image"
 		(vector-prefix->list undumpable)))))
 
-; Convert file-name to VM format
-
-(define (open-channel file-name option close-silently?)
-  (open-channel-low file-name option close-silently?))
-
 ; Return a list containing the non-#F values at the beginning of VECTOR.
 
 (define (vector-prefix->list vector)

@@ -32,16 +32,11 @@
 
 ; Check SPEC type and then call OPEN-CHANNEL.
 
-(define-consing-primitive open-channel-low (any-> fixnum-> any->)
-  (lambda (ignore) (+ channel-size error-string-size))
+(define-consing-primitive open-channel (any-> fixnum-> any->)
+  (lambda (ignore) channel-size)
   (lambda (spec mode close-silently? key)
     (let* ((lose (lambda (reason)
 		   (raise-exception* reason 0 spec (enter-fixnum mode))))
-	   (os-lose (lambda (status)
-		      (raise-exception os-error 0
-				       spec
-				       (enter-fixnum mode)
-				       (get-error-string status key))))
 	   (win (lambda (index)
 		  (receive (channel reason)
 		      (make-registered-channel mode spec index close-silently? key)
@@ -66,10 +61,11 @@
 		       (open-output-file-channel filename)))
 	       (cond ((eq? status (enum errors no-errors))
 		      (win channel))
-		     ((eq? status (enum errors file-not-found))
-		      (lose (enum exception cannot-open-channel)))
 		     (else
-		      (os-lose status)))))
+		      (raise-exception os-error 0
+				       spec
+				       (enter-fixnum mode)
+				       (enter-fixnum status))))))
 	    (else
 	     (lose (enum exception wrong-type-argument)))))))
 

@@ -234,48 +234,57 @@
 
 ; First a generic procedure to do the work.
 
-(define (maybe-open-file file-name option close-silently? coercion)
-  (let ((channel (open-channel (thing->file-name-byte-string file-name)
-			       option close-silently?)))
-    (if channel
-	(coercion channel (channel-buffer-size))
-	#f)))
+(define (maybe-open-file op file-name option close-silently? coercion)
+  (let ((channel
+	 (with-handler
+	  (lambda (c punt)
+	    (cond
+	     ((and (vm-exception? c)
+		   (eq? 'os-error
+			(vm-exception-reason c)))
+	      (punt
+	       (make-i/o-error
+		(car (reverse (vm-exception-arguments c)))
+		op
+		(list file-name))))
+	     (else
+	      (punt))))
+	  (lambda ()
+	    (open-channel (thing->file-name-byte-string file-name)
+			  option close-silently?)))))
+    (coercion channel (channel-buffer-size))))
   
 ; And then all of RnRS's file opening procedures.
 
-(define (really-open-input-file string close-silently?)
-  (if (string? string)
-      (or (maybe-open-file string
-			   (enum channel-status-option input)
-			   close-silently?
-			   input-channel->port)
-	  (error "can't open for input" string))
-      (call-error "invalid argument" open-input-file string)))
+(define (really-open-input-file op string close-silently?)
+  (maybe-open-file op
+		   string
+		   (enum channel-status-option input)
+		   close-silently?
+		   input-channel->port))
 
 (define (open-input-file string)
-  (really-open-input-file string  #f))
+  (really-open-input-file open-input-file string  #f))
 
-(define (really-open-output-file string close-silently?)
-  (if (string? string)
-      (or (maybe-open-file string
-			   (enum channel-status-option output)
-			   close-silently?
-			   output-channel->port)
-	  (error "can't open for output" string))
-      (call-error "invalid argument" open-output-file string)))
+(define (really-open-output-file op string close-silently?)
+  (maybe-open-file op
+		   string
+		   (enum channel-status-option output)
+		   close-silently?
+		   output-channel->port))
 
 (define (open-output-file string)
-  (really-open-output-file string #f))
+  (really-open-output-file open-output-file string #f))
 
 (define (call-with-input-file string proc)
-  (let* ((port (really-open-input-file string #t))
+  (let* ((port (really-open-input-file call-with-input-file string #t))
          (results (call-with-values (lambda () (proc port))
 				    list)))
     (close-input-port port)
     (apply values results)))
 
 (define (call-with-output-file string proc)
-  (let* ((port (really-open-output-file string #t))
+  (let* ((port (really-open-output-file call-with-output-file string #t))
          (results (call-with-values (lambda () (proc port))
 				    list)))
     (close-output-port port)

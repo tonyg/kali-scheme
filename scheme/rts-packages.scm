@@ -153,6 +153,7 @@
 	condvars
 	simple-signals simple-conditions
 	architecture		; channel-opening options
+	handle
 	debug-messages		; for error messages
 	(subset util		(unspecific))
 	(subset primitives	(add-finalizer!)))
