@@ -2,12 +2,11 @@
 
 (define-interface prescheme-interface
   (export ((if begin lambda letrec quote set!
-	       define define-syntax let-syntax
+	       define define-syntax let-syntax letrec-syntax
 	       and cond case do let let* or
 	       quasiquote
 	       ;syntax-rules
 	       ) :syntax)  ; no delay
-	  ;; letrec-syntax  -- not yet implemented
 	  
 	  (goto :syntax)
 	  (external :syntax)

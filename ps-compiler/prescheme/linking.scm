@@ -150,7 +150,7 @@
 			       #f
 			       (get-operator id syntax-type)))
 	    '(if begin lambda letrec quote set!
-		 define define-syntax let-syntax
+		 define define-syntax let-syntax letrec-syntax
 		 ; the rest are special for Prescheme
 		 goto type-case real-external)))
 
