@@ -226,6 +226,7 @@
 		      => (lambda (label-pc)
 			   ;; backward label
 			   (emit-byte! astate (enum op jump-back))
+			   (set-astate-pc! astate (+ (astate-pc astate) 2))
 			   (insert-backward-label! astate
 						    label-location
 						    label-pc
