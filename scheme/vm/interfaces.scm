@@ -269,7 +269,7 @@
 
 	  template? template-size make-template template-length
 	  template-ref template-set!
-	  template-code template-name
+	  template-code template-byte-code template-name
 
 	  vm-string? vm-string-size vm-make-string vm-string-length
 	  vm-string-ref vm-string-set!

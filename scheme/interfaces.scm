@@ -720,12 +720,14 @@
 (define-interface templates-interface
   (export make-template
 	  template-code
+	  template-byte-code
 	  template-info
 	  template-package-id
 	  template-length
 	  template-ref
 	  template-overhead
 	  set-template-code!
+	  set-template-byte-code!
 	  set-template-info!
 	  set-template-package-id!
 	  template-set!

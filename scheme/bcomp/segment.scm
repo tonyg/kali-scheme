@@ -25,6 +25,7 @@
 (define (segment-data->template cv debug-data literals)
   (let ((template (make-template (+ template-overhead (length literals)) 0)))
     (set-template-code! template cv)
+    (set-template-byte-code! template cv)
     (set-template-info! template debug-data)
     (set-template-package-id! template (fluid $package-key))
     (do ((lits literals (cdr lits))

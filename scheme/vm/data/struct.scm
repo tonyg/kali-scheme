@@ -87,7 +87,8 @@
   continuation-code-index)
 
 (define (template-code tem) (template-ref tem 0))
-(define (template-name tem) (template-ref tem 1))
+(define (template-byte-code tem) (template-ref tem 1))
+(define (template-name tem) (template-ref tem 2))
 
 ; Code vectors
 
