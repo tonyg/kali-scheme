@@ -14,7 +14,7 @@
 ; Error
 
 (define (error message . irritants)
-  (signal 'error message irritants))
+  (apply signal 'error message irritants))
 
 ; Warn
 
@@ -28,8 +28,8 @@
 
 ; Syntax errors
 
-(define (syntax-error . rest)  ; Must return a valid expression.
-  (signal-condition (make-condition 'syntax-error rest))
+(define (syntax-error message . rest)  ; Must return a valid expression.
+  (signal-condition (make-condition 'syntax-error (cons message rest)))
   ''syntax-error)
 
 
