@@ -18,11 +18,21 @@
  * with the software or the use or other dealings in the software.
  */
 
+#include <stdio.h>
+
+#ifndef _WIN32
 #include "sysdep.h"
+#endif
 
 typedef unsigned long word32_t;
 
+/* It's a shame ... */
+#ifdef _WIN32
+#define UNSIGNED64 unsigned _int64
+#else
 #define UNSIGNED64 unsigned long long
+#endif
+
 #define U32 word32_t
 
 /* exponent stored + 1024, hidden bit to left of decimal point */

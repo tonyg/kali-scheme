@@ -91,6 +91,10 @@ SOURCE=.\c\bignum.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\c\double_to_string.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\c\win32\dynlink.c
 # End Source File
 # Begin Source File
@@ -108,6 +112,10 @@ SOURCE=.\c\external.c
 # Begin Source File
 
 SOURCE=".\c\win32\fd-io.c"
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\free.c
 # End Source File
 # Begin Source File
 
