@@ -85,9 +85,12 @@
 
 (define-condition-type 'vm-exception '(error))
 (define vm-exception? (condition-predicate 'vm-exception))
-(define vm-exception-opcode cadr)
-(define vm-exception-reason caddr)
-(define vm-exception-arguments cdddr)
+(define (vm-exception-opcode c)
+  (car (condition-stuff c)))
+(define (vm-exception-reason c)
+  (cadr (condition-stuff c))))
+(define (vm-exception-arguments c)
+  (cddr (condition-stuff c)))
 
 (define (make-vm-exception opcode reason args)
   (make-condition 'vm-exception (cons opcode (cons reason args))))
@@ -96,10 +99,14 @@
 
 (define-condition-type 'i/o-error '(error))
 (define i/o-error? (condition-predicate 'i/o-error))
-(define i/o-error-status cadr)
-(define i/o-error-message caddr)
-(define i/o-error-operation cadddr)
-(define i/o-error-arguments cddddr)
+(define (i/o-error-status c)
+  (car (condition-stuff c)))
+(define (i/o-error-message c)
+  (cadr (condition-stuff c)))
+(define (i/o-error-operation c)
+  (caddr (condition-stuff c)))
+(define (i/o-error-arguments c)
+  (cdddr (condition-stuff c)))
 
 (define (make-i/o-error status operation args)
   (make-condition 'i/o-error
