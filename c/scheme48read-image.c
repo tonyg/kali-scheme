@@ -338,7 +338,8 @@ void s48_relocate_all(long delta_53X, char * new_begin_54X, char * new_hp_55X, l
 {
 
  {relocate_symbol_tableB(symbols_56X, delta_53X);relocate_binding_tableB(imported_57X, delta_53X);relocate_binding_tableB(exported_58X, delta_53X);
-  return relocate_image(delta_53X, new_begin_54X, new_hp_55X);}
+  relocate_image(delta_53X, new_begin_54X, new_hp_55X);
+  return;}
 }
 long s48_read_image(char *filename_59X, long heap_size_60X)
 {

@@ -162,14 +162,24 @@
 
 (define (generate-c-tail-call call start port indent)
   (let ((proc (call-arg call 1))
-	(args (call-args call)))
+	(args (call-args call))
+	(cont (call-arg call 0)))
     (cond ((not (and (global-reference? proc)
 		     (memq? 'tail-called
 			    (variable-flags (reference-variable proc)))))
-	   (indent-to port indent)
-	   (display "return " port)
-	   (c-value proc port)
-	   (write-value-list-with-extras args start *extra-tail-call-args* port))
+	   (let* ((type (get-variable-type (reference-variable cont)))
+		  (void? (or (eq? type type/unit)
+			     (eq? type type/null))))
+	     (indent-to port indent)
+	     (if (not void?)
+		 (display "return " port))
+	     (c-value proc port)
+	     (write-value-list-with-extras args start *extra-tail-call-args* port)
+	     (if void?
+		 (begin
+		   (display ";" port)
+		   (indent-to port indent)
+		   (display "return" port)))))
 	  (*doing-tail-called-procedure?*
 	   (generate-goto-call call start port indent))
 	  (else

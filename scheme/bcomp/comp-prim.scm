@@ -422,6 +422,16 @@
 ; point and then jumped, or the jump could be a separate instruction.
 ;  The jump target would have a protocol to allow tail calls within the
 ; producer as well.
+;
+; The closed-compiled version gets the arguments on the stack in the wrong
+; order for what it wants to do.  It does:
+;                             *val*     stack
+;   Start                     ?         consumer producer ...
+;   (stack-ref+push 1)        producer  producer consumer producer ...
+;   (false)                   #f        producer consumer producer ...
+;   (stack-set! 2)            #f        producer consumer #f ...
+;   (pop)                     producer  consumer #f ...
+; to reverse the order.
 
 (define-compiler-primitive 'call-with-values
   (proc ((proc () any-values-type #f)
@@ -454,8 +464,11 @@
 			c-after)))))
     (lambda (frame)
       (receive (before depth label after)
-	  (push-continuation-no-protocol 1 frame #f (plain-fall-through-cont))
+	  (push-continuation-no-protocol 2 frame #f (plain-fall-through-cont))
 	(sequentially (instruction (enum op protocol) 2 #b00)
+		      (instruction (enum op stack-ref+push) 1)
+		      (instruction (enum op false))
+		      (instruction (enum op stack-set!) 2)
 		      (instruction (enum op pop))
 		      before
 		      (using-optional-label (enum op call) label 0)

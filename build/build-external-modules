@@ -23,6 +23,6 @@ void s48_initialize_external_modules (void) {
 !
 	done
 	cat <<!
-		};
+		}
 !
 ) >"$target"

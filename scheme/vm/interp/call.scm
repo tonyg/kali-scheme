@@ -708,10 +708,6 @@
 ; a list and raise an exception.
 
 (define (return-exception stack-nargs list-args)
-  (write-string "RETURN-EXCEPTION: " (current-error-port))
-  (report-continuation-uids (current-code-vector)
-			    (current-error-port))
-  (newline (current-error-port))
   (let ((args (pop-args->list*+gc list-args stack-nargs)))
     (raise-exception wrong-number-of-arguments
 		     -1		 ; no next opcode

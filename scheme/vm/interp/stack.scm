@@ -240,11 +240,14 @@
     (lambda ()
       (check 0))))
 
+; Check 1: if SPACE is DEFAULT-STACK-SPACE this is the same as above.
+; Check 2: as SPACE grows this gets harder to satisfy.
+
 (define (available-on-stack? space limit)
-  (> (+ (a-units->cells			; space on the stack
-	   (address-difference *stack* limit))
-	default-stack-space)            ; allow for s48-*stack-limit*'s offset
-     space))
+  (address<= limit
+	     (address- *stack*
+		       (cells->a-units (- space
+					  default-stack-space)))))
 
 (define ensure-stack-space! (stack-space-check available-on-stack?))
 

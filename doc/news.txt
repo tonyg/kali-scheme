@@ -7,8 +7,9 @@ Recent changes to Scheme 48.
 	  Fixed a problem with the debug data for LETREC environments.
 	  Null output ports now marked as output ports.
 	  Command reader now checks that , is followed by a symbol.
+	  Got rid of 'return <value>;' in void functions in vm/*.c files.
 	 Changes:
-	  The byte code architecture has been changed.  It no longer has
+	  The byte-code architecture has been changed.  It no longer has
 	   dedicated registers for the template and environment.  All values
 	   are now accessed via the stack pointer.
 	  Image writer now uses hash tables instead of breaking hearts.  This

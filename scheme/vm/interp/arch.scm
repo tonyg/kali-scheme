@@ -292,6 +292,7 @@
    gc-protection-mismatch
    no-current-proposal
    native-code-not-supported
+   illegal-exception-return
    ))
 
 ; Used by (READ-CHAR) and (WRITE-CHAR) to get the appropriate ports from

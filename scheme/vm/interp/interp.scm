@@ -205,10 +205,10 @@
 ; This has to operate with broken hearts.
 
 (define (safe-byte-vector-length code)
-  (let ((header (stob-header code)))
-    (if (stob? header)
-	(safe-byte-vector-length header)
-	(code-vector-length code))))
+  (code-vector-length (let ((header (stob-header code)))
+                        (if (stob? header)
+                            header
+                            code))))
 
 (define (current-code-vector)
   (if (within-code? *code-pointer* *last-code-called*)
@@ -395,11 +395,22 @@
 (define-opcode return-from-exception
   (receive (pc code exception size)
       (pop-exception-data)
-    (set-code-pointer! code
-		       (+ (extract-fixnum pc)
-			  (extract-fixnum size)))
-    (goto interpret *code-pointer*)))
+    (let* ((pc (extract-fixnum pc))
+	   (opcode (code-vector-ref code pc)))
+      (cond ((okay-to-proceed? opcode)
+	     (set-code-pointer! code (+ pc (extract-fixnum size)))
+	     (goto interpret *code-pointer*))
+	    (else
+	     (set-code-pointer! code pc)
+	     (raise-exception illegal-exception-return 0 exception))))))
 
+; It's okay to proceed if the opcode is a data operation, which are all those
+; from EQ? on up, or references to globals (where the use can supply a value).
+
+(define (okay-to-proceed? opcode)
+  (or (<= (enum op eq?) opcode)
+      (= opcode (enum op global))))
+	      
 (define no-exceptions? #f)
 
 (define (raise nargs)
