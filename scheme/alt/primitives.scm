@@ -112,6 +112,7 @@
 (define shared-binding-is-import? (unimplemented 'shared-binding-is-import?))
 (define shared-binding-ref (unimplemented 'shared-binding-ref))
 (define shared-binding-set! (unimplemented 'shared-binding-set!))
+(define find-undefined-imported-bindings (unimplemented 'find-undefined-imported-bindings))
 (define find-all (unimplemented 'find-all))
 (define vm-extension (unimplemented 'vm-extension))
 
