@@ -78,6 +78,11 @@
       (inversion-list-intersection (range->inversion-list 0 1000 500 1000)
 				   (range->inversion-list 0 1000 0 501)))
 
+(test "intersection/5" inversion-list=?
+      (range->inversion-list 0 1000 501 505)
+      (inversion-list-intersection (range->inversion-list 0 1000 500 1000)
+				   (range->inversion-list 0 1000 501 505)))
+
 (test "adjoin" inversion-list=?
       (range->inversion-list 0 1000 0 1000)
       (inversion-list-adjoin (range->inversion-list 0 1000 0 999) 999))

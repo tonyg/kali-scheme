@@ -78,6 +78,7 @@
 	 proc-thunk ; for CALL-ERROR
 	 write-increment-count write-decrement-count
 	 process-first? decrement-count?
+	 middle-increment
 	 copy-extra-count)
 
   (lambda (i-list-1 i-list-2)
@@ -127,7 +128,7 @@
 				     (decrement-count? index-1))
 				(and (not (= index-2 size-2))
 				     (decrement-count? index-2)))
-			    (- count 1)
+			    (+ count middle-increment)
 			    count))
 		       (result-size
 			(if (= copy-extra-count count)
@@ -160,13 +161,13 @@
 (define inversion-list-union
   (binary->n-ary
    (make-inversion-list-union/intersection (lambda () inversion-list-union)
-					   0 1 even? odd? 0)))
+					   0 1 even? odd? -1 0)))
    
 
 (define inversion-list-intersection
   (binary->n-ary
    (make-inversion-list-union/intersection (lambda () inversion-list-intersection)
-					   1 2 odd? even? 2)))
+					   1 2 odd? even? +1 2)))
 
 (define inversion-list-difference
   (binary->n-ary
