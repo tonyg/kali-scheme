@@ -12,20 +12,24 @@
 	 (cv (make-code-vector (+ (segment-size segment)
 				  (if big-stack? 3 0))
 			       0))
-	 (astate (make-astate cv)))
+	 (astate (make-astate cv))
+	 (debug-data (frame-debug-data frame)))
     (emit-segment! astate segment)
     (if big-stack?
 	(add-big-stack-protocol! cv (frame-size frame)))
-    (set-debug-data-env-maps! (frame-debug-data frame)
+    (set-debug-data-env-maps! debug-data
 			      (astate-env-maps astate))
+    (set-debug-data-jump-back-dests! debug-data
+				     (astate-jump-back-dests astate))
     (make-immutable! cv)
-    cv))
+    (values cv
+	    (debug-data->info debug-data)
+	    (reverse (frame-literals frame)))))
 
 (define (segment->template segment frame)
-  (let ((cv (segment->cv segment frame)))
-    (segment-data->template cv
-			    (debug-data->info (frame-debug-data frame))
-			    (reverse (frame-literals frame)))))
+  (call-with-values
+   (lambda () (segment->cv segment frame))
+   segment-data->template))
 
 (define (segment-data->template cv debug-data literals)
   (let ((template (make-template (+ template-overhead (length literals)) 0)))
@@ -70,13 +74,14 @@
 ; "astate" is short for "assembly state"
 
 (define-record-type assembly-state :assembly-state
-  (make-assembly-state cv pc env-maps)
-  (cv       astate-code-vector)
-  (pc       astate-pc       set-astate-pc!)
-  (env-maps astate-env-maps set-astate-env-maps!))
+  (make-assembly-state cv pc env-maps jump-back-dests)
+  (cv              astate-code-vector)
+  (pc              astate-pc              set-astate-pc!)
+  (env-maps        astate-env-maps        set-astate-env-maps!)
+  (jump-back-dests astate-jump-back-dests set-astate-jump-back-dests!))
 
 (define (make-astate cv)
-  (make-assembly-state cv 0 '()))
+  (make-assembly-state cv 0 '() '()))
 
 (define (emit-byte! a byte)
   (code-vector-set! (astate-code-vector a) (astate-pc a) byte)
@@ -197,15 +202,19 @@
 		    (let* ((origin (astate-pc astate))
 			   (location (+ origin (segment-size before))))
 		      (emit-segment! astate segment)
-		      (if (car label)
-			  ;; backward label
-			  (insert-label! (astate-code-vector astate)
-					 location
-					 (- (car label) origin))
-			  ;; forward label
-			  (set-cdr! label
-				    (cons (cons location origin)
-					  (cdr label)))))))))
+		      (cond 
+		       ((car label)
+			;; backward label
+			=> (lambda (label-pc)
+			     (insert-backward-label! astate
+						     location
+						     label-pc
+						     (- label-pc origin))))
+		       (else
+			;; forward label
+			(set-cdr! label
+				  (cons (cons location origin)
+					(cdr label))))))))))
 
 (define (jump-instruction label)
   (make-segment 3
@@ -217,9 +226,10 @@
 		      => (lambda (label-pc)
 			   ;; backward label
 			   (emit-byte! astate (enum op jump-back))
-			   (insert-label! (astate-code-vector astate)
-					  label-location
-					  (- origin label-pc))))
+			   (insert-backward-label! astate
+						    label-location
+						    label-pc
+						    (- origin label-pc))))
 		     (else
 		      ;; forward label
 		      (begin
@@ -301,6 +311,17 @@
 
 (define (insert-label! cv location offset)
   (code-vector-set2! cv location offset))
+
+(define (insert-backward-label! astate location label-pc offset)
+  (let ((cv (astate-code-vector astate)))
+    (write (cons label-pc
+				       (astate-jump-back-dests astate)))
+    (newline)
+    (set-astate-jump-back-dests! astate
+				 (cons label-pc
+				       (astate-jump-back-dests astate)))
+    (insert-label! cv location offset)))
+
 
 (define (code-vector-set2! cv i value)
   (code-vector-set! cv i       (high-byte value))

@@ -1014,6 +1014,7 @@
 	  debug-data-env-shape
 	  debug-data-name
 	  debug-data-parent
+	  debug-data-jump-back-dests
 	  debug-data-source
 	  debug-data-uid
 	  debug-data?
@@ -1023,6 +1024,7 @@
   (export make-debug-data
 	  set-debug-data-source!
 	  set-debug-data-env-maps!
+	  set-debug-data-jump-back-dests!
 	  debug-flag-names		; keep and flush commands
 	  debug-flag-accessor
 	  debug-flag-modifier

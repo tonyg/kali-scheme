@@ -20,12 +20,13 @@
 ; is returning the value of i'th subexpression in the source expression.
 
 (define-record-type debug-data :debug-data
-  (make-debug-data uid name parent env-maps source)
+  (make-debug-data uid name parent env-maps jump-back-dests source)
   debug-data?
   (uid      debug-data-uid)
   (name	    debug-data-name)
   (parent   debug-data-parent)
   (env-maps debug-data-env-maps set-debug-data-env-maps!)
+  (jump-back-dests debug-data-jump-back-dests set-debug-data-jump-back-dests!)
   (source   debug-data-source set-debug-data-source!))
 
 (define-record-discloser :debug-data

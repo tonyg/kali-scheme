@@ -22,7 +22,7 @@
       (display "; Template uid -> name, parent, env maps" port)
       (newline port)
       (table-walk (lambda (id data)
-		    ;; Fields: (uid name parent env-maps source)
+		    ;; Fields: (uid name parent env-maps jump-back-dests source)
 		    (write (list id
 				 (let ((name (debug-data-name data)))
 				   (if (generated? name)
@@ -34,6 +34,7 @@
 				       (debug-data-uid p)
 				       p))
 				 (debug-data-env-maps data)
+				 (debug-data-jump-back-dests data)
 				 ;; Don't retain source code, right?
 				 )
 			   port)

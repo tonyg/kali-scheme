@@ -103,4 +103,4 @@
 
 
 (define (new-debug-data name parent)
-  (make-debug-data (new-template-uid) name parent '() '()))
+  (make-debug-data (new-template-uid) name parent '() '() '()))
