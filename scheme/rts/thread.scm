@@ -457,8 +457,9 @@
 ; Block if the current proposal succeeds.  Returns true if successful and false
 ; if the commit fails.  The cell becomes the thread's cell.  It will be cleared
 ; if the thread is killed.
-; The optional parameter is a thunk that will upon a successful commit
-; just before we block.  (See MAYBE-COMMIT-AND-BLOCK-ON-QUEUE below.)
+; The optional parameter is a thunk that will be called upon a
+; successful commit just before we block.
+; (See MAYBE-COMMIT-AND-BLOCK-ON-QUEUE below.)
 
 (define (maybe-commit-and-block cell . maybe-thunk)
   (disable-interrupts!)
