@@ -1,32 +1,17 @@
 ; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-(define-interface enum-sets-interface
-  (export (define-enum-set-type :syntax)
-	  enum-set->list
-	  enum-set-member?
-	  enum-set-union
-	  enum-set-intersection
-	  enum-set-negation))
-
-(define-structure enum-sets enum-sets-interface
-  (open scheme define-record-types
-	finite-types
-	bitwise 
-	util
-	signals)
-  (optimize auto-integrate)
-  (files (big enum-set)))
-
 ; Sets over finite types.
 ;
-; (define-enum-set-type id predicate constructor
+; (define-enum-set-type id type-name predicate constructor
 ;   element-syntax element-predicate all-elements element-index-ref)
 ;
 ; Defines ID to be syntax for constructing sets, PREDICATE to be a predicate
-; for those sets, and CONSTRUCTOR an n-ary procedure for construction them.
+; for those sets, and CONSTRUCTOR an procedure for constructing one
+; from a list.
 ;
 ; (enum-set->list <enum-set>)                   -> <list>
 ; (enum-set-member? <enum-set> <enumerand>)     -> <boolean>
+; (enum-set=? <enum-set> <enum-set>)            -> <boolean>
 ; (enum-set-union <enum-set> <enum-set>)        -> <enum-set>
 ; (enum-set-intersection <enum-set> <enum-set>) -> <enum-set>
 ; (enum-set-negation <enum-set>)                -> <enum-set>
@@ -39,7 +24,7 @@
 ;     color-index
 ;     (red blue green))
 ; we can define sets of colors:
-;   (define-enum-set-type color-set
+;   (define-enum-set-type color-set :color-set
 ;                         color-set?
 ;                         make-color-set
 ;     color color? colors color-index)
@@ -53,7 +38,7 @@
 
 (define-syntax define-enum-set-type
   (syntax-rules ()
-    ((define-enum-set-type id predicate constructor
+    ((define-enum-set-type id type predicate constructor
        element-syntax element-predicate all-elements element-index-ref)
      (begin
        (define type
@@ -65,7 +50,7 @@
 	 (and (enum-set? x)
 	      (eq? (enum-set-type x)
 		   type)))
-       (define (constructor . elements)
+       (define (constructor elements)
 	 (if (every element-predicate elements)
 	     (make-enum-set type (elements->mask elements element-index-ref))
 	     (error "invalid set elements" element-predicate elements)))
@@ -82,7 +67,7 @@
       `(,%define-syntax ,id
           (syntax-rules ()
 	    ((,id element ...)
-	     (,constructor (,element-syntax element) ...)))))))
+            (,constructor (list (,element-syntax element) ...))))))))
 
 (define-record-type enum-set-type :enum-set-type
   (make-enum-set-type id predicate values index-ref)
@@ -107,7 +92,20 @@
 
 (define-record-discloser :enum-set
   (lambda (e-s)
-    (list (enum-set-type-id (enum-set-type e-s)))))
+    (cons (enum-set-type-id (enum-set-type e-s))
+         (enum-set->list e-s))))
+
+(define (enum-set-has-type? enum-set enum-set-type)
+  (eq? (enum-set-type enum-set) enum-set-type))
+
+(define enum-set->integer enum-set-mask)
+
+(define integer->enum-set make-enum-set)
+
+(define-exported-binding "enum-set?" enum-set?)
+(define-exported-binding "enum-set->integer" enum-set->integer)
+(define-exported-binding "integer->enum-set" integer->enum-set)
+(define-exported-binding "enum-set-has-type?" enum-set-has-type?)
 
 (define (make-set-constructor id predicate values index-ref)
   (let ((type (make-enum-set-type id predicate values index-ref)))
@@ -131,7 +129,14 @@
 			   (element-mask element (enum-set-type enum-set)))
 	      0))
       (call-error "invalid arguments" enum-set-member? enum-set element)))
-       
+
+(define (enum-set=? enum-set0 enum-set1)
+  (if (eq? (enum-set-type enum-set0)
+          (enum-set-type enum-set1))
+      (= (enum-set-mask enum-set0) 
+        (enum-set-mask enum-set1))
+      (call-error "invalid arguments" enum-set=? enum-set0 enum-set1)))
+
 (define (element-mask element enum-set-type)
   (arithmetic-shift 1
 		    ((enum-set-type-index-ref enum-set-type) element)))
@@ -179,3 +184,4 @@
     (make-enum-set type
 		   (bitwise-and (bitwise-not (enum-set-mask enum-set))
 				mask))))
+

@@ -372,6 +372,22 @@
 	  mask-subtract
 	  mask-negate))
 
+(define-interface enum-sets-interface
+  (export (define-enum-set-type :syntax)
+	  enum-set->list
+	  enum-set-member?
+	  enum-set=?
+	  enum-set-union
+	  enum-set-intersection
+	  enum-set-negation))
+
+(define-interface enum-sets-internal-interface
+  (export enum-set-has-type?
+	  enum-set?
+	  enum-set-type
+	  enum-set->integer
+	  integer->enum-set))
+
 (define-interface search-trees-interface
   (export make-search-tree
 	  search-tree?

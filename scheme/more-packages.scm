@@ -174,6 +174,17 @@
 	signals)		; call-error
   (files (big mask)))
 
+(define-structures ((enum-sets enum-sets-interface)
+		    (enum-sets-internal enum-sets-internal-interface))
+  (open scheme define-record-types
+	finite-types
+	bitwise 
+	util
+	signals
+	external-calls)
+  (optimize auto-integrate)
+  (files (big enum-set)))
+
 (define general-tables tables)    ; backward compatibility
 
 (define-structure big-util big-util-interface
@@ -603,6 +614,7 @@
 	    dump/restore
 	    dynamic-externals
 	    enum-case
+	    enum-sets
 	    extended-numbers
 	    extended-ports
 	    externals

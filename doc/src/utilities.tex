@@ -85,6 +85,7 @@ They are in the structure \code{byte-vectors}.
 \end{protos}
 
 \section{Cells}
+\label{cells}
 
 These hold a single value and are useful when a simple indirection is
  required.
@@ -514,6 +515,77 @@ The name must be first and
 (color-name (vector-ref colors 1)) \evalsto white
 (color-index (color purple))       \evalsto 2
 (color-red (color maroon))         \evalsto 176
+\end{example}
+
+\section{Sets over finite types}
+\label{sets-finite-types}
+
+The structure \code{enum-sets} has a macro for defining types for sets
+of elements of finite types.  These work naturally with the finite
+types defined by the \code{finite-types} structure, but are not tied
+to them.  The syntax for defining such a type is:
+
+\begin{example}
+(define-enum-set-type \cvar{id} \cvar{type-name} \cvar{predicate} \cvar{constructor}
+   \cvar{element-syntax} \cvar{element-predicate} \cvar{all-elements} \cvar{element-index-ref})
+\end{example}
+%
+This defines \cvar{id} to be syntax for constructing sets,
+\cvar{type-name} to be a value representing the type,
+\cvar{predicate} to be a predicate for those sets, and
+\cvar{constructor} a procedure for constructing one from a list.
+
+\cvar{Element-syntax} must be the name of a macro for constructing set
+elements from names (akin to the \cvar{tag} argument to
+\code{define-enumerated-type}).  \cvar{Element-predicate} must be a
+predicate for the element type, \cvar{all-elements} a vector of all
+values of the element type, and \cvar{element-index-ref} must return
+the index of an element within the \cvar{all-elements} vector.
+
+\begin{protos}
+\proto{enum-set->list}{ enum-set}{list}
+\proto{enum-set-member?}{ enum-set enumerand}{boolean}
+\proto{enum-set=?}{ enum-set enum-set}{boolean}
+\proto{enum-set-union}{ enum-set enum-set}{enum-set}
+\proto{enum-set-intersection}{ enum-set enum-set}{ enum-set}
+\proto{enum-set-negation}{ enum-set}{enum-set}
+\end{protos}
+%
+\code{Enum-set->list} converts a set into a list of its elements.
+\code{Enum-set-member?} tests for membership.  \code{Enum-set=?} tests
+two sets of equal type for equality.  (If its arguments are not of the
+same type, \code{enum-set=?} raises an exception.)
+\code{Enum-set-union} computes the union of two sets of equal type,
+\code{enum-set-intersection} computes the intersection, and
+\code{enum-set-negation} computes the complement of a set.
+
+Here is an example.  Given an enumerated type:
+
+\begin{example}
+(define-enumerated-type color :color
+  color?
+  colors
+  color-name
+  color-index
+  (red blue green))
+\end{example}
+
+we can define sets of colors:
+
+\begin{example}
+(define-enum-set-type color-set :color-set
+                      color-set?
+                      make-color-set
+  color color? colors color-index)
+\end{example}
+
+\begin{example}
+> (enum-set->list (color-set red blue))
+(#{Color red} #{Color blue})
+> (enum-set->list (enum-set-negation (color-set red blue)))
+(#{Color green})
+> (enum-set-member? (color-set red blue) (color blue))
+#t
 \end{example}
 
 \section{Hash tables}
