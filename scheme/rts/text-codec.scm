@@ -157,3 +157,80 @@
 (define utf-8-codec (make-text-codec "UTF-8"
 				    encode-char/utf-8
 				    decode-char/utf-8))
+
+; UTF-16
+
+(define (provisional-byte-vector-set-word/le! bytes start word)
+  (provisional-byte-vector-set! bytes start
+				(bitwise-and #b11111111 word))
+  (provisional-byte-vector-set! bytes (+ 1 start)
+				(arithmetic-shift word -8)))
+
+(define (provisional-byte-vector-set-word/be! bytes start word)
+  (provisional-byte-vector-set! bytes start
+				(arithmetic-shift word -8))
+  (provisional-byte-vector-set! bytes (+ 1 start)
+				(bitwise-and #b11111111 word)))
+
+(define (make-encode-char/utf-16 provisional-byte-vector-set-word!)
+  (lambda (char buffer start count)
+    (let ((scalar-value (char->scalar-value char)))
+      (if (<= scalar-value #xffff)
+	  (if (< count 2)
+	      (values #f 2)
+	      (begin
+		(provisional-byte-vector-set-word! buffer start scalar-value)
+		(values #t 2)))
+	  (if (< count 4)
+	      (values #f 4)
+	      (begin
+		(provisional-byte-vector-set-word!
+		 buffer start
+		 (+ (arithmetic-shift scalar-value -10) #xd7c0))
+		(provisional-byte-vector-set-word!
+		 buffer (+ 2 start)
+		 (+ (bitwise-and scalar-value #x3ff) #xdc00))
+		(values #t 4)))))))
+
+(define (provisional-byte-vector-ref-word/le bytes start)
+  (+ (provisional-byte-vector-ref bytes start)
+     (arithmetic-shift (provisional-byte-vector-ref bytes (+ 1 start))
+		       8)))
+
+(define (provisional-byte-vector-ref-word/be bytes start)
+  (+ (arithmetic-shift (provisional-byte-vector-ref bytes start)
+		       8)
+     (provisional-byte-vector-ref bytes (+ 1 start))))
+
+(define (make-decode-char/utf-16 provisional-byte-vector-ref-word)
+  (lambda (buffer start count)
+    (if (< count 2)
+	(values #f 2)
+	(let ((word0 (provisional-byte-vector-ref-word buffer start)))
+	  (cond
+	   ((or (< word0 #xd800)
+		(> word0 #xdfff))
+	    (values (scalar-value->char word0) 2))
+	   ((< count 4)
+	    (values #f 4))
+	   ((<= word0 #xdbff)
+	    (let ((word1 (provisional-byte-vector-ref-word buffer (+ 2 start))))
+	      (if (and (>= word1 #xdc00)
+		       (<= word1 #xdfff))
+		  (values (scalar-value->char
+			   (+ (arithmetic-shift (- word0 #xd7c0) 10)
+			      (bitwise-and word1 #x3ff)))
+			  4)
+		  (values #f #f))))
+	   (else
+	    (values #f #f)))))))
+
+(define utf-16le-codec
+  (make-text-codec "UTF-16LE"
+		   (make-encode-char/utf-16 provisional-byte-vector-set-word/le!)
+		   (make-decode-char/utf-16 provisional-byte-vector-ref-word/le)))
+
+(define utf-16be-codec
+  (make-text-codec "UTF-16BE"
+		   (make-encode-char/utf-16 provisional-byte-vector-set-word/be!)
+		   (make-decode-char/utf-16 provisional-byte-vector-ref-word/be)))
