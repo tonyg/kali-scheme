@@ -4,20 +4,20 @@
 ;  ,open interfaces packages meta-types sort syntactic
 ;  ,config scheme
 
-(define (show-types thing)
+(define (list-interface thing)
   (cond ((structure? thing)
-	 (show-types-1 (structure-interface thing)
-		       (lambda (name)
-			 (let ((x (structure-lookup thing name #t)))
-			   (if (binding? x)
-			       (binding-type x)
-			       #f)))))
+	 (list-interface-1 (structure-interface thing)
+			   (lambda (name)
+			     (let ((x (structure-lookup thing name #t)))
+			       (if (binding? x)
+				   (binding-type x)
+				   #f)))))
 	((interface? thing)
-	 (show-types-1 thing (lambda (name)
-			       (interface-ref thing name))))
+	 (list-interface-1 thing (lambda (name)
+				   (interface-ref thing name))))
 	(else '?)))
 
-(define (show-types-1 int lookup)
+(define (list-interface-1 int lookup)
   (let ((l '()))
     (for-each-declaration (lambda (name type)
 			    (if (not (memq name l))  ;compound signatures...
@@ -36,11 +36,11 @@
 			     (string<? (symbol->string name1)
 				       (symbol->string name2)))))))
 
-
-
 (define (careful-type->sexp thing)
-  (cond ((or (symbol? thing) (null? thing) (number? thing)) thing)
-	((pair? thing)
+  (cond ((not thing) 'undefined)
+	((or (symbol? thing) (null? thing) (number? thing))
+	 thing)     ;?
+	((pair? thing)    ;e.g. (variable #{Type :value})
 	 (cons (careful-type->sexp (car thing))
 	       (careful-type->sexp (cdr thing))))
 	(else (type->sexp thing #t))))

@@ -21,8 +21,8 @@
 						  #f)
 					     *load-file-type*)))
 		       (if *noisy?*
-			   (begin (display " ") (display file)))
-		       (set! l (cons (lambda () (apply load file env-option))
+			   (begin (display #\space) (display file)))
+		       (set! l (cons (lambda () (apply fload file env-option))
 				     l))))
 		   (lambda (forms p)
 		     (set! l (cons (lambda ()
@@ -36,6 +36,14 @@
 				   l))))
     (for-each (lambda (thunk) (thunk)) (reverse l))
     (newline)))
+
+(define *source-file-name* "")    ;Cf. alt/config.scm
+(define (fload filename . rest)
+  (let ((save filename))
+    (dynamic-wind (lambda () (set! *source-file-name* filename))
+		  (lambda ()
+		    (apply load filename rest))
+		  (lambda () (set! *source-file-name* save)))))
 
 (define (walk-packages structs process? file-action forms-action after-action)
   (let ((seen '()))

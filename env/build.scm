@@ -20,10 +20,13 @@
 	(context (user-context))
 	(env (environment-for-commands)))
     (build-image (lambda (arg)
-		   (start-command-processor arg
-					    context
-					    env
-					    (lambda () (greet-user info))))
+		   (with-interaction-environment env
+		     (lambda ()
+		       (start-command-processor arg
+						context
+						;; env
+						(lambda ()
+						  (greet-user info))))))
 		 filename)))
 
 ; build <exp> <filename>

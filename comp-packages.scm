@@ -62,6 +62,7 @@
 (define-structure reconstruction (export node-type reconstruct-type)
   (open scheme-level-2
 	syntactic meta-types
+	util		; last
 	signals)
   (files (bcomp recon)))
 

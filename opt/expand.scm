@@ -17,16 +17,18 @@
 
 (define (expand-stuff stuff p)
   (let* ((table (make-table))
+	 (env (package->environment p))
 	 (new-stuff
 	  (let-fluid $assignments (cons p table)
 	    (lambda ()
 	      (map (lambda (filename+nodes)
 		     (let ((filename (car filename+nodes))
 			   (nodes (cdr filename+nodes)))
-		       (let-fluid $source-file-name filename
-			 (lambda ()
-			   (cons filename
-				 (expand-forms nodes p))))))
+		       (cons filename
+				 (let ((env (bind-source-file-name filename env)))
+				   (map (lambda (node)
+					  (expand node env))
+					nodes)))))
 		   stuff)))))
     (for-each (lambda (filename+nodes)
 		(for-each (lambda (node)
@@ -51,17 +53,7 @@
 		    (schemify node)
 		    (type->sexp new-type #t)))))))
 
-(define define-node? (node-predicate 'define syntax-type))
 (define lambda-node? (node-predicate 'lambda))
-
-
-; Expand a package body.
-
-(define (expand-forms scanned-forms p)
-  (let ((env (package->environment p)))
-    (map (lambda (node)
-	   (expand node env))
-	 scanned-forms)))
 
 
 ; --------------------
@@ -83,7 +75,7 @@
 						     (cdr form))))))))
 
 (define (define-expander name type proc)
-  (operator-define! expanders (list name type) proc))
+  (operator-define! expanders name type proc))
 
 (define (get-expander id)
   (operator-table-ref expanders id))

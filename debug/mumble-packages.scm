@@ -51,7 +51,6 @@
 				(structure-ref :syntax))
   (open scheme
 	environments		; *structure-ref
-	syntactic		; $source-file-name
 	fluids)
   (files ((".." link) loadc)))
 

@@ -53,7 +53,6 @@ main(argc, argv)
 #endif
 
   long vm_argc = 0;
-  char **vm_argv = NULL;
   char *me = *argv;		/* Save program name. */
 
   object_file = reloc_file = NULL;

@@ -15,7 +15,7 @@
        (values))
 
 (defun enable-lisp-packages ()
-  (setq *scheme-read* ps:scheme-readtable)
+  (setq *readtable* ps:scheme-readtable)
   (values))
 
 (defun disable-lisp-packages ()
@@ -43,7 +43,6 @@
   (flatload link-config))
 
 (load "alt/init-defpackage.scm")
-(set! *package-uid* 0)
 
 (define-syntax struct-list    ;not in link.sbin
   (syntax-rules ()

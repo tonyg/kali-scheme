@@ -75,8 +75,24 @@
 	  <generic-function>
 	  <method>
 	  <class>
-	  <singleton>
-	  ;; etc.
+
+	  <object>
+	  <number>
+	  <complex>
+	  <real>
+	  <rational>
+	  <integer>
+	  <pair>
+	  <symbol>
+	  <char>
+	  <null>
+	  <vector>
+	  <string>
+	  <eof-object>
+	  <input-port>
+	  <output-port>
+
+	  <list>    ;foo
 	  make
 	  initialize
 	  car-setter cdr-setter vector-ref-setter

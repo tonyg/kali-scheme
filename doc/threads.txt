@@ -22,7 +22,7 @@ The following are exported by the THREADS structure.
 (MAKE-CONDVAR) => condvar
 (CONDVAR-REF condvar) => value of condvar
 (CONDVAR-SET! condvar value)
-  Condition Variables; attempts to reference a condition variable before
+  Condition variables.  Attempts to reference a condition variable before
   it has been set cause the referencing thread to block.  Setting a
   condition variable to two different values is an error.
 
@@ -76,14 +76,14 @@ Debugging utilities:
 
 -----
 
-The MORE-THREADS structure defines a command ,START-THREADS that
-starts the scheduler with the command loop as its initial thread.
-For example:
+The following is exported by the MORE-THREADS structure.
 
-    > ,load-package more-threads
+(START-THREADS)
+  Restart the command processor underneath a (WITH-MULTITASKING ...).
+
+    > ,open threads more-threads
     [more-threads ...]
-    > ,open threads
-    > ,start-threads
+    > (start-threads)
     Multitasking started
     > (define (foo) (sleep one-second) (display "Hi") (newline) (foo))
     > (define th (spawn foo))

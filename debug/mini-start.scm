@@ -1,30 +1,19 @@
 ; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
+; Start up a system that has reified packages.
+; COMMAND-PROCESSOR might be either the miniature one or the real one.
 
 (define (start structs-thunk)
   (usual-resumer
    (lambda (arg)
-     ;; This condition handler isn't really necesssary, but it sure
-     ;; makes it easier to debug problems in the package reification
-     ;; code.  Without it, any errors will just show up as an exit
-     ;; with status code 123 -- not very helpful.
-     (call-with-current-continuation
-	   (lambda (k)
-	     (with-handler (lambda (c punt)
-			     (if (error? c)
-				 (begin (write c) (newline)
-					(k #f))
-				 (punt)))
-	       (lambda ()
-		 (initialize-interaction-environment!
-		    (cdr (assq 'scheme (structs-thunk))))))))
-     (command-processor arg))))
+     (initialize-interaction-environment! (structs-thunk))
+     (command-processor #f arg))))
 
-
-(define (initialize-interaction-environment! scheme)
-  (let ((tower (delay (cons eval (scheme-report-environment 5)))))
-    (set-interaction-environment!
-         (make-simple-package (list scheme) #t tower 'interaction))
-    (set-scheme-report-environment!
+(define (initialize-interaction-environment! structs)
+  (let ((scheme (cdr (assq 'scheme structs))))
+    (let ((tower (delay (cons eval (scheme-report-environment 5)))))
+      (set-interaction-environment!
+         (make-simple-package (map cdr structs) #t tower 'interaction))
+      (set-scheme-report-environment!
          5
-	 (make-simple-package (list scheme) #t tower 'r5rs))))
+	 (make-simple-package (list scheme) #t tower 'r5rs)))))

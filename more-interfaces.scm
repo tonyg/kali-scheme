@@ -7,8 +7,7 @@
 ; Command processor
 
 (define-interface command-processor-interface
-  (export command-processor
-	  $command-levels
+  (export $command-levels
 	  $write-length $write-depth
 	  abort-to-command-level
 	  add-sentinel!
@@ -34,7 +33,7 @@
 	  read-command-carefully	;inspect
 	  read-form
 	  run-sentinels
-	  set-command-level-env!
+	  ;; set-command-level-env!
 	  set-focus-object!
 	  set-focus-values!
 	  showing-focus-object		;inspect
@@ -56,10 +55,12 @@
 	  define-command-syntax
           define-user-command-syntax
 	  user-command-environment
-	  set-command-structure!        ;startup
-	  command-structure             ;pacman
+	  ;; set-command-structure!        ;startup
+	  ;; command-structure             ;pacman
           set-user-command-environment! ;pacman
-          read-command-error))          ;inspect
+          read-command-error            ;inspect
+	  &environment-id-string
+	  &evaluate))
 
 (define-interface basic-commands-interface
   (export exit
@@ -175,8 +176,7 @@
 	  compile-structures))
 
 (define-interface expander-interface
-  (export expand-forms
-	  expand-form
+  (export expand-form
 	  expand-stuff
 	  expand
 	  lexical-reference-count

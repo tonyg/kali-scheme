@@ -1,7 +1,7 @@
 --*- Mode: Indented-text; -*-
 
 Scheme 48: list of bugs and things to do.
-Last update by JAR on 2 February 1994.
+Last update by JAR on 3 March 1994.
 
 Run-time system bugs:
     MAX and MIN don't do inexact contagion.
@@ -98,6 +98,9 @@ Module system features:
 
 VM:
     Heaps that can grow larger.
+    Add a test to configure.in that can determine whether ld -A works.
+      If both it and dlopen() work, then both kinds of dynamic loading
+      should be made available.
     Merge in Olin's changes and extensions (command line processing,
       the #! syntax for scripts, external function call, etc.).
     Interrupt while writing out image causes an exit.  [Fixed?]
@@ -106,7 +109,7 @@ VM:
       from.  E.g. "out of ports" shouldn't cause a VM halt, it should
       just cause open-port to return #f or an error code.  [Fixed?]
     Get VM interp.scm-without-gc.scm working again.
-    Make the number predicate instructions return #t when apprioate
+    Make the number predicate instructions return #t when appropriate
       for the built-in number stored object types (bignum, double,
       ratnum).
 
@@ -168,6 +171,11 @@ Cleanup:
   Etc:
     Start using a source control system (like rcs).
     We ought to have a test system / validation suite.
+    There ought to be a sanity check to ensure that the size of the
+      area as computed by static.scm agrees with the size as computed
+      by C's sizeof() operator.
+
+What should (syntax-rules (x) ((foo ?body) (let ((x 1)) ?body))) do?
 
 
 To: jar@cs.cornell.edu

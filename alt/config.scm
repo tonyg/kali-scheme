@@ -8,12 +8,12 @@
 
 (define (load-configuration filename . rest)
   (let ((save filename))
-    (dynamic-wind (lambda () (set! *config-file-name* filename))
+    (dynamic-wind (lambda () (set! *source-file-name* filename))
 		  (lambda ()
 		    (apply load filename rest))
-		  (lambda () (set! *config-file-name* save)))))
-(define (%file-name%) *config-file-name*)
-(define *config-file-name* "")
+		  (lambda () (set! *source-file-name* save)))))
+(define (%file-name%) *source-file-name*)
+(define *source-file-name* "")
 
 
 ; This is used to generate file lists that are "included" in "makefiles."
@@ -59,8 +59,10 @@
 
 (define-syntax make-structure
   (syntax-rules ()
-    ((make-structure package interface name)
-     (vector '<structure> name package))))
+    ((make-structure ?package ?interface ?name)
+     (vector '<structure> ?name ?package))
+    ((make-structure ?package ?interface)
+     (make-structure ?package ?interface #f))))
 
 (define (structure-name s) (vector-ref s 1))
 (define (structure-package s) (vector-ref s 2))
@@ -90,11 +92,14 @@
 (define dummy-package
   (make-a-package (lambda () '()) (lambda () '()) #f "" '() #f))
 
-(define (make-compiler-base)
-  (make-structure dummy-package #f 'compiler-base))
 ; source-file-names  ?
 (define module-system (make-structure dummy-package #f 'module-system))
 (define scheme (make-structure dummy-package #f 'scheme))
+(define built-in-structures
+  (make-structure dummy-package #f 'built-in-structures))
+
+(define (note-name! thing name)
+  thing)
 
 
 ; Handy
@@ -180,6 +185,8 @@
 (define :value ':value)
 (define :syntax ':syntax)
 (define :structure ':structure)
+(define :procedure ':procedure)
+(define :number ':number)
 
 
 (define-reflective-tower-maker list)

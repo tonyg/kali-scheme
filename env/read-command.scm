@@ -62,7 +62,7 @@
   (let ((form (read-form i-port)))
     (if (eq? (skip-over horizontal-space? i-port) #\newline)
 	(read-char i-port))
-    (make-command #f (list form))))
+    (make-command 'run (list form))))
 
 (define (no-more-commands name)
   #f)
@@ -109,7 +109,8 @@
 			(read-char port)
 			'())
 		       (else
-			(read-command-error port "too few command arguments"))))
+			(read-command-error port
+					    "too few command arguments"))))
 	    ((null? ds)
 	     (read-command-error port "too many command arguments"))
 	    ((eq? (car ds) '&rest)
@@ -180,5 +181,6 @@
 (define (with-sharp-sharp form body)
   (let-fluid $sharp-sharp (lambda (port) form) body))
 
+(define make-command cons)      ;(name . args)
 
 ; (put 'with-sharp-sharp 'scheme-indent-hook 1)

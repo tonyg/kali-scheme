@@ -1,50 +1,246 @@
 ; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
+; Meta-modules: the big picture.
 
-; Structures that export structures: the big picture.
 
-; The two definitions assume that we're "flat loading."
-(define-structure the-interfaces (export ) (open ))
+; Various implementations of Primitive Scheme.
+
+(define-structure low-structures low-structures-interface
+  (open meta-module-system the-interfaces)
+  (files low-packages))
+
+(define-structure debug-low-structures low-structures-interface
+  (open meta-module-system the-interfaces
+	;; built-in-structures
+	)
+  (files (alt low-packages)))
+
+
+; Usual Scheme 48 run-time system.
+
+(define (make-run-time low-structures)
+  (structures (run-time-structures-interface
+	       run-time-internals-structures-interface
+	       features-structures-interface)
+    (open meta-module-system the-interfaces
+	  low-structures)
+    (files rts-packages)))
+
+
+; Alternatives to the usual Scheme 48 run-time system.
+
+(define-structure alt-features-structures features-structures-interface
+  (open meta-module-system the-interfaces)
+  (files (alt features-packages)))
+
+(define-structure cheat-features-structures features-structures-interface
+  (open meta-module-system the-interfaces)
+  (begin (define-structures ((signals signals-interface)
+			     (handle handle-interface)
+			     (features features-interface)
+			     (records records-interface)
+			     (ascii ascii-interface)
+			     (bitwise bitwise-interface)
+			     (code-vectors code-vectors-interface))
+	   ;; Assumes use of FLATLOAD.  The implementations of these
+	   ;; structures will become available via some miracle, e.g.
+	   ;; a command ",open signals ... code-vectors" or an
+	   ;; explicit LOAD of something.  Cf. the rule for
+	   ;; link/linker.image in the Makefile.
+	   )))
+
+(define-module (make-alt-run-time features-structures)
+  (structures (low-structures-interface
+	       run-time-structures-interface)
+    (open meta-module-system the-interfaces
+	  features-structures)
+    (files alt-packages
+	   (alt low-packages))))
+
+
+; Byte-code compiler and related things.
+
+(define-module (make-compiler-structures run-time-structures
+					 features-structures)
+
+  (define-structure compiler-structures compiler-structures-interface
+    (open meta-module-system the-interfaces
+	  run-time-structures
+	  features-structures)
+    (files comp-packages))
+
+  compiler-structures)
+
+
+; The initial system (initial.image).  Cf. the rule for initial.image
+; in the Makefile.
+
+(define (make-initial-structures low-structures
+				 run-time-structures
+				 run-time-internals-structures
+				 features-structures
+				 compiler-structures)
+  (structure initial-structures-interface
+    (open meta-module-system the-interfaces
+	  low-structures		;Cf. desirable-structures
+	  run-time-structures
+	  features-structures
+	  run-time-internals-structures
+	  compiler-structures)
+    (files initial-packages)))
+
+
+; Small systems.
+
+(define-structure (make-debug-structures low-structures
+					 run-time-structures
+					 run-time-internals-structures
+					 features-structures
+					 initial-structures)
+  (structure debug-structures-interface
+    (open meta-module-system the-interfaces
+	  low-structures
+	  run-time-structures
+	  run-time-internals-structures
+	  features-structures
+	  initial-structures)
+    (files debug-packages)))
+
+
+; Static linker.
+
+(define-module (make-linker-structures features-structures
+				       run-time-structures
+				       compiler-structures)
+
+  (define-structure linker-structures linker-structures-interface
+    (open meta-module-system the-interfaces
+	  features-structures
+	  run-time-structures
+	  compiler-structures)
+    (files link-packages))
+
+  linker-structures)
+
+
+
+; The following definition of THE-INTERFACES assumes that we're
+; "flatloading."  If we were really using the module system, then its
+; interface would have to include all of the interfaces defined in
+; interfaces.scm, and it would need a (files interfaces) clause.
+
+(define-structure the-interfaces the-interfaces-interface
+  (open )
+  ;; (files interfaces)
+  )
+(define-interface the-interfaces-interface
+  (export scheme-level-0-interface
+	  primitives-interface
+	  ;; ... etc. etc. ad nauseum
+	  for-reification-interface))
+
+; This definition of META-MODULE-SYSTEM assumes that we're flatloading.
+; If we weren't, it would have to be
+;   (def meta-module-system module-system)
+; instead.
+
 (define-structure meta-module-system (export ) (open ))  ;Kludge
 
-; Scheme 48 run time system.
+
+
+; --------------------
+; Particular assemblies:
+
+; The usual run-time system (for initial.image, etc.).
+
+(def run-time-structures run-time-internals-structures features-structures
+  (make-run-time low-structures))
+
+
+; The byte-code compiler as constituted for initial.image and friends.
+
+(def compiler-structures
+  (make-compiler-structures run-time-structures
+			    features-structures))
+
+
+; The initial system made in the usual way.
+
+(def initial-structures
+  (make-initial-structures low-structures
+			   run-time-structures
+			   run-time-internals-structures
+			   features-structures
+			   compiler-structures))
+
+
+; Debug systems.
+
+(def debug-structures
+  (make-debug-structures low-structures
+			 run-time-structures
+			 run-time-internals-structures
+			 features-structures
+			 initial-structures))
+
+
+; The usual development environment (scheme48.image).
+
+(define-structure usual-structures (export (usual-features :structure))
+  (open meta-module-system
+	run-time-structures
+	compiler-structures
+	initial-structures
+	(make-linker-structures features-structures
+				run-time-structures
+				compiler-structures))
+  (files ;; more-interfaces, when not flatloading
+	 more-packages))
+
+
+; The linker running in a random Scheme system (Lucid, Scheme->C, or
+; old version of Scheme 48).  If running in Scheme 48, this becomes
+; link/linker.image.
+
+(def alt-low-structures alt-run-time-structures
+  (make-alt-run-time cheat-features-structures))
+
+(def linker-structures
+  (make-linker-structures cheat-features-structures
+			  alt-run-time-structures
+			  (make-compiler-structures cheat-features-structures
+						    alt-run-time-structures)))
+
+
+
+; --------------------
+; Meta-interfaces.
+; These are ignored by FLATLOAD, but DESIRABLE-STRUCTURES (in
+; initial.scm) extracts the list of srtuctures to be reified from
+; them.
 
 (define-interface low-structures-interface
-  (export ((scheme-level-0
-	    primitives
+  (export ((ascii
 	    bitwise
 	    closures
 	    code-vectors
+	    escapes
 	    features
-	    write-images
-	    source-file-names
+	    locations
 	    loopholes
 	    low-level
-	    escapes
-	    vm-exposure
-	    ascii
-	    locations
+	    primitives
+	    scheme-level-0
 	    signals
 	    silly
-	    structure-refs)
-	   :structure)))
-
-(define-interface run-time-structures-interface
-  (export ((architecture
-	    bummed-define-record-types
-	    closures
-	    enumerated
-	    fluids
-	    locations
-	    loopholes
 	    source-file-names
-	    scheme-level-1
-	    scheme-level-2
-	    templates
-	    util
-	    weak
+	    structure-refs
+	    vm-exposure
 	    write-images)
 	   :structure)))
+
+; Of the feature-structures, only handle and records aren't also
+; low-structures.
 
 (define-interface features-structures-interface
   (export ((ascii
@@ -56,11 +252,29 @@
 	    signals)
 	   :structure)))
 
-(define-interface run-time-internals-interface
+(define-interface run-time-structures-interface
+  (export ((architecture
+	    bummed-define-record-types
+	    ;; closures
+	    enumerated
+	    fluids
+	    ;; locations
+	    ;; loopholes
+	    ;; source-file-names
+	    scheme-level-1
+	    scheme-level-2
+	    templates
+	    util
+	    weak
+	    ;; write-images
+	    )
+	   :structure)))
+
+(define-interface run-time-internals-structures-interface
   (export ((conditions
 	    continuations
 	    display-conditions
-	    escapes
+	    ;; escapes
 	    exceptions
 	    fluids-internal
 	    methods
@@ -70,33 +284,17 @@
 	    more-types
 	    number-i/o
 	    ports
-	    primitives
+	    ;; primitives
 	    reading
 	    records-internal
 	    scheme-level-2-internal
-	    silly
-	    structure-refs
-	    vm-exposure
+	    ;; silly
+	    ;; structure-refs
+	    ;; vm-exposure
 	    wind
 	    writing)
 	   :structure)))
-
-(define-structure low-structures low-structures-interface
-  (open meta-module-system 
-	the-interfaces)
-  (files low-packages))
-
-(define-structures ((run-time-structures run-time-structures-interface)
-		    (features-structures features-structures-interface)
-		    (run-time-internals  run-time-internals-interface))
-  (open meta-module-system
-	low-structures
-	the-interfaces)
-  (files rts-packages))
   
-
-; Byte-code compiler and related things.
-
 (define-interface compiler-structures-interface
   (export ((compiler
 	    debug-data
@@ -105,7 +303,7 @@
 	    inline
 	    meta-types
 	    interfaces
-	    meta-module-system
+	    module-system
 	    packages
 	    packages-internal
 	    reconstruction
@@ -117,65 +315,20 @@
 	    usual-macros)
 	   :structure)))
 
-(define-module (make-compiler-structures run-time-structures
-					 features-structures)
-
-  (define-structure compiler-structures compiler-structures-interface
-    (open meta-module-system
-	  run-time-structures
-	  features-structures
-	  the-interfaces
-	  )
-    (files comp-packages))
-
-  compiler-structures)
-
-(define compiler-structures
-  (make-compiler-structures run-time-structures features-structures))
-
-
-; Initial system (initial.image).
-
 (define-interface initial-structures-interface
-  (export environments
-	  evaluation
-	  scheme
-	  command
-	  ensures-loaded
-	  ;; These two are in there, but shouldn't get reified.
-	  ;; initial-system
-	  ;; for-reification
-	  ))
-
-(define-structure initial-structures initial-structures-interface
-  (open run-time-structures
-	compiler-structures
-	the-interfaces
-	)
-  (files initial-packages))
-
-
-; Static linker.
-
-(define-module (make-linker-structures features-structures
-				       run-time-structures
-				       compiler-structures)
-
-  (define-structure linker-structures linker-structures-interface
-    (open meta-module-system
-	  features-structures
-	  run-time-structures
-	  compiler-structures)
-    (files link-packages))
-
-  linker-structures)
+  (export ((environments
+	    evaluation
+	    ensures-loaded
+	    ;; for-reification is in there, but shouldn't get reified.
+	    )
+	   :structure)
+	  ((make-scheme
+	    make-mini-command
+	    make-initial-system)
+	   :procedure)))
 
 
 ; Initial + usual (scheme48.image).
-
-(define-interface usual-structures-interface
-  (export ((?)
-	   :structure)))
 
 (define-interface linker-structures-interface
   (export ((analysis
@@ -188,55 +341,17 @@
 	    reification)
 	   :structure)))
 
-(define-structure usual-structures usual-structures-interface
-  (open meta-module-system
-	run-time-structures
-	compiler-structures
-	initial-structures
-	(make-linker-structures features-structures
-				run-time-structures
-				compiler-structures))
-  (files ;; more-interfaces
-	 more-packages))
-
-
-
-; Alternative implementations.
-
-(define-module (make-alternate-structures features-structures)
-
-  (define-structure alternate-structures run-time-structures-interface
-    (open meta-module-system features-structures)
-    (files alt-packages))
-
-  alternate-structures)
-
-(define-structure vanilla-features-structures features-structures-interface
-  (open meta-module-system)
-  (files (alt packages)))
-
-(define-structure cheat features-structures-interface
-  (open meta-module-system)
-  (begin (define-structures ((signals signals-interface)
-			     (handle handle-interface)
-			     (features features-interface)
-			     (records records-interface)
-			     (ascii ascii-interface)
-			     (bitwise bitwise-interface)
-			     (code-vectors code-vectors-interface))
-	   ;; Implemented with a manual ,open signals handle ...
-	   )))
-
-(define alt-features-structures cheat)  ;Or vanilla-features-structures
-
-
-; Linker image for bootstrap (link/linker.image).
-
-(define alternate-structures
-  (make-alternate-structures alt-features-structures))
-
-(define linker-structures
-  (make-linker-structures alt-features-structures
-			  alternate-structures
-			  (make-compiler-structures alt-features-structures
-						    alternate-structures)))
+(define debug-structures-interface
+  (export ((mini-eval
+	    mini-environments
+	    mini-scheme
+	    little-system
+	    mini-for-reification
+	    mini-packages
+	    mini-system
+	    run
+	    medium-scheme
+	    medium-system)
+	   :structure)
+	  mini-eval
+	  mini-environments))

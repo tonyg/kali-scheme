@@ -1,7 +1,7 @@
 ; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
-; Link scripts.
+; Link script.
 
 (define (link-initial-system)
   (let ((structures-to-open		;Structures to open for the initial
@@ -26,21 +26,34 @@
 			 ;; scheme-level-1
 			 )))
 
-
 (define (desirable-structures)
   (let ((env (interaction-environment))
 	(l '()))
-    (for-each (lambda (sig)
+    (for-each (lambda (int)
 		(for-each-declaration
 		     (lambda (name type)
-		       (set! l
-			     (cons (cons name
-					 (eval name env))
-				   l)))
-		     sig))
-	      (list run-time-structures-interface
+		       (if (not (assq name l))
+			   (let ((s (eval name env)))
+			     (if (structure? s)
+				 (set! l (cons (cons name s) l))))))
+		     int))
+	      (list low-structures-interface
+		    run-time-structures-interface
 		    features-structures-interface
-		    run-time-internals-interface
+		    run-time-internals-structures-interface
 		    compiler-structures-interface
 		    initial-structures-interface))
     (reverse l)))
+
+
+; Your choice of evaluators:
+
+(define scheme (make-scheme environments evaluation))
+; (define scheme (make-scheme mini-environments mini-eval))
+; (define scheme (make-scheme environments run))
+; etc.
+
+; Your choice of command processors.
+
+(define initial-system
+  (make-initial-system scheme (make-mini-command scheme)))

@@ -4,5 +4,4 @@
 
 (define-structure tiny-system (export start)
   (define-all-operators)
-  (usual-transforms)
   (files tiny))

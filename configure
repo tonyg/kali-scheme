@@ -158,6 +158,40 @@ if egrep yes conftest.out >/dev/null 2>&1; then
 fi
 rm -f conftest*
 
+     echo checking ${CC} for -cckr
+if test ${CC} != gcc; then
+  echo "main(){int i=1;}" > conftest.c
+  if CFLAGS="-cckr ${CFLAGS}" eval $compile
+  then
+    CFLAGS=$CFLAGS
+  fi
+fi
+rm -f conftest*
+
+     echo checking for POSIXized ISC
+if test -d /etc/conf/kconfig.d &&
+  grep _POSIX_VERSION /usr/include/sys/unistd.h >/dev/null 2>&1
+then
+  ISC=1 # If later tests want to check for ISC.
+  
+{
+test -n "$verbose" && \
+echo "	defining _POSIX_SOURCE"
+echo "#define" _POSIX_SOURCE 1 >> confdefs.h
+DEFS="$DEFS -D_POSIX_SOURCE=1"
+SEDDEFS="${SEDDEFS}\${SEDdA}_POSIX_SOURCE\${SEDdB}_POSIX_SOURCE\${SEDdC}1\${SEDdD}
+\${SEDuA}_POSIX_SOURCE\${SEDuB}_POSIX_SOURCE\${SEDuC}1\${SEDuD}
+\${SEDeA}_POSIX_SOURCE\${SEDeB}_POSIX_SOURCE\${SEDeC}1\${SEDeD}
+"
+}
+
+  if test -n "$GCC"; then
+    CC="$CC -posix"
+  else
+    CC="$CC -Xp"
+  fi
+fi
+
      # Make sure to not get the incompatible SysV /etc/install and
 # /usr/sbin/install, which might be in PATH before a BSD-like install,
 # or the SunOS /usr/etc/install directory, or the AIX /bin/install,
@@ -339,6 +373,34 @@ else
    :; 
 fi
 
+          LIBS_save="${LIBS}"
+LIBS="${LIBS} -lelf"
+have_lib=""
+echo checking for -lelf
+cat > conftest.c <<EOF
+#include "confdefs.h"
+
+int main() { exit(0); }
+int t() { main(); }
+EOF
+if eval $compile; then
+  rm -rf conftest*
+  have_lib="1"
+
+fi
+rm -f conftest*
+LIBS="${LIBS_save}"
+if test -n "${have_lib}"; then
+   :; LIBS="$LIBS -lelf"
+else
+   :; 
+fi
+
+     echo checking for RISC/OS POSIX library lossage
+if test -f /usr/posix/usr/lib/libc.a; then
+  LIBS="${LIBS} /usr/posix/usr/lib/libc.a"
+fi
+
      prog='/* Ultrix mips cc rejects this.  */
 typedef int charset[2]; const charset x;
 /* SunOS 4.1.1 cc rejects this.  */
@@ -403,7 +465,52 @@ SEDDEFS="${SEDDEFS}\${SEDdA}const\${SEDdB}const\${SEDdC}\${SEDdD}
 fi
 rm -f conftest*
 
-     for hdr in libgen.h sys/timeb.h
+     echo checking for return type of signal handlers
+cat > conftest.c <<EOF
+#include "confdefs.h"
+#include <sys/types.h>
+#include <signal.h>
+#ifdef signal
+#undef signal
+#endif
+extern void (*signal ()) ();
+int main() { exit(0); }
+int t() { int i; }
+EOF
+if eval $compile; then
+  rm -rf conftest*
+  
+{
+test -n "$verbose" && \
+echo "	defining" RETSIGTYPE to be void
+echo "#define" RETSIGTYPE void >> confdefs.h
+DEFS="$DEFS -DRETSIGTYPE=void"
+SEDDEFS="${SEDDEFS}\${SEDdA}RETSIGTYPE\${SEDdB}RETSIGTYPE\${SEDdC}void\${SEDdD}
+\${SEDuA}RETSIGTYPE\${SEDuB}RETSIGTYPE\${SEDuC}void\${SEDuD}
+\${SEDeA}RETSIGTYPE\${SEDeB}RETSIGTYPE\${SEDeC}void\${SEDeD}
+"
+}
+
+
+else
+  rm -rf conftest*
+  
+{
+test -n "$verbose" && \
+echo "	defining" RETSIGTYPE to be int
+echo "#define" RETSIGTYPE int >> confdefs.h
+DEFS="$DEFS -DRETSIGTYPE=int"
+SEDDEFS="${SEDDEFS}\${SEDdA}RETSIGTYPE\${SEDdB}RETSIGTYPE\${SEDdC}int\${SEDdD}
+\${SEDuA}RETSIGTYPE\${SEDuB}RETSIGTYPE\${SEDuC}int\${SEDuD}
+\${SEDeA}RETSIGTYPE\${SEDeB}RETSIGTYPE\${SEDeC}int\${SEDeD}
+"
+}
+
+fi
+rm -f conftest*
+
+
+     for hdr in libgen.h sys/timeb.h posix/time.h
 do
 trhdr=HAVE_`echo $hdr | tr '[a-z]./' '[A-Z]__'`
 echo checking for ${hdr}
@@ -453,7 +560,45 @@ fi
 rm -f conftest*
 done
 
-     for func in dlopen gettimeofday ftime nlist select setitimer socket
+     for func in dlopen gettimeofday ftime nlist select setitimer sigaction
+do
+trfunc=HAVE_`echo $func | tr '[a-z]' '[A-Z]'`
+echo checking for ${func}
+cat > conftest.c <<EOF
+#include "confdefs.h"
+#include <ctype.h>
+int main() { exit(0); }
+int t() { 
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_${func}) || defined (__stub___${func})
+choke me
+#else
+/* Override any gcc2 internal prototype to avoid an error.  */
+extern char ${func}(); ${func}();
+#endif
+ }
+EOF
+if eval $compile; then
+  rm -rf conftest*
+  {
+test -n "$verbose" && \
+echo "	defining ${trfunc}"
+echo "#define" ${trfunc} 1 >> confdefs.h
+DEFS="$DEFS -D${trfunc}=1"
+SEDDEFS="${SEDDEFS}\${SEDdA}${trfunc}\${SEDdB}${trfunc}\${SEDdC}1\${SEDdD}
+\${SEDuA}${trfunc}\${SEDuB}${trfunc}\${SEDuC}1\${SEDuD}
+\${SEDeA}${trfunc}\${SEDeB}${trfunc}\${SEDeC}1\${SEDeD}
+"
+}
+
+
+fi
+rm -f conftest*
+done
+
+     for func in socket chroot
 do
 trfunc=HAVE_`echo $func | tr '[a-z]' '[A-Z]'`
 echo checking for ${func}
@@ -542,11 +687,12 @@ SEDDEFS="${SEDDEFS}\${SEDdA}FILE_HAS__CNT\${SEDdB}FILE_HAS__CNT\${SEDdC}1\${SEDd
 fi
 rm -f conftest*
 
-               
      if test "z$CFLAGS" = "z"
-       then if test "z$GCC" = "z"
-         then CFLAGS="-O"
-         else CFLAGS="-O2 -g"; fi; fi
+  then if test "z$GCC" = "z"
+    then CFLAGS="-O"
+    else CFLAGS="-O2 -g"; fi; fi
+
+     
 # Set default prefixes.
 if test -n "$prefix"; then
   test -z "$exec_prefix" && exec_prefix='${prefix}'

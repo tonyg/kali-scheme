@@ -2,7 +2,8 @@
 
 
 ; Portable versions of low-level things that would really like to rely
-; on the Scheme 48 VM.
+; on the Scheme 48 VM or on special features provided by the byte code
+; compiler.
 
 (define (vector-unassigned? v i) #f)
 

@@ -66,41 +66,42 @@
 ; compile-scanned-forms: returns a template.
 
 (define (compile-scanned-forms scanned-forms p filename noisy? . env-option)
-  (let ((cenv (if (null? env-option)
-		  (package->environment p)
-		  (car env-option))))
-    (let-fluid $source-file-name filename
-      (lambda ()
-	(segment->template
-	 (if (null? scanned-forms)
-	     (deliver-value (instruction (enum op unspecific))
-			    (return-cont #f))
-	     (let recur ((scanned-forms scanned-forms))
-	       (if (null? (cdr scanned-forms))
-		   (compile-scanned-form (car scanned-forms) cenv
-					 (return-cont #f) noisy?)
-		   (careful-sequentially 
-		    (compile-scanned-form (car scanned-forms) cenv
-					  an-ignore-values-cont noisy?)
-		    ;; Cf. compile-begin
-		    (recur (cdr scanned-forms))
-		    0
-		    (return-cont #f)))))
-	 filename
-	 #f)))))			;pc-in-segment = #f
+  (let ((cenv (bind-source-file-name
+	       filename
+	       (if (null? env-option)
+		   (package->environment p)
+		   (car env-option)))))
+    (segment->template
+     (if (null? scanned-forms)
+	 (deliver-value (instruction (enum op unspecific))
+			(return-cont #f))
+	 (let recur ((scanned-forms scanned-forms))
+	   (if (null? (cdr scanned-forms))
+	       (compile-scanned-form (car scanned-forms) cenv
+				     (return-cont #f) noisy?)
+	       (careful-sequentially 
+		(compile-scanned-form (car scanned-forms) cenv
+				      an-ignore-values-cont noisy?)
+		;; Cf. compile-begin
+		(recur (cdr scanned-forms))
+		0
+		(return-cont #f)))))
+     filename
+     #f)))				;pc-in-segment = #f
 
 ; Compile a single top-level form, returning a segment.
 
 (define (compile-scanned-form node cenv cont noisy?)
-  (if (define-node? node)
-      (let ((segment (compile-definition node cenv cont noisy?)))
-	(if noisy?
-	    (begin (write-char #\. noisy?)
-		   (force-output noisy?)))
-	segment)
-      (compile-top node cenv 0 cont)))
-
-(define define-node? (node-predicate 'define))
+  (cond ((define-node? node)
+	 (let ((segment (compile-definition node cenv cont noisy?)))
+	   (if noisy?
+	       (begin (write-char #\. noisy?)
+		      (force-output noisy?)))
+	   segment))
+	((define-syntax-node? node)
+	 (deliver-value (instruction (enum op unspecific)) cont))
+	(else
+	 (compile-top node cenv 0 cont))))
 
 
 ; Definitions must be treated differently from assignments: we must

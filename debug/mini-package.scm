@@ -4,7 +4,7 @@
 ; Miniature package system.  This links mini-eval up to the output of
 ; the package reifier.
 
-(define (package names locs get-location) ;Reified package
+(define (package names locs get-location uid) ;Reified package
   (lambda (name)
     (let loop ((i (- (vector-length names) 1)))
       (if (< i 0)
@@ -33,14 +33,14 @@
 
 ; Structures
 
-(define (make-structure package interface name)
+(define (make-structure package interface . name-option)
   (cons package (vector->list interface)))
 
 (define structure-interface cdr)
 (define structure-package car)
 
 
-; Things used by reification form
+; Things used by reification forms
 
 (define (operator name type-exp)
   `(operator ,name ,type-exp))
@@ -72,4 +72,3 @@
 ;(define (package-ensure-defined! p name)
 ;  (package-define! p name (make-location 'defined name)))
 
-;(define (set-package-name! . rest) 'lose)

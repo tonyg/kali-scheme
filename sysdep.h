@@ -2,14 +2,18 @@
 /* sysdep.h.in for Scheme 48.  Originally generated automatically from
    configure.in by autoheader, but then modified manually to add
    NLIST_HAS_N_NAME, etc.  The "configure" script creates sysdep.h
-   from this files.  If "configure" doesn't work for you, copy this
-   file to sysdep.h and make any apprioriate modifications.  If you're
-   not sure what to do, it is generally safe to leave things as they
-   are. */
+   from this file.  If "configure" doesn't work for you, copy this
+   file to sysdep.h and make any appriopriate modifications.  If
+   you're not sure what modifications would be appriopriate, it is
+   generally safe to leave things as they are. */
 
 
 /* Define const to empty if the ANSI C "const" keyword doesn't work.  */
 /* #undef const */
+
+/* Define this appropriately as the return value of a signal handler on
+   your system. */
+#define RETSIGTYPE void
 
 /* Define FILE_HAS__CNT if streams, as defined in <stdio.h>, have _cnt
    components.  This is widespread but basically highly unportable.
@@ -53,9 +57,44 @@
    with locating shared object files. */
 /* #undef HAVE_LIBGEN_H */
 
+/* Define if you have the chroot() system call (quite inessential!). */
+#define HAVE_CHROOT 1
+
+/* Define if you have the Posix sigaction() call. */
+#define HAVE_SIGACTION 1
+
 /* Define if you have socket() and related functions. */
 #define HAVE_SOCKET 1
+
+/* Define if Posix "time.h" include file is <posix/time.h> instead of
+   the standard <time.h>.  (MIPS RISC/OS) */
+/* #undef POSIX_TIME_H */
 
 /* Define this if /bin/ld exists and accepts a BSD-style -A argument
    (for dynamic loading of .o files). */
 /* #undef ANCIENT_DYNLOAD */
+
+
+#if !defined(HAVE_SIGACTION)
+struct sigaction {
+  void (*sa_handler)();
+  int sa_mask;
+  int sa_flags;
+};
+
+#define sigaction(sig, act, oact) signal((sig), (act)->sa_handler)
+#define sigemptyset(foo) 0
+#endif
+
+/* Under HPUX, select() is declared
+      extern int select(size_t, int *, int *, int *, const struct timeval *);
+   in sys/time.h.  This is probably Posix, but there's no knowing.
+   Under SunOS, the int *'s are fd_set *'s. */
+
+#if !defined(fd_set_param)
+#if defined(hpux)
+#  define fd_set_param int
+#else
+#  define fd_set_param fd_set
+#endif
+#endif

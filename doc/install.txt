@@ -81,10 +81,13 @@ After editing the definition of usual-features, simply
 
 to rebuild the image.
 
+-----
+
 Deeper changes to the system -- for example, edits to most of the
-files in the rts/ directory -- will require use of the static linker.
-After you have a working scheme48.image, you can create a linker image
-with
+files in the rts/ directory -- will require using the static linker to
+make a new initial.image.  After you have a working scheme48.image
+(perhaps a previous version of Scheme 48), you can create a linker
+image with
 
         make linker
 
@@ -92,8 +95,19 @@ after which you can say
 
         make image
 
-to get the linker to build a new initial.image and initial.debug;
+to get the linker to build a new initial.image and initial.debug.
 scheme48.image will then be built from those.
+
+You might think that "make scheme48.image" ought to do this, but the
+circular dependencies
+
+  scheme48.image on initial.image
+  initial.image on link/linker.image
+  link/linker.image on scheme48.image
+
+needs to be broken somewhere, or else make will (justifiably) barf.  I
+chose to break the cycle by making scheme48.image not depend on
+initial.image, since this is most robust for installation purposes.
 
 -----
 
@@ -129,20 +143,19 @@ overall performance even more, maybe about 6-10%, by removing the
 range check from the interpreter's instruction dispatch.  To do this,
 use the -S flag to get assembly code for scheme48vm.c, then find the
 instructions in scheme48vm.s corresponding to the big dispatch in
-Interpret():
+Tinterpret():
 
  START: {
-  unsigned char b_111X;
-  b_111X = *((unsigned char *) RScode_pointerS);
-  RScode_pointerS = (1L + RScode_pointerS);
+  b_111X = *((unsigned char*) RScode_pointerS);
+  RScode_pointerS = (1 + RScode_pointerS);
   switch (b_111X) {
     ... }
 
 There will be one or two comparison instructions to see whether b_113X
 is in range; just remove them.  For the 68000 I use a "sed" script
 
-    /cmpl #158,d0/ N
-    /cmpl #158,d0\n     jhi L/ d
+    /cmpl #137,d0/ N
+    /cmpl #137,d0\n     jhi L/ d
 
 but of course the constant will probably have to change when a new
 release comes along.

@@ -63,7 +63,13 @@
 #include <unistd.h>		/* for sysconf() (POSIX.1/.2)*/
 #include <sys/times.h>		/* for times() (POSIX.1) */
 #include <signal.h>		/* for sigaction() (POSIX.1) */
-#include <time.h>
+
+#if defined(HAVE_POSIX_TIME_H)
+#  include <posix/time.h>	/* RISC/OS + gcc lossage */
+#  define _XOPEN_SOURCE 1
+#else
+#  include <time.h>
+#endif
 
 #if defined(HAVE_SETITIMER) || defined(HAVE_GETTIMEOFDAY)
 #  include <sys/time.h>		/* for struct itimerval, ITIMER_REAL (Sun) */
@@ -88,16 +94,38 @@
 extern long Spending_interruptsS;
 
 
+/* Signal handlers */
+
+static RETSIGTYPE
+when_keyboard_interrupt(sig, code, scp)
+     int sig, code; 
+     struct sigcontext *scp;
+{
+  Spending_interruptsS |= (1 << INTERRUPT_KEYBOARD);
+  /* The following might be necessary with signal(), but shouldn't be
+     with sigaction() (I think) */
+  /* sigaction(SIGINT, &keyboard_action, NULL); */
+  return;
+}
+
+static RETSIGTYPE
+when_alarm_interrupt(sig, code, scp)
+     int sig, code; 
+     struct sigcontext *scp;
+{
+  Spending_interruptsS |= (1 << INTERRUPT_ALARM);
+  return;
+}
+
+
 /* OS-dependent initialization */
 
 static struct sigaction keyboard_action;
 static struct sigaction alarm_action;
 
-void sysdep_init()
+void
+sysdep_init()
 {
-  static void when_keyboard_interrupt(int, int, struct sigcontext *);
-  static void when_alarm_interrupt(int, int, struct sigcontext *);
-
   keyboard_action.sa_handler = when_keyboard_interrupt;
   keyboard_action.sa_flags = 0;
   sigemptyset(&keyboard_action.sa_mask);
@@ -109,29 +137,11 @@ void sysdep_init()
   sigaction(SIGINT, &keyboard_action, NULL);
 }
 
-static void when_keyboard_interrupt(sig, code, scp)
-     int sig, code; 
-     struct sigcontext *scp;
-{
-  Spending_interruptsS |= (1 << INTERRUPT_KEYBOARD);
-  /* The following might be necessary with signal(), but shouldn't be
-     with sigaction() (I think) */
-  /* sigaction(SIGINT, &keyboard_action, NULL); */
-  return;
-}
-
-static void when_alarm_interrupt(sig, code, scp)
-     int sig, code; 
-     struct sigcontext *scp;
-{
-  Spending_interruptsS |= (1 << INTERRUPT_ALARM);
-  return;
-}
-
 /* ---------------------------------------- */
 /* For char-ready? */
 
-int char_ready_p( FILE* stream )
+int
+char_ready_p( FILE* stream )
 {
   fd_set readfds;
   struct timeval timeout;
@@ -149,7 +159,7 @@ int char_ready_p( FILE* stream )
     return 1;
 #else
 
-  /* Add new cases here AND SEND THEM TO scheme-48@altdorf.ai.mit.edu
+  /* Add new cases here AND SEND THEM TO scheme-48@martigny.ai.mit.edu
      SO THAT THEY CAN GO INTO THE NEXT RELEASE!  (That means you, Olin.)
      It's generally pretty easy to figure out what to put here by
      examining /usr/include/stdio.h.  If the input stream's buffer is
@@ -165,15 +175,8 @@ int char_ready_p( FILE* stream )
   FD_ZERO(&readfds);
   FD_SET(fileno(stream), &readfds);
   timerclear(&timeout);
-
-  /* Under HPUX, select() is declared
-      extern int select(size_t, int *, int *, int *, const struct timeval *);
-     in sys/time.h.  This is probably Posix, but there's no knowing.
-     Under SunOS, the int *'s are fd_set *'s. */
   return select(FD_SETSIZE,
-#if defined(hpux)
-		(int *)
-#endif
+		(fd_set_param *)
 		&readfds,
 		NULL, NULL, &timeout);
 #else /* No select() - but there will generally be some other way to do this.*/
@@ -187,8 +190,8 @@ int char_ready_p( FILE* stream )
 /* ---------------------------------------- */
 /* For open-xxput-file */
 
-FILE *ps_open(filename, spec)
-  char *filename, *spec;
+FILE *
+ps_open(char *filename, char *spec)
 {
 # define FILE_NAME_SIZE 256
   char filename_temp[FILE_NAME_SIZE];
@@ -214,9 +217,8 @@ FILE *ps_open(filename, spec)
    Note: strncpy(x, y, n) copies from y to x.
 */
 
-char *expand_file_name (name, buffer, buffer_len)
-  char *name, *buffer;
-  int buffer_len;
+char *
+expand_file_name (char *name, char *buffer, int buffer_len)
 {
 # define USER_NAME_SIZE 256
   char *dir, *p, user_name[USER_NAME_SIZE];
@@ -314,7 +316,8 @@ main(argc, argv)
 
 #define TICKS_PER_SECOND 1000	/* should agree with ps_real_time() */
 
-long ps_real_time()
+long
+ps_real_time()
 {
 #if defined(HAVE_GETTIMEOFDAY)
   struct timeval tv;
@@ -343,7 +346,8 @@ long ps_real_time()
 #endif /*HAVE_GETTIMEOFDAY */
 }
 
-long ps_run_time()
+long
+ps_run_time()
 {
   struct tms time_buffer;
   static long clock_tick = 0;
@@ -354,12 +358,14 @@ long ps_run_time()
   return((long)(time_buffer.tms_utime * TICKS_PER_SECOND) / clock_tick);
 }
 
-long ps_ticks_per_second()
+long
+ps_ticks_per_second()
 {
   return TICKS_PER_SECOND;
 }
 
-long ps_schedule_interrupt(long delay)
+long
+ps_schedule_interrupt(long delay)
 {
   sigaction(SIGALRM, &alarm_action, NULL);
 
@@ -398,7 +404,7 @@ long ps_schedule_interrupt(long delay)
 #endif
 
 long
-lookup_external_name( char *name, long *location )
+lookup_external_name(char *name, long *location)
 {
 #if defined(HAVE_DLOPEN)
   extern int lookup_dlsym(char*, long*);
@@ -456,8 +462,8 @@ get_reloc_file()
 
 long TTreturn_value;
 
-long TTrun_machine(proc)
-     long (*proc) (void);
+long
+TTrun_machine(long (*proc) (void))
 {
   while (proc != 0)
     proc = (long (*) (void)) (*proc)();
@@ -466,7 +472,8 @@ long TTrun_machine(proc)
 
 /* Temporary hack until this is added as a Pre-Scheme primitive */
 
-call_external_value( long proc, long nargs, long *args )
+long
+call_external_value(long proc, long nargs, long *args)
 {
   return ((long(*)())proc)(nargs, args);
 }

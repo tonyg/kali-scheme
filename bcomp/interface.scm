@@ -9,7 +9,7 @@
   (ref ref-method)
   (walk walk-method)
   (clients interface-clients)
-  (name interface-name))
+  (name interface-name set-interface-name!))
 
 (define-record-discloser :interface
   (lambda (int) (list 'interface (interface-name int))))
@@ -32,7 +32,9 @@
 ; make a population.
 
 (define (make-interface ref walk name)
-  (really-make-interface ref walk (if name (make-population) #f) name))
+  (really-make-interface ref walk
+			 (make-population)
+			 name))
 
 
 ; Simple interfaces (export (name type) ...)
@@ -79,3 +81,8 @@
 		(note-reference-to-interface! i int))
 	      ints)
     int))
+
+
+(define (note-interface-name! int name)
+  (if (and name (not (interface-name int)))
+      (set-interface-name! int name)))

@@ -75,7 +75,7 @@
 
 (define-structure flatloading (export flatload)
   (open scheme packages packages-internal filenames)
-  (files (alt flatload)))
+  (files (env flatload)))
 
 (define-structure loadc (export load-configuration
 				;; (structure-ref :syntax)

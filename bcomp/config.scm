@@ -5,16 +5,14 @@
 ; For DEFINE-STRUCTURE macro
 
 (define (make-a-package opens-thunk accesses-thunk tower
-			dir clauses names)
+			dir clauses name)
   (make-package opens-thunk accesses-thunk
 		#t    ;unstable
 		tower
 		dir
 		clauses
 		#f
-		(if (pair? names)
-		    (car names)
-		    names)))
+		name))
 
 (define (loser . rest)
   (error "init-defpackage! neglected"))
@@ -28,3 +26,10 @@
 
 (define (set-verify-later! proc)
   (set! *verify-later!* proc))
+
+(define (note-name! thing name)
+  (cond ((interface? thing)
+	 (note-interface-name! thing name))
+	((structure? thing)
+	 (note-structure-name! thing name)))
+  thing)

@@ -3,9 +3,10 @@
 ; schemify
 
 
-; Flush nodes in favor of something a little more readable.
-; Eventually, this ought to produce s-expressions with the property that
-; have the same semantics as the original node.
+; Flush nodes and generated names in favor of something a little more
+; readable.  Eventually, (schemify node) ought to produce an
+; s-expression that has the same semantics as node, when node is fully
+; expanded.
 
 (define (schemify node . env-option)
   (schemify1 node (if (null? env-option) #f (car env-option))))
@@ -27,7 +28,7 @@
 			       form)))))
 
 (define (define-schemifier name type proc)
-  (operator-define! schemifiers (list name type) proc))
+  (operator-define! schemifiers name type proc))
 
 (define-schemifier 'name 'leaf
   (lambda (node env)

@@ -183,7 +183,8 @@
 
 (define (terminate-current-thread)
   (signal 'terminate)
-  (error "can't terminate current thread"))
+  (error "can't terminate current thread")
+  0)    ;suppress compiler warning
 
 (define (start-thread thread)
   (if (thread? thread)

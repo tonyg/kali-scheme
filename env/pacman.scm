@@ -8,7 +8,8 @@
 
 (define (set-environment-for-commands! p)
   (set-interaction-environment! p)
-  (set-command-level-env! (command-level) p))
+  ;; (set-command-level-env! (command-level) p)
+  )
 
 (define user-environment
   (user-context-accessor 'user-environment interaction-environment))
@@ -79,9 +80,7 @@
 			      (evaluate interface-expression c))
 			    name)))
     ;; (check-structure s)
-    (environment-define! c name s)
-    (if (not (package-name p))
-	(set-package-name! p name))))
+    (environment-define! c name s)))
 
 
 (define-command-syntax 'open "<struct> ..." "open a structure"
@@ -220,19 +219,21 @@
 
 ; Main entry point, with package setup.
 
-(define (new-command-processor info built-in . meta-structs)
+(define (new-command-processor info commands built-in . meta-structs)
   ;; Argument to ,build command
   (lambda (arg)
     (call-with-values (lambda ()
-			(new-user-context built-in meta-structs))
+			(new-user-context commands built-in meta-structs))
       (lambda (context env)
-	(start-command-processor arg
-				 context
-				 env
-				 (lambda ()
-				   (greet-user info)))))))
+	(with-interaction-environment env
+	  (lambda ()
+	    (start-command-processor arg
+				     context
+				     ;; env
+				     (lambda ()
+				       (greet-user info)))))))))
 
-(define (new-user-context built-in meta-structs)
+(define (new-user-context commands built-in meta-structs)
   (let* ((tower (make-reflective-tower
 		      eval
 		      (list (*structure-ref built-in 'scheme))
@@ -242,7 +243,7 @@
 					      tower
 					      built-in
 					      meta-structs))
-	 (exec-package (make-exec-package 'exec tower built-in)))
+	 (exec-package (make-exec-package commands tower built-in)))
     (values (make-user-context
 	     (lambda ()
 	       (set-user-environment! user)
@@ -282,21 +283,51 @@
 			       #t  ;unstable?
 			       tower
 			       name)))
-    (set-reflective-tower-maker! config
-				 (lambda (clauses id)
-				   (if (null? clauses)
-				       tower ;?
-				       (delay (cons eval (eval `(a-package ((for-syntax ,id)) ,@clauses)
-							       config))))))
+    (set-reflective-tower-maker!
+         config
+	 (lambda (clauses id)
+	   (if (null? clauses)
+	       tower			;?
+	       (delay (let ((p (eval `(a-package ((for-syntax ,id)) ,@clauses)
+				     config)))
+			(ensure-loaded (make-structure p
+						       (lambda () (make-simple-interface #f '()))
+						       'for-syntax))
+			(cons eval p))))))
     config))
 
 ; Exec package
 
-(define (make-exec-package name tower built-in)
-  (let* ((scheme-structure (*structure-ref built-in 'scheme))
-	 (exec-package
-	  (make-simple-package (list (command-structure) scheme-structure)
-			       #t    ;unstable?
-			       tower
-			       name)))
-    exec-package))
+(define (make-exec-package commands tower built-in)
+  (make-simple-package (list commands (*structure-ref built-in 'scheme))
+		       #t		;unstable?
+		       tower
+		       'exec))
+
+; for prompt string
+
+(define-method &environment-id-string ((env :package))
+  (if (eq? env (user-environment))
+      ""
+      (if (symbol? (package-name env))
+	  (symbol->string (package-name env))
+	  (number->string (package-uid env)))))
+
+(define user-environment
+  (user-context-accessor 'user-environment interaction-environment))
+
+; Extract a package-specific evaluator from a package.  Eventually, it
+; would be nice if load, eval-from-file, eval-scanned-forms, and
+; perhaps other things were also generic over different kinds of
+; environments.
+
+(define funny-name/evaluator (string->symbol ".evaluator."))
+
+(define (set-package-evaluator! p evaluator)
+  (package-define-funny! p funny-name/evaluator evaluator))
+
+(define (package-evaluator p)
+  (or (get-funny (package->environment p) funny-name/evaluator) eval))
+
+(define-method &evaluate (form (env :package))
+  ((package-evaluator env) form env))

@@ -5,12 +5,17 @@
   (lambda (structs-thunk)
     (usual-resumer
      (lambda (arg)
-       (with-interaction-environment
-	   (let ((b (make-built-in-structures (structs-thunk))))
-	     (initialize-interaction-environment! b)
-	     (make-initial-package b structs-to-open))
-	 (lambda ()
-	   (command-processor arg)))))))
+       (let* ((structs (structs-thunk))
+	      (b (make-built-in-structures structs)))
+	 (initialize-interaction-environment! b)
+	 (with-interaction-environment
+	     (make-initial-package b structs-to-open)
+	   (lambda ()
+	     (command-processor (cond ((assq 'usual-commands structs)
+				       => (lambda (z)
+					    (structure-package (cdr z))))
+				      (else #f))
+				arg))))))))
 
 ; The structs argument is an a-list of (name . structure), as computed
 ; by the expression returned by reify-structures.
@@ -35,11 +40,11 @@
   (let ((scheme (*structure-ref built-in-structures 'scheme))
 	(tower (make-tower built-in-structures 'interaction)))
     (set-interaction-environment!
-     (make-simple-package (list scheme) eval tower 'interaction))
+     (make-simple-package (list scheme) #t tower 'interaction))
 
     (set-scheme-report-environment!
      5
-     (make-simple-package (list scheme) eval tower 'r5rs))))
+     (make-simple-package (list scheme) #t tower 'r5rs))))
 
 ; Intended for bootstrapping the command processor.
 

@@ -2,33 +2,62 @@
 
 
 ; More and more packages.  Some of these get loaded into the initial
-; image to create scheme48.image; others can be loaded later using
-; ,load-package.
+; image to create scheme48.image; those that aren't can be loaded later
+; using ,load-package.
 
 
-(define-module (make-command-processor scheme)
-  (define-structure command-processor command-processor-interface
-    (open scheme                ; eval
-          records tables fluids signals
-          conditions handle
-          reading               ; gobble-line, with-sharp-sharp
-          display-conditions    ; display-condition
-          packages              ; package?
-          packages-internal     ; package-name, package-uid
-          environments          ; with-interaction-environment
-          util                  ; unspecific
-          scan                  ; $note-undefined
-          features              ; force-output
-          interrupts            ; set-enabled-interrupts!
-          vm-exposure           ; primitive-catch
-          syntactic)            ; for ## kludge
-    (files (env version-info)
-           (env command)
-           (env read-command)))
-  command-processor)
+; Things to load into initial.image to make scheme48.image.
 
-(define command-processor (make-command-processor scheme))
+(define-structure usual-features (export )  ;No exports
+  (open analysis		;auto-integration
+	disclosers
+        command-processor
+        debuginfo
+        ;; Choose any combination of bignums, ratnums, recnums
+	bignums ratnums recnums
+	;; Choose either innums, floatnums, or neither
+	innums			;Silly inexact numbers
+        ;; floatnums		;Still don't print correctly
+	;; pp
+	;; The following is listed because this structure is used to
+	;; generate a dependency list used by the Makefile...
+	usual-commands))
 
+
+; Command processor
+
+(define-structures ((command-processor command-processor-interface)
+		    (command (export command-processor)))
+  (open scheme ;;-level-2     ; eval, interaction-environment
+	records tables fluids
+	conditions handle
+	reading			; gobble-line, with-sharp-sharp
+	display-conditions	; display-condition
+	methods
+	;; environments		; interaction-environment
+	util			; unspecific
+	scan			; $note-undefined
+	features		; force-output
+	interrupts		; set-enabled-interrupts!
+	vm-exposure		; primitive-catch
+	syntactic		; for ## kludge
+	signals)
+  (files (env version-info)
+	 (env command)
+	 (env read-command)))
+
+(define-structure basic-commands basic-commands-interface
+  (open scheme-level-2
+        command-processor
+        scan                    ; noting-undefined-variables
+	environments		; with-interaction-environment
+	evaluation		; eval, load-into
+        ;; packages		; package?
+	)
+  (files (env basic-command)))
+
+; Usual command set
+               
 (define-structure usual-commands usual-commands-interface
   (open basic-commands
         build-commands
@@ -36,15 +65,6 @@
         debug-commands
         inspect-commands
         disassemble-commands))
-                
-(define-structure basic-commands basic-commands-interface
-  (open scheme
-        command-processor
-        scan                    ; noting-undefined-variables
-        packages		; package?
-	structure-refs)
-  (access scheme)		; (structure-ref scheme load)
-  (files (env basic-command)))
 
 ; Image builder.
 
@@ -52,14 +72,15 @@
 		    (build-commands build-commands-interface))
   (open scheme-level-2
         command-processor
-        signals
         conditions handle
         low-level               ; flush-the-symbol-tables!
         scheme-level-2-internal ; usual-resumer
         filenames               ; translate
         display-conditions      ; display-condition
         evaluation              ; package-for-load, eval
-        write-images)
+	environments		; with-interaction-environment
+        write-images
+        signals)
   (files (env build)))
 
 ; Package commands.
@@ -69,7 +90,7 @@
 		       package-commands-internal-interface))
   (open scheme
         command-processor
-        signals
+	methods
         scan                    ; noting-undefined-variables
         packages                ; for creating a user package
         packages-internal       ; set-package-integrate?!, etc.
@@ -77,7 +98,9 @@
         environments            ; *structure-ref, etc.
 	syntactic		; reflective-tower
         ensures-loaded          ; ensure-loaded
+	interfaces
 	ascii ports		; for access-scheme-48
+        signals
 	util			; every
         fluids)
   (files (env pacman)))
@@ -180,6 +203,10 @@
         display-conditions)     ; limited-write
   (files (env inspect)))
 
+(define-structure list-interfaces (export list-interface)
+  (open scheme-level-2 interfaces packages meta-types sort syntactic)
+  (files (env list-interface)))
+
 
 ; Package and interface mutation.
 
@@ -245,9 +272,7 @@
 ; Foo
 
 (define-structure assembler (export (lap :syntax))
-  ;; Open the assembling structure to make sure it gets loaded.
-  ;; (Ensure-loaded neglects to examine the package for syntax.)
-  (open scheme-level-2 assembling)
+  (open scheme-level-2)
   (for-syntax (open scheme-level-2 syntactic meta-types assembling))
   (begin
     (define-syntax lap
@@ -450,7 +475,7 @@
 
 ; Glue to connect the threads package with command processor.
 
-(define-structure more-threads (export threads)
+(define-structure more-threads (export threads start-threads)
   (open scheme threads
         handle conditions interrupts signals
         command-processor
@@ -497,23 +522,6 @@
 ; ... end of package definitions.
 
 
-; Stuff to load into initial.image to make scheme48.image.
-
-(define-structure usual-features (export )  ;No exports
-  (open analysis		;auto-integration
-	disclosers
-        command-processor
-        debuginfo
-        ;; Choose any combination of bignums, ratnums, recnums
-	bignums ratnums recnums
-	;; Choose either innums, floatnums, or neither
-	innums			;Silly inexact numbers
-        ;; floatnums		;Still don't print correctly
-	;; pp
-	;; The following is listed because this structure is used to
-	;; generate a dependency list used by the Makefile...
-	usual-commands))
-
 ; Temporary compatibility stuff
 (define-syntax define-signature
   (syntax-rules () ((define-signature . ?rest) (define-interface . ?rest))))
@@ -549,6 +557,7 @@
 	    formats defrecord
 	    innums
 	    inspector
+	    list-interfaces
 	    more-threads
 	    package-commands-internal
 	    package-mutation

@@ -4,34 +4,32 @@
 ; Macro-expand and process top-level forms.
 ;
 ; Main entry points are:
-;    scan-forms (suitable for use by eval), and
-;    scan-file (suitable for use by load or compile-file).
-;
-; These all return lists of pairs (loc . node).
-; Each loc is either
-;   - a location, if the corresponding node is a definition, or
-;   - #f, if the corresponding node is an expression.
+;    scan-forms (suitable for use by eval)
+;    scan-file (suitable for use by load or compile-file)
+; These both return lists of nodes.
+; DEFINE and DEFINE-SYNTAX forms cause side effects to the package.
 ; Forms are macro-expanded as necessary in order to locate all definitions.
 ;
-; Defines and define-syntaxes cause side effects to the package.
-
-; Also in this file, internal definition scanning; but this is an
-; independent mechanism.
+; Entry points supporting the package system are:
+;    scan-structures
+;    scan-package
+; These both return lists of (filename . node-list).
+;
+; Also defined here is SCAN-BODY, which scans a lambda-body for
+; internal definitions.  This is an independent mechanism.
 
 
 (define $note-file-package (make-fluid list)) ;Hook
 
 
-; Scan a set of form for definitions.
+; Scan a set of forms for definitions.
 
 (define (scan-forms forms p filename . env-option)
   (let ((env (if (null? env-option)
 		 (package->environment p)
 		 (car env-option))))
     (if filename ((fluid $note-file-package) filename p))
-    (let-fluid $source-file-name filename
-      (lambda ()
-	(scan-form-list forms p env)))))
+    (scan-form-list forms p (bind-source-file-name filename env))))
 
 ; Read a file, scanning it for definitions.
 
@@ -44,21 +42,22 @@
     (call-with-input-file truename
       (lambda (port)
 	(if filename ((fluid $note-file-package) filename p))
-	(let-fluid $source-file-name filename ;or pathname?
-	  (lambda ()
-	    (let ((o-port (current-output-port)))
-	      (display truename o-port)
-	      (force-output o-port)
-	      (let ((result
-		     (let recur ()
-		       (let ((form (read port)))
-			 (if (eof-object? form)
-			     '()
-			     (append (scan-form form p env)
-				     (recur)))))))
-		(display #\space o-port)
-		(force-output o-port)
-		result))))))))
+	(let ((env (bind-source-file-name filename env))
+	      (reader (environment-reader env))
+	      (o-port (current-output-port)))
+	  (display truename o-port)
+	  (force-output o-port)
+	  (let ((result
+		 (let recur ()
+		   (let ((form (read port)))
+		     (if (eof-object? form)
+			 '()
+			 (append (scan-form form p env)
+				 (recur)))))))
+	    (display #\space o-port)
+	    (force-output o-port)
+	    result))))))
+
 
 ; --------------------
 ; Process a list of forms.
@@ -72,12 +71,10 @@
 	  (append scanned-forms
 		  (loop (cdr forms)))))))
 
-; Process a single top-level form, returning a list of (loc . node)'s.
+; Process a single top-level form, returning a list of nodes.
 
 (define scan-form
-  (let ((begin-node? (node-predicate 'begin syntax-type))
-	(define-node? (node-predicate 'define syntax-type))
-	(define-syntax-node? (node-predicate 'define-syntax syntax-type)))
+  (let ((begin-node? (node-predicate 'begin syntax-type)))
     (lambda (form p env)
       (let ((node (classify form env)))
 	(cond ((begin-node? node)
@@ -88,7 +85,7 @@
 		 (list node)))
 	      ((define-syntax-node? node)
 	       (process-define-syntax (node-form node) p env)
-	       '())
+	       (list node))
 	      (else
 	       (list node)))))))
 
@@ -145,8 +142,8 @@
 
 (define (scan-package p . env-option)
   (let* ((env (if (null? env-option)
-		 (package->environment p)
-		 (car env-option)))
+		  (package->environment p)
+		  (car env-option)))
 	 (stuff '())
 	 (config-file (package-file-name p))
 	 (dir (if config-file

@@ -73,16 +73,20 @@
 	 (display "; char d" port)
 	 (writex x port)
 	 (write-char #\[ port)
-	 (write (b-vector-length x) port))
+	 ;; Ensure alignment (thanks Ian)
+	 (write (cells->bytes (bytes->cells (b-vector-length x)))
+		port))
 	(else
 	 (display "; unsigned char d" port)
 	 (writex x port)
 	 (write-char #\[ port)
-	 (write (b-vector-length x) port)))
+	 ;; Ensure alignment
+	 (write (cells->bytes (bytes->cells (b-vector-length x)))
+		port)))
   (display "];" port)
   (if *comments?*
       (begin (display " /* " port)
-	     (display (vector-ref stob (stob-type x)) port)
+	     (display (enumerand->name (stob-type x) stob) port)
 	     (display " */" port)))
   (newline port))
 

@@ -25,15 +25,16 @@ Scheme 48 tries to be faithful to the upcoming Revised^5 Scheme
 Report, providing neither more nor less in the initial user
 environment.  (This is not to say that more isn't available in other
 environments; see below.)  Support for numbers is weak: bignums are
-slow and floating point is nonexistent.  DEFINE-SYNTAX, LET-SYNTAX,
-LETREC-SYNTAX, and SYNTAX-RULES are supported, but not the rest of the
-Revised^4 Scheme macro proposal.
+slow and floating point is almost nonexistent (see description of
+floatnums, below).  DEFINE-SYNTAX, LET-SYNTAX, LETREC-SYNTAX, and
+SYNTAX-RULES are supported, but not the rest of the Revised^4 Scheme
+macro proposal.
 
 The Revised^5 Report hasn't been published yet, but it will be very
 similar to the Revised^4 Report.  For a list of differences, see
 doc/meeting.tex.
 
-This is what might be called an alpha release.  Please report bugs,
+This is what might be called a beta release.  Please report bugs,
 especially in the VM, especially core dumps, to
 scheme-48-bugs@altdorf.ai.mit.edu.  Include the version number x.yy
 from the "Welcome to Scheme 48 x.yy" greeting message in your bug
@@ -52,7 +53,8 @@ Command line arguments
 A few command line arguments are processed by the virtual machine as
 it starts up.
 
-    scheme48 [-i image] [-h heapsize] [-o filename] [-a argument]
+    scheme48 [-i image] [-h heapsize] [-o filename] [-s stacksize]
+          [-a argument ...]
 
 -i image
     specifies a heap image file to resume.  This defaults to a heap
@@ -67,6 +69,12 @@ it starts up.
     if you want to make sure you can allocate a million cons cells,
     you should specify -h 6000000 (actually somewhat more than this,
     to account for the initial heap image and breathing room).
+
+-s stacksize
+    specifies how much space should be reserved for the continuation
+    and environment stack.  If this space is exhausted, continuations
+    and environments are copied to the heap.  stacksize is in words
+    and defaults to 2500.
 
 -o filename
     This specifies an executable file in which foreign identifiers can be
@@ -185,10 +193,11 @@ Building images:
  ,build <exp> <filename>
     <exp> should evaluate to a procedure of one argument.  When
     <filename> is resumed, that procedure will be invoked on the VM's
-    -a arguments, which are passed as a list of strings.  <exp> should
-    return an integer (as for ,exit).  The command processor and
-    debugging system are not included in the image (unless you go to
-    some effort to preserve them, such as retaining a continuation).
+    -a arguments, which are passed as a list of strings.  The
+    procedure should return an integer (as for ,exit).  The command
+    processor and debugging system are not included in the image
+    (unless you go to some effort to preserve them, such as retaining
+    a continuation).
 
     Doing ",flush" before building an image will make for smaller
     images, but if an error occurs, the error message may be less
@@ -487,7 +496,7 @@ conditions
 
 define-record-types
     A define-record-type macro, providing more concise use of the
-    record package.  (Richard and Jonathan use different
+    record package.  (Richard and Jonathan favor different
     define-record-type macros; this one is Jonathan's.)
 
 defpackage
@@ -495,7 +504,7 @@ defpackage
 
 defrecord
     A define-record-type macro, providing more concise use of the
-    record package.  (Richard and Jonathan use different
+    record package.  (Richard and Jonathan favor different
     define-record-type macros; this one is Richard's.)
 
 destructuring
@@ -534,9 +543,9 @@ filenames
     Rudimentary file name parsing and synthesis.  E.g.
     file-name-directory and file-name-nondirectory are as in Gnu emacs.
 
-floatnum
-    Floating point numbers.  These are in an extremely crude state;
-    use at your own risk.
+floatnums
+    Floating point numbers.  These are in a very crude state; use at
+    your own risk.  They are slow and do not read or print correctly.
 
 fluids
     Dynamically bound "variables."
@@ -571,10 +580,10 @@ interrupts
 more-threads
     Interface between multitasking and the command processor.  Try
     this:
-	,load-package more-threads
-	,open threads
-	,start-threads
+	,open threads more-threads
+	(start-threads)
 	(spawn (lambda () (display "Hello ")))
+    Cf. doc/threads.txt.
 
 ports
     A few extra port-related operations, notably FORCE-OUTPUT.
@@ -609,7 +618,7 @@ records
     MAKE-RECORD-TYPE and friends.  See the Scheme of Things column in
     Lisp Pointers, volume 4, number 1, for documentation.
 
-recnum
+recnums
     Complex numbers.  This should be loaded (e.g. with ,load-package)
     but needn't be opened.
 

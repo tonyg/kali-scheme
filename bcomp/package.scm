@@ -13,7 +13,7 @@
   (interface structure-interface-really set-structure-interface!)
   (package   structure-package)    ; allow #f
   (clients   structure-clients)
-  (name	     structure-name))
+  (name	     structure-name set-structure-name!))
 
 (define-record-discloser :structure
   (lambda (s) (list 'structure
@@ -32,16 +32,18 @@
 	       (note-reference-to-interface! int s))
 	(call-error "invalid interface" initialize-structure! s))))
 
-(define (make-structure package int-thunk name)
+(define (make-structure package int-thunk . name-option)
   (if (not (package? package))
-      (call-error "invalid package" make-structure package int-thunk name))
+      (call-error "invalid package" make-structure package int-thunk))
   (let ((struct (really-make-structure package
 				       (if (procedure? int-thunk)
 					   int-thunk
 					   (lambda () int-thunk))
 				       #f
 				       (make-population)
-				       name)))
+				       #f)))
+    (if (not (null? name-option))
+	(note-structure-name! struct (car name-option)))
     (add-to-population! struct (package-clients package))
     struct))
 
@@ -64,6 +66,10 @@
 		  binding)))
 	int)))
 
+(define (note-structure-name! struct name)
+  (if (and name (not (structure-name struct)))
+      (begin (set-structure-name! struct name)
+	     (note-package-name! (structure-package struct) name))))
 
 ; --------------------
 ; Packages
@@ -126,7 +132,7 @@
 	    file			;file containing DEFINE-STRUCTURE form
 	    clauses			;misc. DEFINE-STRUCTURE clauses
 	    #f)))			;loaded?
-    (if name (set-package-name! p name))
+    (note-package-name! p name)
     (set-package->environment! p (really-package->environment p))
     (if unstable?			;+++
 	(define-funny-names! p tower))
@@ -152,8 +158,11 @@
 (define (package-name package)
   (table-ref package-name-table (package-uid package)))
 
-(define (set-package-name! package name)
-  (table-set! package-name-table (package-uid package) name))
+(define (note-package-name! package name)
+  (if name
+      (let ((uid (package-uid package)))
+	(if (not (table-ref package-name-table uid))
+	    (table-set! package-name-table uid name)))))
 
 (define (package-opens p)
   (initialize-package-if-necessary! p)
@@ -411,6 +420,6 @@
   (let ((id (location-id place)))
     (if (vector? id)
 	(follow-forwarding-pointers (vector-ref id 0))
-	id)))
+	place)))
 
 ; (put 'package-define! 'scheme-indent-hook 2)

@@ -109,8 +109,7 @@
 
 (define (breakpoint . rest)
   (command-loop unspecific
-		(make-condition 'breakpoint rest)
-		(interaction-environment)))
+		(make-condition 'breakpoint rest)))
 
 (define-condition-type 'breakpoint '())
 (define breakpoint? (condition-predicate 'breakpoint))
@@ -124,8 +123,7 @@
   (command-loop list
 		(if (command-level? (focus-object))
 		    (command-level-condition (focus-object))
-		    #f)
-		(interaction-environment)))
+		    #f)))
 
 ; reset
 
@@ -489,11 +487,13 @@ Kind should be one of: names maps files source tabulate"
 			    (error "unusual command in ,from-file ... ,end"
 				   command))))))))
       (if (package? env)
-	  (noting-undefined-variables env
+	  (with-interaction-environment env
 	    (lambda ()
-	      (eval-from-file forms env (if (null? maybe-filename)
-					    #f
-					    (car maybe-filename)))))
+	      (noting-undefined-variables env
+		(lambda ()
+		  (eval-from-file forms env (if (null? maybe-filename)
+						#f
+						(car maybe-filename)))))))
 	  (for-each (lambda (form) (eval form env)) ;Foo
 		    env)))))
 

@@ -6,12 +6,12 @@
 ; Command processor.
 
 ; The command processor's state is of three kinds:
-; 1. Command levels - one for each different command level.
-;    This includes any condition being handled, and continuations.
+; 1. User context - preserved across dump commands.
+;    This includes the designated user and configuration environments.
 ; 2. Session state - one per "login"; not preserved across dump commands.
 ;    This includes ## and the command loop's interactive ports.
-; 3. User context - preserved across dump commands.
-;    This includes the designated user and configuration environments.
+; 3. Command levels - one for each different command level.
+;    This includes any condition being handled, and continuations.
 
 (define command-prefix #\,)
 
@@ -48,7 +48,7 @@
     (table-set! (user-context) name new)))
 
 
-; Session state
+; Session state.
 
 (define session-type
   (make-record-type 'session '(input output values batch-mode? bow?)))
@@ -76,17 +76,21 @@
 
 
 
-; Command levels
+; Command levels.
 
 (define $command-levels (make-fluid '()))
 (define (command-level) (car (fluid $command-levels)))
 
 (define :command-level
   (make-record-type 'command-level
-                    '(throw vm-cont condition interrupts env)))
+                    '(throw vm-cont condition interrupts
+			    ;; env
+			    )))
 (define make-command-level
   (record-constructor :command-level
-                      '(throw vm-cont condition interrupts env)))
+                      '(throw vm-cont condition interrupts
+			      ;; env
+			      )))
 (define command-level? (record-predicate :command-level))
 (define command-level-throw
   (record-accessor :command-level 'throw))
@@ -96,22 +100,19 @@
   (record-accessor :command-level 'condition))
 (define command-level-interrupts
   (record-accessor :command-level 'interrupts))
-(define command-level-env
-  (record-accessor :command-level 'env))
-(define set-command-level-env!
-  (record-modifier :command-level 'env))
+;(define command-level-env
+;  (record-accessor :command-level 'env))
+;(define set-command-level-env!
+;  (record-modifier :command-level 'env))
 
 (define environment-for-commands interaction-environment)
 
-(define (command-processor args)
-  (start-command-processor args
-                           (make-user-context unspecific)
-                           (interaction-environment)
-                           unspecific))
-
+; --------------------
 ; Main entry point.
 
-(define (start-command-processor resume-args context initial-env start-thunk)
+(define (start-command-processor resume-args context
+				 ;; initial-env
+				 start-thunk)
   (interrupt-before-heap-overflow!)
   ((let-fluids $command-levels '()
                $user-context context  ;Log in
@@ -122,34 +123,51 @@
 					   (equal? (car resume-args) "batch"))
                                       #f)
      (lambda ()
-       (command-loop start-thunk #f initial-env)))))
+       (command-loop start-thunk #f
+		     ;; initial-env
+		     )))))
+
+; Entry for initialization & testing.
+
+(define (command-processor command-env args) 
+  (start-command-processor args
+                           (make-user-context
+			    (lambda ()
+			      (set-user-command-environment! command-env)))
+                           ;; (interaction-environment)
+                           unspecific))
 
 ; Command loop
 ; Uses:
 ;  1. startup, 2. condition handler, 3. abort-to-level, 4. breakpoint
 
-(define (command-loop start-thunk condition env)
-  (call-with-command-level condition env
+(define (command-loop start-thunk condition
+		      ;; env
+		      )
+  (call-with-command-level condition ;; env
     (lambda (level)
       (start-command-level start-thunk level))))
 
-(define (call-with-command-level condition env proc)
+(define (call-with-command-level condition
+				 ;; env
+				 proc)
   (primitive-catch
     (lambda (vm-cont)
       ((call-with-current-continuation
          (lambda (throw)
            (proc (make-command-level throw vm-cont condition
                                      (enabled-interrupts)
-                                     env))))))))
+                                     ;; env
+				     ))))))))
 
 (define (start-command-level start-thunk level)
   (with-handler command-loop-condition-handler
     (lambda ()
       (let-fluids $command-levels (cons level (fluid $command-levels))
-                  $note-undefined #f    ;necessary?
+                  $note-undefined #f    ;useful
         (lambda ()
-          (with-interaction-environment (command-level-env level)
-            (lambda ()
+          ;;(with-interaction-environment (command-level-env level)
+            ;;(lambda ()
               (start-thunk)
               (let ((condition (command-level-condition level)))
                 (if condition
@@ -167,7 +185,7 @@
                   (showing-focus-object
                    (lambda ()
                      (execute-command command)))
-                  (loop))))))))))
+                  (loop))))))));;))
 
 (define form-preferred?
   (user-context-accessor 'form-preferred? (lambda () #t)))
@@ -229,8 +247,10 @@
 
 (define (deal-with-condition c)
   (if (push-command-levels?)
-      (command-loop list c (interaction-environment))
-      (call-with-command-level c (interaction-environment)
+      (command-loop list c
+		    ;; (interaction-environment)
+		    )
+      (call-with-command-level c ;; (interaction-environment)
         (lambda (level)
           (set-focus-object! level)
           (display-condition c (command-output))
@@ -242,24 +262,19 @@
 
 (define (command-prompt)
   (let ((level (- (length (fluid $command-levels)) 1))
-        (env (environment-for-commands)))
-    (let ((name? (and (package? env)
-                      (not (eq? env (user-environment))))))
-      (string-append (if (= level 0)
-                         ""
-                         (number->string level))
-                     (if (or (= level 0) (not name?))
-                         ""
-                         " ")
-                     (if name?
-                         (if (symbol? (package-name env))
-			     (symbol->string (package-name env))
-                             (number->string (package-uid env)))
-                         "")
-                     "> "))))
+	(id (environment-id-string (environment-for-commands))))
+    (string-append (if (= level 0)
+		       ""
+		       (number->string level))
+		   (if (or (= level 0) (= (string-length id) 0))
+		       ""
+		       " ")
+		   id
+		   "> ")))
 
-(define user-environment
-  (user-context-accessor 'user-environment interaction-environment))
+(define-generic environment-id-string &environment-id-string (env))
+
+(define-method &environment-id-string (env) "")
 
 
 ; Evaluate a form
@@ -274,25 +289,9 @@
           (set-focus-values! results))
       (apply values results))))
 
-(define (evaluate form env)
-  ((if (package? env)
-       (package-evaluator env)
-       eval)
-   form
-   env))
+(define-generic evaluate &evaluate (form env))
 
-; Extract a package-specific evaluator from a package.  Eventually, it
-; would be nice if load, eval-from-file, eval-scanned-forms, and
-; perhaps other things to be generic over different kinds of
-; environments.
-
-(define funny-name/evaluator (string->symbol ".evaluator."))
-
-(define (set-package-evaluator! p evaluator)
-  (package-define-funny! p funny-name/evaluator evaluator))
-
-(define (package-evaluator p)
-  (or (get-funny (package->environment p) funny-name/evaluator) eval))
+(define-method &evaluate (form env) (eval form env))
 
 
 ; Display the focus object if it changes (sort of like emacs's redisplay)
@@ -358,13 +357,13 @@
 (define command-environment
   (user-context-accessor 'command-environment interaction-environment))
 
-(define *command-structure* (unspecific))
-
-(define (command-structure)
-  *command-structure*)
-
-(define (set-command-structure! structure)  ; called on initial startup
-  (set! *command-structure* structure))
+;(define *command-structure* (unspecific))
+;
+;(define (command-structure)
+;  *command-structure*)
+;
+;(define (set-command-structure! structure)  ; called on initial startup
+;  (set! *command-structure* structure))
 
 (define command-syntax-table (make-table))
 (define *command-help* '())
@@ -390,7 +389,7 @@
   (user-context-accessor 'user-command-syntax-table (lambda () (make-table))))
 
 (define user-command-environment
-  (user-context-accessor 'user-command-environment interaction-environment))
+  (user-context-accessor 'user-command-environment (lambda () #f)))
 
 (define set-user-command-environment!
   (user-context-modifier 'user-command-environment))
@@ -404,9 +403,8 @@
 (define (define-user-command-syntax name help1 help2 arg-descriptions)
   (table-set! (user-command-syntax-table) name arg-descriptions)
   (if help1
-      (set-user-command-help! (add-help (user-command-help) name help1 help2))))
-
-(define make-command cons)      ;(name . args) -- called by command reader
+      (set-user-command-help!
+           (add-help (user-command-help) name help1 help2))))
 
 (define (execute-command command)
   (cond ((eof-object? command)
@@ -415,19 +413,11 @@
         ((not command))       ; error while reading
         (else
          (let* ((name (car command))
-                (proc (cond ((not name)
-                             (lambda (exp)
-                               (evaluate-and-select exp
-                                                    (environment-for-commands))))
-                            ((table-ref (user-command-syntax-table) name)
-                             (environment-ref (user-command-environment) name))
-                            (else
-                             (*structure-ref *command-structure* name)))))
-	   (dynamic-wind
-	    (lambda () #f)
-	    (lambda ()
-	      (apply proc (cdr command)))
-	    run-sentinels)))))
+		(proc (evaluate name (user-command-environment))))
+	   (dynamic-wind (lambda () #f)
+			 (lambda ()
+			   (apply proc (cdr command)))
+			 run-sentinels)))))
 
 ; help
 
@@ -460,7 +450,7 @@
     (for-each (lambda (s)
                 (write-line s o-port))
               '(
-"This is an alpha-test version of Scheme 48.  You are interacting with"
+"This is a beta-test version of Scheme 48.  You are interacting with"
 "the command processor.  A command is either a Scheme form to evaluate"
 "or one of the following:"
 ""))
@@ -569,7 +559,7 @@
     (newline port)
     (write-line "Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees."
 		port)
-    (write-line "Please report bugs to scheme-48-bugs@altdorf.ai.mit.edu."
+    (write-line "Please report bugs to scheme-48-bugs@martigny.ai.mit.edu."
                 port)
     (if (not (batch-mode?))
 	(write-line "Type ,? (comma question-mark) for help." port))))

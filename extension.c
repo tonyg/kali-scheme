@@ -18,6 +18,7 @@
    floating point: POSIX.1, ANSI C (should we be linking with -lM or -lm?)
    sprintf: POSIX.1, ANSI C
    atof: POSIX.1, ANSI C
+   chroot: not standard
 
  */
 
@@ -26,6 +27,7 @@
 #endif
 
 #include <stdio.h>
+#include "sysdep.h"
 #include "scheme48.h"
 
 #include <string.h>
@@ -145,15 +147,42 @@ extended_vm (long key, scheme_value value)
     /* This is intended for use by HTTP scripts... */
     if (!PAIRP(value) || !FIXNUMP(CAR(value)) || !FIXNUMP(CDR(value)))
       return UNDEFINED;
-    if (setgid(EXTRACT_FIXNUM(CDR(value))) != 0 ||
-	setuid(EXTRACT_FIXNUM(CAR(value))) != 0)
-      return SCHFALSE;
+    if (setgid(EXTRACT_FIXNUM(CDR(value))) != 0) {
+      perror("setgid");
+      return SCHFALSE; }
+    if (setuid(EXTRACT_FIXNUM(CAR(value))) != 0) {
+      perror("setuid");
+      return SCHFALSE; }
+    else
+      return SCHTRUE;
+  }
+#endif
+
+#if defined(HAVE_CHROOT)
+  case 28: {
+    if (!STRINGP(value))
+      return UNDEFINED;
+    else if (chroot(&STRING_REF(value, 0)) != 0) {
+      perror("chroot");
+      return SCHFALSE; }
     else
       return SCHTRUE;
   }
 #endif
 
 #if POSIX >= 2
+  case 96: {
+    int status;
+    if (!STRINGP(value))
+      return UNDEFINED;
+    status = system(&STRING_REF(value, 0));
+    if (status == -1) {
+      perror("chroot");
+      return UNDEFINED; }
+    else
+      return ENTER_FIXNUM(status); /* cf. waitpid() */
+  }
+
   /* popen() support.  Rather kludgey; there's no pclose(), so
      zombies will pile up. */
   case 97:
@@ -344,7 +373,8 @@ extended_vm (long key, scheme_value value)
 }
 
 
-FILE **port_to_stream(scheme_value port)
+FILE **
+port_to_stream(scheme_value port)
 {
   int index;
   extern FILE **Sopen_portsS;

@@ -5,28 +5,34 @@
 
 (define-syntax def
   (syntax-rules ()
-    ;; Redundant work around for bug in Scheme->C
-    ((def (?name) ?exp) (def ?name ?exp))
-    ((def (?name ...) ?exp)
-     (begin (verify-later! (lambda () ?name))
-	    ...
-	    (define-values (?name ...) ?exp)))
-    ((def ?name ?exp)
-     (define ?name (begin (verify-later! (lambda () ?name))
-			  ?exp)))))
+    ((def (?name . ?args) ?body ...)
+     (really-def () ?name (lambda ?args ?body ...)))
+    ((def ?name ...)
+     (really-def () ?name ...))))
 
-(define-syntax define-values
+(define-syntax really-def
   (syntax-rules ()
-    ((define-values (?name ...) ?exp)
+    ((really-def (?name ...) ?exp)
+     (define-multiple (?name ...)
+       (begin (verify-later! (lambda () ?name))
+	      ...
+	      ?exp)))
+    ((really-def (?name ...) ?name1 ?etc ...)
+     (really-def (?name ... ?name1) ?etc ...))))
+
+(define-syntax define-multiple
+  (syntax-rules ()
+    ((define-multiple (?name) ?exp)
+     (define ?name (note-name! ?exp '?name)))
+    ((define-multiple (?name ...) ?exp)
      (begin (define ?name)
 	    ...
 	    (let ((frob (lambda things
-			  (begin (set! ?name (car things))
+			  (begin (set! ?name
+				       (note-name! (car things) '?name))
 				 (set! things (cdr things)))
 			  ...)))
-	      (call-with-values (lambda () ?exp)
-		(lambda (?name ...)
-		  (frob ?name ...))))))))
+	      (call-with-values (lambda () ?exp) frob))))))
 
 
 ; Interfaces
@@ -37,9 +43,7 @@
 (define-syntax define-interface
   (syntax-rules ()
     ((define-interface ?name ?int)
-     (define ?name
-       (begin (verify-later! (lambda () ?name))
-	      (an-interface ?name ?int))))))
+     (def ?name ?int))))
 
 (define-syntax export
   (syntax-rules ()
@@ -51,28 +55,18 @@
     ((compound-interface ?int ...)
      (make-compound-interface #f ?int ...))))
 
-(define-syntax an-interface
-  (syntax-rules (export compound-interface)
-    ((an-interface ?name (export ?item ...))
-     (really-export '?name ?item ...))
-    ((an-interface ?name (compound-interface ?int ...))
-     (make-compound-interface '?name (an-interface #f ?int) ...))
-    ((an-interface ?name ?int)	;name
-     ?int)))
-
 
 ; <item> ::= <name> | (<name> <type>) | ((<name> ...) <type>)
 
-(define-syntax really-export
+(define-syntax export
   (lambda (e r c)
-    (let ((name (cadr e))
-	  (items (cddr e)))
+    (let ((items (cdr e)))
       (let loop ((items items)
 		 (plain '())
 		 (others '()))
 	(if (null? items)
 	    `(,(r 'make-simple-interface)
-	      ,(cadr e)
+	      #f
 	      (,(r 'list) (,(r 'quote) ,(list (reverse plain)
 					      ':undeclared))
 			  ,@(reverse others)))
@@ -89,29 +83,36 @@
   (make-simple-interface list quote value))
 
 		    
-
-
 ; Structures
 
 (define-syntax define-structure
   (syntax-rules ()
     ((define-structure ?name ?int ?clause1 ?clause ...)
-     (define-structures ((?name ?int)) ?clause1 ?clause ...))
-    ;; For compatibility (?)
+     (def ?name (structure ?int ?clause1 ?clause ...)))
+    ;; For compatibility.  Use DEF instead.
     ((define-structure ?name ?exp)
      (def ?name ?exp))))
 
+(define-syntax define-structures
+  (syntax-rules ()
+    ((define-structures ((?name ?int) ...)
+       ?clause ...)
+     (def ?name ... (structures (?int ...) ?clause ...)))))
+
+(define-syntax structure
+  (syntax-rules ()
+    ((structure ?int ?clause ...)
+     (structures (?int) ?clause ...))))
+
+(define-syntax structures
+  (syntax-rules ()
+    ((structures (?int ...) ?clause ...)
+     (let ((p (a-package #f ?clause ...)))
+       (values (make-structure p (lambda () ?int))
+	       ...)))))
+
 
 ; Packages
-
-(define-syntax define-structures
-  (syntax-rules (implement export)
-    ((define-structures ((?name ?int) ...)
-       (?keyword ?stuff ...) ...)
-     (def (?name ...)
-       (let ((p (a-package (?name ...) (?keyword ?stuff ...) ...)))
-	 (values (make-structure p (lambda () (an-interface #f ?int)) '?name)
-		 ...))))))
 
 (define-syntax a-package
   (let ()
@@ -190,6 +191,14 @@
   (cons lambda list make-a-package quote %file-name%))
 
 
+(define-syntax receive
+  (syntax-rules ()
+    ((receive (?var ...) ?producer . ?body)
+     (call-with-values (lambda () ?producer)
+       (lambda (?var ...)
+	 (note-name! ?var '?var) ...
+	 (let () . ?body))))))
+
 
 ; (DEFINE-REFLECTIVE-TOWER-MAKER <proc>)
 ;   <proc> should be an expression that evaluates to a procedure of
@@ -212,7 +221,7 @@
   (export))
 
 
-; Modules  = package combinators
+; Modules  = package combinators...
 
 (define-syntax define-module
   (syntax-rules ()

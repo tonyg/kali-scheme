@@ -3,7 +3,7 @@
 
 ; Miniature command processor.
 
-(define (command-processor args)
+(define (command-processor ignore args)
   (let ((in (current-input-port))
 	(out (current-output-port))
 	(batch? (member "batch" args)))
@@ -26,13 +26,16 @@
 		 (cond ((eof-object? form)
 			(newline out)
 			(go (lambda () 0)))
-		       ((equal? form '(unquote load))
-			(mini-load in)
-			(go loop))
-		       ((equal? form '(unquote go))
-			(let ((form (read in)))
-			  (go (lambda ()
-				(eval form (interaction-environment))))))
+		       ((and (pair? form) (eq? (car form) 'unquote))
+			(case (cadr form)
+			  ((load)
+			   (mini-load in)
+			   (go loop))
+			  ((go)
+			   (let ((form (read in)))
+			     (go (lambda ()
+				   (eval form (interaction-environment))))))
+			  (else (error "unknown command" (cadr form)))))
 		       (else
 			(call-with-values
 			    (lambda () (eval form (interaction-environment)))

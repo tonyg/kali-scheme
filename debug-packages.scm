@@ -1,18 +1,13 @@
 ; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
-; Debugging stuff.
-
-; For example: in the linker image or after ,take l.s48:
-;
-;   ,load scripts.scm
-;   (load-configuration "debug-packages.scm")
-;   (link-little-system)
+; Handy things for debugging the run-time system, byte code compiler,
+; and linker.
 
 
 ; Alternative command processor.  Handy for debugging the bigger one.
 
-(define-module (make-mini-command scheme)
+(define (make-mini-command scheme)
   (define-structure mini-command (export command-processor)
     (open scheme
 	  signals conditions handle
@@ -23,69 +18,77 @@
 ; Miniature EVAL, for debugging runtime system sans package system.
 
 (define-structures ((mini-eval evaluation-interface)
-		    (mini-eval-internal
-		     (export set-interaction-environment!
-			     set-scheme-report-environment!))
 		    (mini-environments
 		     (export interaction-environment
-			     scheme-report-environment)))
+			     scheme-report-environment
+			     set-interaction-environment!
+			     set-scheme-report-environment!)))
   (open scheme-level-2
 	signals)		;error
   (files (debug mini-eval)))
 
-(define-module (make-scheme environments evaluation)
+(define (make-scheme environments evaluation) ;cf. initial-packages.scm
   (define-structure scheme scheme-interface
     (open scheme-level-2
 	  environments
 	  evaluation))
   scheme)
 
-(define mini-scheme (make-scheme mini-environments mini-eval))
-
 ; Stand-alone system that doesn't contain a byte-code compiler.
 ; This is useful for various testing purposes.
 
-(define little-system (make-mini-command mini-scheme))
+(define mini-scheme (make-scheme mini-environments mini-eval))
+
+(define mini-command (make-mini-command mini-scheme))
+
+(define-structure little-system (export start)
+  (open scheme-level-1
+	mini-command
+	scheme-level-2-internal)
+  (begin (define start
+	   (usual-resumer
+	    (lambda (args) (command-processor #f args))))))
 
 (define (link-little-system)
   (link-simple-system '(debug little)
-		      '(usual-resumer command-processor) 
-		      little-system scheme-level-2-internal))
-
+		      'start
+		      little-system))
 
 
 
 ; --------------------
 ; Hack: smallest possible reified system.
 
-(define-structure mini-packages
-    (compound-interface for-reification-interface
-			(export make-simple-package))
+(define-structures ((mini-for-reification for-reification-interface)
+		    (mini-packages (export make-simple-package)))
   (open scheme-level-2
-	tables
+	;; tables
 	features		;contents
 	locations
 	signals)		;error
   (files (debug mini-package)))
 
-(define mini-command (make-mini-command mini-scheme))
-
 (define-structure mini-system (export start)
   (open mini-scheme
 	mini-command
+	mini-for-reification
 	mini-packages
-	mini-eval-internal
-	signals			;error
-	conditions handle	;error? with-handler
-	scheme-level-2-internal ;usual-resumer
-	)
+	mini-environments		;set-interaction-environment!
+	scheme-level-2-internal		;usual-resumer
+	conditions handle		;error? with-handler
+	signals)			;error
   (files (debug mini-start)))
 
 (define (link-mini-system)
-  (link-reified-system (list (cons 'scheme mini-scheme))
+  (link-reified-system (list (cons 'scheme mini-scheme)
+			     (cons 'write-images write-images)
+			     (cons 'primitives primitives) ;just for fun
+			     (cons 'scheme-level-2-internal
+				   scheme-level-2-internal)
+			     (cons 'command mini-command))
 		       '(debug mini)
 		       'start
-		       mini-system mini-packages))
+		       mini-system mini-for-reification))
 
 
 
@@ -93,7 +96,7 @@
 ; S-expression interpreter
 
 (define-structure run evaluation-interface
-  (open scheme-level-2 syntactic packages scan types
+  (open scheme-level-2 syntactic packages scan meta-types
 	environments
 	signals
 	locations
@@ -105,20 +108,27 @@
 
 ; Hack: an interpreter-based system.
 
-(define medium-scheme (make-scheme environments run))
+(define (link-medium-system)		;cf. initial.scm
 
-(define medium-system
-  (make-initial-system medium-scheme
-		       (make-mini-command medium-scheme)))
+  (def medium-scheme (make-scheme environments run))
 
-(define (link-medium-system)		;cf. scripts.scm
-  (let* ((scheme medium-scheme)
-	 (initial-structures
-	  (struct-list scheme signals packages)))
-    (link-reified-system initial-structures
-			 '(debug medium)
-			 `(start ',(map car initial-structures))
-			 ;; Packages to open for evaluating the expression
-			 ;; that evaluates to the startup procedure
-			 medium-system
-			 for-reification)))
+  (let ()
+
+    (def command (make-mini-command medium-scheme))
+
+    (let ()
+
+      (def medium-system
+	;; Cf. initial-packages.scm
+	(make-initial-system medium-scheme command))
+
+      (let ((structs (list (cons 'scheme medium-scheme)
+			   (cons 'primitives primitives) ;just for fun
+			   (cons 'scheme-level-2-internal
+				 scheme-level-2-internal)
+			   (cons 'command command))))
+
+	(link-reified-system structs
+			     '(debug medium)
+			     `(start ',(map car structs))
+			     medium-system for-reification)))))

@@ -73,20 +73,22 @@
 ; LOAD
 
 (define (load filename)
-  (let ((package (interaction-environment)))
-    (call-with-input-file filename
-      (lambda (port)
-	(let loop ()
-	  (let ((form (read port)))
-	    (cond ((eof-object? form))
-		  (else
-		   (eval form package)
-		   (loop)))))))))
+  (load-into filename (interaction-environment)))
 
-(define (eval-from-file forms p filename)
-  (for-each (lambda (form) (eval form p)) forms))
-(define (eval-scanned-forms forms p filename)
-  (for-each (lambda (form) (eval form p)) forms))
+(define (load-into filename env)
+  (call-with-input-file filename
+    (lambda (port)
+      (let loop ()
+	(let ((form (read port)))
+	  (cond ((eof-object? form))
+		(else
+		 (eval form env)
+		 (loop))))))))
+
+(define (eval-from-file forms env filename)
+  (for-each (lambda (form) (eval form env)) forms))
+(define (eval-scanned-forms forms env filename)
+  (for-each (lambda (form) (eval form env)) forms))
 
 
 ; Interaction environment

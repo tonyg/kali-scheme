@@ -32,13 +32,7 @@
 		((symbol? type)		; 'leaf or 'internal
 		 (if (not (eq? type previous-type))
 		     (warn "operator type inconsistency" name type previous-type)))
-		((same-type? type previous-type))
-		((subtype? type previous-type)
-		 (signal 'note
-			 "improving operator type"
-			 name
-			 (type->sexp previous-type 'foo)
-			 (type->sexp type 'foo))
+		((subtype? type previous-type)  ;Improvement
 		 (set-operator-type! probe type))
 		((not (subtype? previous-type type))
 		 (warn "operator type inconsistency"
@@ -47,11 +41,8 @@
 		       (type->sexp type 'foo))))
 	  probe)
 	(let* ((uid *operator-uid*)
-	       (op (make-operator (or type
-				      (begin (signal 'note
-						     "default type for operator"
-						     name)
-					     usual-operator-type))
+	       (type (or type usual-operator-type))
+	       (op (make-operator type
 				  (if (and (not (symbol? type))
 					   (fixed-arity-procedure-type? type))
 				      (procedure-type-arity type)
@@ -86,13 +77,16 @@
 (define (operator-lookup table op)
   (operator-table-ref table (operator-uid op)))
 
-(define (operator-define! table name proc)
-  (vector-set! table
-	       (operator-uid (if (pair? name)
-				 (get-operator (car name) (cadr name))
-				 (get-operator name)))
-	       proc))
-
+(define (operator-define! table name proc-or-type . proc-option)
+  (if (null? proc-option)
+      (vector-set! table		;Obsolescent
+		   (operator-uid (if (pair? name)
+				     (get-operator (car name) (cadr name))
+				     (get-operator name)))
+		   proc-or-type)
+      (vector-set! table
+		   (operator-uid (get-operator name proc-or-type))
+		   (car proc-option))))
 
 ; --------------------
 ; Nodes
@@ -343,7 +337,6 @@
 
 (define (impose-type type b integrate?)
   (if (or (eq? type syntax-type)
-	  (and (eq? type undeclared-type) integrate?) ;+++
 	  (not (binding? b)))
       b
       (make-binding (if (eq? type undeclared-type)
@@ -503,7 +496,7 @@
 			     (classify-call op-node form env)))))
 
 (define (define-classifier name proc)
-  (operator-define! classifiers (list name syntax-type) proc))
+  (operator-define! classifiers name syntax-type proc))
 
 ; Remove generated names from quotations.
 
@@ -521,6 +514,12 @@
 			 (append (cdr exp) (list (unspecific-node)))
 			 (cdr exp))))))
 
+(define unspecific-node
+  (let ((op (get-operator 'unspecific
+			  (proc () unspecific-type))))
+    (lambda ()
+      (make-node op '(unspecific)))))
+
 ; Rewrite (define (name . vars) body ...)
 ;  as (define foo (lambda vars body ...)).
 
@@ -529,8 +528,8 @@
 	(operator/unassigned (get-operator 'unassigned 
 					   (proc () value-type)))) ;foo
     (lambda (op op-node form env)
-      (make-node op
-		 (let ((pat (cadr form)))
+      (let ((pat (cadr form)))
+	(make-node op
 		   (cons op-node
 			 (if (pair? pat)
 			     (list (car pat)
@@ -543,11 +542,11 @@
 						  `(unassigned))
 				       (caddr form))))))))))
 
-(define unspecific-node
-  (let ((op (get-operator 'unspecific
-			  (proc () unspecific-type))))
-    (lambda ()
-      (make-node op '(unspecific)))))
+;(define (make-define-node op op-node lhs rhs)
+;  (make-node op (list op-node lhs rhs)))
+
+(define define-node? (node-predicate 'define))
+(define define-syntax-node? (node-predicate 'define-syntax syntax-type))
 
 
 ; For the module system:
@@ -575,7 +574,17 @@
 (define-classifier '%file-name%
   (let ((operator/quote (get-operator 'quote syntax-type)))
     (lambda (op op-node form env)
-      (make-node operator/quote `',(fluid $source-file-name)))))
+      (make-node operator/quote `',(get-funny env funny-name/source-file-name)))))
+
+(define funny-name/source-file-name
+  (string->symbol ".source-file-name."))
+
+(define (bind-source-file-name filename env)
+  (if filename
+      (bind1 funny-name/source-file-name
+	     (make-binding syntax-type #f filename)
+	     env)
+      env))
 
 
 ; To do:
@@ -646,17 +655,12 @@
 (define unbound? name?)
 
 
-; Name of file being compiled
-
-(define $source-file-name (make-fluid #f))
-
-
 ; --------------------
 ; LET-SYNTAX and friends
 
 (define (define-usual-suspects table mumble)
 
-  (operator-define! table (list 'let-syntax syntax-type)
+  (operator-define! table 'let-syntax syntax-type
     (mumble (lambda (node env)
 	      (let* ((form (node-form node))
 		     (specs (cadr form)))
@@ -672,7 +676,7 @@
 				   specs)
 			      env))))))
 
-  (operator-define! table (list 'letrec-syntax syntax-type)
+  (operator-define! table 'letrec-syntax syntax-type
     (mumble (lambda (node env)
 	      (let* ((form (node-form node))
 		     (specs (cadr form)))
@@ -690,7 +694,7 @@
 					specs))
 				 env))))))
 
-  (operator-define! table 'with-aliases
+  (operator-define! table 'with-aliases syntax-type
     (mumble (lambda (node env)
 	      (let ((form (node-form node)))
 		(values (cadddr form)
@@ -774,7 +778,6 @@
 
 
 (define begin-node? (node-predicate 'begin syntax-type))
-(define define-node? (node-predicate 'define syntax-type))
 
 ; --------------------
 ; Variable types
@@ -809,3 +812,14 @@
 
 
 (define undeclared-type ':undeclared)    ;cf. really-export macro
+
+
+; Associate a reader (parser) with an environment.
+
+(define funny-name/reader (string->symbol ".reader."))
+
+;(define (set-package-reader! p reader)
+;  (package-define-funny! p funny-name/reader reader))
+
+(define (environment-reader env)
+  (or (get-funny env funny-name/reader) read))

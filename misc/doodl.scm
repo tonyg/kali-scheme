@@ -259,6 +259,8 @@
 			      ,(recur (cdr specs))))))))
 	e)))
 
+(define-simple-type <list> (<object>) list?)
+
 ; --------------------
 ; More?
 

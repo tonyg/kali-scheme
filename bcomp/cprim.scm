@@ -19,7 +19,7 @@
                          (error "unknown primitive procedure"))))
 
 (define (define-closed-compilator name proc)
-  (operator-define! closed-compilators name proc))
+  (operator-define! closed-compilators name #f proc))
 
 ; (primitive-procedure name)  =>  a procedure
 

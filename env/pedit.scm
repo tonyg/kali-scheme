@@ -233,7 +233,13 @@
 				     p name binding))
 			  (set-location-forward! prev place name p)
 			  (set! newly-defined
-				(cons name newly-defined))))))
+				(cons name newly-defined)))
+			(let ((loc (location-for-reference p name)))
+			  (if (not (eq? loc prev))
+			      ;; Newly imported
+			      (begin (set-location-forward! prev loc name p)
+				     (set! newly-defined
+					   (cons name newly-defined))))))))
 		undefs)
     (if (not (null? newly-defined))
         (begin (display "Newly accessible in ")

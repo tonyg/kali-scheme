@@ -3,7 +3,7 @@
 Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.
 See file COPYING for copying information.
 
-Please report bugs to scheme48-bugs@altdorf.ai.mit.edu, and include
+Please report bugs to scheme48-bugs@martigny.ai.mit.edu, and include
 the version number in your message.
 
 Installation instructions in file INSTALL.
@@ -14,7 +14,7 @@ Recent changes are listed in file NEWS.
 
 Known bugs and things to do in the future are listed in TODO.
 
-Send mail to scheme-48-request@altdorf.ai.mit.edu to be put on a
+Send mail to scheme-48-request@martigny.ai.mit.edu to be put on a
 mailing list for announcements, discussion, bug reports, and bug
 fixes.
 
@@ -61,4 +61,4 @@ The Scheme 48 root directory should contain the following files:
 
 The Pre-Scheme compiler, which produces scheme48vm.c from vm/*.scm, is
 distributed separately.  For information contact
-scheme-48-request@altdorf.ai.mit.edu.
+kelsey@research.nj.nec.com.

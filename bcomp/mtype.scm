@@ -666,7 +666,9 @@
 (define-syntax proc
   (syntax-rules ()
     ((proc (?type ...) ?cod)
-     (procedure-type (some-values ?type ...) ?cod #t))))
+     (procedure-type (some-values ?type ...) ?cod #t))
+    ((proc (?type ...) ?cod ?r)
+     (procedure-type (some-values ?type ...) ?cod ?r))))
 
 (define-syntax some-values
   (syntax-rules (&opt &rest)

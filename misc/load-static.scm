@@ -2,6 +2,8 @@
 ;  ,exec ,load misc/load-static.scm
 ;  (do-it 100000 "debug/little.image" "debug/little-heap.c")
 
+(translate "=scheme48/" "./")
+
 (config
  (lambda ()
    (load "vm/ps-interface.scm")
@@ -10,9 +12,9 @@
 
 (load-package 'bigbit)
 ; The following is for struct's (for-syntax ...) clause
-(load-package 'big-scheme)
-(load-package 'heap)
+; (load-package 'destructuring)
 
+(load-package 'heap)
 (in 'heap
     (lambda ()
       (run '(define (newspace-begin) *newspace-begin*))
@@ -29,7 +31,7 @@
 		      heap-extra
 		      vm-architecture
 		      formats
-		      ;; enumerated
+		      enumerated
 		      signals)
 		(files (misc static)))))
 

@@ -555,8 +555,7 @@
 	  structure-type))
 
 (define-interface syntactic-interface
-  (export $source-file-name
-	  binding?
+  (export binding?
 	  binding-place
 	  clobber-binding!
 	  binding-static
@@ -613,7 +612,10 @@
 	  variable-value-type
 	  usual-variable-type
 	  compatible-types?
-	  undeclared-type))
+	  undeclared-type
+	  bind-source-file-name
+	  funny-name/reader
+	  environment-reader))
 
 (define-interface nodes-interface
   (export classify
@@ -627,6 +629,8 @@
 	  node-set!
 	  node-predicate
 	  make-similar-node
+	  define-node?  
+	  define-syntax-node?
 	  scan-body
 	  lookup
 	  bind
@@ -642,7 +646,8 @@
 	  interface-ref
 	  interface?
 	  interface-clients
-	  for-each-declaration))
+	  for-each-declaration
+	  note-interface-name!))
 
 
 ; Packages.
@@ -664,13 +669,15 @@
 	  package-note-caching
 	  structure-package
 	  extract-package-from-environment
-	  package-define-funny!))
+	  package-define-funny!
+	  note-structure-name!
+	  (:package :type)
+	  (:structure :type)))		;for (define-method ...)'s
 
 (define-interface packages-internal-interface
   (export package-loaded?		;env/load-package.scm
 	  set-package-loaded?!		;env/load-package.scm
 	  package-name
-	  set-package-name!		;env/pacman.scm
 	  flush-location-names
 	  package-name-table		;debuginfo
 	  location-info-table		;debuginfo, disclosers
@@ -779,7 +786,7 @@
 	  with-fresh-compiler-state))  ;for linker
 
 (define-interface evaluation-interface
-  (export eval load eval-from-file eval-scanned-forms))
+  (export eval load load-into eval-from-file eval-scanned-forms))
 
 (define-interface environments-interface  ;cheesy
   (export *structure-ref
@@ -795,7 +802,7 @@
 	  set-reflective-tower-maker!))
 
 (define-interface defpackage-interface
-  (export ((define			;Formerly define-structure
+  (export ((def			        ;Formerly define-structure
 	    define-interface		;Formerly define-signature
 	    define-structures		;Formerly define-package
 	    define-structure
@@ -805,9 +812,12 @@
 	    export-reflective-tower-maker
 	    compound-interface
 	    export
-	    begin
+	    structure structures let	; New
+	    begin			; mostly for macros
+	    define			; for compatibility?
 	    a-package)			; cf. env/init-defpackage.scm
 	   :syntax)
+	  values
 	  interface-of
 	  set-verify-later!))
 

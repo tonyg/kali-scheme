@@ -55,9 +55,7 @@
 			       (compile form cenv depth cont)))))))
 
 (define (define-compilator name type proc)
-  (operator-define! compilators
-		    (if type (list name type) name)
-		    proc))
+  (operator-define! compilators name type proc))
 
 (define-compilator 'literal #f
   (lambda (node cenv depth cont)
@@ -459,7 +457,8 @@
 
 (define (generate-trap cont . stuff)
   (apply warn stuff)
-  (sequentially (instruction-with-literal (enum op literal) (cons 'error stuff))
+  (sequentially (instruction-with-literal (enum op literal)
+					  (cons 'error stuff))
 		(deliver-value (instruction (enum op trap))
 			       cont)))
 

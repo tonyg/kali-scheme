@@ -17,11 +17,9 @@
 	    (map (lambda (filename+nodes)
 		   (let ((filename (car filename+nodes))
 			 (nodes (cdr filename+nodes)))
-		     (let-fluid $source-file-name filename
-		       (lambda ()
-			 (set! names
-			       (append (analyze-forms nodes p) names))
-			 (cons filename nodes)))))
+		     (set! names
+			   (append (analyze-forms nodes p) names))
+		     (cons filename nodes)))
 		 stuff)))
       (cond ((not (null? names))
 	     (newline)
@@ -58,7 +56,6 @@
 		      #f))))))
       #f))
 
-(define define-node? (node-predicate 'define))
 (define lambda-node? (node-predicate 'lambda))
 (define name-node? (node-predicate 'name))
 (define loophole-node? (node-predicate 'loophole))
@@ -156,7 +153,7 @@
 			 (simple-list? (cdr exp) env))))
 
 (define (define-analyzer name proc)
-  (operator-define! analyzers name proc))
+  (operator-define! analyzers name #f proc))
 
 (define-analyzer 'literal
   (lambda (exp env ret?)

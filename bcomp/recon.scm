@@ -40,7 +40,7 @@
                          (reconstruct-call node constrained want-type))))
 
 (define (define-reconstructor name type proc)
-  (operator-define! reconstructors (list name type) proc))
+  (operator-define! reconstructors name type proc))
 
 
 (define-reconstructor 'lambda syntax-type
@@ -245,7 +245,7 @@
                                 (cdr (node-form node))))))
 
 (define-reconstructor 'call-with-values
-                      (proc ((proc () any-values-type)
+                      (proc ((proc () any-values-type #f)
                              any-procedure-type)
                             any-values-type)
   (lambda (node constrained want-type)
@@ -271,11 +271,12 @@
               (cdr args))
     (careful-codomain proc-type)))
 
-(define-reconstructor 'apply (proc (any-procedure-type &rest value-type) any-values-type)
+(define-reconstructor 'apply
+    (proc (any-procedure-type &rest value-type) any-values-type)
   reconstruct-apply)
 
 (define-reconstructor 'primitive-catch
-                      (proc ((proc (escape-type) any-values-type))
+                      (proc ((proc (escape-type) any-values-type #f))
                             any-values-type)
   reconstruct-apply)
 
@@ -290,7 +291,7 @@
       (get-operator ops type)))
 
 (declare-operator-type 'with-continuation
-                       (proc (escape-type (proc () any-values-type))
+                       (proc (escape-type (proc () any-values-type #f))
                              any-arguments-type))
  
 (declare-operator-type 'eq?
@@ -363,12 +364,6 @@
 
 ; Can't do I/O until the meta-types interface exports input-port-type and
 ; output-port-type.
-
-(define (last x)
-  (if (null? (cdr x))
-      (car x)
-      (last (cdr x))))
-
 
 (define (constant-type x)
   (cond ((number? x)

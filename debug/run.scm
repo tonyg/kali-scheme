@@ -4,31 +4,34 @@
 ; A little interpreter.
 
 (define (eval form p)
-  (run-forms (list form) p #f))
+  (eval-forms (list form) p #f))
 
 ; Programs
 
-(define (run-forms forms p file)
-  (let ((nodes (scan-forms forms p file)))
-    (if (not (null? nodes))
-	(let-fluid $source-file-name file
-	  (lambda ()
-	    (let ((env (package->environment p)))
-	      (do ((nodes nodes (cdr nodes)))
-		  ((null? (cdr nodes))
-		   (run-processed-form (car nodes) env))
-		(run-processed-form (car nodes) env))))))))
+(define (eval-forms forms p file)
+  (eval-nodes (scan-forms forms p file)
+	      (package->environment p)
+	      file))
 
-(define (run-processed-form node env)
-  (if (define-node? node)
-      (let* ((form (node-form node))
-	     (loc (cdr (env (cadr form))))
-	     (value (run (caddr form) env)))
-	(set-location-defined?! loc #t)
-	(set-contents! loc value))
-      (run node env)))
+(define (eval-nodes nodes env file)
+  (if (not (null? nodes))
+      (run-nodes nodes (bind-source-file-name file env))))
 
-(define define-node? (node-predicate 'define))
+(define (run-nodes nodes env)
+  (do ((nodes nodes (cdr nodes)))
+      ((null? (cdr nodes))
+       (run-node (car nodes) env))
+    (run-node (car nodes) env)))
+
+(define (run-node node env)
+  (cond ((define-node? node)
+	 (let* ((form (node-form node))
+		(loc (binding-place (lookup env (cadr form))))
+		(value (run (caddr form) env)))
+	   (set-location-defined?! loc #t)
+	   (set-contents! loc value)))
+	((not (define-syntax-node? node))
+	 (run node env))))
 
 
 ; Main dispatch for a single expression.
@@ -41,16 +44,16 @@
   (make-operator-table (lambda (node env)
 			 (run-call (node-form node) env))))
 
-(define (define-interpreter name proc)
-  (operator-define! interpreters name proc))
+(define (define-interpreter name type proc)
+  (operator-define! interpreters name type proc))
 
-(define-interpreter 'name
+(define-interpreter 'name #f
   (lambda (node env)
     (let ((binding (name-node-binding node env)))
-      (cond ((binding? binding)		;(type . location)
+      (cond ((binding? binding)
 	     (if (and (compatible-types? (binding-type binding) value-type)
 		      (location? (binding-place binding)))
-		 (let ((loc (cdr binding)))
+		 (let ((loc (binding-place binding)))
 		   (if (location-defined? loc)
 		       (contents loc)
 		       (error "uninitialized variable" (schemify node env))))
@@ -64,11 +67,11 @@
   (or (node-ref node 'binding)
       (lookup env (node-form node))))
 
-(define-interpreter 'literal
+(define-interpreter 'literal #f
   (lambda (node env)
     (node-form node)))
 
-(define-interpreter 'call
+(define-interpreter 'call #f
   (lambda (node env)
     (run-call (node-form node) env)))
 
@@ -79,11 +82,11 @@
 		  (run arg-exp env))
 		(cdr exp)))))
 
-(define-interpreter '(quote syntax)
+(define-interpreter 'quote syntax-type
   (lambda (node env)
     (cadr (node-form node))))
 
-(define-interpreter '(lambda syntax)
+(define-interpreter 'lambda syntax-type
   (lambda (node env)
     (let ((exp (node-form node)))
       (make-interpreted-closure (cadr exp) (cddr exp) env))))
@@ -104,7 +107,7 @@
 			env)))))
 
 
-(define-interpreter '(begin syntax)
+(define-interpreter 'begin syntax-type
   (lambda (node env)
     (let ((exp (node-form node)))
       (run-begin (cdr exp) env))))
@@ -118,7 +121,7 @@
 	    (begin (run (car exp-list) env)
 		   (loop (cdr exp-list)))))))
 
-(define-interpreter '(set! syntax)
+(define-interpreter 'set! syntax-type
   (lambda (node env)
     (let* ((exp (node-form node))
 	   (probe (name-node-binding (classify (cadr exp) env) env)))
@@ -131,7 +134,7 @@
 	    ((unbound? probe) (error "unbound variable" exp))
 	    (else (error "peculiar assignment" exp))))))
 
-(define-interpreter '(if syntax)
+(define-interpreter 'if syntax-type
   (lambda (node env)
     (let ((exp (node-form node)))
       (if (null? (cdddr exp))
@@ -143,7 +146,7 @@
 
 ; (reverse specs) in order to try to catch unportabilities
 
-(define-interpreter '(letrec syntax)
+(define-interpreter 'letrec syntax-type
   (lambda (node env)
     (let ((exp (node-form node)))
       (run-letrec (cadr exp) (cddr exp) env))))
@@ -158,8 +161,9 @@
 		    bindings
 		    env)))
     (for-each (lambda (binding val)
-		(set-location-defined?! (cdr binding) #t)
-		(set-contents! (cdr binding) val))
+		(let ((loc (binding-place binding)))
+		  (set-location-defined?! loc #t)
+		  (set-contents! loc val)))
 	      bindings
 	      (map (lambda (spec) (run (cadr spec) env)) specs))
     (run-body body env)))
@@ -167,13 +171,13 @@
 
 (let ((bad (lambda (node env)
 	     (error "not valid in expression context" (node-form node)))))
-  (define-interpreter '(define syntax) bad)
-  (define-interpreter '(define-syntax syntax) bad))
+  (define-interpreter 'define syntax-type bad)
+  (define-interpreter 'define-syntax syntax-type bad))
 
 
 ; Primitive procedures
 
-(define-interpreter '(primitive-procedure syntax)
+(define-interpreter 'primitive-procedure syntax-type
   (lambda (node env)
     (let ((name (cadr (node-form node))))
       (or (table-ref primitive-procedures name)
@@ -184,7 +188,7 @@
 
 (define (define-a-primitive name proc)
   (table-set! primitive-procedures name proc)
-  (define-interpreter name
+  (define-interpreter name any-procedure-type
     (lambda (node env)
       (apply proc (map (lambda (arg) (run arg env))
 		       (cdr (node-form node)))))))
@@ -229,27 +233,21 @@
 		   (bind-vars (cdr names) (cdr args) env)))))
 
 
-; LOAD  (copied from mini-eval.scm)
+; LOAD
 
 (define (load filename . package-option)
-  (let ((package (if (null? package-option)
-		     (interaction-environment)
-		     (car package-option))))
-    (call-with-input-file filename
-      (lambda (port)
-	(let ((out (current-output-port)))
-	  (display filename out) (force-output out)
-	  (let loop ()
-	    (let ((form (read port)))
-	      (cond ((eof-object? form))
-		    (else
-		     (run-forms (list form) package filename)
-		     (loop)))))
-	  (newline out))))))
+  (load-into filename (if (null? package-option)
+			  (interaction-environment)
+			  (car package-option))))
+
+(define (load-into filename package)
+  (eval-nodes (scan-file filename package)
+	      (package->environment package)
+	      filename))
 
 
 (define (eval-from-file forms p file)	;Scheme 48 internal thing
-  (run-forms forms p file))
+  (eval-forms forms p file))
 
 
 ; (scan-structures (list s) (lambda (p) #t) (lambda (stuff) #f))
