@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h> /* memcpy, strlen */
 
 #include "c-mods.h"
 #include "scheme48write-barrier.h"
@@ -21,6 +22,14 @@ extern s48_value	s48_extended_vm(long, s48_value),
 					  s48_value proc_name,
 					  long nargs,
 					  char *argv);
+
+/*
+ * This comes from glue.{s,c}.
+ */
+
+extern long		s48_call_native_procedure(long, long),
+			s48_invoke_native_continuation(long);
+
 /*
  * The following are hand-written macro versions of procedures
  * in scheme48heap.c.
