@@ -277,8 +277,7 @@
   (alarm           ; order matters - higher priority first
    keyboard
    post-gc         ; handler is passed a list of finalizers
-   i/o-completion  ; handler is passed channel and status
-   i/o-error       ; handler is passed channel and error code
+   i/o-completion  ; handler is passed channel, error flag and status
    os-signal
    ))
 

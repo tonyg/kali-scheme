@@ -19,7 +19,12 @@
 (define (channel-maybe-commit-and-read channel buffer start count condvar wait?)
   (maybe-commit-no-interrupts
    (lambda ()
-     (let ((got (channel-maybe-read channel buffer start count wait?)))
+     (let ((got
+	    (with-handler ; this seems like too much overhead for an uncommon case
+	     (lambda (condition punt)
+	       (make-i/o-error-status condition))
+	     (lambda ()
+	       (channel-maybe-read channel buffer start count wait?)))))
        (if got
 	   (note-channel-result! condvar got)
 	   (add-channel-condvar! channel condvar))))))
@@ -27,7 +32,12 @@
 (define (channel-maybe-commit-and-write channel buffer start count condvar wait?)
   (maybe-commit-no-interrupts
    (lambda ()
-     (let ((got (channel-maybe-write channel buffer start count)))
+     (let ((got
+	    (with-handler ; this seems like too much overhead
+	     (lambda (condition punt)
+	       (make-i/o-error-status condition))
+	     (lambda ()
+	       (channel-maybe-write channel buffer start count)))))
        (if got
 	   (note-channel-result! condvar got)
 	   (begin
@@ -96,10 +106,23 @@
 ;
 ; Called with interrupts disabled.
 
-(define (i/o-completion-handler channel status enabled-interrupts)
+(define (i/o-completion-handler channel error? status enabled-interrupts)
   (let ((condvar (fetch-channel-condvar! channel)))
     (if condvar
-	(note-channel-result! condvar status))))
+	(note-channel-result! condvar
+			      (if error?
+				  (make-i/o-error-status
+				   (make-exception #f
+						   (enum exception os-error)
+						   (list channel
+							 (os-error-message status))))
+				  status)))))
+				  
+
+(define-record-type i/o-error-status :i/o-error-status
+  (make-i/o-error-status condition)
+  i/o-error-status?
+  (condition i/o-error-status-condition))
 
 ; Exported procedure
 ; This should check the list for condvars which have no waiters.

@@ -66,11 +66,16 @@
 	       (set-channel-cell-in-use?! cell #f)
 	       (set-condvar-has-value?! condvar #f)
 	       (note-buffer-reuse! port)
-	       (if (eof-object? result)
-		   (provisional-set-port-pending-eof?! port #t)
-		   (begin
-		     (provisional-set-port-index! port 0)
-		     (provisional-set-port-limit! port result)))
+	       (cond
+		((eof-object? result)
+		 (provisional-set-port-pending-eof?! port #t))
+		((i/o-error-status? result)
+		 (if (maybe-commit)
+		     (signal-condition (i/o-error-status-condition result))
+		     #f))
+		(else
+		 (provisional-set-port-index! port 0)
+		 (provisional-set-port-limit! port result)))
 	       (maybe-commit)))
 	    (wait?
 	     (maybe-commit-and-wait-for-condvar condvar))
@@ -135,17 +140,31 @@
 	     (set-channel-cell-in-use?! cell #t)
 	     (send-some port 0 necessary?)))
 	  ((condvar-has-value? condvar)
-	   (let ((sent (+ (condvar-value condvar)
-			  (channel-cell-sent cell))))
+	   (let ((result (condvar-value condvar)))
 	     (set-condvar-has-value?! condvar #f)
-	     (if (< sent
-		    (provisional-port-index port)) 
-		 (send-some port sent necessary?)
+	     (if (i/o-error-status? result)
 		 (begin
+		   ;; #### We should probably maintain some kind of
+		   ;; "error status" with the channel cell that allows
+		   ;; actual recovery.
+		   ;; The way it is, we just pretend we're done so the
+		   ;; the periodic buffer flushing doesn't annoy the heck
+		   ;; out of us.
 		   (provisional-set-port-index! port 0)
 		   (note-buffer-reuse! port)
 		   (set-channel-cell-in-use?! cell #f)
-		   (maybe-commit)))))
+		   (if (maybe-commit)
+		       (signal-condition (i/o-error-status-condition result))
+		       #f))
+		 (let ((sent (+ result (channel-cell-sent cell))))
+		   (if (< sent
+			  (provisional-port-index port)) 
+		       (send-some port sent necessary?)
+		       (begin
+			 (provisional-set-port-index! port 0)
+			 (note-buffer-reuse! port)
+			 (set-channel-cell-in-use?! cell #f)
+			 (maybe-commit)))))))
 	  (necessary?
 	   (maybe-commit-and-wait-for-condvar condvar))
 	  (else

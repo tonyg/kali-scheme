@@ -97,10 +97,11 @@
   (optimize auto-integrate))
 
 (define-structure channel-i/o channel-i/o-interface
-  (open scheme-level-1 byte-vectors queues
+  (open scheme-level-1 byte-vectors define-record-types
 	channels
 	i/o i/o-internal
-	signals
+	signals handle conditions
+	(subset primitives (os-error-message))
 	(subset threads-internal (maybe-commit-no-interrupts))
 	proposals
 	condvars condvars-internal

@@ -186,7 +186,8 @@ s48_stop_alarm_interrupts(void)
 typedef struct fd_struct {
  int	fd,			/* file descriptor */
 	status;			/* one of the FD_* constants */
- long   chars_processed;
+ long   os_status;              /* characters processed or error code */
+ psbool has_error;
  psbool is_input;		/* iff input */
  struct fd_struct	*next;	/* next on same queue */
 } fd_struct;
@@ -264,13 +265,14 @@ there_are_ready_ports(void)
 
 
 static int
-next_ready_port(long* chars_processed)
+next_ready_port(long* os_status, psbool* has_error)
 {
   fd_struct	*p;
 
   p = rmque(&ready.first, &ready);
   p->status = FD_QUIESCENT;
-  *chars_processed = p->chars_processed;
+  *os_status = p->os_status;
+  *has_error = p->has_error;
   return (p->fd);
 }
 
@@ -280,12 +282,13 @@ next_ready_port(long* chars_processed)
  */
 
 psbool
-s48_add_ready_fd(long fd, psbool is_input, long chars_processed)
+s48_add_ready_fd(long fd, psbool is_input, psbool has_error, long os_status)
 {
   fd_struct* data = fds[fd];  /* we created this before */
 
   data->is_input = is_input;
-  data->chars_processed = chars_processed;
+  data->os_status = os_status;
+  data->has_error = has_error;
 
   if (data->status == FD_READY)
     return (PSTRUE); /* fd is already ready */
@@ -380,14 +383,6 @@ s48_remove_fd(int fd)
   return TRUE;
 }
 
-static DWORD last_error = 0;
-
-void
-s48_register_error(DWORD error)
-{
-  last_error = error;
-}
-
 /*
  *  ; Scheme version of the get-next-event procedure
  *  ;
@@ -437,19 +432,22 @@ s48_get_next_event(long *ready_fd, long *status)
     return (KEYBOARD_INTERRUPT_EVENT);
   }
   if (poll_time != -1 && s48_current_time >= poll_time) {
-    last_error = NO_ERRORS;
     SleepEx(0, TRUE);
-    if (last_error == NO_ERRORS)
-      poll_time = s48_current_time + poll_interval;
-    else {
-      *status = last_error;
-      return (ERROR_EVENT);
-    }
+    poll_time = s48_current_time + poll_interval;
   }
   if (there_are_ready_ports()) {
-    *ready_fd = next_ready_port(status);
-    /* fprintf(stderr, "[i/o completion on port %ld, status %ld]\n", *ready_fd, *status); */
-    return (IO_COMPLETION_EVENT);
+    psbool has_error;
+    *ready_fd = next_ready_port(status, &has_error);
+    if (has_error)
+      {
+	/* fprintf(stderr, "[i/o error on port %ld, status %ld]\n", *ready_fd, *status); */
+	return (IO_ERROR_EVENT);
+      }
+    else
+      {
+	/* fprintf(stderr, "[i/o completion on port %ld, status %ld]\n", *ready_fd, *status); */
+	return (IO_COMPLETION_EVENT);
+      }
   }
   if (alarm_time != -1 && s48_current_time >= alarm_time) {
     alarm_time = -1;
@@ -487,10 +485,8 @@ s48_wait_for_event(long max_wait, psbool is_minutes)
     else
       dwMilliseconds = max_wait * (1000 / TICKS_PER_SECOND);
 
-    last_error = NO_ERRORS;
     SleepEx(dwMilliseconds,
 	    TRUE);
-    status = last_error;
     if (there_are_ready_ports())
       NOTE_EVENT;
   }

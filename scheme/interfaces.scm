@@ -560,6 +560,8 @@
 	  channel-maybe-commit-and-close
 	  channel-write
 
+	  i/o-error-status? i/o-error-status-condition
+
 	  initialize-channel-i/o!       ;scheduler
 	  waiting-for-i/o?              ;scheduler
 	  abort-unwanted-reads!		;scheduler
