@@ -159,6 +159,8 @@
 	  signal-os-number
 	  integer->signal
 	  name->signal
+          signal=?
+          signal?
 
 	  make-signal-queue
 	  dequeue-signal!
