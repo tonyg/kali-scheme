@@ -12,8 +12,9 @@
 ; it a name, and then load it.
 
 (define (load-srfi-7-program name filename)
-  (eval `(define ,name ,(read-srfi-7-program filename))
-	(config-package))
+  (eval-from-file `((define ,name ,(read-srfi-7-program filename)))
+		  (config-package)
+		  filename)
   (let ((structure (eval name (config-package))))
     (note-structure-name! structure name)
     (ensure-loaded structure)))

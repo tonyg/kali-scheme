@@ -82,6 +82,8 @@
 	nondeterminism
 	(subset signals (error))
 
+	(subset evaluation			(eval-from-file))
+
 	(subset package-commands-internal	(config-package))
 	ensures-loaded
 	(subset packages			(note-structure-name!))
