@@ -7,8 +7,8 @@ extern void	s48_heap_init(void);
 
 /* heap-init interface */
 extern char *	s48_initialize_heap(long, long, char *);
-extern void	s48_register_static_areas(unsigned char, long *, long *,
-					  unsigned char, long *, long *);
+extern void	s48_register_static_areas(long, char **, long *,
+					  long, char **, long *);
 
 /* heap interface */
 extern long	s48_available(void);
@@ -30,9 +30,9 @@ extern char *	s48_SlimitS;
 /* gc interface */
 extern void	s48_collect();
 extern long	s48_trace_value(long);
-extern long	s48_trace_locationsB(char *, char *);
-extern long	s48_trace_stob_contentsB(long);
-extern long	s48_trace_continuation_contentsB(char *, char *, long);
+extern void	s48_trace_locationsB(char *, char *);
+extern void	s48_trace_stob_contentsB(long);
+extern void	s48_trace_continuation_contentsB(char *, char *, long);
 extern char	s48_extantP(long);
 extern long	s48_gc_count(void);
 
