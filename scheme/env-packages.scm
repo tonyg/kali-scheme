@@ -293,8 +293,18 @@
         architecture)   ;(enum op global)
   (files (env shadow)))     ;Exception handler to support package system
 
-(define-structure parse-bytecode (export parse-template
-                                         parse-template-code)
+(define-interface parse-bytecode-interface
+  (export parse-template
+          parse-template-code
+          make-attribution
+          make-opcode-table
+          opcode-table-set!
+          env-data? env-data-total-count env-data-frame-offsets
+          env-data-closure-offsets env-data-env-offsets
+          cont-data? cont-data-length cont-data-mask-bytes cont-data-pc
+          cont-data-gc-mask-size cont-data-depth))
+          
+(define-structure parse-bytecode parse-bytecode-interface
   (open scheme
         templates
         code-vectors byte-vectors

@@ -1,16 +1,14 @@
-;; Generic bytecode parser
+;; Generic byte code parser
 
 (define-record-type attribution :attribution
   (make-attribution init-template template-literal 
-                           opcode-table make-label)
+                           opcode-table make-label at-label)
   attribution?
   (init-template attribution-init-template)
   (template-literal attribution-template-literal)
   (opcode-table attribution-opcode-table)
-  (make-label attribution-make-label))
-
-(define (make-label offset pc attribution)
-  ((attribution-make-label attribution) (+ offset pc)))
+  (make-label attribution-make-label)
+  (at-label attribution-at-label))
 
 (define (opcode-table-ref table i)
   (vector-ref table i))
@@ -24,14 +22,14 @@
 
 ;; Example attribution
 (define (disass)
-  (define (disass-init-template state protocol p-args push-template? push-env?)
-    (cons (list 0 'protocol protocol p-args push-template? push-env?)
+  (define (disass-init-template state template p-args push-template? push-env?)
+    (cons (list 0 'protocol p-args push-template? push-env?)
           state))
 
   (define instruction-set-table 
     (make-opcode-table 
-     (lambda (opcode state pc . args)
-       (cons `(,pc ,(enumerand->name opcode op) ,@args) state))))
+     (lambda (opcode template state pc . args)
+       (cons `(,pc ,(enumerand->name opcode op) ,@(map cdr args)) state))))
 
   (define (attribute-literal literal i state)
     state)
@@ -39,99 +37,114 @@
   (define (make-label target-pc)
     target-pc)
 
-  (make-attribution disass-init-template attribute-literal instruction-set-table make-label))
+  (define (at-label label state)
+    (cons `(,label :) state))
+
+  (make-attribution disass-init-template attribute-literal 
+                    instruction-set-table make-label at-label))
 
 (define (parse-template x state attribution)
   (let* ((tem (coerce-to-template x))
          (template-len (template-length tem)))
+        (let lp ((i 1) (state state))
+          (if (= i template-len)
+              (parse-template-code tem (template-code tem) state attribution)
+              (let ((literal (template-ref tem i)))
+                (if (template? literal)
+                    (lp (+ i 1) (parse-template literal state attribution))
+                    (lp (+ i 1) ((attribution-template-literal attribution) literal i state))))))))
+
+(define (parse-template-code tem code state attribution)
+  (let ((length (template-code-length code)))
     (let-fluid 
         *bc-make-labels* '()
       (lambda ()
         (for-each 
          pc->label 
          (debug-data-jump-back-dests (template-debug-data tem)))
-        (let lp ((i 1) (state state))
-          (if (= i template-len)
-              (parse-template-code tem state attribution)
-              (let ((literal (template-ref tem i)))
-                (if (template? literal)
-                    (lp (+ i 1) (parse-template literal state attribution))
-                    (lp (+ i 1) ((attribution-template-literal attribution) literal i state))))))))))
-
-(define (parse-template-code tem state attribution)
-  (let* ((code (template-code tem))
-         (length (template-code-length code))
-         (protocol (code-vector-ref code 1)))
-    (receive (size protocol-arguments)
-        (parse-protocol protocol code 0 attribution)
-      (receive (push-template? push-env?)
-          (case (code-vector-ref code (+ size 1))
-            ((0) (values #f #f))
-            ((1) (values #f #t))
-            ((2) (values #t #f))
-            ((3) (values #t #t)))
-        (let loop ((pc (+ size 2)) 
-                   (state ((attribution-init-template attribution) 
-                           state protocol protocol-arguments push-template? push-env?)))
-          (if (< pc length)
-              (receive (size state)
-                  (parse-instruction tem code pc state attribution)
-                (loop (+ pc size) state))
-              state))))))
+        (receive (size protocol-arguments)
+            (parse-protocol code 1 attribution)
+          (receive (push-template? push-env?)
+              (case (code-vector-ref code (+ size 1))
+                ((0) (values #f #f))
+                ((1) (values #f #t))
+                ((2) (values #t #f))
+                ((3) (values #t #t)))
+            (let loop ((pc (+ size 2)) 
+                       (state ((attribution-init-template attribution) 
+                               state tem protocol-arguments push-template? push-env?)))
+              (if (< pc length)
+                  (receive (size state)
+                      (parse-instruction tem code pc state attribution)
+                    (loop (+ pc size) state))
+                  state))))))))
 
 (define (parse-instruction template code pc state attribution)
   (let* ((opcode (code-vector-ref code pc))
-	 (len.rev-args (cond ((= opcode (enum op computed-goto))
-			      (error "computed-goto in byte-code"))
-			     ((= opcode (enum op make-flat-env))
-			      (parse-flat-env-args (+ pc 1) code 1 code-vector-ref))
-			     ((= opcode (enum op protocol))
-                              (let ((protocol (code-vector-ref code (+ pc 1))))
-                                (receive (size state)
-                                    (parse-protocol protocol code pc attribution)
-                                  (cons size (list state)))))
-			     ((= opcode (enum op cont-data))
-			      (parse-cont-data-args pc code template attribution))
-			      ;; undo the peephole optimization:
-;			     ((= opcode (enum op local0-push))
-;			      (set! opcode (enum op local0))
-;			      (cons 1 (list (code-vector-ref code (+ pc 1)))))
-			     ;; we don't undo push-local0 as there should be no jumps inside it
+	 (len.rev-args (cond ((= opcode (enum op computed-goto)) ; unused?
+			      (error "computed-goto in parse-bytecode"))
 			     (else
-			      (parse-opcode-args opcode pc code template attribution)))))
+			      (parse-opcode-args opcode 
+                                                 pc 
+                                                 code 
+                                                 template 
+                                                 attribution)))))
     (values (+ 1 (car len.rev-args))  ; 1 for the opcode
-            (really-parse-instruction pc opcode (reverse (cdr len.rev-args)) state attribution))))
+            (really-parse-instruction pc opcode template state 
+                                      (reverse (cdr len.rev-args)) attribution))))
 
-(define (really-parse-instruction pc opcode args state attribution)
-;  (if (exists-pc->label? pc)
-;      (emit! out (label (pc->label pc))))
-  (let ((opcode-attribution (opcode-table-ref (attribution-opcode-table attribution) opcode)))
+(define (really-parse-instruction pc opcode template state args attribution)
+  (let ((new-state (if (label-at-pc? pc)
+                       ((attribution-at-label attribution) 
+                        (pc->label pc attribution)
+                        state)
+                       state)))
+  (let ((opcode-attribution 
+         (opcode-table-ref (attribution-opcode-table attribution) opcode)))
     (if opcode-attribution
-	(apply opcode-attribution opcode state pc args)
-	(error "cannot attribute " (enumerand->name opcode op) args))))
+	(apply opcode-attribution opcode template new-state pc args)
+	(error "cannot attribute " (enumerand->name opcode op) args)))))
 
 ;;--------------------
 ;; labels
 
 (define *bc-make-labels* (make-fluid 'unassigned-bc-pc-labels))
 
-(define (add-bc-pc! bc-pc)
+(define (add-pc! pc attribution)
   (set-fluid! *bc-make-labels*
-	      (cons (cons bc-pc (make-label bc-pc)) (fluid *bc-make-labels*))))
+	      (cons (cons pc ((attribution-make-label attribution) pc))
+                    (fluid *bc-make-labels*))))
 
-(define (pc->label bc-pc)
-  (let ((maybe-bc-pc.label (assq bc-pc (fluid *bc-make-labels*))))
-    (if maybe-bc-pc.label
-	(cdr maybe-bc-pc.label)
+(define (pc->label pc attribution)
+  (let ((maybe-pc.label (assq pc (fluid *bc-make-labels*))))
+    (if maybe-pc.label
+	(cdr maybe-pc.label)
 	(begin 
-	  (add-bc-pc! bc-pc)
-	  (pc->label bc-pc)))))
+	  (add-pc! pc attribution)
+	  (pc->label pc attribution)))))
 
-(define (exists-pc->label? bc-pc)
-  (if (assq bc-pc (fluid *bc-make-labels*)) #t #f))
+(define (label-at-pc? pc)
+  (if (assq pc (fluid *bc-make-labels*)) #t #f))
 
-;;--------------------
-;; returns the reversed list...
+; (enum op make-[big-]flat-env)
+; number of vars
+; number of closures
+; [offset of template in frame
+;  offsets of templates in template]
+; number of variables in frame (size)
+; offsets of vars in frame
+; [offset of env in frame
+;  number of vars in env
+;  offsets of vars in level]*
+
+(define-record-type env-data :env-data
+  (make-env-data total-count frame-offsets closure-offsets env-offsets)
+  env-data?
+  (total-count env-data-total-count)
+  (frame-offsets env-data-frame-offsets)
+  (closure-offsets env-data-closure-offsets)
+  (env-offsets env-data-env-offsets))
+
 (define (parse-flat-env-args pc code size fetch)
   (let ((start-pc pc)
 	(total-count (fetch code pc))
@@ -152,11 +165,10 @@
       (let ((frame-offsets (get-offsets code pc size fetch frame-count)))
 	(let ((pc (+ pc (* frame-count size)))
 	      (count (+ closure-count frame-count)))
-	  (let loop ((pc pc) (count count) (rev-env-offsets 
-					    (list closure-offsets frame-offsets 
-						  total-count)))
+	  (let loop ((pc pc) (count count) (rev-env-offsets '()))
 	    (if (= count total-count)
-		(cons (- pc start-pc) rev-env-offsets)
+                (make-env-data total-count frame-offsets closure-offsets
+                               (reverse rev-env-offsets))
 		(let* ((env (fetch code pc))
 		       (count-here (fetch code (+ pc size)))
 		       (indexes (get-offsets code 
@@ -177,41 +189,47 @@
        (reverse r))))
 
 
-; Display a protocol, returning the number of bytes of instruction stream that
+; Parse a protocol, returning the number of bytes of instruction stream that
 ; were consumed.
 
-(define (parse-protocol protocol code pc attribution)
+(define (parse-protocol code pc attribution)
+  (let ((protocol (code-vector-ref code pc)))
+    (really-parse-protocol protocol code pc attribution)))
+
+(define (really-parse-protocol protocol code pc attribution)
   (cond ((<= protocol maximum-stack-args)
-         (values 1 '()))
+         (values 1 (list protocol)))
         ((= protocol two-byte-nargs-protocol)
-         (values 3 (list (get-offset code (+ pc 2)))))
+         (values 3 (list protocol (get-offset code (+ pc 1)))))
         ((= protocol two-byte-nargs+list-protocol)
-         (values 4 (list (get-offset code (+ pc 2)))))
+         (values 4 (list protocol (get-offset code (+ pc 1)))))
         ((= protocol ignore-values-protocol)
-         (values 1 (list ignore-values-protocol)))
+         (values 1 (list protocol)))
         ((= protocol call-with-values-protocol)
-         (values 3 (list (make-label (get-offset code (+ pc 2)) pc attribution))))
+         (values 3 (list protocol 
+                         (pc->label (+ (get-offset code (+ pc 1)) pc)
+                                    attribution))))
         ((= protocol args+nargs-protocol)
-         (values 2 (list (code-vector-ref code (+ pc 2)))))
+         (values 2 (list protocol (code-vector-ref code (+ pc 1)))))
         ((= protocol nary-dispatch-protocol)
-         (values 5 (parse-dispatch code pc attribution)))
+         (values 5 (cons protocol (parse-dispatch code pc attribution))))
         ((= protocol big-stack-protocol)
          (let ((real-protocol (code-vector-ref code
                                                (- (code-vector-length code) 3)))
                (stack-size (get-offset code (- (code-vector-length code) 2))))
            (receive (size real-attribution)
-               (parse-protocol real-protocol code pc attribution)
+               (really-parse-protocol real-protocol code pc attribution)
              (values size
-                     (list big-stack-protocol real-protocol real-attribution stack-size)))))
+                     (list protocol real-attribution stack-size)))))
         (else
-         (error "unknown protocol" protocol))))
+         (error "unknown protocol" protocol pc))))
 
 (define (parse-dispatch code pc attribution)
   (define (maybe-parse-one-dispatch index)
     (let ((offset (code-vector-ref code (+ pc index))))
       (if (= offset 0)
           #f
-          (make-label offset pc attribution))))
+          (pc->label (+ offset pc) attribution))))
 
   (map maybe-parse-one-dispatch (list 3 4 5 2)))
 
@@ -220,11 +238,17 @@
 (define (parse-opcode-args op start-pc code template attribution)
   (let ((specs (vector-ref opcode-arg-specs op)))
     (let loop ((specs specs) (pc (+ start-pc 1)) (len 0) (args '()))
-      (cond ((or (null? specs)
- 		 (= 0 (arg-spec-size (car specs) pc code)))
+      (cond ((null? specs)
   	     (cons len args))
-  	    ((eq? (car specs) 'junk)  ; avoid parsing junk
-	     (loop (cdr specs) (+ pc 1) (+ len 1) (cons 'junk args)))
+            ((eq? (car specs) 'protocol)
+             (receive (size p-args)
+                 (parse-protocol code pc attribution)
+               (loop (cdr specs) 
+                     (+ pc size) 
+                     (+ len size) 
+                     (cons (cons 'protocol p-args) args))))
+            ((= 0 (arg-spec-size (car specs) pc code))
+             (cons len args))
 	    (else
   	     (let ((arg (parse-opcode-arg specs 
 					  pc 
@@ -243,79 +267,89 @@
   (case spec
     ((nargs byte stob literal) 1)
     ((offset offset- index small-index two-bytes) 2)
-    ((env-data) (error "env data is still there")) ;(+ 1 (* 2 (code-vector-ref code pc))))
+    ((env-data) (+ 1 (* 2 (code-vector-ref code pc))))
     ((moves-data)
      (let ((n-moves (code-vector-ref code pc)))
        (+ 1 (* 2 n-moves))))
     ((big-moves-data)
      (let ((n-moves (code-vector-ref code pc)))
        (+ 2 (* 4 n-moves))))
-    (else 
-     (if (number? spec)
-	 0
-	 (error "unknown spec" spec)))))
+    ((cont-data)
+     (- (get-offset code pc) 1)) ; size includes opcode
+    (else 0)))
 
 ; Parse the particular type of argument.
 
 (define (parse-opcode-arg specs pc start-pc code template attribution)
-  (case (car specs)
-    ((nargs byte)
-     (code-vector-ref code pc))
-    ((literal)
-     (- (code-vector-ref code pc) 128))
-    ((two-bytes)
-     (get-offset code pc))
-    ((index)
-     (get-offset code pc))
-    ((small-index)
-     (code-vector-ref code pc))
-    ((offset)
-     (make-label (get-offset code pc) start-pc attribution))
-    ((offset-)
-     (make-label (- (get-offset code pc)) start-pc attribution))
-    ((stob)
-     (code-vector-ref code pc))
-    ((env-data)
-     (error "env-data in bytecode"))
-    ((moves-data)
-     (let ((n-moves (code-vector-ref code pc)))
-       (let loop ((offset (+ pc 1))
-		  (n n-moves))
-	 (if (zero? n)
-	     '()
-	     (cons (cons (code-vector-ref code offset)
-			 (code-vector-ref code (+ offset 1)))
-		   (loop (+ offset 2) (- n 1)))))))
-    ((big-moves-data)
-     (let ((n-moves (get-offset code pc)))
-       (let loop ((offset (+ pc 2))
-		  (n n-moves))
-	 (if (zero? n)
-	     '()
-	     (cons (cons (get-offset code offset)
-			 (get-offset code (+ offset 2)))
-		   (loop (+ offset 4) (- n 1)))))))
-    (else (error "unknown arg spec: " (car specs)))))
+  (cons 
+   (car specs)
+   (case (car specs)
+     ((nargs byte)
+      (code-vector-ref code pc))
+     ((literal)
+      (- (code-vector-ref code pc) 128))
+     ((two-bytes)
+      (get-offset code pc))
+     ((index)
+      (get-offset code pc))
+     ((small-index)
+      (code-vector-ref code pc))
+     ((offset)
+      (pc->label (+ start-pc (get-offset code pc)) attribution))
+     ((offset-)
+      (pc->label (- start-pc (get-offset code pc)) attribution))
+     ((stob)
+      (code-vector-ref code pc))
+     ((env-data)
+      (parse-flat-env-args pc code 1 code-vector-ref))
+     ((cont-data)
+      (parse-cont-data-args pc code template attribution))
+     ((moves-data)
+      (let ((n-moves (code-vector-ref code pc)))
+        (let loop ((offset (+ pc 1))
+                   (n n-moves))
+          (if (zero? n)
+              '()
+              (cons (cons (code-vector-ref code offset)
+                          (code-vector-ref code (+ offset 1)))
+                    (loop (+ offset 2) (- n 1)))))))
+     ((big-moves-data)
+      (let ((n-moves (get-offset code pc)))
+        (let loop ((offset (+ pc 2))
+                   (n n-moves))
+          (if (zero? n)
+              '()
+              (cons (cons (get-offset code offset)
+                          (get-offset code (+ offset 2)))
+                    (loop (+ offset 4) (- n 1)))))))
+     (else (error "unknown arg spec: " (car specs))))))
+
+(define-record-type cont-data :cont-data
+  (make-cont-data length mask-bytes pc gc-mask-size depth)
+  cont-data?
+  (length cont-data-length)
+  (mask-bytes cont-data-mask-bytes)
+  (pc cont-data-pc)
+  (gc-mask-size cont-data-gc-mask-size)
+  (depth cont-data-depth))
 
 (define (parse-cont-data-args pc code template attribution)
-  (let* ((len (get-offset code (+ pc 1)))
-	 (end-pc (+ pc len))
+  (let* ((len (get-offset code pc))
+	 (end-pc (- (+ pc len) 1))      ; len includes opcode
 	 (gc-mask-size (code-vector-ref code (- end-pc 3)))
 	 (depth (get-offset code (- end-pc 2)))
 	 (offset (get-offset code (- end-pc 5)))
 	 (mask-bytes
-	  (let lp ((the-pc (+ pc 3 1)))
-	    (if (> the-pc (+ pc 3 gc-mask-size))
+	  (let lp ((the-pc (+ pc 3)))
+	    (if (> the-pc (+ pc 2 gc-mask-size))
 		'()
 		(cons (code-vector-ref code the-pc)
 		      (lp (+ the-pc 1)))))))
-    (cons (- len 1) ; caller will skip opcode
-	  (reverse
-	       (list len
-		     mask-bytes
-		     (make-label offset pc attribution)
-		     gc-mask-size
-		     depth)))))
+    (make-cont-data len
+                    mask-bytes
+                    (pc->label (+ offset pc) attribution)
+                    gc-mask-size
+                    depth)))
 ;----------------
 ; Utilities.
 
