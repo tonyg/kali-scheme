@@ -235,24 +235,30 @@
 ; First a generic procedure to do the work.
 
 (define (maybe-open-file op file-name option close-silently? coercion)
-  (let ((channel
+  (let ((thing
 	 (with-handler
 	  (lambda (c punt)
 	    (cond
 	     ((and (vm-exception? c)
 		   (eq? 'os-error
 			(vm-exception-reason c)))
-	      (punt
-	       (make-i/o-error
-		(car (reverse (vm-exception-arguments c)))
-		op
-		(list file-name))))
+	      ;; We can't use PUNT here because the I/O error
+	      ;; condition object typically needs to be re-encoded,
+	      ;; and PUNT won't do that.  So we exit regularly, and
+	      ;; call SIGNAL-CONDITION, which does the job.  (If this
+	      ;; seems obscure to you, ask Mike.)
+	      (make-i/o-error
+	       (car (reverse (vm-exception-arguments c)))
+	       op
+	       (list file-name)))
 	     (else
 	      (punt))))
 	  (lambda ()
 	    (open-channel (thing->file-name-byte-string file-name)
 			  option close-silently?)))))
-    (coercion channel (channel-buffer-size))))
+    (if (channel? thing)
+	(coercion thing (channel-buffer-size))
+	(signal-condition thing))))
   
 ; And then all of RnRS's file opening procedures.
 
