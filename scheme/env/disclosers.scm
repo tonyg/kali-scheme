@@ -318,16 +318,13 @@
 ;                "returning to a non-continuation"
 ;                (value->expression continuation))))))
 
-(define-vm-exception-discloser (enum op ascii->char)
+(define-vm-exception-discloser (enum op scalar-value->char)
   (lambda (opcode reason args)
     (let ((value (car args)))
       `(error
 	"vm-exception"
 	"wrong-type-argument"
-	(ascii->char ,(value->expression value))
-	,@(if (integer? value)
-	      '("note: INTEGER->CHAR doesn't use ASCII; open ASCII and use ASCII->CHAR")
-	      '())))))
+	(scalar-value->char ,(value->expression value))))))
 
 ; Call-errors should print as (proc 'arg1 'arg2 ...)
 

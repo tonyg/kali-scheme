@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 28")
+(define architecture-version "Vanilla 29")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -166,7 +166,6 @@
   (arithmetic-shift 2)
   (char? 1)
   ((char=? char<?) 2)
-  ((char->ascii ascii->char) 1)
   ((char->scalar-value scalar-value->char scalar-value?) 1)
   (eof-object? 1)
 

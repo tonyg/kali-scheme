@@ -4,8 +4,26 @@
 ; Low-level things that rely on the fact that we're running under the
 ; Scheme 48 VM.
 
-; Needs LET macro.
+; Historical kludge; ASCII is a misnomer (as it covers only [0, 127])---
+; we really mean Latin-1.
 
+(define (char->ascii c)
+  (let ((scalar-value (char->scalar-value c)))
+    (if (>= scalar-value ascii-limit)
+	(signal-condition
+	 (cons 'call-error
+	       (cons "not an ASCII/Latin-1 character"
+		     (cons char->ascii (cons c '()))))))
+    scalar-value))
+
+(define (ascii->char x)
+  (if (or (>= x ascii-limit) (< x 0))
+      (signal-condition
+       (cons 'call-error
+	     (cons"not an ASCII/Latin-1 code"
+		  (cons ascii->char
+			(cons x '()))))))
+  (scalar-value->char x))
 
 ; Characters are not represented in ASCII.  Using a different encoding
 ; helps to catch portability problems.

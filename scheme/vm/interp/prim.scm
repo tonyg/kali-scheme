@@ -9,22 +9,6 @@
 (define-primitive char=?      (vm-char-> vm-char->) vm-char=? return-boolean)
 (define-primitive char<?      (vm-char-> vm-char->) vm-char<? return-boolean)
 
-; should be called CHAR->LATIN1 and LATIN1->CHAR
-; these are transitory, anyway
-(define-primitive char->ascii
-  (char-scalar-value->)
-  (lambda (c)
-    (if (or (> c 255) (< c 0))
-	(raise-exception wrong-type-argument 0 (scalar-value->char c))
-	(goto return-fixnum c))))
-
-(define-primitive ascii->char
-  (fixnum->)
-  (lambda (x)
-    (if (or (> x 255) (< x 0))
-        (raise-exception wrong-type-argument 0 (enter-fixnum x))
-	(goto return (scalar-value->char x)))))
-
 (define-primitive char->scalar-value (char-scalar-value->) (lambda (c) c) return-fixnum)
 
 ; Unicode surrogates are not scalar values

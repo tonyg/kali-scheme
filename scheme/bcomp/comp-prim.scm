@@ -111,10 +111,6 @@
 	    exact-integer-type))
     ((char=? char<?)
      ,(proc (char-type char-type) boolean-type))
-    (char->ascii
-     ,(proc (char-type) exact-integer-type))
-    (ascii->char
-     ,(proc (exact-integer-type) char-type))
     (string=?
      ,(proc (string-type string-type) boolean-type))
     (open-channel
@@ -919,5 +915,5 @@
     (instruction (enum op make-string))
     (make-node op/literal #\?)
     (sequentially (integer-literal-instruction (char->ascii #\?))
-		  (instruction (enum op ascii->char)))
+		  (instruction (enum op scalar-value->char)))
     (proc (number-type &opt char-type) string-type)))
