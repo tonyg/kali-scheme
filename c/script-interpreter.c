@@ -19,7 +19,7 @@ main(int argc, char *argv[])
 
   if (argc < 2)
     {
-      fprintf(stderr, "usage: %s script arg ...", argv[0]);
+      fprintf(stderr, "usage: %s script arg ...\n", argv[0]);
       return EX_USAGE;
     }
 
