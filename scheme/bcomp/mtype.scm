@@ -519,7 +519,7 @@
 (define exact-integer-type (meet-type integer-type exact-type))
 (set-type-name! exact-integer-type ':exact-integer)
 
-(define inexact-real-type (meet-type real-type exact-type))
+(define inexact-real-type (meet-type real-type inexact-type))
 (set-type-name! inexact-real-type ':inexact-real)
 
 ; Next, all the others.
