@@ -44,7 +44,7 @@ RSC=rc.exe
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Yu"stdafx.h" /FD /c
 # ADD CPP /nologo /W3 /GX /O2 /I "c" /D "NDEBUG" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "__COMPILING_SCHEME48_ITSELF__" /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /fo"scheme48.res" /d "NDEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -68,7 +68,7 @@ LINK32=link.exe
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Yu"stdafx.h" /FD /GZ /c
 # ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "c" /D "_DEBUG" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "__COMPILING_SCHEME48_ITSELF__" /FR /FD /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
-# ADD RSC /l 0x409 /d "_DEBUG"
+# ADD RSC /l 0x409 /fo"scheme48.res" /d "_DEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -140,6 +140,10 @@ SOURCE=.\c\main.c
 # Begin Source File
 
 SOURCE=.\c\win32\misc.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\build\scheme48.rc
 # End Source File
 # Begin Source File
 
@@ -217,6 +221,10 @@ SOURCE=".\c\scheme48write-barrier.h"
 # Begin Group "Resource Files"
 
 # PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
+# Begin Source File
+
+SOURCE=.\build\scheme48.ico
+# End Source File
 # End Group
 # Begin Source File
 
