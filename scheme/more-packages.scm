@@ -431,7 +431,7 @@
 ; SRFI-4 - needs hacks to the reader
 
 (define-structure srfi-5 (export (let :syntax))
-  (open (modify scheme-level-2 (hide let)))
+  (open (modify scheme-level-2 (rename (let standard-let))))
   (files (srfi srfi-5)))
 
 (define-structure srfi-6 (export open-input-string
