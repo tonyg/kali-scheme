@@ -34,7 +34,6 @@ $vm -i $initial -a batch <<EOF
 ,in debuginfo (read-debug-info "$srcdir/build/initial.debug")
 ,keep maps source files
 ,translate =scheme48/ $lib/
-,load-package floatnums
 ,build ((*structure-ref package-commands-internal
 			'new-command-processor)
 	"(made by $USER on $date)"

@@ -423,8 +423,8 @@
 	    externals
 	    external-calls
 	    finite-types
+	    floatnums
 	    formats
-	    innums
 	    inspector
 	    inspector-internal
 	    list-interfaces

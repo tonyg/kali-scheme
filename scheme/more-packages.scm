@@ -16,8 +16,8 @@
 	;; bignums		; now in the VM
 	ratnums recnums
 	;; Choose either innums, floatnums, or neither
-	innums			;Silly inexact numbers
-        ;; floatnums		;Still don't print correctly
+	;; innums			;Silly inexact numbers
+        floatnums		;Still don't print correctly
 	;; pp
 	;; The following is listed because this structure is used to
 	;; generate a dependency list used by the Makefile...
