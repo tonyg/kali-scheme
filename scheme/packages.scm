@@ -482,6 +482,17 @@
 	    ;; Compatibility
 	    record table
 
+	    ; CML packages (see scheme/cml/packages.scm)
+	    rendezvous
+	    rendezvous-channels
+	    rendezvous-async-channels
+	    rendezvous-placeholders
+	    rendezvous-jars
+	    rendezvous-time
+	    ; do-it-yourself
+	    make-rendezvous
+	    trans-ids
+
 	    ; POSIX packages (see scheme/posix/packages.scm)
 	    posix-files
 	    posix-time

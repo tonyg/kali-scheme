@@ -291,6 +291,7 @@ $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 		scheme/link-packages.scm scheme/env-packages.scm \
 		scheme/more-packages.scm \
 		scheme/sort/interfaces.scm scheme/sort/packages.scm \
+		scheme/cml/interfaces.scm scheme/cml/packages.scm \
 		scheme/posix/packages.scm scheme/srfi/packages.scm \
 		$(usual-files) build/initial.debug build/build-usual-image
 	$(srcdir)/build/build-usual-image $(srcdir) "`(cd $(srcdir) && echo $$PWD)`/scheme" '$(IMAGE)' './$(VM)' \
@@ -328,7 +329,7 @@ inst-inc:
 	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(incdir)
 
 inst-misc:
-	for stub in env big sort opt misc link posix srfi; do		\
+	for stub in env big sort opt misc link posix cml srfi; do	\
 		for f in $(srcdir)/scheme/$$stub/*.scm; do		\
 			$(INSTALL_DATA) $$f $(LIB)/$$stub || exit 1;	\
 		done;							\
@@ -372,7 +373,7 @@ dirs:
 		echo "$(LIB) not a writable directory" >&2;		 \
 		exit 1;							 \
 	}
-	for dir in rts env big sort opt misc link posix srfi; do	  \
+	for dir in rts env big sort opt misc link posix cml srfi; do	  \
 		{ mkdir -p $(LIB)/$$dir && [ -w $(LIB)/$$dir ]; } || {	  \
 			echo "$(LIB)/$$dir not a writable directory" >&2; \
 			exit 1;						  \
@@ -417,7 +418,8 @@ image: $(INITIAL)
 tags:
 	etags scheme/vm/interp/arch.scm scheme/rts/*.scm scheme/bcomp/*.scm \
 	scheme/*.scm scheme/env/*.scm scheme/big/*.scm scheme/link/*.scm \
-	scheme/opt/*.scm scheme/debug/*.scm scheme/misc/*.scm scheme/sort/*.scm
+	scheme/opt/*.scm scheme/debug/*.scm scheme/misc/*.scm scheme/sort/*.scm \
+	scheme/cml/*.scm
 
 # --------------------
 # Distribution...
@@ -500,6 +502,7 @@ PACKAGES=scheme/packages.scm scheme/rts-packages.scm scheme/alt-packages.scm \
 	 scheme/comp-packages.scm scheme/initial-packages.scm \
 	 scheme/link-packages.scm scheme/env-packages.scm \
 	 scheme/sort/packages.scm scheme/more-packages.scm \
+	 scheme/cml/packages.scm \
 	 build/filenames.scm
 
 $(srcdir)/build/filenames.make: $(PACKAGES)
