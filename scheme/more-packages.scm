@@ -643,7 +643,7 @@
 	    posix-processes
 	    posix-regexps
 	    posix-i/o
-	    regexps
+	    regexps regexps-internal
 	    posix
 
 	    ; SRFI packages
