@@ -3,26 +3,6 @@ dnl
 dnl We might want AC_WORDS_BIGENDIAN in the future.
 dnl We might want AC_CHAR_UNSIGNED in the future.
 dnl
-dnl The -cckr (K&R) flag is for the IRIX C compiler.  If this is left
-dnl out, scheme48vm.c breaks because the rather pedantic SGI compiler
-dnl decides that a char is not the same thing as an unsigned char.
-dnl - Bryan O'Sullivan 3/94
-dnl Note, this test didn't work correctly on Sun's which take -cckr as a
-dnl synonym for -c. (HCC)
-define(S48_CFLAG_CKR, [dnl
-	if test "z$GCC" = z; then
-		AC_MSG_CHECKING([-cckr])
-		oldCFLAGS="$CFLAGS"
-		CFLAGS="$CFLAGS -cckr"
-		AC_TRY_RUN([int main() { return 0;}],
-			[AC_MSG_RESULT(yes)],
-			[AC_MSG_RESULT(no)
-				CFLAGS="$oldCFLAGS"],
-			[AC_MSG_RESULT(no)
-				CFLAGS="$oldCFLAGS"])
-	fi
-])dnl
-dnl
 define(S48_POSIX_LIBC, [dnl
 echo checking for RISC/OS POSIX library lossage
 if test -f /usr/posix/usr/lib/libc.a; then
@@ -87,7 +67,6 @@ AC_INIT(c/scheme48vm.c)
      AC_ISC_POSIX
      dnl set the cross-compile flag before we try anything.
      AC_TRY_RUN([int main() { return 0;}], [], [], [true])
-     S48_CFLAG_CKR
      AC_PROG_INSTALL
      AC_CHECK_LIB(m, main)
      AC_CHECK_LIB(dl, main)
