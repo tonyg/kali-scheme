@@ -71,17 +71,26 @@
   (set! s48-*native-protocol* protocol))
 
 (define (post-native-dispatch tag)
-  (case tag
-    ((0)
-     (goto return-values s48-*native-protocol* null 0))
-    ((1)
-     (goto perform-application s48-*native-protocol*))
-    ((2)
-     (goto return-values s48-*native-protocol* null 0))
-    ((4)
-     (goto interpret *code-pointer*))
-    (else
-     (error "unexpected native return value" tag))))
+  (let loop ((tag tag))
+    (case tag
+      ((0)
+       (goto return-values s48-*native-protocol* null 0))
+      ((1)
+       (goto perform-application s48-*native-protocol*))
+      ((2)
+       (cond ((pending-interrupt?)
+              (push-poll-interrupt-continuation)
+              (goto find-and-call-interrupt-handler))
+             (else
+              (loop (s48-invoke-native-continuation
+                     (+ (address->integer (pop-continuation-from-stack))
+                        -2))))))
+      ((3)
+       (goto return-values s48-*native-protocol* null 0))
+      ((4)
+       (goto interpret *code-pointer*))
+      (else
+       (error "unexpected native return value" tag)))))
 
 ;; Not used for now
 (define (push-native-exception-continuation)
