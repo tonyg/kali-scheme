@@ -4,7 +4,7 @@
 
 ; This returns the result of calling recursive FIB on its first argument.
 
-(define (start arg in out error)
+(define (start arg in in-encoding out out-encoding error error-encoding)
   (fib (string->integer (vector-ref arg 0))))
 
 (define (string->integer s)

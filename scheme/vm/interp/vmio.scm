@@ -57,21 +57,35 @@
   (if (null-pointer? *vm-channels*)
       (error "out of memory, unable to continue"))
   (vector+length-fill! *vm-channels* *number-of-channels* false)
-  (let ((key (ensure-space (* 3 (+ channel-size
-				   (vm-string-size
-				     (string-length "standard output")))))))
-    (values (make-initial-channel (current-input-channel)
-				  input-status
-				  "standard input"
-				  key)
-	    (make-initial-channel (current-output-channel)
-				  output-status
-				  "standard output"
-				  key)
-	    (make-initial-channel (current-error-channel)
-				  output-status
-				  "standard error"
-				  key))))
+  (let ((input-encoding (channel-console-encoding (current-input-channel)))
+	(output-encoding (channel-console-encoding (current-output-channel)))
+	(error-encoding (channel-console-encoding (current-error-channel))))
+    (if (or (null-pointer? input-encoding)
+	    (null-pointer? output-encoding)
+	    (null-pointer? error-encoding))
+	(error "out of memory, unable to continue"))
+
+    (let ((key (ensure-space (* 3 (+ channel-size
+				     (vm-string-size
+				      (string-length "standard output"))
+				     (vm-string-size (string-length input-encoding))
+				     (vm-string-size (string-length output-encoding))
+				     (vm-string-size (string-length error-encoding)))))))
+      (values (make-initial-channel (current-input-channel)
+				    input-status
+				    "standard input"
+				    key)
+	      (enter-string input-encoding key)
+	      (make-initial-channel (current-output-channel)
+				    output-status
+				    "standard output"
+				    key)
+	      (enter-string output-encoding key)
+	      (make-initial-channel (current-error-channel)
+				    output-status
+				    "standard error"
+				    key)
+	      (enter-string error-encoding key)))))
 
 (define (make-initial-channel channel status name key)
   (let ((vm-channel (make-channel status

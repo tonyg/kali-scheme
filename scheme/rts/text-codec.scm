@@ -7,11 +7,11 @@
 ; provisionally.
 
 (define-record-type text-codec :text-codec
-  (make-text-codec name
+  (make-text-codec names
 		   encode-char-proc
 		   decode-char-proc)
   text-codec?
-  (name text-codec-name)
+  (names text-codec-names)
   ;; (char buffer start count) -> (ok? #f or #bytes consumed or #bytes needed)
   (encode-char-proc text-codec-encode-char-proc)
   ;; (buffer start count) -> (char #bytes consumed)
@@ -19,12 +19,58 @@
   ;;                      or (#f #f) (failure)
   (decode-char-proc text-codec-decode-char-proc))
 
-(define null-text-codec
-  (make-text-codec "null"
-		   (lambda (char buffer start count)
-		     #f)
-		   (lambda (buffer start count)
-		     (values #f #f))))
+(define-record-discloser :text-codec
+  (lambda (r)
+    (cons 'text-codec (text-codec-names r))))
+
+(define *text-codecs* '())
+
+(define (register-text-codec! codec)
+  (set! *text-codecs* (cons codec *text-codecs*)))
+
+(define (find-text-codec name)
+  (let loop ((codecs *text-codecs*))
+    (cond
+     ((null? codecs) #f)
+     ((member name (text-codec-names (car codecs)))
+      (car codecs))
+     (else (loop (cdr codecs))))))
+
+(define-syntax define-text-codec
+  (syntax-rules ()
+    ((define-text-codec ?id (?name ...) ?encode-proc ?decode-proc)
+     (begin
+       (define ?id (make-text-codec '(?name ...) ?encode-proc ?decode-proc))
+       (register-text-codec! ?id)))
+    ((define-text-codec ?id ?name ?encode-proc ?decode-proc)
+     (define-text-codec ?id (?name) ?encode-proc ?decode-proc))))
+       
+(define-text-codec null-text-codec "null"
+  (lambda (char buffer start count)
+    #f)
+  (lambda (buffer start count)
+    (values #f #f)))
+
+;; US-ASCII
+
+;; This is mainly needed because it might be the default locale
+;; encoding reported by the OS.
+
+(define (encode-char/us-ascii char buffer start count)
+  (let ((scalar-value (char->scalar-value char)))
+    (if (< scalar-value 128)
+	(begin
+	  (provisional-byte-vector-set! buffer start scalar-value)
+	  (values #t 1))
+	(values #f #f))))
+
+(define (decode-char/us-ascii buffer start count)
+  (values (scalar-value->char (provisional-byte-vector-ref buffer start))
+	  1))
+
+(define-text-codec us-ascii-codec "US-ASCII"
+  encode-char/us-ascii
+  decode-char/us-ascii)
 
 ;; Latin 1
 
@@ -40,9 +86,9 @@
   (values (scalar-value->char (provisional-byte-vector-ref buffer start))
 	  1))
 
-(define latin-1-codec (make-text-codec "ISO8859-1"
-				      encode-char/latin-1
-				      decode-char/latin-1))
+(define-text-codec latin-1-codec "ISO8859-1"
+  encode-char/latin-1
+  decode-char/latin-1)
 
 ;; UTF 8
 
@@ -154,9 +200,9 @@
 	     (values #f #f))))
 	(values #f (+ 1 q)))))
 
-(define utf-8-codec (make-text-codec "UTF-8"
-				    encode-char/utf-8
-				    decode-char/utf-8))
+(define-text-codec utf-8-codec "UTF-8"
+  encode-char/utf-8
+  decode-char/utf-8)
 
 ; UTF-16
 
@@ -225,12 +271,10 @@
 	   (else
 	    (values #f #f)))))))
 
-(define utf-16le-codec
-  (make-text-codec "UTF-16LE"
-		   (make-encode-char/utf-16 provisional-byte-vector-set-word/le!)
-		   (make-decode-char/utf-16 provisional-byte-vector-ref-word/le)))
+(define-text-codec utf-16le-codec "UTF-16LE"
+  (make-encode-char/utf-16 provisional-byte-vector-set-word/le!)
+  (make-decode-char/utf-16 provisional-byte-vector-ref-word/le))
 
-(define utf-16be-codec
-  (make-text-codec "UTF-16BE"
-		   (make-encode-char/utf-16 provisional-byte-vector-set-word/be!)
-		   (make-decode-char/utf-16 provisional-byte-vector-ref-word/be)))
+(define-text-codec utf-16be-codec "UTF-16BE"
+  (make-encode-char/utf-16 provisional-byte-vector-set-word/be!)
+  (make-decode-char/utf-16 provisional-byte-vector-ref-word/be))

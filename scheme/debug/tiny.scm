@@ -5,7 +5,7 @@
 ; This prints `Hello' and the first command argument, if any, then reads
 ; a line from standard input and prints it to standard output.
 
-(define (start arg in out error-out resumer-records)
+(define (start arg in in-encoding out out-encoding error-out error-out-encoding resumer-records)
   (letrec ((fib (lambda (n)
 		  (if (< n 2)
 		      1

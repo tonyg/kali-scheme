@@ -4,14 +4,14 @@
 
 ; link-simple-system:
 ; resumer-exp should evaluate to a procedure
-;   (lambda (arg i-port o-port ...) ...)
+;   (lambda (arg i-port i-port-encoding o-port o-port-encoding ...) ...)
 
 (define (link-simple-system filename resumer-exp . structs)
   (link-system structs (lambda () resumer-exp) filename))
 
 
 ; resumer-exp should evaluate to a procedure
-;   (lambda (structs-thunk) ... (lambda (arg i-port o-port ...) ...))
+;   (lambda (structs-thunk) ... (lambda (arg i-port i-port-encoding o-port o-port-encoding ...) ...))
 
 (define (link-reified-system some filename make-resumer-exp . structs)
   (link-system (append structs (map cdr some))
@@ -33,7 +33,7 @@
 
 
 ; `(,make-resumer-exp ',vector) should evaluate to a procedure
-;   (lambda (locs) ... (lambda (arg i-port o-port ...) ...))
+;   (lambda (locs) ... (lambda (arg i-port i-port-encoding o-port o-port-encoding ...) ...))
 
 (define (link-semireified-system some filename
 				 make-resumer-exp . structs)

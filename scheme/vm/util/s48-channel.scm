@@ -106,6 +106,8 @@
 
 (define (channel-buffer-size) 4096)
 
+(define (channel-console-encoding) "ISO8859-1")
+
 (define (channel-abort channel)
   (set! *pending-channels* (delq channel *pending-channels*))
   0)

@@ -568,11 +568,15 @@
 
 (define-interface text-codecs-interface
   (export text-codec? make-text-codec
-	  text-codec-name
+	  text-codec-names
 	  text-codec-decode-char-proc
 	  text-codec-encode-char-proc
 
+	  (define-text-codec :syntax)
+	  find-text-codec
+
 	  null-text-codec
+	  us-ascii-codec
 	  latin-1-codec
 	  utf-8-codec
 	  utf-16le-codec

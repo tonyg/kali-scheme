@@ -5,7 +5,7 @@
 ; This prints `Hello' three times and then the first command argument, if any,
 ; and finally reads a line from standard input and prints it to standard output.
 
-(define (start arg in out error-out)
+(define (start arg in in-encoding out out-encoding error-out error-out-encoding)
   (call-with-values
     (lambda ()
       (values "H" "e" "ll" "o" " "))

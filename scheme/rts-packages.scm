@@ -426,6 +426,8 @@
 	i/o		 ;initialize-i/o, etc.
 	channel-i/o      ;initialize-channel-i/o
 	channel-ports    ;{in,out}put-channel->port
+	(subset text-codecs (find-text-codec))
+	(subset ports (set-port-text-codec!))
 	session-data     ;initialize-session-data!
 	fluids-internal	 ;initialize-dynamic-state!
 	exceptions-internal

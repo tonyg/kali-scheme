@@ -9,10 +9,13 @@
 #include <sys/time.h>
 #include <errno.h>              /* for errno, (POSIX?/ANSI) */
 #include <string.h>		/* FD_ZERO sometimes needs this */
+#include <locale.h>		/* ISO C99 */
+#include <langinfo.h>		/* SUSv2 */
 #include "sysdep.h"
 #include "c-mods.h"
 #include "scheme48vm.h"
 #include "event.h"
+#include "fd-io.h"
 #include "unix.h"
 
 /* Non-blocking I/O on file descriptors.
@@ -202,6 +205,43 @@ long
 ps_io_buffer_size(void)
 {
   return 4096;
+}
+
+char *
+ps_console_encoding(long fd_as_long)
+{
+  static char *encoding_STDIN = NULL;
+  static char *encoding_STDOUT = NULL;
+  static char *encoding_STDERR = NULL;
+  static char setlocale_called = PSFALSE;
+  char *codeset;
+
+  char** encoding_p;
+
+  if (fd_as_long == STDIN_FD())
+    encoding_p = &encoding_STDIN;
+  else if (fd_as_long == STDOUT_FD())
+    encoding_p = &encoding_STDOUT;
+  else if (fd_as_long == STDERR_FD())
+    encoding_p = &encoding_STDERR;
+    
+  /* Mike has no clue what the rationale for needing this is. */
+  if (!setlocale_called)
+    {
+      setlocale(LC_CTYPE, "");
+      setlocale_called = PSTRUE;
+    }
+
+  if (*encoding_p == NULL)
+    {
+      codeset = nl_langinfo(CODESET); /* this ain't reentrant */
+      *encoding_p = malloc(strlen(codeset) + 1);
+      if (*encoding_p == NULL)
+	return NULL;
+      strcpy(*encoding_p, codeset);
+    }
+
+  return *encoding_p;
 }
 
 long

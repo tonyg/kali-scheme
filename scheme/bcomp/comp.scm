@@ -112,16 +112,20 @@
 ;----------------
 ; Make a startup procedure from a list of initialization templates.  This
 ; is only used by the static linker.  RESUMER should be a template that
-; returns a procedure that takes 5 arguments (the number the VM passes to
+; returns a procedure that takes 8 arguments (the number the VM passes to
 ; the startup procedure).
 
+; The length of the argument list needs to be in sync with
+; MAKE-USUAL-RESUMER in rts/init.scm, and S48-CALL-STARTUP-PROCEDURE
+; in vm/interp/resume.scm.
+
 (define (make-startup-procedure inits resumer)
-  (let ((nargs 5)
-	(frame (make-frame #f		; no parent
-			   #f		; no name
-			   5		; args on stack
-			   #f		; drop environment
-			   #t)))	; keep template
+  (let* ((nargs 8)
+	 (frame (make-frame #f		; no parent
+			    #f		; no name
+			    nargs	; args on stack
+			    #f		; drop environment
+			    #t)))	; keep template
     (append-templates inits
 		      nargs
 		      frame

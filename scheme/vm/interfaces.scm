@@ -443,6 +443,7 @@
 	  channel-read-block
 	  channel-write-block
 	  channel-buffer-size
+	  channel-console-encoding
 	  channel-abort
 	  ))
 

@@ -16,17 +16,23 @@
 ; Push the arguments to the initial procedure (a vector of strings passed
 ; in from the outside and the three standard channels) and call it.
 
+; The argument list needs to be in sync with MAKE-USUAL-RESUMER in
+; rts/init.scm, and MAKE-STARTUP-PROCEDURE in bcomp/comp.scm.
+
 (define (s48-call-startup-procedure startup-vector startup-vector-length)
   (clear-registers)
   (push (enter-startup-argument+gc startup-vector startup-vector-length))
-  (receive (input output error)
+  (receive (input input-encoding output output-encoding error error-encoding)
       (initialize-i/o-system+gc)
     (push input)
+    (push input-encoding)
     (push output)
+    (push output-encoding)
     (push error)
+    (push error-encoding)
     (push (s48-resumer-records))
     (s48-initialization-complete!)
-    (s48-restart (s48-startup-procedure) 5)))
+    (s48-restart (s48-startup-procedure) 8)))
   
 (define (enter-startup-argument+gc startup-vector startup-vector-length)
   (let ((vector (vm-make-vector+gc startup-vector-length)))
