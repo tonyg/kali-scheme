@@ -261,25 +261,23 @@
 		    (get-current-port (enter-fixnum
 				       (enum current-port-marker
 					     current-output-port)))))
-      (if (and (fixnum? byte)
-	       (port? port)
-	       (port-has-status? port
-				 (enum port-status-options open-for-output)))
-	  (let ((b (port-buffer port)))
-	    (if (false? b)
-		(raise-exception buffer-full/empty 1 byte port)
-		(let ((i (extract-fixnum (port-index port))))
-		  (cond ((= i (code-vector-length b))
-			 (raise-exception buffer-full/empty 1 byte port))
-			(else
-			 (set-port-index! port (enter-fixnum (+ i 1)))
-			 (code-vector-set! (port-buffer port)
-					   i
-					   (extract-fixnum byte))
-			 (goto continue-with-value
-			       unspecific-value
-			       1))))))
-	  (raise-exception wrong-type-argument 1 byte port)))))
+      (cond
+       ((not (and (fixnum? byte)
+		  (port? port)
+		  (port-has-status? port
+				    (enum port-status-options open-for-output))))
+	(raise-exception wrong-type-argument 1 byte port))
+       ((false? (port-limit port))	; unbuffered
+	(raise-exception buffer-full/empty 1 byte port))
+       (else
+	(let ((b (port-buffer port))
+	      (i (extract-fixnum (port-index port))))
+	  (cond ((= i (code-vector-length b))
+		 (raise-exception buffer-full/empty 1 byte port))
+		(else
+		 (set-port-index! port (enter-fixnum (+ i 1)))
+		 (code-vector-set! b i (extract-fixnum byte))
+		 (goto continue-with-value unspecific-value 1)))))))))
 	  
 ; Do an ASSQ-like walk up the current dynamic environment, looking for
 ; MARKER.
