@@ -75,9 +75,22 @@
 		     (+ (address->integer (pop-continuation-from-stack))
 			2))))))
       ((3)
-       (raise-exception native-code-not-supported -1))
+       ;;; just a prototype
+       (push-native-interrupt-continuation)
+       (let ((nargs (pop)))
+	 (write-string "exception with " (current-error-port))
+	 (write-integer nargs (current-error-port))
+	 (write-string " arguments" (current-error-port))
+	 (goto raise nargs)))
+      ((4)
+       (goto interpret *code-pointer*))
       (else
        (error "unexpected native return value" tag)))))
+
+;; Not used for now
+(define (push-native-exception-continuation)
+ (push-continuation! (code+pc->code-pointer *exception-return-code*
+					     return-code-pc)))
 
 ;----------------------------------------------------------------
 ; As above but with a two-byte argument count.  The tail and not-tail calls
