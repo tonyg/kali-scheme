@@ -116,7 +116,7 @@ instance of each element is preserved.
 \proto{delete}{ predicate list}{list}
 \end{protos}
 All three of these return \var{list} with some elements removed.
-\code{Delq} removes all elements \code{eq?} to \var{value}.  DELQ!
+\code{Delq} removes all elements \code{eq?} to \var{value}.  \code{Delq!}
 does the same and may modify the list argument.  \code{Delete} removes
 all elements for which \var{predicate} is true.  Both \code{delq} and
 \code{delete} may reuse some of the storage in the list argument, but
@@ -133,10 +133,10 @@ Destructively reverses \var{list}.
 Returns the symbol whose name is produced by concatenating the
 \code{display}ed
 representations of \var{value}~\ldots.
-%
-\begin{alltt}
+
+\begin{example}
 (concatenate-symbol 'abc "-" 4) \(\Longrightarrow\) 'abc-4
-\end{alltt}
+\end{example}
 
 \section{Pretty-printing}
 
@@ -1426,16 +1426,16 @@ to another.
 These procedures uniformly observe the following parameter order:
 the data to be sorted comes after the comparison procedure.
 That is, we write
-%
-\begin{alltt}
+
+\begin{example}
   (sort \(<\) \var{list})
-\end{alltt}
-%
+\end{example}
+
 not
-%
-\begin{alltt}
+
+\begin{example}
   (sort \var{list} \(<\))
-\end{alltt}
+\end{example}
 %
 
 \paragraph{Ordering, comparison procedures and stability}
@@ -1804,18 +1804,17 @@ where $x$ comes before $y$ in the containing list or vector.
 \end{itemize}
 %
 Examples:
-%
-\begin{alltt}
+
+\begin{example}
 (list-delete-neighbor-dups = '(1 1 2 7 7 7 0 -2 -2))
   \(\Longrightarrow\) (1 2 7 0 -2)
 
-(vector-delete-neighbor-dups = '#(1 1 2 7 7 7 0 -2 -2))
-  \(\Longrightarrow\) #(1 2 7 0 -2)
+(vector-delete-neighbor-dups = '\#(1 1 2 7 7 7 0 -2 -2))
+  \(\Longrightarrow\) \#(1 2 7 0 -2)
 
-(vector-delete-neighbor-dups = '#(1 1 2 7 7 7 0 -2 -2) 3 7)
-  \(\Longrightarrow\) #(7 0 -2)
-
-\end{alltt}
+(vector-delete-neighbor-dups = '\#(1 1 2 7 7 7 0 -2 -2) 3 7)
+  \(\Longrightarrow\) \#(7 0 -2)
+\end{example}
          
 \subsubsection{Algorithm-specific sorting packages}
 
@@ -2004,10 +2003,13 @@ elements from a large list or vector, you can sort the elements to bring
 equal items together, then use one of these procedures, for a total time
 of $O(n\log(n))\).
     
-The comparison procedure = passed to these procedures is always applied
-\begin{alltt}
+The comparison procedure = passed to these procedures is always
+applied
+
+\begin{example}
 (\(=\) \(x\) \(y\))
-\end{alltt}
+\end{example}
+
 where $x$ comes before $y$ in the containing list or vector.
 %
 \begin{itemize}
@@ -2030,23 +2032,23 @@ returns \var{end$'$} as its result. The vector is not altered outside the range
 \end{itemize}
 %
 Examples:
-%
-\begin{alltt}
+
+\begin{example}
 (list-delete-neighbor-dups = '(1 1 2 7 7 7 0 -2 -2))
   \(\Longrightarrow\) (1 2 7 0 -2)
 
-(vector-delete-neighbor-dups = '#(1 1 2 7 7 7 0 -2 -2))
-  \(\Longrightarrow\) #(1 2 7 0 -2)
+(vector-delete-neighbor-dups = '\#(1 1 2 7 7 7 0 -2 -2))
+  \(\Longrightarrow\) \#(1 2 7 0 -2)
 
-(vector-delete-neighbor-dups = '#(1 1 2 7 7 7 0 -2 -2) 3 7)
-  \(\Longrightarrow\) #(7 0 -2)
+(vector-delete-neighbor-dups = '\#(1 1 2 7 7 7 0 -2 -2) 3 7)
+  \(\Longrightarrow\) \#(7 0 -2)
 
 ;; Result left in v[3,9):
 (let ((v (vector 0 0 0 1 1 2 2 3 3 4 4 5 5 6 6)))
   (cons (vector-delete-neighbor-dups! = v 3)
         v))
-   \(\Longrightarrow\) (9 . #(0 0 0 1 2 3 4 5 6 4 4 5 5 6 6))
-\end{alltt}
+   \(\Longrightarrow\) (9 . \#(0 0 0 1 2 3 4 5 6 4 4 5 5 6 6))
+\end{example}
 
 \paragraph{\code{binary-searches}---vector binary search}
 
@@ -2061,34 +2063,34 @@ Examples:
 associated key is equal to \var{key}. The procedure \var{elt-$>$key} is used to map
 an element to its associated key. The elements of the vector are assumed
 to be ordered by the $<$ relation on these keys. That is, 
-%
-\begin{alltt}
+
+\begin{example}
 (vector-sorted? (lambda (x y) (\(<\) (\var{elt-$>$key} x) (\var{elt-$>$key} y)))
                 \var{vector} \var{start} \var{end}) \(\Longrightarrow\) true
-\end{alltt}
-%
+\end{example}
+
 An element \var{e} of \var{vector} is a match for \var{key} if it's
 neither less nor greater than the key:
-%
-\begin{alltt}
+
+\begin{example}
 (and (not (\(<\) (\var{elt-$>$key} \var{e}) \var{key}))
      (not (\(<\) \var{key} (\var{elt-$>$key} \var{e}))))
-\end{alltt}
-%
+\end{example}
+
 If there is such an element, the procedure returns its index in the
 vector as an exact integer. If there is no such element in the searched 
 range, the procedure returns false.
-%
-\begin{alltt}
-(vector-binary-search < car 4 '#((1 . one) (3 . three)
+
+\begin{example}
+(vector-binary-search < car 4 '\#((1 . one) (3 . three)
                                  (4 . four) (25 . twenty-five)))
 \(\Longrightarrow\) 2
 
-(vector-binary-search < car 7 '#((1 . one) (3 . three)
+(vector-binary-search < car 7 '\#((1 . one) (3 . three)
                                  (4 . four) (25 . twenty-five)))
-\(\Longrightarrow\) #f
-\end{alltt}    
-%
+\(\Longrightarrow\) \#f
+\end{example}    
+
 \code{Vector-binary-search3} is a variant that uses a three-way comparison
 procedure \var{compare-proc}. \var{Compare-proc} compares its
 parameter to the search key, and returns an
@@ -2101,14 +2103,14 @@ exact integer whose sign indicates its relationship to the search key.
       (\var{compare-proc}~x) &>& 0& \Rightarrow&  x &>& \var{search-key}
   \end{array}
 \end{displaymath}
-%
-\begin{alltt}
+
+\begin{example}
 (vector-binary-search3 (lambda (elt) (- (car elt) 4))
-                       '#((1 . one) (3 . three)
+                       '\#((1 . one) (3 . three)
                           (4 . four) (25 . twenty-five)))
 \(\Longrightarrow\) 2
-\end{alltt}
-% 
+\end{example}
+
 %% Rationale:
 %% %
 %% \begin{itemize}
