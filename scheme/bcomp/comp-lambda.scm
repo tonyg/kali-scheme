@@ -83,8 +83,9 @@
 				     frame
 				     body-name)))
       (values (sequentially
-	        (lambda-protocol nargs n-ary?)
-		(instruction (if need-env? #b11 #b10)) ; template always
+	        (if n-ary?
+                    (nary-lambda-protocol nargs #t need-env?)
+                    (lambda-protocol nargs #t need-env?))
 		code)
 	      frame))))
 
@@ -99,20 +100,6 @@
 		     'binding
 		     (list stack-index over))
 	  (loop (+ over 1) (cdr names))))))
-
-(define (lambda-protocol nargs n-ary?)
-  (cond ((and (<= nargs maximum-stack-args)
-	      (not n-ary?))
-	 (instruction (enum op protocol) nargs))
-	((<= nargs available-stack-space)
-	 (instruction (enum op protocol)
-		      (if n-ary?
-			  two-byte-nargs+list-protocol
-			  two-byte-nargs-protocol)
-		      (high-byte nargs)
-		      (low-byte nargs)))
-	(else
-	 (error "compiler bug: too many formals" nargs))))
 
 ; NAME isn't the name of the procedure, it's the name to be given to
 ; the value that the procedure will return.

@@ -953,7 +953,6 @@
 
 (define-interface segments-interface
   (export attach-label
-	  label-reference optional-label-reference
 	  byte-limit two-byte-limit
 	  high-byte low-byte
 	  empty-segment
@@ -963,6 +962,10 @@
 	  jump-instruction
 	  computed-goto-instruction
 	  continuation-data
+          lambda-protocol nary-lambda-protocol
+          nary-primitive-protocol continuation-protocol
+          cwv-continuation-protocol
+          make-dispatch-protocol
 	  make-label
 	  note-environment
 	  note-source-code

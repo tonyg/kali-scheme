@@ -428,10 +428,12 @@
 (define (push-continuation depth frame cont node)
   (if (return-cont? cont)
       (error "making a return point in tail position"))
-  (let ((protocol (instruction (enum op protocol)
-			       (if (ignore-values-cont? cont)
-				   ignore-values-protocol
-				   1))))
+  (let ((protocol (continuation-protocol (if (ignore-values-cont? cont)
+                                             0
+                                             1)
+                                         (if (ignore-values-cont? cont)
+                                             #t
+                                             #f))))
     (really-push-continuation depth frame protocol node cont)))
 
 (define (push-continuation-no-protocol depth frame node cont)

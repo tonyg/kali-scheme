@@ -184,6 +184,107 @@
       ((= 0 n)
        b)))
 
+
+;;;;;;;;;;;;;;;;;;;;
+; Emitting the PROTOCOL pseudo instruction
+
+(define (make-push-byte need-template? need-env?)
+  (bitwise-ior (if need-template? 
+                   #b10 
+                   #b00)
+               (if need-env?
+                   #b01
+                   #b00)))
+
+
+(define (lambda-protocol nargs need-template? need-env?)
+  (let ((push-byte (make-push-byte need-template? need-env?)))
+    (cond ((<= nargs maximum-stack-args)
+           (instruction (enum op protocol) nargs push-byte))
+          ((<= nargs available-stack-space)
+           (instruction (enum op protocol)
+                        two-byte-nargs-protocol
+                        (high-byte nargs)
+                        (low-byte nargs)
+                        push-byte))
+          (else
+           (error "compiler bug: too many formals" nargs)))))
+
+(define (nary-lambda-protocol nargs need-template? need-env?)
+  (let ((push-byte (make-push-byte need-template? need-env?)))
+    (cond ((<= nargs available-stack-space)
+           (instruction (enum op protocol)
+                        two-byte-nargs+list-protocol
+                        (high-byte nargs)
+                        (low-byte nargs)
+                        push-byte))
+          (else
+           (error "compiler bug: too many formals" nargs)))))
+  
+
+(define (nary-primitive-protocol min-nargs)
+  (instruction (enum op protocol) args+nargs-protocol min-nargs #b00))
+
+; Building primitives that use the computed-goto provided by the
+; protocol dispatcher.
+
+(define dispatch-protocol-size
+  (segment-size (instruction (enum op protocol) nary-dispatch-protocol
+			     0     ; 3+
+			     0     ; 0
+			     0     ; 1
+			     0     ; 2
+			     0)))  ; env/template
+
+; For a silly reason involving the way the call-setup code in the VM is
+; organized we have to the THREE-PLUS-ARGS offset and code come before
+; the others.
+
+(define (make-dispatch-protocol zero-args one-arg two-args three-plus-args)
+  (let ((segments (list three-plus-args zero-args one-arg two-args)))
+    (let loop ((to-do segments)
+	       (offset dispatch-protocol-size)
+	       (offsets '()))
+      (if (null? to-do)
+	  (apply sequentially
+		 (apply instruction
+			(enum op protocol)
+			nary-dispatch-protocol
+			(reverse (cons #b00 offsets))) ; no env, no template
+		 segments)
+	  (loop (cdr to-do)
+		(+ offset (segment-size (car to-do)))
+		(cons (if (empty-segment? (car to-do))
+			  0
+			  offset)
+		      offsets))))))
+
+
+(define (continuation-protocol n-args n-ary?)
+  (cond ((and n-ary?
+              (zero? n-args))
+         (instruction (enum op protocol) ignore-values-protocol))
+        ((not n-ary?)
+         (instruction (enum op protocol) n-args))
+        (else
+         (let ((n-args-min (- n-args 1)))
+           (instruction (enum op protocol)
+                        two-byte-nargs+list-protocol
+                        (high-byte n-args-min)
+                        (low-byte n-args-min))))))
+
+(define (cwv-continuation-protocol maybe-label)
+  (if maybe-label
+      (optional-label-reference
+			 (instruction (enum op protocol)
+				      call-with-values-protocol)
+			 maybe-label
+			 empty-segment)
+      (instruction (enum op protocol)
+                   call-with-values-protocol
+                   0
+                   0)))
+
 ; Labels.  Each label maintains a list of pairs (location . origin).
 ; Location is the index of the first of two bytes that will hold the jump
 ; target offset, and the offset stored will be (- jump-target origin).
@@ -382,3 +483,11 @@
 						  new)
 					  old))))))
       segment))
+
+; --------------------
+; Utilities
+
+
+(define (empty-segment? segment)
+  (= (segment-size segment)
+     0))

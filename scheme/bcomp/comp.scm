@@ -11,7 +11,7 @@
     (lambda ()
       (if (null? forms)
 	  (segment->template (sequentially
-			      (instruction (enum op protocol) 0 #b10)
+			      (lambda-protocol 0 #t #f)
 			      (deliver-value (instruction (enum op unspecific))
 					     (return-cont #f)))
 			     (make-frame #f name 0 #f #f))
@@ -34,7 +34,7 @@
   (let ((frame (make-frame #f name 0 #f #t)))
     (segment->template
       (sequentially
-        (instruction (enum op protocol) 0 #b10)	; template, no env
+        (lambda-protocol 0 #t #f)	; template, no env
 	(let ((node (flatten-form (force-node form))))
 	  (cond ((define-node? node)
 		 (sequentially
@@ -139,7 +139,7 @@
 (define (append-templates templates nargs frame final)
   (segment->template
     (sequentially
-      (instruction (enum op protocol) nargs #b10)	; push template
+      (lambda-protocol nargs #t #f)	; push template
       (reduce (lambda (template seg)
 		(sequentially
 		  (template-call template

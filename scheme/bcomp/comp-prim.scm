@@ -53,13 +53,9 @@
     (let ((arg-specs (vector-ref opcode-arg-specs opcode)))
       (sequentially (if (pair? arg-specs)
                         (sequentially
-                         (instruction (enum op protocol)
-                                      (car arg-specs)
-                                      #b00)     ; ignore env and template
+                         (lambda-protocol (car arg-specs) #f #f)
                          (instruction (enum op pop)))
-                        (instruction (enum op protocol)
-                                     0
-                                     #b00))     ; ignore env and template
+                        (lambda-protocol 0 #f #f))
                     (instruction opcode)
                     (instruction (enum op return))))))
 
@@ -177,7 +173,7 @@
 
 (define (simple-closed-compilator nargs segment)
   (lambda (frame)
-    (sequentially (instruction (enum op protocol) nargs #b00)
+    (sequentially (lambda-protocol nargs #f #f)
                   (if (< 0 nargs)
                       (instruction (enum op pop))
                       empty-segment)
@@ -212,7 +208,7 @@
 	cont))
     (cons 0
 	  (lambda (frame)
-	    (sequentially (instruction (enum op protocol) 0 #b10)
+	    (sequentially (lambda-protocol 0 #t #f)
 			  (instruction (enum op stack-indirect)
 				       (template-offset frame 1) ; template
 				       (literal->index frame 0))
@@ -402,7 +398,7 @@
 		      (call-instruction 1 label)	; one argument
 		      after))))
   (lambda (frame)
-    (sequentially (instruction (enum op protocol) 1 #b00)
+    (sequentially (lambda-protocol 1 #f #f)
                   (instruction (enum op current-cont))
 		  (instruction (enum op push))
 		  (instruction (enum op stack-ref 1))
@@ -456,16 +452,12 @@
 						 p-label
 						 0)
 			p-after
-			(optional-label-reference
-			 (instruction (enum op protocol)
-				      call-with-values-protocol)
-			 c-label
-			 empty-segment)
+			(cwv-continuation-protocol c-label)
 			c-after)))))
     (lambda (frame)
       (receive (before depth label after)
 	  (push-continuation-no-protocol 2 frame #f (plain-fall-through-cont))
-	(sequentially (instruction (enum op protocol) 2 #b00)
+	(sequentially (lambda-protocol 2 #f #f)
 		      (instruction (enum op stack-ref+push) 1)
 		      (instruction (enum op false))
 		      (instruction (enum op stack-set!) 2)
@@ -473,10 +465,7 @@
 		      before
 		      (using-optional-label (enum op call) label 0)
 		      after
-		      (instruction (enum op protocol)
-				   call-with-values-protocol
-				   0
-				   0)))))
+                      (cwv-continuation-protocol #f)))))
 
 ; Is NODE a lambda with a null variable list.
 
@@ -546,7 +535,7 @@
 					      (low-byte stack-nargs))
 			after)))))
   (lambda (frame)
-    (sequentially (instruction (enum op protocol) args+nargs-protocol 2 #b00)
+    (sequentially (nary-primitive-protocol 2)
                   (instruction (enum op closed-apply)))))
 
 ; (values value1 value2 ...)
@@ -589,7 +578,7 @@
 	    (else
 	     (error "unknown compiler continuation for VALUES" cont)))))
   (lambda (frame)
-    (sequentially (instruction (enum op protocol) args+nargs-protocol 0 #b00)
+    (sequentially (nary-primitive-protocol 0)
 		  (instruction (enum op closed-values)))))
 
 (define (evaluate-arguments-for-effect args node depth frame)
@@ -630,11 +619,7 @@
     (cons 2
 	  (lambda (frame)
 	    ; stack at start is: template irritants message
-	    (sequentially (instruction (enum op protocol)
-				       two-byte-nargs+list-protocol
-				       0              ; (high-byte 1) 
-				       1              ; (low-byte 1)
-				       #b10)
+	    (sequentially (nary-lambda-protocol 1 #t #f)
 			  (instruction (enum op stack-ref) 1)       ; irritants
 			  (instruction (enum op push))
 			  (instruction (enum op stack-ref) 3)       ; message
@@ -655,7 +640,7 @@
 (define-n-ary-compiler-primitive 'call-external-value value-type 1
   #f                                         ;Could be done
   (lambda (frame)
-    (sequentially (instruction (enum op protocol) args+nargs-protocol 1 #b00)
+    (sequentially (nary-primitive-protocol 1)
                   (instruction (enum op call-external-value))
                   (instruction (enum op return)))))
 
@@ -674,7 +659,7 @@
 			       cont))))
 	    (lambda (frame)
               (sequentially
-                (instruction (enum op protocol) args+nargs-protocol 0 #b00)
+                (nary-primitive-protocol 0)
 		(instruction (enum op closed-make-stored-object) type-byte)
 		(instruction (enum op return))))))))
   (n-ary-constructor 'vector vector-type (enum stob vector))
@@ -976,44 +961,3 @@
     (sequentially (integer-literal-instruction (char->ascii #\?))
 		  (instruction (enum op ascii->char)))
     (proc (number-type &opt char-type) string-type)))
-
-; --------------------
-; Utilities
-
-; Building primitives that use the computed-goto provided by the
-; protocol dispatcher.
-
-(define dispatch-protocol-size
-  (segment-size (instruction (enum op protocol) nary-dispatch-protocol
-			     0     ; 3+
-			     0     ; 0
-			     0     ; 1
-			     0     ; 2
-			     0)))  ; env/template
-
-; For a silly reason involving the way the call-setup code in the VM is
-; organized we have to the THREE-PLUS-ARGS offset and code come before
-; the others.
-
-(define (make-dispatch-protocol zero-args one-arg two-args three-plus-args)
-  (let ((segments (list three-plus-args zero-args one-arg two-args)))
-    (let loop ((to-do segments)
-	       (offset dispatch-protocol-size)
-	       (offsets '()))
-      (if (null? to-do)
-	  (apply sequentially
-		 (apply instruction
-			(enum op protocol)
-			nary-dispatch-protocol
-			(reverse (cons #b00 offsets))) ; no env, no template
-		 segments)
-	  (loop (cdr to-do)
-		(+ offset (segment-size (car to-do)))
-		(cons (if (empty-segment? (car to-do))
-			  0
-			  offset)
-		      offsets))))))
-
-(define (empty-segment? segment)
-  (= (segment-size segment)
-     0))
