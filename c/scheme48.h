@@ -4,7 +4,7 @@
 #ifndef _H_SCHEME48
 #define _H_SCHEME48
 
-/* Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include "scheme48write-barrier.h"

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; More and more packages.  Some of these get loaded into the initial

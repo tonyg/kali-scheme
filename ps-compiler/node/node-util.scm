@@ -1,5 +1,5 @@
  
-; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2004 by Richard Kelsey.  See file COPYING.
 
 ; This file contains miscellaneous utilities for accessing and modifying the
 ; node tree.

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Code to print out module dependencies in a format readable by the
 ; graph layout program AT&T DOT Release 1.0. (for information on DOT call

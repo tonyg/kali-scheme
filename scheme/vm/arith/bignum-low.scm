@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; fixnum-as-bignum-length - the maximum bignum digits required to hold a fixnum
 ; From struct.scm:

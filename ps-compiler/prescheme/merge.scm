@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2004 by Richard Kelsey.  See file COPYING.
 
 ; This code determines which procedures are called from one other form, and
 ; thus can be compiled as part of that form and called with a `goto' instead

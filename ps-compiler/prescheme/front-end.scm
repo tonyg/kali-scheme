@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2004 by Richard Kelsey.  See file COPYING.
 
 
 (define (prescheme-front-end package-ids spec-files copy no-copy shadow)

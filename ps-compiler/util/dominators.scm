@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2004 by Richard Kelsey.  See file COPYING.
 
 ;;; Find immediate dominators in a directed graph
 ;;; Mark Reinhold (mbr@research.nj.nec.com)/3 February 1995

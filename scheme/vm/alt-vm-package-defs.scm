@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; These are used to compile the GC separately from the VM.  It has new
 ; definitions of the VM structures that the GC uses, with all of the values

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This builds the macro call to make the folder and constructs the arguments
 ; for the resulting fold procedure.  The first three clauses add a loop variable
