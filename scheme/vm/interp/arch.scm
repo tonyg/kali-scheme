@@ -20,12 +20,16 @@
 ; (op . args)
 ; OP may be a name or a list of names
 ; ARGS are
-;  nargs        - a byte
-;  byte         - a byte
-;  two-bytes    - two bytes
+
+;  byte                   - A byte used for some random purpose
+;  two-bytes              - ditto, but two bytes
+;  nargs                  - number of arguments on the stack
+;  two-byte-nargs         - ditto, but two bytes
+;  stack-index            - A one-byte index into the stack
+;  two-byte-stack-index   - ditto, but two bytes
+;  index                  - A index into some stob
+;  two-byte-index         - ditto, but two bytes
 ;  literal      - a one-byte value
-;  index        - a two byte index into the current template or environment
-;  small-index  - a one byte index into the current template or environment
 ;  offset       - two bytes giving an offset into the current instruction stream
 ;  offset-      - same thing, negative offset
 ;  stob         - a byte specifying a type for a stored object
@@ -68,8 +72,8 @@
   (push+integer-literal literal) ; preceded by a push
   (integer-literal+push literal) ; followed by a push
 
-  (global      two-bytes index)   ; first is template, second within template
-  (set-global! two-bytes index 1) ; first is template, second within template
+  (global      two-byte-stack-index two-byte-index)   ; first is template, second within template
+  (set-global! two-byte-stack-index two-byte-index 1) ; first is template, second within template
 
   (make-flat-env  env-data)      ; make new environment from env-data
   (make-big-flat-env big-env-data) ; same, but with two-byte size and offsets
@@ -81,17 +85,17 @@
 				 ; leaving *val* unchanged
   (push-n	  two-bytes)     ; allocate space for N values on stack
 				 ; leaving *val* unchanged
-  (stack-ref      byte)	         ; index'th element of stack into *val*
-  (push+stack-ref byte)	         ; preceded by a push
-  (stack-ref+push byte)	         ; followed by a push
-  (big-stack-ref  two-bytes)
-  (stack-set!     byte 1)        ; *val* to index'th element of stack
-  (big-stack-set! two-bytes 1)
-  (stack-indirect byte byte)     ; first is index into stack, second is index
+  (stack-ref      stack-index)   ; index'th element of stack into *val*
+  (push+stack-ref stack-index)   ; preceded by a push
+  (stack-ref+push stack-index)   ; followed by a push
+  (big-stack-ref  two-byte-stack-index)
+  (stack-set!     stack-index 1) ; *val* to index'th element of stack
+  (big-stack-set! two-byte-stack-index 1)
+  (stack-indirect stack-index two-byte-index)     ; first is index into stack, second is index
 			  	 ; into what you find there
-  (push+stack-indirect byte byte) ; preceded by a push
-  (stack-indirect+push byte byte) ; followed by a push
-  (big-stack-indirect two-bytes two-bytes)
+  (push+stack-indirect stack-index two-byte-index) ; preceded by a push
+  (stack-indirect+push stack-index two-byte-index) ; followed by a push
+  (big-stack-indirect two-byte-stack-index two-byte-index)
 
   (stack-shuffle! moves-data)	 ; shuffle stack elements around
   (big-stack-shuffle! big-moves-data)	 ; shuffle stack elements around with two-byte offsets
@@ -104,9 +108,9 @@
   (call     offset nargs 1 +)    ; last argument is the procedure to call,
 				 ; offset is to return pointer
   (tail-call nargs 1 +)          ; same, no return pointer, moves arguments
-  (big-call offset two-bytes 1 +) ; ditto, nargs counts are two bytes
+  (big-call offset two-byte-nargs 1 +) ; ditto, nargs counts are two bytes
   (poll offset)			 ; offset is for continuation-pc if interrupt
-  (apply offset two-bytes 2 +)   ; last argument is procedure to call, second to
+  (apply offset two-byte-nargs 2 +)   ; last argument is procedure to call, second to
 				 ; last is a list of additional arguments, next
                                  ; two bytes are the number of stack arguments
   (closed-apply 2 +)		 ; arguments are as for Scheme's APPLY, with
@@ -120,9 +124,9 @@
   (closed-values +)		 ; values are on stack, count is pushed on stack
 
   ;; Six different ways to jump
-  (goto-template index)		 ; jump to another template (*EXP*)
+  (goto-template two-byte-index)		 ; jump to another template (*EXP*)
 				 ; does not poll for interrupts
-  (call-template offset index index nargs)
+  (call-template offset two-byte-stack-index two-byte-index nargs)
 				 ; call a template instead of a procedure
 				 ; nargs is needed for interrupt handling
   (jump-if-false offset 1)	 ; boolean in *val*
@@ -171,14 +175,14 @@
 
   (make-stored-object byte stob)
   (closed-make-stored-object stob)	; size pushed on stack
-  (stored-object-ref  stob byte 1)	; byte is the offset
-  (stored-object-set! stob byte byte 2)	; byte0 is the offset, byte1 = 0
+  (stored-object-ref  stob two-byte-index 1)
+  (stored-object-set! stob two-byte-index byte 2)	; byte0 is the offset, byte1 = 0
   					; means not to log in the proposal
 
   (make-vector-object stob 2)			; size + init
   ; If the byte = 0 then do not log in the current proposal
-  (stored-object-indexed-ref  stob byte 2)	; vector + offset
-  (stored-object-indexed-set! stob byte 3)	; vector + offset + value
+  (stored-object-indexed-ref  stob two-byte-index 2)	; vector + offset
+  (stored-object-indexed-set! stob two-byte-index 3)	; vector + offset + value
 
   (make-byte-vector 2)
   (byte-vector-length 1)
@@ -209,7 +213,7 @@
   (current-proposal)
   (set-current-proposal! 1)
   (maybe-commit)
-  (stored-object-logging-ref stob byte 1)
+  (stored-object-logging-ref stob two-byte-index 1)
   (copy-bytes! byte 5)		; byte = 0 -> don't log
   (byte-vector-logging-ref 2)
   (byte-vector-logging-set! 3)
@@ -251,8 +255,8 @@
   (assq 2)
   (unassigned-check 1)
   ; If the byte = 0 then do not log in the current proposal
-  (checked-record-ref byte 3)
-  (checked-record-set! byte 4)
+  (checked-record-ref two-byte-index 3)
+  (checked-record-set! two-byte-index 4)
 
   ;; ports (buffered I/O) - these are all unnecessary
   ;; byte = 0 -> port is supplied
