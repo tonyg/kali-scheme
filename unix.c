@@ -34,7 +34,9 @@
 
 
 #if defined(svr4) || defined(SVR4) || defined (__svr4__) || defined(sun) 
+#if !defined(MACH)
 #define HAS_DLOPEN
+#endif /*not MACH*/
 #endif /*svr4*/
 
 /*
@@ -248,7 +250,7 @@ long ps_run_time()
   if (clock_tick == 0)
     clock_tick = sysconf(_SC_CLK_TCK); /* POSIX.1, POSIX.2 */
   times(&time_buffer);		/* On Sun, getrusage() would be better */
-  return((long)(time_buffer.tms_utime) * (TICKS_PER_SECOND / clock_tick));
+  return((long)(time_buffer.tms_utime * TICKS_PER_SECOND) / clock_tick);
 }
 
 void when_alarm_interrupt(sig, code, scp)

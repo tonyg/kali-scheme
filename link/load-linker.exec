@@ -41,6 +41,9 @@
       (open scheme-level-1 signals enumerated)
       (files (rts arch))))
 
+(config '(structure reflective-tower-maker
+		    (export-reflective-tower-maker)))
+
 ; Make the new linker obtain its table, record, etc. structures from
 ; the currently running Scheme.
 
@@ -66,9 +69,8 @@
 
 ; Initialize
 (in 'link-config
-    '(open scheme packages packages-internal)) ;Needed for init-defpackage
-(in 'link-config
-    '(load "alt/init-defpackage.scm")) ;For nonincestuous bootstrap
+    '(open scheme packages packages-internal
+	   reflective-tower-maker))
 
 (in 'linker '(run (set! *debug-linker?* #t)))
 (in 'link-config '(open flatloading))    ; A different one.

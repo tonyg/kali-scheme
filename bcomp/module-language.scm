@@ -46,6 +46,11 @@
     ((export ?item ...)
      (really-export #f ?item ...))))
 
+(define-syntax compound-interface
+  (syntax-rules ()
+    ((compound-interface ?int ...)
+     (make-compound-interface #f ?int ...))))
+
 (define-syntax an-interface
   (syntax-rules (export compound-interface)
     ((an-interface ?name (export ?item ...))
@@ -176,15 +181,35 @@
 			   (,%list ,@(map (lambda (a)
 					    `(,%cons (,%quote ,a) ,a))
 					  accesses)))
-		       ,(if (null? for-syntaxes)
-			    `#f
-			    `(,%lambda ()
-				 (,%a-package ((for-syntax ,@names))
-					      ,@for-syntaxes)))
+		       (,(string->symbol ".make-reflective-tower.")
+			(,%quote ,for-syntaxes)
+			(,%quote ,names))
 		       (,%file-name)
 		       (,%quote ,others)
 		       (,%quote ,(cadr form)))))))))
   (cons lambda list make-a-package quote %file-name%))
+
+
+
+; (DEFINE-REFLECTIVE-TOWER-MAKER <proc>)
+;   <proc> should be an expression that evaluates to a procedure of
+;   two arguments.  The first argument is a list of DEFINE-STRUCTURE
+;   clauses, and the second is some identifying information (no
+;   semantic content).  The procedure should return a "reflective
+;   tower", which is a pair (<eval-proc> . <env>).  To evaluate the
+;   right-hand side of a DEFINE-SYNTAX (LET-SYNTAX, etc.) form,
+;   <eval-proc> is called on the right-hand side and <env>.
+; Got that?
+
+(define-syntax define-reflective-tower-maker
+  (lambda (e r c)
+    `(,(r 'define) ,(string->symbol ".make-reflective-tower.") ,(cadr e)))
+  (define))
+
+(define-syntax export-reflective-tower-maker
+  (lambda (e r c)
+    `(,(r 'export) ,(string->symbol ".make-reflective-tower.")))
+  (export))
 
 
 ; Modules  = package combinators

@@ -62,12 +62,17 @@
 
 (define (expt x n)
   (if (and (integer? n) (exact? n))
-      (raise-to-integer-power x n)
+      (if (>= n 0)
+	  (raise-to-integer-power x n)
+	  (/ 1 (raise-to-integer-power x (- 0 n))))
       (exp (* n (log x)))))
 
-(define (raise-to-integer-power z p) ;Slow version.  Switch to binary some day
-  (if (>= p 0)
-      (do ((a 1 (* a z))
-	   (p p (- p 1)))
-	  ((<= p 0) a))
-      (/ 1 (raise-to-integer-power z (- 0 p)))))
+(define (raise-to-integer-power x n)
+  (if (= n 0)
+      1
+      (let loop ((s x) (i n) (a 1))	;invariant: a * s^i = x^n
+	(let ((a (if (odd? i) (* a s) a))
+	      (i (quotient i 2)))
+	  (if (= i 0)
+	      a
+	      (loop (* s s) i a))))))

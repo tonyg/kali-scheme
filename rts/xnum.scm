@@ -2,9 +2,7 @@
 
 ; This is file xnum.scm.
 
-;;;; Extended numbers
-
-(define (extended-number-type x) (extended-number-ref x 0))
+;;;; Extended number support
 
 (define-simple-type :extended-number (:number) extended-number?)
 
@@ -27,45 +25,55 @@
 		  10)
 	       (lambda (x)
 		 (and (extended-number? x)
-		      (eq? (extended-number-type x) id)))
+		      (eq? (extended-number-type x) t)))
 	       id)))
     t))
+
+(define (extended-number-type x) (extended-number-ref x 0))
+
+
+; DEFINE-EXTENDED-NUMBER-TYPE macro
+
+(define-syntax define-extended-number-type
+  (syntax-rules ()
+    ((define-extended-number-type ?type (?super ...)
+       (?constructor ?arg ...)
+       ?predicate
+       (?field ?accessor)
+       ...)
+     (begin (define ?type
+	      (make-extended-number-type '(?field ...)
+					 (list ?super ...)
+					 '?type))
+	    (define ?constructor
+	      (if (equal? '(?arg ...)
+			  (extended-number-type-field-names ?type))
+		  (let ((k (+ (length '(?field ...)) 1)))
+		    (lambda (?arg ...)
+		      (let ((n (make-extended-number k #f))
+			    (i 1))
+			(extended-number-set! n 0 ?type)
+			(begin (extended-number-set! n i ?arg)
+			       (set! i (+ i 1)))
+			...
+			n)))
+		  (error "ill-formed DEFINE-EXTENDED-NUMBER-TYPE" '?type)))
+	    (define (?predicate x)
+	      (and (extended-number? x)
+		   (eq? (extended-number-type x) ?type)))
+	    (define ?accessor
+	      (let ((i (+ 1 (posq '?field
+				  (extended-number-type-field-names ?type)))))
+		(lambda (n)
+		  (extended-number-ref n i))))
+	    ...))))
+
 
 (define-method &type-priority ((t :extended-number-type))
   (extended-number-type-priority t))
 
 (define-method &type-predicate ((t :extended-number-type))
   (extended-number-predicate t))
-
-
-(define (extended-number-type-field-index nt name)
-  (let loop ((names (extended-number-type-field-names nt))
-	     (i 1))
-    (cond ((null? names) (error "unknown field index"
-				nt
-				name))
-	  ((eq? name (car names))
-	   i)
-	  (else (loop (cdr names) (+ i 1))))))
-
-(define (extended-number-constructor nt names)
-  (let ((indexes (map (lambda (name)
-			(extended-number-type-field-index nt name))
-		      names))
-	(size (+ 1 (length (extended-number-type-field-names nt))))
-	(id (extended-number-type-identity nt)))
-    (lambda args
-      (let ((n (make-extended-number size id)))
-	(let loop ((is indexes) (args args))
-	  (if (and (null? is) (null? args))
-	      n
-	      (begin (extended-number-set! n (car is) (car args))
-		     (loop (cdr is) (cdr args)))))))))
-
-(define (extended-number-accessor nt name)
-  (let ((index (extended-number-type-field-index nt name)))
-    (lambda (n)
-      (extended-number-ref n index))))
 
 
 ; Make all the numeric instructions be extensible.
@@ -227,8 +235,7 @@
 				 radix)))
 	 (n (if (= dot (- len 1))
 		0
-		(string->integer (substring s (+ dot 1)
-					    len)
+		(string->integer (substring s (+ dot 1) len)
 				 radix))))
     (if (and m n)
 	(let ((n (+ m (/ n (expt radix

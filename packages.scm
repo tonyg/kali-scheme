@@ -74,6 +74,7 @@
 	    reading
 	    records-internal
 	    scheme-level-2-internal
+	    silly
 	    structure-refs
 	    vm-exposure
 	    wind

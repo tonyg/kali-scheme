@@ -71,7 +71,7 @@
 
 ; Packages are not what they appear to be.
 
-(define (make-a-package opens-thunk accesses-thunk for-syntax-thunk
+(define (make-a-package opens-thunk accesses-thunk tower
 			file-name clauses name)
   (vector '<a-package>
 	  (delay (opens-thunk))
@@ -181,3 +181,5 @@
 (define :syntax ':syntax)
 (define :structure ':structure)
 
+
+(define-reflective-tower-maker list)

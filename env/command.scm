@@ -81,25 +81,25 @@
 (define $command-levels (make-fluid '()))
 (define (command-level) (car (fluid $command-levels)))
 
-(define command-level-type
+(define :command-level
   (make-record-type 'command-level
                     '(throw vm-cont condition interrupts env)))
 (define make-command-level
-  (record-constructor command-level-type
+  (record-constructor :command-level
                       '(throw vm-cont condition interrupts env)))
-(define command-level? (record-predicate command-level-type))
+(define command-level? (record-predicate :command-level))
 (define command-level-throw
-  (record-accessor command-level-type 'throw))
+  (record-accessor :command-level 'throw))
 (define command-level-vm-cont
-  (record-accessor command-level-type 'vm-cont))
+  (record-accessor :command-level 'vm-cont))
 (define command-level-condition
-  (record-accessor command-level-type 'condition))
+  (record-accessor :command-level 'condition))
 (define command-level-interrupts
-  (record-accessor command-level-type 'interrupts))
+  (record-accessor :command-level 'interrupts))
 (define command-level-env
-  (record-accessor command-level-type 'env))
+  (record-accessor :command-level 'env))
 (define set-command-level-env!
-  (record-modifier command-level-type 'env))
+  (record-modifier :command-level 'env))
 
 (define environment-for-commands interaction-environment)
 
@@ -117,13 +117,14 @@
                $user-context context  ;Log in
                $session (make-session (current-input-port)
                                       (current-output-port)
-                                      '("Hello")
+                                      (list resume-arg)
                                       (equal? resume-arg "batch")
                                       #f)
      (lambda ()
        (command-loop start-thunk #f initial-env)))))
 
 ; Command loop
+; Uses:
 ;  1. startup, 2. condition handler, 3. abort-to-level, 4. breakpoint
 
 (define (command-loop start-thunk condition env)
@@ -273,9 +274,25 @@
       (apply values results))))
 
 (define (evaluate form env)
-  (if (package? env)
-      ((package-evaluator env) form env)
-      (eval form env)))
+  ((if (package? env)
+       (package-evaluator env)
+       eval)
+   form
+   env))
+
+; Extract a package-specific evaluator from a package.  Eventually, it
+; would be nice if load, eval-from-file, eval-scanned-forms, and
+; perhaps other things to be generic over different kinds of
+; environments.
+
+(define funny-name/evaluator (string->symbol ".evaluator."))
+
+(define (set-package-evaluator! p evaluator)
+  (package-define-funny! p funny-name/evaluator evaluator))
+
+(define (package-evaluator p)
+  (or (get-funny (package->environment p) funny-name/evaluator) eval))
+
 
 ; Display the focus object if it changes (sort of like emacs's redisplay)
 

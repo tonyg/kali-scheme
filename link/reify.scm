@@ -121,7 +121,8 @@
 			    ;; Each binding is a pair (name . loc)
 			    ',(list->vector (map car bindings)) ;names
 			    ',(list->vector (map cdr bindings)) ;location ids
-			    get-location)))
+			    get-location
+			    ,(package-uid thing))))
 		      (lambda ()
 			(table-set! *package-table*
 				    thing
@@ -247,7 +248,10 @@
 	(types '()))
     (for-each-export (lambda (name type binding)
 		       (set! names (cons name names))
-		       (set! types (cons (type->sexp type #t) types)))
+		       (set! types (cons (if (eq? type undeclared-type)
+					     ':undeclared
+					     (type->sexp type #t))
+					 types)))
 		     struct)
     `(simple-interface ',(list->vector names) ',(list->vector types))))
 

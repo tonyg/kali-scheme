@@ -1,7 +1,5 @@
 ; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
-
-
 ; Code-vectors implemented as vectors.
 
 (define *code-vector-marker* (list '*code-vector-marker*))

@@ -26,19 +26,19 @@
 	     (structure-interface-really s))))
 
 (define (initialize-structure! s)
-  (let ((sig ((structure-interface-thunk s))))
-    (if (interface? sig)
-	(begin (set-structure-interface! s sig)
-	       (note-reference-to-interface! sig s))
+  (let ((int ((structure-interface-thunk s))))
+    (if (interface? int)
+	(begin (set-structure-interface! s int)
+	       (note-reference-to-interface! int s))
 	(call-error "invalid interface" initialize-structure! s))))
 
-(define (make-structure package sig-thunk name)
+(define (make-structure package int-thunk name)
   (if (not (package? package))
-      (call-error "invalid package" make-structure package sig-thunk name))
+      (call-error "invalid package" make-structure package int-thunk name))
   (let ((struct (really-make-structure package
-				       (if (procedure? sig-thunk)
-					   sig-thunk
-					   (lambda () sig-thunk))
+				       (if (procedure? int-thunk)
+					   int-thunk
+					   (lambda () int-thunk))
 				       #f
 				       (make-population)
 				       name)))
@@ -49,7 +49,7 @@
   (package-unstable? (structure-package struct)))
 
 (define (for-each-export proc struct)
-  (let ((sig (structure-interface struct)))
+  (let ((int (structure-interface struct)))
     (for-each-declaration
         (lambda (name want-type)
 	  (let ((binding (structure-lookup struct name #t)))
@@ -62,7 +62,7 @@
 			    type))
 		      want-type)
 		  binding)))
-	sig)))
+	int)))
 
 
 ; --------------------
@@ -90,6 +90,7 @@
   (file-name       package-file-name)
   (clauses         package-clauses)
   (loaded?         package-loaded? set-package-loaded?!)
+  (env             package->environment set-package->environment!)
 
   ;; For package mutation
   (opens-thunk     package-opens-thunk set-package-opens-thunk!)
@@ -106,10 +107,14 @@
 	  (list 'package (package-uid p))))))
 
 (define make-package
-  (lambda (opens-thunk accesses-thunk evaluator for-syntax-promise dir clauses
-		       name)
+  (lambda (opens-thunk accesses-thunk unstable? tower dir clauses
+		       uid name)
     (let ((p (really-make-package
-	      (new-package-uid)
+	      (if uid
+		  (begin (if (>= uid *package-uid*)
+			     (set! *package-uid* (+ uid 1)))
+			 uid)
+		  (new-package-uid))
 	      opens-thunk
 	      #f
 	      accesses-thunk		;list of thunks
@@ -118,13 +123,18 @@
 	      '()			;property list...
 	      (make-table name-hash)	;bindings cached in templates
 	      (make-population)		;structures
-	      (if evaluator #t #f)      ;unstable
+	      unstable?			;unstable
 	      dir
 	      clauses
 	      #f)))			;loaded?
       (if name (set-package-name! p name))
-      (define-funny-names! p evaluator for-syntax-promise)
+      (set-package->environment! p (really-package->environment p))
+      (define-funny-names! p tower)
       p)))
+
+(define (really-package->environment p)
+  (lambda (name)
+    (package-lookup p name)))
 
 ; Unique id's
 
@@ -156,15 +166,16 @@
 ; --------------------
 ; A simple package has no ACCESSes or other far-out clauses.
 
-(define (make-simple-package opens evaluator efs-promise . name-option)
+(define (make-simple-package opens unstable? tower . name-option)
   (if (not (list? opens))
       (error "invalid package opens list" opens))
   (let ((p (make-package (lambda () opens)
 			 (lambda () '()) ;accesses-thunk
-			 evaluator
-			 efs-promise
+			 unstable?
+			 tower
 			 ""		;directory
 			 '()		;clauses
+			 #f		;uid
 			 (if (null? name-option)
 			     #f
 			     (car name-option)))))
@@ -283,10 +294,6 @@
 
 ; Environments for CLASSIFY are procedures.
 
-(define (package->environment p)
-  (lambda (name)
-    (package-lookup p name)))
-
 (define (package-lookup-type p name)
   (let ((probe (package-lookup p name)))
     (if (binding? probe)
@@ -312,25 +319,12 @@
 				      (cdr name+struct)))
 	    (package-accesses p)))
 
-; --------------------
-; Eventually, it should be possible to inherit everything (except
-; the-package).
 
-(define (define-funny-names! p evaluator for-syntax-promise)
+(define (define-funny-names! p tower)
   (package-define-funny! p funny-name/the-package p)
-  (if for-syntax-promise
-      (begin
-	(package-define-funny! p funny-name/for-syntax-promise for-syntax-promise)
-	(package-define-funny! p funny-name/evaluator-for-syntax
-	  (lambda (form)
-	    (generic-eval form (force for-syntax-promise))))))
-  (if evaluator
-      (set-package-evaluator! p evaluator)))
-
-(define (generic-eval form env)
-  ;; Not very generic right now.  It ought to do different things
-  ;; depending on what kind of environment it gets.
-  ((package-evaluator env) form env))
+  (if tower
+      (package-define-funny! p funny-name/reflective-tower
+			     tower)))
 
 (define (package-define-funny! p name static)
   (table-set! (package-definitions p)
@@ -345,42 +339,12 @@
 
 (define funny-name/the-package (string->symbol ".the-package."))
 
-(define extract-package-from-environment
-  (get-funny funny-name/the-package))
+(define (extract-package-from-environment env)
+  (get-funny env funny-name/the-package))
 
-
-
-(define (generic-get-funny name)
-  (let ((f (get-funny name)))
-    (lambda (p)
-      (f (if (package? p)
-	     (package->environment p)
-	     p)))))
-
-; Evaluator, for command processor and for evaluating transformers.
-; Eventually, we also want load, eval-from-file, eval-scanned-forms,
-; and perhaps other things used by the command processor to be generic
-; over different kinds of environments.
-
-(define funny-name/evaluator (string->symbol ".evaluator."))
-
-(define (set-package-evaluator! p evaluator)
-  (package-define-funny! p funny-name/evaluator evaluator))
-
-(define package-evaluator
-  (generic-get-funny funny-name/evaluator))
-
-
-
-; Environment for syntax (for command processor's ,for-syntax command)
-
-(define funny-name/for-syntax-promise (string->symbol ".for-syntax-promise."))
-
-(define package-for-syntax-promise
-  (generic-get-funny funny-name/for-syntax-promise))
-
-(define (package-for-syntax p)
-  (force (package-for-syntax-promise p)))
+; (define (package->environment? env)
+;   (eq? env (package->environment
+;	        (extract-package-from-environment env))))
 
 
 ; --------------------

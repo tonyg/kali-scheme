@@ -108,11 +108,11 @@
 
 
 (define (make-remote-package in out opens id)
-  (let ((for-syntax (package-for-syntax (interaction-environment))))
-    (make-simple-package opens
-			 (make-remote-eval in out)
-			 (delay for-syntax)
-			 id)))
+  (make-simple-package opens
+		       (make-remote-eval in out)
+		       (reflective-tower
+			  (package->environment (interaction-environment)))
+		       id))
 
 (define (remote-repl host-name socket-port-number)
   (let ((in #f) (out #f))

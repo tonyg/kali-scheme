@@ -1,11 +1,18 @@
 ; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
-; Initialize the defpackage package by providing it with an EVAL to
-; stick into packages that it creates.  This file should be loaded
-; into the initial-image before any use of DEFINE-STRUCTURE.  This seems
-; wrong somehow, but I haven't thought of a better way to do it yet.
+; This file has to be loaded into the initial-image before any use of
+; DEFINE-STRUCTURE.  Compare with alt/init-defpackage.scm.
 
-(init-defpackage! eval (lambda ()
-			 (let ((p (interaction-environment)))
-			   (delay (package-for-syntax p)))))
+; The procedure given to DEFINE-REFLECTIVE-TOWER-MAKER is called when
+; a DEFINE-STRCTURE form is evaluated.
+
+(define-reflective-tower-maker
+  (let ((env (interaction-environment))
+	(reflective-tower (*structure-ref syntactic 'reflective-tower)))
+    (lambda (clauses id)
+      (if (null? clauses)
+	  ;; (make-reflective-tower eval (list scheme) id)
+	  (reflective-tower (package->environment env))
+	  (delay (cons eval (eval `(a-package ((for-syntax ,id)) ,@clauses)
+				  env)))))))

@@ -2,7 +2,24 @@
 
 Recent changes to Scheme 48.
 
-1/30/94  Fixed ps_run_time() to call sysconf() to find out how many
+2/3/94   (version 0.30)
+	 Faster EXPT.
+	 FLOATNUMS improvement: (inexact->exact <float>) should now
+	   work, e.g. 
+           (inexact->exact (/ 1. 3.)) => 6004799503160661/18014398509481984
+         Reinstated ACCESS-SCHEME-48 for the benefit of PSD (portable
+           scheme debugger) and a certain other software package that
+           shal remain nameless.  It only knows about a small number of
+           procedures, including things like ERROR and FORCE-OUTPUT.
+         Various changes to support the Pre-Scheme compiler, notably
+	   SET-REFLECTIVE-TOWER-MAKER!.
+	 Incompatible change to the ENUMERATED structure: the names
+	   foo/bar no longer become defined.  Write (enum foo bar)
+	   instead.  This will macro expand into the correct small
+	   integer.
+
+1/30/94  (version 0.29)
+	 Fixed ps_run_time() to call sysconf() to find out how many
 	   ticks there are per second.  It used to assume 60.  This
 	   affects the output of the ,time command, so don't try
 	   comparing numbers from this version with numbers from older
@@ -20,10 +37,11 @@ Recent changes to Scheme 48.
 	   the use of other comparison predicates besides EQ?, and
 	   eliminates some code that had a restrictive copyright
 	   notice.
+         ENUM, NAME->ENUMERAND, ENUMERAND->NAME, are all macros.
+         Enumerated types themselves are now macros as well.
 
-1/23/94  (version 0.29)
-	 Fixed bad multiplication bug: (* 214760876 10) was returning
-	   125112.
+1/23/94  Fixed bad multiplication bug in VM: (* 214760876 10) was
+	   returning 125112.
 	 Moved RECORD-TYPE? and RECORD-TYPE-FIELD-NAMES from the
 	   RECORDS-INTERNAL interface to the RECORDS interface, for
 	   a somewhat closer approximation to MIT Scheme.

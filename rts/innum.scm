@@ -3,12 +3,10 @@
 
 ; Inexact numbers as mere shells surrounding exact numbers.
 
-(define :innum
-  (make-extended-number-type '(exact) (list :inexact) 'innum))
-
-(define make-innum  (extended-number-constructor :innum '(exact)))
-(define innum?	    (extended-number-predicate :innum))
-(define innum-exact (extended-number-accessor :innum 'exact))
+(define-extended-number-type :innum (:inexact)
+  (make-innum exact)
+  innum?
+  (exact innum-exact))
 
 (define-method &exact?  ((n :innum)) #f)
 
@@ -25,11 +23,11 @@
       (exact->inexact n)
       n))
 
-(define (define-innum-method ?mtable ?proc)
-  (define-method ?mtable ((m :innum) (n :number))
-    (inexactify (?proc (innum-exact m) n)))
-  (define-method ?mtable ((m :number) (n :innum))
-    (inexactify (?proc m (innum-exact n)))))
+(define (define-innum-method mtable proc)
+  (define-method mtable ((m :innum) (n :number))
+    (inexactify (proc (innum-exact m) n)))
+  (define-method mtable ((m :number) (n :innum))
+    (inexactify (proc m (innum-exact n)))))
 
 (define-innum-method &+ +)
 (define-innum-method &- -)
@@ -38,11 +36,11 @@
 (define-innum-method &quotient quotient)
 (define-innum-method &remainder remainder)
 
-(define (define-innum-comparison ?mtable ?proc)
-  (define-method ?mtable ((m :innum) (n :number))
-    (?proc (innum-exact m) n))
-  (define-method ?mtable ((m :number) (n :innum))
-    (?proc m (innum-exact n))))
+(define (define-innum-comparison mtable proc)
+  (define-method mtable ((m :innum) (n :number))
+    (proc (innum-exact m) n))
+  (define-method mtable ((m :number) (n :innum))
+    (proc m (innum-exact n))))
 
 (define-innum-comparison &= =)
 (define-innum-comparison &< <)

@@ -1,17 +1,12 @@
 ; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
+; Rectangular complex arithmetic built on real arithmetic.
 
-; Complex arithmetic, built on real arithmetic.
-
-(define :recnum
-  (make-extended-number-type '(real-part imag-part) (list :complex) 'recnum))
-
-(define recnum? (extended-number-predicate :recnum))
-(define make-recnum
-  (extended-number-constructor :recnum '(real-part imag-part)))
-
-(define recnum-real-part (extended-number-accessor :recnum 'real-part))
-(define recnum-imag-part (extended-number-accessor :recnum 'imag-part))
+(define-extended-number-type :recnum (:complex)
+  (make-recnum real imag)
+  recnum?
+  (real recnum-real-part)
+  (imag recnum-imag-part))
 
 (define (rectangulate x y)    ; Assumes (eq? (exact? x) (exact? y))
   (if (= y 0)

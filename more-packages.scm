@@ -75,7 +75,9 @@
         packages-internal       ; set-package-integrate?!, etc.
         package-mutation        ; package-system-sentinel
         environments            ; *structure-ref, etc.
+	syntactic		; reflective-tower
         ensures-loaded          ; ensure-loaded
+	ascii ports		; for access-scheme-48
 	util			; every
         fluids)
   (files (env pacman)))
@@ -238,6 +240,8 @@
         locations)              ;location?
   (files (env assem)))
 
+; Foo
+
 (define-structure assembler (export (lap :syntax))
   ;; Open the assembling structure to make sure it gets loaded.
   ;; (Ensure-loaded neglects to examine the package for syntax.)
@@ -259,6 +263,7 @@
         primitives
         architecture
         signals
+	util
         number-i/o)
   (files (rts xnum)))
 
@@ -479,20 +484,21 @@
 ; ... end of package definitions.
 
 
-
 ; Stuff to load into initial.image to make scheme48.image.
 
 (define-structure usual-features (export )  ;No exports
   (open disclosers
         command-processor
-        package-commands-internal
         debuginfo
-        bignums ratnums
-	innums				;Silly inexact numbers
-        ;; pp
-	;; These now have command structures:
-        ;;   debugging inspector disassembler build
-        ))
+        ;; Choose any combination of bignums, ratnums, recnums
+	bignums ratnums recnums
+	;; Choose either innums, floatnums, or neither
+	innums			;Silly inexact numbers
+        ;; floatnums		;Still don't print correctly
+	;; pp
+	;; The following is listed because this structure is used to
+	;; generate a dependency list used by the Makefile...
+	usual-commands))
 
 ; Temporary compatibility stuff
 (define-syntax define-signature
@@ -502,57 +508,58 @@
 (define table tables)
 (define record records)
 
+
 ; Must list all the packages defined in this file that are to be
 ; visible in the command processor's config package.
 
 (define-interface more-structures-interface
   (export ((more-structures
-            usual-features
-            arrays
-            assembler
-            assembling
-            general-tables
-            bigbit
-            bignums ratnums recnums floatnums
-            build
-            command-processor
-            debugging
-            define-record-types
-            destructuring
-            disassembler
-            disclosers
-            dump/restore
-            extended-numbers
-            extended-ports
-            externals
-            formats defrecord
+	    usual-features
+	    arrays
+	    assembler
+	    assembling
+	    general-tables
+	    bigbit
+	    bignums ratnums recnums floatnums
+	    build
+	    command-processor
+	    debugging
+	    define-record-types
+	    destructuring
+	    disassembler
+	    disclosers
+	    dump/restore
+	    extended-numbers
+	    extended-ports
+	    externals
+	    formats defrecord
 	    innums
-            inspector
-            more-threads
-            package-commands-internal
-            package-mutation
-            pp
-            queues
-            random
-            receiving
-            search-trees
-            sicp
-            sockets
-            sort
-            threads
-            traverse
-            big-scheme
-            ;; From link-packages.scm:
-            analysis
-            debuginfo
-            expander
-            flatloading
-            linker
-            link-config
-            reification  ;?
-            shadowing
-            ;; Compatibility
-            record table
-            )
-           :structure)
-          ((define-signature define-package) :syntax)))
+	    inspector
+	    more-threads
+	    package-commands-internal
+	    package-mutation
+	    pp
+	    queues
+	    random
+	    receiving
+	    search-trees
+	    sicp
+	    sockets
+	    sort
+	    threads
+	    traverse
+	    big-scheme
+	    ;; From link-packages.scm:
+	    analysis
+	    debuginfo
+	    expander
+	    flatloading
+	    linker
+	    link-config
+	    reification			;?
+	    shadowing
+	    ;; Compatibility
+	    record table
+	    )
+	   :structure)
+	  ((define-signature define-package) :syntax)))

@@ -8,25 +8,25 @@
 (define-simple-type :exact-rational (:rational :exact)
   (lambda (n) (and (rational? n) (exact? n))))
 
-(define :ratnum
-  (make-extended-number-type '(num den) (list :exact-rational :exact) 'ratnum))
-
-(define make-ratnum (extended-number-constructor :ratnum '(num den)))
-(define ratnum?	    (extended-number-predicate :ratnum))
-(define ratnum-numerator   (extended-number-accessor :ratnum 'num))
-(define ratnum-denominator (extended-number-accessor :ratnum 'den))
+(define-extended-number-type :ratnum (:exact-rational :exact) ;?
+  (make-ratnum num den)
+  ratnum?
+  (num ratnum-numerator)
+  (den ratnum-denominator))
 
 (define (integer/ m n)
-  (if (< n 0)
-      (integer/ (- 0 m) (- 0 n))
-      (if (= n 0)
-	  (error "rational division by zero" m)
-	  (let ((g (gcd m n)))
-	    (let ((m (quotient m g))
-		  (n (quotient n g)))
-	      (if (= n 1)
-		  m
-		  (make-ratnum m n)))))))
+  (cond ((< n 0)
+	 (integer/ (- 0 m) (- 0 n)))
+	((= n 0)
+	  (error "rational division by zero" m))
+	((and (exact? m) (exact? n))
+	 (let ((g (gcd m n)))
+	   (let ((m (quotient m g))
+		 (n (quotient n g)))
+	     (if (= n 1)
+		 m
+		 (make-ratnum m n)))))
+	(else (/ m n))))    ;In case we get flonums
 
 (define (rational-numerator p)
   (if (ratnum? p)

@@ -3,99 +3,53 @@
 
 ; Alternate implementation of PRIMITIVES module.
 
-; Based on
-;(define-interface primitives-interface
-;  (export close-port                    ;extended-ports
-;          collect                       ; ,collect command
-;          continuation-length
-;          continuation-ref
-;          continuation-set!
-;          continuation?
-;          extended-number-length
-;          extended-number-ref
-;          extended-number-set!
-;          extended-number?
-;          external-call
-;          external-lookup
-;          external-name
-;          external-value
-;          external?
-;          find-all-xs                   ; externals.scm
-;          force-output                  ;ports re-exports this.
-;          get-dynamic-state             ;fluids
-;          make-continuation
-;          make-extended-number
-;          make-external
-;          make-record
-;          make-template
-;          make-weak-pointer
-;          memory-status                 ;interrupts
-;          record-length
-;          record-ref
-;          record-set!
-;          record?
-;          schedule-interrupt            ;interrupts re-exports
-;          set-dynamic-state!            ;fluids
-;          set-enabled-interrupts!       ;interrupts
-;          set-exception-handler!
-;          set-interrupt-handlers!       ;interrupts
-;          template-length
-;          template-ref
-;          template-set!
-;          template?
-;          time                          ;interrupts
-;          unspecific                    ;record
-;          vm-extension
-;          vm-return
-;          weak-pointer-ref
-;          weak-pointer?
-;          write-string))
-
-
 (define underlying-error error)
 
 (define (unspecific) (if #f #f))
 
-; Shadow record primitives so that the existing inspector and printer
-; don't get confused.
 
-(define pseudo-record-type
-  (make-record-type 'new-record '(fields)))
-(define make-record
-  (let ((make (record-constructor pseudo-record-type
-				  '(fields))))
-    (lambda (size init)
-      (make (make-vector size init)))))
-(define pseudo-record-fields
-  (record-accessor pseudo-record-type 'fields))
-(define (record-ref record i)
-  (vector-ref (pseudo-record-fields record) i))
-(define (record-set! record i value)
-  (vector-set! (pseudo-record-fields record) i value))
-(define record? (record-predicate pseudo-record-type))
-(define (record-length record)
-  (vector-length (pseudo-record-fields record)))
+; Records
+
+(define-record-type new-record :new-record
+  (make-new-record fields)
+  record?
+  (fields new-record-fields))
+
+(define (make-record size init)
+  (make-new-record (make-vector size init)))
+
+(define (record-ref r i)
+  (vector-ref (new-record-fields r) i))
+
+(define (record-set! r i value)
+  (vector-set! (new-record-fields r) i value))
+
+(define (record-length r)
+  (vector-length (new-record-fields r)))
 
 
-; Similarly for extended numbers.
+; Extended numbers
 
-(define pseudo-extended-number-type
-  (make-record-type 'new-extended-number '(fields)))
-(define make-extended-number
-  (let ((make (record-constructor pseudo-extended-number-type
-				  '(fields))))
-    (lambda (size init)
-      (make (make-vector size init)))))
-(define pseudo-extended-number-fields
-  (record-accessor pseudo-extended-number-type 'fields))
-(define (extended-number-ref extended-number i)
-  (vector-ref (pseudo-extended-number-fields extended-number) i))
-(define (extended-number-set! extended-number i value)
-  (vector-set! (pseudo-extended-number-fields extended-number) i value))
-(define extended-number?
-  (record-predicate pseudo-extended-number-type))
-(define (extended-number-length extended-number)
-  (vector-length (pseudo-extended-number-fields extended-number)))
+(define-record-type new-extended-number :new-extended-number
+  (make-new-extended-number fields)
+  extended-number?
+  (fields new-extended-number-fields))
+
+(define-record-discloser :new-extended-number
+  (lambda (n) `(extended-number ,(new-extended-number-fields n))))
+
+(define (make-extended-number size init)
+  (make-new-extended-number (make-vector size init)))
+
+(define (extended-number-ref n i)
+  (vector-ref (new-extended-number-fields n) i))
+
+(define (extended-number-set! n i value)
+  (vector-set! (new-extended-number-fields n) i value))
+
+(define (extended-number-length n)
+  (vector-length (new-extended-number-fields n)))
+
 
 ; Dynamic state (= current thread)
 
@@ -161,10 +115,6 @@
     ((0) 1000)
     (else (underlying-error "unimplemented time" which arg))))
 
-
-; force-output, continuations, etc. are inherited
-
-; templates
 
 ; end of definitions implementing PRIMITIVES structure
 

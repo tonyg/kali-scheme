@@ -3,4 +3,6 @@
 
 
 (define (fact n)
-  (if (= n 0) 1 (* n (fact (- n 1)))))
+  (if (= n 0)
+      (+ n 'a)
+      (* n (fact (- n 1)))))

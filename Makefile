@@ -98,7 +98,7 @@ CONFIG_FILES = interfaces.scm low-packages.scm rts-packages.scm \
 enough: $(VM) $(IMAGE) .notify
 
 # The developers are curious to know.
-.notify:
+.notify: minor-version-number
 	echo Another 0.`cat minor-version-number` installation. \
 	   | mail scheme-48-notifications@martigny.ai.mit.edu 
 	touch .notify
@@ -130,7 +130,7 @@ filenames.make: packages.scm rts-packages.scm alt-packages.scm \
 		more-packages.scm
 	touch filenames.make
 	$(MAKE) $(VM)
-	(echo ,load alt/config.scm alt/flatload.scm bcomp/module-language.scm;\
+	(echo ,load bcomp/module-language.scm alt/config.scm alt/flatload.scm;\
 	 echo \(load-configuration \"packages.scm\"\);  \
 	 echo \(define syntactic 0\) \(define tables 0\); \
 	 echo \(flatload linker-structures\);		 \
@@ -154,7 +154,7 @@ include filenames.make
 # The ,bench command here turns benchmark mode on.
 # (set! *package-uid* 0) is a kludge.
 
-link/linker.image: $(linker-files)
+link/linker.image: $(linker-files) alt/init-defpackage.scm
 	(echo ,batch; echo ,bench on;                  \
 	 echo ,open signals handle features;           \
 	 echo ,open bitwise ascii code-vectors record; \
@@ -235,8 +235,7 @@ clean:
 	-rm -f $(VM) *.o *.1 TAGS $(IMAGE) *.tmp \
 	    link/*.image debug/*.image debug/*.debug
 
-install: enough $(INSTALL_METHOD) $(RUNNABLE).1 install_misc
-	install-vm
+install: enough $(INSTALL_METHOD) $(RUNNABLE).1 install_misc install-vm
 	chmod +x $(BIN)/$(RUNNABLE)
 	if test -d $(MAN);  \
 	  then $(CP) $(RUNNABLE).1 $(MAN)/; chmod +r $(MAN)/$(RUNNABLE).1; \
@@ -312,9 +311,13 @@ DISTFILES = COPYING README INSTALL NEWS TODO Makefile $(CFILES) \
 	    link/*.lisp link/*.exec \
 	    emacs/*.el emacs/README .gdbinit *-version-number
 
+DIST = $(DISTDIR)/$(RUNNABLE)-0-`cat minor-version-number`.tar.gz
+
 dist: initial.image
-	tar cf - $(DISTFILES) | gzip -c >$(DISTDIR)/$(RUNNABLE)-0-`cat minor-version-number`.tar.gz
-#	$(MAKE) new-version
+	tar cf - $(DISTFILES) | gzip -c >$(DIST)
+	rm -f $(DISTDIR)/$(RUNNABLE).tar.gz
+	ln -s $(DIST) $(DISTDIR)/$(RUNNABLE).tar.gz
+#	$(MAKE) inc
 
 inc:
 	(cat minor-version-number; echo 1+p) | dc >minor-version-number.tmp

@@ -26,7 +26,7 @@
     (for-each (lambda (name)
 		(write name)
 		(display (make-string
-			  (max 0 (- 20 (string-length
+			  (max 0 (- 25 (string-length
 					(symbol->string name))))
 			  #\space))
 		(write-char #\space)

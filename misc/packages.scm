@@ -21,7 +21,7 @@
 	interfaces
 	;; For both?
 	packages
-	packages-internal  ;package-for-syntax
+	;; packages-internal ?
 	syntactic
 	built-in-structures
 	dump/restore

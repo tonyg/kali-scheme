@@ -99,10 +99,14 @@
 				reverse-list->string)
   (open scheme-level-1)
   (begin
-    (define really-string->symbol string->symbol)
-
+    (define really-string->symbol
+      string->symbol)
     (define (reverse-list->string l n)
-      (list->string (reverse l)))))
+      ;; Significantly faster than (list->string (reverse l))
+      (let ((s (make-string n #\x)))
+	(let loop ((i (- n 1)) (l l))
+	  (if (< i 0) s (begin (string-set! s i (car l))
+			       (loop (- i 1) (cdr l)))))))))
 
 ; number-i/o	       - ?
 ; ports		       - ?
@@ -117,7 +121,7 @@
 						 get-exception-handler
 						 ?start)))
   (open scheme-level-2
-	bitwise records
+	bitwise define-record-types
 	features
 	signals
 	templates)

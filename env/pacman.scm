@@ -38,18 +38,18 @@
 
 (define (new-package)
   (let ((p (make-simple-package (list (get-structure 'scheme))
-				eval
-				(environment-for-syntax-promise)
+				#t    ;unstable?
+				(get-reflective-tower (user-environment))
 				#f)))
     (set-package-integrate?! p
 			     (package-integrate? (environment-for-commands)))
     (set-environment-for-commands! p)))
 
+(define (get-reflective-tower env)    ;Returns promise of (eval . env)
+  (reflective-tower (if (package? env)
+			  (package->environment env)
+			  env)))	;Mumble
 
-(define (environment-for-syntax-promise)
-  ;; should be (make-package-for-syntax eval ???)
-  (let ((user (user-environment)))
-    (delay (package-for-syntax user))))
 
 ; load-package
 
@@ -122,7 +122,8 @@
   '(&opt command))
 
 (define (for-syntax . maybe-command)
-  (in-package (package-for-syntax (environment-for-commands)) maybe-command))
+  (in-package (cdr (force (get-reflective-tower (environment-for-commands))))
+    maybe-command))
 
 
 ; ,user  goes to the user initial environment.
@@ -219,11 +220,11 @@
 
 ; Main entry point, with package setup.
 
-(define (new-command-processor info built-in-structures . more)
+(define (new-command-processor info built-in . meta-structs)
   ;; Argument to ,build command
   (lambda (arg)
     (call-with-values (lambda ()
-			(new-user-context built-in-structures more))
+			(new-user-context built-in meta-structs))
       (lambda (context env)
 	(start-command-processor arg
 				 context
@@ -231,16 +232,17 @@
 				 (lambda ()
 				   (greet-user info)))))))
 
-(define (new-user-context built-in-structures more-structures)
-  (let* ((for-syntax (make-package-for-syntax
+(define (new-user-context built-in meta-structs)
+  (let* ((tower (make-reflective-tower
 		      eval
-		      (list (*structure-ref built-in-structures 'scheme))))
-	 (user (make-user-package built-in-structures for-syntax))
+		      (list (*structure-ref built-in 'scheme))
+		      'user))
+	 (user (make-user-package built-in tower))
 	 (config-package (make-config-package 'config
-					      user
-					      built-in-structures
-					      more-structures))
-	 (exec-package (make-exec-package 'exec user built-in-structures)))
+					      tower
+					      built-in
+					      meta-structs))
+	 (exec-package (make-exec-package 'exec tower built-in)))
     (values (make-user-context
 	     (lambda ()
 	       (set-user-environment! user)
@@ -250,50 +252,51 @@
 
 ; User package
 
-(define (make-user-package built-in-structures for-syntax)
-  (let* ((scheme-structure (*structure-ref built-in-structures 'scheme))
+(define (make-user-package built-in tower)
+  (let* ((scheme-structure (*structure-ref built-in 'scheme))
 	 (user
 	  (make-simple-package (list scheme-structure)
-			       eval
-			       (trivial-delay for-syntax)
+			       #t  ;unstable?
+			       tower
 			       'user)))
     (set-package-integrate?! user #f)
+    (environment-define! user 'access-scheme-48 access-scheme-48)
     user))
+
+(define (access-scheme-48 name)		;For PSD and SLIB, ugh.
+  (case name
+    ((error) error)
+    ((ascii->char) ascii->char)
+    ((force-output) force-output)
+    ((error-output-port) error-output-port)
+    (else (call-error "unrecognized name" access-scheme-48 name))))
 
 ; Configuration package
 
-(define (make-config-package name user built-in more-structures)
+(define (make-config-package name tower built-in meta-structs)
   (let* ((module-system (*structure-ref built-in 'module-system))
-	 (for-syntax (package-for-syntax user))
-	 (config-package
+	 (config
 	  (make-simple-package (cons module-system
-				     (append more-structures
+				     (append meta-structs
 					     (list built-in)))
-			       eval
-			       (trivial-delay for-syntax)
+			       #t  ;unstable?
+			       tower
 			       name)))
-    config-package))
+    (set-reflective-tower-maker! config
+				 (lambda (clauses id)
+				   (if (null? clauses)
+				       tower ;?
+				       (delay (cons eval (eval `(a-package ((for-syntax ,id)) ,@clauses)
+							       config))))))
+    config))
 
 ; Exec package
 
-(define (make-exec-package name user built-in-structures)
-  (let* ((scheme-structure (*structure-ref built-in-structures 'scheme))
-	 (for-syntax (package-for-syntax user))
+(define (make-exec-package name tower built-in)
+  (let* ((scheme-structure (*structure-ref built-in 'scheme))
 	 (exec-package
 	  (make-simple-package (list (command-structure) scheme-structure)
-			       eval
-			       (trivial-delay for-syntax)
+			       #t    ;unstable?
+			       tower
 			       name)))
     exec-package))
-
-;(define (make-trivial-package name opens user built-in-structures)
-;  (make-simple-package (map (lambda (spec)
-;                              (if (symbol? spec)
-;                                  (*structure-ref built-in-structures spec)
-;                                  spec)))
-;                       eval
-;                       (trivial-delay (package-for-syntax user))
-;                       name))
-
-(define (trivial-delay thing)  ;extracted for gc purposes
-  (delay thing))

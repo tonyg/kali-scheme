@@ -696,34 +696,33 @@
 				      env)))))))
 
 (define (process-syntax form env name env-or-whatever)
-  (let ((thing ((evaluator-for-syntax env)
-		;; Bootstrap kludge to macro expand SYNTAX-RULES
-		(let ((probe (lookup env (car form))))
-		  (if (and (binding? probe)
-			   (binding-transform probe))
-		      ((transform-procedure (binding-transform probe))
-		       form (lambda (x) x) eq?)
-		      form)))))
+  (let* ((eval+env (force (reflective-tower env)))
+	 (thing ((car eval+env)
+		 ;; Bootstrap kludge to macro expand SYNTAX-RULES
+		 (let ((probe (lookup env (car form))))
+		   (if (and (binding? probe)
+			    (binding-transform probe))
+		       ((transform-procedure (binding-transform probe))
+			form (lambda (x) x) eq?)
+		       form))
+		 (cdr eval+env))))
     (make-transform thing env-or-whatever syntax-type form name)))
 
-(define (get-funny name)
-  (lambda (env)
-    (let ((binding (lookup env name)))
-      (if (binding? binding)
-	  (binding-static binding)
-	  (error "no binding of funny name" env binding)))))
+(define (get-funny env name)
+  (let ((binding (lookup env name)))
+    (if (binding? binding)
+	(binding-static binding)
+	#f)))
 
-(define funny-name/evaluator-for-syntax
-  (string->symbol ".evaluator-for-syntax."))
+; An environment's "reflective tower" is a promise that is expected to
+; deliver, when forced, a pair (eval . env).
 
-(define evaluator-for-syntax 
-  (get-funny funny-name/evaluator-for-syntax))
+(define funny-name/reflective-tower
+  (string->symbol ".reflective-tower."))
 
-;(define funny-name/environment-for-syntax
-;  (string->symbol ".environment-for-syntax."))
-;
-;(define environment-for-syntax 
-;  (get-funny funny-name/environment-for-syntax))
+(define (reflective-tower env)
+  (or (get-funny env funny-name/reflective-tower)
+      (error "environment has no environment for syntax" env)))
 
 
 ; --------------------

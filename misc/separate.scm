@@ -105,7 +105,8 @@
 					       (name->structure name)))
 				       access-names))
 				#f #f filename '()
-				#f)))    ;name
+				#f	;uid
+				#f)))	;name
 	  (let loop ()
 	    (let ((uid (restore)))
 	      (if (not (eq? uid '-))

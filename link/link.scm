@@ -71,28 +71,26 @@
   (with-fresh-compiler-state
    (if *debug-linker?* 100000 0)    ;Location uid
    (lambda ()
-     (with-fresh-packages-state (if *debug-linker?* 1000 0)  ;Package uid
-       (lambda ()
-	 (set! *loser* #f)
-	 (let* ((location-info (make-table))
-		(generator (make-location-generator location-info
-						    (if *debug-linker?* 10000 0)))
-		(thunks (compile-structures structs
-					    generator
-					    package->environment))
-		(p (make-simple-package structs #f #f))
-		(r (noting-undefined-variables p
-					       (lambda ()
-						 (set-package-get-location! p generator)
-						 (compile-form (make-resumer) p)))))
-	   (let ((startup (make-closure 
-			   (make-startup-procedure thunks r)
-			   0)))
-	     (if *debug-linker?* (set! *loser* startup))
-	     (write-image-file startup
-			       (namestring filename #f 'image)))
-	   (write-debug-info location-info
-			     (namestring filename #f 'debug))))))))
+     (set! *loser* #f)
+     (let* ((location-info (make-table))
+	    (generator (make-location-generator location-info
+						(if *debug-linker?* 10000 0)))
+	    (thunks (compile-structures structs
+					generator
+					package->environment))
+	    (p (make-simple-package structs #f #f))
+	    (r (noting-undefined-variables p
+					   (lambda ()
+					     (set-package-get-location! p generator)
+					     (compile-form (make-resumer) p)))))
+       (let ((startup (make-closure 
+		       (make-startup-procedure thunks r)
+		       0)))
+	 (if *debug-linker?* (set! *loser* startup))
+	 (write-image-file startup
+			   (namestring filename #f 'image)))
+       (write-debug-info location-info
+			 (namestring filename #f 'debug))))))
 (define *loser* #f)
 (define *debug-linker?* #f)
 

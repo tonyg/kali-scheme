@@ -14,7 +14,7 @@
 ; dynamic-state register.  The run-time system stores the current
 ; thread in the dynamic-state register.
 
-; Here we define a particular thread structure, but a different one is
+; Here we define a particular thread record, but a different one is
 ; defined by the (uniprocessor) threads package.  The current thread
 ; may actually be any kind of record as long as its first component
 ; can be used by the fluid variable implementation to maintain the

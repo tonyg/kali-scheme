@@ -1,7 +1,7 @@
 --*- Mode: Indented-text; -*-
 
 Scheme 48: list of bugs and things to do.
-Last update by JAR on 11 January 1994.
+Last update by JAR on 2 February 1994.
 
 Run-time system bugs:
     Compiler needs to treat calls with more than 63 arguments specially.
@@ -10,6 +10,9 @@ Run-time system bugs:
         (define (foo x) `(a ,x))
 	(define cons list)
 	(foo 1) => (a (1 ()))
+    The WITH-**PUT-FILE and CALL-WITH-**PUT-PORT procedures probably
+      close ports sooner than the Scheme reports think they ought to.
+      (They just do the obvious DYNAMIC-WIND.)
     If (find-all-symbols) fails due to lack of space, it should GC and
       retry (I think) (bug reported by Basile Starynkevitch, 7-21-93)
 
@@ -37,6 +40,8 @@ Programming environment:
     Command (and procedure) to change current directory.
 
 Performance:
+    Put initial pure objects in read-only memory somehow (for faster
+      startup and fork() calls).
     More compact representation for debugging data?
     Leaf procedure compilation (RK's rts/no-leaf-env.scm): if no
       continuations or lambdas, skip the make-env and access locals
@@ -46,11 +51,12 @@ Performance:
     The CAML light implementation has good documentation and patches
       for optimizing the interpreter's switch (*pc++); perhaps we
       could lift some of it.  (Range check isn't necessary.)
+    Floating point support in VM.
     Bignum support in VM: use MIT Scheme bignums or GNU Multiple
       Precision Arithmetic Library (Torbjorn Granlund <tege@sics.se>).
-    Faster bignum printer (e.g. the one Richard wrote - it would be
-      nice if it were an option tied to bignums)
-    Floating point support in VM.
+    Faster bignum printer (e.g. the one Richard wrote - but it would be
+      nice if it were an option tied to bignums, not built in to the
+      initial image).
     Ratnum multiplication and division might be made more efficient by
       taking cross-GCD's.
     Native code compiler...
@@ -125,9 +131,7 @@ Cleanup:
     Revert to the old exception system: vector of handlers (not just a
       single procedure), and each handler gets an exception code.
     Rename "unassigned" to "uninitialized"?  Or phase it out entirely.
-  Run-time:
-    Flush (optimize ...) clause in DEFINE-STRUCTURE in favor of
-      optimizer argument to SCAN-STRUCTURES.
+  Run-time / features / development environment:
     Figure out how to merge the two type systems (META-METHODS and
       META-TYPES).  The generic function system could make use of the
       SUBTYPE? and INTERSECT? predicates.
@@ -136,22 +140,29 @@ Cleanup:
       big/filename.scm assumes Unix (cf. DIRECTORY-COMPONENT-SEPARATOR,
       FILE-NAME-PREFERRED-CASE).  Perhaps there should be VM support for
       this.
-    Vector patterns and templates ought to be supported in
-      SYNTAX-RULES.
-    The DEFINE-INTERFACE forms should contain types for every exported
-      variable; the code in cprim.scm (and recon.scm?) shouldn't have
-      to worry about setting up types.
     Make sure that the disassembler and assembler are inverses of one
       another.
     Disassembler should generate S-expression first, and then print
       it independently.
     Combine condition, signals, and handle into a single structure?
     Figure out a better way to implement ##.
+  Compiler / linker / module system:
+    Flush link/data.scm.  Linker should instead open the VM module
+      that includes vm/data.scm.
+    Flush (optimize ...) clause in DEFINE-STRUCTURE in favor of
+      optimizer argument to SCAN-STRUCTURES.
+    Vector patterns and templates ought to be supported in
+      SYNTAX-RULES.
+    The DEFINE-INTERFACE forms should contain types for every exported
+      variable; the code in cprim.scm (and recon.scm?) shouldn't have
+      to worry about setting up types.
     Add ENVIRONMENT-DEFINED? ?
     Make USUAL-TRANSFORM return a transform?
     Add enough to the node signature to make it usable on its own?
   Etc:
     Start using a source control system (like rcs).
+    We ought to have a test system / validation suite.
+
 
 
 Date: Mon, 14 Jun 93 18:33:30 HKT

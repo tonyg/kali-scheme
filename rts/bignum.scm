@@ -4,17 +4,11 @@
 
 ; Integer arithmetic
 
-(define :bignum
-  (make-extended-number-type '(sign magnitude)
-			     (list :exact-integer)
-			     'bignum))
-
-(define make-bignum
-  (extended-number-constructor :bignum '(sign magnitude)))
-(define bignum?          (extended-number-predicate :bignum))
-(define bignum-sign	 (extended-number-accessor :bignum 'sign))
-(define bignum-magnitude (extended-number-accessor :bignum 'magnitude))
-
+(define-extended-number-type :bignum (:exact-integer)
+  (make-bignum sign magnitude)
+  bignum?
+  (sign bignum-sign)
+  (magnitude bignum-magnitude))
 
 (define (integer->bignum m)
   (if (bignum? m)
@@ -25,6 +19,12 @@
 	     (make-bignum -1 least-non-bignum-magnitude))
 	    (else
 	     (make-bignum -1 (integer->magnitude (- 0 m)))))))
+
+;(define (bignum->integer n)             ;For debugging
+;  (* (bignum-sign n)
+;     (reduce (lambda (d n) (+ d (* n radix)))
+;             0
+;             (bignum-magnitude n))))
 
 (define (make-integer sign mag)
   (if (> sign 0)
@@ -48,15 +48,9 @@
 	  (n-mag (bignum-magnitude n)))
     (if (= m-sign n-sign)
 	(make-integer m-sign (add-magnitudes m-mag n-mag))
-	(if (> m-sign 0)
-	    ;; (+ X -Y)
-	    (if (smaller-magnitude? m-mag n-mag)
-		(make-integer -1 (subtract-magnitudes n-mag m-mag))
-		(make-integer  1 (subtract-magnitudes m-mag n-mag)))
-	    ;; (+ -X Y)
-	    (if (smaller-magnitude? m-mag n-mag)
-		(make-integer  1 (subtract-magnitudes n-mag m-mag))
-		(make-integer -1 (subtract-magnitudes m-mag n-mag))))))))
+	(if (smaller-magnitude? m-mag n-mag)
+	    (make-integer (- 0 m-sign) (subtract-magnitudes n-mag m-mag))
+	    (make-integer m-sign (subtract-magnitudes m-mag n-mag)))))))
 
 (define (integer- m n)
   (integer+ m (integer-negate n)))
@@ -118,7 +112,8 @@
 
 ; Magnitude (unsigned integer) arithmetic
 
-(define radix (expt 2 14))  ;Cutting it close here...
+(define log-radix 14)			;Cutting it close here...
+(define radix (expt 2 log-radix))
 
 (define greatest-non-bignum (+ (expt 2 28) (- (expt 2 28) 1)))
 (define least-non-bignum (* (expt 2 28) -2))
@@ -186,9 +181,6 @@
 
 (define (subtract-magnitudes m n)
   (combine-magnitudes m n -))
-
-; bitwise-{and, ior, xor, not}-magnitudes
-; arithmetic-shift-magnitudes
 
 ; Compare
 

@@ -31,23 +31,15 @@
     (environment-define! p 'built-in-structures s)
     s))
 
-(define scheme-for-syntax 'scheme)
-
 (define (initialize-interaction-environment! built-in-structures)
   (let ((scheme (*structure-ref built-in-structures 'scheme))
-	(for-syntax (*structure-ref built-in-structures scheme-for-syntax)))
+	(tower (make-tower built-in-structures 'interaction)))
     (set-interaction-environment!
-     (make-simple-package (list scheme)
-			  eval
-			  (make-env-for-syntax-promise for-syntax)
-			  'interaction))
+     (make-simple-package (list scheme) eval tower 'interaction))
 
     (set-scheme-report-environment!
      5
-     (make-simple-package (list scheme)
-			  eval
-			  (make-env-for-syntax-promise for-syntax)
-			  'r5rs))))
+     (make-simple-package (list scheme) eval tower 'r5rs))))
 
 ; Intended for bootstrapping the command processor.
 
@@ -58,11 +50,13 @@
 			 (*structure-ref built-in-structures name))
 		       structs-to-open))
 	    eval
-	    (make-env-for-syntax-promise
-	     (*structure-ref built-in-structures scheme-for-syntax))
+	    (make-tower built-in-structures 'initial)
 	    'initial)))
     (environment-define! p 'built-in-structures built-in-structures)
     p))
 
-(define (make-env-for-syntax-promise scheme)
-  (delay (make-package-for-syntax eval (list scheme))))
+(define (make-tower built-in-structures id)
+  (make-reflective-tower eval
+			 (list (*structure-ref built-in-structures
+					       'scheme))
+			 id))

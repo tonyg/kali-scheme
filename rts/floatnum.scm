@@ -2,16 +2,15 @@
 
 ; Inexact rational arithmetic using hacked-in floating point numbers.
 
-(define :floatnum
-  (make-extended-number-type '(code-vec) (list :rational) 'floatnum))
+(define-extended-number-type :floatnum (:rational)
+  (make-floatnum code-vec)
+  floatnum?
+  (code-vec floatnum-code-vec))
 
-(define floatnum? (extended-number-predicate :floatnum))
-(define make-floatnum (extended-number-constructor :floatnum '(code-vec)))
-(define floatnum-code-vec (extended-number-accessor :floatnum 'code-vec))
-
+; Floating point at interrupt level?  Naw!
 (define float-vec (make-vector 4))
 
-(define (fixnum->floatnum fix)
+(define (fixnum->float fix)
   (let ((res (make-code-vector 8 0)))
     (vector-set! float-vec 0 6)
     (vector-set! float-vec 1 fix)
@@ -93,7 +92,7 @@
   (let ((foo (expt 2 28)))
     (lambda (x)
       (if (in-fixnum-range? x)
-	  (fixnum->floatnum x)
+	  (fixnum->float x)
 	  (float+ (float* foo (quotient x foo))
 		  (remainder x foo))))))
 
@@ -143,13 +142,39 @@
   (define atan float-atan)
   (define sqrt float-sqrt))
 
+(define (float-fraction-length z)
+  (let ((two (integer->float 2)))
+    (do ((z z (float* z two))
+	 (i 0 (+ i 1)))
+	((integral-floatnum? z) i)
+      (if (> i 1000) (error "I'm bored." z)))))
+
 (define (float-denominator z)
-  (do ((z z (float* z 2))
-       (n (integer->float 1) (float* n 2)))
-      ((integral-floatnum? z) n)))
+  (expt (integer->float 2) (float-fraction-length z)))
 
 (define (float-numerator z)
   (float* z (float-denominator z)))
+
+(define (float->exact z)
+  (if (integral-floatnum? z)
+      (float->exact-integer z)
+      (let ((q (expt 2 (float-fraction-length z))))
+	(let ((e (/ (float->exact-integer (float* z (integer->float q)))
+		    q)))
+	  (if (exact? e)
+	      e
+	      (call-error "no exact representation"
+			  inexact->exact z))))))
+
+(define float->exact-integer
+  (let ((foo (expt 2 28)))
+    (lambda (x)
+      (if (integral-floatnum? x)
+	  (if (in-fixnum-range? x)
+	      (floatnum->fixnum x)
+	      (+ (* foo (inexact->exact (quotient x foo)))
+		 (inexact->exact (remainder x foo))))
+	  (call-error "invalid argument" float->exact-integer x)))))
 
 
 ; Methods on floatnums
@@ -162,10 +187,7 @@
 (define-method &exact? ((z :floatnum)) #f)
 
 (define-method &inexact->exact ((z :floatnum))
-  (if (and (integral-floatnum? z)
-	   (in-fixnum-range? z))
-      (floatnum->fixnum z)
-      (next-method)))				; ain't no way
+  (float->exact z))
 
 (define-method &exact->inexact ((z :rational))
   (x->float z))		;Should do this only if the number is within range.
@@ -173,8 +195,8 @@
 (define-method &floor ((z :floatnum)) (float-floor z))
 
 ; beware infinite regress
-;(define-method &numerator ((z :floatnum)) (float-numerator z))
-;(define-method &denominator ((z :floatnum)) (float-denominator z))
+(define-method &numerator ((z :floatnum)) (float-numerator z))
+(define-method &denominator ((z :floatnum)) (float-denominator z))
 
 (define (define-floatnum-method mtable proc)
   (define-method mtable ((m :rational) (n :rational)) (proc m n)))
@@ -190,9 +212,17 @@
 (define-floatnum-method &= float=)
 (define-floatnum-method &< float<)
 
+(define-method &numerator ((z :rational)) (float-numerator z))
+(define-method &denominator ((z :rational)) (float-denominator z))
+
 (define-method &exp ((z :rational)) (float-exp z))
 (define-method &log ((z :rational)) (float-log z))
 (define-method &sqrt ((z :rational)) (float-sqrt z))
+(define-method &sin ((z :rational)) (float-sin z))
+(define-method &cos ((z :rational)) (float-cos z))
+(define-method &tan ((z :rational)) (float-tan z))
+(define-method &acos ((z :rational)) (float-acos z))
+(define-method &atan ((z :rational)) (float-atan z))
 
 (define-method &number->string ((n :floatnum) radix)
   (if (= radix 10)

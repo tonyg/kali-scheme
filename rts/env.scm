@@ -74,11 +74,22 @@
 
 
 
-; Infinite tower of packages for syntax
+; Make an infinite tower of packages for syntax.
+; structs should be a non-null list of structures that should be
+; opened at EVERY level of the tower.
 
-(define (make-package-for-syntax eval structs)
-  (let recur ()
-    (make-simple-package structs
-			 eval
-			 (delay (recur)) ;package for syntax
-			 'for-syntax)))
+(define (make-reflective-tower eval structs id)
+  (let recur ((level 1))
+    (delay (cons eval
+		 (make-simple-package structs
+				      eval
+				      (delay (recur (+ level 1)))
+				      `(for-syntax ,level ,id))))))
+
+; (set-reflective-tower-maker! p (lambda (clauses id) ...))
+; where clauses is a list of DEFINE-STRUCTURE clauses
+
+(define set-reflective-tower-maker!
+  (let ((name (string->symbol ".make-reflective-tower.")))
+    (lambda (p proc)
+      (environment-define! p name proc))))

@@ -11,7 +11,7 @@
 			      (vector->list names)
 			      (vector->list types))))
 
-(define (package names locs get-location)
+(define (package names locs get-location uid)
   (let ((p (make-simple-package '() #f #f))
 	(end (vector-length names)))
     (do ((i 0 (+ i 1)))

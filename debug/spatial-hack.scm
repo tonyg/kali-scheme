@@ -6,7 +6,7 @@
 (init-defpackage! eval
 		  (lambda ()
 		    (delay (make-simple-package (list scheme-level-1)
-						eval (delay #f) 'for-syntax))))
+						#t (delay #f) 'for-syntax))))
 
 (define-structures ((assembler (export (lap syntax))))
   (open scheme-level-2 compiler architecture

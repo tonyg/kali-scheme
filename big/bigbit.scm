@@ -169,11 +169,6 @@
 		      (integer->magnitude carry)
 		      (recur high n carry)))))))))))
 
-(define log-radix
-  (do ((i 0 (+ i 1))
-       (r 1 (* r 2)))
-      ((>= r radix) i)))
-
 ;(define (tst)
 ;  (let* ((m (random))
 ;         (n (bitwise-and m 63))

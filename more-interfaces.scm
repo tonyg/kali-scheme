@@ -188,10 +188,7 @@
 ; Extended numbers: bignums, ratnums, etc.
 
 (define-interface extended-numbers-interface
-  (export make-extended-number-type
-	  extended-number-constructor
-	  extended-number-accessor
-	  extended-number-predicate
+  (export (define-extended-number-type :syntax)
 	  (define-opcode-extension :syntax)
 	  :exact :inexact
 	  string-position
@@ -231,7 +228,7 @@
 	  low-digit high-digits
 	  make-integer
 	  zero-magnitude
-	  radix
+	  radix log-radix
 	  integer-negate integer- integer=))
 
 ; --------------------

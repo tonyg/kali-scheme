@@ -10,7 +10,7 @@
 
 ; ,bench
 ; ,load rts/defenum.scm
-; ,load-into for-syntax my-vm/for-syntax.scm
+; ,for-syntax ,load my-vm/for-syntax.scm
 ; ,load my-vm/s48-prescheme.scm my-vm/util.scm my-vm/memory.scm
 ; ,load my-vm/arch.scm my-vm/data.scm my-vm/struct.scm
 ; ,load link/s48-features.scm link/read-image.scm

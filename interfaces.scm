@@ -600,7 +600,8 @@
 	  unbound?
 	  schemify
 	  get-funny
-	  funny-name/evaluator-for-syntax
+	  reflective-tower 
+	  funny-name/reflective-tower
 	  ;; Stuff moved from meta-types
 	  variable-type
 	  variable-type?
@@ -658,7 +659,8 @@
 	  make-new-location		;ctop.scm
 	  package-note-caching
 	  structure-package
-	  extract-package-from-environment))
+	  extract-package-from-environment
+	  package-define-funny!))
 
 (define-interface packages-internal-interface
   (export package-loaded?		;env/load-package.scm
@@ -677,9 +679,7 @@
 	  for-each-export
 	  package-accesses
 	  package-clauses
-	  package-evaluator
 	  package-file-name
-	  package-for-syntax
 	  package-opens
 	  set-package-integrate?!
 	  structure-name
@@ -786,11 +786,12 @@
 	  environment-ref
 	  environment-set!
 	  interaction-environment
-	  make-package-for-syntax
+	  make-reflective-tower
 	  scheme-report-environment
 	  set-interaction-environment!
 	  set-scheme-report-environment!
-	  with-interaction-environment))
+	  with-interaction-environment
+	  set-reflective-tower-maker!))
 
 (define-interface defpackage-interface
   (export ((define			;Formerly define-structure
@@ -799,12 +800,14 @@
 	    define-structure
 	    define-module
 	    define-syntax
-	    ;; compound-interface
+	    define-reflective-tower-maker
+	    export-reflective-tower-maker
+	    compound-interface
 	    export
-	    begin)
+	    begin
+	    a-package)			; cf. env/init-defpackage.scm
 	   :syntax)
 	  interface-of
-	  init-defpackage!
 	  set-verify-later!))
 
 (define-interface types-interface

@@ -3,10 +3,6 @@
 
 ; Integer-length, a la Common Lisp, written in portable Scheme.
 
-; Attempts to compute the answer in time linear in the number of bits,
-; although I haven't analyzed the algorithm.  Might be n log n
-; instead.  The obvious implementation is at least quadratic.
-
 (define-syntax cons-stream
   (syntax-rules ()
     ((cons-stream head tail)

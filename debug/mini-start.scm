@@ -22,11 +22,9 @@
 
 
 (define (initialize-interaction-environment! scheme)
-  (let ((eval-for-syntax
-	  (lambda (form) (eval form (scheme-report-environment 5)))))
+  (let ((tower (delay (cons eval (scheme-report-environment 5)))))
     (set-interaction-environment!
-         (make-simple-package (list scheme) #f #f 'interaction))
+         (make-simple-package (list scheme) #t tower 'interaction))
     (set-scheme-report-environment!
          5
-	 (make-simple-package (list scheme) #f #f 'r5rs))
-    ))
+	 (make-simple-package (list scheme) #t tower 'r5rs))))

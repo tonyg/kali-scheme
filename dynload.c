@@ -17,7 +17,9 @@
 #endif
 
 #if defined(svr4) || defined(SVR4) || defined (__svr4__) || defined(sun) 
+#if !defined(MACH)
 #define HAS_DLOPEN
+#endif /*not MACH*/
 #endif /*svr4*/
 
 
