@@ -61,6 +61,9 @@
     (define (s48-integer-quotient x y)
       (integer-quotient x y))
 
+    (define (s48-integer-divide x y)
+      (integer-divide x y))
+
     (define-syntax define-integer-or-floanum-comparison
       (syntax-rules ()
 	((define-integer-or-floanum-comparison 

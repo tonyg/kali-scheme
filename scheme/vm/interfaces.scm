@@ -652,6 +652,7 @@
 	  s48-integer-or-floanum->=
           s48-integer-remainder
           s48-integer-quotient
+          s48-integer-divide
 	  s48-integer-bitwise-not
 	  s48-integer-bit-count
 	  s48-integer-bitwise-and
