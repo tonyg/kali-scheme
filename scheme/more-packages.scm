@@ -464,7 +464,8 @@
   (begin
     (define available-srfis
       '(srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
-	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17 srfi-23))
+	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17 srfi-23
+	srfi-31))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -547,6 +548,10 @@
 
 (define-structure srfi-23 (export error)
   (open (subset signals (error))))
+
+(define-structure srfi-31 srfi-31-interface
+  (open scheme)
+  (files (srfi srfi-31)))
 
 ;----------------
 ; ... end of package definitions.
@@ -650,6 +655,7 @@
 	    srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
 	    srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
 	    srfi-23
+	    srfi-31
 	    )
 	   :structure)
 	  ((define-signature define-package) :syntax)))

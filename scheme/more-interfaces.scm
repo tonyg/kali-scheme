@@ -571,3 +571,5 @@
 
 	  ))
 
+(define-interface srfi-31-interface
+  (export (rec :syntax)))
