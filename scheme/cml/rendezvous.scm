@@ -139,8 +139,7 @@
 		   (lambda ()
 		     value)))))
 
-(define (never-rv)
-  (really-make-base '()))
+(define never-rv (really-make-base '()))
 
 (define (guard thunk)
   (make-guard thunk))
