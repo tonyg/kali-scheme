@@ -93,7 +93,7 @@
     (define available-srfis
       '(srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
 	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17 srfi-23
-	srfi-27 srfi-31))
+	srfi-27 srfi-31 srfi-42))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -297,3 +297,28 @@
 	 (letrec ( (NAME (lambda VARIABLES . BODY)) ) NAME))
 	((rec NAME EXPRESSION)
 	 (letrec ( (NAME EXPRESSION) ) NAME))))))
+
+(define-interface srfi-42-interface
+  (export ((do-ec
+	    list-ec append-ec
+	    string-ec string-append-ec
+	    vector-ec vector-of-length-ec
+	    sum-ec product-ec
+	    min-ec max-ec
+	    any?-ec every?-ec
+	    first-ec last-ec
+	    fold-ec fold3-ec) :syntax)
+	  ((:
+	    :list :string :vector
+	    :integers
+	    :range :real-range :char-range
+	    :port
+	    :dispatched) :syntax)
+	  ((:do :let :parallel :while :until) :syntax)
+	  :-dispatch-ref :-dispatch-set! make-initial-:-dispatch 
+	  (:generator-proc :syntax)))
+
+(define-structure srfi-42 srfi-42-interface
+  (open scheme
+	srfi-23)
+  (files srfi-42))

@@ -482,6 +482,7 @@
 	    srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
 	    srfi-23 srfi-27
 	    srfi-31
+	    srfi-42
 	    )
 	   :structure)
 	  ((define-signature define-package) :syntax)))
