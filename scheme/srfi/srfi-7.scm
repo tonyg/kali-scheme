@@ -8,11 +8,21 @@
   "load an SRFI-7 program"
   '(name filename))
 
+(define-user-command-syntax 'load-srfi-7-script "<name> <filename>"
+  "load an SRFI-7 script"
+  '(name filename))
+
 ; We create a structure, EVAL it in the configuration package, give
 ; it a name, and then load it.
 
 (define (load-srfi-7-program name filename)
-  (eval-from-file `((define ,name ,(read-srfi-7-program filename)))
+  (load-srfi-7 name filename read-srfi-7-program))
+
+(define (load-srfi-7-script name filename)
+  (load-srfi-7 name filename read-srfi-7-script))
+
+(define (load-srfi-7 name filename read)
+  (eval-from-file `((define ,name ,(read filename)))
 		  (config-package)
 		  filename)
   (let ((structure (eval name (config-package))))
@@ -25,12 +35,18 @@
 		     'load-srfi-7-program
 		     load-srfi-7-program)
 
+(environment-define! (user-command-environment)
+		     'load-srfi-7-script
+		     load-srfi-7-script)
+
 ; Read a program from FILENAME and return the code for a structure that
 ; contains it.
 
-(define (read-srfi-7-program filename)
+(define (read-srfi-7 filename script?)
   (call-with-input-file filename
     (lambda (in)
+      (if script?
+	  (skip-line in))
       (let ((program (read in)))
 	(if (and (pair? program)
 		 (eq? (car program) 'program))
@@ -40,6 +56,19 @@
 		  (program->structure-exp needed source)
 		  (error "cannot satisfy program's requirements")))
 	    (error "program not found in file" filename))))))
+
+(define (skip-line port)
+  (let loop ()
+    (let ((char (read-char port)))
+      (if (and (not (eof-object? char))
+	       (not (char=? #\newline char)))
+	  (loop)))))
+
+(define (read-srfi-7-program filename)
+  (read-srfi-7 filename #f))
+
+(define (read-srfi-7-script filename)
+  (read-srfi-7 filename #t))
 
 ; Returns a STRUCTURE expression for a program that uses the SRFIs listed
 ; in NEEDED and whose source is SOURCE.

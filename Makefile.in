@@ -109,16 +109,17 @@ CONFIG_FILES = scheme/interfaces.scm scheme/packages.scm \
 
 # The following is the first rule and therefore the "make" command's
 # default target.
-enough: $(VM) $(LIBSCHEME48) $(IMAGE) go
+enough: $(VM) $(LIBSCHEME48) $(IMAGE) script-interpreter go
 
 # --------------------
 # External code to include in the VM
 # After changing any of these you should delete `scheme48vm' and remake it.
 
-EXTERNAL_OBJECTS = $(POSIX_OBJECTS) $(SOCKET_OBJECTS) $(LOOKUP_OBJECTS)	\
-		   $(ASM_OBJECTS) $(SRFI_OBJECTS)
-EXTERNAL_LD_FLAGS = $(POSIX_LD_FLAGS) $(SOCKET_LD_FLAGS)
+EXTERNAL_OBJECTS = $(POSIX_OBJECTS) $(SOCKET_OBJECTS) $(SYSEXITS_OBJECTS) \
+		   $(LOOKUP_OBJECTS) $(ASM_OBJECTS) $(SRFI_OBJECTS)
+EXTERNAL_LD_FLAGS = $(POSIX_LD_FLAGS) $(SOCKET_LD_FLAGS) $(SYSEXITS_LD_FLAGS)
 EXTERNAL_INITIALIZERS = $(POSIX_INITIALIZERS) $(SOCKET_INITIALIZERS)	\
+			$(SYSEXITS_INITIALIZERS)			\
                         $(LOOKUP_INITIALIZERS) $(ASM_INITIALIZERS)	\
 			$(SRFI_INITIALIZERS)
 
@@ -157,6 +158,12 @@ SOCKET_LD_FLAGS =
 SOCKET_INITIALIZERS = 	s48_init_socket
 
 # End of socket rules
+
+# Sysexits (this is for the implementation of SRFI 22)
+
+SYSEXITS_OBJECTS = c/unix/sysexits.o
+SYSEXITS_LD_FLAGS =
+SYSEXITS_INITIALIZERS = s48_init_sysexits
 
 # Lookup rules (this is just for compatibility with old code)
 
@@ -210,6 +217,8 @@ $(LIBSCHEME48): $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
 	ranlib $@ &&					\
 	rm -f /tmp/s48_external_$$$$.c
 
+script-interpreter: c/script-interpreter.o
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/script-interpreter.o
 
 c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
 	$(CC) -c $(CFLAGS) -o $@ \
@@ -225,12 +234,19 @@ c/scheme48read-image.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h
 c/scheme48write-image.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h
 c/extension.o: c/sysdep.h $(FAKEHS) c/scheme48.h c/scheme48vm.h
 c/external.o: c/sysdep.h $(FAKEHS) c/scheme48.h
+c/unix/sysexits.o: c/sysdep.h $(FAKEHS) c/scheme48.h
 c/unix/event.o: c/sysdep.h $(FAKEHS) c/scheme48vm.h c/scheme48heap.h \
 			c/event.h c/fd-io.h
 c/unix/fd-io.o: c/sysdep.h $(FAKEHS) c/scheme48vm.h c/scheme48heap.h \
 			c/event.h c/fd-io.h
 c/unix/misc.o: c/sysdep.h $(FAKEHS)
 c/unix/io.o: c/io.h
+c/script-interpreter.o: c/sysdep.h $(FAKEHS) c/script-interpreter.c
+	$(CC) -c $(CFLAGS) -o $@ \
+		-DRUNNABLE=\"$(bindir)/$(RUNNABLE)\" \
+		$(CPPFLAGS) $(DEFS) \
+		-I ./c -I$(srcdir)/c \
+		$(srcdir)/c/script-interpreter.c
 c/fake/libdl1.o: c/fake/dlfcn.h
 c/fake/libdl2.o: c/fake/dlfcn.h
 c/fake/strerror.o: c/fake/strerror.h
@@ -251,7 +267,9 @@ $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 
 ### Fake targets:  all clean install man dist
 
-install: enough dirs inst-script inst-vm inst-misc inst-man inst-inc inst-image
+install: enough dirs \
+	 inst-script inst-vm inst-misc inst-man inst-inc inst-image \
+	 inst-script-interpreters
 
 inst-vm:
 	$(INSTALL_PROGRAM) $(VM) $(LIB)
@@ -298,6 +316,11 @@ inst-script:
 				>>$$script &&				\
 	chmod +x $$script
 
+inst-script-interpreters:
+	for dialect in r5rs srfi-7; do					\
+		$(INSTALL_PROGRAM) script-interpreter $(bindir)/scheme-$$dialect; \
+	done
+
 # Script to run scheme48 in this directory.
 go:
 	echo '#!/bin/sh'	>$@ &&					\
@@ -329,7 +352,8 @@ configure: configure.in
 	autoheader && autoconf
 
 clean:
-	-rm -f $(VM) *.o c/unix/*.o c/posix/*.o c/*.o c/fake/*.o	\
+	-rm -f $(VM) script-interpreter					\
+		*.o c/unix/*.o c/posix/*.o c/*.o c/fake/*.o		\
 		TAGS $(IMAGE)						\
 		build/*.tmp $(MANPAGE) build/linker.image		\
 		scheme/debug/*.image scheme/debug/*.debug config.cache	\

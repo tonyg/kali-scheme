@@ -10,7 +10,7 @@
   (make-fluid (make-cell (lambda (filename package)
 			   (values)))))
 
-(define (read-forms pathname package)
+(define (read-forms pathname package script?)
   (let* ((filename (namestring pathname #f *scheme-file-type*))
          (truename (translate filename))
    	 (port (open-input-file truename)))
@@ -23,16 +23,23 @@
        (let ((o-port (current-noise-port)))
 	 (display truename o-port)
 	 (force-output o-port)
-	 (really-read-forms port)))
+	 (really-read-forms port script?)))
      (lambda ()
        (close-input-port port)
        (set! port #f)))))
 
-(define (really-read-forms port)	    
+(define (really-read-forms port script?)
+  (if script?
+      (skip-line port))
   (let loop ((forms '()))
     (let ((form (read port)))
       (if (eof-object? form)
 	  (reverse forms)
 	  (loop (cons form forms))))))
 
-
+(define (skip-line port)
+  (let loop ()
+    (let ((char (read-char port)))
+      (if (and (not (eof-object? char))
+	       (not (char=? #\newline char)))
+	  (loop)))))

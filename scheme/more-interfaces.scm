@@ -117,6 +117,7 @@
 	  exit-when-done
           go
 	  load
+	  load-script
           help
           run
 	  ?))

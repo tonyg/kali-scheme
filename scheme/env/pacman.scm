@@ -252,8 +252,8 @@
 	  (lambda ()
 	    (start-command-processor arg
 				     (lambda ()
-				       (init-thunk)
-				       (greet-user info)))))))))
+				       (greet-user info))
+				     init-thunk)))))))
 
 (define (make-user-envs commands built-in meta-structs)
   (let* ((tower (make-reflective-tower

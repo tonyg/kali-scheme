@@ -21,6 +21,11 @@
 #undef	HAVE_SYS_SELECT_H
 
 /*
+ * HAVE_SYSEXITS_H is defined iff we have the include file sysexits.h.
+ */
+#undef	HAVE_SYSEXITS_H
+
+/*
  * HAVE_DLOPEN is defined iff we have dlopen().
  */
 #undef	HAVE_DLOPEN
@@ -47,3 +52,4 @@
 #include "fake/strerror.h"
 #include "fake/sys-select.h"
 #include "fake/environ.h"
+#include "fake/sysexits.h"

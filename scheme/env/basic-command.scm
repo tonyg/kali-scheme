@@ -47,6 +47,16 @@
   '(&rest filename))
 
 (define (load . filenames)
+  (apply really-load load-into filenames))
+
+(define-command-syntax 'load-script "<filename> ..."
+  "load Scheme script(s)"
+  '(&rest filename))
+
+(define (load-script . filenames)
+  (apply really-load load-script-into filenames))
+
+(define (really-load load-into . filenames)
   (let ((env (environment-for-commands)))
     ;; (with-interaction-environment env
     ;; (lambda ()

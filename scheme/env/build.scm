@@ -25,7 +25,8 @@
 		       (restart-command-processor arg
 						  context
 						  (lambda ()
-						    (greet-user info))))))
+						    (greet-user info))
+						  values))))
 		 filename)))
 
 ; build <exp> <filename>

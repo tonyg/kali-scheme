@@ -1224,7 +1224,7 @@
 	  :type))		;Holy stratification, Batman!
 
 (define-interface evaluation-interface
-  (export eval load load-into eval-from-file
+  (export eval load load-into load-script-into eval-from-file
 	  ; eval-scanned-forms
 	  ))
 

@@ -16,15 +16,17 @@
 ; There are two version, one for an initial start and the other for restarting
 ; with an existing user context.
 
-(define (start-command-processor resume-args start-thunk)
-  (restart-command-processor resume-args #f start-thunk))
+(define (start-command-processor resume-args greeting-thunk start-thunk)
+  (restart-command-processor resume-args #f greeting-thunk start-thunk))
 
-(define (restart-command-processor resume-args context start-thunk)
+(define (restart-command-processor resume-args context greeting-thunk start-thunk)
   ((with-handler command-loop-condition-handler
      (lambda ()
        (start-command-levels resume-args
 			     context
+			     greeting-thunk
 			     start-thunk
+			     script-runner
 			     real-command-loop
 			     #f			; no condition
 			     #f			; not inspecting
@@ -36,6 +38,7 @@
 
 (define (command-processor command-env resume-args)
   (start-command-processor resume-args
+			   values
 			   (lambda ()
 			     (set-user-command-environment! command-env)
 			     unspecific)))
@@ -196,6 +199,74 @@
 (define-generic environment-id-string &environment-id-string (env))
 
 (define-method &environment-id-string (env) "")
+
+;----------------
+; Loading scripts
+
+(define (script-runner)
+  (run-script (cdr (focus-object))))
+
+; This loads a script SRFI-22-style
+
+; ARG is a list of command-line arguments after "run-script"
+
+(define (run-script arg)
+  (run-script-handler (car arg) (cdr arg)))
+
+(define *script-handler-alist* '())
+
+(define (define-script-handler tag proc)
+  (set! *script-handler-alist*
+	(cons (cons tag proc) *script-handler-alist*)))
+
+(define (run-script-handler tag args)
+  (cond
+   ((assoc tag *script-handler-alist*)
+    => (lambda (pair)
+	 (silently
+	  (lambda ()
+	    ((cdr pair) args)))))
+   (else
+    (display "invalid argument to run-script-handler" (current-error-port))
+    (display tag)
+    1)))
+
+(define EX_SOFTWARE (shared-binding-ref (lookup-imported-binding "EX_SOFTWARE")))
+
+(define (with-srfi-22-error-handling thunk)
+  (call-with-current-continuation
+   (lambda (k)
+     (with-handler
+      (lambda (c punt)
+	(if (error? c)
+	    (begin
+	      (display-condition c (current-error-port))
+	      (k EX_SOFTWARE))
+	    (punt)))
+      (lambda ()
+	(thunk)
+	0)))))
+
+(define-script-handler "r5rs"
+  (lambda (args)
+    (with-srfi-22-error-handling
+     (lambda ()
+       (load-script-into (car args) (interaction-environment))
+       ((environment-ref (interaction-environment) 'main) args)))))
+
+(define-script-handler "srfi-7"
+  (lambda (args)
+    (with-srfi-22-error-handling
+     (lambda ()
+       (eval '(load-package 'srfi-7) (user-command-environment))
+       (eval `(load-srfi-7-script 'srfi-7-script ,(car args))
+	     (user-command-environment))
+       (let ((cell (make-cell #f)))	; kludge
+	 (let-fluid $command-results cell
+	  (lambda ()
+	    (eval '(in 'srfi-7-script '(run main))
+		  (user-command-environment))))
+	 ((car (cell-ref cell)) args))))))
 
 ;----------------
 ; Evaluate a form and save its result as the current focus values.

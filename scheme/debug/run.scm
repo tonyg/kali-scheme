@@ -11,7 +11,7 @@
 ; LOAD-INTO - load file into package.
 
 (define (load-into filename package)
-  (compile-and-run (read-forms filename package)
+  (compile-and-run (read-forms filename package #f)
 		   package
 		   filename))
 
@@ -269,7 +269,7 @@
 			  (car package-option))))
 
 (define (load-into filename package)
-  (eval-nodes (read-forms filename package)
+  (eval-nodes (read-forms filename package #f)
 	      (package->environment package)
 	      filename))
 

@@ -28,6 +28,10 @@
 	signals
 	debug-messages		; for debugging
 
+	(subset evaluation (load-script-into))
+	(subset environments (environment-ref))
+	(subset shared-bindings (shared-binding-ref lookup-imported-binding))
+
 	(subset root-scheduler   (scheme-exit-now))
 	(subset threads          (thread? thread-uid))
 	(subset threads-internal (thread-continuation))
@@ -60,7 +64,7 @@
 	environments		; with-interaction-environment,
 				;   interaction-environment
 	root-scheduler          ; call-when-deadlocked!
-	conditions)             ; define-condition-type
+	conditions)              ; define-condition-type
   (files (env user)
 	 (env command-level)))
 
@@ -127,6 +131,7 @@
         environments            ; *structure-ref, etc.
 	compiler-envs		; reflective-tower
         ensures-loaded          ; ensure-loaded
+	debug-messages
 	interfaces
 	ascii
 	i/o			; force-output, current-error-port, silently

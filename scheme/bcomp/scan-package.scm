@@ -86,7 +86,7 @@
 				  dir
 				  *scheme-file-type*)))
 	    (display #\space (current-noise-port))
-	    (cons (cons file (read-forms file package))
+	    (cons (cons file (read-forms file package #f))
 		  stuff)))
 	(reverse all-files)
 	stuff))

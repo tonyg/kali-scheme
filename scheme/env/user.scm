@@ -84,20 +84,23 @@
 (define-record-type user-session :user-session
   (make-user-session command-thread
 		     user-context
-		     repl-thunk
+		     script-thunk repl-thunk
 		     command-input command-output command-error-output
 		     focus-object
 		     exit-status
-		     batch-mode?)
+		     batch-mode?
+		     script-mode?)
   user-session?
   (command-thread	user-session-command-thread)
   (repl-thunk		user-session-repl-thunk)
+  (script-thunk		user-session-script-thunk)
   (user-context		user-session-user-context)
   (command-input 	user-session-command-input)
   (command-output	user-session-command-output)
   (command-error-output user-session-command-error-output)
   (exit-status  user-session-exit-status  set-user-session-exit-status!)
   (batch-mode?  user-session-batch-mode?  set-user-session-batch-mode?!)
+  (script-mode? user-session-script-mode? set-user-session-script-mode?!)
   (focus-object user-session-focus-object set-user-session-focus-object!))
 
 ; Two local macros that do a bit of name mangling.

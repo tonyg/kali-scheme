@@ -52,7 +52,9 @@
 					      #f)
 					  #f	; paused thread
 					  #f)))	; undetermined thread list
-    (spawn-repl-thread! level)
+    (if (user-session-script-mode? (user-session))
+	(spawn-script-thread! level)
+	(spawn-repl-thread! level))
     level))
 
 ; Add THUNK as a thread to LEVEL.  The level is stored in the thread so
@@ -78,6 +80,16 @@
 					(user-session-repl-thunk (user-session))
 					'command-loop)))
     (set-command-level-repl-thread! level thread)))
+
+; Add a script thread to LEVEL
+
+(define (spawn-script-thread! level)
+  (spawn-on-command-level level
+			  (let ((thunk
+				 (user-session-script-thunk (user-session))))
+			    (lambda ()
+			      (set-exit-status! (thunk))))
+			  'script))
 
 ; Find all of the threads belonging to LEVEL.  This may be expensive to call
 ; and may not return the correct value if LEVEL is currently running.
@@ -108,7 +120,8 @@
 ; session, runs an initial thunk and then pushes a command level.
 
 (define (start-command-levels resume-args context
-			      start-thunk repl-thunk
+			      greeting-thunk start-thunk
+			      repl-thunk script-thunk
 			      condition inspector-state
 			      input-port output-port error-port)
   ;(debug-message "[Starting levels]")
@@ -116,19 +129,24 @@
   (let ((dynamic-env (get-dynamic-env))
 	(session (make-user-session (current-thread)
 				    (or context (make-user-context))
-				    repl-thunk
+				    repl-thunk script-thunk
 				    input-port
 				    output-port
 				    error-port
 				    resume-args	; focus values
 				    #f		; exit status
 				    (and (pair? resume-args)
-					 (equal? (car resume-args) "batch")))))
+					 (equal? (car resume-args) "batch"))
+				    (and (pair? resume-args)
+					 (equal? (car resume-args) "run-script")))))
     (with-handler command-levels-condition-handler
       (lambda ()
 	(let-fluids $command-level-thread? #t
 		    $user-session session
 	  (lambda ()
+	    (if (not (or (user-session-batch-mode? session)
+			 (user-session-script-mode? session)))
+		(greeting-thunk))
 	    ;(debug-message "[start-thunk]")
 	    (start-thunk)
 	    (let ((thunk (really-push-command-level condition

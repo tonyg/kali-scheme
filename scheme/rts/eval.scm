@@ -12,7 +12,10 @@
 ; LOAD-INTO - load file into package.
 
 (define (load-into filename package)
-  (really-load-into filename package #f))  
+  (really-load-into filename package #f #f))
+
+(define (load-script-into filename package)
+  (really-load-into filename package #f #t))
 
 ; Evaluate forms as if they came from the given file.
 
@@ -28,13 +31,13 @@
   (let ((package (if (null? package-option)
 		     (interaction-environment)
 		     (car package-option))))
-    (really-load-into filename package #t)))
+    (really-load-into filename package #t #f)))
 
 ;----------------
 
-(define (really-load-into filename package note-undefined?)  
+(define (really-load-into filename package note-undefined? script?)
   (force-output (current-output-port))	; just to make the output nice
-  (let ((forms (read-forms filename package)))
+  (let ((forms (read-forms filename package script?)))
     (newline (current-noise-port))	; READ-FORMS prints the filename
     (compile-and-run forms
 		     package

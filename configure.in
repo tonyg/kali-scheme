@@ -117,6 +117,7 @@ AC_INIT(c/scheme48vm.c)
      AC_RETSIGTYPE
      AC_CHECK_HEADERS(libgen.h sys/timeb.h posix/time.h)
      AC_CHECK_HEADERS(sys/select.h)
+     AC_CHECK_HEADERS(sysexits.h)
      AC_CHECK_FUNCS(gettimeofday ftime nlist select setitimer sigaction)
      AC_CHECK_FUNC(dlopen, [AC_DEFINE(HAVE_DLOPEN, 
 				1, [Define to 1 if the interface to the dynamic linker exists])],
