@@ -388,17 +388,19 @@
 
 (define native-protocol-mask #x80)
 
-; The maximum number of arguments that can be passed to EXTERNAL-CALL.
-; This is determined by the C procedure `external_call()'.
-
-(define maximum-external-call-args 12)
-
 ;----------------
 ; The number of stack slots available to each procedure by default.
 ; Procedures that need more than this must use one of the two-byte-nargs
 ; protocols.  All of these are given in terms of descriptors.
 
 (define default-stack-space 64)
+
+; The maximum number of arguments that can be passed to EXTERNAL-CALL.
+; This is determined by the C procedure `external_call()'.
+
+; This leaves space for the non-argument stuff on the stack---see
+; external-call.scm.  Note that Mike isn't quite sure this is right.
+(define maximum-external-call-args (- default-stack-space 5))
 
 (define continuation-stack-size 4)  ; header + continuation + pc + code
 

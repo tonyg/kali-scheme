@@ -79,6 +79,8 @@ extern void *		s48_value_pointer(s48_value);
 #define S48_UNSAFE_EXTRACT_DOUBLE(x)				\
   (*(S48_ADDRESS_AFTER_HEADER((x), double)))
 
+#define S48_ARG_REF(argv, index, argc) ((argv)[(argc)-(index)-1])
+
 #define S48_DECLARE_GC_PROTECT(n) long ___gc_buffer[(n)+2]
 
 #define S48_GC_PROTECT_1(v) \
