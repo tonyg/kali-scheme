@@ -1,6 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This is file util.scm.
@@ -39,7 +38,8 @@
   ;; (reduce or #f l), sort of
   (if (null? l)
       #f
-      (or (pred (car l)) (any pred (cdr l)))))
+      (or (pred (car l))
+	  (any pred (cdr l)))))
 
 ; Is pred true of every element of l?
 

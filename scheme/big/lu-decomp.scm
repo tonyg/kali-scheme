@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; LU Decomposition (a rewriting of a Pascal program from `Numerical Recipes
 ; in Pascal'; look there for a detailed description of what is going on).

@@ -1,12 +1,18 @@
+/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+   See file COPYING. */
+
 #include <signal.h>		/* for sigaction() (POSIX.1) */
+#include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/times.h>
 #include <errno.h>              /* for errno, (POSIX?/ANSI) */
 #include "sysdep.h"
+#include "c-mods.h"
 #include "scheme48vm.h"
-
+#include "event.h"
 
 /* turning interrupts and I/O readiness into events */
 
@@ -17,22 +23,22 @@
 static void	when_keyboard_interrupt();
 static void	when_alarm_interrupt();
 static void     when_sigpipe_interrupt();
-static bool	setcatcher(int signum, void (*catcher)(int));
-static void	start_alarm_interrupts(void);
+bool		s48_setcatcher(int signum, void (*catcher)(int));
+void		s48_start_alarm_interrupts(void);
 
 
 void
-sysdep_init(void)
+s48_sysdep_init(void)
 {
-	if (!setcatcher(SIGINT, when_keyboard_interrupt)
-	    || !setcatcher(SIGALRM, when_alarm_interrupt)
-	    || !setcatcher(SIGPIPE, when_sigpipe_interrupt)) {
-	  fprintf(stderr,
-		  "Failed to install signal handlers, errno = %d\n",
-		  errno);
-	  exit(1);
-	}
-	start_alarm_interrupts();
+  if (!s48_setcatcher(SIGINT, when_keyboard_interrupt)
+      || !s48_setcatcher(SIGALRM, when_alarm_interrupt)
+      || !s48_setcatcher(SIGPIPE, when_sigpipe_interrupt)) {
+    fprintf(stderr,
+	    "Failed to install signal handlers, errno = %d\n",
+	    errno);
+    exit(1);
+  }
+  s48_start_alarm_interrupts();
 }
 
 
@@ -40,36 +46,22 @@ sysdep_init(void)
  * Unless a signal is being ignored, set up the handler.
  * If we return FALSE, something went wrong and errno is set to what.
  */
-static bool
-setcatcher(int signum, void (*catcher)(int))
+bool
+s48_setcatcher(int signum, void (*catcher)(int))
 {
-	struct sigaction	sa;
+  struct sigaction	sa;
 
-	if (sigaction(signum, (struct sigaction *)NULL, &sa) != 0)
-		return (FALSE);
-	if (sa.sa_handler == SIG_IGN)
-		return (TRUE);
-	sa.sa_handler = catcher;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = 0;
-	if (sigaction(signum, &sa, (struct sigaction *)NULL) != 0)
-		return (FALSE);
-	return (TRUE);
+  if (sigaction(signum, (struct sigaction *)NULL, &sa) != 0)
+    return (FALSE);
+  if (sa.sa_handler == SIG_IGN)
+    return (TRUE);
+  sa.sa_handler = catcher;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+  if (sigaction(signum, &sa, (struct sigaction *)NULL) != 0)
+    return (FALSE);
+  return (TRUE);
 }
-
-extern unsigned char	Spending_eventsPS;
-extern unsigned char	Spending_interruptPS;
-
-
-/*
- * Fix (HCC) NOTE_EVENT so that it will act like a single
- * statement.
- */
-#define	NOTE_EVENT					\
-	do {						\
-		Spending_eventsPS = 1;			\
-		Spending_interruptPS = 1;		\
-	} while (0)
 
 static long	keyboard_interrupt_count = 0;
 
@@ -95,7 +87,9 @@ when_sigpipe_interrupt(int ign)
   return;
 }
 
-long		current_time = 0; /* ticks since last timer-interrupt request */
+/* ticks since last timer-interrupt request */
+long		s48_current_time = 0;
+
 static long	alarm_time = -1;
 static long	poll_time = -1;
 static long	poll_interval = 5;
@@ -103,10 +97,10 @@ static long	poll_interval = 5;
 static void
 when_alarm_interrupt(int ign)
 {
-  current_time += 1;
+  s48_current_time += 1;
   /* fprintf(stderr, "[tick]"); */
-  if ((alarm_time >= 0 && alarm_time <= current_time) ||
-      (poll_time >= 0 && poll_time <= current_time)) {
+  if ((alarm_time >= 0 && alarm_time <= s48_current_time) ||
+      (poll_time >= 0 && poll_time <= s48_current_time)) {
     NOTE_EVENT;
   };
   return;
@@ -117,23 +111,23 @@ when_alarm_interrupt(int ign)
 /* delta is in ticks, 0 cancels current alarm */
 
 long
-schedule_alarm_interrupt(long delta)
+s48_schedule_alarm_interrupt(long delta)
 {
   long old;
   /*
-  fprintf(stderr, "<scheduling alarm for %ld + %ld>\n", current_time,
+  fprintf(stderr, "<scheduling alarm for %ld + %ld>\n", s48_current_time,
 	  delta/TICKS_PER_POLL);
 	  */
   /* get remaining time */
   if (alarm_time == -1)
     old = -1;
   else
-    old = (alarm_time - current_time) * TICKS_PER_POLL;
+    old = (alarm_time - s48_current_time) * TICKS_PER_POLL;
 
   /* decrement poll_time and reset current_time */
   if (poll_time != -1)
-    poll_time -= current_time;
-  current_time = 0;
+    poll_time -= s48_current_time;
+  s48_current_time = 0;
 
   /* set alarm_time */
   if (delta == 0) {
@@ -147,7 +141,8 @@ schedule_alarm_interrupt(long delta)
 
 /* The next two procedures return times in seconds and ticks */
 
-long real_time(long *ticks)
+long
+s48_real_time(long *ticks)
 {
   struct timeval tv;
   static struct timeval tv_orig;
@@ -161,7 +156,8 @@ long real_time(long *ticks)
   return tv.tv_sec - tv_orig.tv_sec;
 }
 
-long run_time(long *ticks)
+long
+s48_run_time(long *ticks)
 {
   struct tms time_buffer;
   static long clock_tick = 0;
@@ -177,8 +173,8 @@ long run_time(long *ticks)
   return cpu_time / clock_tick;
 }
 
-static void
-start_alarm_interrupts(void)
+void
+s48_start_alarm_interrupts(void)
 {
   struct itimerval new, old;
 
@@ -191,8 +187,8 @@ start_alarm_interrupts(void)
     exit(-1); }
 }
 
-static void
-stop_alarm_interrupts(void)
+void
+s48_stop_alarm_interrupts(void)
 {
   struct itimerval new, old;
 
@@ -246,46 +242,54 @@ static int	next_ready_port(void);
 static int	queue_ready_ports(bool wait, long seconds, long ticks);
 
 int
-get_next_event(long *ready_fd, long *status)
+s48_get_next_event(long *ready_fd, long *status)
 {
-	int io_poll_status;
-	/*
-	fprintf(stderr, "[poll at %d (waiting for %d)]\n", current_time, alarm_time);
-	*/
-	if (keyboard_interrupt_count > 0) {
-		block_interrupts();
-		--keyboard_interrupt_count;
-		allow_interrupts();
-		/* fprintf(stderr, "[keyboard interrupt]\n"); */
-		return (KEYBOARD_INTERRUPT_EVENT);
-	}
-	if (poll_time != -1 && current_time >= poll_time) {
-		io_poll_status = queue_ready_ports(FALSE, 0, 0);
-		if (io_poll_status == NO_ERRORS)
-			poll_time = current_time + poll_interval;
-		else if (io_poll_status != EINTR) {
-			*status = io_poll_status;
-			return (ERROR_EVENT);
-		}
-	}
-	if (there_are_ready_ports()) {
-		*ready_fd = next_ready_port();
-		*status = 0;   /* chars read or written */
-		/* fprintf(stderr, "[i/o completion]\n"); */
-		return (IO_COMPLETION_EVENT);
-	}
-	if (alarm_time != -1 && current_time >= alarm_time) {
-		alarm_time = -1;
-		/* fprintf(stderr, "[alarm]\n"); */
-		return (ALARM_EVENT);
-	}
-	block_interrupts();
-	if ((keyboard_interrupt_count == 0)
-	&&  (alarm_time == -1 || current_time < alarm_time)
-	&&  (poll_time == -1 || current_time < poll_time))
-		Spending_eventsPS = FALSE;
-	allow_interrupts();
-	return (NO_EVENT);
+  /*
+  extern int s48_os_signal_pending(void);
+  */
+
+  int io_poll_status;
+  /*
+    fprintf(stderr, "[poll at %d (waiting for %d)]\n", s48_current_time, alarm_time);
+    */
+  if (keyboard_interrupt_count > 0) {
+    block_interrupts();
+    --keyboard_interrupt_count;
+    allow_interrupts();
+    /* fprintf(stderr, "[keyboard interrupt]\n"); */
+    return (KEYBOARD_INTERRUPT_EVENT);
+  }
+  if (poll_time != -1 && s48_current_time >= poll_time) {
+    io_poll_status = queue_ready_ports(FALSE, 0, 0);
+    if (io_poll_status == NO_ERRORS)
+      poll_time = s48_current_time + poll_interval;
+    else {
+      *status = io_poll_status;
+      return (ERROR_EVENT);
+    }
+  }
+  if (there_are_ready_ports()) {
+    *ready_fd = next_ready_port();
+    *status = 0;   /* chars read or written */
+    /* fprintf(stderr, "[i/o completion]\n"); */
+    return (IO_COMPLETION_EVENT);
+  }
+  if (alarm_time != -1 && s48_current_time >= alarm_time) {
+    alarm_time = -1;
+    /* fprintf(stderr, "[alarm]\n"); */
+    return (ALARM_EVENT);
+  }
+  /*
+  if (s48_os_signal_pending())
+    return (OS_SIGNAL_EVENT);
+    */
+  block_interrupts();
+  if ((keyboard_interrupt_count == 0)
+      &&  (alarm_time == -1 || s48_current_time < alarm_time)
+      &&  (poll_time == -1 || s48_current_time < poll_time))
+    s48_Spending_eventsPS = FALSE;
+  allow_interrupts();
+  return (NO_EVENT);
 }
 
 
@@ -299,33 +303,33 @@ get_next_event(long *ready_fd, long *status)
 #define FD_READY     1			/* I/O ready to be performed */
 #define FD_PENDING   2			/* waiting */
 
-typedef struct	fd_struct {
-	int			fd,		/* file descriptor */
-				status;		/* one of the FD_* constants */
-	bool			is_input;	/* iff input */
-	struct fd_struct	*next;		/* next on same queue */
-}	fd_struct;
+typedef struct fd_struct {
+ int	fd,			/* file descriptor */
+	status;			/* one of the FD_* constants */
+ bool	is_input;		/* iff input */
+ struct fd_struct	*next;	/* next on same queue */
+} fd_struct;
 
 
 /*
  * A queue of fd_structs is empty iff the first field is NULL.  In
  * that case, lastp points to first.
  */
-typedef struct	fdque {
-	fd_struct	*first,
-			**lastp;
-}	fdque;
+typedef struct fdque {
+  fd_struct	*first,
+		**lastp;
+} fdque;
 
 
 static fd_struct	*fds[FD_SETSIZE];
-static fdque		ready = {
-				NULL,
-				&ready.first
+static fdque	ready = {
+			 NULL,
+			 &ready.first
 			},
-			pending = {
-				NULL,
-				&pending.first
-			};
+		pending = {
+			   NULL,
+			   &pending.first
+			  };
 
 
 static void		findrm(fd_struct *entry, fdque *que);
@@ -340,16 +344,16 @@ static fd_struct	*add_fd(int fd, bool is_input);
 static void
 findrm(fd_struct *entry, fdque *que)
 {
-	fd_struct	**fp,
-			*f;
+  fd_struct	**fp,
+    *f;
 
-	for (fp = &que->first; (f = *fp) != entry; fp = &f->next)
-		if (f == NULL) {
-			fprintf(stderr, "ERROR: findrm fd %d, status %d not on queue.\n",
-				entry->fd, entry->status);
-			return;
-		}
-	rmque(fp, que);
+  for (fp = &que->first; (f = *fp) != entry; fp = &f->next)
+    if (f == NULL) {
+      fprintf(stderr, "ERROR: findrm fd %d, status %d not on queue.\n",
+	      entry->fd, entry->status);
+      return;
+    }
+  rmque(fp, que);
 }
 
 
@@ -361,13 +365,13 @@ findrm(fd_struct *entry, fdque *que)
 static fd_struct	*
 rmque(fd_struct **link, fdque *que)
 {
-	fd_struct	*res;
+  fd_struct	*res;
 
-	res = *link;
-	*link = res->next;
-	if (res->next == NULL)
-		que->lastp = link;
-	return (res);
+  res = *link;
+  *link = res->next;
+  if (res->next == NULL)
+    que->lastp = link;
+  return (res);
 }
 
 
@@ -377,27 +381,27 @@ rmque(fd_struct **link, fdque *que)
 static void
 addque(fd_struct *entry, fdque *que)
 {
-	*que->lastp = entry;
-	entry->next = NULL;
-	que->lastp = &entry->next;
+  *que->lastp = entry;
+  entry->next = NULL;
+  que->lastp = &entry->next;
 }
 
 
 static bool
 there_are_ready_ports(void)
 {
-	return (ready.first != NULL);
+  return (ready.first != NULL);
 }
 
 
 static int
 next_ready_port(void)
 {
-	fd_struct	*p;
+  fd_struct	*p;
 
-	p = rmque(&ready.first, &ready);
-	p->status = FD_QUIESCENT;
-	return (p->fd);
+  p = rmque(&ready.first, &ready);
+  p->status = FD_QUIESCENT;
+  return (p->fd);
 }
 
 
@@ -406,30 +410,30 @@ next_ready_port(void)
  * Return TRUE if successful, and FALSE otherwise.
  */
 bool
-add_pending_fd(int fd, bool is_input)
+s48_add_pending_fd(int fd, bool is_input)
 {
-	fd_struct	*data;
+  fd_struct	*data;
 
-	if (! (0 <= fd && fd < FD_SETSIZE)) {
-		fprintf(stderr, "ERROR: add_pending fd %d not in [0, %d)\n",
-			fd,
-			FD_SETSIZE);
-		return (FALSE);
-	}
-	data = fds[fd];
-	if (data == NULL) {
-		data = add_fd(fd, is_input);
-		if (data == NULL)
-			return (FALSE);		/* no more memory */
-	} else if (data->status == FD_PENDING)
-		return (TRUE);			/* fd is already pending */
-	else if (data->status == FD_READY)
-		findrm(data, &ready);
-	data->status = FD_PENDING;
-	addque(data, &pending);
-	if (poll_time == -1)
-		poll_time = current_time + poll_interval;
-	return TRUE;
+  if (! (0 <= fd && fd < FD_SETSIZE)) {
+    fprintf(stderr, "ERROR: add_pending fd %d not in [0, %d)\n",
+	    fd,
+	    FD_SETSIZE);
+    return (FALSE);
+  }
+  data = fds[fd];
+  if (data == NULL) {
+    data = add_fd(fd, is_input);
+    if (data == NULL)
+      return (FALSE);		/* no more memory */
+  } else if (data->status == FD_PENDING)
+    return (TRUE);			/* fd is already pending */
+  else if (data->status == FD_READY)
+    findrm(data, &ready);
+  data->status = FD_PENDING;
+  addque(data, &pending);
+  if (poll_time == -1)
+    poll_time = s48_current_time + poll_interval;
+  return TRUE;
 }
 
 
@@ -439,17 +443,17 @@ add_pending_fd(int fd, bool is_input)
 static fd_struct	*
 add_fd(int fd, bool is_input)
 {
-	struct fd_struct	*new;
+  struct fd_struct	*new;
 
-	new = (struct fd_struct *)malloc(sizeof(*new));
-	if (new != NULL) {
-		new->fd = fd;
-		new->status = FD_QUIESCENT;
-		new->is_input = is_input;
-		new->next = NULL;
-		fds[fd] = new;
-	}
-	return (new);
+  new = (struct fd_struct *)malloc(sizeof(*new));
+  if (new != NULL) {
+    new->fd = fd;
+    new->status = FD_QUIESCENT;
+    new->is_input = is_input;
+    new->next = NULL;
+    fds[fd] = new;
+  }
+  return (new);
 }
 
 
@@ -458,59 +462,59 @@ add_fd(int fd, bool is_input)
  * and false if it wasn't.
  */
 bool
-remove_fd(int fd)
+s48_remove_fd(int fd)
 {
-	struct fd_struct	*data;
+  struct fd_struct	*data;
 
-	if (! (0 <= fd && fd < FD_SETSIZE)) {
-		fprintf(stderr, "ERROR: remove_fd fd %d not in [0, %d)\n",
-			fd,
-			FD_SETSIZE);
-		return FALSE;
-	}
-	data = fds[fd];
-	if (data == NULL)
-		return FALSE;
-	if (data->status == FD_PENDING) {
-		findrm(data, &pending);
-		if (pending.first == NULL)
-			poll_time = -1;
-	} else if (data->status == FD_READY)
-		findrm(data, &ready);
-	free((void *)data);
-	fds[fd] = NULL;
-	return TRUE;
+  if (! (0 <= fd && fd < FD_SETSIZE)) {
+    fprintf(stderr, "ERROR: s48_remove_fd fd %d not in [0, %d)\n",
+	    fd,
+	    FD_SETSIZE);
+    return FALSE;
+  }
+  data = fds[fd];
+  if (data == NULL)
+    return FALSE;
+  if (data->status == FD_PENDING) {
+    findrm(data, &pending);
+    if (pending.first == NULL)
+      poll_time = -1;
+  } else if (data->status == FD_READY)
+    findrm(data, &ready);
+  free((void *)data);
+  fds[fd] = NULL;
+  return TRUE;
 }
 
 
 int
-wait_for_event(long max_wait, bool is_minutes)
+s48_wait_for_event(long max_wait, bool is_minutes)
 {
-	int	status;
-	long	seconds,
-		ticks;
+  int	status;
+  long	seconds,
+	ticks;
 
-	/* fprintf(stderr, "[waiting]\n"); */
+  /* fprintf(stderr, "[waiting]\n"); */
 
-	stop_alarm_interrupts();
-	ticks = 0;
-	if (max_wait == -1)
-		seconds = -1;
-	else if (is_minutes)
-		seconds = max_wait * 60;
-	else {
-		seconds = max_wait / TICKS_PER_SECOND;
-		ticks = max_wait % TICKS_PER_SECOND;
-	}
-	if (keyboard_interrupt_count > 0)
-		status = NO_ERRORS;
-	else {
-		status = queue_ready_ports(TRUE, seconds, ticks);
-		if (there_are_ready_ports())
-			NOTE_EVENT;
-	}
-	start_alarm_interrupts();
-	return (status);
+  s48_stop_alarm_interrupts();
+  ticks = 0;
+  if (max_wait == -1)
+    seconds = -1;
+  else if (is_minutes)
+    seconds = max_wait * 60;
+  else {
+    seconds = max_wait / TICKS_PER_SECOND;
+    ticks = max_wait % TICKS_PER_SECOND;
+  }
+  if (keyboard_interrupt_count > 0)
+    status = NO_ERRORS;
+  else {
+    status = queue_ready_ports(TRUE, seconds, ticks);
+    if (there_are_ready_ports())
+      NOTE_EVENT;
+  }
+  s48_start_alarm_interrupts();
+  return (status);
 }
 
 
@@ -523,53 +527,63 @@ wait_for_event(long max_wait, bool is_minutes)
 static int
 queue_ready_ports(bool wait, long seconds, long ticks)
 {
-	fd_set		reads,
-			writes,
-			alls;
-	int		limfd;
-	fd_struct	*fdp,
-			**fdpp;
-	struct timeval	tv,
-			*tvp;
-	int		left;
+  fd_set	reads,
+    		writes,
+    		alls;
+  int		limfd;
+  fd_struct	*fdp,
+    		**fdpp;
+  int		left;
+  struct timeval	tv,
+    			*tvp;
 
-	if ((! wait)
-	&&  (pending.first == NULL))
-		return (NO_ERRORS);
-	FD_ZERO(&reads);
-	FD_ZERO(&writes);
-	FD_ZERO(&alls);
-	limfd = 0;
-	for (fdp = pending.first; fdp != NULL; fdp = fdp->next) {
-		FD_SET(fdp->fd, fdp->is_input ? &reads : &writes);
-		FD_SET(fdp->fd, &alls);
-		if (limfd <= fdp->fd)
-			limfd = fdp->fd + 1;
-	}
-	tvp = &tv;
-	if (wait)
-		if (seconds == -1)
-			tvp = NULL;
-		else {
-			tv.tv_sec = seconds;
-			tv.tv_usec = ticks * (1000000 / TICKS_PER_SECOND);
-		}
-	else
-		timerclear(&tv);
-	left = select(limfd, &reads, &writes, &alls, tvp);
-	if (left <= 0)
-		return (left == 0 ? NO_ERRORS : errno);
-	fdpp = &pending.first;
-	while (left > 0 && (fdp = *fdpp) != NULL)
-		if ((FD_ISSET(fdp->fd, &alls))
-		||  (FD_ISSET(fdp->fd, fdp->is_input ? &reads : &writes))) {
-			--left;
-			rmque(fdpp, &pending);
-			fdp->status = FD_READY;
-			addque(fdp, &ready);
-		} else
-			fdpp = &fdp->next;
-	if (pending.first == NULL)
-		poll_time = -1;
-	return (NO_ERRORS);
+  if ((! wait)
+      &&  (pending.first == NULL))
+    return (NO_ERRORS);
+  FD_ZERO(&reads);
+  FD_ZERO(&writes);
+  FD_ZERO(&alls);
+  limfd = 0;
+  for (fdp = pending.first; fdp != NULL; fdp = fdp->next) {
+    FD_SET(fdp->fd, fdp->is_input ? &reads : &writes);
+    FD_SET(fdp->fd, &alls);
+    if (limfd <= fdp->fd)
+      limfd = fdp->fd + 1;
+  }
+  tvp = &tv;
+  if (wait)
+    if (seconds == -1)
+      tvp = NULL;
+    else {
+      tv.tv_sec = seconds;
+      tv.tv_usec = ticks * (1000000 / TICKS_PER_SECOND);
+    }
+  else
+    timerclear(&tv);
+  while(TRUE) {
+    left = select(limfd, &reads, &writes, &alls, tvp);
+    if (left > 0) {
+      fdpp = &pending.first;
+      while (left > 0 && (fdp = *fdpp) != NULL)
+	if ((FD_ISSET(fdp->fd, &alls))
+	    ||  (FD_ISSET(fdp->fd, fdp->is_input ? &reads : &writes))) {
+	  --left;
+	  rmque(fdpp, &pending);
+	  fdp->status = FD_READY;
+	  addque(fdp, &ready);
+	} else
+	  fdpp = &fdp->next;
+      if (pending.first == NULL)
+	poll_time = -1;
+      return NO_ERRORS;
+    }
+    else if (left == 0)
+      return NO_ERRORS;
+    else if (errno == EINTR) {
+      tvp = &tv;		/* turn off blocking and try again */
+      timerclear(tvp);
+    }	      
+    else
+      return errno;
+  }
 }

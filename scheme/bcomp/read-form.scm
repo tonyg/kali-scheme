@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The value of $NOTE-FILE-PACKAGE is called whenever a file is loaded into
 ; a package.  env/debug.scm uses this to associate packages with files so

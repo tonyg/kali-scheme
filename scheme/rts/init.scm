@@ -1,15 +1,18 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; System entry and exit
 
 ; Entry point from OS executive.  Procedures returned by USUAL-RESUMER
 ; are suitable for use as the second argument to WRITE-IMAGE.
+;
+; The placement of INITIALIZE-RECORDS! is questionable.  Important parts
+; of the system are not in place when it is run.
 
 (define (usual-resumer entry-point)
-  (lambda (resume-arg in out error)
+  (lambda (resume-arg in out error records)
     (initialize-rts in out error
      (lambda ()
+       (initialize-records! records)
        (entry-point (vector->list resume-arg))))))
        
 (define (initialize-rts in out error thunk)

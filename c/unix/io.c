@@ -1,15 +1,17 @@
+/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+   See file COPYING. */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <string.h>
 #include "io.h"
+#include "scheme48.h"
 
 #define	TRUE	(0 == 0)
 #define	FALSE	(! TRUE)
 #define	bool	char
-
-#define NO_ERRORS 0    /* errno value */
 
 /* read a character while ignoring interrupts */
 
@@ -18,7 +20,7 @@
   FILE * TTport = PORT;					\
   int TTchar;						\
   if (EOF == (TTchar = getc(TTport)))			\
-    RESULT = read_char(TTport);				\
+    RESULT = s48_read_char(TTport);			\
   else							\
     RESULT = TTchar; 					\
 }
@@ -29,7 +31,7 @@ we clear the error bit and try again.
 */
 
 int
-read_char(FILE *port)
+s48_read_char(FILE *port)
 {
   int result;
 
@@ -51,7 +53,7 @@ ps_read_char(FILE *port, bool *eofp, long *status, bool peekp)
   bool errorp;
   int result;
 
-  result = read_char(port);     /* read past any interruptions */
+  result = s48_read_char(port);     /* read past any interruptions */
   if (result != EOF) {
     if (peekp)
       ungetc(result, port);
@@ -149,7 +151,7 @@ ps_write_integer(long n, FILE *port)
 {
   int status;
 
-  long write_integer(unsigned long n, FILE *port);
+  static long write_integer(unsigned long n, FILE *port);
 
   if (n == 0) {
     WRITE_CHAR('0', port, status);
@@ -164,7 +166,7 @@ ps_write_integer(long n, FILE *port)
       return status; }
 }
 
-long
+static long
 write_integer(unsigned long n, FILE *port)
 {
   char ch;
@@ -253,11 +255,11 @@ ps_really_open_file(char *filename, long *status, char *mode)
 
   char filename_temp[FILE_NAME_SIZE];
   char *expanded;
-  extern char *expand_file_name(char *, char *, int);
+  extern char *s48_expand_file_name(char *, char *, int);
 
   FILE *new;
 
-  expanded = expand_file_name(filename, filename_temp, FILE_NAME_SIZE);
+  expanded = s48_expand_file_name(filename, filename_temp, FILE_NAME_SIZE);
   if (expanded == NULL) {
     *status = EDOM;    /* has to be something */
     return NULL; }

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The syntax-rules macro (new in R5RS)
 
@@ -33,6 +32,7 @@
 (define (process-rules rules subkeywords r c)
 
   (define %append (r 'append))
+  (define %apply (r 'apply))
   (define %and (r 'and))
   (define %car (r 'car))
   (define %cdr (r 'cdr))
@@ -136,20 +136,26 @@
 				   template))
 		 `(,%rename ',template))))
 	  ((segment-template? template)
-	   (let ((vars
-		  (free-meta-variables (car template) (+ dim 1) env '())))
+	   (let* ((depth (segment-depth template))
+		  (seg-dim (+ dim depth))
+		  (vars
+		   (free-meta-variables (car template) seg-dim env '())))
 	     (if (null? vars)
 		 (syntax-error "too many ...'s" template)
 		 (let* ((x (process-template (car template)
-					     (+ dim 1)
+					     seg-dim
 					     env))
 			(gen (if (equal? (list x) vars)
 				 x	;+++
 				 `(,%map (,%lambda ,vars ,x)
-					 ,@vars))))
-		   (if (null? (cddr template))
+					 ,@vars)))
+			(gen (do ((d depth (- d 1))
+				  (gen gen `(,%apply ,%append ,gen)))
+				 ((= d 1)
+				  gen))))
+		   (if (null? (segment-tail template))
 		       gen		;+++
-		       `(,%append ,gen ,(process-template (cddr template)
+		       `(,%append ,gen ,(process-template (segment-tail template)
 							  dim env)))))))
 	  ((pair? template)
 	   `(,%cons ,(process-template (car template) dim env)
@@ -202,6 +208,22 @@
   (and (pair? pattern)
        (pair? (cdr pattern))
        (memq (cadr pattern) indicators-for-zero-or-more)))
+
+; Count the number of `...'s in PATTERN.
+
+(define (segment-depth pattern)
+  (if (segment-template? pattern)
+      (+ 1 (segment-depth (cdr pattern)))
+      0))
+
+; Get whatever is after the `...'s in PATTERN.
+
+(define (segment-tail pattern)
+  (let loop ((pattern (cdr pattern)))
+    (if (and (pair? pattern)
+             (memq (car pattern) indicators-for-zero-or-more))
+        (loop (cdr pattern))
+        pattern)))
 
 (define indicators-for-zero-or-more (list (string->symbol "...")))
 

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Deal with shadowed variables.
@@ -56,7 +55,7 @@
 	     (if (eq? new loc)
 		 (apply signal-exception opcode reason loc rest)
 		 (begin (template-set! tem index new)
-			(signal 'note "Replaced location" loc new p-uid)
+			;(signal 'note "Replaced location" loc new p-uid)
 			(if (location-defined? new)
 			    (succeed new rest)
 			    (apply signal-exception opcode reason new rest)))))

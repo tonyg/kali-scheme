@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
 
 ; C variable declarations.
 ; 
@@ -13,30 +12,31 @@
   (for-each (lambda (f)
 	      (if (eq? (form-type f) 'lambda)
 		  (if (form-tail-called? f)
-		      (write-function-tail-prototype (form-var f)
+		      (write-function-tail-prototype (form-c-name f)
 						     (form-exported? f)
 						     port)
 		      (write-function-prototype (form-var f)
+						(form-c-name f)
 						(form-exported? f)
 						port))))
 	    forms))
 
-(define (write-function-tail-prototype var exported? port)
+(define (write-function-tail-prototype name exported? port)
   (if (not exported?)
       (display "static " port))
   (display "long T" port)
-  (write-c-identifier (variable-name var) port)
+  (display name port)
   (display "(void);" port)
   (newline port))
 
-(define (write-function-prototype var exported? port)
+(define (write-function-prototype var name exported? port)
   (if (not exported?)
       (display "static " port))
   (receive (result args)
       (parse-arrow-type (final-variable-type var))
     (display-c-type result
 		    (lambda (port)
-		      (write-c-identifier (variable-name var) port))
+		      (display name port))
 		    port)
     (write-char #\( port)
     (if (null? args)

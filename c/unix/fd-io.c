@@ -1,11 +1,17 @@
+/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+   See file COPYING. */
+
 #include <unistd.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/time.h>
 #include <errno.h>              /* for errno, (POSIX?/ANSI) */
 #include "sysdep.h"
+#include "c-mods.h"
 #include "scheme48vm.h"
+#include "event.h"
 
 
 /* Non-blocking I/O on file descriptors.
@@ -32,12 +38,12 @@ ps_open_fd(char *filename, bool is_input, long *status)
 
   char filename_temp[FILE_NAME_SIZE];
   char *expanded;
-  extern char *expand_file_name(char *, char *, int);
+  extern char *s48_expand_file_name(char *, char *, int);
 
   int flags;
   mode_t mode;
 
-  expanded = expand_file_name(filename, filename_temp, FILE_NAME_SIZE);
+  expanded = s48_expand_file_name(filename, filename_temp, FILE_NAME_SIZE);
   if (expanded == NULL)
     return -1;
 
@@ -69,7 +75,7 @@ ps_close_fd(long fd_as_long)
   while(TRUE) {
     int status = close(fd);
     if (status != -1) {
-      remove_fd(fd);
+      s48_remove_fd(fd);
       return NO_ERRORS; }
     else if (errno != EINTR)
       return errno;
@@ -101,7 +107,7 @@ ps_read_fd(long fd_as_long, char *buffer, long max, bool waitp,
     if (ready == 0) {
       if (!waitp)
 	return 0;
-      else if (add_pending_fd(fd, TRUE)) {
+      else if (s48_add_pending_fd(fd, TRUE)) {
 	*pending = TRUE;
 	return 0; }
       else {
@@ -125,7 +131,7 @@ ps_read_fd(long fd_as_long, char *buffer, long max, bool waitp,
       else if (errno == EAGAIN) {			/* HCC */
 	if (!waitp)
 	  return 0;
-	else if (add_pending_fd(fd, TRUE)) {
+	else if (s48_add_pending_fd(fd, TRUE)) {
 	  *pending = TRUE;
 	  return 0; }
 	else {
@@ -150,7 +156,7 @@ ps_write_fd(long fd_as_long, char *buffer, long max, bool *pending, long *status
   if (sent > 0)
     {}
   else if (errno == EINTR || errno == EAGAIN) {		/* HCC */
-    if (add_pending_fd(fd, FALSE))
+    if (s48_add_pending_fd(fd, FALSE))
       *pending = TRUE;
     else
       *status = ENOMEM;    /* as close as POSIX gets */
@@ -167,7 +173,7 @@ ps_abort_fd_op(long fd_as_long)
 {
   int fd = (int)fd_as_long;
 
-  if (!remove_fd(fd))
+  if (!s48_remove_fd(fd))
     fprintf(stderr, "Error: ps_abort_fd_op, no pending operation on fd %d\n",
 	            fd);
   return 0;      /* because we do not actually do any I/O in parallel the

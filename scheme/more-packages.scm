@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; More and more packages.  Some of these get loaded into the initial
@@ -60,13 +59,14 @@
 (define-structure command-levels command-levels-interface
   (open scheme
 	enumerated enum-case 
-	tables fluids
+	tables
+	session-data
 	define-record-types
 	threads threads-internal
 	scheduler
 	interrupts
 	weak
-	user-messages		; for debugging
+	debug-messages		; for debugging
 	signals			; error
 	i/o			; current-error-port
 	util                    ; unspecific
@@ -163,7 +163,7 @@
         enumerated              ; enumerand->name
         weak                    ; weak-pointer?
 	i/o                     ; disclose-port
-        templates continuations channels
+        templates continuations low-channels
         architecture)
   (files (env disclosers)))
 
@@ -395,7 +395,8 @@
         methods signals
 	enumerated
 	loopholes
-        primitives)             ;vm-extension
+	more-types		;:double
+        primitives)             ;vm-extension double?
   (files (rts floatnum))
   (optimize auto-integrate))
 
@@ -478,9 +479,11 @@
 (define-structure big-util big-util-interface
   (open scheme-level-2
 	formats
-        structure-refs)         ; for structure-ref
-  (access signals               ; for error
-          debugging)            ; for breakpoint        
+	features		; immutable? make-immutable!
+        structure-refs)         ; structure-ref
+  (access signals               ; error
+          debugging		; breakpoint
+	  primitives)		; copy-bytes!
   (files (big big-util)))
 
 (define-structure big-scheme big-scheme-interface
@@ -499,16 +502,63 @@
         destructuring
         receiving))
 
-; Externals
+; Things needed for connecting with external code.
 
-(define-structure externals externals-interface
-  (open scheme-level-2 handle exceptions tables
-        primitives
-        architecture            ;stob
-        conditions              ;exception-arguments
+(define-structure external-calls (export call-imported-binding
+					 lookup-imported-binding
+					 define-exported-binding
+					 shared-binding-ref
+					 ((import-definition
+					   import-lambda-definition)
+					  :syntax)
+					 add-finalizer!
+					 define-record-resumer
+					 call-external-value)
+  (open scheme-level-2 define-record-types
+	primitives
+        architecture
+	exceptions interrupts signals
+	placeholders
+	shared-bindings
+	byte-vectors
+	bitwise bigbit		;for {enter|extract}_integer() helpers
+	records)
+  (files (big import-def)
+	 (big callback)))
+
+(define-structure dynamic-externals dynamic-externals-interface
+  (open scheme-level-2 define-record-types tables
         signals                 ;warn
-        ascii code-vectors)
+	primitives		;find-all-records
+	i/o			;current-error-port
+        code-vectors
+	external-calls)
   (files (big external)))
+
+; Externals - this is obsolete; use external-calls and dynamic-externals
+; instead.
+
+(define-structure externals (compound-interface
+			       dynamic-externals-interface
+			       (export external-call
+				       null-terminate))
+  (open scheme-level-2 structure-refs
+	dynamic-externals)
+  (access external-calls)
+  (begin
+   ; We fake the old external-call primitive using the new one and a
+   ; a C helper procedure from c/unix/dynamo.c.
+
+    (define (external-call proc . args)
+      (let ((args (apply vector args)))
+	(old-external-call (external-value proc) args)))
+    
+    ((structure-ref external-calls import-lambda-definition)
+       old-external-call (proc args)
+       "s48_old_external_call")
+
+    ; All strings are now null terminated.
+    (define (null-terminate string) string)))
 
 ; Rudimentary object dump and restore
 
@@ -531,19 +581,25 @@
 ; Unix Sockets
 
 (define-structure sockets
-    (export open-socket close-socket
-	    socket-listen
-	    socket-listen-channels
+    (export open-socket
+	    close-socket
+	    socket-accept
 	    socket-port-number
 	    socket-client
-	    socket-client-channels)
-  (open scheme
-	define-record-types
-	channel-i/o
-	interrupts              ;disable-interrupts! enable-interrupts!
-	primitives
-	channels		;open-channel
-	architecture)		;open-channel-option
+
+	    get-host-name
+
+	    ; From the old interface; I would like to get rid of these.
+	    socket-listen
+	    socket-listen-channels
+	    socket-client-channels
+	    )
+  (open scheme define-record-types
+	external-calls
+	low-channels	; channel? close-channel
+	signals		; error
+	interrupts	; enable-interrupts! disable-interrupts!
+	channel-i/o)	; wait-for-channel {in|out}put-channel->port
   (files (big socket)))
 
 ; Heap traverser
@@ -581,9 +637,14 @@
   (optimize auto-integrate)
   (files (big search-tree)))
 
+(define-structure finite-types (export ((define-finite-type
+					 define-enumerated-type) :syntax))
+  (open scheme-level-2 code-quote define-record-types
+	enumerated
+	features)		; make-immutable
+  (files (big finite-type)))
 
 ; ... end of package definitions.
-
 
 ; Temporary compatibility stuff
 (define-syntax define-signature
@@ -607,6 +668,7 @@
 	    bigbit
 	    bignums ratnums recnums floatnums
 	    build
+	    callback
 	    command-levels
 	    command-processor
 	    debugging
@@ -616,10 +678,13 @@
 	    disassembler
 	    disclosers
 	    dump/restore
+	    dynamic-externals
 	    enum-case
 	    extended-numbers
 	    extended-ports
 	    externals
+	    external-calls
+	    finite-types
 	    formats
 	    innums
 	    inspector

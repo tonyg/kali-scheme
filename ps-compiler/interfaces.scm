@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
 
 
 (define-interface utilities-interface
@@ -147,7 +146,7 @@
            walk-refs-safely
            small-node?
            side-effects?
-           called-node?
+           called-node? called-node
            called-lambda
            get-lambda-value
            ;set-reference?
@@ -181,8 +180,6 @@
            node-equal?
 
            no-free-references?
-
-           procedure-node? called-procedure-node
 
 	   find-calls
 

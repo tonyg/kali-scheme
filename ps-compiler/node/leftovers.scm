@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
 
 
 ; Identifying values called by primops
@@ -7,10 +6,12 @@
 ; Is NODE the value being called by a primop?
                             
 (define (procedure-node? node)
-  (let ((primop (call-primop (node-parent node))))
-    (and (primop-procedure? primop)
-	 (eq? (primop-call-index (call-primop (node-parent node)))
-	      (node-index node)))))
+  (let ((parent (node-parent node)))
+    (and (node? parent)
+	 (let ((primop (call-primop parent)))
+	   (and (primop-procedure? primop)
+		(eq? (primop-call-index primop)
+		     (node-index node)))))))
 
 ; Get the node called at CALL.
 
@@ -20,9 +21,3 @@
 	 => (lambda (i)
 	      (call-arg call i)))
 	(else '#f)))
-
-
-
-
-
-

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; --------------------
@@ -48,7 +47,7 @@
 	  (or (template-print-name tem) (template-id tem)))))
   
 (define-method &disclose ((obj :code-vector))
-  (list 'code-vector (code-vector-length obj))
+  (list 'byte-vector (code-vector-length obj))
 ; (cons 'code-vector
 ;       (let ((z (code-vector-length obj)))
 ;         (do ((i (- z 1) (- i 1))

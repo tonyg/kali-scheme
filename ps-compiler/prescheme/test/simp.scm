@@ -1,3 +1,5 @@
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+
 
 (define (foo x y z)
   (if (and (= (bitwise-and x 3) 0)

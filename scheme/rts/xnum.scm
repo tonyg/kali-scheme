@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file xnum.scm.
 
@@ -15,6 +14,10 @@
   (priority    extended-number-type-priority)
   (predicate   extended-number-predicate)
   (id	       extended-number-type-identity))
+
+(define-record-discloser :extended-number-type
+  (lambda (e-n-t)
+    (list 'extended-number-type (extended-number-type-identity e-n-t))))
 
 (define (make-extended-number-type field-names supers id)
   (letrec ((t (really-make-extended-number-type

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 ; This file contains the type declarations for the VM's interface to
 ; unbuffered i/o.  Unbuffered ports are called channels in the VM
 ; and FD's in the OS.  The external names are unixoid, but the interface
@@ -80,6 +79,7 @@
   (keyboard-interrupt-event     ; user interrupt
    io-completion-event          ; a pending i/o operation completed
    alarm-event                  ; scheduled interrupt
+   os-signal-event		; some OS signal of no interest to the VM occured
    error-event                  ; OS error occurred
    no-event                     ; no more pending events
    ))
@@ -99,12 +99,12 @@
 ; (currently this is always zero for i/o-completions).
 
 (define get-next-event
-  (external "get_next_event" (=> () integer integer integer)))
+  (external "s48_get_next_event" (=> () integer integer integer)))
 
 ; Wait for the next event.  The two arguments are maximum time to wait and
 ; whether that time is in minutes (#T) or milliseconds (#F).
 
 (define wait-for-event
-  (external "wait_for_event" (=> (integer boolean) unit)))
+  (external "s48_wait_for_event" (=> (integer boolean) unit)))
 
 

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
 
 
 ; The intermediate language (node tree)
@@ -19,8 +18,7 @@
   (files (node node)         ; variable and node data structures
 	 (node primop)       ; primop data structure
 	 (node node-util)    ; various small utilities
-	 (node node-equal)   ; node equality
-	 (node leftovers)))  ; more node utilities
+	 (node node-equal))) ; node equality
 
 ;(define node
 ;  (let ()

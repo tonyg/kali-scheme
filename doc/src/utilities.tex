@@ -1,0 +1,383 @@
+\documentclass{article}
+\usepackage{hyperlatex}
+
+\include{proto}
+
+% Make a few big HTML files, and not a lot of small ones.
+\setcounter{htmldepth}{1}
+
+\makeindex
+
+\title{Scheme 48 User's Guide}
+\author{Richard A. Kelsey}
+
+%\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{ASCII character encoding}
+
+These are in the structure \code{ascii}.
+
+\begin{protos}
+\proto{char->ascii}{ char}{integer}
+\proto{ascii->char}{ integer}{char}
+\end{protos}
+\noindent
+These are identical to \code{char->integer} and \code{integer->char} except that
+ they use the ASCII encoding.
+
+\begin{protos}
+\constproto{ascii-limit}{integer}
+\constproto{ascii-whitespaces}{list of integers}
+\end{protos}
+\code{Ascii-limit} is one more than the largest value that \code{char->ascii}
+ may return.
+\code{Ascii-whitespaces} is a list of the ASCII values of whitespace characters
+ (space, tab, line feed, form feed, and carriage return).
+
+\section{Bitwise integer operations}
+
+These functions use the two's-complement representation for integers.
+There is no limit to the number of bits in an integer.
+They are in the structures \code{bitwise} and \code{big-scheme}.
+
+\begin{protos}
+\proto{bitwise-and}{ integer integer}{integer}
+\proto{bitwise-ior}{ integer integer}{integer}
+\proto{bitwise-xor}{ integer integer}{integer}
+\proto{bitwise-not}{ integer} {integer}
+\end{protos}
+\noindent
+These perform various logical operations on integers on a bit-by-bit
+basis. `\code{ior}' is inclusive OR and `\code{xor}' is exclusive OR.
+
+\begin{protos}
+\proto{arithmetic-shift}{ integer bit-count}{integer}
+\end{protos}
+\noindent Shifts the integer by the given bit count, which must be an integer,
+ shifting left for positive counts and right for negative ones.
+Shifting preserves the integer's sign.
+
+\section{Arrays}
+
+These are N-dimensional, zero-based arrays and
+ are in the structure \code{arrays}.
+
+The array interface is derived from one written by Alan Bawden.
+
+\begin{protos}
+\proto{make-array}{ value dimension$_0$ \ldots}{array}
+\proto{array}{ dimensions element$_0$ \ldots}{array}
+\proto{copy-array}{ array}{array}
+\end{protos}
+\noindent
+\code{Make-array} makes a new array with the given dimensions, each of which
+ must be a non-negative integer.
+Every element is initially set to \cvar{value}.
+\code{Array} Returns a new array with the given dimensions and elements.
+\cvar{Dimensions} must be a list of non-negative integers, 
+The number of elements should be the equal to the product of the
+ dimensions.
+The elements are stored in row-major order.
+\begin{example}
+(make-array 'a 2 3) \evalsto \{Array 2 3\}
+
+(array '(2 3) 'a 'b 'c 'd 'e 'f)
+    \evalsto \{Array 2 3\}
+\end{example}
+
+\code{Copy-array} returns a copy of \cvar{array}.
+The copy is identical to the \cvar{array} but does not share storage with it.
+
+
+\begin{protos}
+\proto{array?}{ value}{boolean}
+\end{protos}
+\noindent
+Returns \code{\#t} if \cvar{value} is an array.
+
+\begin{protos}
+\proto{array-ref}{ array index$_0$ \ldots}{value}
+\protonoresult{array-set!}{ array value index$_0$ \ldots}
+\proto{array->vector}{ array}{vector}
+\proto{array-dimensions}{ array}{list}
+\end{protos}
+\noindent
+\code{Array-ref} returns the specified array element and \code{array-set!}
+ replaces the element with \cvar{value}.
+\begin{example}
+(let ((a (array '(2 3) 'a 'b 'c 'd 'e 'f)))
+  (let ((x (array-ref a 0 1)))
+    (array-set! a 'g 0 1)
+    (list x (array-ref a 0 1))))
+    \evalsto '(b g)
+\end{example}
+
+\code{Array->vector} returns a vector containing the elements of \cvar{array}
+ in row-major order.
+\code{Array-dimensions} returns the dimensions of
+ the array as a list.
+
+\begin{protos}
+\proto{make-shared-array}{ array linear-map dimension$_0$ \ldots}{array}
+\end{protos}
+\noindent
+\code{Make-shared-array} makes a new array that shares storage with \cvar{array}
+ and uses \cvar{linear-map} to map indicies to elements.
+\cvar{Linear-map} must accept as many arguments as the number of
+ \cvar{dimension}s given and must return a list of non-negative integers
+ that are valid indicies into \cvar{array}.
+\begin{example}
+(array-ref (make-shared-array a f i0 i1 ...)
+           j0 j1 ...)
+\end{example}
+is equivalent to
+\begin{example}
+(apply array-ref a (f j0 j1 ...))
+\end{example}
+
+As an example, the following function makes the transpose of a two-dimensional
+ array:
+\begin{example}
+(define (transpose array)
+  (let ((dimensions (array-dimensions array)))
+    (make-shared-array array
+                       (lambda (x y)
+		         (list y x))
+		       (cadr dimensions)
+		       (car dimensions))))
+
+(array->vector
+  (transpose
+    (array '(2 3) 'a 'b 'c 'd 'e 'f)))
+      \evalsto '(a d b e c f)
+\end{example}
+
+\section{Records}
+
+New types can be constructed using the \code{define-record-type} macro
+ from the \code{define-record-types} structure
+The general syntax is:
+\begin{example}
+(define-record-type \cvar{tag} \cvar{type-name}
+  (\cvar{constructor-name} \cvar{field-tag} \ldots)
+  \cvar{predicate-name}
+  (\cvar{field-tag} \cvar{accessor-name} [\cvar{modifier-name}])
+  \ldots)
+\end{example}
+This makes the following definitions:
+\begin{protos}
+\constproto{\cvar{type-name}}{type}
+\proto{\cvar{constructor-name}}{ field-init \ldots}{type-name}
+\proto{\cvar{predicate-name}}{ value}{boolean}
+\proto{\cvar{accessor-name}}{ type-name}{value}
+\protonoresult{\cvar{modifier-name}}{ type-name value}
+\end{protos}
+\noindent
+\cvar{Type-name} is the record type itself, and can be used to
+ specify a print method (see below).
+\cvar{Constructor-name} is a constructor that accepts values
+ for the fields whose tags are specified.
+\cvar{Predicate-name} to a predicate that can returns \code{\#t} for
+ elements of the type and \code{\#f} for everything else.
+The \cvar{accessor-name}s retrieve the values of fields,
+ and the \cvar{modifier-name}'s update them.
+The \cvar{tag} is used in printing instances of the record type and
+ the field tags are used in the inspector and to match
+ constructor arguments with fields.
+
+\begin{protos}
+\protonoresult{define-record-discloser}{ type discloser}
+\end{protos}
+\noindent
+\code{Define-record-discloser} determines how
+ records of type \cvar{type} are printed.
+\cvar{Discloser} should be procedure which takes a single
+ record of type \cvar{type} and returns a list whose car is
+ a symbol.
+The record will be printed as the value returned by \cvar{discloser}
+ with curly braces used instead of the usual parenthesis.
+
+For example
+\begin{example}
+(define-record-type pare :pare
+  (kons x y)
+  pare?
+  (x kar set-kar!)
+  (y kdr))
+\end{example}
+ defines \code{kons} to be a constructor, \code{kar} and \code{kdr} to be
+ accessors, \code{set-kar!} to be a modifier, and \code{pare?} to be a predicate
+ for a new type of object.
+The type itself is named \code{:pare}.
+\code{Pare} is a tag used in printing the new objects.
+
+By default, the new objects print as \code{\#{Pare}}.
+The print method can be modified using DEFINE-RECORD-DISCLOSER:
+\begin{example}
+(define-record-discloser :pare
+  (lambda (p) `(pare ,(kar p) ,(kdr p))))
+\end{example}
+ will cause the result of \code{(kons 1 2)} to print as
+ \code{\#\{pare 1 2\}}.
+
+\section{Finite record types}
+
+The structure \code{finite-types} has
+ two macros for defining `finite' record types.
+These are record types for which there are a fixed number of instances,
+ which are created when the record type is defined.
+The syntax for the defining a finite type is:
+\begin{example}
+(define-finite-type \cvar{tag} \cvar{type-name}
+  (\cvar{field-tag} \ldots)
+  \cvar{predicate-name}
+  \cvar{vector-of-elements-name}
+  \cvar{name-accessor}
+  \cvar{index-accessor}
+  (\cvar{field-tag} \cvar{accessor-name} [\cvar{modifier-name}])
+  \ldots
+  ((\cvar{element-name} \cvar{field-value} \ldots)
+   \ldots))
+\end{example}
+This differs from \code{define-record-type} in the following ways:
+\begin{itemize}
+\item No name is specified for the constructor, but the field arguments
+ to the constructor are listed.
+\item The \cvar{vector-of-elements-name} is added; it will be bound
+ to a vector containing all of the elements of the type.
+These are constructed by applying the (unnamed) constructor to the
+ initial field values at the end of the form.
+\item There are names for accessors for two required fields, name
+ and index.
+These fields are not settable, and are not to be included
+ in the argument list for the constructor.
+\item The form ends with the names and the initial field values for
+ the elements of the type.
+The name must be first.
+The remaining values must match the \cvar{field-tag}s in the constructor's
+ argument list.
+\item \cvar{Tag} is bound to a macro that maps \cvar{element-name}s to the
+ the corresponding element of the vector.
+The name lookup is done at macro-expansion time.
+\end{itemize}
+
+\begin{example}
+(define-finite-type color :color
+  (red green blue)
+  color?
+  colors
+  color-name
+  color-index
+  (red   color-red)
+  (green color-green)
+  (blue  color-blue)
+  ((white  255 255 255)
+   (black    0   0   0)
+   (yellow 255 255   0)
+   (maroon 176  48  96)))
+
+(color-name (vector-ref colors 0)) \evalsto white
+(color-name (color black))         \evalsto black
+(color-index (color yellow))       \evalsto 2
+(color-red (color maroon))         \evalsto 176
+\end{example}
+
+Enumerated types are finite types whose only fields are the name
+ and the index.
+The syntax for defining an enumerated type is:
+\begin{example}
+(define-enumerated-type \cvar{tag} \cvar{type-name}
+  \cvar{predicate-name}
+  \cvar{vector-of-elements-name}
+  \cvar{name-accessor}
+  \cvar{index-accessor}
+  (\cvar{element-name} \ldots))
+\end{example}
+In the absence of any additional fields, both the constructor argument
+ list and the initial field values are not required.
+
+The above example of a finite type can be pared down to the following
+ enumerated type:
+\begin{example}
+(define-enumerated-type color :color
+  color?
+  colors
+  color-name
+  color-index
+  (white black yellow maroon))
+
+(color-name (vector-ref colors 0)) \evalsto white
+(color-name (color black))         \evalsto black
+(color-index (color yellow))       \evalsto 2
+\end{example}
+
+\section{Hash tables}
+
+These are generic hash tables, and are in the structure \code{tables}.
+Strictly speaking they are more maps than tables, as every table has a
+ value for every possible key (for that type of table).
+All but a finite number of those values are \code{\#f}.
+
+\begin{protos}
+\proto{make-table}{}{table}
+\proto{make-symbol-table}{}{symbol-table}
+\proto{make-string-table}{}{string-table}
+\proto{make-integer-table}{}{integer-table}
+\proto{make-table-maker}{ compare-proc hash-proc}{procedure}
+\protonoresult{make-table-immutable!}{ table}
+\end{protos}
+\noindent
+The first four functions listed make various kinds of tables.
+\code{Make-table} returns a table whose keys may be symbols, integer,
+ characters, booleans, or the empty list (these are also the values
+ that may be used in \code{case} expressions).
+As with \code{case}, comparison is done using \code{eqv?}.
+The comparison procedures used in symbol, string, and integer tables are
+ \code{eq?}, \code{string=?}, and \code{=}.
+
+\code{Make-table-maker} takes two procedures as arguments and returns
+ a nullary table-making procedure.
+\cvar{Compare-proc} should be a two-argument equality predicate.
+\cvar{Hash-proc} should be a one argument procedure that takes a key
+ and returns a non-negative integer hash value.
+If \code{(\cvar{compare-proc} \cvar{x} \cvar{y})} returns true,
+ then \code{(= (\cvar{hash-proc} \cvar{x}) (\cvar{hash-proc} \cvar{y}))}
+ must also return true.
+For example, \code{make-integer-table} could be defined
+ as \code{(make-table-maker = abs)}.
+
+\code{Make-table-immutable!} prohibits future modification to its argument.
+
+\begin{protos}
+\proto{table?}{ value}{boolean}
+\proto{table-ref}{ table key}{value or \code{\#f}}
+\protonoresult{table-set!}{ table key value}
+\protonoresult{table-walk}{ procedure table}
+\end{protos}
+\noindent
+\code{Table?} is the predicate for tables.
+\code{Table-ref} and \code{table-set!} access and modify the value of \cvar{key}
+ in \cvar{table}.
+\code{Table-walk} applies \cvar{procedure}, which must accept two arguments,
+ to every associated key and non-\code{\#f} value in \code{table}.
+
+\begin{protos}
+\proto{default-hash-function}{ value}{integer}
+\proto{string-hash}{ string}{integer}
+\end{protos}
+\noindent
+\code{default-hash-function} is the hash function used in the tables
+ returned by \code{make-table}, and \code{string-hash} it the one used
+ by \code{make-string-table}.
+
+%\W \chapter*{Index}
+%\W \htmlprintindex
+%\T \input{doc.ind}
+
+\end{document}
+
+

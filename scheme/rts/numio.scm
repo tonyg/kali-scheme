@@ -1,17 +1,33 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ;;;; number->string and string->number
 
 ; NUMBER->STRING
 
-(define-generic number->string &number->string)
+(define-generic real-number->string &number->string)
 
-(define-method &number->string (n)
-  (number->string n 10))
+(define (number->string number . maybe-radix)
+  (let ((radix (if (null? maybe-radix)
+		   10
+		   (car maybe-radix))))
+    (if (and (number? number)
+	     (or (null? maybe-radix)
+		 (and (null? (cdr maybe-radix))
+		      (integer? radix)
+		      (exact? radix)
+		      (< 0 radix))))
+	(real-number->string number radix)
+	(apply call-error
+	       "invalid argument"
+	       'number->string
+	       number
+	       maybe-radix))))
 
 (define-method &number->string (n radix)
-  "#{Number}")    ;Shouldn't happen
+  (call-error "invalid argument"
+	      'number->string
+	      n
+	      radix))
 
 (define-method &number->string ((n :exact-integer) radix)
   (integer->string n radix))
@@ -50,6 +66,10 @@
 ; really-string->number, which is generic.
 
 (define (string->number string . options)
+  (if (not (string? string))
+      (apply call-error "invalid argument"
+	     'string->number
+	     string options))
   (let* ((radix (cond ((null? options) 10)
 		      ((null? (cdr options)) (car options))
 		      ;; Revised^3 Scheme compatibility

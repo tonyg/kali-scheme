@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file transport.scm.
 
@@ -168,16 +167,20 @@
                  (transport (location-id loc)))
     descriptor))
 
-; Symbols have one slot, the string containing the symbol's name.
+; Symbols have two slots, the string containing the symbol's name and a slot
+; used in building the symbol table.
 ; Characters in the symbol name are made to be lower case.
 
 (define (transport-symbol symbol)
-  (let* ((data (allocate-d-vector (enum stob symbol) 1 #t))
+  (let* ((data (allocate-d-vector (enum stob symbol) 2 #t))
          (descriptor (car data))
          (vector (cdr data)))
     (vector-set! vector
                  0
                  (transport (symbol-case-converter (symbol->string symbol))))
+    (vector-set! vector
+                 1
+                 (transport #f))
     descriptor))
 
 (define (string-case-converter string)
@@ -245,7 +248,7 @@
         ((code-vector? thing)
          (let ((len (code-vector-length thing)))
            (write-stob (make-header-immutable  ; ***
-                        (make-header (enum stob code-vector) len))
+                        (make-header (enum stob byte-vector) len))
                        thing len code-vector-ref write-byte port)
            (align-port len port)))
         ((vector? thing)

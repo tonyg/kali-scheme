@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; I/O primitives
 
@@ -143,6 +142,7 @@
 	  (eof?
 	   (goto return eof-object))
 	  (pending?
+	   (set-channel-os-status! channel true)  ; note that we're waiting
 	   (disable-interrupts!)  ; keep the result pending for a moment
 	   (lose (enum exception pending-channel-i/o)))
 	  (else
@@ -156,6 +156,7 @@
     (cond ((error? status)
 	   (os-lose status))
 	  (pending?
+	   (set-channel-os-status! channel true)  ; note that we're waiting
 	   (disable-interrupts!)  ; keep the result pending for a moment
 	   (lose (enum exception pending-channel-i/o)))
 	  (else
@@ -180,6 +181,10 @@
 (define-primitive channel-abort (channel->)
   (lambda (channel)
     (goto return (vm-channel-abort channel))))
+
+(define-primitive open-channels-list ()
+  (lambda ()
+    (goto return (open-channels-list))))
 
 ; Copying error strings into the heap.
 
@@ -208,7 +213,7 @@
 (define (read-or-peek-char read?)
   (lambda ()
     (let ((port (if (= (code-byte 0) 0)
-		    *val*
+		    (val)
 		    (get-current-port
 		      (enter-fixnum
 		        (enum current-port-marker current-input-port))))))
@@ -240,10 +245,11 @@
     (receive (char port)
 	(if (= (code-byte 0) 0)
 	    (values (pop)
-		    *val*)
-	    (values *val*
+		    (val))
+	    (values (val)
 		    (get-current-port (enter-fixnum
-				       (enum current-port-marker current-output-port)))))
+				       (enum current-port-marker
+					     current-output-port)))))
       (if (and (vm-char? char)
 	       (port? port)
 	       (port-has-status? port
@@ -267,20 +273,24 @@
 ; MARKER.
 
 (define (get-current-port marker)
-  (let ((thread *current-thread*))
+  (let ((thread (current-thread)))
     (if (and (record? thread)
 	     (< 1 (record-length thread)))
 	(let loop ((env (record-ref thread 1)))
 	  (cond ((not (and (vm-pair? env)
 			   (vm-pair? (vm-car env))))
 		 (if (vm-eq? env null)
-		     (enter-string "null")
-		     (enter-string "not pair")))
+		     (error (if (eq? (extract-fixnum marker)
+				     (enum current-port-marker
+					   current-output-port))
+				"dynamic environment doesn't have current-output-port"
+				"dynamic environment doesn't have current-input-port"))
+		     (error "dynamic environment is not a proper list")))
 		((vm-eq? marker (vm-car (vm-car env)))
 		 (vm-cdr (vm-car env)))
 		(else
 		 (loop (vm-cdr env)))))
-	(enter-string "bad record"))))
+	(error "current thread is not a record"))))
 
 ;----------------
 ; A poor man's WRITE for use in debugging.
@@ -382,7 +392,7 @@
 			(if (error? (close-output-port port))
 			    (error-message "Unable to close image file"))
 			(lose reason status))))
-      (if (not (image-writing-okay?))
+      (if (not (s48-image-writing-okay?))
 	  (raise-exception unimplemented-instruction 0
 			   filename resume-proc comment-string)
 	  (receive (port status)
@@ -392,13 +402,26 @@
 		(let ((status (write-string (extract-string comment-string) port)))
 		  (if (error? status)
 		      (port-lose (enum exception os-error) status port)
-		      (let ((status (write-image resume-proc
-						 port
-						 mark-traced-channels-closed!)))
+		      (let ((status (s48-write-image resume-proc port)))
 			(if (error? status)
 			    (port-lose (enum exception os-error) status port)
 			    (let ((status (close-output-port port)))
 			      (if (error? status)
 				  (lose (enum exception os-error) status)
-				  (goto no-result)))))))))))))
+				  (receive (undumpables undumpable-count)
+				      (s48-undumpable-records)
+				    (if (= undumpable-count 0)
+					(goto no-result)
+		     ; ---------------->
+		     (raise-exception unresumable-records-in-image 0
+				      filename
+				      resume-proc
+				      comment-string
+				      undumpables
+				      (enter-fixnum undumpable-count))))))))))))))))
+
+; READ-IMAGE needs to protect some values against GCs (this can't be with
+; READ-IMAGE as that is compiled separately.)
+
+(add-gc-root! s48-initializing-gc-root)
 

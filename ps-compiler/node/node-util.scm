@@ -1,5 +1,5 @@
  
-;;; Copyright (c) 1991 Richard Kelsey
+; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
 
 ; This file contains miscellaneous utilities for accessing and modifying the
 ; node tree.
@@ -64,7 +64,7 @@
 (define (find-calls l)
   (let ((refs (cond ((bound-to-variable l)
 		     => variable-refs)
-		    ((procedure-node? l)
+		    ((called-node? l)
 		     (list l))
 		    (else
 		     #f))))
@@ -145,8 +145,16 @@
 ; Finding the lambda node called by CALL, JUMP, or RETURN
 
 (define (called-node? node)
-  (eq? node (called-procedure-node (node-parent node))))
+  (and (node? (node-parent node))
+       (eq? node (called-node (node-parent node)))))
 						   
+(define (called-node call)
+  (cond ((and (primop-procedure? (call-primop call))
+	      (primop-call-index (call-primop call)))
+	 => (lambda (i)
+	      (call-arg call i)))
+	(else '#f)))
+
 (define (called-lambda call)
   (get-lambda-value (call-arg call (primop-call-index (call-primop call)))))
 

@@ -1,20 +1,23 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Tiny image and simple I/O test system
 
 ; This prints `Hello' and the first command argument, if any, then reads
 ; a line from standard input and prints it to standard output.
 
-(define (start arg in out error-out)
+(define (start arg in out error-out resumer-records)
   (write-string "Hello " out)
   (if (vector? arg)
       (if (< 0 (vector-length arg))
 	  (write-string (vector-ref arg 0) out)))
+  (collect)
+  (collect)
   (newline out)
   (write-string (read-string in) out)
   (newline out)
   0)
+
+(define first? #t)
 
 (define (write-string string . channel-option)  ; test n-ary procedures
   (channel-maybe-write string

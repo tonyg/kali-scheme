@@ -1,5 +1,4 @@
-Copyright (c) 1993, 1994, 1995 Richard Kelsey and Jonathan Rees.
-Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 Please report bugs to scheme-48-bugs@martigny.ai.mit.edu, and include
 the version number in your message.
@@ -61,6 +60,7 @@ listed here):
       prescheme/	code for running the VM using Scheme 48
       debug/		debugging utilities, tests, etc.
       misc/		very miscellaneous things (e.g. AMB operator)
+      posix/		unfinished interface to POSIX system calls
     ps-compiler/	Pre-Scheme -> C compiler
     c/			c source files
       sysdep.h.in	input to configure
@@ -72,11 +72,16 @@ listed here):
       prescheme.h	part of the VM
       extension.c       default definition of vm_extension()
       scheme48.h	C declarations and macros for Scheme 48 data structures
+      old-scheme48.h	old version, included for compatibility
+      c-mods.h		minor additions to the C language
       event.h		header file for OS interface
+      io.h		ditto
       fd-io.h		ditto
-      socket.h		ditto
+      socket.c		socket support
+      dynamo.c		dynamic loading support
       unix/             Unix-specific source files
-      fake/		C files for insufficiently Posix compliant systems
+      posix/		C half of an unfinished interface to POSIX system calls
+      fake/		C files for insufficiently POSIX-compliant systems
     build/		code for building the system
       filenames.make	included by Makefile, generated automatically
       filenames.scm	code for generating filenames.make
@@ -84,4 +89,5 @@ listed here):
       initial.debug	debugging database for same
       initial.scm	script for creating initial.image
       build-usual-image	script for creating scheme48.image
+      build-external-modules script for creating external-module initializer
     emacs/		gnu emacs support

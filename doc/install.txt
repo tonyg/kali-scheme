@@ -42,7 +42,7 @@ Customizing the installation
 
 Customizing scheme48.image
 
-By default, the image consists of a core Scheme system (Revised^4
+By default, the image consists of a core Scheme system (Revised^5
 Scheme plus a very minimal read-eval-print loop) together with a
 standard set of "options" (command processor, debugging commands,
 inspector, disassembler, generic arithmetic).  The set of options is
@@ -128,16 +128,16 @@ overall performance even more, maybe about 6-10%, by removing the
 range check from the interpreter's instruction dispatch.  To do this,
 use the -S flag to get assembly code for scheme48vm.c, then find the
 instructions in scheme48vm.s corresponding to the big dispatch in
-Tinterpret():
+restart():
 
- START: {
-  b_111X = *((unsigned char*) RScode_pointerS);
-  RScode_pointerS = (1 + RScode_pointerS);
-  switch (b_111X) {
+ L19173: {
+  code_pointer_83X = arg1K0;
+  switch ((*((unsigned char *) code_pointer_83X))) {
     ... }
 
-There will be one or two comparison instructions to see whether b_113X
-is in range; just remove them.  For the 68000 I use a "sed" script
+There will be one or two comparison instructions to see whether the
+opcode is in range; just remove them.  For the 68000 I use a "sed"
+ script
 
     /cmpl #137,d0/ N
     /cmpl #137,d0\n     jhi L/ d

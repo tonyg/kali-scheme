@@ -1,34 +1,77 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is the main entry point to the compiler.  It returns a template
 ; that will execute the forms (each of which is a node).
+;
+; This is written in a somewhat odd fashion to make sure that the forms are
+; not retained once they have been compiled.
 
-(define (compile-forms forms name debug-data)
-  (segment->template
-    (sequentially
-      (instruction (enum op protocol) 0)	; no arguments passed
-      (if (null? forms)
-	  (deliver-value (instruction (enum op unspecific))
-			 (return-cont #f))
-	  (let recur ((forms forms))
-	    (if (null? (cdr forms))
-		(compile-form (car forms) (return-cont #f))
-		(sequentially 
-		  (compile-form (car forms) an-ignore-values-cont)
-		  ;; Cf. compile-begin
-		  (recur (cdr forms)))))))
-    name
-    #f					;pc-in-segment = #f
-    debug-data))
+;(define (compile-forms forms name)
+;  (if (null? forms)
+;      (segment->template (sequentially
+;                           (instruction (enum op protocol) 0)
+;                           (deliver-value (instruction (enum op unspecific))
+;                                          (return-cont #f)))
+;                         name
+;                         #f             ;pc-in-segment
+;                         #f)            ;debug data
+;      (really-compile-forms forms
+;                            (instruction (enum op protocol) 0)
+;                            name)))
+;      
+;(define (really-compile-forms forms segment name)
+;  (if (null? (cdr forms))
+;      (segment->template (sequentially segment
+;                                       (compile-form (car forms)
+;                                                     (return-cont #f)))
+;                         name
+;                         #f             ;pc-in-segment
+;                         #f)            ;debug data
+;      (really-compile-forms (cdr forms)
+;                            (sequentially segment
+;                                          (compile-form (car forms)
+;                                                        an-ignore-values-cont))
+;                            name)))
 
-; Compile a single top-level form, returning a segment.
+(define (compile-forms forms name)
+  (if (null? forms)
+      (segment->template (sequentially
+                           (instruction (enum op protocol) 0)
+                           (deliver-value (instruction (enum op unspecific))
+                                          (return-cont #f)))
+                         name
+                         #f             ;pc-in-segment
+                         #f)            ;debug data
+      (compile-forms-loop (reverse forms) name #f)))
 
-(define (compile-form node cont)
-  (let ((node (force-node node)))
-    (if (define-node? node)
-	(compile-definition node cont)
-	(compile-expression node 0 cont))))
+(define (compile-forms-loop forms name next)
+  (if (null? forms)
+      next
+      (compile-forms-loop (cdr forms)
+			  name
+			  (compile-form (car forms) name next))))
+
+; Compile a single top-level form, returning a template.  NEXT is either #F or
+; a template; if it is a template we jump to it after FORM.
+  
+(define (compile-form form name next)
+  (segment->template (sequentially
+		      (instruction (enum op protocol) 0)
+		      (let ((node (force-node form))
+			    (cont (if next
+				      an-ignore-values-cont
+				      (return-cont #f))))
+			(if (define-node? node)
+			    (compile-definition node cont)
+			    (compile-expression node 0 cont)))
+		      (if next
+			  (instruction-with-literal (enum op call-template)
+						    next
+						    0)
+			  empty-segment))
+		     name
+		     #f		;pc-in-segment
+		     #f))	;debug data
 
 (define define-node? (node-predicate 'define syntax-type))
 
@@ -66,29 +109,44 @@
 
 ;----------------
 ; Make a startup procedure from a list of initialization templates.  This
-; is only used by the static linker.
+; is only used by the static linker.  RESUMER should be a template that
+; returns a procedure that takes 5 arguments (the number the VM passes to
+; the startup procedure).
 
 (define (make-startup-procedure inits resumer)
-  (let ((nargs 4))
-    (segment->template
-     (sequentially
+  (let ((nargs 5))
+    (append-templates inits
+		      nargs
+		      (sequentially
+		        (maybe-push-continuation
+			  (instruction-with-literal (enum op call-template)
+						    resumer
+						    0)
+			  nargs
+			  (fall-through-cont #f #f))
+			(instruction (enum op call) nargs)))))
+
+; Return a template that accepts NARGS arguments, invokes TEMPLATES in turn,
+; and then calls template FINAL on the arguments.
+
+(define (append-templates templates nargs final)
+  (segment->template
+    (sequentially
       (instruction (enum op protocol) nargs)
-      (reduce (lambda (init seg)
+      (reduce (lambda (template seg)
 		(sequentially
-		 (maybe-push-continuation
-		   (instruction-with-literal (enum op call-template) init 0)
-		   nargs
-		   an-ignore-values-cont)
-		 seg))
-	      (sequentially
-	       (maybe-push-continuation
-		 (instruction-with-literal (enum op call-template) resumer 0)
-		 nargs
-		 (fall-through-cont #f #f))
-	       ;; was (compile resumer p nargs (fall-through-cont))
-	       (instruction (enum op call) nargs))
-	      inits))
-      #f #f #f)))
+		  (maybe-push-continuation
+		    (instruction-with-literal (enum op call-template)
+					      template
+					      0)
+		    nargs
+		    an-ignore-values-cont)
+		  seg))
+	      final
+	      templates))
+    #f		; no name
+    #f		; pc-in-segment = #f
+    #f))	; no debug data
 
 (define an-ignore-values-cont (ignore-values-cont #f #f))
 

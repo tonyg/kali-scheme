@@ -1,41 +1,78 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Allocation
-;  *hp* is the heap pointer and *limit* is the limit beyond which no
+;  s48-*hp* is the heap pointer and s48-*limit* is the limit beyond which no
 ;  storage should be allocated.  Both of these are addresses (not
 ;  descriptors).
 
-(define *hp*)
-(define *limit*)
+(define s48-*hp*)
+(define s48-*limit*)
+
+(define *oldspace-hp*)
+(define *oldspace-limit*)
 
 ; These are all in address units
-(define *newspace-begin* (unspecific))
-(define *newspace-end*   (unspecific))
-(define *oldspace-begin* (unspecific))
-(define *oldspace-end*   (unspecific))
+(define *newspace-begin*)
+(define *newspace-end*)
+(define *oldspace-begin*)
+(define *oldspace-end*)
 
-(define (initialize-heap start size)
+; For the GC (which is in another module)
+
+(define (heap-pointer)
+  s48-*hp*)
+
+(define (set-heap-pointer! new-hp)
+  (set! s48-*hp* new-hp))
+
+(define (heap-start)
+  *newspace-begin*)
+
+(define (heap-limit)
+  *newspace-end*)
+
+;----------------
+
+(define (s48-initialize-heap start size)
   (let ((semisize (cells->a-units (quotient size 2))))
     (set! *newspace-begin* start)
     (set! *newspace-end* (address+ *newspace-begin* semisize))
+    (set! s48-*hp* *newspace-begin*)
+    (set! s48-*limit* *newspace-end*)
     (set! *oldspace-begin* *newspace-end*)
     (set! *oldspace-end* (address+ *oldspace-begin* semisize))
-    (set! *hp* *newspace-begin*)
-    (set! *limit* *newspace-end*)))
+    (set! *oldspace-hp* *oldspace-begin*)
+    (set! *oldspace-limit* *oldspace-end*)))
 
-(define (available? cells)
-  (address< (address+ *hp* (cells->a-units cells)) *limit*))
+; To write images we need to be able to undo the swapping.
 
-(define (available)
-  (a-units->cells (address-difference *limit* *hp*)))
+(define-syntax swap!
+  (syntax-rules ()
+    ((swap! a b)
+     (let ((temp a))
+       (set! a b)
+       (set! b temp)))))
 
-(define (heap-size)
+(define (swap-spaces)
+  (swap! s48-*limit*          *oldspace-limit*)
+  (swap! s48-*hp*             *oldspace-hp*)
+  (swap! *newspace-begin* *oldspace-begin*)
+  (swap! *newspace-end*   *oldspace-end*))
+
+;----------------
+
+(define (s48-available? cells)
+  (address< (address+ s48-*hp* (cells->a-units cells)) s48-*limit*))
+
+(define (s48-available)
+  (a-units->cells (address-difference s48-*limit* s48-*hp*)))
+
+(define (s48-heap-size)
   (address-difference *newspace-end* *newspace-begin*))
 
 (define (store-next! descriptor)
-  (store! *hp* descriptor)
-  (set! *hp* (address1+ *hp*)))
+  (store! s48-*hp* descriptor)
+  (set! s48-*hp* (address1+ s48-*hp*)))
 
 ; Pre-Allocation
 ;
@@ -68,48 +105,50 @@
 (define check-preallocation? #f)
 
 (define *heap-key* 0)
-(define universal-key 0)
 (define *okayed-space* 0)
 
-(define (preallocate-space cells)
+(define (s48-preallocate-space cells)
   (cond (check-preallocation?
-	 (assert (available? cells))
+	 (assert (s48-available? cells))
 	 (set! *heap-key* (+ *heap-key* 1))
 	 (set! *okayed-space* cells)
 	 *heap-key*)
 	(else
-	 universal-key)))
+	 0)))
 
-(define (allocate-space type len key)	;len is in bytes
+(define (s48-allocate-space type len key)	;len is in bytes
   (= type 0)      ; declaration for type-checker
   (if check-preallocation?
       (let ((cells (+ (bytes->cells len) 1)))
-	(assert (available? cells))
-	(cond ((not (= key universal-key))
-	       (if (not (and (= key *heap-key*)
-			     (>= *okayed-space* cells)))
-		   (error "invalid heap key" key cells))
-	       (set! *okayed-space* (- *okayed-space* cells))))))
-  (let ((new *hp*))
-    (set! *hp* (address+ *hp* (bytes->a-units len)))
+	(assert (s48-available? cells))
+	(if (not (and (= key *heap-key*)
+		      (>= *okayed-space* cells)))
+	    (error "invalid heap key" key cells))
+	(set! *okayed-space* (- *okayed-space* cells))))
+  (let ((new s48-*hp*))
+    (set! s48-*hp* (address+ s48-*hp* (bytes->a-units len)))
     new))
 
-(define (write-barrier address value)
-  (address+ address value)  ; for the type checker
+(define (s48-write-barrier stob address value)
+  (address+ address (+ stob value))  ; for the type checker
   (unspecific))
 
 ;----------------
 ; Keeping track of all the areas.
 
-(define *pure-areas*   (unspecific))
-(define *impure-areas* (unspecific))
-(define *pure-sizes*   (unspecific))
-(define *impure-sizes* (unspecific))
-(define *pure-area-count*   0)
+(define *pure-areas*)
+(define *impure-areas*)
+(define *pure-sizes*)
+(define *impure-sizes*)
+(define *pure-area-count* 0)
 (define *impure-area-count* 0)
 
-(define (register-static-areas pure-count pure-areas pure-sizes
-			       impure-count impure-areas impure-sizes)
+(define (have-static-areas?)
+  (or (< 0 *impure-area-count*)
+      (< 0 *pure-area-count*)))
+
+(define (s48-register-static-areas pure-count pure-areas pure-sizes
+				   impure-count impure-areas impure-sizes)
   (set! *pure-area-count* pure-count)
   (set! *pure-areas* pure-areas)
   (set! *pure-sizes* pure-sizes)
@@ -129,348 +168,110 @@
 	   #f))))
 
 (define (walk-pure-areas proc)
-  (walk-areas proc *pure-areas* *pure-sizes* *pure-area-count*))
+  (if (< 0 *pure-area-count*)
+      (walk-areas proc *pure-areas* *pure-sizes* *pure-area-count*)))
 
 (define (walk-impure-areas proc)
-  (walk-areas proc *impure-areas* *impure-sizes* *impure-area-count*))
+  (if (< 0 *impure-area-count*)
+      (walk-areas proc *impure-areas* *impure-sizes* *impure-area-count*)))
 
 ;----------------------------------------------------------------
 ; Finding things in the heap.
 
 (define *finding-type* (enum stob symbol))    ; work around lack of closures
 
-(define (walk-over-type-in-area proc)
+; Call PREDICATE on all objects of type *FINDING-TYPE* found between START and END.
+; The objects for which PREDICATE returns #T are pushed onto the heap using STORE-NEXT!.
+; Returns #T for success and #F for failure.
+
+(define (collect-type-in-area predicate)
   (lambda (start end)
     (let ((type *finding-type*))
       (let loop ((addr start))
-	(cond ((address< addr end)
-	       (let ((d (fetch addr)))
-		 (cond ((not (header? d))
-			(write-string "heap is in an inconsistent state."
-				      (current-error-port))
-			#f)
-		       ((or (not (= type (header-type d)))
-			    (proc (address->stob-descriptor (address1+ addr))))
-			(loop (address1+ (address+ addr (header-a-units d)))))
-		       (else
-			#f))))
-	      (else
-	       #t))))))
+	(if (address>= addr end)
+	    #t
+	    (let* ((d (fetch addr))
+		   (next (address+ addr
+				   (+ (cells->a-units stob-overhead)
+				      (header-length-in-a-units d)))))
+	      (cond ((not (header? d))
+		     (write-string "heap is in an inconsistent state."
+				   (current-error-port))
+		     #f)
+		    ((not (= type (header-type d)))
+		     (loop next))
+		    (else
+		     (let ((obj (address->stob-descriptor (address1+ addr))))
+		       (cond ((not (predicate obj))
+			      (loop next))
+			     ((s48-available? (cells->a-units 1))
+			      (store-next! obj)
+			      (loop next))
+			     (else
+			      #f)))))))))))
 
-; Used to find end of an object
-(define (header-a-units h)
-  (bytes->a-units (header-length-in-bytes h)))
+; Returns a procedure that will walk the heap calling PREDICATE on every
+; object of a particular type.  Returns a vector containing all objects
+; for which PREDICATE returns #t.  If the heap is screwed up or there isn't
+; room for the vector we return FALSE.
 
-;(define (walk-over-symbols proc)
-;  (let ((proc (walk-over-type-in-area (enum stob symbol) proc))
-;        (start-hp *hp*))
-;    (cond ((and (proc *newspace-begin* *hp*)
-;                (walk-pure-areas proc))
-;           #t)
-;          (else
-;           (set! *hp* start-hp) ; out of space, so undo and give up
-;           #f))))
-
-; Returns a procedure that will walk the heap calling PUSHER on every
-; object of a particular type.  If PUSHER returns #f the walk is aborted
-; and false is returned.  If the walk finishes everything pushed on the
-; heap by PUSHER is returned in a vector.
-
-(define (generic-find-all pusher)
-  (let ((proc (walk-over-type-in-area pusher)))
+(define (generic-find-all predicate)
+  (let ((proc (collect-type-in-area predicate)))
     (lambda (type)
       (set! *finding-type* type)                     ; we don't have closures
-      (let ((start-hp *hp*))
+      (let ((start-hp s48-*hp*))
 	(store-next! 0)                              ; reserve space for header
 	(cond ((and (proc *newspace-begin* start-hp)
 		    (walk-impure-areas proc)
 		    (walk-pure-areas proc))
-	       (let ((size (address-difference *hp* (address1+ start-hp))))
+	       (let ((size (address-difference s48-*hp* (address1+ start-hp))))
 		 (store! start-hp (make-header (enum stob vector) size) )
 		 (address->stob-descriptor (address1+ start-hp))))
 	      (else
-	       (set! *hp* start-hp) ; out of space, so undo and give up
+	       (set! s48-*hp* start-hp) ; out of space, so undo and give up
 	       false))))))
 
 ; Find everything with a given type.
 
-(define find-all
-  (generic-find-all (lambda (thing)
-		      (cond ((available? (cells->a-units 1))
-			     (store-next! thing)
-			     #t)
-			    (else #f)))))
+(define s48-find-all
+  (generic-find-all (lambda (thing) #t)))
 
 ; Find all records of a given record type (as determined by the first slot
 ; in each record).
 
-(define find-all-records
-  (let* ((the-record-type greatest-fixnum-value) ; full-sized integer constant
+(define s48-find-all-records
+  (let* ((the-record-type false)
 	 (finder (generic-find-all
 		  (lambda (record)
-		    (cond ((not (vm-eq? the-record-type
-					(fetch (address-after-header record))))
-			   #t)
-			  ((available? (cells->a-units 1))
-			   (store-next! record)
-			   #t)
-			  (else #f))))))
+		    (vm-eq? (record-type record)
+			    the-record-type)))))
     (lambda (record-type)
       (set! the-record-type record-type)
       (finder (enum stob record)))))
 
-;----------------------------------------------------------------
-; Write-image and read-image
+(define find-resumer-records
+  (let ((finder (generic-find-all
+		  (lambda (record)
+		    (let ((type (record-type record)))
+		      (and (record? type)
+			   (stob? (record-type-resumer type))))))))
+    (lambda ()
+      (finder (enum stob record)))))
 
-(define (image-writing-okay?)
-  (and (= 0 *pure-area-count*)
-       (= 0 *impure-area-count*)))
+; Functions for accessing records.  Getting these from STRUCT would introduce
+; a circular module dependency.
 
-(define *status* (enum errors no-errors))
+(define (record? x)
+  (and (stob? x)
+       (= (header-type (stob-header x))
+	  (enum stob record))))
+    
+(define (record-type record)
+  (record-ref record -1))
 
-(define-syntax write-check
-  (syntax-rules ()
-    ((write-check exp)
-     (if (eq? *status* (enum errors no-errors))
-	 (set! *status* exp)))))
+(define (record-type-resumer record-type)
+  (record-ref record-type 0))
 
-(define (write-heap-integer n port)
-  (write-check (write-integer n port))
-  (write-check (write-char #\newline port)))
-
-(define (write-image resume-proc port mark-traced-channels-closed!)
-  (begin-collection)
-  (let ((resume-proc (trace-value resume-proc)))
-    (really-do-gc *newspace-begin*)
-    (clean-weak-pointers)
-    (mark-traced-channels-closed!)
-    (let ((status (really-write-image port resume-proc)))
-      (abort-collection)
-      status)))
-
-(define (really-write-image port restart-proc)
-  (set! *status* (enum errors no-errors))
-  (write-check (write-char #\newline port))
-  (write-check (write-page port))
-  (write-check (write-char #\newline port))
-  (write-check (write-string architecture-version port))
-  (write-check (write-char #\newline port))
-  (write-heap-integer bytes-per-cell port)
-  (write-heap-integer (a-units->cells (address->integer *newspace-begin*)) port)
-  (write-heap-integer (a-units->cells (address->integer *hp*)) port)
-  (write-heap-integer restart-proc port)
-  (write-check (write-page port))
-  (store! *hp* 1)  ; used to detect endianess of image
-  (write-check (write-block port
-			    *hp*
-			    (address-difference (address1+ *hp*) *hp*)))
-  (write-check (write-block port
-			    *newspace-begin*
-			    (address-difference *hp* *newspace-begin*)))
-  *status*)
-
-; Make sure the image file is okay and return the size of the heap it
-; contains.
-
-(define *eof?* #f)
-
-(define-syntax read-check
-  (syntax-rules ()
-    ((read-check exp)
-     (read-check exp -1))
-    ((read-check exp losing-value)
-     (let ((lose losing-value))
-       (if *eof?*
-	   lose
-	   (receive (thing eof? status)
-	       exp
-	     (cond (eof?
-		    (set! *eof?* #t)
-		    lose)
-		   ((eq? *status* (enum errors no-errors))
-		    thing)
-		   (else
-		    (set! *eof?* #t)
-		    (set! *status* status)
-		    lose))))))))
-
-(define (check-image-header filename)
-  (receive (port status)
-      (open-input-file filename)
-    (cond ((error? status)
-	   (error-message  "Can't open heap image file")
-	   (error-message (error-string status))
-	   -1)
-	  (else
-	   (set! *status* (enum errors no-errors))
-	   (set! *eof?* #f)
-	   (read-check (read-page port))
-	   (read-check (read-newline port)) ; version starts on next line
-	   (let* ((same-version? (read-check (check-image-version port) #f))
-		  (old-bytes-per-cell (read-check (read-integer port))))
-	     (set! *old-begin*
-		   (integer->address
-		     (cells->a-units (read-check (read-integer port)))))
-	     (set! *old-hp*
-		   (integer->address
-		     (cells->a-units (read-check (read-integer port)))))
-	     (set! *startup-proc* (read-check (read-integer port)))
-	     (set! *image-port* port)
-	     (read-check (read-page port)) ; read to beginning of heap
-	     (cond ((error? *status*)
-		    (read-lost "Error reading from image file" port))
-		   (*eof?*   ; has to come after *status* check
-		    (set! *status* (enum errors parse-error))
-		    (read-lost "Premature EOF when reading image file" port))
-		   ((not same-version?)
-		    (read-lost "Format of image is incompatible with this version of system" port))
-		   ((not (= old-bytes-per-cell bytes-per-cell))
-		    (read-lost "Incompatible bytes-per-cell in image" port))
-		   (else
-		    (address-difference *old-hp* *old-begin*))))))))
-
-(define (read-page port)
-  (read-this-character page-character port))
-
-(define (read-newline port)
-  (read-this-character #\newline port))
-
-(define (read-this-character char port)
-  (let loop ()
-    (receive (ch eof? status)
-	(read-char port)
-      (cond ((or eof? (error? status))
-	     (values -1 eof? status))
-	    ((char=? char ch)
-	     (values -1 #f status))
-	    (else
-	     (loop))))))
-
-(define (check-image-version port)
-  (let ((len (string-length architecture-version)))
-    (let loop ((i 0))
-      (receive (ch eof? status)
-	  (read-char port)
-	(cond ((or eof? (error? status))
-	       (values #f eof? status))
-	      ((= i len)
-	       (values (char=? #\newline ch) #f status))
-	      ((char=? ch (string-ref architecture-version i))
-	       (loop (+ i 1)))
-	      (else
-	       (values #f #f status)))))))
-
-(define *image-port* (unspecific))
-(define *old-begin* (unspecific))
-(define *old-hp* (unspecific))
-(define *startup-proc* (unspecific))
-  
-(define (read-image startup-space)
-  (let ((port *image-port*))
-    (receive (okay? string)
-	(image-read-block port (cells->a-units 1))
-      (cond ((not okay?)
-	     (read-lost string port))
-	    ((= (fetch *hp*) 1)
-	     (really-read-image port #f startup-space))
-	    (else
-	     (reverse-descriptor-byte-order! *hp*)
-	     (if (= (fetch *hp*) 1)
-		 (really-read-image port #t startup-space)
-		 (read-lost "Unable to correct byte order" port)))))))
-
-(define (really-read-image port reverse? startup-space)
-  (let* ((delta (address-difference *hp* *old-begin*))
-	 (new-hp (address+ *old-hp* delta))
-	 (new-limit *newspace-end*)
-	 (start *hp*))
-    (if (address>= (address+ new-hp startup-space) new-limit)
-	(read-lost "Heap not big enough to restore this image" port)
-	(receive (okay? string)
-	    (image-read-block port (address-difference *old-hp* *old-begin*))
-	  (receive (ch eof? status)
-	      (read-char port)
-	    (cond ((not okay?)
-		   (read-lost string port))
-		  ((error? status)
-		   (read-lost "Error reading from image file" port))
-		  ((not eof?)
-		   (read-lost "Image file has extraneous data after image" port))
-		  ((error? (close-input-port port))
-		   (read-lost "Error closing image file" port))
-		  (else
-		   (if reverse?
-		       (reverse-byte-order! start new-hp))
-		   (if (not (= delta 0))
-		       (relocate-image delta start new-hp))
-		   (set! *hp* new-hp)
-		   (adjust *startup-proc* delta))))))))
-
-(define (image-read-block port need)
-  (receive (got eof? status)
-      (read-block port *hp* need)
-    (cond ((error? status)
-	   (set! *status* status)
-	   (values #f "Error reading from image file"))
-	  (eof?
-	   (values #f "Premature EOF when reading image file"))
-	  ((< got need)
-	   (values #f "Read returned too few bytes"))
-	  (else
-	   (values #t "")))))
-
-(define (read-lost message port)
-  (error-message message)
-  (if (error? *status*)
-      (error-message (error-string *status*)))
-  (if (error? (close-input-port port))
-      (error-message "Error closing image file"))
-  -1)
-
-; ABCD => DCBA
-
-; memory intensive, but independent of Scheme's integer size
-
-(define (reverse-descriptor-byte-order! addr)
-  (let ((x (fetch-byte addr)))
-    (store-byte! addr (fetch-byte (address+ addr 3)))
-    (store-byte! (address+ addr 3) x))
-  (let ((x (fetch-byte (address+ addr 1))))
-    (store-byte! (address+ addr 1) (fetch-byte (address+ addr 2)))
-    (store-byte! (address+ addr 2) x)))
-
-(define (reverse-byte-order! start end)
-  (error-message "Correcting byte order of resumed image.")
-  (let loop ((ptr start))
-    (if (address< ptr end)
-	(begin
-	  (reverse-descriptor-byte-order! ptr)
-	  (loop (let ((value (fetch ptr))
-		      (next (address1+ ptr)))
-		  (if (b-vector-header? value)
-		      (address+ next (header-a-units value))
-		      next)))))))
-
-(define (adjust descriptor delta)
-  (if (stob? descriptor)
-      (address->stob-descriptor
-        (address+ (address-after-header descriptor) delta))
-      descriptor))
-
-(define (relocate-image delta start end)
-  (let loop ((ptr start))
-    (if (address< ptr end)
-	(let ((d (adjust (fetch ptr) delta)))
-	  (store! ptr d)
-	  (loop (if (b-vector-header? d)
-		    (address+ (address1+ ptr) (header-a-units d))
-		    (address1+ ptr)))))))
-
-; The page character is used to mark the ends of the user and prelude sections
-; of image files.
-
-(define page-character (ascii->char 12))
-
-(define (write-page port)
-  (write-char page-character port))
-
+(define (record-ref record offset)
+  (fetch (address+ (address-after-header record)
+		   (cells->a-units (+ offset 1)))))

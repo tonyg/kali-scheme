@@ -1,131 +1,117 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
-; Using sockets from Scheme 48.
+; Server interface
+;   (open-socket [socket-number]) -> socket
+;   (close-socket socket)
+;   (socket-accept socket) -> [input-port output-port]
+;   (get-host-name) -> string
+;   (socket-port-number socket) -> integer
 
-; Server side routines:
-;   (open-socket port-number-or-zero) => socket (socket is O_NONBLOCK)
-;   (socket-port-number socket) => port number
-;     This is essential if the argument to open-socket was zero.
-;   (socket-listen s) => two values: input port and output port
-;   (socket-listen-channels s) => two values: input channel and output channel
-;     Blocks until an outside party connects to the socket's port number.
-;     Use socket-listen to get ports and socket-listen-channels to get
-;	channels.
-;   (close-socket s)
-;     Do this after you've done all the socket-listens you want to.
+; Client interface
+;   (socket-client host-name socket-number) -> [input-port output-port]
 
-; Client side routine:
-;   (socket-client host-name port-number) =>
-;       two values: input port and output port
-;   (socket-client-channels host-name port-number) =>
-;       two values: input channel and output channel
+; Old calls I would like to get rid off.
+;   (socket-listen socket) -> [input-port output-port]
+;   (socket-listen-channels socket) -> [input-channel output-channel]
+;   (socket-client-channels host-name socket-number) -> [input-channels output-channels]
 
-
-; --------------------
-; Client.
-
-
-(define socket-client
-   (lambda (host-name port-number)
-      (call-with-values
-	 (lambda ()
-	    (socket-client-channels host-name
-				    port-number))
-	 (lambda (i-chan o-chan)
-	    (values (input-channel->port i-chan bufsiz)
-		    (output-channel->port o-chan bufsiz))))))
-
-(define socket-client-channels
-   (let ((try
-	    (lambda (fd host-name port-number)
-	       (not (= -1
-		       (vm-extension 23
-				     `(,fd ,host-name
-					   . ,port-number)))))))
-      (lambda (host-name port-number)
-	 (let* ((fd
-		   (internet-stream-socket))
-		(o-chan
-		   (open-channel fd
-				 (enum channel-status-option output))))
-	    (let loop ()
-	       (disable-interrupts!)
-	       (cond ((try fd host-name port-number)
-			(enable-interrupts!)
-			(values (open-channel (duplicate-fd fd)
-					      (enum channel-status-option input))
-				o-chan))
-		     (else
-			(wait-for-channel o-chan)	; re-enables interrupts
-			(loop))))))))
-
-; --------------------
-; Server calls
+;--------------------
+; Socket type
+;
+; A socket has a channel (for accepting connections) and a port number.
+; These are only used for servers; clients don't need them.
 
 (define-record-type socket :socket
-  (make-socket ch pn)
+  (make-socket channel port-number)
   socket?
-  (ch socket-channel)
-  (pn socket-port-number))
+  (channel socket-channel)
+  (port-number socket-port-number))
 
 (define-record-discloser :socket
   (lambda (s) `(socket ,(socket-port-number s))))
 
-(define (open-socket port-number)
-  (let* ((socket-fd (internet-stream-socket))
-	 (channel (open-channel socket-fd (enum channel-status-option
-						input))))
-    (make-socket channel (socket-bind socket-fd port-number))))
-
 (define (close-socket socket)
   (close-channel (socket-channel socket)))
 
-(define (socket-listen socket)
-  (fd->ports (socket-accept (socket-channel socket))))
+; Makes a server socket.
+
+(define (open-socket . maybe-number)
+  (let ((channel (new-socket #t)))
+    (bind-socket channel (if (or (null? maybe-number)
+				 (= (car maybe-number) 0))  ; old, crappy spec
+			     #f
+			     (car maybe-number)))
+    (real-socket-listen channel)
+    (make-socket channel (socket-number channel))))
+
+(define (socket-accept socket)
+  (call-with-values
+   (lambda ()
+     (socket-listen-channels socket))
+   (lambda (in out)
+     (values (input-channel+closer->port in close-socket-input-channel)
+	     (output-channel+closer->port out close-socket-output-channel)))))
+  
+(define socket-listen socket-accept)
 
 (define (socket-listen-channels socket)
-  (fd->channels (socket-accept (socket-channel socket))))
+  (let ((channel (socket-channel socket)))
+    (let loop ()
+      (disable-interrupts!)
+      (let ((channels (real-socket-accept channel)))
+	(cond (channels
+	       (enable-interrupts!)
+	       (values (car channels)
+		       (cdr channels)))
+	      (else
+	       (wait-for-channel channel)		; enables interrupts
+	       (loop)))))))
 
-; --------------------
-; vm-extension calls
+; Connect to the socket and return input and output ports.
 
-(define (internet-stream-socket)
-  (vm-extension 20 #f))
+(define (socket-client host-name port-number)
+  (call-with-values
+   (lambda ()
+     (socket-client-channels host-name port-number))
+   (lambda (in out)
+     (values (input-channel+closer->port in close-socket-input-channel)
+	     (output-channel+closer->port out close-socket-output-channel)))))
 
-(define (socket-bind s port-number)
-  (vm-extension 21 (cons s port-number)))
+(define (socket-client-channels host-name port-number)
+  (let ((channel (new-socket #f)))
+    (let loop ()
+      (disable-interrupts!)
+      (let ((output-channel (real-socket-connect channel host-name port-number)))
+	(cond ((channel? output-channel)
+	       (enable-interrupts!)
+	       (values channel output-channel))
+	      ; This should never happen.
+	      ((eq? output-channel #t)
+	       (error "client socket already connected" host-name port-number))
+	      (else
+	       (wait-for-channel channel) ; enables interrupts
+	       (loop)))))))
 
-(define (socket-accept socket-channel)
-  (disable-interrupts!)
-  (let ((fd (vm-extension 22 (channel-os-index socket-channel))))
-    (cond ((= fd -1)  ; not ready
-	   (wait-for-channel socket-channel)  ; re-enables interrupts
-	   (socket-accept socket-channel))
-	  (else
-	   (enable-interrupts!)
-	   fd))))
+; We need to explicitly close the channel.
 
-; We duplicate the fd so that the input and output channels can be
-; closed independently.
+(define (close-socket-input-channel channel)
+  (close-socket-half channel #t)
+  (close-channel channel))
 
-(define (fd->channels fd)
-  (let ((out-fd (duplicate-fd fd)))
-    (values (open-channel fd (enum channel-status-option input))
-	    (open-channel out-fd (enum channel-status-option output)))))
+(define (close-socket-output-channel channel)
+  (close-socket-half channel #f)
+  (close-channel channel))
 
-(define fd->ports
-   (let ((bufsiz 1024))
-      (lambda (fd)
-	 (call-with-values
-	    (lambda ()
-	       (fd->channels fd))
-	    (lambda (in out)
-	       (values (input-channel->port in bufsiz)
-		       (output-channel->port out bufsiz)))))))
+; The C calls we use.  These are in c/unix/socket.c.
 
-(define (duplicate-fd fd)
-  (vm-extension 29 fd))
-
-(define bufsiz 1024)
+(import-lambda-definition new-socket (server?) "s48_socket")
+(import-lambda-definition bind-socket (socket number) "s48_bind")
+(import-lambda-definition socket-number (socket) "s48_socket_number")
+(import-lambda-definition real-socket-listen (socket) "s48_listen")
+(import-lambda-definition real-socket-accept (socket) "s48_accept")
+(import-lambda-definition real-socket-connect (socket machine port-number)
+			  "s48_connect")
+(import-lambda-definition close-socket-half (socket input?)
+			  "s48_close_socket_half")
+(import-lambda-definition get-host-name () "s48_get_host_name")

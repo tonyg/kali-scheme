@@ -2,6 +2,43 @@
 
 Recent changes to Scheme 48.
 
+2/24/99  (version 0.53)
+	 Additions:
+	  DEFINE-FINITE-TYPE and DEFINE-ENUMERATED-TYPE (in structure
+	   FINITE-TYPES; documented in doc/utilities.ps and
+	   doc/html/utilities.html.
+          Added CHAR-SOURCE->INPUT-PORT, CHAR-SINK->OUTPUT-PORT,
+ 	   MAKE-STRING-OUTPUT-PORT, STRING-OUTPUT-SOURCE-OUTPUT to
+	   the extended-ports structure.
+	  The structure BYTE-VECTORS is the same as CODE-VECTORS with `byte'
+	   replacing `code' in all the names.  The underlying datatype is the
+	   same for both, and uses `byte' when printing.
+	  There is a new and much improved interface to C code, thanks to
+           Mike Sperber.  It is documented in in doc/external.ps and
+	   doc/html/external.html.
+         Bug fixes:
+	  Session-data and user-context records are no longer in the fluid env.
+	  Lexical environments can now be nested up to 65k deep.
+	  ,expand no longer prints `definition in expression context' warnings.
+	  Added ARRAY? and SEARCH-TREE? to the array and search tree structures.
+	  Flat environments work again.
+	  Templates of the form `var ... ...' now work in syntax rules.
+	  Reinstated caching of SCHEMIFY results to greatly reduce the space
+           used by debugging info.
+	  Added argument checking to STRING->NUMBER and NUMBER->STRING.
+	  Fixed space blow-up in LOAD.
+	  Unused ports are closed more reliably.
+	 Changes:
+	  The heap, gc, and image code is now in three separate modules.
+          The symbol table is now held in a VM register.
+	  Inlined SHOWING-FOCUS-VALUES into the main command loop and moved
+	   the sentinal call to reduce the noise at the base of ,preview output.
+	  The tables returned by MAKE-TABLE now use EQV? for comparison (instead
+	   of EQ?).  This makes these tables about 50% slower when numbers are
+           used as keys, but significantly more accurate.
+	  Floating-point numbers are no longer double boxed.
+	  The channels structure has been split into channels and low-channels.
+
 7/22/98  (version 0.52)
          Bug fixes:
 	  Fixed problems with unbound variables in SET! and the inliner.

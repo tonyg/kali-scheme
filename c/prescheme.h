@@ -55,5 +55,5 @@ RESULT = ps_read_integer(PORT,&EOFP,&STATUS);
   RESULT = TTy >= 32 ? 0 : X << TTy; \
 }  
 
-extern long TTreturn_value, TTrun_machine();
+extern long s48_return_value, s48_run_machine();
 

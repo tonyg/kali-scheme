@@ -2,6 +2,8 @@
 # Documentation in files INSTALL and doc/install.txt
 
 SHELL = /bin/sh
+
+### Filled in by `configure' ###
 srcdir = @srcdir@
 VPATH = @srcdir@
 CC = @CC@
@@ -17,6 +19,8 @@ LIBOBJS = @LIBOBJS@
 
 prefix = @prefix@
 exec_prefix = @exec_prefix@
+### End of `configure' section###
+
 bindir = $(exec_prefix)/bin
 libdir = $(exec_prefix)/lib
 incdir = $(exec_prefix)/include
@@ -75,19 +79,19 @@ LINKER_IMAGE = build/linker.image
 LINKER = $(LINKER_VM) -i $(LINKER_IMAGE)
 START_LINKER = echo ',batch' && echo ',bench on'
 
-
 # --------------------
-# You shouldn't have to change anything below this point.
+# You shouldn't have to change anything below this point, except for possibly
+# the external code rules.
 
 # Targets:
 
 IMAGE = scheme48.image
 INITIAL = build/initial.image
 VM = scheme48vm
-UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o \
-		c/unix/socket.o c/unix/dynamo.o
-OBJS = c/scheme48vm.o c/scheme48heap.o c/extension.o
-FAKEHS	= c/fake/sigact.h c/fake/strerror.h c/fake/sys-select.h
+UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
+OBJS = c/scheme48vm.o c/scheme48heap.o c/extension.o c/external.o
+FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
+		c/fake/sys-select.h
 
 # Sources:
 
@@ -100,6 +104,37 @@ CONFIG_FILES = scheme/interfaces.scm scheme/low-packages.scm \
 # default target.
 enough: $(VM) $(IMAGE) go .notify
 
+# --------------------
+# External code to include in the VM
+# After changing any of these you should delete `scheme48vm' and remake it.
+
+EXTERNAL_OBJECTS = $(SOCKET_OBJECTS) $(LOOKUP_OBJECTS)
+EXTERNAL_FLAGS = $(SOCKET_FLAGS)
+EXTERNAL_INITIALIZERS = $(SOCKET_INITIALIZERS) $(LOOKUP_INITIALIZERS)
+
+# Rules for any external code.
+
+# Socket rules
+
+c/unix/socket.o: c/scheme48.h c/fd-io.h c/event.h
+
+SOCKET_OBJECTS = c/unix/socket.o
+SOCKET_LD_FLAGS =
+SOCKET_INITIALIZERS = 	s48_init_socket
+
+# End of socket rules
+
+# Lookup rules (this is just for compatibility with old code)
+
+c/unix/dynamo.o: c/scheme48.h
+
+LOOKUP_OBJECTS = c/unix/dynamo.o
+LOOKUP_INITIALIZERS = 	s48_init_external_lookup
+
+# End of lookup rules
+# End of external rules
+# --------------------
+
 # The developers are curious to know.  Don't be concerned if this fails.
 .notify: build/minor-version-number
 	touch .notify
@@ -107,29 +142,35 @@ enough: $(VM) $(IMAGE) go .notify
 		installation. \
 		| mail scheme-48-notifications@martigny.ai.mit.edu
 
-$(VM): c/main.o $(OBJS) $(UNIX_OBJS) $(LIBOBJS)
-	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/main.o $(OBJS) $(UNIX_OBJS) \
-		$(LIBOBJS) $(LIBS)
+$(VM): c/main.o $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
+	rm -f /tmp/s48_external_$$$$.c &&					\
+	build/build-external-modules /tmp/s48_external_$$$$.c			\
+		$(EXTERNAL_INITIALIZERS) &&					\
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/main.o $(OBJS) $(UNIX_OBJS)		\
+		/tmp/s48_external_$$$$.c					\
+		$(LIBOBJS) $(LIBS)						\
+		$(EXTERNAL_OBJECTS) $(EXTERNAL_LD_FLAGS) &&			\
+	rm -f /tmp/s48_external_$$$$.c
 
-c/main.o: c/main.c
+c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
 	$(CC) -c $(CFLAGS) -o $@ \
 		-DDEFAULT_IMAGE_NAME=\"$(LIB)/$(IMAGE)\" \
 		$(CPPFLAGS) $(DEFS) c/main.c
 
 c/scheme48vm.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h c/event.h \
-			c/io.h c/fd-io.h
+			c/io.h c/fd-io.h c/scheme48vm-prelude.h
 c/scheme48heap.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h c/event.h \
 			c/io.h c/fd-io.h
-c/extension.o: c/sysdep.h $(FAKEHS) c/scheme48.h c/socket.h
+c/extension.o: c/sysdep.h $(FAKEHS) c/scheme48.h c/scheme48vm.h
+c/external.o: c/sysdep.h $(FAKEHS) c/scheme48.h
 c/unix/event.o: c/sysdep.h $(FAKEHS) c/scheme48vm.h c/scheme48heap.h \
 			c/event.h c/fd-io.h
 c/unix/fd-io.o: c/sysdep.h $(FAKEHS) c/scheme48vm.h c/scheme48heap.h \
 			c/event.h c/fd-io.h
-c/unix/dynamo.o: c/sysdep.h $(FAKEHS) c/scheme48.h
-c/unix/socket.o: c/sysdep.h $(FAKEHS) c/scheme48vm.h c/scheme48heap.h \
-			c/event.h c/fd-io.h c/socket.h 
 c/unix/misc.o: c/sysdep.h $(FAKEHS)
 c/unix/io.o: c/io.h
+c/fake/libdl1.o: c/fake/dlfcn.h
+c/fake/libdl2.o: c/fake/dlfcn.h
 c/fake/strerror.o: c/fake/strerror.h
 
 # --------------------
@@ -140,8 +181,7 @@ c/fake/strerror.o: c/fake/strerror.h
 
 $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 		scheme/link-packages.scm scheme/more-packages.scm \
-		$(usual-files) build/initial.debug build/build-usual-image \
-		Makefile
+		$(usual-files) build/initial.debug build/build-usual-image
 	build/build-usual-image . "`pwd`/scheme" '$(IMAGE)' './$(VM)' \
 		'$(INITIAL)'
 
@@ -224,14 +264,15 @@ configure: configure.in
 	autoheader && autoconf
 
 clean:
-	-rm -f $(VM) *.o c/unix/*.o c/*.o c/fake/*.o TAGS $(IMAGE)	\
+	-rm -f $(VM) *.o c/unix/*.o c/*.o c/fake/*.o			\
+		TAGS $(IMAGE)						\
 		build/*.tmp $(MANPAGE) build/linker.image		\
 		scheme/debug/*.image scheme/debug/*.debug config.cache	\
-		scheme/vm/scheme48vm.c scheme48heap.c			\
-		config.log config.status c/sysdep.h go $(distname)
+		scheme/vm/scheme48vm.c scheme/vm/scheme48heap.c		\
+		go $(distname)
 
 distclean: clean
-	rm -f Makefile
+	rm -f Makefile config.log config.status c/sysdep.h
 
 check:	$(VM) $(IMAGE) scheme/debug/check.scm
 	(								\
@@ -263,17 +304,19 @@ tags:
 # Distribution...
 
 # DISTFILES should include all sources.
-DISTFILES = README COPYING INSTALL configure \
-		acconfig.h configure.in Makefile.in install-sh \
-		doc/*.ps doc/*.tex doc/*.txt doc/scheme48.man \
-		emacs/README build/*-version-number build/*.exec \
+DISTFILES = README COPYING INSTALL configure				\
+		acconfig.h configure.in Makefile.in install-sh		\
+		doc/*.ps doc/*.txt doc/html/*.html doc/scheme48.man	\
+		doc/src/*.tex doc/src/*.sty				\
+		emacs/README build/*-version-number build/*.exec	\
 		build/*.lisp build/build-usual-image build/filenames.make \
-		build/filenames.scm build/initial.debug \
-		build/initial.image build/initial.scm \
-		c/*.[ch] c/*/*.[ch] \
-		emacs/*.el gdbinit \
-		scheme/*.scm scheme/*/*.scm \
-		ps-compiler \
+		build/filenames.scm build/initial.debug			\
+		build/initial.image build/initial.scm			\
+		build/build-external-modules				\
+		c/*.[ch] c/*/*.[ch] c/scheme48.h.in			\
+		emacs/*.el gdbinit					\
+		scheme/*.scm scheme/*/*.scm				\
+		ps-compiler						\
 		c/sysdep.h.in
 
 distname = $(RUNNABLE)-0.`cat build/minor-version-number`
@@ -447,18 +490,33 @@ scheme/debug/mini1.image: $(VM) scheme/debug/mini.image
 # --------------------
 # Generate scheme48.h from VM sources
 
-c/scheme48.h: scheme/vm/arch.scm scheme/vm/data.scm \
+c/scheme48.h: c/scheme48.h.in scheme/vm/arch.scm scheme/vm/data.scm \
 	    scheme/link/generate-c-header.scm
-	(echo ',bench';							     \
-		echo ',batch';						     \
-		echo ',load-package big-scheme';			     \
-		echo ',open big-scheme';				     \
-		echo ',load scheme/link/generate-c-header.scm';		     \
-		echo "(make-c-header-file \"$@\"			     \
-					  \"$(srcdir)/scheme/vm/arch.scm\"   \
-					  \"$(srcdir)/scheme/vm/data.scm\")" \
+	(echo ',bench';								\
+		echo ',batch';							\
+		echo ',load-package big-scheme';				\
+		echo ',open big-scheme';					\
+		echo ',load scheme/link/generate-c-header.scm';			\
+		echo "(make-c-header-file \"$@\"				\
+					  \"$(srcdir)/c/scheme48.h.in\"		\
+					  \"$(srcdir)/scheme/vm/arch.scm\"	\
+					  \"$(srcdir)/scheme/vm/data.scm\"   	\
+					  \"$(srcdir)/scheme/rts/record.scm\")"	\
 	) | $(RUNNABLE)
 
+# An old version of the above for legacy code.
+
+c/old-scheme48.h: scheme/vm/arch.scm scheme/vm/data.scm \
+	    scheme/link/generate-old-c-header.scm
+	(echo ',bench';								\
+		echo ',batch';							\
+		echo ',load-package big-scheme';				\
+		echo ',open big-scheme';					\
+		echo ',load scheme/link/generate-old-c-header.scm';		\
+		echo "(make-c-header-file \"$@\"				\
+					  \"$(srcdir)/scheme/vm/arch.scm\"	\
+					  \"$(srcdir)/scheme/vm/data.scm\")"   	\
+	) | $(RUNNABLE)
 
 # Generate vm (scheme48vm.c and scheme48heap.c) from VM sources.
 # Never called automatically.  Do not use unless you are sure you

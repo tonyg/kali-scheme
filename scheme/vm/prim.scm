@@ -1,192 +1,9 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-
-; This is file prim.scm.
-; Requires DEFINE-PRIMITIVE macro.
-
-;;;; VM data manipulation primitives
-
-; Input checking and coercion
-
-(define (input-type pred coercer)  ;Alonzo wins
-  (lambda (f) (f pred coercer)))
-
-(define (input-type-predicate type) (type (lambda (x y) y x)))
-(define (input-type-coercion type)  (type (lambda (x y) x y)))
-
-(define (no-coercion x) x)
-
-(define any->         (input-type (lambda (x) x #t) no-coercion))
-(define fixnum->      (input-type fixnum?      extract-fixnum))
-(define char->        (input-type vm-char?     extract-char))
-(define vm-char->     (input-type vm-char?     no-coercion))
-(define boolean->     (input-type vm-boolean?  extract-boolean))
-(define location->    (input-type location?    no-coercion))
-(define string->      (input-type vm-string?   no-coercion))
-(define vector->      (input-type vm-vector?   no-coercion))
-(define code-vector-> (input-type code-vector? no-coercion))
-
-; Output coercion
-
-(define (return val)
-  (set! *val* val)
-  (goto continue 0))
-
-(define return-any return)
-
-(define (return-boolean x)
-  (goto return (enter-boolean x)))
-
-(define (return-fixnum x)
-  (goto return (enter-fixnum x)))
-
-(define (return-char x)
-  (goto return (enter-char x)))
-
-(define (return-unspecific x)
-  x ;ignored
-  (goto return unspecific-value))
-
-(define (no-result)
-  (goto return unspecific-value))
-
-
 ; Scalar primitives
 
 (define-primitive eq? (any-> any->) vm-eq? return-boolean)
-
-; Rudimentary generic arithmetic.  Incomplete and confusing.
-;  How to modularize for VM's like Maclisp that have generic arithmetic
-;  built-in?
-
-; These predicates are used to characterize the numeric representations that
-; are implemented in the VM.
-
-(define primitive-number?  fixnum?)
-(define primitive-real?    fixnum?)
-(define primitive-integer? fixnum?)
-
-(define number->  (input-type primitive-number?  no-coercion))
-(define real->    (input-type primitive-real?    no-coercion))
-(define integer-> (input-type primitive-integer? no-coercion))
-
-(define-primitive number? (any->)
-  (lambda (x)
-    (or (fixnum? x)
-	(bignum? x)
-	(ratnum? x)
-	(double? x)
-	(extended-number? x)))
-  return-boolean)
-
-(define-primitive integer?
-  (any->)
-  (lambda (n)
-    (cond ((or (fixnum? n)
-	       (bignum? n))
-	   (goto return (enter-boolean #t)))
-	  ((extended-number? n)
-	   (raise-exception wrong-type-argument 0 n))
-	  (else
-	   (goto return (enter-boolean #f))))))
-
-(define-syntax define-rational-predicate
-  (syntax-rules ()
-    ((define-numeric-predicate op)
-     (define-primitive op
-       (any->)
-       (lambda (n)
-	 (cond ((or (fixnum? n)
-		    (bignum? n)
-		    (ratnum? n)
-		    (double? n))
-		(goto return (enter-boolean #t)))
-	       ((extended-number? n)
-		(raise-exception wrong-type-argument 0 n))
-	       (else
-		(goto return (enter-boolean #f)))))))))
-
-(define-rational-predicate rational?)
-(define-rational-predicate real?)
-(define-rational-predicate complex?)
-
-; These primitives have a simple answer in the case of fixnums; for all other
-; they punt to the run-time system.
-
-(define-primitive exact?      (number->) (lambda (n) #t) return-boolean)
-(define-primitive real-part   (number->) (lambda (n) (goto return n)))
-(define-primitive imag-part   (number->) (lambda (n) 0) return-fixnum)
-(define-primitive floor       (number->) (lambda (n) (goto return n)))
-(define-primitive numerator   (number->) (lambda (n) (goto return n)))
-(define-primitive denominator (number->) (lambda (n) 1) return-fixnum)
-
-(define-primitive angle (number->)
-  (lambda (n)
-    (if (>= n 0)
-	(goto return (enter-fixnum 0))
-	(raise-exception arithmetic-overflow 0 n))))
-
-; beware of (abs least-fixnum)
-(define-primitive magnitude (number->)
-  (lambda (n)
-    (abs-carefully n
-		   return
-		   (lambda (n)
-		     (raise-exception arithmetic-overflow 0 n)))))
-
-; These primitives all just raise an exception and let the run-time system do
-; the work.
-
-(define-syntax define-punt-primitive
-  (syntax-rules ()
-    ((define-punt-primitive op)
-     (define-primitive op (number->)
-       (lambda (n)
-	 (raise-exception arithmetic-overflow 0 n))))))
-
-(define-punt-primitive exact->inexact)
-(define-punt-primitive inexact->exact)
-(define-punt-primitive exp)
-(define-punt-primitive log)
-(define-punt-primitive sin)
-(define-punt-primitive cos)
-(define-punt-primitive tan)
-(define-punt-primitive asin)
-(define-punt-primitive acos)
-(define-punt-primitive sqrt)
-
-(define-syntax define-punt2-primitive
-  (syntax-rules ()
-    ((define-punt2-primitive op)
-     (define-primitive op (number-> number->)
-       (lambda (n m) (raise-exception arithmetic-overflow 0 n m))))))
-
-(define-punt2-primitive atan)
-(define-punt2-primitive make-polar)
-(define-punt2-primitive make-rectangular)
-
-(define (arithmetic-overflow x y)
-  (raise-exception arithmetic-overflow 0 x y))
-
-(define (arith op)
-  (lambda (x y)
-    (goto op x y return arithmetic-overflow)))
-
-(define-primitive +         (number->  number->) (arith add-carefully))
-(define-primitive -         (number->  number->) (arith subtract-carefully))
-(define-primitive *         (number->  number->) (arith multiply-carefully))
-(define-primitive /         (number->  number->) (arith divide-carefully))
-(define-primitive quotient  (integer-> integer->) (arith quotient-carefully))
-(define-primitive remainder (integer-> integer->) (arith remainder-carefully))
-(define-primitive =         (number->  number->) vm-=  return-boolean)
-(define-primitive <         (real->    real->)   vm-<  return-boolean)
-(define-primitive >         (real->    real->)   vm->  return-boolean)
-(define-primitive <=        (real->    real->)   vm-<= return-boolean)
-(define-primitive >=        (real->    real->)   vm->= return-boolean)
-(define-primitive arithmetic-shift (number-> number->)
-  (arith shift-carefully))
 
 (define-primitive char?       (any->) vm-char? return-boolean)
 (define-primitive char=?      (vm-char-> vm-char->) vm-char=? return-boolean)
@@ -205,12 +22,8 @@
   (lambda (x) (vm-eq? x eof-object))
   return-boolean)
 
-(define-primitive bitwise-not (fixnum->)          bitwise-not return-fixnum)
-(define-primitive bitwise-and (fixnum-> fixnum->) bitwise-and return-fixnum)
-(define-primitive bitwise-ior (fixnum-> fixnum->) bitwise-ior return-fixnum)
-(define-primitive bitwise-xor (fixnum-> fixnum->) bitwise-xor return-fixnum)
+;----------------
 
-
 (define-primitive stored-object-has-type?
   (any->)
   (lambda (x)
@@ -383,17 +196,17 @@
 	  (raise-exception wrong-type-argument 1
 			   (enter-fixnum type) len init)))))
 
-; Strings and code-vectors
+; Strings and byte vectors
 
 (define-primitive string-length
   (string->)
   (lambda (string)
     (goto return-fixnum (vm-string-length string))))
 
-(define-primitive code-vector-length
+(define-primitive byte-vector-length
   (code-vector->)
-  (lambda (code-vector)
-    (goto return-fixnum (code-vector-length code-vector))))
+  (lambda (byte-vector)
+    (goto return-fixnum (code-vector-length byte-vector))))
 
 (define (make-byte-ref ref length returner)
   (lambda (vector index)
@@ -405,7 +218,7 @@
   (define-primitive string-ref (string-> fixnum->) proc))
 
 (let ((proc (make-byte-ref code-vector-ref code-vector-length return-fixnum)))
-  (define-primitive code-vector-ref (code-vector-> fixnum->) proc))
+  (define-primitive byte-vector-ref (code-vector-> fixnum->) proc))
 
 (define (make-byte-setter setter length enter-elt)
   (lambda (vector index char)
@@ -423,7 +236,7 @@
   (define-primitive string-set! (string-> fixnum-> char->) proc))
 
 (let ((proc (make-byte-setter code-vector-set! code-vector-length enter-fixnum)))
-  (define-primitive code-vector-set! (code-vector-> fixnum-> fixnum->) proc))
+  (define-primitive byte-vector-set! (code-vector-> fixnum-> fixnum->) proc))
 
 (define (byte-vector-maker size maker setter enter-elt)
   (lambda (len init)
@@ -432,8 +245,8 @@
 	      (> size max-stob-size-in-cells))
 	  (raise-exception wrong-type-argument 0
 			   (enter-fixnum len) (enter-elt init))
-	  (receive (okay? key ignore)
-	      (maybe-ensure-space-saving-temp size (enter-fixnum 0))
+	  (receive (okay? key)
+	      (maybe-ensure-space size)
 	    (if (not okay?)
 		(raise-exception heap-overflow 0
 				 (enter-fixnum len) (enter-elt init))
@@ -453,7 +266,7 @@
 			       make-code-vector
 			       code-vector-set!
 			       enter-fixnum)))
-  (define-primitive make-code-vector (fixnum-> fixnum->) proc))
+  (define-primitive make-byte-vector (fixnum-> fixnum->) proc))
 
 ; Locations & mutability
 
@@ -477,7 +290,7 @@
     (make-immutable! thing)
     (goto return thing)))
 
-
+;----------------
 ; Misc
 
 (define-primitive false ()
@@ -492,42 +305,10 @@
   (lambda (arg)
     (raise-exception trap 0 arg)))
 
-(define-primitive find-all-symbols (vector->)
-  (lambda (table)
-    (let loop ((table table) (first? #t))
-      (let ((symbols (find-all (enum stob symbol))))
-	(cond ((not (false? symbols))
-	       (really-find-all-symbols table symbols))
-	      (first?
-	       (loop (collect-saving-temp table) #f))
-	      (else
-	       (raise-exception heap-overflow 0 table)))))))
-
-(define (really-find-all-symbols table symbols)
-  (let loop ((table table) (symbols symbols) (first? #t))
-    (let index-loop ((i 0))
-      (cond ((= i (vm-vector-length symbols))
-	     (goto no-result))
-	    ((available? vm-pair-size)
-	     (let ((key (preallocate-space vm-pair-size)))
-	       (add-to-symbol-table (vm-vector-ref symbols i) table key)
-	       (index-loop (+ i 1))))
-	    (first?
-	     (do ((i 1 (+ i 1)))                     ; clear table
-		 ((= i (vm-vector-length table)))
-	       (vm-vector-set! table i null))
-	     (vm-vector-set! table 0 symbols)        ; save symbols in table
-	     (let ((table (collect-saving-temp table)))
-	       (let ((symbols (vm-vector-ref table 0)))
-		 (vm-vector-set! table 0 null)
-		 (loop table symbols #f))))
-	    (else
-	     (raise-exception heap-overflow 0 table))))))
-
 (define-primitive find-all (fixnum->)
   (lambda (type)
     (let loop ((first? #t))
-      (let ((vector (find-all type)))
+      (let ((vector (s48-find-all type)))
 	(cond ((not (false? vector))
 	       (goto return vector))
 	      (first?
@@ -539,7 +320,7 @@
 (define-primitive find-all-records (any->)
   (lambda (type)
     (let loop ((first? #t) (type type))
-      (let ((vector (find-all-records type)))   ; only one call site
+      (let ((vector (s48-find-all-records type)))   ; only one call site
 	(cond ((not (false? vector))
 	       (goto return vector))
 	      (first?
@@ -575,13 +356,13 @@
       ((pointer-hash)
        (goto return (descriptor->fixnum other)))
       ((available)
-       (goto return-fixnum (available)))
+       (goto return-fixnum (s48-available)))
       ((heap-size)
-       (goto return-fixnum (bytes->cells (heap-size))))
+       (goto return-fixnum (bytes->cells (s48-heap-size))))
       ((stack-size)
        (goto return-fixnum (stack-size)))
       ((gc-count)
-       (goto return-fixnum (gc-count)))
+       (goto return-fixnum (s48-gc-count)))
       ((expand-heap!)
        (raise-exception unimplemented-instruction 0 (enter-fixnum key) other))
       (else
@@ -632,69 +413,39 @@
 ;          (else
 ;           (* mantissa (expt 10 (- exponent system)))))))
 
-(define external-> (input-type external? no-coercion))
-
-(define-primitive external-lookup (external->)
-  (lambda (external)
-    (let ((name (external-name external))
-	  (value (external-value external)))
-      (if (and (vm-string? name)
-	       (code-vector? value)
-	       (lookup-external-name (address-after-header name)
-				     (address-after-header value)))
-	  (goto no-result)
-	  (raise-exception unbound-external-name 0 external)))))
-
-; The arguments have been pushed on the stack after the procedure.
-; *stack* = procedure arg1 ... argN rest-list N+1 total-nargs
-;
-; The top-level driver loop removes the procedure and the arguments from
-; the stack.
-
-(define-primitive external-call ()
-  (lambda ()
-    (let* ((nargs (extract-fixnum (pop)))
-	   (stack-nargs (extract-fixnum (pop)))
-	   (rest-list (pop)))
-      (do ((rest-list rest-list (vm-cdr rest-list)))
-	  ((vm-eq? rest-list null))
-	(push (vm-car rest-list)))
-      (let ((proc (stack-ref (- nargs 1))))
-	(cond ((not (external? proc))    ; lots of junk on the stack...
-	       (raise-exception wrong-type-argument 0 proc))
-	      (else
-	       (set! *external-call-nargs* (- nargs 1)) ; don't count proc
-	       (set! *val* proc)
-	       (set! *code-pointer* (address+ *code-pointer* 1))
-	       (enum return-option external-call))))))) ; return to driver loop
-
 (define-enumeration vm-extension-status
   (okay
    exception
    ))
 
-(define *extension-value* (unspecific))
+(define s48-*extension-value*)
 
 (define-primitive vm-extension (fixnum-> any->)
   (lambda (key value)
     (let ((status (extended-vm key value)))
       (cond ((vm-eq? status (enum vm-extension-status okay))
-	     (goto return *extension-value*))
+	     (goto return s48-*extension-value*))
 	    ((vm-eq? status (enum vm-extension-status exception))
 	     (raise-exception extension-exception 0 (enter-fixnum key) value))
 	    (else
 	     (raise-exception extension-return-error 0 (enter-fixnum key) value))))))
 
-; This is exported to keep *EXTENSION-VALUE* from being eliminated by the
+; This is exported to keep s48-*EXTENSION-VALUE* from being eliminated by the
 ; compiler.
 
-(define (set-extension-value! value)
-  (set! *extension-value* value))
+(define (s48-set-extension-value! value)
+  (set! s48-*extension-value* value))
 
-(define-primitive vm-return (fixnum-> any->)
-  (lambda (key value)
-    (set! *val* value)
-    (enum return-option exit)))            ; the VM returns this value
+; Used to indicate which stack block we are returning to.  Set to FALSE if we are
+; returning from the VM as a whole.
+(define s48-*callback-return-stack-block* false)
+
+(define-primitive return-from-callback (any-> any->)
+  (lambda (stack-block value)
+    (enable-interrupts!)	; Disabled to ensure that we return to the right
+				; stack block.
+    (set! s48-*callback-return-stack-block* stack-block)
+    value))                     ; the interpreter returns this value
 
 (define-primitive current-thread ()
   (lambda () *current-thread*)
@@ -734,11 +485,6 @@
             (vm-string-set! obj i (extract-char (vm-car l))))))))
 
 (define-primitive string-hash (string->) vm-string-hash return-fixnum)
-
-(define-consing-primitive intern (string-> vector->)
-  (lambda (ignore) (+ vm-symbol-size vm-pair-size))
-  intern
-  return)
 
 ; Messy because we have to detect circular lists (alternatively we
 ; could check for interrupts and then pclsr).  ***

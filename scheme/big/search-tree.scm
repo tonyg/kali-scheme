@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Red-Black binary search trees as described in Introduction to Algorithms
 ; by Cormen, Leiserson, and Rivest.  Look there if you want to understand
@@ -8,6 +7,8 @@
 ; These are like tables in that the value of a key defaults to #f.
 ;
 ; (make-search-tree key-= key-<)      -> tree
+;
+; (search-tree? value)                -> boolean
 ;
 ; (search-tree-ref tree key)          -> value
 ;
@@ -27,7 +28,7 @@
 
 (define-record-type tree :tree
   (make-tree lookup nil root)
-  tree?
+  search-tree?
   (lookup tree-lookup)
   (nil    tree-nil)                  ; node marker for missing leaf nodes
   (root   tree-root set-tree-root!))

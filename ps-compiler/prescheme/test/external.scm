@@ -1,3 +1,5 @@
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+
 
 (define foo
   (external (=> (int32 int32) unit)

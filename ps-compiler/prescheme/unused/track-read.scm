@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1994 Richard Kelsey.  See file COPYING.
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
 
 
 ; Scheme48 reader modified to annotate pairs with source line and column

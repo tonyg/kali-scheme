@@ -1,0 +1,202 @@
+/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+   See file COPYING. */
+
+#include "write-barrier.h"
+
+typedef long	s48_value;
+
+#define NO_ERRORS 0    /* errno value */
+
+/* Misc stuff */
+
+#define S48_EQ(v1, v2) ((v1) == (v2))
+
+#define S48_MAX_FIXNUM_VALUE ((1 << 29) - 1)
+#define S48_MIN_FIXNUM_VALUE (-1 << 29)
+
+extern int		s48_stob_has_type(s48_value, int);
+extern long		s48_stob_length(s48_value, int);
+extern long		s48_stob_byte_length(s48_value, int);
+extern s48_value	s48_stob_ref(s48_value, int, long);
+extern void		s48_stob_set(s48_value, int, long, s48_value);
+extern char		s48_stob_byte_ref(s48_value, int, long);
+extern void		s48_stob_byte_set(s48_value, int, long, char);
+
+extern void		s48_register_gc_rootB(char *);
+extern void		s48_push_gc_rootsB(char *, long);
+extern char		s48_pop_gc_rootsB(void);
+extern char		s48_pop_gc_roots_up_to_markerB(char *);
+
+extern s48_value	s48_enter_char(unsigned char);
+extern unsigned char	s48_extract_char(s48_value);
+extern s48_value	s48_enter_fixnum(long);
+extern long		s48_extract_fixnum(s48_value);
+extern s48_value	s48_enter_integer(long);
+extern long		s48_extract_integer(s48_value);
+extern s48_value	s48_enter_double(double);
+extern double		s48_extract_double(s48_value);
+extern s48_value	s48_cons(s48_value, s48_value);
+extern s48_value	s48_enter_string(char *);
+extern char *		s48_extract_string(s48_value);
+extern s48_value	s48_enter_substring(char *, int);
+extern s48_value	s48_make_string(int, char);
+extern s48_value	s48_make_vector(int, s48_value);
+extern s48_value	s48_make_byte_vector(int);
+extern s48_value	s48_make_record(s48_value);
+extern s48_value	s48_make_weak_pointer(s48_value);
+extern void		s48_check_record_type(s48_value, s48_value);
+extern long		s48_length(s48_value);
+extern s48_value	s48_enter_pointer(void *);
+extern s48_value	s48_get_imported_binding(char *);
+extern void		s48_define_exported_binding(char *, s48_value);
+
+extern s48_value	s48_set_channel_os_index(s48_value, long);
+extern s48_value	s48_add_channel(s48_value, s48_value, long);
+extern void		s48_close_channel(long);
+
+extern s48_value	s48_call_scheme(s48_value proc, long nargs, ...);
+
+#define S48_EXPORT_FUNCTION(p) (s48_define_exported_binding(#p, s48_enter_pointer(p)))
+
+#define S48_MAKE_VALUE(type) (s48_make_byte_vector(sizeof(type)))
+extern void *		s48_value_pointer(s48_value);
+
+#define S48_EXTRACT_VALUE_POINTER(x, type) ((type *) s48_value_pointer(x))
+#define S48_EXTRACT_VALUE(x, type) (*(S48_EXTRACT_VALUE_POINTER((x), type)))
+#define S48_SET_VALUE(x, type, v) (S48_EXTRACT_VALUE((x), type) = (v))
+
+#define S48_UNSAFE_EXTRACT_VALUE_POINTER(x, type)		\
+  (S48_ADDRESS_AFTER_HEADER((x), type))
+#define S48_UNSAFE_EXTRACT_VALUE(x, type)			\
+  (*(S48_UNSAFE_EXTRACT_VALUE_POINTER((x), type)))
+#define S48_UNSAFE_SET_VALUE(x, type, v)			\
+  (S48_UNSAFE_EXTRACT_VALUE((x), type) = (v))
+
+#define S48_UNSAFE_EXTRACT_DOUBLE(x)				\
+  (*(S48_ADDRESS_AFTER_HEADER((x), double)))
+
+#define S48_DECLARE_GC_PROTECT(n) long ___gc_buffer[(n)+2]
+
+#define S48_GC_PROTECT_1(v) \
+  (___gc_buffer[2]=(long)&(v), \
+   s48_push_gc_rootsB((char *) ___gc_buffer, 1))
+
+#define S48_GC_PROTECT_2(v1, v2) \
+  (___gc_buffer[2]=(long)&(v1), ___gc_buffer[3]=(long)&(v2), \
+   s48_push_gc_rootsB((char *) ___gc_buffer, 2))
+
+#define S48_GC_PROTECT_3(v1, v2, v3) \
+  (___gc_buffer[2]=(long)&(v1), \
+   ___gc_buffer[3]=(long)&(v2), \
+   ___gc_buffer[4]=(long)&(v3), \
+   s48_push_gc_rootsB((char *) ___gc_buffer, 3))
+
+#define S48_GC_PROTECT_4(v1, v2, v3, v4) \
+  (___gc_buffer[2]=(long)&(v1), \
+   ___gc_buffer[3]=(long)&(v2), \
+   ___gc_buffer[4]=(long)&(v3), \
+   ___gc_buffer[5]=(long)&(v4), \
+   s48_push_gc_rootsB((char *) ___gc_buffer, 4))
+
+#define S48_GC_PROTECT_5(v1, v2, v3, v4, v5) \
+  (___gc_buffer[2]=(long)&(v1), \
+   ___gc_buffer[3]=(long)&(v2), \
+   ___gc_buffer[4]=(long)&(v3), \
+   ___gc_buffer[5]=(long)&(v4), \
+   ___gc_buffer[6]=(long)&(v5), \
+   s48_push_gc_rootsB((char *) ___gc_buffer, 5))
+
+#define S48_GC_PROTECT_6(v1, v2, v3, v4, v5, v6) \
+  (___gc_buffer[2]=(long)&(v1), \
+   ___gc_buffer[3]=(long)&(v2), \
+   ___gc_buffer[4]=(long)&(v3), \
+   ___gc_buffer[5]=(long)&(v4), \
+   ___gc_buffer[6]=(long)&(v5), \
+   ___gc_buffer[7]=(long)&(v6), \
+   s48_push_gc_rootsB((char *) ___gc_buffer, 6))
+
+#define S48_GC_PROTECT_7(v1, v2, v3, v4, v5, v6, v7) \
+  (___gc_buffer[2]=(long)&(v1), \
+   ___gc_buffer[3]=(long)&(v2), \
+   ___gc_buffer[4]=(long)&(v3), \
+   ___gc_buffer[5]=(long)&(v4), \
+   ___gc_buffer[6]=(long)&(v5), \
+   ___gc_buffer[7]=(long)&(v6), \
+   ___gc_buffer[8]=(long)&(v7), \
+   s48_push_gc_rootsB((char *) ___gc_buffer, 7))
+
+#define S48_GC_PROTECT_8(v1, v2, v3, v4, v5, v6, v7, v8) \
+  (___gc_buffer[2]=(long)&(v1), \
+   ___gc_buffer[3]=(long)&(v2), \
+   ___gc_buffer[4]=(long)&(v3), \
+   ___gc_buffer[5]=(long)&(v4), \
+   ___gc_buffer[6]=(long)&(v5), \
+   ___gc_buffer[7]=(long)&(v6), \
+   ___gc_buffer[8]=(long)&(v7), \
+   ___gc_buffer[9]=(long)&(v8), \
+   s48_push_gc_rootsB((char *) ___gc_buffer, 8))
+
+#define S48_GC_PROTECT_9(v1, v2, v3, v4, v5, v6, v7, v8, v9) \
+  (___gc_buffer[2]=(long)&(v1), \
+   ___gc_buffer[3]=(long)&(v2), \
+   ___gc_buffer[4]=(long)&(v3), \
+   ___gc_buffer[5]=(long)&(v4), \
+   ___gc_buffer[6]=(long)&(v5), \
+   ___gc_buffer[7]=(long)&(v6), \
+   ___gc_buffer[8]=(long)&(v7), \
+   ___gc_buffer[9]=(long)&(v8), \
+   ___gc_buffer[10]=(long)&(v9), \
+   s48_push_gc_rootsB((char *) ___gc_buffer, 9))
+
+#define S48_GC_PROTECT_10(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) \
+  (___gc_buffer[2]=(long)&(v1), \
+   ___gc_buffer[3]=(long)&(v2), \
+   ___gc_buffer[4]=(long)&(v3), \
+   ___gc_buffer[5]=(long)&(v4), \
+   ___gc_buffer[6]=(long)&(v5), \
+   ___gc_buffer[7]=(long)&(v6), \
+   ___gc_buffer[8]=(long)&(v7), \
+   ___gc_buffer[9]=(long)&(v8), \
+   ___gc_buffer[10]=(long)&(v9), \
+   ___gc_buffer[11]=(long)&(v10), \
+   s48_push_gc_rootsB((char *) ___gc_buffer, 10))
+
+#define S48_GC_UNPROTECT()				\
+   do { if (! s48_pop_gc_rootsB())			\
+       	  s48_raise_scheme_exception( S48_EXCEPTION_GC_PROTECTION_MISMATCH, 0); \
+      } while(0)
+
+#define S48_GC_PROTECT_GLOBAL(v) (s48_register_gc_rootB((char *)&(v)))
+
+/* Exceptions */
+
+extern void s48_raise_scheme_exception(long type, long nargs, ...);
+extern void s48_raise_argtype_error(s48_value value);
+extern void s48_raise_argnumber_error(s48_value value,
+				  s48_value min, s48_value max);
+extern void s48_raise_range_error(s48_value value,
+			      s48_value min, s48_value max);
+extern void s48_raise_closed_channel_error();
+extern void s48_raise_os_error(int the_errno);
+extern void s48_raise_string_os_error(char *reason);
+extern void s48_raise_out_of_memory_error();
+
+/* Type checking */
+
+#define S48_CHECK_PAIR(v) do { if (!S48_PAIR_P(v)) s48_raise_argtype_error(v); } while (0)
+#define S48_CHECK_FIXNUM(v) do { if (!S48_FIXNUM_P(v)) s48_raise_argtype_error(v); } while (0)
+#define S48_CHECK_STRING(v) do { if (!S48_STRING_P(v)) s48_raise_argtype_error(v); } while (0)
+#define S48_CHECK_CHANNEL(v) do { if (!S48_CHANNEL_P(v)) s48_raise_argtype_error(v); } while (0)
+#define S48_CHECK_RECORD(v) do { if (!S48_RECORD_P(v)) s48_raise_argtype_error(v); } while (0)
+#define S48_CHECK_VALUE(v) do { if (!S48_BYTE_VECTOR_P(v)) s48_raise_argtype_error(v); } while (0)
+#define S48_CHECK_EXPORT_BINDING(v) do { if (!S48_EXPORT_BINDING_P(v)) s48_raise_argtype_error(v); } while (0)
+
+#define S48_VALUE_P(v) (S48_BYTE_VECTOR_P(v))
+
+extern void s48_check_record_type(s48_value record, s48_value type_binding);
+
+#define S48_SHARED_BINDING_CHECK(binding)					\
+  do { if (S48_UNSPECIFIC == S48_SHARED_BINDING_REF(binding))		\
+         s48_raise_scheme_exception(S48_EXCEPTION_UNBOUND_EXTERNAL_NAME, 1,	\
+				    S48_SHARED_BINDING_NAME(binding));	\
+  } while(0)

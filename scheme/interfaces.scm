@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Some interfaces.  Order of presentation is a bit random.
@@ -55,6 +54,7 @@
 
 (define-interface primitives-interface
   (export add-finalizer!
+	  call-external-value
 	  checked-record-ref
 	  checked-record-set!
 	  collect			;,collect command
@@ -64,22 +64,18 @@
 	  continuation?
 	  copy-bytes!
 	  current-thread		;fluids threads
+	  double?
 	  eof-object                    ;i/o-internal re-exports this
 	  extended-number-length
 	  extended-number-ref
 	  extended-number-set!
 	  extended-number?
-	  external-call
-	  external-lookup
-	  external-name
-	  external-value
-	  external?
 	  find-all			;externals, command-levels
 	  find-all-records		;threads
 	  immutable?
 	  make-continuation
+	  make-double
 	  make-extended-number
-	  make-external
 	  make-immutable!
 	  make-record
 	  make-template
@@ -90,6 +86,7 @@
 	  record-ref
 	  record-set!
 	  record?
+	  return-from-callback
 	  schedule-interrupt            ;interrupts re-exports this
 	  session-data			;channels
 	  set-current-thread!		;fluids threads
@@ -105,7 +102,6 @@
 	  time
 	  unspecific			;record
 	  vm-extension
-	  vm-return
 	  wait
 	  weak-pointer-ref
 	  weak-pointer?))
@@ -133,6 +129,15 @@
 	  closure-env
 	  closure-template))
 
+(define-interface byte-vectors-interface
+  (export byte-vector?
+	  byte-vector-length
+	  byte-vector-ref
+	  byte-vector-set!
+	  make-byte-vector))
+
+; Same again, but with old names for compatibility.
+
 (define-interface code-vectors-interface
   (export code-vector?
 	  code-vector-length
@@ -141,6 +146,17 @@
 	  make-code-vector))
 
 (define-interface channels-interface
+  (export input-channel?
+	  open-input-channel
+	  channel-read	  
+	  close-input-channel
+	  
+	  output-channel?
+	  open-output-channel
+	  channel-write
+	  close-output-channel))
+
+(define-interface low-channels-interface
   (export channel?
 	  channel-id
 	  channel-status
@@ -150,7 +166,20 @@
 	  close-channel
 	  channel-read
 	  channel-write
-	  channel-abort))
+	  channel-abort
+
+	  open-channels-list))
+
+(define-interface channels-interface
+  (export input-channel?
+	  open-input-channel
+	  channel-read	  
+	  close-input-channel
+	  
+	  output-channel?
+	  open-output-channel
+	  channel-write
+	  close-output-channel))
 
 (define-interface ports-interface
   (export port?
@@ -173,6 +202,19 @@
 	  release-lock
 	  lock-owner-uid))    ;really should be internal
 
+(define-interface shared-bindings-interface
+  (export shared-binding?
+	  shared-binding-is-import?
+	  shared-binding-name
+	  shared-binding-ref
+	  shared-binding-set!	  
+	  lookup-imported-binding
+	  define-imported-binding
+	  undefine-imported-binding
+	  lookup-exported-binding
+	  define-exported-binding
+	  undefine-exported-binding))
+
 ; Miscellaneous useful procedures used in various random places.
 ; These are used in the byte-code compiler and the linker and so have
 ; alternative implementations in alt/...
@@ -187,8 +229,7 @@
 ; Another hodge-podge.
 
 (define-interface low-level-interface
-  (export vector-unassigned?		;inspector
-	  flush-the-symbol-table!))	;build.scm
+  (export vector-unassigned?))		;inspector
 
 (define-interface vm-exposure-interface
   (export invoke-closure		;eval
@@ -203,7 +244,6 @@
 	  char->ascii
 	  ascii-limit
 	  ascii-whitespaces))
-
 
 ; Level 1: The rest of Scheme except for I/O.
 
@@ -277,6 +317,7 @@
 	  record-modifier
 	  record-predicate
 	  define-record-discloser
+	  define-record-resumer
 	  record-type?
 	  record-type-field-names
 	  record-type-name))
@@ -289,7 +330,8 @@
 	  record-ref
 	  record-set!
 	  :record-type
-	  disclose-record))
+	  disclose-record
+	  initialize-records!))
 
 (define-interface define-record-types-interface
   (export (define-record-type :syntax)
@@ -439,6 +481,8 @@
 	  release-port-lock
 
 	  periodically-force-output!
+	  periodically-flushed-ports
+	  force-output-if-open
 	  really-force-output          ; assumes port alread locked
 
 	  output-port-forcers	       ;root-scheduler.scm
@@ -457,10 +501,17 @@
 
 	  steal-channel-port!		;command
 	  
-	  input-channel->port           ;usual-resumer big/socket.scm
-	  output-channel->port          ;usual-resumer big/socket.scm
+	  input-channel->port           ;usual-resumer posix
+	  output-channel->port          ;usual-resumer posix
+
+	  input-channel+closer->port    ;big/socket.scm
+	  output-channel+closer->port	;big/socket.scm
+	  
 	  ; call WAIT-FOR-CHANNEL with interrupts disabled
-	  wait-for-channel		; big/socket.scm
+	  wait-for-channel		;big/socket.scm
+
+	  port->channel			;posix
+	  force-channel-output-ports!	;posix
 	  ))
 
 (define-interface threads-interface
@@ -797,8 +848,9 @@
 
 (define-interface syntactic-interface
   (export expand
-	  scan-forms
 	  expand-form
+	  scan-forms
+	  expand-scanned-form
 	  syntax?
 	  make-compiler-env
 	  bind-source-file-name))
@@ -843,7 +895,7 @@
 	  instruction-using-label
 	  instruction-with-literal
 	  instruction-with-location
-	  instruction-with-template
+	  template
 	  computed-goto-instruction
 	  make-label
 	  note-environment
@@ -983,8 +1035,7 @@
 
 (define-interface optimizer-interface
   (export set-optimizer!
-	  get-optimizer
-	  set-standard-optimizers!))
+	  get-optimizer))
 
 (define-interface undefined-interface
   (export noting-undefined-variables

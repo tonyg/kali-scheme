@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Additional port types
 
@@ -256,19 +255,19 @@
     (string-output-port-output port)))
 
 ;----------------
-; Output ports from a single character writer
+; Output ports from single character consumers
 
-(define char-at-a-time-output-port-handler
+(define char-sink-output-port-handler
   (make-port-handler
    (lambda (proc)
-     (list 'single-char-output-port))
+     (list 'char-sink-output-port))
    (lambda (proc)
      (values))
    (lambda (proc char)
      (proc char))))
 
-(define (make-char-at-a-time-output-port proc)
-  (make-unbuffered-output-port char-at-a-time-output-port-handler
+(define (char-sink->output-port proc)
+  (make-unbuffered-output-port char-sink-output-port-handler
 			       proc))
 
 ; Call PROC on a port that will transfer COUNT characters to PORT and
@@ -277,9 +276,54 @@
 (define (write-one-line port count proc)
   (call-with-current-continuation
     (lambda (quit)
-      (proc (make-char-at-a-time-output-port
+      (proc (char-sink->output-port
 	     (lambda (char)
 	       (write-char char port)
 	       (set! count (- count 1))
 	       (if (<= count 0)
 		   (quit #f))))))))
+
+;----------------
+; Input ports from single character producers
+; The producer is passed #T if a character is needed and #F if not.
+; If #F is passed and no character is ready, then #F is returned.
+
+(define char-source-input-port-handler
+  (make-port-handler
+   (lambda (proc)
+     (list 'char-source-input-port))
+   (lambda (proc)			; nothing to do
+     (values))
+   (lambda (proc buffer start needed)
+     (if (integer? needed)
+	 (let loop ((got 0))
+	   (if (= got needed)
+	       got
+	       (let ((next (proc #t)))
+		 (cond ((char? next)
+			(buffer-set! buffer (+ start got) next)
+			(loop (+ got 1)))
+		       ((= got 0)
+			(eof-object))
+		       (else
+			got)))))
+	 (let ((next (proc (eq? needed 'any))))
+	   (cond ((not next)
+		  0)
+		 ((eof-object? next)
+		  (eof-object))
+		 (else
+		  (buffer-set! buffer start next)
+		  1)))))))
+
+(define (buffer-set! buffer index char)
+  (if (string? buffer)
+      (string-set! buffer index char)
+      (code-vector-set! buffer index (char->ascii char))))
+
+(define (char-source->input-port proc)
+  (make-input-port char-source-input-port-handler
+		   proc
+		   (make-code-vector 1 0)
+		   0
+		   0))

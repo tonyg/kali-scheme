@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Static linker.  Doesn't work very well this way (debug info is
@@ -39,30 +38,6 @@
 	util			;filter
 	inline)			;name->extrinsic
   (files (link reify)))
-
-;(define-structure expander expander-interface
-;  (open scheme-level-2
-;        syntactic packages scan meta-types reconstruction
-;        define-record-types
-;        util signals tables fluids strong
-;        features)  ; string-hash
-;  (files (opt expand)
-;         (opt sort)
-;         (opt flatten)))
-
-;(define-structure analysis (export analyze-forms)
-;  (open scheme
-;        syntactic packages scan inline meta-types expander
-;        packages-internal       ;set-package-integrate?!
-;        reconstruction
-;        signals
-;        locations
-;        features                ;force-output
-;        tables
-;        fluids
-;        util)
-;  (files (opt analyze)))
-
 
 ; Database of procedure names 'n' stuff.
 ; (copy in more-packages.scm ...)

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Interfaces for packages that can get loaded after the initial.image
@@ -32,6 +31,7 @@
 	  set-focus-object!
 	  showing-focus-object		;inspect
 	  start-command-processor
+	  restart-command-processor
 	  value->expression		;foo
 	  write-carefully
 	  write-line
@@ -50,7 +50,6 @@
 
 (define-interface command-levels-interface
   (export start-command-levels
-	  with-new-session
 	  command-levels
 	  top-command-level
 	  push-command-level
@@ -59,7 +58,6 @@
 	  proceed-with-command-level
 	  kill-paused-thread!
 
-	  make-user-context
 	  user-context
 	  user-context-accessor
 	  user-context-modifier
@@ -282,11 +280,18 @@
 ; --------------------
 ; Big Scheme
 
-(define-interface externals-interface
-  (export get-external
+(define-interface dynamic-externals-interface
+  (export dynamic-load
+
+          get-external
 	  lookup-all-externals
-	  external-call
-	  null-terminate))
+
+	  external?
+	  external-name
+	  external-value
+	  external-lookup
+
+	  call-external))
 
 (define-interface dump/restore-interface
   (export dump
@@ -296,14 +301,19 @@
 	  $restore-index))
 
 (define-interface extended-ports-interface
-  (export make-tracking-input-port make-tracking-output-port
+  (export char-source->input-port
+	  char-sink->output-port
+	  make-tracking-input-port make-tracking-output-port
 	  make-string-input-port
-	  call-with-string-output-port
+	  make-string-output-port
+	  string-output-port-output
+	  call-with-string-output-port		; denigrated
 	  write-one-line
 	  current-row current-column fresh-line))
 
 (define-interface arrays-interface
   (export make-array		; <initial-value> <bound1> ...
+	  array?
 	  array-shape		; <array>
 	  array-ref		; <array> <index1> ...
 	  array-set!		; <array> <value> <index1> ...
@@ -314,12 +324,15 @@
 
 (define-interface search-trees-interface
   (export make-search-tree
+	  search-tree?
           search-tree-ref
           search-tree-set!
           search-tree-modify!
           search-tree-max pop-search-tree-max!
           search-tree-min pop-search-tree-min!
           walk-search-tree))
+
+; This is getting to be a hodge-podge.
 
 (define-interface big-util-interface       
   (export concatenate-symbol
@@ -329,7 +342,10 @@
 	  memq? first any? any every?
 	  filter filter! filter-map partition-list partition-list!
 	  remove-duplicates delq delq! delete
-	  reverse!))
+	  reverse!
+	  copy-string
+	  string->immutable-string
+	  ))
 
 (define-interface big-scheme-interface
   (compound-interface

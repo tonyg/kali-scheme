@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Getting usage counts and doing a topological sort (so that definitions
 ; will be seen before uses, where possible).
@@ -101,17 +100,13 @@
 (define (define-usage-analyzer name type proc)
   (operator-define! usage-analyzers name type proc))
 
-(define-usage-analyzer 'literal #f
-  (lambda (node free usages)
-    free))
+(define (nothing node free usages) free)
 
-(define-usage-analyzer 'unspecific #f
-  (lambda (node free usages)
-    free))
-
-(define-usage-analyzer 'quote syntax-type
-  (lambda (node free usages)
-    free))
+(define-usage-analyzer 'literal    #f nothing)
+(define-usage-analyzer 'unspecific #f nothing)
+(define-usage-analyzer 'unassigned #f nothing)
+(define-usage-analyzer 'quote               syntax-type nothing)
+(define-usage-analyzer 'primitive-procedure syntax-type nothing)
 
 (define-usage-analyzer 'name #f
   (lambda (node free usages)
@@ -180,10 +175,6 @@
 (define-usage-analyzer 'if syntax-type
   (lambda (node free usages)
     (analyze-nodes (cdr (node-form node)) free usages)))
-
-(define-usage-analyzer 'primitive-procedure syntax-type
-  (lambda (node free usages)
-    free))
 
 (define-usage-analyzer 'lap syntax-type
   (lambda (node free usages)

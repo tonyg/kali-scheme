@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The static linker.
 
@@ -97,10 +96,9 @@
 (define (expand&compile-form form package)
   (let* ((env (package->environment package))
 	 (template (compile-forms (map (lambda (form)
-					 (expand-form form env))
+					 (expand-scanned-form form env))
 				       (scan-forms (list form) env))
-				  #f	;filename
-				  #f)))	;debug data
+				  #f)))	;filename
     (link! template package #t)
     template))
 

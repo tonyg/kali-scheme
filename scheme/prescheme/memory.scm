@@ -1,4 +1,4 @@
-; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; An implementation of Pre-Scheme's memory interface that can detect some
@@ -167,7 +167,7 @@
 	  ((>= i count))
 	(write-char (ascii->char (code-vector-ref vector (+ i byte-address)))
 		    port))
-      (values count (enum errors no-errors)))))
+      (enum errors no-errors))))
 
 (define (read-block port address count)
   (let ((address (address-index address)))
@@ -239,9 +239,9 @@
 ; string.  This is a trivial operation in C.
 
 (define (char-pointer->nul-terminated-string address)
-  (let ((address (address-index address)))
-    (let ((vector (address->vector address))
-	  (byte-address (address->vector-index address)))
+  (let ((index (address-index address)))
+    (let ((vector (address->vector index))
+	  (byte-address (address->vector-index index)))
       (char-pointer->string address (index-of-first-nul vector byte-address)))))
   
 (define (index-of-first-nul vector address)

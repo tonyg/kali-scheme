@@ -1,4 +1,4 @@
-; Copyright (c) 1994 Richard Kelsey.  See file COPYING.
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
 
 (define (simplify-letrec1 call)
   (let* ((cont (call-arg call 0))
@@ -116,7 +116,9 @@
 		  (lambda (call) 1) 0)
 
 (define (simplify-unspecific call)
-  (replace call (make-undefined-literal)))
+  (let ((node (make-undefined-literal)))
+    (set-literal-type! node type/null)
+    (replace call node)))
 
 (define-scheme-primop unspecific #f type/null simplify-unspecific)
 

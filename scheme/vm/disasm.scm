@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Disassembler that uses the VM's data structures.
@@ -44,9 +43,8 @@
     (write (enumerand->name opcode op))
     (let ((pc (cond ((= opcode (enum op computed-goto))
  		     (display-computed-goto pc code))
- 		    ((= opcode (enum op flat-closure))
- 		     (display-flat-lambda (+ pc 1) code template
- 					  level write-sub-templates?))
+ 		    ((= opcode (enum op make-flat-env))
+ 		     (display-flat-env (+ pc 1) code))
 		    ((= opcode (enum op protocol))
 		     (display-protocol pc code))
  		    (else
@@ -65,19 +63,22 @@
       (display #\space)
       (write `(=> ,(+ start-pc (get-offset pc code)))))))
 
-(define (display-flat-lambda pc code template level write-sub-templates?)
-  (let* ((count (code-vector-ref code pc))
- 	 (pc (do ((i 0 (+ i 1))
- 		  (pc (+ pc 1) (+ pc 2)))
- 		 ((= i count) pc)
- 	       (display #\space)
- 	       (display (cons (code-vector-ref code pc)
- 			      (code-vector-ref code (+ pc 1)))))))
-    (let ((template (template-ref template (code-vector-ref code pc))))
-      (if write-sub-templates?
- 	  (really-disassemble template (+ level 1) #t)
- 	  (display "...")))
-    (+ pc 1)))
+(define (display-flat-env pc code)
+  (let ((total-count (code-vector-ref code (+ pc 1))))
+    (display #\space) (write total-count)
+    (let loop ((pc (+ pc 2)) (count 0) (old-back 0))
+      (if (= count total-count)
+	  pc
+	  (let ((back (+ (code-vector-ref code pc)
+			 old-back))
+		(limit (+ pc 2 (code-vector-ref code (+ pc 1)))))
+	    (do ((pc (+ pc 2) (+ pc 1))
+		 (count count (+ count 1))
+		 (offsets '() (cons (code-vector-ref code pc) offsets)))
+		((= pc limit)
+		 (display #\space)
+		 (write `(,back ,(reverse offsets)))
+		 (loop pc count back))))))))
 
 (define (display-protocol pc code)
   (let ((protocol (code-vector-ref code (+ pc 1))))
@@ -123,7 +124,7 @@
 
 (define (arg-spec-size spec)
   (case spec
-    ((nargs byte stob) 1)
+    ((nargs byte stob junk) 1)
     ((offset small-index index two-bytes) 2)
     (else 0)))
 

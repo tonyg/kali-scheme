@@ -1,0 +1,315 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: utilities.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 19.34.1, Tue Feb 23 18:25:11 1999 -->
+<HEAD>
+<TITLE>Untitled</TITLE>
+
+</HEAD><BODY>
+
+
+    <H1 ALIGN=CENTER>Scheme 48 User's Guide</H1>
+    <H2 ALIGN=CENTER>Richard A. Kelsey</H2>
+    <H3 ALIGN=CENTER>February 23, 1999</H3>
+    <H1><A NAME="1">ASCII character encoding</A></H1>
+<P>These are in the structure <CODE>ascii</CODE>.
+<UL><LI><CODE>(char-&gt;ascii<VAR> char</VAR>)&nbsp;-&gt;&nbsp;<VAR>integer</VAR></CODE>
+<LI><CODE>(ascii-&gt;char<VAR> integer</VAR>)&nbsp;-&gt;&nbsp;<VAR>char</VAR></CODE>
+</UL>
+These are identical to <CODE>char-&gt;integer</CODE> and <CODE>integer-&gt;char</CODE> except that
+ they use the ASCII encoding.
+<UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>ascii-limit</CODE></td> <td align=right>integer</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>ascii-whitespaces</CODE></td> <td align=right>list of integers</td></tr></table>
+</UL>
+<CODE>Ascii-limit</CODE> is one more than the largest value that <CODE>char-&gt;ascii</CODE>
+ may return.
+<CODE>Ascii-whitespaces</CODE> is a list of the ASCII values of whitespace characters
+ (space, tab, line feed, form feed, and carriage return).
+<H1><A NAME="2">Bitwise integer operations</A></H1>
+<P>These functions use the two's-complement representation for integers.
+There is no limit to the number of bits in an integer.
+They are in the structures <CODE>bitwise</CODE> and <CODE>big-scheme</CODE>.
+<UL><LI><CODE>(bitwise-and<VAR> integer integer</VAR>)&nbsp;-&gt;&nbsp;<VAR>integer</VAR></CODE>
+<LI><CODE>(bitwise-ior<VAR> integer integer</VAR>)&nbsp;-&gt;&nbsp;<VAR>integer</VAR></CODE>
+<LI><CODE>(bitwise-xor<VAR> integer integer</VAR>)&nbsp;-&gt;&nbsp;<VAR>integer</VAR></CODE>
+<LI><CODE>(bitwise-not<VAR> integer</VAR>)&nbsp;-&gt;&nbsp;<VAR>integer</VAR></CODE>
+</UL>
+These perform various logical operations on integers on a bit-by-bit
+basis. `<CODE>ior</CODE>' is inclusive OR and `<CODE>xor</CODE>' is exclusive OR.
+<UL><LI><CODE>(arithmetic-shift<VAR> integer bit-count</VAR>)&nbsp;-&gt;&nbsp;<VAR>integer</VAR></CODE>
+</UL>
+Shifts the integer by the given bit count, which must be an integer,
+ shifting left for positive counts and right for negative ones.
+Shifting preserves the integer's sign.
+<H1><A NAME="3">Arrays</A></H1>
+<P>These are N-dimensional, zero-based arrays and
+ are in the structure <CODE>arrays</CODE>.
+<P>The array interface is derived from one written by Alan Bawden.
+<UL><LI><CODE>(make-array<VAR> value dimension<I><sub>0</sub></I> ...</VAR>)&nbsp;-&gt;&nbsp;<VAR>array</VAR></CODE>
+<LI><CODE>(array<VAR> dimensions element<I><sub>0</sub></I> ...</VAR>)&nbsp;-&gt;&nbsp;<VAR>array</VAR></CODE>
+<LI><CODE>(copy-array<VAR> array</VAR>)&nbsp;-&gt;&nbsp;<VAR>array</VAR></CODE>
+</UL>
+<CODE>Make-array</CODE> makes a new array with the given dimensions, each of which
+ must be a non-negative integer.
+Every element is initially set to <CODE><VAR>value</VAR></CODE>.
+<CODE>Array</CODE> Returns a new array with the given dimensions and elements.
+<CODE><VAR>Dimensions</VAR></CODE> must be a list of non-negative integers, 
+The number of elements should be the equal to the product of the
+ dimensions.
+The elements are stored in row-major order.
+<BLOCKQUOTE><PRE>
+(make-array 'a 2 3) <CODE>-&gt;</CODE> {Array 2 3}
+
+(array '(2 3) 'a 'b 'c 'd 'e 'f)
+    <CODE>-&gt;</CODE> {Array 2 3}
+</PRE></BLOCKQUOTE>
+<P><CODE>Copy-array</CODE> returns a copy of <CODE><VAR>array</VAR></CODE>.
+The copy is identical to the <CODE><VAR>array</VAR></CODE> but does not share storage with it.
+<UL><LI><CODE>(array?<VAR> value</VAR>)&nbsp;-&gt;&nbsp;<VAR>boolean</VAR></CODE>
+</UL>
+Returns <CODE>#t</CODE> if <CODE><VAR>value</VAR></CODE> is an array.
+<UL><LI><CODE>(array-ref<VAR> array index<I><sub>0</sub></I> ...</VAR>)&nbsp;-&gt;&nbsp;<VAR>value</VAR></CODE>
+<LI><CODE>(array-set!<VAR> array value index<I><sub>0</sub></I> ...</VAR>)</CODE>
+<LI><CODE>(array-&gt;vector<VAR> array</VAR>)&nbsp;-&gt;&nbsp;<VAR>vector</VAR></CODE>
+<LI><CODE>(array-dimensions<VAR> array</VAR>)&nbsp;-&gt;&nbsp;<VAR>list</VAR></CODE>
+</UL>
+<CODE>Array-ref</CODE> returns the specified array element and <CODE>array-set!</CODE>
+ replaces the element with <CODE><VAR>value</VAR></CODE>.
+<BLOCKQUOTE><PRE>
+(let ((a (array '(2 3) 'a 'b 'c 'd 'e 'f)))
+  (let ((x (array-ref a 0 1)))
+    (array-set! a 'g 0 1)
+    (list x (array-ref a 0 1))))
+    <CODE>-&gt;</CODE> '(b g)
+</PRE></BLOCKQUOTE>
+<P><CODE>Array-&gt;vector</CODE> returns a vector containing the elements of <CODE><VAR>array</VAR></CODE>
+ in row-major order.
+<CODE>Array-dimensions</CODE> returns the dimensions of
+ the array as a list.
+<UL><LI><CODE>(make-shared-array<VAR> array linear-map dimension<I><sub>0</sub></I> ...</VAR>)&nbsp;-&gt;&nbsp;<VAR>array</VAR></CODE>
+</UL>
+<CODE>Make-shared-array</CODE> makes a new array that shares storage with <CODE><VAR>array</VAR></CODE>
+ and uses <CODE><VAR>linear-map</VAR></CODE> to map indicies to elements.
+<CODE><VAR>Linear-map</VAR></CODE> must accept as many arguments as the number of
+ <CODE><VAR>dimension</VAR></CODE>s given and must return a list of non-negative integers
+ that are valid indicies into <CODE><VAR>array</VAR></CODE>.
+<BLOCKQUOTE><PRE>
+(array-ref (make-shared-array a f i0 i1 ...)
+           j0 j1 ...)
+</PRE></BLOCKQUOTE>
+is equivalent to
+<BLOCKQUOTE><PRE>
+(apply array-ref a (f j0 j1 ...))
+</PRE></BLOCKQUOTE>
+<P>As an example, the following function makes the transpose of a two-dimensional
+ array:
+<BLOCKQUOTE><PRE>
+(define (transpose array)
+  (let ((dimensions (array-dimensions array)))
+    (make-shared-array array
+                       (lambda (x y)
+		         (list y x))
+		       (cadr dimensions)
+		       (car dimensions))))
+
+(array-&gt;vector
+  (transpose
+    (array '(2 3) 'a 'b 'c 'd 'e 'f)))
+      <CODE>-&gt;</CODE> '(a d b e c f)
+</PRE></BLOCKQUOTE>
+<H1><A NAME="4">Records</A></H1>
+<P>New types can be constructed using the <CODE>define-record-type</CODE> macro
+ from the <CODE>define-record-types</CODE> structure
+The general syntax is:
+<BLOCKQUOTE><PRE>
+(define-record-type <CODE><VAR>tag</VAR></CODE> <CODE><VAR>type-name</VAR></CODE>
+  (<CODE><VAR>constructor-name</VAR></CODE> <CODE><VAR>field-tag</VAR></CODE> ...)
+  <CODE><VAR>predicate-name</VAR></CODE>
+  (<CODE><VAR>field-tag</VAR></CODE> <CODE><VAR>accessor-name</VAR></CODE> [<CODE><VAR>modifier-name</VAR></CODE>])
+  ...)
+</PRE></BLOCKQUOTE>
+This makes the following definitions:
+<UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE><CODE><VAR>type-name</VAR></CODE></CODE></td> <td align=right>type</td></tr></table>
+<LI><CODE>(<CODE><VAR>constructor-name</VAR></CODE><VAR> field-init ...</VAR>)&nbsp;-&gt;&nbsp;<VAR>type-name</VAR></CODE>
+<LI><CODE>(<CODE><VAR>predicate-name</VAR></CODE><VAR> value</VAR>)&nbsp;-&gt;&nbsp;<VAR>boolean</VAR></CODE>
+<LI><CODE>(<CODE><VAR>accessor-name</VAR></CODE><VAR> type-name</VAR>)&nbsp;-&gt;&nbsp;<VAR>value</VAR></CODE>
+<LI><CODE>(<CODE><VAR>modifier-name</VAR></CODE><VAR> type-name value</VAR>)</CODE>
+</UL>
+<CODE><VAR>Type-name</VAR></CODE> is the record type itself, and can be used to
+ specify a print method (see below).
+<CODE><VAR>Constructor-name</VAR></CODE> is a constructor that accepts values
+ for the fields whose tags are specified.
+<CODE><VAR>Predicate-name</VAR></CODE> to a predicate that can returns <CODE>#t</CODE> for
+ elements of the type and <CODE>#f</CODE> for everything else.
+The <CODE><VAR>accessor-name</VAR></CODE>s retrieve the values of fields,
+ and the <CODE><VAR>modifier-name</VAR></CODE>'s update them.
+The <CODE><VAR>tag</VAR></CODE> is used in printing instances of the record type and
+ the field tags are used in the inspector and to match
+ constructor arguments with fields.
+<UL><LI><CODE>(define-record-discloser<VAR> type discloser</VAR>)</CODE>
+</UL>
+<CODE>Define-record-discloser</CODE> determines how
+ records of type <CODE><VAR>type</VAR></CODE> are printed.
+<CODE><VAR>Discloser</VAR></CODE> should be procedure which takes a single
+ record of type <CODE><VAR>type</VAR></CODE> and returns a list whose car is
+ a symbol.
+The record will be printed as the value returned by <CODE><VAR>discloser</VAR></CODE>
+ with curly braces used instead of the usual parenthesis.
+<P>For example
+<BLOCKQUOTE><PRE>
+(define-record-type pare :pare
+  (kons x y)
+  pare?
+  (x kar set-kar!)
+  (y kdr))
+</PRE></BLOCKQUOTE>
+defines <CODE>kons</CODE> to be a constructor, <CODE>kar</CODE> and <CODE>kdr</CODE> to be
+ accessors, <CODE>set-kar!</CODE> to be a modifier, and <CODE>pare?</CODE> to be a predicate
+ for a new type of object.
+The type itself is named <CODE>:pare</CODE>.
+<CODE>Pare</CODE> is a tag used in printing the new objects.
+<P>By default, the new objects print as <CODE>#Pare</CODE>.
+The print method can be modified using DEFINE-RECORD-DISCLOSER:
+<BLOCKQUOTE><PRE>
+(define-record-discloser :pare
+  (lambda (p) `(pare ,(kar p) ,(kdr p))))
+</PRE></BLOCKQUOTE>
+will cause the result of <CODE>(kons 1 2)</CODE> to print as
+ <CODE>#{pare 1 2}</CODE>.
+<H1><A NAME="5">Finite record types</A></H1>
+<P>The structure <CODE>finite-types</CODE> has
+ two macros for defining `finite' record types.
+These are record types for which there are a fixed number of instances,
+ which are created when the record type is defined.
+The syntax for the defining a finite type is:
+<BLOCKQUOTE><PRE>
+(define-finite-type <CODE><VAR>tag</VAR></CODE> <CODE><VAR>type-name</VAR></CODE>
+  (<CODE><VAR>field-tag</VAR></CODE> ...)
+  <CODE><VAR>predicate-name</VAR></CODE>
+  <CODE><VAR>vector-of-elements-name</VAR></CODE>
+  <CODE><VAR>name-accessor</VAR></CODE>
+  <CODE><VAR>index-accessor</VAR></CODE>
+  (<CODE><VAR>field-tag</VAR></CODE> <CODE><VAR>accessor-name</VAR></CODE> [<CODE><VAR>modifier-name</VAR></CODE>])
+  ...
+  ((<CODE><VAR>element-name</VAR></CODE> <CODE><VAR>field-value</VAR></CODE> ...)
+   ...))
+</PRE></BLOCKQUOTE>
+This differs from <CODE>define-record-type</CODE> in the following ways:
+<UL><LI>No name is specified for the constructor, but the field arguments
+ to the constructor are listed.
+<LI>The <CODE><VAR>vector-of-elements-name</VAR></CODE> is added; it will be bound
+ to a vector containing all of the elements of the type.
+These are constructed by applying the (unnamed) constructor to the
+ initial field values at the end of the form.
+<LI>There are names for accessors for two required fields, name
+ and index.
+These fields are not settable, and are not to be included
+ in the argument list for the constructor.
+<LI>The form ends with the names and the initial field values for
+ the elements of the type.
+The name must be first.
+The remaining values must match the <CODE><VAR>field-tag</VAR></CODE>s in the constructor's
+ argument list.
+<LI><CODE><VAR>Tag</VAR></CODE> is bound to a macro that maps <CODE><VAR>element-name</VAR></CODE>s to the
+ the corresponding element of the vector.
+The name lookup is done at macro-expansion time.
+</UL>
+<BLOCKQUOTE><PRE>
+(define-finite-type color :color
+  (red green blue)
+  color?
+  colors
+  color-name
+  color-index
+  (red   color-red)
+  (green color-green)
+  (blue  color-blue)
+  ((white  255 255 255)
+   (black    0   0   0)
+   (yellow 255 255   0)
+   (maroon 176  48  96)))
+
+(color-name (vector-ref colors 0)) <CODE>-&gt;</CODE> white
+(color-name (color black))         <CODE>-&gt;</CODE> black
+(color-index (color yellow))       <CODE>-&gt;</CODE> 2
+(color-red (color maroon))         <CODE>-&gt;</CODE> 176
+</PRE></BLOCKQUOTE>
+<P>Enumerated types are finite types whose only fields are the name
+ and the index.
+The syntax for defining an enumerated type is:
+<BLOCKQUOTE><PRE>
+(define-enumerated-type <CODE><VAR>tag</VAR></CODE> <CODE><VAR>type-name</VAR></CODE>
+  <CODE><VAR>predicate-name</VAR></CODE>
+  <CODE><VAR>vector-of-elements-name</VAR></CODE>
+  <CODE><VAR>name-accessor</VAR></CODE>
+  <CODE><VAR>index-accessor</VAR></CODE>
+  (<CODE><VAR>element-name</VAR></CODE> ...))
+</PRE></BLOCKQUOTE>
+In the absence of any additional fields, both the constructor argument
+ list and the initial field values are not required.
+<P>The above example of a finite type can be pared down to the following
+ enumerated type:
+<BLOCKQUOTE><PRE>
+(define-enumerated-type color :color
+  color?
+  colors
+  color-name
+  color-index
+  (white black yellow maroon))
+
+(color-name (vector-ref colors 0)) <CODE>-&gt;</CODE> white
+(color-name (color black))         <CODE>-&gt;</CODE> black
+(color-index (color yellow))       <CODE>-&gt;</CODE> 2
+</PRE></BLOCKQUOTE>
+<H1><A NAME="6">Hash tables</A></H1>
+<P>These are generic hash tables, and are in the structure <CODE>tables</CODE>.
+Strictly speaking they are more maps than tables, as every table has a
+ value for every possible key (for that type of table).
+All but a finite number of those values are <CODE>#f</CODE>.
+<UL><LI><CODE>(make-table<VAR></VAR>)&nbsp;-&gt;&nbsp;<VAR>table</VAR></CODE>
+<LI><CODE>(make-symbol-table<VAR></VAR>)&nbsp;-&gt;&nbsp;<VAR>symbol-table</VAR></CODE>
+<LI><CODE>(make-string-table<VAR></VAR>)&nbsp;-&gt;&nbsp;<VAR>string-table</VAR></CODE>
+<LI><CODE>(make-integer-table<VAR></VAR>)&nbsp;-&gt;&nbsp;<VAR>integer-table</VAR></CODE>
+<LI><CODE>(make-table-maker<VAR> compare-proc hash-proc</VAR>)&nbsp;-&gt;&nbsp;<VAR>procedure</VAR></CODE>
+<LI><CODE>(make-table-immutable!<VAR> table</VAR>)</CODE>
+</UL>
+The first four functions listed make various kinds of tables.
+<CODE>Make-table</CODE> returns a table whose keys may be symbols, integer,
+ characters, booleans, or the empty list (these are also the values
+ that may be used in <CODE>case</CODE> expressions).
+As with <CODE>case</CODE>, comparison is done using <CODE>eqv?</CODE>.
+The comparison procedures used in symbol, string, and integer tables are
+ <CODE>eq?</CODE>, <CODE>string=?</CODE>, and <CODE>=</CODE>.
+<P><CODE>Make-table-maker</CODE> takes two procedures as arguments and returns
+ a nullary table-making procedure.
+<CODE><VAR>Compare-proc</VAR></CODE> should be a two-argument equality predicate.
+<CODE><VAR>Hash-proc</VAR></CODE> should be a one argument procedure that takes a key
+ and returns a non-negative integer hash value.
+If <CODE>(<CODE><VAR>compare-proc</VAR></CODE> <CODE><VAR>x</VAR></CODE> <CODE><VAR>y</VAR></CODE>)</CODE> returns true,
+ then <CODE>(= (<CODE><VAR>hash-proc</VAR></CODE> <CODE><VAR>x</VAR></CODE>) (<CODE><VAR>hash-proc</VAR></CODE> <CODE><VAR>y</VAR></CODE>))</CODE>
+ must also return true.
+For example, <CODE>make-integer-table</CODE> could be defined
+ as <CODE>(make-table-maker = abs)</CODE>.
+<P><CODE>Make-table-immutable!</CODE> prohibits future modification to its argument.
+<UL><LI><CODE>(table?<VAR> value</VAR>)&nbsp;-&gt;&nbsp;<VAR>boolean</VAR></CODE>
+<LI><CODE>(table-ref<VAR> table key</VAR>)&nbsp;-&gt;&nbsp;<VAR>value or <CODE>#f</CODE></VAR></CODE>
+<LI><CODE>(table-set!<VAR> table key value</VAR>)</CODE>
+<LI><CODE>(table-walk<VAR> procedure table</VAR>)</CODE>
+</UL>
+<CODE>Table?</CODE> is the predicate for tables.
+<CODE>Table-ref</CODE> and <CODE>table-set!</CODE> access and modify the value of <CODE><VAR>key</VAR></CODE>
+ in <CODE><VAR>table</VAR></CODE>.
+<CODE>Table-walk</CODE> applies <CODE><VAR>procedure</VAR></CODE>, which must accept two arguments,
+ to every associated key and non-<CODE>#f</CODE> value in <CODE>table</CODE>.
+<UL><LI><CODE>(default-hash-function<VAR> value</VAR>)&nbsp;-&gt;&nbsp;<VAR>integer</VAR></CODE>
+<LI><CODE>(string-hash<VAR> string</VAR>)&nbsp;-&gt;&nbsp;<VAR>integer</VAR></CODE>
+</UL>
+<CODE>default-hash-function</CODE> is the hash function used in the tables
+ returned by <CODE>make-table</CODE>, and <CODE>string-hash</CODE> it the one used
+ by <CODE>make-string-table</CODE>.
+<HR >
+</BODY></HTML>

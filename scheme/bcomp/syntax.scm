@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Macro expansion.
 
@@ -29,7 +28,7 @@
 		(else
 		 (loop more-forms (cons form expanded))))))))
 
-(define (expand-form form env)
+(define (expand-scanned-form form env)
   (if (define? form)
       (expand-define form env)
       (expand form env)))
@@ -67,6 +66,34 @@
 	'())
       `(,(syntax-error "ill-formed syntax definition" form))))
 
+; This is used by the ,expand command.
+
+(define (expand-form form env)
+  (let loop ((forms (list form)) (expanded '()))
+    (if (null? forms)
+	(if (= (length expanded) 1)
+	    (car expanded)
+	    (make-node operator/begin (cons 'begin (reverse expanded))))
+	(let ((form (expand-head (car forms) env))
+	      (more-forms (cdr forms)))
+	  (cond ((define? form)
+		 (loop more-forms
+		       (cons (expand-define form env) expanded)))
+		((define-syntax? form)
+		 (loop more-forms
+		       (cons (make-node operator/define-syntax
+					(list (car form)
+					      (expand (cadr form) env)
+					      (make-node operator/quote
+							 `',(caddr form))))
+			     expanded)))
+		((begin? form)
+		 (loop (append (cdr form) more-forms)
+		       expanded))
+		(else
+		 (loop more-forms
+		       (cons (expand form env) expanded))))))))
+
 ;----------------
 ; Looking for definitions.
 ; This expands the form until it reaches a name, a form whose car is an
@@ -87,11 +114,15 @@
 	       (let ((probe (node-ref op 'binding)))
 		 (if (binding? probe)
 		     (let ((s (binding-static probe)))
-		       (if (and (transform? s)
-				(eq? (binding-type probe) syntax-type))
-			   (expand-macro-application
- 			     s (cons op (cdr form)) env expand-head)
-			   (cons op (cdr form))))
+		       (cond ((and (transform? s)
+				   (eq? (binding-type probe) syntax-type))
+			      (expand-macro-application
+			        s (cons op (cdr form)) env expand-head))
+			     ((and (operator? s)
+				   (eq? s operator/structure-ref))
+			      (expand-structure-ref form env expand-head))
+			     (else
+			      (cons op (cdr form)))))
 		     (cons op (cdr form))))
 	       (cons op (cdr form)))))
 	(else
@@ -363,21 +394,27 @@
 
 (define-expander 'structure-ref
   (lambda (op op-node form env)
-    (let ((struct-node (expand (cadr form) env))
-	  (lose (lambda ()
-		  (expand (syntax-error "invalid structure reference" form)
-			  env))))
-      (if (and (this-long? form 3)
-	       (name? (caddr form))
-	       (name-node? struct-node))
-	  (let ((b (node-ref struct-node 'binding)))
-	    (if (and (binding? b) (binding-static b)) ; (structure? ...)
-		(expand (generate-name (desyntaxify (caddr form))
-				       (binding-static b)
-				       (node-form struct-node))
-			env)
-		(lose)))
-	  (lose)))))
+    (expand-structure-ref form env expand)))
+
+; This is also called by EXPAND-HEAD, which passes in a different expander.
+
+(define (expand-structure-ref form env expander)
+  (let ((struct-node (expand (cadr form) env))
+	(lose (lambda ()
+		(expand (syntax-error "invalid structure reference" form)
+			env))))
+    (if (and (this-long? form 3)
+	     (name? (caddr form))
+	     (name-node? struct-node))
+	(let ((b (node-ref struct-node 'binding)))
+	  (if (and (binding? b)
+		   (binding-static b)) ; (structure? ...)
+	      (expand (generate-name (desyntaxify (caddr form))
+				     (binding-static b)
+				     (node-form struct-node))
+		      env)
+	      (lose)))
+	(lose))))
 
 ; Scheme 48 internal special form principally for use by the
 ; DEFINE-STRUCTURES macro.
@@ -583,8 +620,9 @@
 (define operator/begin (get-operator 'begin syntax-type))
 (define operator/letrec (get-operator 'letrec syntax-type))
 (define operator/define (get-operator 'define syntax-type))
+(define operator/define-syntax (get-operator 'define-syntax syntax-type))
 (define operator/primitive-procedure
   (get-operator 'primitive-procedure syntax-type))
-
+(define operator/structure-ref (get-operator 'structure-ref syntax-type))
 
 

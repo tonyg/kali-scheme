@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Interpreting commands.
 
@@ -13,8 +12,14 @@
 ;
 ; The double-paren around the WITH-HANDLER is because it returns a
 ; thunk which is the thing to do after the command-processor exits.
+;
+; There are two version, one for an initial start and the other for restarting
+; with an existing user context.
 
-(define (start-command-processor resume-args context start-thunk)
+(define (start-command-processor resume-args start-thunk)
+  (restart-command-processor resume-args #f start-thunk))
+
+(define (restart-command-processor resume-args context start-thunk)
   ((with-handler command-loop-condition-handler
      (lambda ()
        (start-command-levels resume-args
@@ -27,10 +32,9 @@
 
 (define (command-processor command-env resume-args)
   (start-command-processor resume-args
-			   (make-user-context
-			    (lambda ()
-			      (set-user-command-environment! command-env)))
-			   unspecific))
+			   (lambda ()
+			     (set-user-command-environment! command-env)
+			     unspecific)))
 
 ;----------------
 ; Command loop
@@ -47,6 +51,9 @@
 
 ; Install the handler, bind $NOTE-UNDEFINED to keep from annoying the user,
 ; display the condition and start reading commands.
+;
+; This has SHOWING-FOCUS-OBJECT inlined by hand to reduce the amount of noise
+; the debugger sees on the stack.
 
 (define (real-command-loop)
   (let-fluids $note-undefined #f    ;useful
@@ -55,10 +62,12 @@
 	(let loop ()
 	  (let ((command (read-command-carefully (command-prompt)
 						 (form-preferred?)
-						 (command-input))))
-	    (showing-focus-object
-	     (lambda ()
-	       (execute-command command)))
+						 (command-input)))
+		(focus-before (focus-values)))
+	    (execute-command command)
+	    (let ((focus-after (focus-values)))
+	      (if (not (eq? focus-after focus-before))
+		  (show-command-results focus-after)))
 	    (loop))))))
 
 (define (display-command-level-condition condition)
@@ -99,7 +108,8 @@
 ; errors and interrupts we stop the level or exit.
 
 (define (command-loop-condition-handler c next-handler)
-  (cond ((warning? c) ; (or (note? c))   ; no one curently uses notes
+  (cond ((or (warning? c)
+	     (note? c))
          (if (break-on-warnings?)
              (deal-with-condition c)
              (begin (force-output (current-output-port)) ; keep synchronous
@@ -137,9 +147,8 @@
 	 (display "Back to " (command-output))))
   (restart-command-level level))
 
-; These were neither used nor exported.
-;(define-condition-type 'note '())
-;(define note? (condition-predicate 'note))
+(define-condition-type 'note '())
+(define note? (condition-predicate 'note))
 
 ; The prompt is "level-number environment-id-string> " or just
 ; "environment-id-string> " at top level.  The id-string is empty for the
@@ -289,6 +298,7 @@
            (add-help (user-command-help) name help1 help2))))
 
 (define (execute-command command)
+  (run-sentinels)
   (cond ((eof-object? command)
          (newline (command-output))
          (pop-command-level))
@@ -296,10 +306,7 @@
         (else
          (let* ((name (car command))
 		(proc (eval name (user-command-environment))))
-	   (dynamic-wind (lambda () #f)
-			 (lambda ()
-			   (apply proc (cdr command)))
-			 run-sentinels)))))
+	   (apply proc (cdr command))))))
 
 ;----------------
 ; help
@@ -435,9 +442,7 @@
                (display info port)))
     (display "." port)
     (newline port)
-    (write-line "Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees."
-		port)
-    (write-line "Copyright (c) 1996 by NEC Research Institute, Inc."
+    (write-line "Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees."
 		port)
     (write-line "Please report bugs to scheme-48-bugs@martigny.ai.mit.edu."
                 port)

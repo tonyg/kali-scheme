@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Hash table package that allows for different hash and comparison functions.
@@ -45,8 +44,11 @@
 ; it into a hash table.
 
 (define (make-table-maker comparison-function hash-function)
-  (let* ((assoc (make-assoc comparison-function))
-	 (ref-proc (make-linear-table-ref assoc))
+  (assoc->table-maker (make-assoc comparison-function)
+		      hash-function))
+
+(define (assoc->table-maker assoc hash-function)
+  (let* ((ref-proc (make-linear-table-ref assoc))
 	 (x->hash-table! (make->hash-table assoc hash-function))
 	 (set!-proc (make-linear-table-set! assoc x->hash-table!)))
     (lambda ()
@@ -242,17 +244,26 @@
 	((null? obj) 3005)
 	(else (error "value cannot be used as a table key" obj))))
 
+(define eqv?-assoc (make-assoc eqv?))
+
+(define (default-table-assoc key alist)
+  (if (number? key)
+      (eqv?-assoc key alist)
+      (assq key alist)))
+
 ; (define string-hash (structure-ref features string-hash))
 
 (define (symbol-hash symbol)
   (string-hash (symbol->string symbol)))
 
 (define make-table
-  (let ((make-usual-table (make-table-maker eq? default-table-hash-function)))
+  (let ((make-usual-table (assoc->table-maker default-table-assoc
+					      default-table-hash-function)))
     (lambda hash-function-option
       (if (null? hash-function-option)
 	  (make-usual-table)
-	  ((make-table-maker eq? (car hash-function-option)))))))
+	  ((assoc->table-maker default-table-assoc
+			       (car hash-function-option)))))))
 
 (define make-string-table  (make-table-maker string=? string-hash))
 (define make-symbol-table  (make-table-maker eq?      symbol-hash))

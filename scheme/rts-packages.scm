@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 (define-structures ((scheme-level-1 scheme-level-1-interface)
@@ -21,6 +20,13 @@
 	primitives)
   (files (rts record))
   (optimize auto-integrate))
+
+; The external code needs this to check the types of records.
+
+(define-structure export-the-record-type (export)
+  (open scheme-level-1 records-internal shared-bindings)
+  (begin
+    (define-exported-binding "s48-the-record-type" :record-type)))
 
 (define-structure define-record-types define-record-types-interface
   (open scheme-level-1 records records-internal loopholes
@@ -75,21 +81,32 @@
 	number-i/o      ; number->string for debugging
 	exceptions      ; wrong-number-of-args stuff
 	handle)		; report-errors-as-warnings
-  (files (rts port) (rts current-port))
+  (files (rts port)
+	 (rts current-port))
   (optimize auto-integrate))
 
+(define-structure channels channels-interface
+  (open scheme-level-1
+	low-channels
+	architecture
+	signals)	; error, call-error
+  (files (rts channel)))
+
 (define-structure channel-i/o channel-i/o-interface
-  (open scheme-level-1 i/o i/o-internal channels signals
+  (open scheme-level-1 i/o i/o-internal signals
+	channels low-channels
 	architecture code-vectors wind
+	define-record-types
 	queues threads threads-internal locks
 	exceptions interrupts
 	ascii ports util
 	session-data
 	structure-refs
-	user-messages	; for error messages
+	debug-messages	; for error messages
 	handle)		; report-errors-as-warnings
-  (access primitives)	; add-finalizer
-  (files (rts channel-port) (rts channel)))
+  (access primitives)	; add-finalizer, channel stuff
+  (files (rts channel-port)
+	 (rts channel-io)))
 
 (define-structure conditions conditions-interface
   (open scheme-level-1 signals)
@@ -101,7 +118,7 @@
 	i/o				;output-port-option, write-string
 	methods				;disclose
 	structure-refs)
-  (access channels			;channel? channel-id
+  (access low-channels			;channel? channel-id
 	  code-vectors)			;code-vector?
   (files (rts write)))
 	 
@@ -141,21 +158,27 @@
   (files (rts continuation))
   (optimize auto-integrate))
 
-(define-structure more-types (export :closure :code-vector :location :template
-				     :channel :port :weak-pointer :external)
+(define-structure more-types (export :closure :code-vector :location :double
+				     :template :channel :port :weak-pointer
+				     :shared-binding)
   (open scheme-level-1 methods
-	closures code-vectors locations templates channels ports primitives)
+	closures code-vectors locations templates low-channels ports primitives
+	shared-bindings)
   (begin (define-simple-type :closure     (:value) closure?)
 	 (define-simple-type :code-vector (:value) code-vector?)
 	 (define-simple-type :location    (:value) location?)
 	 (define-simple-type :template    (:value) template?)
 	 (define-simple-type :channel     (:value) channel?)
 	 (define-simple-type :port        (:value) port?)
+	 (define-simple-type :double      (:rational) double?)
 	 (define-simple-type :weak-pointer (:value) weak-pointer?)
 	 (define-method &disclose ((obj :weak-pointer)) (list 'weak-pointer))
-	 (define-simple-type :external (:value) external?)
-	 (define-method &disclose ((obj :external))
-	   (list 'external (external-name obj)))))
+	 (define-simple-type :shared-binding (:value) shared-binding?)
+	 (define-method &disclose ((obj :shared-binding))
+	   (list (if (shared-binding-is-import? obj)
+		     'imported-binding
+		     'exported-binding)
+		 (shared-binding-name obj)))))
 
 (define-structure enumerated enumerated-interface
   (open scheme-level-1 signals)
@@ -209,7 +232,7 @@
 	loopholes               ;for converting #f to a continuation
 	architecture            ;time-option
 	session-data
-	user-messages
+	debug-messages
 	structure-refs)
   (access primitives)           ;time current-thread set-current-thread! etc.
   (optimize auto-integrate)
@@ -217,7 +240,7 @@
 
 (define-structure scheduler scheduler-interface
   (open scheme-level-1 threads threads-internal enumerated enum-case
-	user-messages
+	debug-messages
 	signals)       		;error
   (files (rts scheduler)))
 
@@ -284,6 +307,8 @@
 	fluids-internal	 ;initialize-dynamic-state!
 	exceptions	 ;initialize-exceptions!
 	interrupts	 ;initialize-interrupts!
+	records-internal ;initialize-records!
+	export-the-record-type	;just what it says
 	threads-internal ;start threads
 	root-scheduler)  ;start a scheduler
   (files (rts init)))

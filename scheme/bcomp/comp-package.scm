@@ -1,13 +1,13 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; package -> template
 
 (define (compile-package package)
-  (let* ((forms ((get-optimizer (package-optimizer-names package))
-		  (expand-package package)
-		 package))
-	 (template (compile-forms forms (package-name package) #f)))
+  (let ((template (compile-forms ((get-optimizer
+				     (package-optimizer-names package))
+				    (expand-package package)
+				    package)
+				 (package-name package))))
     (link! template package #t)		; #t means warn about undefined variables
     template))
 
@@ -44,7 +44,7 @@
 	  (fold (lambda (scanned+env expanded)
 		  (let ((env (car scanned+env)))
 		    (fold (lambda (form expanded)
-			    (cons (lambda () (expand-form form env))
+			    (cons (delay (expand-scanned-form form env))
 				  expanded))
 			  (cdr scanned+env)
 			  expanded)))

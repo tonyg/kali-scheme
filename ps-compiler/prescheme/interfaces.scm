@@ -1,4 +1,4 @@
-; Copyright (c) 1994 Richard Kelsey.  See file COPYING.
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
 
 (define-interface ps-primop-interface
   (export get-prescheme-primop

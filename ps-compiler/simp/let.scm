@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
 
 
 ; Simplifying LET nodes, i.e. calls to the LET primop.
@@ -65,7 +64,7 @@
 		(or (not (side-effects? val 'allocate))
 		    (and (not (side-effects? val 'allocate 'read))
 			 (not-used-between? val (car refs)))))))
-	((every? procedure-node? (variable-refs var))
+	((every? called-node? (variable-refs var))
 	 (simplify-known-cont-calls (variable-refs var) val)
 	 (or (null? (cdr (variable-refs var)))
 	     (case (lambda-type val)
@@ -152,5 +151,5 @@
 ;                 (call-args (lambda-body val))))
 
 (define (called-anywhere? var)
-  (any? procedure-node? (variable-refs var)))
+  (any? called-node? (variable-refs var)))
 

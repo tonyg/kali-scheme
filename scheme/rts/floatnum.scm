@@ -1,18 +1,8 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Inexact rational arithmetic using hacked-in floating point numbers.
 
-(define-extended-number-type :floatnum (:rational)
-  (really-make-floatnum datum)
-  floatnum?
-  (datum floatnum-datum))
-
-(define (make-float-datum) (make-code-vector 8 0))
-
-(define (make-floatnum datum)
-  (loophole :inexact-real
-	    (really-make-floatnum datum)))
+(define floatnum? double?)
 
 (define-enumeration flop
   (+ - * / = <
@@ -37,38 +27,28 @@
 
 (define (float&float->float op)
   (lambda (a b)
-    (let ((float1 (x->float a))
-	  (float2 (x->float b))
-	  (res (make-float-datum)))
-      (floperate op
-		 (floatnum-datum float1)
-		 (floatnum-datum float2)
-		 res)
-      (make-floatnum res))))
+    (let ((res (make-double)))
+      (floperate op (x->float a) (x->float b) res)
+      res)))
 
 (define (float&float->boolean op)
   (lambda (a b)
-    (let ((float1 (x->float a))
-	  (float2 (x->float b)))
-      (floperate op
-		 (floatnum-datum float1)
-		 (floatnum-datum float2)))))
+    (floperate op (x->float a) (x->float b))))
 
 (define (float1 op)
   (lambda (float)
-    (floperate op (floatnum-datum float))))
+    (floperate op float)))
 
 (define (float->float op)
   (lambda (a)
-    (let ((float (x->float a))
-	  (res (make-float-datum)))
-      (floperate op (floatnum-datum float) res)
-      (make-floatnum res))))
+    (let ((res (make-double)))
+      (floperate op (x->float a) res)
+      res)))
 
 (define (string->float string)
-  (let ((res (make-float-datum)))
+  (let ((res (make-double)))
     (floperate (enum flop string->float) string res)
-    (make-floatnum res)))
+    res))
 
 ; Call the OS to get a string and then add a `.' if necessary (so that
 ; it will be inexact).
@@ -76,7 +56,7 @@
 (define (float->string float)
   (let* ((res (make-string 40 #\space))
 	 (len (floperate (enum flop float->string)
-			 (floatnum-datum float)
+			 float
 			 res))
 	 (str (substring res 0 len)))
     (let loop ((i 0))
@@ -92,7 +72,8 @@
 	     (loop (+ i 1)))))))
 
 (define (x->float x)
-  (cond ((floatnum? x) x)
+  (cond ((double? x)
+	 x)
 	((integer? x)
 	 (exact-integer->float (if (exact? x)
 				   x
@@ -113,9 +94,9 @@
 	      (fixnum->float (remainder k definitely-a-fixnum)))))
 
 (define (fixnum->float k)    ;Returns #f is k is a bignum
-  (let ((res (make-float-datum)))
+  (let ((res (make-double)))
     (if (floperate (enum flop fixnum->float) k res)
-	(make-floatnum res)
+	res
 	#f)))
 
 (define (float->exact-integer x)
@@ -123,7 +104,7 @@
       (let ((d (fixnum->float definitely-a-fixnum)))
 	(+ (* definitely-a-fixnum
 	      (float->exact-integer (float-quotient x d)))
-	   (float->fixnum (loophole :extended-number  ; outsmarted ourselves
+	   (float->fixnum (loophole :double		; outsmarted ourselves
 				    (float-remainder x d)))))))
 
 (define definitely-a-fixnum (expt 2 23))    ;Be conservative
@@ -196,24 +177,24 @@
 
 ; Methods on floatnums
 
-(define-method &integer? ((x :floatnum))
+(define-method &integer? ((x :double))
   (integral-floatnum? x))
 
-(define-method &rational? ((n :floatnum)) #t)
+(define-method &rational? ((n :double)) #t)
 
-(define-method &exact? ((x :floatnum)) #f)
+(define-method &exact? ((x :double)) #f)
 
-(define-method &inexact->exact ((x :floatnum))
+(define-method &inexact->exact ((x :double))
   (float->exact x))
 
 (define-method &exact->inexact ((x :rational))
   (x->float x))		;Should do this only if the number is within range.
 
-(define-method &floor ((x :floatnum)) (float-floor x))
+(define-method &floor ((x :double)) (float-floor x))
 
 ; beware infinite regress
-(define-method &numerator ((x :floatnum)) (float-numerator x))
-(define-method &denominator ((x :floatnum)) (float-denominator x))
+(define-method &numerator ((x :double)) (float-numerator x))
+(define-method &denominator ((x :double)) (float-denominator x))
 
 (define (define-floatnum-method mtable proc)
   (define-method mtable ((m :rational) (n :rational)) (proc m n)))
@@ -240,7 +221,7 @@
 
 (define-floatnum-method &atan float-atan)
 
-(define-method &number->string ((n :floatnum) radix)
+(define-method &number->string ((n :double) radix)
   (if (= radix 10)
       (float->string n)
       (next-method)))

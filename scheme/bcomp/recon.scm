@@ -1,7 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
-
-
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Rudimentary type reconstruction, hardly worthy of the name.
 
@@ -50,15 +47,20 @@
   (lambda (node constrained want-type)
     (reconstruct-lambda node constrained want-type #f)))
 
+(define-reconstructor 'flat-lambda syntax-type
+  (lambda (node constrained want-type)
+    (reconstruct-lambda node constrained want-type #f)))
+
 (define (reconstruct-lambda node constrained want-type called?)
   (if (eq? constrained 'fast)
       any-procedure-type
       (let* ((form (node-form node))
 	     (want-result (careful-codomain want-type))
 	     (formals (cadr form))
-	     (alist (map (lambda (node) (cons node value-type))
+	     (alist (map (lambda (node)
+			   (cons node value-type))
 			 (normalize-formals formals)))
-	     (cod (reconstruct (caddr form)
+	     (cod (reconstruct (last form)	; works for normal and flat
 			       (if called?
 				   (append alist constrained)
 				   alist)
@@ -100,17 +102,30 @@
 (define-reconstructor 'call 'internal
   (lambda (node constrained want-type)
     (let ((form (node-form node)))
-      (if (name-node? (car form))
-	  (let ((probe (node-ref node 'binding)))
-	    (cond ((and probe
-			(primop? (binding-static probe))
-			(table-ref primop-reconstructors
-				   (primop-name (binding-static probe))))
-		   => (lambda (recon)
-			(recon (cdr form) constrained want-type)))
-		  (else
-		   (reconstruct-call form constrained want-type))))
-	  (reconstruct-call form constrained want-type)))))
+      (cond ((proc->reconstructor (car form))
+	     => (lambda (recon)
+		  (recon (cdr form) constrained want-type)))
+	    (else
+	     (reconstruct-call form constrained want-type))))))
+
+; See if PROC is a primop or a variable bound to a primop, and then return
+; that primops reconstructor, if it has one.
+
+(define (proc->reconstructor proc)      
+  (cond ((name-node? proc)
+	 (let ((probe (node-ref proc 'binding)))
+	   (if (and probe
+		    (binding? probe)
+		    (primop? (binding-static probe)))
+	       (table-ref primop-reconstructors
+			  (binding-static probe))
+	       #f)))
+	((literal-node? proc)
+	 (if (primop? (node-form proc))
+	     (table-ref primop-reconstructors
+			(node-form proc))
+	     #f))
+	(else #f)))
 
 (define (reconstruct-call form constrained want-type)
   (let* ((want-op-type (procedure-type any-arguments-type
@@ -234,9 +249,9 @@
   (lambda (node constrained want-type)
     any-procedure-type))
 
-(define name-node? (node-predicate 'name 'leaf))
-(define lambda-node? (node-predicate 'lambda syntax-type))
-
+(define name-node?    (node-predicate 'name    'leaf))
+(define lambda-node?  (node-predicate 'lambda  syntax-type))
+(define literal-node? (node-predicate 'literal 'leaf))
 ; --------------------
 ; Primops.
 ;
@@ -305,3 +320,4 @@
         ((symbol? x) symbol-type)
         ((vector? x) vector-type)
         (else value-type)))
+

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; These are the four entry points (cf. rts/eval.scm):
@@ -40,7 +39,7 @@
 					 (package->environment package))
 		  (package->environment package)))
 	 (nodes (map (lambda (form)
-		       (expand-form form env))
+		       (expand-scanned-form form env))
 		     (scan-forms forms env))))
     (if (not (null? nodes))
 	(run-nodes nodes env))))

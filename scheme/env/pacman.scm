@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; PACkage-manipulation comMANds
@@ -227,16 +226,16 @@
   ;; Argument to ,build command
   (lambda (arg)
     (call-with-values (lambda ()
-			(new-user-context commands built-in meta-structs))
-      (lambda (context env)
+			(make-user-envs commands built-in meta-structs))
+      (lambda (env init-thunk)
 	(with-interaction-environment env
 	  (lambda ()
 	    (start-command-processor arg
-				     context
 				     (lambda ()
+				       (init-thunk)
 				       (greet-user info)))))))))
 
-(define (new-user-context commands built-in meta-structs)
+(define (make-user-envs commands built-in meta-structs)
   (let* ((tower (make-reflective-tower
 		      eval
 		      (list (*structure-ref built-in 'scheme))
@@ -247,12 +246,12 @@
 					      built-in
 					      meta-structs))
 	 (exec-package (make-exec-package commands tower built-in)))
-    (values (make-user-context
-	     (lambda ()
-	       (set-user-environment! user)
-	       (set-config-package! config-package)
-	       (set-user-command-environment! exec-package)))
-	    user)))
+    (values
+     user
+     (lambda ()
+       (set-user-environment! user)
+       (set-config-package! config-package)
+       (set-user-command-environment! exec-package)))))
 
 ; User package
 

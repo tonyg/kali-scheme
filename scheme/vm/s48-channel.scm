@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Implementation of OS channels in Scheme.
 ;
@@ -97,9 +96,7 @@
 	 (values 0 #f #f (enum (structure-ref prescheme errors) no-errors)))))
 
 (define (channel-write-block channel start count)
-  (receive (count status)
-      (write-block (channel->port channel) start count)
-    (values count #f status)))
+  (values count #f (write-block (channel->port channel) start count)))
 
 (define (channel-abort channel)
   (set! *pending-channels* (delq channel *pending-channels*))
@@ -129,6 +126,7 @@
   (keyboard-interrupt-event
    io-completion-event
    alarm-event
+   os-signal-event
    error-event
    no-event
    ))

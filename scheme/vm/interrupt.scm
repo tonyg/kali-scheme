@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 ; Code for handling interrupts.
 
 ; New interrupt handler vector in *val*
@@ -56,8 +55,8 @@
 	 2)
 	((eq? pending-interrupt (enum interrupt post-gc))
 	 (push *finalize-these*)
-	 (push (enter-fixnum *enabled-interrupts*))
 	 (set! *finalize-these* null)
+	 (push (enter-fixnum *enabled-interrupts*))
 	 2)
 	((eq? pending-interrupt (enum interrupt i/o-completion))
 	 (let ((channel (dequeue-channel!)))
@@ -67,9 +66,25 @@
 	   (push (channel-os-status channel))
 	   (push (enter-fixnum *enabled-interrupts*))
 	   3))
+	((eq? pending-interrupt (enum interrupt os-signal))
+	 (push *os-signal-type*)
+	 (push *os-signal-argument*)
+	 (set! *os-signal-type* false)
+	 (set! *os-signal-argument* false)
+	 (push (enter-fixnum *enabled-interrupts*))
+	 3)
 	(else
 	 (push (enter-fixnum *enabled-interrupts*))
 	 1)))
+
+; Called from outside when an os-signal event is returned.
+
+(define (s48-set-os-signal type argument)
+  (set! *os-signal-type* type)
+  (set! *os-signal-argument* argument))
+
+(define *os-signal-type* false)
+(define *os-signal-argument* false)
 
 ; Return from a call to an interrupt handler.
 
@@ -93,27 +108,27 @@
 ; The players:
 ;   *pending-interrupts*      A bit mask of pending interrupts
 ;   *enabled-interrupts*      A bit mask of enabled interrupts
-;   *pending-interrupt?*      True if either an event or interrupt is pending
-;   *pending-events?*         True if an event is pending
+;   s48-*pending-interrupt?*  True if either an event or interrupt is pending
+;   s48-*pending-events?*     True if an event is pending
 ;
-; When an asynchronous event occurs the OS sets *PENDING-EVENTS?* and
-; *PENDING-INTERRUPT?* to true.
+; When an asynchronous event occurs the OS sets S48-*PENDING-EVENTS?* and
+; S48-*PENDING-INTERRUPT?* to true.
 ;
-; When *PENDING-EVENTS?* is true the VM calls (CURRENT-EVENTS) to get the
+; When S48-*PENDING-EVENTS?* is true the VM calls (CURRENT-EVENTS) to get the
 ; pending events.
 ;
 ; The goals of all this mucking about are:
 ;   - no race conditions
 ;   - the VM operates synchronously; only the OS is asynchronous
-;   - polling only requires testing *PENDING-INTERRUPT?*
+;   - polling only requires testing S48-*PENDING-INTERRUPT?*
 
-(define *pending-events?* #f)
+(define s48-*pending-events?* #f)
 
 ; Called asynchronously by the OS
 
-(define (note-event)
-  (set! *pending-events?* #t)       ; order required by non-atomicity
-  (set! *pending-interrupt?* #t))
+(define (s48-note-event)
+  (set! s48-*pending-events?* #t)       ; order required by non-atomicity
+  (set! s48-*pending-interrupt?* #t))
 
 ; The polling procedure.  If *PENDING-INTERRUPT* then either there is a
 ; pending OS event or there is really a pending interrupt.  CHECK-EVENTS
@@ -121,10 +136,10 @@
 ; we want this procedure to be small so that it will compiled in-line).
 
 (define (pending-interrupt?)
-  (cond ((not *pending-interrupt?*)
+  (cond ((not s48-*pending-interrupt?*)
 	 #f)
-	(*pending-events?*
-	 (set! *pending-events?* #f)
+	(s48-*pending-events?*
+	 (set! s48-*pending-events?* #f)
 	 (check-events))  ; ends with call to PENDING-INTERRUPT?
 	(else
 	 #t)))
@@ -162,21 +177,26 @@
 ; Disable all interrupts.
 
 (define (disable-interrupts!)
-  (set! *pending-interrupt?* #f)
+  (set! s48-*pending-interrupt?* #f)
   (set! *enabled-interrupts* 0))
 
+; Enable all interrupts.
+
+(define (enable-interrupts!)
+  (set-enabled-interrupts! -1))
+
 ; Whenever *PENDING-INTERRUPTS* or *ENABLED-INTERRUPTS* changes we have to
-; set *PENDING-INTERRUPT?* to the correct value.
+; set S48-*PENDING-INTERRUPT?* to the correct value.
 
 (define (check-for-enabled-interrupt!)
   (if (= 0 (bitwise-and *pending-interrupts* *enabled-interrupts*))
       (begin
-	(set! *pending-interrupt?* #f)  ; Done first to avoid a race condition.
-	(if *pending-events?*
-	    (set! *pending-interrupt?* #t)))
-      (set! *pending-interrupt?* #t)))
+	(set! s48-*pending-interrupt?* #f)  ; Done first to avoid a race condition.
+	(if s48-*pending-events?*
+	    (set! s48-*pending-interrupt?* #t)))
+      (set! s48-*pending-interrupt?* #t)))
 
-; We don't need to mess with *PENDING-INTERRUPT?* because all interrupts
+; We don't need to mess with S48-*PENDING-INTERRUPT?* because all interrupts
 ; are about to be disabled.
 
 (define (get-highest-priority-interrupt!)
@@ -217,6 +237,8 @@
 	((eq? event (enum events io-completion-event))
 	 (enqueue-channel! channel status)
 	 (interrupt-bit (enum interrupt i/o-completion)))
+	((eq? event (enum events os-signal-event))
+	 (interrupt-bit (enum interrupt os-signal)))
 	((eq? event (enum events no-event))
 	 0)
 	((eq? event (enum events error-event))

@@ -1,116 +1,136 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
-
-
-; This is file gc.scm.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Collector
+
+; The interface to the GC consists of
+; (S48-BEGIN-COLLECTION)		; call either this
+; (BEGIN-WRITING-IMAGE)			; or this first
+; (S48-TRACE-LOCATIONS! start end)	; trace all roots
+; (S48-TRACE-VALUE value) => copied value
+; (S48-TRACE-STOB-CONTENTS! stob)
+; (S48-DO-GC)				; then do the GC
+; (S48-END-COLLECTION)			; and either finish
+; (ABORT-COLLECTION)			; or abort if writing an image
+
+(define *gc-count* 0)
+(define (s48-gc-count) *gc-count*)
+
+; True if the GC is being done for the purpose of dumping an image, in which
+; case we check for undumpable records.
+
+(define *writing-image?*)
+(define *undumpable-records*)
+(define *undumpable-count*)
+
+(define (s48-begin-collection)
+  (really-begin-collection)
+  (set! *writing-image?* #f)
+  (trace-static-areas)
+  (unspecific))
+
+(define (begin-writing-image)
+  (really-begin-collection)
+  (set! *writing-image?* #t)
+  (set! *undumpable-records* null)
+  (set! *undumpable-count* 0))
+
+(define (really-begin-collection)
+  (set! *from-begin* (heap-start))
+  (set! *from-end* (heap-limit))
+  (swap-spaces)
+  (set-heap-pointer! (heap-start))
+  (set! *weak-pointer-hp* null-address))
+
+(define *from-begin*)
+(define *from-end*)
 
 (define (in-oldspace? descriptor)
   (and (stob? descriptor)
        (let ((a (address-after-header descriptor)))
-         (and (address>= a *oldspace-begin*)
-              (address< a *oldspace-end*)))))
+         (and (address>= a *from-begin*)
+              (address< a *from-end*)))))
 
-; The interface to the GC consists of
-; (BEGIN-COLLECTION)                        ; call first
-; (TRACE-VALUE value) => copied value
-; (TRACE-LOCATIONS! start end)              ; trace all pointers
-; (TRACE-STOB-CONTENTS! stob)
-; (DO-GC finalize-list cont)                ; then do the GC,
-;                                           ; calls CONT on traced and untraced
-;                                           ;  finalize sublists
-; (END-COLLECTION)                          ; and either finish
-; (ABORT-COLLECTION)                        ; or abort
-
-(define *gc-count* 0)
-(define (gc-count) *gc-count*)
-
-(define *saved-hp*)
-(define *saved-limit*)
-
-(define (begin-collection)
-  (swap-spaces)
-  (set! *saved-limit* *limit*)
-  (set! *saved-hp* *hp*)
-  (set! *limit* *newspace-end*)
-  (set! *hp* *newspace-begin*)
-  (set! *weak-pointer-hp* null-address))
-
-(define (swap-spaces)
-  (let ((b *newspace-begin*))
-    (set! *newspace-begin* *oldspace-begin*)
-    (set! *oldspace-begin* b))
-  (let ((e *newspace-end*))
-    (set! *newspace-end* *oldspace-end*)
-    (set! *oldspace-end* e)))
-
-(define (trace-value stob)
-  (if (in-oldspace? stob)
-      (copy-object stob)
-      stob))
+(define (s48-trace-value stob)
+  (cond ((and *writing-image?*
+	      (undumpable? stob))
+	 (begin
+	   (note-undumpable! stob)
+	   (s48-trace-value (undumpable-alias stob))))
+	((in-oldspace? stob)
+	 (copy-object stob))
+	(else
+	 stob)))
     
-(define (end-collection)
+(define (s48-end-collection)
   (set! *gc-count* (+ *gc-count* 1)))
+
+(define (s48-undumpable-records)
+  (values *undumpable-records*
+	  *undumpable-count*))
 
 ; Undo the effects of the current collection (assuming that it did not
 ; modify any VM registers or the stack).
 
 (define (abort-collection)
   (swap-spaces)
-  (set! *limit* *saved-limit*)
-  (set! *hp* *saved-hp*)
-  (let loop ((addr *newspace-begin*))
-    (if (address< addr *hp*)
+  (let loop ((addr (heap-start)))
+    (if (address< addr (heap-pointer))
 	(let* ((d (fetch addr))
 	       (h (if (header? d)
 		      d
 		      (let ((h (stob-header d)))
 			(store! addr h)            ; mend heart
 			h))))
-	  (loop (address1+ (address+ addr (header-a-units h))))))))
+	  (loop (address+ addr
+			  (+ (cells->a-units stob-overhead)
+			     (header-length-in-a-units h))))))))
 
 ; Complete a GC after all roots have been traced.
-; Need to trace the procedures in the finalize list.
 
-(define (do-gc finalizer-alist)
+(define (trace-static-areas)
   (walk-impure-areas
    (lambda (start end)
-     (trace-locations! start end)
-     #t))
-  (trace-finalizer-alist! finalizer-alist)
-  (really-do-gc *newspace-begin*)
-  (clean-weak-pointers)
-  (partition-finalizer-alist finalizer-alist))
+     (s48-trace-locations! start end)
+     #t)))
 
 ; Scan the heap, copying pointed to objects, starting from START.  Quit once
 ; the scanning pointer catches up with the heap pointer.
 
-(define (really-do-gc start)
-  (let loop ((start start))
-    (let ((end *hp*))
-      (trace-locations! start end)
-      (cond ((address>= *hp* *limit*)
+(define (s48-do-gc)
+  (let loop ((start (heap-start)))
+    (let ((end (heap-pointer)))
+      (s48-trace-locations! start end)
+      (cond ((< (s48-available) 0)
 	     (error "GC error: ran out of space in new heap"))
-	    ((address< end *hp*)
-	     (loop end))))))
+	    ((address< end (heap-pointer))
+	     (loop end)))))
+  (clean-weak-pointers))
 
-(define (trace-stob-contents! stob)
+(define (s48-trace-stob-contents! stob)
   (let ((start (address-after-header stob))
 	(size (bytes->a-units (header-length-in-bytes (stob-header stob)))))
-    (trace-locations! start (address+ start size))))
+    (s48-trace-locations! start (address+ start size))))
 
 ; Copy everything pointed to from somewhere between START (inclusive)
 ; and END (exclusive).
 
-(define (trace-locations! start end)
-  (let loop ((addr start) (frontier *hp*))
+(define (s48-trace-locations! start end)
+  (let loop ((addr start) (frontier (heap-pointer)))
     (if (address< addr end)
 	(let ((thing (fetch addr))
 	      (next (address1+ addr)))
-	  (cond ((b-vector-header? thing)
-		 (loop (address+ next (header-a-units thing)) frontier))
+	  (cond ((header? thing)
+		 (cond ((b-vector-header? thing)
+			(loop (address+ next (header-length-in-a-units thing))
+			      frontier))
+		       (else
+			(loop next frontier))))
+		((and *writing-image?*
+		      (undumpable? thing))
+		 (note-undumpable! thing)
+		 (store! addr (undumpable-alias thing))
+		 (loop addr frontier))
 		((in-oldspace? thing)
 		 (receive (new-thing frontier)
 		     (real-copy-object thing frontier)
@@ -118,18 +138,18 @@
 		   (loop next frontier)))
 		(else
 		 (loop next frontier))))
-	(set! *hp* frontier)))
+	(set-heap-pointer! frontier)))
   0)  ; for the type-checker
 
 ; Copy THING if it has not already been copied.
 
 (define (copy-object thing)
   (receive (new-thing new-hp)
-      (real-copy-object thing *hp*)
-    (set! *hp* new-hp)
+      (real-copy-object thing (heap-pointer))
+    (set-heap-pointer! new-hp)
     new-thing))
 
-; NON-*hp* version for better code in TRACE-LOCATIONS
+; Non-heap-pointer version for better code in TRACE-LOCATIONS
 
 (define (real-copy-object thing frontier)
   (let ((h (stob-header thing)))
@@ -148,92 +168,14 @@
 			   data-addr
 			   (header-length-in-bytes h))
 	     (values new
-		     (address+ data-addr (header-a-units h))))))))
+		     (address+ data-addr (header-length-in-a-units h))))))))
 
-;----------------------------------------------------------------
-; Dealing with the list of finalizers.
+(define (s48-extant? thing)
+  (or (not (stob? thing))
+      (not (in-oldspace? thing))
+      (stob? (stob-header thing))))
 
-;  1. Trace the contents of every finalizer object, updating them in oldspace.
-;     If any contains a pointer to itself, quit and trace it normally.
-;     If any have already been copied ignore them.
-;  2. Do the usual GC, including weaks.
-;  3. Check each to see if each has been copied.  If not, copy it.  There is
-;     no need to trace any additional pointers.
-
-; Walk down the finalizer alist, tracing the procedures and the contents of
-; the things.
-
-(define (trace-finalizer-alist! alist)
-  (let loop ((alist alist))
-    (if (not (vm-eq? alist null))
-	(let* ((pair (vm-car alist)))
-	  (if (header? (stob-header (vm-car pair)))  ; if not already traced
-	      (trace-stob-contents! (vm-car pair)))
-	  (vm-set-cdr! pair (trace-value (vm-cdr pair)))
-	  (loop (vm-cdr alist))))))
-
-; Walk down the finalizer alist, separating out the pairs whose things
-; have been copied.
-
-(define (partition-finalizer-alist alist)
-  (let loop ((alist alist) (okay null) (goners null))
-    (if (vm-eq? alist null)
-	(values okay goners)
-	(let* ((alist (copy-object alist))
-	       (pair (copy-object (vm-car alist)))
-	       (thing (vm-car pair))
-	       (next (vm-cdr alist)))
-	  (call-with-values
-	   (lambda ()
-	     (cond ((not (in-oldspace? thing))    ; already copied
-		    (values #t thing))
-		   ((stob? (stob-header thing))   ; broken heart
-		    (values #t (stob-header thing)))
-		   (else                          ; no other pointers
-		    (values #f (copy-object thing)))))
-	   (lambda (traced? thing)
-	     (vm-set-car! pair thing)
-	     (vm-set-car! alist pair)
-	     (cond (traced?
-		    (vm-set-cdr! alist okay)
-		    (loop next alist goners))
-		   (else
-		    (vm-set-cdr! alist goners)
-		    (loop next okay alist)))))))))
-
-; VM pair operations, defined here to avoid the GC depending on struct.scm.
-;
-; This is a macro because I am too lazy to add ASSQ, CDDDR, etc. to Pre-Scheme
-; just for this.
-
-(define-syntax pair-offset
-  (lambda (e r c?)
-    (let* ((name (cadr e))
-	   (pair-data (assq 'pair stob-data)))
-      (do ((i 0 (+ i 1))
-	   (data (cdddr pair-data) (cdr data)))
-	   ((c? (car (car data)) name)
-	    i)))))
-
-(define (vm-car pair)
-  (fetch (address+ (address-after-header pair)
-		   (cells->a-units (pair-offset car)))))
-
-(define (vm-cdr pair)
-  (fetch (address+ (address-after-header pair)
-		   (cells->a-units (pair-offset cdr)))))
-
-(define (vm-set-car! pair value)
-  (store! (address+ (address-after-header pair)
-		    (cells->a-units (pair-offset car)))
-          value))
-
-(define (vm-set-cdr! pair value)
-  (store! (address+ (address-after-header pair)
-		    (cells->a-units (pair-offset cdr)))
-          value))
-
-;----------------------------------------------------------------
+;----------------
 ; Weak pointers
 ;
 ; Weak pointers are copied into contiguous blocks so that they can be
@@ -260,7 +202,7 @@
 
 ; A header used to stop the GC from scanning weak-pointer blocks.
 (define weak-alloc-area-header
-  (make-header (enum stob code-vector)
+  (make-header (enum stob byte-vector)
 	       (cells->bytes (- (* weak-pointer-alloc-count weak-pointer-size)
 				1))))  ; don't count the header
 
@@ -301,7 +243,7 @@
 	(if (not (address>= end *weak-pointer-limit*))
 	    (let ((unused-portion (address-difference *weak-pointer-limit*
 						      (address1+ end))))
-	      (store! end (make-header (enum stob code-vector)
+	      (store! end (make-header (enum stob byte-vector)
 				       (cells->bytes
 					(a-units->cells unused-portion)))))))))
 
@@ -326,3 +268,58 @@
 		  (let ((h (stob-header value)))
 		    (if (stob? h) h false)))))))
 
+;----------------
+; Undumpable records
+;
+; Record types may be marked as `undumpable', in which case they are replaced in
+; images by the value of their first slot.
+
+(define (undumpable? x)
+  (and (gc-record? x)
+       (let ((type (record-ref x 0)))
+	 (and (gc-record? type)
+	      (= false (record-ref type 1))))))
+
+(define (gc-record? x)
+  (and (stob? x)
+       (let ((header (stob-header x)))
+	 (if (stob? header)
+	     (record? header)
+	     (record? x)))))
+
+(define (undumpable-alias record)
+  (record-ref record 1))
+
+; This is a bit weird.
+;
+; We want to cons a list of undumpable records that the user is trying to dump.
+; The list is used by the write-image instruction after the image is written out,
+; so it needs to be in what is currently oldspace.  We swap the spaces, cons
+; onto the list, and then swap back.
+;
+; We only return the first one-thousand undumpable objects because:
+;  A. It is unlikely anyone will want more.
+;  B. We don't want to get hung up in MEMQ? in pathological cases.
+;  C. Using an NlogN algorithm would be too much work for this.
+
+(define (note-undumpable! thing)
+  (if (and (<= *undumpable-count* 1000)
+	   (not (vm-memq? thing *undumpable-records*)))
+      (begin
+	(set! *undumpable-count* (+ 1 *undumpable-count*))
+	(swap-spaces)
+	(if (s48-available? vm-pair-size)
+	    (set! *undumpable-records*
+		  (vm-cons thing
+			   *undumpable-records*
+			   (s48-preallocate-space vm-pair-size))))
+	(swap-spaces))))
+
+(define (vm-memq? thing list)
+  (let loop ((list list))
+    (cond ((vm-eq? null list)
+	   #f)
+	  ((vm-eq? (vm-car list) thing)
+	   #t)
+	  (else
+	   (loop (vm-cdr list))))))

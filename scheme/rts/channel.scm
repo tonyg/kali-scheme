@@ -1,131 +1,39 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-; Channel interrupt stuff.
+; Provides input and output channels.
 
-; Install an interrupt handler that queues up the results of completed I/O
-; operations and spawn a thread to cope with them.  This is written so as
-; to avoid having state in top-level variables, because their values are
-; saved in dumped images.
+(define (input-channel? thing)
+  (and (channel? thing)
+       (or (= (channel-status thing)
+	      (enum channel-status-option input))
+	   (= (channel-status thing)
+	      (enum channel-status-option special-input)))))
 
-(define (initialize-channel-i/o!)
-  (session-data-set! i/o-wait-queues-slot (make-i/o-wait-queues))
-  (session-data-set! i/o-wait-count-slot 0)
-  (set-interrupt-handler! (enum interrupt i/o-completion)
-			  i/o-completion-handler))
+(define (output-channel? thing)
+  (and (channel? thing)
+       (or (= (channel-status thing)
+	      (enum channel-status-option output))
+	   (= (channel-status thing)
+	      (enum channel-status-option special-output)))))
 
-; The warning message is printed using USER-MESSAGE because to try to make
-; sure it appears in spite of whatever problem's the I/O system is having.
+(define (open-input-channel filename)
+  (let ((channel (open-channel filename (enum channel-status-option input))))
+    (if (channel? channel)
+	channel
+	(error "cannot open input file" filename))))
 
-(define (i/o-completion-handler channel status enabled-interrupts)
-  (let ((queue (i/o-wait-queue channel)))
-    (if (thread-queue-empty? queue)
-	(user-message "Warning: dropping ignored channel i/o result {Channel "
-		      (channel-os-index channel)
-		      " "
-		      (channel-id channel)
-		      "}")
-	(begin
-	  (decrement-i/o-wait-count!)
-	  (make-ready (dequeue-thread! queue) status)))))
+(define (open-output-channel filename)
+  (let ((channel (open-channel filename (enum channel-status-option output))))
+    (if (channel? channel)
+	channel
+	(error "cannot open output file" filename))))
 
-; Exported procedure
+(define (close-input-channel channel)
+  (if (input-channel? channel)
+      (close-channel channel)
+      (call-error close-input-channel channel)))
 
-(define (waiting-for-i/o?)
-  (< 0 (i/o-wait-count)))
-
-; Block until the current I/O operation on CHANNEL has completed.
-; This returns the result of the operation.
-;
-; This needs to be called with interrupts disabled.
-
-(define (wait-for-channel channel)
-  (let ((queue (i/o-wait-queue channel)))
-    (if (thread-queue-empty? queue)
-	(begin
-	  (increment-i/o-wait-count!)
-	  (enqueue-thread! queue (current-thread))
-	  (block))
-	(begin
-	  (warn "channel has two pending operations" channel)
-	  (terminate-current-thread)))))
-
-; Abort any pending operation on by OWNER on CHANNEL.
-; Called with interrupts disabled.
-  
-(define (steal-channel! channel owner)
-  (let ((queue (i/o-wait-queue channel)))
-    (if (thread-queue-empty? queue)
-	#f
-	(let ((thread (dequeue-thread! queue)))
-	  (cond ((eq? thread owner)
-		 (decrement-i/o-wait-count!)
-                 (channel-abort channel))
-		(else
-		 (warn "channel in use by other than port owner" channel)
-		 (enqueue-thread! queue thread)
-		 #f))))))
-
-; Have CHANNEL-READ and CHANNEL-WRITE wait if a pending-channel-i/o
-; exception occurs.
-
-(define-exception-handler (enum op channel-maybe-read)
-  (lambda (opcode reason buffer start count wait? channel . maybe-os-message)
-    (if (= reason (enum exception pending-channel-i/o))
-	(wait-for-channel channel)
-	(begin
-	  (enable-interrupts!)
- 	  (apply signal-exception
- 		 opcode reason buffer start count wait? channel
- 		 maybe-os-message)))))
-
-(define-exception-handler (enum op channel-maybe-write)
-  (lambda (opcode reason buffer start count channel . maybe-os-message)
-    (if (= reason (enum exception pending-channel-i/o))
-	(wait-for-channel channel)
-	(begin
-	  (enable-interrupts!)
- 	  (apply signal-exception
- 		 opcode reason buffer start count channel
- 		 maybe-os-message)))))
-
-; Two session slots
-;   - the number of threads waiting for I/O completion events
-;   - a vector of mapping channel-os-indicies to queues for waiting threads
-
-(define i/o-wait-count-slot (make-session-data-slot! 0))
-
-(define (i/o-wait-count)
-  (session-data-ref i/o-wait-count-slot))
-
-(define (increment-i/o-wait-count!)
-  (session-data-set! i/o-wait-count-slot (+ (i/o-wait-count) 1)))
-
-(define (decrement-i/o-wait-count!)
-  (session-data-set! i/o-wait-count-slot (- (i/o-wait-count) 1)))
-
-(define i/o-wait-queues-slot (make-session-data-slot! #f))
-
-(define (i/o-wait-queue channel)
-  ((session-data-ref i/o-wait-queues-slot) (channel-os-index channel)))
-
-; Vector of queues for threads waiting for I/O to complete.  There is at
-; most one thread on each queue.
-  
-(define (make-i/o-wait-queues)
-  (let ((waiting-for-i/o '#()))
-    (lambda (channel-os-index)
-      (let ((size (vector-length waiting-for-i/o)))
-	(if (>= channel-os-index size)
-	    (let ((new (make-vector (max (+ channel-os-index 1)
-					 (+ size 8))
-				    #f)))
-	      (do ((i 0 (+ i 1)))
-		  ((= i size))
-		(vector-set! new i (vector-ref waiting-for-i/o i)))
-	      (do ((i size (+ i 1)))
-		  ((= i (vector-length new)))
-		(vector-set! new i (make-thread-queue)))
-	      (set! waiting-for-i/o new)))
-	(vector-ref waiting-for-i/o channel-os-index)))))
-  
+(define (close-output-channel channel)
+  (if (output-channel? channel)
+      (close-channel channel)
+      (call-error close-output-channel channel)))

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
 
 
 ; Call JOIN-SUBSTITUTE on all variable/value pairs.
@@ -87,7 +86,7 @@
 	   #f)
 	  ((= 0 (call-exits call))
 	   (and (eq? 'jump (primop-id (call-primop call)))
-		(eq? var (reference-variable (called-procedure-node call)))))
+		(eq? var (reference-variable (called-node call)))))
 	  (else
 	   (let loop ((i 0))
 	     (cond ((>= i (call-exits call))

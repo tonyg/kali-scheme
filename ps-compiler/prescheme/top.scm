@@ -1,4 +1,4 @@
-; Copyright (c) 1994 Richard Kelsey.  See file COPYING.
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
 
 ; Entry point
 
@@ -93,7 +93,7 @@
 	       (reverse done)))
 	  ((single-called-use? (car forms))
 	   (let ((form (car forms)))
-	     (format #t " ~S~%" (variable-name (form-var form)))
+;	     (format #t " ~S~%" (variable-name (form-var form)))
 	     (integrate-single-use form
 				   (car (variable-refs (form-var form)))
 				   #f)
@@ -109,7 +109,7 @@
 	 (eq? (form-type form) 'lambda)
 	 (not (null? (variable-refs var)))
 	 (null? (cdr (variable-refs var)))
-	 (procedure-node? (car (variable-refs var))))))
+	 (called-node? (car (variable-refs var))))))
 
 (define (integrate-single-use form ref copy?)
   (let* ((in-node (node-base ref))
@@ -281,7 +281,7 @@
   (if (eq? 'lambda (form-type form))
       (let* ((node (form-node form))
 	     (self-calls (filter (lambda (ref)
-				   (and (= (node-index ref) 1)
+				   (and (eq? (node-index ref) 1)
 					(calls-this-primop? (node-parent ref)
 							    (if (calls-known? node)
 								'tail-call

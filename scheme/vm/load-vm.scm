@@ -1,6 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; To load the VM into Scheme 48:
 ;   ,exec ,load load-vm.scm
@@ -23,7 +22,7 @@
 ; To send input to the VM, do the following:
 ;
 ;  Breakpoint: Waiting
-;  1> ,in interpreter (set! *pending-events?* #t)
+;  1> ,in interpreter (set! s48-*pending-events?* #t)
 ;  1> ,proceed
 ;  (+ 2 3)                             ; this will be read by the loaded VM
 ;  Call to (schedule-interrupt 200)    ; output noise
@@ -84,20 +83,19 @@
 (load "package-defs.scm")
 (load-package 'destructuring)  ; used in FOR-SYNTAX clause
 (load-package 'bigbit)
-(load-package 'interpreter)
+(load-package 'vm)
 
 (user)
 (open 'ps-memory)
-(open 'interpreter)
+(open 'vm)
 (open 'heap-init)
+(open 'images)
 (open 'memory-debug)
 
 (run '
 (define (start-vm image-file heap-size stack-size start-args)
   (reinitialize-memory)
-  (let* ((startup-space (required-init-space start-args (vector-length start-args)))
-	 (needed-space (+ (quotient (check-image-header image-file) 4)
-			  startup-space)))
+  (let ((needed-space (+ (quotient (s48-check-image-header image-file) 4))))
     (cond ((< heap-size (* 16 needed-space))
            (display "Heap too small, want at least ")
            (display (* 16 needed-space))
@@ -105,9 +103,9 @@
           (else
            (let ((heap (allocate-memory heap-size))
                  (stack (allocate-memory stack-size)))
-	     (initialize-heap heap (quotient heap-size 4))
-             (initialize-vm stack (quotient stack-size 4))
-             (call-startup-procedure (read-image startup-space)
-                                     start-args
-                                     (vector-length start-args)))))))
+	     (s48-initialize-heap heap (quotient heap-size 4))
+	     (s48-read-image)
+	     (s48-initialize-vm stack (quotient stack-size 4))
+	     (s48-call-startup-procedure start-args
+					 (vector-length start-args)))))))
 )

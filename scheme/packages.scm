@@ -1,5 +1,5 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
+
 
 ; Meta-modules: the big picture.
 
@@ -233,6 +233,7 @@
 (define-interface low-structures-interface
   (export ((ascii
 	    bitwise
+	    byte-vectors
 	    code-vectors
 	    features
 	    ;; records  - lose
@@ -243,14 +244,16 @@
 	    escapes
 	    locations
 	    loopholes
+	    low-channels
 	    low-level
 	    ports
 	    primitives
 	    scheme-level-0
+	    shared-bindings
 	    silly
 	    source-file-names
 	    structure-refs
-	    user-messages
+	    debug-messages
 	    vm-exposure
 	    write-images)
 	   :structure)))
@@ -295,6 +298,7 @@
 	    reading
 	    records-internal
 	    root-scheduler
+	    session-data
 	    usual-resumer
 	    ;; silly
 	    ;; structure-refs
@@ -312,6 +316,7 @@
 	    debug-data
 	    defpackage
 	    filenames
+	    flat-environments
 	    inline
 	    meta-types
 	    interfaces

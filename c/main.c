@@ -1,9 +1,11 @@
-/* Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "scheme48vm.h"
+#include "scheme48heap.h"
 
 #if !defined(DEFAULT_HEAP_SIZE)
 /* 1.5 megacell = 6 megabytes (3 meg per semispace) */
@@ -26,21 +28,11 @@
 
 #endif /* STATIC_AREAS */
 
+extern void	s48_sysdep_init(void);
+extern void	s48_initialize_external_modules(void);
 
-char *object_file;   /* specified via a command line argument */
-char *reloc_file;    /* dynamic loading will set this */
-
-
-extern void	scheme48_init(void);
-extern void	sysdep_init(void);
-extern void	s48_heap_init(void);
-extern long	required_init_space(unsigned char **, long);
-extern void	initialize_heap(long, long);
-extern void	initialize_vm(long, long);
-extern long	call_startup_procedure(long, char **, long);
-extern long	check_image_header(unsigned char *);
-extern long	read_image(long);
-extern void	register_static_areas(unsigned char, long *, long *, unsigned char, long *, long *);
+char *s48_object_file;   /* specified via a command line argument */
+char *s48_reloc_file;    /* dynamic loading will set this */
 
 int
 main(argc, argv)
@@ -52,10 +44,13 @@ main(argc, argv)
   int errors = 0;
   long return_value;
   void *heap, *stack;
-  long required_heap_size, startup_proc;
+  long required_heap_size;
+  int warn_undefined_imported_bindings_p = 1;
 
 #if defined(STATIC_AREAS)
-  extern long entry;
+  extern long static_entry;
+  extern long static_symbol_table;
+  extern long static_imported_binding_table, static_exported_binding_table;
   extern long p_count, *p_areas[], p_sizes[];
   extern long i_count, *i_areas[], i_sizes[];
 #endif
@@ -63,7 +58,7 @@ main(argc, argv)
   long vm_argc = 0;
   char *me = *argv;		/* Save program name. */
 
-  object_file = reloc_file = NULL;
+  s48_object_file = s48_reloc_file = NULL;
 
   argv++; argc--;		/* Skip program name. */
 
@@ -95,44 +90,48 @@ main(argc, argv)
       case 'o':
         argc--; argv++;
 	if (argc == 0) { errors++; break; }
-        object_file = *argv;
+        s48_object_file = *argv;
+	break;
+      case 'u':
+        argc--; argv++;
+	warn_undefined_imported_bindings_p = 0;
 	break;
       default:
 	fprintf(stderr, "Invalid argument: %s\n", *argv);
 	errors++;
       }
     else
-      if (argv[0][0] != '\0') 
-	{ fprintf(stderr, "Invalid argument: %s\n", *argv);
-	  errors++; }
+      if (argv[0][0] != '\0') {
+	fprintf(stderr, "Invalid argument: %s\n", *argv);
+	errors++; }
   if (errors != 0) {
     fprintf(stderr,
 "Usage: %s [options] [-a arguments]\n\
 Options: -h <total heap size in words>\n\
 	 -s <stack buffer size in words>\n\
          -i <image file name>\n\
-         -o <object file name>\n",
+         -o <object file name>\n\
+         -u [don't warn on unbound external identifiers]",
 	    me);
     return 1;
   }
 
-  sysdep_init();
+  s48_sysdep_init();
   s48_heap_init();
-  scheme48_init();
+  s48_init();
 
   if (image_name == NULL)
     required_heap_size = 0;
   else {
     /* check_image_header returns number of bytes; required_heap_size
        is number of cells. */
-    required_heap_size = check_image_header((unsigned char *)image_name) >> 2;
+    required_heap_size =
+      s48_check_image_header((unsigned char *)image_name) >> 2;
     if (-1 == required_heap_size) {
       fprintf(stderr, "Image file \"%s\" is unusable.\n", image_name);
       return 1; }
   }
 
-  required_heap_size += required_init_space((unsigned char **)argv, vm_argc);
-  
   /* two semi-spaces, plus we want some room to maneuver */
   if (heap_size < 4 * required_heap_size) {
     fprintf(stderr, "heap size %ld is too small, using %ld\n",
@@ -146,29 +145,37 @@ Options: -h <total heap size in words>\n\
     fprintf(stderr, "system is out of memory\n");
     return 1; }
 
-  initialize_heap((long)heap, heap_size);
-  initialize_vm((long)stack, stack_size);
+  s48_initialize_heap((long)heap, heap_size);
 
 #if defined(STATIC_AREAS)
   if (image_name == NULL) {
-    register_static_areas(p_count, p_areas, p_sizes,
-			  i_count, i_areas, i_sizes);
-    startup_proc = entry;
-  } else
-    startup_proc = read_image((long)0);
-#else
-  startup_proc = read_image((long)0);
-#endif
-
-  if (startup_proc == -1) {
+    s48_register_static_areas(p_count, p_areas, p_sizes,
+			      i_count, i_areas, i_sizes);
+    s48_set_image_valuesB(static_entry,
+			  static_symbol_table,
+			  static_imported_binding_table,
+			  static_exported_binding_table);
+  } else if (s48_read_image() == -1) {
     fprintf(stderr, "Image file \"%s\" is unusable.\n", image_name);
     return 1; }
+#else
+  if (s48_read_image() == -1) {
+    fprintf(stderr, "Image file \"%s\" is unusable.\n", image_name);
+    return 1; }
+#endif
 
-  return_value = call_startup_procedure(startup_proc, argv, vm_argc);
+  s48_initialize_vm(stack, stack_size);
 
-  if (reloc_file != NULL)
-    if (0 != unlink(reloc_file))
-      fprintf(stderr, "unable to delete file %s\n", reloc_file);
+  s48_initialize_external_modules();
+  
+  if (warn_undefined_imported_bindings_p)
+    s48_warn_about_undefined_imported_bindings();
+  
+  return_value = s48_call_startup_procedure(argv, vm_argc);
+
+  if (s48_reloc_file != NULL)
+    if (0 != unlink(s48_reloc_file))
+      fprintf(stderr, "unable to delete file %s\n", s48_reloc_file);
 
   return(return_value);
 }

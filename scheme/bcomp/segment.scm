@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; The byte code compiler's assembly phase.
@@ -76,7 +75,7 @@
   (set-astate-pc! a (+ (astate-pc a) 1)))
 
 (define (literal->index a thing)
-  (let ((probe (position thing (astate-literals a)))
+  (let ((probe (literal-position thing (astate-literals a)))
 	(count (astate-count a)))
     (if probe
 	;; +++  Eliminate duplicate entries.
@@ -91,6 +90,25 @@
 	  (set-astate-literals! a (cons thing (astate-literals a)))
 	  (set-astate-count! a (+ count 1))
 	  count))))
+
+(define (literal-position thing literals)
+  (position (if (thingie? thing)
+		(lambda (thing other-thing)
+		  (and (thingie? other-thing)
+		       (equal? (thingie-name thing)
+			       (thingie-name other-thing))))
+		equal?)
+	    thing
+	    literals))
+
+(define (position pred elt list)
+  (let loop ((i 0) (l list))
+    (cond ((null? l)
+	   #f)
+	  ((pred elt (car l))
+	   i)
+	  (else
+	   (loop (+ i 1) (cdr l))))))
 
 (define (emit-literal! a thing)
   (let ((index (literal->index a thing)))
@@ -174,13 +192,12 @@
 ; Templates for inferior closures are also obtained from the
 ; (parent's) template.
 
-(define (instruction-with-template opcode segment name)
-  (make-segment 3
-		(lambda (astate)
-		  (emit-byte! astate opcode)
-		  (emit-literal! astate
-				 (segment->template segment
-						    name
+(define (template segment name)
+  (make-segment 2
+  		(lambda (astate)
+  		  (emit-literal! astate
+  				 (segment->template segment
+  						    name
 						    (astate-pc astate)
 						    (fluid $debug-data))))))
 
@@ -312,4 +329,3 @@
       (fluid $environment-maps))))
 
 (define $environment-maps (make-fluid '()))
-(define environment-maps-table (make-table))

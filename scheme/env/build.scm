@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Commands for writing images.
@@ -23,10 +22,10 @@
     (build-image (lambda (arg)
 		   (with-interaction-environment env
 		     (lambda ()
-		       (start-command-processor arg
-						context
-						(lambda ()
-						  (greet-user info))))))
+		       (restart-command-processor arg
+						  context
+						  (lambda ()
+						    (greet-user info))))))
 		 filename)))
 
 ; build <exp> <filename>
@@ -43,7 +42,6 @@
 (define (build-image start filename)
   (let ((filename (translate filename)))
     (write-line (string-append "Writing " filename) (command-output))
-    (flush-the-symbol-table!)	;Gets restored at next use of string->symbol
     (write-image filename
 		 (stand-alone-resumer start)
 		 "")

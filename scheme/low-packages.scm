@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Things provided by the byte compiler / VM, together with a few
@@ -9,6 +8,7 @@
 		    (primitives primitives-interface)
 		    (bitwise bitwise-interface)
 		    (closures closures-interface)
+		    (byte-vectors byte-vectors-interface)
 		    (code-vectors code-vectors-interface)
 		    (write-images (export write-image))	;for linker
 		    (source-file-names (export (%file-name% :syntax)))
@@ -18,10 +18,11 @@
 		    (vm-exposure vm-exposure-interface)
 		    (ascii ascii-interface)
 		    (locations locations-interface)
-		    (channels channels-interface)
+		    (low-channels low-channels-interface)
 		    (ports ports-interface)
+		    (shared-bindings shared-bindings-interface)
 		    (signals signals-interface)
-		    (user-messages (export user-message))
+		    (debug-messages (export debug-message))
 		    (silly (export reverse-list->string))
 		    (code-quote (export (code-quote :syntax)))
 		    (structure-refs (export (structure-ref :syntax))))

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; A dirty little inspector.
 ; This breaks abstractions left and right.
@@ -230,7 +229,8 @@
 
 (define (prepare-menu thing)
   (cond ((list? thing)
-         (map (lambda (x) (list #f x))
+         (map (lambda (x)
+		(list #f x))
               thing))
 
         ((pair? thing)
@@ -272,8 +272,7 @@
 ; save environment, for which names may be available.
 
 (define (prepare-continuation-menu thing)
-  (let ((dd (continuation-debug-data thing))
-        (next (continuation-parent thing)))
+  (let ((next (continuation-parent thing)))
     `(,@(let recur ((c thing))
 	  (if (eq? c next)
 	      '()
@@ -284,7 +283,8 @@
 			      l)))
 		    ((< i 0) l)))))
       ,@(prepare-environment-menu (continuation-env thing)
-				  (get-shape dd (continuation-pc thing))))))
+				  (get-shape (continuation-debug-data thing)
+					     (continuation-pc thing))))))
 
 (define (continuation-debug-data thing)
   (template-debug-data (continuation-template thing)))
@@ -313,8 +313,11 @@
             (append (map list (car shape) values)
                     (prepare-environment-menu (vector-ref env 0)
                                               (cdr shape)))
-            (append (map (lambda (x) (list #f x)) values)
-                    (prepare-environment-menu (vector-ref env 0) shape))))
+            (append (map (lambda (x)
+			   (list #f x))
+			 values)
+                    (prepare-environment-menu (vector-ref env 0)
+					      shape))))
       '()))
 
 (define (rib-values env)

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 (define (adjoin-bits high low k)
@@ -21,6 +20,15 @@
   (do ((i 0 (+ i 1)))
       ((>= i length))
     (vector-set! v i x)))
+
+; Apply PROC to 0 ... N-1.
+
+(define (natural-for-each proc n)
+  (do ((i 0 (+ i 1)))
+      ((= i n))
+    (proc i)))
+
+;----------------
 
 (define (error? status)
   (not (eq? status (enum errors no-errors))))

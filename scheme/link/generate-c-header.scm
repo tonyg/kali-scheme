@@ -1,27 +1,33 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
-
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; [This is a kludge.  Richard is loathe to include it in the
-; distribution.]
+; distribution.  But now the system itself uses it, so we're stuck.]
 
 ; Reads arch.scm and data.scm and writes out a C .h file with constants
 ; and macros for dealing with Scheme 48 data structures.
 
 ; Needs Big Scheme.
 
-; (make-c-header-file "scheme48.h" "vm/arch.scm" "vm/data.scm")
+; (make-c-header-file "scheme48.h" "scheme48.h.in"
+;                     "vm/arch.scm" "vm/data.scm" "rts/record.scm")
 
-(define (make-c-header-file c-file arch-file data-file)
-  (receive (stob-list stob-data)
+(define (make-c-header-file c-file c-in-file arch-file data-file record-file)
+  (receive (stob-list stob-data exception-list channel-status-list)
       (search-file arch-file
-		   '("stob enumeration" "(define stob-data ...)")
+		   '("stob enumeration"
+		     "(define stob-data ...)"
+		     "exception enumeration"
+		     "channel-status enumeration")
 		   (defines-enum? 'stob)
 		   enum-definition-list
 		   (lambda (x)
 		     (and (eq? (car x) 'define)
 			  (eq? (cadr x) 'stob-data)))
-		   (lambda (x) (cadr (caddr x))))
+		   (lambda (x) (cadr (caddr x)))
+		   (defines-enum? 'exception)
+		   enum-definition-list
+		   (defines-enum? 'channel-status-option)
+		   enum-definition-list)
     (receive (tag-list immediate-list)
 	(search-file data-file
 		     '("tag enumeration" "imm enumeration")
@@ -29,79 +35,179 @@
 		     enum-definition-list
 		     (defines-enum? 'imm)
 		     enum-definition-list)
-      (with-output-to-file c-file
-	(lambda ()
-	  (format #t "typedef long scheme_value;~%~%")
-	  (tag-stuff tag-list)
-	  (newline)
-	  (immediate-stuff immediate-list)
-	  (newline)
-	  (stob-stuff stob-list stob-data))))))
+      (let ((record-type-fields
+	     (search-file record-file
+			  '("(define record-type-fields ...")
+			  (lambda (x)
+			    (and (eq? (car x) 'define)
+				 (eq? (cadr x) 'record-type-fields)))
+			  (lambda (x) (cadr (caddr x))))))
+	(with-output-to-file c-file
+	  (lambda ()
+	    (format #t "/* This file was generated automatically.~%")
+	    (format #t "   It's probably not a good idea to change it. */~%")
+	    (newline)
+	    (format #t "#ifndef _H_SCHEME48~%")
+	    (format #t "#define _H_SCHEME48~%")
+	    (newline)
+	    (copy-file c-in-file)
+	    (newline)
+	    (tag-stuff tag-list)
+	    (newline)
+	    (immediate-stuff immediate-list)
+	    (newline)
+	    (stob-stuff stob-list stob-data)
+	    (newline)
+	    (enumeration-stuff record-type-fields
+			       "S48_RECORD_TYPE_~A(x) S48_RECORD_REF((x), ~D)")
+	    (newline)
+	    (enumeration-stuff exception-list "S48_EXCEPTION_~A ~D")
+	    (newline)
+	    (enumeration-stuff channel-status-list
+		       "S48_CHANNEL_STATUS_~A S48_UNSAFE_ENTER_FIXNUM(~D)")
+	    (newline)
+	    (format #t "#endif /* _H_SCHEME48 */")
+	    (newline)))))))
 	  
 (define (tag-stuff tag-list)
   (do ((tags tag-list (cdr tags))
        (i 0 (+ i 1)))
       ((null? tags))
     (let ((name (upcase (car tags))))
-      (c-define "~A_TAG ~D" name i)
-      (c-define "~AP(x) (((long)(x) & 3L) == ~A_TAG)" name name)))
+      (c-define "S48_~A_TAG ~D" name i)
+      (c-define "S48_~A_P(x) (((long)(x) & 3L) == S48_~A_TAG)" name name)))
   (newline)
-  (c-define "ENTER_FIXNUM(n)   ((scheme_value)((n) << 2))")
-  (c-define "EXTRACT_FIXNUM(x) ((long)(x) >> 2)"))
+  (c-define "S48_UNSAFE_ENTER_FIXNUM(n)   ((s48_value)((n) << 2))")
+  (c-define "S48_UNSAFE_EXTRACT_FIXNUM(x) ((long)(x) >> 2)"))
 
 (define (immediate-stuff imm-list)
-  (c-define "MISC_IMMEDIATE(n) (scheme_value)(IMMEDIATE_TAG | ((n) << 2))")
+  (c-define "S48_MISC_IMMEDIATE(n) ((s48_value)(S48_IMMEDIATE_TAG | ((n) << 2)))")
   (do ((imm imm-list (cdr imm))
        (i 0 (+ i 1)))
       ((null? imm))
     (let ((name (upcase (car imm))))
-      (c-define "SCH~A    MISC_IMMEDIATE(~D)" name i)))
-  (c-define "UNDEFINED SCHUNDEFINED")
-  (c-define "UNSPECIFIC SCHUNSPECIFIC")
+      (c-define "S48_~A    (S48_MISC_IMMEDIATE(~D))" name i)))
   (newline)
-  (c-define "ENTER_BOOLEAN(n) ((n) ? SCHTRUE : SCHFALSE)")
-  (c-define "EXTRACT_BOOLEAN(x) ((x) != SCHFALSE)")
+  (c-define "S48_ENTER_BOOLEAN(n) ((n) ? S48_TRUE : S48_FALSE)")
+  (c-define "S48_EXTRACT_BOOLEAN(x) ((x) != S48_FALSE)")
   (newline)
-  (c-define "ENTER_CHAR(c) (SCHCHAR | ((c) << 8))")
-  (c-define "EXTRACT_CHAR(x) ((x) >> 8)")
-  (c-define "CHARP(x) ((((long) (x)) & 0xff) == SCHCHAR)"))
+  (c-define "S48_UNSAFE_ENTER_CHAR(c) (S48_CHAR | ((c) << 8))")
+  (c-define "S48_UNSAFE_EXTRACT_CHAR(x) ((x) >> 8)")
+  (c-define "S48_CHAR_P(x) ((((long) (x)) & 0xff) == S48_CHAR)"))
 
 (define (stob-stuff stob-list stob-data)
   (let ((type-mask (let ((len (length stob-list)))
 		     (do ((i 2 (* i 2)))
 			 ((>= i len) (- i 1))))))
-    (c-define "ADDRESS_AFTER_HEADER(x, type) ((type *)((x) - STOB_TAG))")
-    (c-define "STOB_REF(x, i) ((ADDRESS_AFTER_HEADER(x, long))[i])")
-    (c-define "STOB_TYPE(x)   ((STOB_HEADER(x)>>2)&~D)" type-mask)
-    (c-define "STOB_HEADER(x) (STOB_REF((x),-1))")
-    (c-define "STOB_BLENGTH(x) (STOB_HEADER(x) >> 8)")
-    (c-define "STOB_LLENGTH(x) (STOB_HEADER(x) >> 10)")
+    (c-define "S48_ADDRESS_AFTER_HEADER(x, type) ((type *)((x) - S48_STOB_TAG))")
+    (c-define "S48_STOB_REF(x, i) (S48_ADDRESS_AFTER_HEADER(x, s48_value)[i])")
+    (c-define (string-append
+	       "S48_STOB_BYTE_REF(x, i) "
+	       "(((char *)S48_ADDRESS_AFTER_HEADER(x, s48_value))[i])"))
+    (c-define (string-append
+	       "S48_STOB_SET(x, i, v) "
+	       "do { "
+	       "s48_value __stob_set_x = (x); "
+	       "long __stob_set_i = (i); "
+	       "s48_value __stob_set_v = (v); "
+	       "if (S48_STOB_IMMUTABLEP(__stob_set_x)) "
+	       "s48_raise_argtype_error(__stob_set_x); "
+	       "else { "
+	       "S48_WRITE_BARRIER((__stob_set_x), "
+	       "(char *) (&S48_STOB_REF((__stob_set_x), (__stob_set_i))),"
+	       "(__stob_set_v)); "
+	       "*(&S48_STOB_REF((__stob_set_x), (__stob_set_i))) = (__stob_set_v); "
+	       "} "
+	       "} while (0)"))
+    (c-define (string-append
+	       "S48_STOB_BYTE_SET(x, i, v) "
+	       "do { "
+	       "char __stob_set_x = (x); "
+	       "long __stob_set_i = (i); "
+	       "s48_value __stob_set_v = (v); "
+	       "if (S48_STOB_IMMUTABLEP(__stob_set_x)) "
+	       "s48_raise_argtype_error(__stob_set_x); "
+	       "else "
+	       "*(&S48_STOB_BYTE_REF((__stob_set_x), (__stob_set_i))) = (__stob_set_v); "
+	       "} while (0)"))
+    (c-define "S48_STOB_TYPE(x)   ((S48_STOB_HEADER(x)>>2)&~D)" type-mask)
+    (c-define "S48_STOB_HEADER(x) (S48_STOB_REF((x),-1))")
+    (c-define "S48_STOB_ADDRESS(x) (&(S48_STOB_HEADER(x)))")
+    (c-define "S48_STOB_BYTE_LENGTH(x) (S48_STOB_HEADER(x) >> 8)")
+    (c-define "S48_STOB_DESCRIPTOR_LENGTH(x) (S48_STOB_HEADER(x) >> 10)")
+    (c-define "S48_STOB_IMMUTABLEP(x) ((S48_STOB_HEADER(x)>>7) & 1)")
+    (c-define "S48_STOB_MAKE_IMMUTABLE(x) ((S48_STOB_HEADER(x)) |= (1<<7))")
     (newline)
     (do ((stob stob-list (cdr stob))
 	 (i 0 (+ i 1)))
 	((null? stob))
       (let ((name (upcase (car stob))))
-	(c-define "STOBTYPE_~A ~D" name i)
-	(c-define "~AP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_~A))"
-		  name name)))
+	(c-define "S48_STOBTYPE_~A ~D" name i)
+	(c-define "S48_~A_P(x) (s48_stob_has_type(x, ~D))" name i)))
     (newline)
     (for-each (lambda (data)
-		(do ((accs (cdddr data) (cdr accs))
-		     (i 0 (+ i 1)))
-		    ((null? accs))
-		  (let ((name (upcase (caar accs))))
-		    (c-define "~A(x) STOB_REF(x, ~D)" name i))))
+		(let ((type (upcase (car data))))
+		  (do ((accs (cdddr data) (cdr accs))
+		       (i 0 (+ i 1)))
+		      ((null? accs))
+		    (let ((name (upcase (caar accs))))
+		      (c-define "S48_~A_OFFSET ~D" name i)
+		      (c-define "S48_~A(x) (s48_stob_ref((x), S48_STOBTYPE_~A, ~D))"
+				name type i)
+		      (c-define "S48_UNSAFE_~A(x) (S48_STOB_REF((x), ~D))" name i))
+		    (if (not (null? (cdar accs)))
+			(let ((name (upcase (cadar accs))))
+			  (c-define "S48_~A(x, v) (s48_stob_ref((x), S48_STOBTYPE_~A, ~D, (v)))"
+				    name type i)
+			  (c-define "S48_UNSAFE_~A(x, v) S48_STOB_SET((x), ~D, (v))" name i))))))
 	      stob-data)
     (newline)
-    (c-define "VECTOR_LENGTH(x) STOB_LLENGTH(x)")
-    (c-define "VECTOR_REF(x, i) STOB_REF(x, i)")
-    (c-define "CODE_VECTOR_LENGTH(x)  STOB_BLENGTH(x)")
-    (c-define "CODE_VECTOR_REF(x, i)  (ADDRESS_AFTER_HEADER(x, unsigned char)[i])")
-    (c-define "STRING_LENGTH(x)  (STOB_BLENGTH(x)-1)")
-    (c-define "STRING_REF(x, i)  (ADDRESS_AFTER_HEADER(x, char)[i])")))
+    (for-each (lambda (type index)
+		(c-define "S48_~A_LENGTH(x) (s48_stob_length((x), S48_STOBTYPE_~A))"
+			  type type)
+		(c-define "S48_UNSAFE_~A_LENGTH(x) (STOB_DESCRIPTOR_LENGTH(x))"
+			  type)
+		(c-define "S48_~A_REF(x, i) (s48_stob_ref((x), S48_STOBTYPE_~A, ~A))"
+			  type type index)
+		(c-define "S48_~A_SET(x, i, v) (s48_stob_set((x), S48_STOBTYPE_~A, ~A, (v)))"
+			  type type index)
+		(c-define "S48_UNSAFE_~A_REF(x, i) (S48_STOB_REF((x), ~A))"
+			  type index)
+		(c-define "S48_UNSAFE_~A_SET(x, i, v) S48_STOB_SET((x), ~A, (v))"
+			  type index))
+	      '("VECTOR" "RECORD")
+	      '("(i)" "(i) + 1"))
+    (c-define "S48_RECORD_TYPE(x) (s48_stob_ref((x), S48_STOBTYPE_RECORD))")
+    (c-define "S48_UNSAFE_RECORD_TYPE(x) (STOB_REF((x), 0))")
+    (for-each (lambda (type)
+		(c-define "S48_~A_LENGTH(x) (s48_stob_byte_length((x), S48_STOBTYPE_~A))"
+			  type type)
+		(c-define "S48_~A_REF(x, i) (s48_stob_byte_ref((x), S48_STOBTYPE_~A, (i)))"
+			  type type)
+		(c-define "S48_~A_SET(x, i, v) (s48_stob_byte_set((x), S48_STOBTYPE_~A, (i), (v)))"
+			  type type)
+		(c-define "S48_UNSAFE_~A_REF(x, i) (S48_STOB_BYTE_REF((x), (i)))"
+			  type)
+		(c-define "S48_UNSAFE_~A_SET(x, i, v) S48_BYTE_STOB_SET((x), (i), (v))"
+			  type))
+	      '("BYTE_VECTOR" "STRING"))
+    (c-define "S48_UNSAFE_BYTE_VECTOR_LENGTH(x) (S48_STOB_BYTE_LENGTH(x))")
+    (c-define "S48_UNSAFE_STRING_LENGTH(x) (S48_STOB_BYTE_LENGTH(x) - 1)")
+    (c-define "S48_UNSAFE_EXTRACT_STRING(x) (S48_ADDRESS_AFTER_HEADER((x), char))")
+
+    (c-define (string-append "S48_EXTRACT_EXTERNAL_OBJECT(x, type) "
+			     "((type *)(S48_ADDRESS_AFTER_HEADER(x, long)+1))"))))
+
+(define (enumeration-stuff names format-string)
+  (do ((names names (cdr names))
+       (i 0 (+ 1 i)))
+      ((null? names))
+    (let ((name (upcase (car names))))
+      (c-define format-string name i))))
 
 ; - becomes _ > becomes TO_ (so -> turns into _TO_)
 ; ? becomes P
+; ! disappears
 
 (define (upcase symbol)
   (do ((chars (string->list (symbol->string symbol)) (cdr chars))
@@ -109,6 +215,7 @@
 		  ((#\>) (append (string->list "_OT") res))
 		  ((#\-) (cons #\_ res))
 		  ((#\?) (cons #\P res))
+		  ((#\/ #\!) res)
 		  (else (cons (char-upcase (car chars)) res)))))
       ((null? chars)
        (list->string (reverse res)))))
@@ -123,6 +230,24 @@
 
 (define enum-definition-list caddr)
 
+; Copy the file to the current-output-file.
+
+(define (copy-file filename)
+  (call-with-input-file filename
+      (lambda (in)
+	(let loop ()
+	  (let ((c (read-char in)))
+	    (if (not (eof-object? c))
+		(begin
+		  (write-char c)
+		  (loop))))))))
+
+; WHAT-FOR is a list of names, used only for debugging.
+; PRED+EXTRACT is a list of <predicate0> <extract0> <predicate1> <extract1> ... .
+; Each form in the file is read and passed to the predicates that haven't yet
+; matched.  If the predicate matches the corresponding extractor is called on
+; the form.  The results of the extractors are returned.
+;
 ; STUFF is list of ((predicate . extract) . name).  <name> is replaced
 ; with the value when it is found.
 

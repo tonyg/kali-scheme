@@ -1,6 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The stack grows from higher addresses to lower ones.
 ; *STACK-BEGIN* and *STACK-END* delimit the stack portion of memory.
@@ -25,21 +24,23 @@
 (define stack-slack
   (+ default-stack-space
      continuation-stack-size	    ; *bottom-of-stack*
-     (+ continuation-stack-size 7)  ; exceptions need at most 7 values
-                                    ; (from examining the code)
+     (+ continuation-stack-size 13) ; exceptions need at most 14 values
+                                    ; (long pole is external exceptions with
+                                    ; exception + procedure-name + 10 irritants +
+                                    ; saved-exception + stack-block)
      (+ continuation-stack-size 7)  ; interrupts need at most 7 values
                                     ; (also from examining the code)
      (+ stack-warning-limit 2)))    ; safety
 
 ; *BOTTOM-OF-STACK* is a continuation that lies a the base of the stack.
 
-(define *stack-begin*     (unspecific))
-(define *stack-end*       (unspecific))
-(define *stack*           (unspecific))
-(define *stack-limit*     (unspecific))
+(define *stack-begin*)
+(define *stack-end*)
+(define *stack*)
+(define *stack-limit*)
 
 ; Current continuation
-(define *cont* (unspecific))
+(define *cont*)
 
 ; For tracking the reason for copying closures and environments (used for
 ; debugging and gathering statistics).
@@ -53,11 +54,11 @@
 ; When it is invoked it copies the next continuation out of the heap (if there
 ; is any such) and invokes that instead.
 
-(define *bottom-of-stack* (unspecific))
+(define *bottom-of-stack*)
 
 ; Initialize the stack and related registers.  All sizes are in descriptors.
 
-(define (initialize-stack start have-size)
+(define (initialize-stack+gc start have-size)
   (let ((required-size (+ available-stack-space stack-slack)))
     (receive (start size)
 	(if (>= have-size required-size)
@@ -75,16 +76,14 @@
       (do ((a start (address1+ a)))
 	  ((address= a *stack-end*))
 	(store! a stack-marker))
-      (push-continuation-on-stack (make-template-containing-ops
-				   (enum op get-cont-from-heap)
-				   (enum op return))
-				  (enter-fixnum 0)
-				  0)
+      (let ((key (ensure-space (op-template-size 2))))
+	(push-continuation-on-stack
+	  (make-template-containing-ops (enum op get-cont-from-heap)
+					(enum op return)
+					key)
+	  (enter-fixnum 0)
+	  0))
       (set! *bottom-of-stack* *cont*))))
-
-; The amount of heap space required to initialize the stack.
-
-(define initial-stack-heap-space (op-template-size 2))
 
 (define (reset-stack-pointer base-continuation)
   (set! *stack* (the-pointer-before
@@ -264,7 +263,7 @@
 ; migrated to the heap (their header gets clobbered during the of migration).
 ; Any header type that is not normally found on the heap will work.
 
-(define argument-limit-marker (make-header (enum stob external) 0))
+(define argument-limit-marker (make-header (enum stob channel) 0))
 
 (define (really-move-args-above-cont! nargs top-of-args)
   (let ((start-loc (the-pointer-before (address-at-header *cont*)))

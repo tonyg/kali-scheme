@@ -1,6 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
-
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Code for keeping external pointers in a table similar to the symbol table.
 ;
@@ -10,7 +8,27 @@
 ; (LOOKUP-ALL-EXTERNALS)   looks up new values for all external pointers;
 ;                          ideally this should be called automatically
 ;                          on startup
+;
+; (DYNAMIC-LOAD filename)  loads the file into the current image
+;
+; The following used to be in the PRIMITIVES interface when externals were
+; a primitive data type.
+;
+; external?
+; external-name
+; external-value
+; (external-lookup external)
+; (call-external external . args)
 
+; New, non-primitive data type.
+
+(define-record-type external :external
+  (make-external name value)
+  external?
+  (name external-name)
+  (value external-value))
+
+; Table of externals.
 
 (define *the-external-table* #f)
 
@@ -23,7 +41,7 @@
 		     (table-set! *the-external-table*
 				 (external-name external)
 				 external))
-		   (find-all (enum stob external))))
+		   (find-all-records :external)))
 
 (define (gc-externals)
   (flush-the-external-table!)
@@ -38,90 +56,72 @@
 
 (restore-the-external-table!)
 
-;------------------------------------------------------------
+;----------------
+; Making new externals.
 
 (define (get-external name)
   (cond ((table-ref *the-external-table* name)
 	 => (lambda (x) x))
 	(else
-	 (let ((new (maybe-external-lookup
-		     (make-external name (make-code-vector 4 0)))))
-	   (if new
-	       (table-set! *the-external-table* name new)
+	 (let* ((value (make-code-vector 4 0))
+		(new (make-external name value)))
+	   (table-set! *the-external-table* name new)
+	   (if (not (external-lookup name value))
 	       (warn "External not found" name))
 	   new))))
 
-(define (maybe-external-lookup external)
-  (call-with-current-continuation
-    (lambda (lose)
-      (with-handler
-	  (lambda (c punt)
-	    (cond ((or (not (exception? c))
-		       (not (= op/external-lookup (exception-opcode c))))
-		   (punt))
-		  (else
-		   (lose #f))))
-	(lambda ()
-	  (external-lookup external)
-	  external)))))
+(import-lambda-definition external-lookup (name value) "s48_external_lookup")
 
-(define op/external-lookup (enum op external-lookup))
+; No longer necessary, as all strings now end with nulls.
 
 (define (null-terminate str)
-  ;; No longer necessary
-  (string-append str (string (ascii->char 0))))
+  str)
 
-;------------------------------------------------------------
+;----------------
+; Re-lookup all externals.  This needs to be done whenever we resume an image.
 
 (define (lookup-all-externals)
-  (cond ((try-to-lookup-all-externals)
+  (cond ((null? (really-lookup-all-externals))
 	 #t)
 	(else
 	 (display "GCing to try to remove unbound externals")
 	 (newline)
 	 (gc-externals)
-	 (really-lookup-all-externals))))
+	 (let ((losers (really-lookup-all-externals)))
+	   (if (null? losers)
+	       #t
+	       (let ((out (current-error-port)))
+		 (display "Unbound external(s):" out)
+		 (for-each (lambda (name)
+			     (write-char #\space out)
+			     (display name out))
+			   losers)
+		 #f))))))
+
 
 ; Quietly look up all externals, returning #F if unsuccessful
 
 (define (try-to-lookup-all-externals)
-  (call-with-current-continuation
-    (lambda (k)
-      (lookup-all-externals-with-handler
-       (lambda (external)
-	 (k #f)))
-      #t)))
+  (null? (really-lookup-all-externals)))
 
-; Look up all externals, printing out the names of those that cannot
+; Look up all externals, returning a list of the names of those that cannot
 ; be found.
 
 (define (really-lookup-all-externals)
-  (let ((okay? #t))
-    (lookup-all-externals-with-handler
-     (lambda (external)
-       (cond (okay?
-	      (display "Remaining unbound external(s):")
-	      (newline)
-	      (set! okay? #f)))
-       (display " ")
-       (display (external-name external))
-       (newline)))
-    okay?))
+  (let ((losers '()))
+    (table-walk (lambda (name external)
+		  (if (not (external-lookup name (external-value external)))
+		      (set! losers (cons name losers))))
+		*the-external-table*)
+    losers))
 
-; Look up all externals, calling PROC on any that cannot be found.
-; This assumes that not finding a value for the name is the only reason why
-; op/external-lookup would fail, which isn't quite true.  Other possible
-; reasons are that the name is not a string, or the value is not a
-; code vector.
+;----------------
 
-(define (lookup-all-externals-with-handler proc)
-  (with-handler
-   (lambda (c punt)
-     (if (or (not (exception? c))
-	     (not (= op/external-lookup (exception-opcode c))))
-	 (punt)
-	 (proc (car (exception-arguments c)))))
-   (lambda ()
-     (table-walk (lambda (name external)
-		   (external-lookup external))
-		 *the-external-table*))))
+(define (call-external external . args)
+  (apply call-external-value (external-value external)
+	                     (external-name external)
+			     args))
+
+;----------------
+
+(import-lambda-definition dynamic-load (filename) "s48_dynamic_load")

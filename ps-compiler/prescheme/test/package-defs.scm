@@ -1,3 +1,5 @@
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+
 
 (define-structures ((fact (export *one* fact all)))
   (open prescheme)

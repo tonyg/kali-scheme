@@ -1,5 +1,5 @@
 
-;;; Copyright (c) 1991 Richard Kelsey
+; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
 
 ; This file contains the definitions of the node tree data structure.
 

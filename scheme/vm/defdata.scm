@@ -1,6 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Macros for defining data types.
 
@@ -29,12 +28,14 @@
 	     (size (concatenate-symbol name '- 'size))
 	     (shorten (lambda (l1 l2) (map (lambda (x1 x2) x2 x1) l1 l2)))
 	     (vars (shorten `(a b c d e f g h i j) body)))
-	`(begin (define ,make
-		  (let ((type (enum stob ,type)))
-		    (lambda (,@vars key)
-		      ,(if immutable?
-			   `(immutable-d-vector type key ,@vars)
-			   `(d-vector type key ,@vars)))))
+	`(begin ,@(if make
+		      `((define ,make
+			  (let ((type (enum stob ,type)))
+			    (lambda (,@vars key)
+			      ,(if immutable?
+				   `(immutable-d-vector type key ,@vars)
+				   `(d-vector type key ,@vars))))))
+		      '())
 		(define ,pred (stob-predicate (enum stob ,type)))
 		(define ,size (+ ,(length body) stob-overhead))
 		,@(do ((s body (cdr s))

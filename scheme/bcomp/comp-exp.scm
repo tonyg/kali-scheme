@@ -1,6 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Compiling expressions.
 
@@ -78,17 +77,17 @@
 
 (define-compilator 'name 'leaf
   (lambda (node level depth cont)
-    (let* ((binding (name-node-binding node level))
+    (let* ((binding (name-node-binding node))
 	   (name (node-form node)))
       (deliver-value
-         (if (and (binding? binding)
-		  (pair? (binding-place binding)))
-	     (let* ((level+over (binding-place binding))
-		    (back (- level (car level+over)))
-		    (over (cdr level+over)))
-	       (if (>= over byte-limit)
+         (if (pair? binding)
+	     (let ((back (- level (car binding)))
+		   (over (cdr binding)))
+	       (if (or (>= back byte-limit)
+		       (>= over byte-limit))
 		   (instruction (enum op big-local)
-				back
+				(high-byte back)
+				(low-byte back)
 				(high-byte over)
 				(low-byte over))
 		   (case back
@@ -110,17 +109,18 @@
 	   (lhs-node (cadr exp))
 	   (name (node-form lhs-node))
 	   ;; Error if not a name node...
-	   (binding (name-node-binding lhs-node level)))
+	   (binding (name-node-binding lhs-node)))
       (sequentially
        (compile (caddr exp) level depth (named-cont name))
        (deliver-value
-	(if (and (binding? binding)
-		 (pair? (binding-place binding)))
-	    (let ((level+over (binding-place binding)))
+	(if (pair? binding)
+	    (let ((back (- level (car binding)))
+		  (over (cdr binding)))
 	      (instruction (enum op set-local!)
-			   (- level (car level+over))
-			   (high-byte (cdr level+over))
-			   (low-byte (cdr level+over))))
+			   (high-byte back)
+			   (low-byte back)
+			   (high-byte over)
+			   (low-byte over)))
 	    (instruction-with-location (enum op set-global!)
 				       binding
 				       name
@@ -176,11 +176,19 @@
 	      ((and (lambda-node? proc-node)
 		    (not (n-ary? (cadr (node-form proc-node)))))
 	       (compile-redex proc-node (cdr (node-form node)) level depth cont))
+ 	      ((and (literal-node? proc-node)
+ 		    (primop? (node-form proc-node)))
+ 	       (let ((primop (node-form proc-node)))
+ 		 (if (primop-compilator primop)
+ 		     ((primop-compilator primop) node level depth cont)
+ 		     (error "compiler bug: primop has no compilator"
+ 			    primop
+ 			    (schemify node)))))
 	      (else
 	       (compile-unknown-call node level depth cont))))))
 
 (define (compile-name-call node proc-node level depth cont)
-  (let ((binding (node-ref proc-node 'binding)))
+  (let ((binding (name-node-binding proc-node)))
     (if (binding? binding)
 	(let ((static (binding-static binding)))
 	  (cond ((primop? static)
@@ -212,9 +220,7 @@
 	   (generate-trap cont
 			  "wrong number of arguments"
 			  (cons (schemify proc-node)
-				(map (lambda (arg)
-				       (schemify arg))
-				     args))))
+				(map schemify args))))
 	  ((null? formals)
 	   (compile body level depth cont)) ;+++
 	  (else
@@ -299,16 +305,14 @@
     (let ((exp (node-form node))
 	  (name (cont-name cont)))
       (deliver-value
-       (instruction-with-template (enum op closure)
-				  (compile-lambda exp
-						  level
-						  ;; Hack for constructors.
-						  ;; Cf. disclose method
-						  ;; (if name #t #f)
-						  #f)
-				  (if (name? name)
-				      (name->symbol name)
-				      #f))
+       (sequentially
+	 (instruction (enum op closure))
+	 (template (compile-lambda exp level #f)
+		   (if (name? name)
+		       (name->symbol name)
+		       #f))
+	 (instruction 0)) ; last byte of closure instruction, 0 means use
+                          ; *env* for environment
        cont))))
 
 (define (compile-lambda exp level body-name)
@@ -349,7 +353,7 @@
 		      (low-byte nargs)))
        (let ((vars (normalize-formals formals))
 	     (level (+ level 1)))
-	 (set-lexical-offsets! (reverse vars) level 1) ; 0 is super env
+	 (set-lexical-offsets! (reverse vars) level)
 	 (note-environment
 	  (map name-node->symbol vars)
 	  (compile body level 0 (return-cont name)))))))
@@ -366,63 +370,133 @@
 ; Give each name node in NAMES a binding record that has the names lexical
 ; level and offset.
 
-(define (set-lexical-offsets! names level start)
-  (let loop ((over start) (names names))
+(define (set-lexical-offsets! names level)
+  (let loop ((over 1) (names names))
     (if (not (null? names))
 	(begin
-	  (node-set! (car names)
+	  (node-set! (car names) 
 		     'binding
-		     (make-binding usual-variable-type (cons level over) #f))
+		     (cons level over))
 	  (loop (+ over 1) (cdr names))))))
 
-; Same as the above, except with a flat instead of nested environment.
-; (flat-lambda formals free-vars body)
-;
-;(define-compilator 'flat-lambda syntax-type
-;  (lambda (node level depth cont)
-;    (let* ((exp (node-form node))
-;           (name (cont-name cont))
-;           (name (if (name? name)
-;                     (name->symbol name)
-;                     name))
-;           (free (caddr exp))
-;           (free-names (map node-form free))
-;           (reverse-var-locs (lookup-variables free level))
-;           (template (compile-lambda `(lambda ,(cadr exp)
-;                                        . ,(cdddr exp))
-;                                     (bind-lexical-vars free-names level 0)
-;                                     #f)))
-;      (deliver-value
-;       (if (null? free)   ; not an optimization, but a hack around the
-;           (sequentially  ; somewhat odd assembler interface for templates
-;            (instruction-with-template (enum op literal) template name)
-;            (instruction (enum op push))
-;            (instruction (enum op false))
-;            (instruction (enum op make-stored-object) 2 (enum stob closure)))
-;           (sequentially
-;            (instruction (enum op flat-closure) (length free))
-;            (apply instruction (reverse (cdr reverse-var-locs)))
-;            (note-environment (map name->symbol (reverse free-names))
-;                              (instruction-with-template
-;                               (car reverse-var-locs)
-;                               template
-;                               name))))
-;       cont))))
-;
-;(define (lookup-variables vars level)
-;  (let loop ((vars vars) (locs '()))
-;    (if (null? vars)
-;        locs
-;        (let* ((name (node-form (car vars)))
-;               (binding (lookup level name)))
-;          (if (and (binding? binding)
-;                   (pair? (binding-place binding)))
-;              (let* ((level+over (binding-place binding))
-;                     (back (- (environment-level level)
-;                              (car level+over)))
-;                     (over (cdr level+over)))
-;                (loop (cdr vars) (cons over (cons back locs))))
-;              (error "variable in flat-lambda list is not local" (car vars)))))))
+(define-compilator 'flat-lambda syntax-type
+  (lambda (node level depth cont)
+    (let ((exp (node-form node))
+	  (name (cont-name cont)))
+      (let ((vars (cadr exp))
+	    (free (caddr exp))
+ 	    (body (cadddr exp)))
+ 	(deliver-value (compile-flat-lambda name vars body free level)
+ 		       cont)))))
+ 
+; The MAKE-FLAT-ENV instruction is designed to allow us to make nested flat
+; environments (i.e. flat environments consisting of a linked chain of vectors)
+; but this code doesn't generate them.  The nested environments would avoid
+; the need for offsets larger than a byte.  The current code cannot handle
+; large environments.
+; When we're done we have to restore the old locations of the free variables.
+
+(define (compile-flat-lambda name vars body free level)
+  (let* ((alist (sort-list (get-variables-offsets free level)
+			   (lambda (p1 p2)
+			     (< (cadr p1)
+				(cadr p2)))))
+	 (free (map car alist))
+	 (old-locations (map name-node-binding free)))
+    (set-lexical-offsets! free 0)  ; 0 is the level
+    (let ((code (sequentially
+		 (instruction (enum op false)) ; either the super env or the env
+		 (if (null? free)
+		     empty-segment
+		     (apply instruction (enum op make-flat-env)
+			    1   ; add in *val*
+			    (+ (length free) 1)
+			    (variable-env-data (map cdr alist))))
+		 (instruction (enum op closure))
+		 (note-environment (reverse (map node-form free))
+				   (template (compile-lambda `(lambda ,vars
+								,body)
+							     0
+							     #f)
+					     (if (name? name)
+						 (name->symbol name)
+						 #f)))
+		 (instruction 1)))) ; last byte of closure instruction, 1 means
+                                    ; use *val* as environment, instead of *env*
+      (for-each (lambda (node location)
+		  (node-set! node 'binding location))
+		free
+		old-locations)
+      code)))
+
+; Looks up VARS in CENV and returns an alist of (<name> . (<level> <over>))
+; pairs.
+
+(define (get-variables-offsets vars level)
+  (let loop ((vars vars) (locs '()))
+    (if (null? vars)
+	locs
+	(let ((binding (name-node-binding (car vars))))
+	  (if (pair? binding)
+	      (let ((back (- level (car binding)))
+		    (over (cdr binding)))
+		(if (< byte-limit over)
+		    (error "lexical environment limit exceeded; complain to implementors"))
+		(loop (cdr vars)
+		      (cons (cons (car vars)
+				  (cons back over))
+			    locs)))
+	      (error "variable in flat-lambda list is not local"
+		     (car vars)))))))
+
+; Addresses is a list of (level . over) pairs, sorted by level.
+; This returns the reverse of the following data:
+;   <back for level>
+;   <number of variables from this level>
+;   <over of 1st var> ...
+;   <back for next level>
+;   ...
+; If a <back> is too large we insert some empty levels.
+
+(define (variable-env-data addresses)
+  (let level-loop ((addresses addresses) (last-level 0) (data '()))
+    (if (null? addresses)
+	(reverse data)
+	(let ((level (caar addresses)))
+	  (let loop ((addresses addresses) (overs '()))
+	    (if (or (null? addresses)
+		    (not (= level (caar addresses))))
+		(level-loop addresses
+			    level
+			    (append overs
+				    (list (length overs))
+				    (let loop ((delta (- level last-level))
+					       (back '()))
+				      (if (<= delta byte-limit)
+					  (cons delta back)
+					  (loop (- delta byte-limit)
+						`(0 ,byte-limit . ,back))))
+				    data))
+		(loop (cdr addresses)
+		      (cons (cdar addresses) overs))))))))
+	  
+; We should probably just use the sort from big-scheme.
+
+(define (sort-list xs less?)
+  (letrec ((insert (lambda (x xs)
+		     (if (null? xs)
+			 (list x)
+			 (if (less? (car xs) x)
+			     (cons (car xs)
+				   (insert x (cdr xs)))
+			     (cons x xs))))))
+    (let sort ((xs xs))    
+      (if (null? xs)
+	  '()
+	  (insert (car xs)
+		  (sort (cdr xs)))))))
+
+; LETREC.
 
 (define-compilator 'letrec syntax-type
   (lambda (node level depth cont)
@@ -523,9 +597,9 @@
 
 ; Find lookup result that was cached by classifier
 
-(define (name-node-binding node level)
+(define (name-node-binding node)
   (or (node-ref node 'binding)
-      (node-form node)))  ; = (lookup level (node-form node))
+      (node-form node)))
 
 ; --------------------
 ; Utilities
@@ -613,8 +687,9 @@
 
 ; Node predicates and operators.
 
-(define lambda-node? (node-predicate 'lambda syntax-type))
-(define name-node?   (node-predicate 'name 'leaf))
+(define lambda-node?  (node-predicate 'lambda syntax-type))
+(define name-node?    (node-predicate 'name 'leaf))
+(define literal-node? (node-predicate 'literal 'leaf))
 
 (define operator/lambda     (get-operator 'lambda syntax-type))
 (define operator/set!	    (get-operator 'set!   syntax-type))

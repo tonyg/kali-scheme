@@ -1,4 +1,4 @@
-; Copyright (c) 1994 Richard Kelsey.  See file COPYING.
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
 
 ; temporary hack
 ;(define enqueue! enqueue)
@@ -266,8 +266,7 @@
 		   (x->cps (form-value form) (form-name form)))))
     (cond ((variable-set!? (form-var form))
 	   (set-form-type! form 'initialize)
-	   (set-form-value! form node)
-	   (set-form-lambdas! form '())
+	   (set-form-node! form node '())
 	   "settable")
          ((reference-node? node)
 	  (let ((var (reference-variable node)))
@@ -409,7 +408,7 @@
 (define (called-arguments? node)
   (any? (lambda (v)
 	  (any? (lambda (n)
-		  (eq? n (called-procedure-node (node-parent n))))
+		  (eq? n (called-node (node-parent n))))
 		(variable-refs v)))
 	(cdr (lambda-variables node))))
 
@@ -519,14 +518,14 @@
 ; Actually remove forms that are not referenced.
 
 (define (remove-unused-forms forms)
-  (format #t "Removing unused forms~%")
+;  (format #t "Removing unused forms~%")
   (filter (lambda (f)
 	    (cond ((or (not (form-used? f))
 		       )
 		       ;(let ((value (form-value f)))
 			; (and (quote-exp? value)
 			 ;     (external-value? (quote-exp-value value))))
-		   (format #t " ~S~%" (variable-name (form-var f)))
+;		   (format #t " ~S~%" (variable-name (form-var f)))
 		   (erase-variable (form-var f))
 		   (cond ((node? (form-value f))
 			  (erase (form-value f))

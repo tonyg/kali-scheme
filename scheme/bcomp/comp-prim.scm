@@ -1,6 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This is file cprim.scm.
@@ -12,11 +11,12 @@
 (define-compilator 'primitive-procedure syntax-type
   (lambda (node level depth cont)
     (let ((name (cadr (node-form node))))
-      (deliver-value (instruction-with-template
-                          (enum op closure)
-                          ((primop-closed (get-primop name)))
-                          (name->symbol (cont-name cont)))
-                     cont))))
+      (deliver-value (sequentially
+		       (instruction (enum op closure))
+		       (template ((primop-closed (get-primop name)))
+				 (name->symbol (cont-name cont)))
+		       (instruction 0)) ; last byte of closure instruction
+		     cont))))
 
 ; --------------------
 ; Direct primitives.
@@ -110,7 +110,7 @@
     (cons
      ,(proc (value-type value-type) pair-type))
     (intern
-     ,(proc (string-type vector-type) symbol-type))))
+     ,(proc (string-type) symbol-type))))
 
 ; Can't do I/O until the meta-types interface exports input-port-type and
 ; output-port-type.
@@ -121,7 +121,7 @@
     ((= opcode op-count))
   (let ((arg-specs (vector-ref opcode-arg-specs opcode))
         (name (enumerand->name opcode op)))
-    (cond ((memq name '(external-call return-from-interrupt return)))
+    (cond ((memq name '(call-external-value return-from-interrupt return)))
           ((null? arg-specs)
            (let ((type (proc () value-type)))
              (define-compiler-primitive name type
@@ -175,8 +175,21 @@
     (instruction (enum op stored-object-has-type?)
                  (name->enumerand stob-name stob))))
 
-(define-stob-predicate 'code-vector? 'code-vector)
+(define-stob-predicate 'byte-vector? 'byte-vector)
+(define-stob-predicate 'double? 'double)
 (define-stob-predicate 'string? 'string)
+
+; Making doubles
+
+(let ((:value (sexp->type ':value #t))
+      (:double (sexp->type ':double #t)))
+  (define-simple-primitive 'make-double
+    (proc () :double)
+    (sequentially
+      (instruction-with-literal (enum op literal) 0)
+      (instruction (enum op push))
+      (instruction-with-literal (enum op literal) 0)
+      (instruction (enum op make-stored-object) 2 (enum stob double)))))
 
 ; Define primitives for record-like stored objects (e.g. pairs).
 
@@ -431,13 +444,13 @@
                     (instruction (enum op return))))))
 
 
-; (external-call external-routine arg ...)
+; (call-external-value external-routine arg ...)
 
-(define-n-ary-compiler-primitive 'external-call value-type 1
+(define-n-ary-compiler-primitive 'call-external-value value-type 1
   #f                                         ;Could be done
   (lambda ()
     (sequentially (instruction (enum op protocol) args+nargs-protocol 1)
-                  (instruction (enum op external-call))
+                  (instruction (enum op call-external-value))
                   (instruction (enum op return)))))
 
 (let ((n-ary-constructor

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; A parameterized scheduler.
 
@@ -39,8 +38,6 @@
 	    (lambda ()
 	      (run thread time))
 	    (lambda (time-left event . event-data)
-	      (if (not (integer? time-left))
-		  (user-message "[Losing time " time-left "]"))
 	      (let ((hk-time (let ((temp (- hk-time (- time time-left))))
 			       (if (<= temp 0)
 				   (begin

@@ -1,4 +1,4 @@
-; Copyright (c) 1994 Richard Kelsey.  See file COPYING.
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
 
 ; Definitions are (<variable> . <value>) pairs, where <value> can be any
 ; Scheme value.  This code walks the values looking for sharing and for
@@ -15,9 +15,18 @@
   (set! *closed-compiled-primitives* (make-symbol-table))
   (let loop ((defs definitions) (flat '()))
     (cond ((not (null? defs))
-	   (loop (cdr defs)
-		 (cons (cons (caar defs) (flatten-value (cdar defs)))
-		       flat)))
+	   (let ((var (caar defs))
+		 (value (cdar defs)))
+	     (if (and (variable-set!? var)
+		      (closure? value))
+		 (let ((new (generate-top-variable (variable-name var))))
+		   (loop `((,var . ,new)
+			   (,new . ,value)
+			   . ,defs)
+			 flat))
+		 (loop (cdr defs)
+		       (cons (cons var (flatten-value value))
+			     flat)))))
 	  ((null? *definitions*)
 	   (let ((forms (really-make-forms flat *shared*)))
 	     (set! *shared* #f)       ; safety
@@ -340,9 +349,12 @@
 
 (define (name-node->variable name-node)
   (let ((binding (node-ref name-node 'binding)))
-    (if (primitive? (binding-static binding))
-	(primitive->name-node (binding-static binding))
-	(binding-place binding))))
+    (cond ((not (binding? binding))
+	   (bug "unbound variable ~S" (node-form name-node)))
+	  ((primitive? (binding-static binding))
+	   (primitive->name-node (binding-static binding)))
+	  (else
+	   (binding-place binding)))))
 
 (define (primitive->name-node primitive)
   (let ((id (primitive-id primitive)))

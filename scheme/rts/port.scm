@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Ports and port handlers
 
@@ -166,7 +165,6 @@
 	      ((port-handler-close (port-handler port)) (port-data port))))
 	(release-port-lock port))
       (call-error "invalid argument" close-input-port port)))
-
 	
 (define (close-output-port port)
   (if (output-port? port)
@@ -254,7 +252,7 @@
 				      count)))
   (cond ((port-pending-eof? port)
 	 (set-port-pending-eof?! port #f)
-	 eof-object)
+	 (eof-object))
 	((eq? count 0)
 	 0)
 	(else
@@ -296,7 +294,7 @@
 		 (- count have))))
     (if (eof-object? more)
 	(if (= 0 have)
-	    eof-object
+	    (eof-object)
 	    (begin
 	      (set-port-pending-eof?! port #t)
 	      have))
@@ -370,6 +368,17 @@
 (define (really-force-output port)
   (if (< 0 (port-index port))
       (empty-port-buffer! port)))
+
+; Used to avoid race conditions elsewhere.
+
+(define (force-output-if-open port)
+  (if (output-port? port)
+      (begin
+	(obtain-port-lock port)
+	(if (open-output-port? port)
+	    (really-force-output port))
+	(release-port-lock port))
+      (call-error "invalid argument" force-output-if-open port)))
 
 ;----------------
 
@@ -547,6 +556,28 @@
                 (else                                 ; empty
                  (release-port-lock port)
                  (loop (cdr next) next thunks)))))))
+
+; Returns a list of the current ports that are flushed whenever.
+; This is used to flush channel ports before forking.
+
+(define (periodically-flushed-ports)
+  (let ((ints (set-enabled-interrupts! 0)))
+    (let loop ((next (cdr *flush-these-ports*))
+	       (last *flush-these-ports*)
+	       (ports '()))
+      (if (null? next)
+	  (begin
+	    (set-enabled-interrupts! ints)
+	    ports)
+	  (let ((port (weak-pointer-ref (car next))))
+	    (cond ((or (not port)                      ; GCed or closed
+		       (not (open-output-port? port))) ; so drop it from the list
+		   (set-cdr! last (cdr next))
+		   (loop (cdr next) last ports))
+		  (else
+		   (loop (cdr next)
+			 next
+			 (cons port ports)))))))))
 
 ; Write out PORT's buffer.  If a problem occurs it is reported and PORT
 ; is closed.

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Package / structure / interface mutation operations.
@@ -75,7 +74,8 @@
 		     (table-set! (package-undefineds p) name #f)
 		     uloc)
 	      (make-new-location p name))))
-    (if (not uloc)
+    (if (and (not uloc)
+	     (symbol? name))	; interfaces can't handle generated names
 	(let recur ((q p))
 	  (let loop ((opens (package-opens q)))
 	    (if (not (null? opens))
@@ -130,18 +130,20 @@
 ; inherited binding.
 
 (define (packages-seeing-location package name loc)
-  (let ((losers (list package)))
-    (let recur ((package package))
-      (if (and (not (memq package losers))
-               (not (table-ref (package-definitions package) name)))
-          (begin (set! losers (cons package losers))
-                 (walk-population
-                   (lambda (struct)
-                     (if (interface-ref (structure-interface struct) name)
-                         (walk-population recur (structure-clients struct))))
-                   (package-clients package)))))
-    losers))
-
+  (if (not (symbol? name)) ; interfaces cannot handle generated names
+      (list package)
+      (let ((losers '())) ; was (list package) but that disables the
+	                  ; entire procedure
+	(let recur ((package package))
+	  (if (and (not (memq package losers))
+		   (not (table-ref (package-definitions package) name)))
+	      (begin (set! losers (cons package losers))
+		     (walk-population
+		      (lambda (struct)
+			(if (interface-ref (structure-interface struct) name)
+			    (walk-population recur (structure-clients struct))))
+		      (package-clients package)))))
+	losers)))
 
 (define (set-location-forward! loser new name p)
   (if *debug?*

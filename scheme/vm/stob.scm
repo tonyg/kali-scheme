@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 (define max-stob-size-in-cells
@@ -7,7 +6,7 @@
      stob-overhead))
 
 (define (make-stob type len key)
-  (let ((addr (allocate-space type (+ len (cells->bytes stob-overhead)) key)))
+  (let ((addr (s48-allocate-space type (+ len (cells->bytes stob-overhead)) key)))
     (store! addr (make-header type len))
     (address->stob-descriptor (address+ addr (cells->bytes stob-overhead)))))
 
@@ -19,10 +18,10 @@
 ; Used to copy stuff from the stack to the heap.
 
 (define (header+contents->stob header contents key)
-  (let* ((addr (allocate-space (header-type header)
-			       (+ (header-length-in-bytes header)
-				  (cells->bytes stob-overhead))
-			       key))
+  (let* ((addr (s48-allocate-space (header-type header)
+				   (+ (header-length-in-bytes header)
+				      (cells->bytes stob-overhead))
+				   key))
 	 (data-addr (address+ addr (cells->bytes stob-overhead))))
     (store! addr header)
     (copy-memory! contents data-addr (header-length-in-bytes header))
@@ -64,7 +63,7 @@
 (define (d-vector-set! x index value)
   (assert (valid-index? index (d-vector-length x)))
   (let ((addr (address+ (address-after-header x) (cells->a-units index))))
-    (write-barrier addr value)
+    (s48-write-barrier x addr value)
     (store! addr value)))
 
 (define (d-vector-init! x index value)

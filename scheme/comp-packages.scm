@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Various data structures used by the compiler, module system, etc.
 
@@ -57,7 +56,8 @@
 (define-structure nodes nodes-interface
   (open scheme-level-2
 	meta-types names
-	signals define-record-types tables)
+	signals define-record-types tables
+	util)
   (files (bcomp node)
 	 (bcomp schemify))
   (optimize auto-integrate))
@@ -183,6 +183,15 @@
 	features		;current-noise-port force-output
 	)
   (files (bcomp read-form)))
+
+;----------------
+; Optional compiler pass.
+
+(define-structure flat-environments (export flatten-form)
+  (open scheme-level-2 nodes signals
+	optimizer primops
+	var-utilities)
+  (files (opt flatten)))
 
 ;----------------
 ; Module system

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Names (symbols) and generated names.
 
@@ -105,12 +104,12 @@
 
 ; These can't be records because they are included in linked images.
 
-(define (make-qualified transform-name sym)
-  (vector '>> transform-name sym))
+(define (make-qualified transform-name sym uid)
+  (vector '>> transform-name sym uid))
 
 (define (qualified? thing)
   (and (vector? thing)
-       (= (vector-length thing) 3)
+       (= (vector-length thing) 4)
        (eq? (vector-ref thing 0) '>>)))
 
 (define (qualified-parent-name q) (vector-ref q 1))
@@ -128,7 +127,8 @@
 	(else
 	 (make-qualified (qualify-parent (generated-parent-name name)
 					 env)
-			 (generated-symbol name)))))
+			 (generated-symbol name)
+			 (generated-uid name)))))
 	 
 ; As an optimization, we elide intermediate steps in the lookup path
 ; when possible.  E.g.
@@ -157,7 +157,8 @@
 					  (transform-env s2))))))))
 	      (recur parent) ;+++
 	      (make-qualified (recur parent)
-			      (generated-symbol name))))
+			      (generated-symbol name)
+			      (generated-uid name))))
 	name)))
   
 

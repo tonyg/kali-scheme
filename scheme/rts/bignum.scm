@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file bignum.scm.
 
@@ -188,15 +187,22 @@
 (define same-magnitude? equal?)
 
 (define (smaller-magnitude? m n)
-  (let loop ((m m) (n n) (a #f))
-    (cond ((zero-magnitude? m)
-	   (or (not (zero-magnitude? n)) a))
-	  ((zero-magnitude? n) #f)
+  (let ((m-len (length m))
+	(n-len (length n)))
+    (cond ((< m-len n-len)
+	   #t)
+	  ((< n-len m-len)
+	   #f)
 	  (else
-	   (loop (high-digits m)
-		 (high-digits n)
-		 (or (< (low-digit m) (low-digit n))
-		     (and (= (low-digit m) (low-digit n)) a)))))))
+	   (let loop ((m m) (n n) (a #f))
+	     (cond ((zero-magnitude? m)
+		    (or (not (zero-magnitude? n)) a))
+		   ((zero-magnitude? n) #f)
+		   (else
+		    (loop (high-digits m)
+			  (high-digits n)
+			  (or (< (low-digit m) (low-digit n))
+			      (and (= (low-digit m) (low-digit n)) a))))))))))
 
 ; Multiply
 

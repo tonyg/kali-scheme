@@ -1,3 +1,5 @@
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+
 
 (define (test x i)
   (let ((m (allocate-memory 10)))

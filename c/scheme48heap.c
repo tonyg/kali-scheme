@@ -3,29 +3,42 @@
 #include "scheme48vm.h"
 
 static long copy_weak_pointer(long, char *, char **);
-static long real_copy_object(long, char *, char **);
 static void clean_weak_pointers(void);
-void write_barrier(char *, long);
-long heap_size(void);
-long preallocate_space(long);
-void register_static_areas(long, char **, long*, long, char **, long*);
-char image_writing_okayP(void);
-long gc_count(void);
-void end_collection(void);
-void initialize_heap(char *, long);
-char availableP(long);
-void begin_collection(void);
-char * allocate_space(long, long, long);
-long available(void);
-long check_image_header(char*);
-long trace_locationsB(char *, char *);
-long find_all(long);
-long trace_stob_contentsB(long);
-long trace_value(long);
-long find_all_records(long);
-long read_image(long);
-long write_image(long, FILE *, void(*)(void));
-long do_gc(long, long*);
+static char gc_recordP(long);
+static void note_undumpableB(long);
+void s48_write_barrier(long, char *, long);
+long s48_heap_size(void);
+long s48_preallocate_space(long);
+void s48_register_static_areas(long, char **, long*, long, char **, long*);
+long s48_gc_count(void);
+void s48_end_collection(void);
+long s48_undumpable_records(long*);
+long s48_startup_procedure(void);
+long s48_initial_symbols(void);
+long s48_initial_imported_bindings(void);
+long s48_initial_exported_bindings(void);
+long s48_resumer_records(void);
+void s48_set_image_valuesB(long, long, long, long, long);
+void s48_initialization_completeB(void);
+void s48_initialize_heap(char *, long);
+char s48_availableP(long);
+char s48_image_writing_okayP(void);
+char * s48_allocate_space(long, long, long);
+long s48_available(void);
+char s48_extantP(long);
+long s48_check_image_header(char*);
+long s48_find_all(long);
+long s48_read_image(void);
+long s48_find_all_records(long);
+long s48_trace_locationsB(char *, char *);
+void s48_do_gc(void);
+long s48_trace_stob_contentsB(long);
+void s48_begin_collection(void);
+long s48_trace_value(long);
+long s48_write_image(long, FILE *);
+void s48_initializing_gc_root(void);
+static char * Soldspace_hpS;
+static char * Soldspace_limitS;
 static char * Snewspace_beginS;
 static char * Snewspace_endS;
 static char * Soldspace_beginS;
@@ -37,20 +50,28 @@ static long *Simpure_sizesS;
 static long Spure_area_countS;
 static long Simpure_area_countS;
 static long Sfinding_typeS;
+static long Sgc_countS;
+static char Swriting_imagePS;
+static long Sundumpable_recordsS;
+static long Sundumpable_countS;
+static char * Sfrom_beginS;
+static char * Sfrom_endS;
+static char * Sweak_pointer_hpS;
+static char * Sweak_pointer_limitS;
 static long SstatusS;
 static char SeofPS;
 static FILE * Simage_portS;
 static char * Sold_beginS;
 static char * Sold_hpS;
-static long Sstartup_procS;
-static long Sgc_countS;
-static char * Ssaved_hpS;
-static char * Ssaved_limitS;
-static char * Sweak_pointer_hpS;
-static char * Sweak_pointer_limitS;
-static long Hthe_record_type7610;
-char * ShpS;
-char * SlimitS;
+static long Sstartup_procedureS;
+static long SsymbolsS;
+static long Simported_bindingsS;
+static long Sexported_bindingsS;
+static long Sresumer_recordsS;
+static char SinitializingPS;
+static long Hthe_record_type9260;
+char * s48_ShpS;
+char * s48_SlimitS;
 
 static long copy_weak_pointer(long weak_1X, char * frontier_2X, char * *TT0)
 {
@@ -62,14 +83,14 @@ static long copy_weak_pointer(long weak_1X, char * frontier_2X, char * *TT0)
   char * x_3X;
  {  x_3X = Sweak_pointer_hpS;
   if ((x_3X == NULL)) {
-    goto L1897;}
+    goto L2423;}
   else {
     if (((Sweak_pointer_hpS) < (Sweak_pointer_limitS))) {
       arg0K0 = frontier_2X;
-      goto L1902;}
+      goto L2428;}
     else {
-      goto L1897;}}}
- L1897: {
+      goto L2423;}}}
+ L2423: {
   old_4X = Sweak_pointer_hpS;
   new_frontier_5X = frontier_2X + 1024;
   Sweak_pointer_hpS = frontier_2X;
@@ -77,8 +98,8 @@ static long copy_weak_pointer(long weak_1X, char * frontier_2X, char * *TT0)
   *((long *) (Sweak_pointer_hpS)) = 261190;
   *((long *) ((Sweak_pointer_hpS) + 8)) = (((long) old_4X));
   arg0K0 = new_frontier_5X;
-  goto L1902;}
- L1902: {
+  goto L2428;}
+ L2428: {
   frontier_6X = arg0K0;
   new_7X = 3 + (((long) ((Sweak_pointer_hpS) + 4)));
   *((long *) ((Sweak_pointer_hpS) + 4)) = (*((long *) (((char *) (-3 + weak_1X)))));
@@ -87,487 +108,695 @@ static long copy_weak_pointer(long weak_1X, char * frontier_2X, char * *TT0)
   *TT0 = frontier_6X;
   return new_7X;}
 }
-static long real_copy_object(long thing_8X, char * frontier_9X, char * *TT0)
-{
-  long new_14X;
-  char * data_addr_13X;
-  char * a_12X;
-  long descriptor_11X;
-  long h_10X;
- {  h_10X = *((long *) ((((char *) (-3 + thing_8X))) + -4));
-  if ((3 == (3 & h_10X))) {
-    *TT0 = frontier_9X;
-    return h_10X;}
-  else {
-    if ((1074 == h_10X)) {
-      descriptor_11X = *((long *) (((char *) (-3 + thing_8X))));
-      if ((3 == (3 & descriptor_11X))) {
-        a_12X = ((char *) (-3 + descriptor_11X));
-        if ((a_12X < (Soldspace_beginS))) {
-          goto L3052;}
-        else {
-          if ((a_12X < (Soldspace_endS))) {
-            return copy_weak_pointer(thing_8X, frontier_9X, TT0);}
-          else {
-            goto L3052;}}}
-      else {
-        goto L3052;}}
-    else {
-      goto L3052;}}}
- L3052: {
-  *((long *) frontier_9X) = h_10X;
-  data_addr_13X = frontier_9X + 4;
-  new_14X = 3 + (((long) data_addr_13X));
-  *((long *) ((((char *) (-3 + thing_8X))) + -4)) = new_14X;
-  memcpy((void *)data_addr_13X, (void *)(((char *) (-3 + thing_8X))),((long)(((unsigned long)h_10X)>>8)));
-  *TT0 = (data_addr_13X + (-4 & (3 + ((long)(((unsigned long)h_10X)>>8)))));
-  return new_14X;}
-}
 static void clean_weak_pointers(void)
 {
   char * arg0K1;
   char * arg0K0;
   long arg1K0;
-  long x2_24X;
-  long h_23X;
-  char * a_22X;
-  long value_21X;
-  char * scan_20X;
-  char * next_19X;
-  char * end_18X;
-  char * start_17X;
-  char * end_16X;
-  char * x_15X;
+  long x2_17X;
+  long h_16X;
+  char * a_15X;
+  long value_14X;
+  char * scan_13X;
+  char * next_12X;
+  char * end_11X;
+  char * start_10X;
+  char * end_9X;
+  char * x_8X;
  {  if (((Sweak_pointer_hpS) == NULL)) {
     return;}
   else {
-    x_15X = Sweak_pointer_limitS;
-    end_16X = Sweak_pointer_hpS;
-    arg0K0 = (x_15X + -1024);
-    arg0K1 = end_16X;
-    goto L3709;}}
- L3709: {
-  start_17X = arg0K0;
-  end_18X = arg0K1;
-  next_19X = ((char *) (*((long *) (start_17X + 8))));
-  arg0K0 = start_17X;
-  goto L2008;}
- L2008: {
-  scan_20X = arg0K0;
-  if ((scan_20X < end_18X)) {
-    *((long *) scan_20X) = 1074;
-    value_21X = *((long *) (scan_20X + 4));
-    if ((3 == (3 & value_21X))) {
-      a_22X = ((char *) (-3 + value_21X));
-      if ((a_22X < (Soldspace_beginS))) {
-        goto L2054;}
+    x_8X = Sweak_pointer_limitS;
+    end_9X = Sweak_pointer_hpS;
+    arg0K0 = (x_8X + -1024);
+    arg0K1 = end_9X;
+    goto L3994;}}
+ L3994: {
+  start_10X = arg0K0;
+  end_11X = arg0K1;
+  next_12X = ((char *) (*((long *) (start_10X + 8))));
+  arg0K0 = start_10X;
+  goto L2635;}
+ L2635: {
+  scan_13X = arg0K0;
+  if ((scan_13X < end_11X)) {
+    *((long *) scan_13X) = 1074;
+    value_14X = *((long *) (scan_13X + 4));
+    if ((3 == (3 & value_14X))) {
+      a_15X = ((char *) (-3 + value_14X));
+      if ((a_15X < (Sfrom_beginS))) {
+        goto L2681;}
       else {
-        if ((a_22X < (Soldspace_endS))) {
-          if ((3 == (3 & value_21X))) {
-            h_23X = *((long *) ((((char *) (-3 + value_21X))) + -4));
-            if ((3 == (3 & h_23X))) {
-              arg1K0 = h_23X;
-              goto L2049;}
+        if ((a_15X < (Sfrom_endS))) {
+          if ((3 == (3 & value_14X))) {
+            h_16X = *((long *) ((((char *) (-3 + value_14X))) + -4));
+            if ((3 == (3 & h_16X))) {
+              arg1K0 = h_16X;
+              goto L2676;}
             else {
               arg1K0 = 1;
-              goto L2049;}}
+              goto L2676;}}
           else {
-            goto L2054;}}
+            goto L2681;}}
         else {
-          goto L2054;}}}
+          goto L2681;}}}
     else {
-      goto L2054;}}
+      goto L2681;}}
   else {
-    if ((next_19X == NULL)) {
-      if ((end_16X < (Sweak_pointer_limitS))) {
-        *((long *) end_16X) = (70 + ((((-4 & ((Sweak_pointer_limitS) - (end_16X + 4))))<<8)));
+    if ((next_12X == NULL)) {
+      if ((end_9X < (Sweak_pointer_limitS))) {
+        *((long *) end_9X) = (70 + ((((-4 & ((Sweak_pointer_limitS) - (end_9X + 4))))<<8)));
         return;}
       else {
         return;}}
     else {
-      arg0K0 = (next_19X + -1024);
-      arg0K1 = next_19X;
-      goto L3709;}}}
- L2054: {
-  arg0K0 = (scan_20X + 8);
-  goto L2008;}
- L2049: {
-  x2_24X = arg1K0;
-  *((long *) (scan_20X + 4)) = x2_24X;
-  goto L2054;}
+      arg0K0 = (next_12X + -1024);
+      arg0K1 = next_12X;
+      goto L3994;}}}
+ L2681: {
+  arg0K0 = (scan_13X + 8);
+  goto L2635;}
+ L2676: {
+  x2_17X = arg1K0;
+  *((long *) (scan_13X + 4)) = x2_17X;
+  goto L2681;}
 }
-void write_barrier(char * address_25X, long value_26X)
+static char gc_recordP(long x_18X)
+{
+  long header_19X;
+ {  if ((3 == (3 & x_18X))) {
+    header_19X = *((long *) ((((char *) (-3 + x_18X))) + -4));
+    if ((3 == (3 & header_19X))) {
+      if ((3 == (3 & header_19X))) {
+        return (8 == (31 & ((((*((long *) ((((char *) (-3 + header_19X))) + -4))))>>2))));}
+      else {
+        return 0;}}
+    else {
+      if ((3 == (3 & x_18X))) {
+        return (8 == (31 & ((((*((long *) ((((char *) (-3 + x_18X))) + -4))))>>2))));}
+      else {
+        return 0;}}}
+  else {
+    return 0;}}
+}
+static void note_undumpableB(long thing_20X)
+{
+  long arg1K0;
+  char * temp_34X;
+  char * temp_33X;
+  char * temp_32X;
+  char * temp_31X;
+  long x_30X;
+  char * new_29X;
+  long b_28X;
+  char v_27X;
+  char * temp_26X;
+  char * temp_25X;
+  char * temp_24X;
+  char * temp_23X;
+  long list_22X;
+  long list_21X;
+ {  if ((1000 < (Sundumpable_countS))) {
+    return;}
+  else {
+    list_21X = Sundumpable_recordsS;
+    arg1K0 = list_21X;
+    goto L6367;}}
+ L6367: {
+  list_22X = arg1K0;
+  if ((25 == list_22X)) {
+    Sundumpable_countS = (1 + (Sundumpable_countS));
+    temp_23X = s48_SlimitS;
+    s48_SlimitS = (Soldspace_limitS);
+    Soldspace_limitS = temp_23X;
+    temp_24X = s48_ShpS;
+    s48_ShpS = (Soldspace_hpS);
+    Soldspace_hpS = temp_24X;
+    temp_25X = Snewspace_beginS;
+    Snewspace_beginS = (Soldspace_beginS);
+    Soldspace_beginS = temp_25X;
+    temp_26X = Snewspace_endS;
+    Snewspace_endS = (Soldspace_endS);
+    Soldspace_endS = temp_26X;
+    v_27X = ((s48_ShpS) + 12) < (s48_SlimitS);
+    if (v_27X) {
+      b_28X = Sundumpable_recordsS;
+      new_29X = s48_ShpS;
+      s48_ShpS = ((s48_ShpS) + 12);
+      *((long *) new_29X) = 2050;
+      x_30X = 3 + (((long) (new_29X + 4)));
+      *((long *) (((char *) (-3 + x_30X)))) = thing_20X;
+      *((long *) ((((char *) (-3 + x_30X))) + 4)) = b_28X;
+      Sundumpable_recordsS = x_30X;
+      goto L6289;}
+    else {
+      goto L6289;}}
+  else {
+    if (((*((long *) (((char *) (-3 + list_22X))))) == thing_20X)) {
+      return;}
+    else {
+      arg1K0 = (*((long *) ((((char *) (-3 + list_22X))) + 4)));
+      goto L6367;}}}
+ L6289: {
+  temp_31X = s48_SlimitS;
+  s48_SlimitS = (Soldspace_limitS);
+  Soldspace_limitS = temp_31X;
+  temp_32X = s48_ShpS;
+  s48_ShpS = (Soldspace_hpS);
+  Soldspace_hpS = temp_32X;
+  temp_33X = Snewspace_beginS;
+  Snewspace_beginS = (Soldspace_beginS);
+  Soldspace_beginS = temp_33X;
+  temp_34X = Snewspace_endS;
+  Snewspace_endS = (Soldspace_endS);
+  Soldspace_endS = temp_34X;
+  return;}
+}
+void s48_write_barrier(long stob_35X, char * address_36X, long value_37X)
 {
 
  {  return;}
 }
-long heap_size(void)
+long s48_heap_size(void)
 {
 
  {  return ((Snewspace_endS) - (Snewspace_beginS));}
 }
-long preallocate_space(long cells_27X)
+long s48_preallocate_space(long cells_38X)
 {
 
  {  return 0;}
 }
-void register_static_areas(long pure_count_28X, char * *pure_areas_29X, long *pure_sizes_30X, long impure_count_31X, char * *impure_areas_32X, long *impure_sizes_33X)
+void s48_register_static_areas(long pure_count_39X, char * *pure_areas_40X, long *pure_sizes_41X, long impure_count_42X, char * *impure_areas_43X, long *impure_sizes_44X)
 {
 
- {  Spure_area_countS = pure_count_28X;
-  Spure_areasS = pure_areas_29X;
-  Spure_sizesS = pure_sizes_30X;
-  Simpure_area_countS = impure_count_31X;
-  Simpure_areasS = impure_areas_32X;
-  Simpure_sizesS = impure_sizes_33X;
+ {  Spure_area_countS = pure_count_39X;
+  Spure_areasS = pure_areas_40X;
+  Spure_sizesS = pure_sizes_41X;
+  Simpure_area_countS = impure_count_42X;
+  Simpure_areasS = impure_areas_43X;
+  Simpure_sizesS = impure_sizes_44X;
   return;}
 }
-char image_writing_okayP(void)
-{
-
- {  if ((0 == (Spure_area_countS))) {
-    return (0 == (Simpure_area_countS));}
-  else {
-    return 0;}}
-}
-long gc_count(void)
+long s48_gc_count(void)
 {
 
  {  return (Sgc_countS);}
 }
-void end_collection(void)
+void s48_end_collection(void)
 {
 
  {  Sgc_countS = (1 + (Sgc_countS));
   return;}
 }
-void initialize_heap(char * start_34X, long size_35X)
+long s48_undumpable_records(long *TT0)
 {
-  long semisize_37X;
-  long cells_36X;
- {  cells_36X = size_35X / 2;
-  semisize_37X = ((cells_36X)<<2);
-  Snewspace_beginS = start_34X;
-  Snewspace_endS = ((Snewspace_beginS) + semisize_37X);
+
+ {  *TT0 = (Sundumpable_countS);
+  return (Sundumpable_recordsS);}
+}
+long s48_startup_procedure(void)
+{
+
+ {  return (Sstartup_procedureS);}
+}
+long s48_initial_symbols(void)
+{
+
+ {  return (SsymbolsS);}
+}
+long s48_initial_imported_bindings(void)
+{
+
+ {  return (Simported_bindingsS);}
+}
+long s48_initial_exported_bindings(void)
+{
+
+ {  return (Sexported_bindingsS);}
+}
+long s48_resumer_records(void)
+{
+
+ {  return (Sresumer_recordsS);}
+}
+void s48_set_image_valuesB(long startup_proc_45X, long symbols_46X, long imports_47X, long exports_48X, long records_49X)
+{
+
+ {  Sstartup_procedureS = startup_proc_45X;
+  SsymbolsS = symbols_46X;
+  Simported_bindingsS = imports_47X;
+  Sexported_bindingsS = exports_48X;
+  Sresumer_recordsS = records_49X;
+  return;}
+}
+void s48_initialization_completeB(void)
+{
+
+ {  SinitializingPS = 0;
+  return;}
+}
+void s48_initialize_heap(char * start_50X, long size_51X)
+{
+  long semisize_53X;
+  long cells_52X;
+ {  cells_52X = size_51X / 2;
+  semisize_53X = ((cells_52X)<<2);
+  Snewspace_beginS = start_50X;
+  Snewspace_endS = ((Snewspace_beginS) + semisize_53X);
+  s48_ShpS = (Snewspace_beginS);
+  s48_SlimitS = (Snewspace_endS);
   Soldspace_beginS = (Snewspace_endS);
-  Soldspace_endS = ((Soldspace_beginS) + semisize_37X);
-  ShpS = (Snewspace_beginS);
-  SlimitS = (Snewspace_endS);
+  Soldspace_endS = ((Soldspace_beginS) + semisize_53X);
+  Soldspace_hpS = (Soldspace_beginS);
+  Soldspace_limitS = (Soldspace_endS);
   return;}
 }
-char availableP(long cells_38X)
+char s48_availableP(long cells_54X)
 {
 
- {  return (((ShpS) + (((cells_38X)<<2))) < (SlimitS));}
+ {  return (((s48_ShpS) + (((cells_54X)<<2))) < (s48_SlimitS));}
 }
-void begin_collection(void)
-{
-  char * e_40X;
-  char * b_39X;
- {  b_39X = Snewspace_beginS;
-  Snewspace_beginS = (Soldspace_beginS);
-  Soldspace_beginS = b_39X;
-  e_40X = Snewspace_endS;
-  Snewspace_endS = (Soldspace_endS);
-  Soldspace_endS = e_40X;
-  Ssaved_limitS = (SlimitS);
-  Ssaved_hpS = (ShpS);
-  SlimitS = (Snewspace_endS);
-  ShpS = (Snewspace_beginS);
-  Sweak_pointer_hpS = NULL;
-  return;}
-}
-char * allocate_space(long type_41X, long len_42X, long key_43X)
-{
-  char * new_44X;
- {  new_44X = ShpS;
-  ShpS = ((ShpS) + (-4 & (3 + len_42X)));
-  return new_44X;}
-}
-long available(void)
+char s48_image_writing_okayP(void)
 {
 
- {  return (((((SlimitS) - (ShpS)))>>2));}
+ {  if ((0 < (Simpure_area_countS))) {
+    return 0;}
+  else {
+    if ((0 < (Spure_area_countS))) {
+      return 0;}
+    else {
+      return 1;}}}
 }
-long check_image_header(char *filename_45X)
+char * s48_allocate_space(long type_55X, long len_56X, long key_57X)
+{
+  char * new_58X;
+ {  new_58X = s48_ShpS;
+  s48_ShpS = ((s48_ShpS) + (-4 & (3 + len_56X)));
+  return new_58X;}
+}
+long s48_available(void)
+{
+
+ {  return (((((s48_SlimitS) - (s48_ShpS)))>>2));}
+}
+char s48_extantP(long thing_59X)
+{
+  char * a_60X;
+ {  if ((3 == (3 & thing_59X))) {
+    if ((3 == (3 & thing_59X))) {
+      a_60X = ((char *) (-3 + thing_59X));
+      if ((a_60X < (Sfrom_beginS))) {
+        return 1;}
+      else {
+        if ((a_60X < (Sfrom_endS))) {
+          return (3 == (3 & (*((long *) ((((char *) (-3 + thing_59X))) + -4)))));}
+        else {
+          return 1;}}}
+    else {
+      return 1;}}
+  else {
+    return 1;}}
+}
+long s48_check_image_header(char *filename_61X)
 {
   long arg1K0;
   long arg1K2;
   long arg1K1;
   char arg2K1;
   char arg2K0;
-  long status_90X;
-  char eofP_89X;
+  long status_122X;
+  char eofP_121X;
+  long status_120X;
+  long status_119X;
+  long status_118X;
+  long status_117X;
+  long status_116X;
+  char eofP_115X;
+  char ch_114X;
+  long v_113X;
+  long status_112X;
+  char eofP_111X;
+  long thing_110X;
+  long v_109X;
+  long status_108X;
+  char eofP_107X;
+  long thing_106X;
+  long v_105X;
+  long status_104X;
+  char eofP_103X;
+  long thing_102X;
+  long v_101X;
+  long status_100X;
+  char eofP_99X;
+  long thing_98X;
+  long v_97X;
+  long status_96X;
+  char eofP_95X;
+  long thing_94X;
+  long cells_93X;
+  long status_92X;
+  char eofP_91X;
+  long thing_90X;
+  long cells_89X;
   long status_88X;
-  long status_87X;
-  long status_86X;
+  char eofP_87X;
+  char thing_86X;
   long status_85X;
-  long status_84X;
-  char eofP_83X;
-  char ch_82X;
-  long v_81X;
-  long status_80X;
-  char eofP_79X;
-  long thing_78X;
-  long cells_77X;
-  long status_76X;
-  char eofP_75X;
-  long thing_74X;
-  long cells_73X;
-  long status_72X;
-  char eofP_71X;
-  char thing_70X;
+  char eofP_84X;
+  long thing_83X;
+  long old_bytes_per_cell_82X;
+  long status_81X;
+  char eofP_80X;
+  long status_79X;
+  char eofP_78X;
+  char ch_77X;
+  long i_76X;
+  long status_75X;
+  char eofP_74X;
+  long thing_73X;
+  char same_versionP_72X;
+  long status_71X;
+  char eofP_70X;
   long status_69X;
   char eofP_68X;
-  long thing_67X;
-  long old_bytes_per_cell_66X;
-  long status_65X;
-  char eofP_64X;
+  char ch_67X;
+  long status_66X;
+  char eofP_65X;
+  char ch_64X;
   long status_63X;
-  char eofP_62X;
-  char ch_61X;
-  long i_60X;
-  long status_59X;
-  char eofP_58X;
-  long thing_57X;
-  char same_versionP_56X;
-  long status_55X;
-  char eofP_54X;
-  long status_53X;
-  char eofP_52X;
-  char ch_51X;
-  long status_50X;
-  char eofP_49X;
-  char ch_48X;
-  long status_47X;
-  FILE * port_46X;
- {  port_46X = ps_open_input_file(filename_45X, &status_47X);
-  if ((status_47X == NO_ERRORS)) {
+  FILE * port_62X;
+ {  port_62X = ps_open_input_file(filename_61X, &status_63X);
+  if ((status_63X == NO_ERRORS)) {
     SstatusS = NO_ERRORS;
     SeofPS = 0;
     if ((SeofPS)) {
-      goto L2229;}
+      goto L2893;}
     else {
-      goto L2802;}}
+      goto L3626;}}
   else {
     ps_write_string("Can't open heap image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-    ps_write_string((ps_error_string(status_47X)), (stderr));
+    ps_write_string((ps_error_string(status_63X)), (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2229: {
+ L2893: {
   if ((SeofPS)) {
-    goto L2262;}
+    goto L2926;}
   else {
-    goto L2766;}}
- L2802: {
-  PS_READ_CHAR(port_46X, ch_48X, eofP_49X, status_50X)
-  if (eofP_49X) {
-    arg2K0 = eofP_49X;
-    arg1K1 = status_50X;
-    goto L2207;}
+    goto L3590;}}
+ L3626: {
+  PS_READ_CHAR(port_62X, ch_64X, eofP_65X, status_66X)
+  if (eofP_65X) {
+    arg2K0 = eofP_65X;
+    arg1K1 = status_66X;
+    goto L2871;}
   else {
-    if ((status_50X == NO_ERRORS)) {
-      if ((12 == ch_48X)) {
+    if ((status_66X == NO_ERRORS)) {
+      if ((12 == ch_64X)) {
         arg2K0 = 0;
-        arg1K1 = status_50X;
-        goto L2207;}
+        arg1K1 = status_66X;
+        goto L2871;}
       else {
-        goto L2802;}}
+        goto L3626;}}
     else {
-      arg2K0 = eofP_49X;
-      arg1K1 = status_50X;
-      goto L2207;}}}
- L2262: {
+      arg2K0 = eofP_65X;
+      arg1K1 = status_66X;
+      goto L2871;}}}
+ L2926: {
   if ((SeofPS)) {
     arg2K0 = 0;
-    goto L2295;}
+    goto L2959;}
   else {
     arg1K0 = 0;
-    goto L2742;}}
- L2766: {
-  PS_READ_CHAR(port_46X, ch_51X, eofP_52X, status_53X)
-  if (eofP_52X) {
-    arg2K0 = eofP_52X;
-    arg1K1 = status_53X;
-    goto L2240;}
+    goto L3566;}}
+ L3590: {
+  PS_READ_CHAR(port_62X, ch_67X, eofP_68X, status_69X)
+  if (eofP_68X) {
+    arg2K0 = eofP_68X;
+    arg1K1 = status_69X;
+    goto L2904;}
   else {
-    if ((status_53X == NO_ERRORS)) {
-      if ((10 == ch_51X)) {
+    if ((status_69X == NO_ERRORS)) {
+      if ((10 == ch_67X)) {
         arg2K0 = 0;
-        arg1K1 = status_53X;
-        goto L2240;}
+        arg1K1 = status_69X;
+        goto L2904;}
       else {
-        goto L2766;}}
+        goto L3590;}}
     else {
-      arg2K0 = eofP_52X;
-      arg1K1 = status_53X;
-      goto L2240;}}}
- L2207: {
-  eofP_54X = arg2K0;
-  status_55X = arg1K1;
-  if (eofP_54X) {
+      arg2K0 = eofP_68X;
+      arg1K1 = status_69X;
+      goto L2904;}}}
+ L2871: {
+  eofP_70X = arg2K0;
+  status_71X = arg1K1;
+  if (eofP_70X) {
     SeofPS = 1;
-    goto L2229;}
+    goto L2893;}
   else {
     if (((SstatusS) == NO_ERRORS)) {
-      goto L2229;}
+      goto L2893;}
     else {
       SeofPS = 1;
-      SstatusS = status_55X;
-      goto L2229;}}}
- L2295: {
-  same_versionP_56X = arg2K0;
+      SstatusS = status_71X;
+      goto L2893;}}}
+ L2959: {
+  same_versionP_72X = arg2K0;
   if ((SeofPS)) {
     arg1K0 = -1;
-    goto L2330;}
+    goto L2994;}
   else {
-    PS_READ_INTEGER(port_46X, thing_57X, eofP_58X, status_59X)
-    if (eofP_58X) {
+    PS_READ_INTEGER(port_62X, thing_73X, eofP_74X, status_75X)
+    if (eofP_74X) {
       SeofPS = 1;
       arg1K0 = -1;
-      goto L2330;}
+      goto L2994;}
     else {
       if (((SstatusS) == NO_ERRORS)) {
-        arg1K0 = thing_57X;
-        goto L2330;}
+        arg1K0 = thing_73X;
+        goto L2994;}
       else {
         SeofPS = 1;
-        SstatusS = status_59X;
+        SstatusS = status_75X;
         arg1K0 = -1;
-        goto L2330;}}}}
- L2742: {
-  i_60X = arg1K0;
-  PS_READ_CHAR(port_46X, ch_61X, eofP_62X, status_63X)
-  if (eofP_62X) {
+        goto L2994;}}}}
+ L3566: {
+  i_76X = arg1K0;
+  PS_READ_CHAR(port_62X, ch_77X, eofP_78X, status_79X)
+  if (eofP_78X) {
     arg2K0 = 0;
-    arg2K1 = eofP_62X;
-    arg1K2 = status_63X;
-    goto L2273;}
+    arg2K1 = eofP_78X;
+    arg1K2 = status_79X;
+    goto L2937;}
   else {
-    if ((status_63X == NO_ERRORS)) {
-      if ((i_60X == (strlen((char *) "Vanilla 19")))) {
-        arg2K0 = (10 == ch_61X);
+    if ((status_79X == NO_ERRORS)) {
+      if ((i_76X == (strlen((char *) "Vanilla 20")))) {
+        arg2K0 = (10 == ch_77X);
         arg2K1 = 0;
-        arg1K2 = status_63X;
-        goto L2273;}
+        arg1K2 = status_79X;
+        goto L2937;}
       else {
-        if ((ch_61X == (*("Vanilla 19" + i_60X)))) {
-          arg1K0 = (1 + i_60X);
-          goto L2742;}
+        if ((ch_77X == (*("Vanilla 20" + i_76X)))) {
+          arg1K0 = (1 + i_76X);
+          goto L3566;}
         else {
           arg2K0 = 0;
           arg2K1 = 0;
-          arg1K2 = status_63X;
-          goto L2273;}}}
+          arg1K2 = status_79X;
+          goto L2937;}}}
     else {
       arg2K0 = 0;
-      arg2K1 = eofP_62X;
-      arg1K2 = status_63X;
-      goto L2273;}}}
- L2240: {
-  eofP_64X = arg2K0;
-  status_65X = arg1K1;
-  if (eofP_64X) {
+      arg2K1 = eofP_78X;
+      arg1K2 = status_79X;
+      goto L2937;}}}
+ L2904: {
+  eofP_80X = arg2K0;
+  status_81X = arg1K1;
+  if (eofP_80X) {
     SeofPS = 1;
-    goto L2262;}
+    goto L2926;}
   else {
     if (((SstatusS) == NO_ERRORS)) {
-      goto L2262;}
+      goto L2926;}
     else {
       SeofPS = 1;
-      SstatusS = status_65X;
-      goto L2262;}}}
- L2330: {
-  old_bytes_per_cell_66X = arg1K0;
+      SstatusS = status_81X;
+      goto L2926;}}}
+ L2994: {
+  old_bytes_per_cell_82X = arg1K0;
   if ((SeofPS)) {
     arg1K0 = -1;
-    goto L2365;}
+    goto L3029;}
   else {
-    PS_READ_INTEGER(port_46X, thing_67X, eofP_68X, status_69X)
-    if (eofP_68X) {
+    PS_READ_INTEGER(port_62X, thing_83X, eofP_84X, status_85X)
+    if (eofP_84X) {
       SeofPS = 1;
       arg1K0 = -1;
-      goto L2365;}
+      goto L3029;}
     else {
       if (((SstatusS) == NO_ERRORS)) {
-        arg1K0 = thing_67X;
-        goto L2365;}
+        arg1K0 = thing_83X;
+        goto L3029;}
       else {
         SeofPS = 1;
-        SstatusS = status_69X;
+        SstatusS = status_85X;
         arg1K0 = -1;
-        goto L2365;}}}}
- L2273: {
-  thing_70X = arg2K0;
-  eofP_71X = arg2K1;
-  status_72X = arg1K2;
-  if (eofP_71X) {
+        goto L3029;}}}}
+ L2937: {
+  thing_86X = arg2K0;
+  eofP_87X = arg2K1;
+  status_88X = arg1K2;
+  if (eofP_87X) {
     SeofPS = 1;
     arg2K0 = 0;
-    goto L2295;}
+    goto L2959;}
   else {
     if (((SstatusS) == NO_ERRORS)) {
-      arg2K0 = thing_70X;
-      goto L2295;}
+      arg2K0 = thing_86X;
+      goto L2959;}
     else {
       SeofPS = 1;
-      SstatusS = status_72X;
+      SstatusS = status_88X;
       arg2K0 = 0;
-      goto L2295;}}}
- L2365: {
-  cells_73X = arg1K0;
-  Sold_beginS = (((char *) (((cells_73X)<<2))));
+      goto L2959;}}}
+ L3029: {
+  cells_89X = arg1K0;
+  Sold_beginS = (((char *) (((cells_89X)<<2))));
   if ((SeofPS)) {
     arg1K0 = -1;
-    goto L2403;}
+    goto L3067;}
   else {
-    PS_READ_INTEGER(port_46X, thing_74X, eofP_75X, status_76X)
-    if (eofP_75X) {
+    PS_READ_INTEGER(port_62X, thing_90X, eofP_91X, status_92X)
+    if (eofP_91X) {
       SeofPS = 1;
       arg1K0 = -1;
-      goto L2403;}
+      goto L3067;}
     else {
       if (((SstatusS) == NO_ERRORS)) {
-        arg1K0 = thing_74X;
-        goto L2403;}
+        arg1K0 = thing_90X;
+        goto L3067;}
       else {
         SeofPS = 1;
-        SstatusS = status_76X;
+        SstatusS = status_92X;
         arg1K0 = -1;
-        goto L2403;}}}}
- L2403: {
-  cells_77X = arg1K0;
-  Sold_hpS = (((char *) (((cells_77X)<<2))));
+        goto L3067;}}}}
+ L3067: {
+  cells_93X = arg1K0;
+  Sold_hpS = (((char *) (((cells_93X)<<2))));
   if ((SeofPS)) {
     arg1K0 = -1;
-    goto L2441;}
+    goto L3105;}
   else {
-    PS_READ_INTEGER(port_46X, thing_78X, eofP_79X, status_80X)
-    if (eofP_79X) {
+    PS_READ_INTEGER(port_62X, thing_94X, eofP_95X, status_96X)
+    if (eofP_95X) {
       SeofPS = 1;
       arg1K0 = -1;
-      goto L2441;}
+      goto L3105;}
     else {
       if (((SstatusS) == NO_ERRORS)) {
-        arg1K0 = thing_78X;
-        goto L2441;}
+        arg1K0 = thing_94X;
+        goto L3105;}
       else {
         SeofPS = 1;
-        SstatusS = status_80X;
+        SstatusS = status_96X;
         arg1K0 = -1;
-        goto L2441;}}}}
- L2441: {
-  v_81X = arg1K0;
-  Sstartup_procS = v_81X;
-  Simage_portS = port_46X;
+        goto L3105;}}}}
+ L3105: {
+  v_97X = arg1K0;
+  SsymbolsS = v_97X;
   if ((SeofPS)) {
-    goto L2480;}
+    arg1K0 = -1;
+    goto L3141;}
   else {
-    goto L2689;}}
- L2480: {
+    PS_READ_INTEGER(port_62X, thing_98X, eofP_99X, status_100X)
+    if (eofP_99X) {
+      SeofPS = 1;
+      arg1K0 = -1;
+      goto L3141;}
+    else {
+      if (((SstatusS) == NO_ERRORS)) {
+        arg1K0 = thing_98X;
+        goto L3141;}
+      else {
+        SeofPS = 1;
+        SstatusS = status_100X;
+        arg1K0 = -1;
+        goto L3141;}}}}
+ L3141: {
+  v_101X = arg1K0;
+  Simported_bindingsS = v_101X;
+  if ((SeofPS)) {
+    arg1K0 = -1;
+    goto L3177;}
+  else {
+    PS_READ_INTEGER(port_62X, thing_102X, eofP_103X, status_104X)
+    if (eofP_103X) {
+      SeofPS = 1;
+      arg1K0 = -1;
+      goto L3177;}
+    else {
+      if (((SstatusS) == NO_ERRORS)) {
+        arg1K0 = thing_102X;
+        goto L3177;}
+      else {
+        SeofPS = 1;
+        SstatusS = status_104X;
+        arg1K0 = -1;
+        goto L3177;}}}}
+ L3177: {
+  v_105X = arg1K0;
+  Sexported_bindingsS = v_105X;
+  if ((SeofPS)) {
+    arg1K0 = -1;
+    goto L3213;}
+  else {
+    PS_READ_INTEGER(port_62X, thing_106X, eofP_107X, status_108X)
+    if (eofP_107X) {
+      SeofPS = 1;
+      arg1K0 = -1;
+      goto L3213;}
+    else {
+      if (((SstatusS) == NO_ERRORS)) {
+        arg1K0 = thing_106X;
+        goto L3213;}
+      else {
+        SeofPS = 1;
+        SstatusS = status_108X;
+        arg1K0 = -1;
+        goto L3213;}}}}
+ L3213: {
+  v_109X = arg1K0;
+  Sresumer_recordsS = v_109X;
+  if ((SeofPS)) {
+    arg1K0 = -1;
+    goto L3249;}
+  else {
+    PS_READ_INTEGER(port_62X, thing_110X, eofP_111X, status_112X)
+    if (eofP_111X) {
+      SeofPS = 1;
+      arg1K0 = -1;
+      goto L3249;}
+    else {
+      if (((SstatusS) == NO_ERRORS)) {
+        arg1K0 = thing_110X;
+        goto L3249;}
+      else {
+        SeofPS = 1;
+        SstatusS = status_112X;
+        arg1K0 = -1;
+        goto L3249;}}}}
+ L3249: {
+  v_113X = arg1K0;
+  Sstartup_procedureS = v_113X;
+  Simage_portS = port_62X;
+  if ((SeofPS)) {
+    goto L3288;}
+  else {
+    goto L3497;}}
+ L3288: {
   if (((SstatusS) == NO_ERRORS)) {
     if ((SeofPS)) {
       SstatusS = EDOM;
@@ -575,1235 +804,1554 @@ long check_image_header(char *filename_45X)
       { long ignoreXX;
       PS_WRITE_CHAR(10, (stderr), ignoreXX) }
       if (((SstatusS) == NO_ERRORS)) {
-        goto L2561;}
+        goto L3369;}
       else {
         ps_write_string((ps_error_string((SstatusS))), (stderr));
         { long ignoreXX;
         PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-        goto L2561;}}
+        goto L3369;}}
     else {
-      if (same_versionP_56X) {
-        if ((4 == old_bytes_per_cell_66X)) {
+      if (same_versionP_72X) {
+        if ((4 == old_bytes_per_cell_82X)) {
           return ((Sold_hpS) - (Sold_beginS));}
         else {
           ps_write_string("Incompatible bytes-per-cell in image", (stderr));
           { long ignoreXX;
           PS_WRITE_CHAR(10, (stderr), ignoreXX) }
           if (((SstatusS) == NO_ERRORS)) {
-            goto L2621;}
+            goto L3429;}
           else {
             ps_write_string((ps_error_string((SstatusS))), (stderr));
             { long ignoreXX;
             PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-            goto L2621;}}}
+            goto L3429;}}}
       else {
         ps_write_string("Format of image is incompatible with this version of system", (stderr));
         { long ignoreXX;
         PS_WRITE_CHAR(10, (stderr), ignoreXX) }
         if (((SstatusS) == NO_ERRORS)) {
-          goto L2591;}
+          goto L3399;}
         else {
           ps_write_string((ps_error_string((SstatusS))), (stderr));
           { long ignoreXX;
           PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-          goto L2591;}}}}
+          goto L3399;}}}}
   else {
     ps_write_string("Error reading from image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     if (((SstatusS) == NO_ERRORS)) {
-      goto L2536;}
+      goto L3344;}
     else {
       ps_write_string((ps_error_string((SstatusS))), (stderr));
       { long ignoreXX;
       PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-      goto L2536;}}}
- L2689: {
-  PS_READ_CHAR(port_46X, ch_82X, eofP_83X, status_84X)
-  if (eofP_83X) {
-    arg2K0 = eofP_83X;
-    arg1K1 = status_84X;
-    goto L2458;}
+      goto L3344;}}}
+ L3497: {
+  PS_READ_CHAR(port_62X, ch_114X, eofP_115X, status_116X)
+  if (eofP_115X) {
+    arg2K0 = eofP_115X;
+    arg1K1 = status_116X;
+    goto L3266;}
   else {
-    if ((status_84X == NO_ERRORS)) {
-      if ((12 == ch_82X)) {
+    if ((status_116X == NO_ERRORS)) {
+      if ((12 == ch_114X)) {
         arg2K0 = 0;
-        arg1K1 = status_84X;
-        goto L2458;}
+        arg1K1 = status_116X;
+        goto L3266;}
       else {
-        goto L2689;}}
+        goto L3497;}}
     else {
-      arg2K0 = eofP_83X;
-      arg1K1 = status_84X;
-      goto L2458;}}}
- L2561: {
-  status_85X = ps_close(port_46X);
-  if ((status_85X == NO_ERRORS)) {
+      arg2K0 = eofP_115X;
+      arg1K1 = status_116X;
+      goto L3266;}}}
+ L3369: {
+  status_117X = ps_close(port_62X);
+  if ((status_117X == NO_ERRORS)) {
     return -1;}
   else {
     ps_write_string("Error closing image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2621: {
-  status_86X = ps_close(port_46X);
-  if ((status_86X == NO_ERRORS)) {
+ L3429: {
+  status_118X = ps_close(port_62X);
+  if ((status_118X == NO_ERRORS)) {
     return -1;}
   else {
     ps_write_string("Error closing image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2591: {
-  status_87X = ps_close(port_46X);
-  if ((status_87X == NO_ERRORS)) {
+ L3399: {
+  status_119X = ps_close(port_62X);
+  if ((status_119X == NO_ERRORS)) {
     return -1;}
   else {
     ps_write_string("Error closing image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2536: {
-  status_88X = ps_close(port_46X);
-  if ((status_88X == NO_ERRORS)) {
+ L3344: {
+  status_120X = ps_close(port_62X);
+  if ((status_120X == NO_ERRORS)) {
     return -1;}
   else {
     ps_write_string("Error closing image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2458: {
-  eofP_89X = arg2K0;
-  status_90X = arg1K1;
-  if (eofP_89X) {
+ L3266: {
+  eofP_121X = arg2K0;
+  status_122X = arg1K1;
+  if (eofP_121X) {
     SeofPS = 1;
-    goto L2480;}
+    goto L3288;}
   else {
     if (((SstatusS) == NO_ERRORS)) {
-      goto L2480;}
+      goto L3288;}
     else {
       SeofPS = 1;
-      SstatusS = status_90X;
-      goto L2480;}}}
+      SstatusS = status_122X;
+      goto L3288;}}}
 }
-long trace_locationsB(char * start_91X, char * end_92X)
-{
-  char * arg0K0;
-  char * arg0K1;
-  long arg1K0;
-  long new_106X;
-  char * data_addr_105X;
-  char * frontier_104X;
-  long new_thing_103X;
-  char * frontier_102X;
-  long new_thing_101X;
-  char * a_100X;
-  long descriptor_99X;
-  long h_98X;
-  char * a_97X;
-  char * next_96X;
-  long thing_95X;
-  char * frontier_94X;
-  char * addr_93X;
- {  arg0K0 = start_91X;
-  arg0K1 = (ShpS);
-  goto L3801;}
- L3801: {
-  addr_93X = arg0K0;
-  frontier_94X = arg0K1;
-  if ((addr_93X < end_92X)) {
-    thing_95X = *((long *) addr_93X);
-    next_96X = addr_93X + 4;
-    if ((2 == (3 & thing_95X))) {
-      if (((31 & (((thing_95X)>>2))) < 16)) {
-        goto L3815;}
-      else {
-        arg0K0 = (next_96X + (-4 & (3 + ((long)(((unsigned long)thing_95X)>>8)))));
-        arg0K1 = frontier_94X;
-        goto L3801;}}
-    else {
-      goto L3815;}}
-  else {
-    ShpS = frontier_94X;
-    return 0;}}
- L3815: {
-  if ((3 == (3 & thing_95X))) {
-    a_97X = ((char *) (-3 + thing_95X));
-    if ((a_97X < (Soldspace_beginS))) {
-      arg0K0 = next_96X;
-      arg0K1 = frontier_94X;
-      goto L3801;}
-    else {
-      if ((a_97X < (Soldspace_endS))) {
-        h_98X = *((long *) ((((char *) (-3 + thing_95X))) + -4));
-        if ((3 == (3 & h_98X))) {
-          arg1K0 = h_98X;
-          arg0K1 = frontier_94X;
-          goto L3822;}
-        else {
-          if ((1074 == h_98X)) {
-            descriptor_99X = *((long *) (((char *) (-3 + thing_95X))));
-            if ((3 == (3 & descriptor_99X))) {
-              a_100X = ((char *) (-3 + descriptor_99X));
-              if ((a_100X < (Soldspace_beginS))) {
-                goto L5339;}
-              else {
-                if ((a_100X < (Soldspace_endS))) {
-                  new_thing_101X = copy_weak_pointer(thing_95X, frontier_94X, &frontier_102X);
-                  arg1K0 = new_thing_101X;
-                  arg0K1 = frontier_102X;
-                  goto L3822;}
-                else {
-                  goto L5339;}}}
-            else {
-              goto L5339;}}
-          else {
-            goto L5339;}}}
-      else {
-        arg0K0 = next_96X;
-        arg0K1 = frontier_94X;
-        goto L3801;}}}
-  else {
-    arg0K0 = next_96X;
-    arg0K1 = frontier_94X;
-    goto L3801;}}
- L3822: {
-  new_thing_103X = arg1K0;
-  frontier_104X = arg0K1;
-  *((long *) addr_93X) = new_thing_103X;
-  arg0K0 = next_96X;
-  arg0K1 = frontier_104X;
-  goto L3801;}
- L5339: {
-  *((long *) frontier_94X) = h_98X;
-  data_addr_105X = frontier_94X + 4;
-  new_106X = 3 + (((long) data_addr_105X));
-  *((long *) ((((char *) (-3 + thing_95X))) + -4)) = new_106X;
-  memcpy((void *)data_addr_105X, (void *)(((char *) (-3 + thing_95X))),((long)(((unsigned long)h_98X)>>8)));
-  arg1K0 = new_106X;
-  arg0K1 = (data_addr_105X + (-4 & (3 + ((long)(((unsigned long)h_98X)>>8)))));
-  goto L3822;}
-}
-long find_all(long type_107X)
+long s48_find_all(long type_123X)
 {
   char * arg0K0;
   long arg1K0;
   char * merged_arg0K1;
   char * merged_arg0K0;
 
-  int Hproc758108_return_tag;
-  char Hproc7581080_return_value;
-  char * start_109X;
-  char * end_110X;
-  long d_125X;
-  char * addr_124X;
-  long type_123X;
-  char v_122X;
-  long i_121X;
-  long count_120X;
-  long *sizes_119X;
-  char * *areas_118X;
-  char v_117X;
-  long i_116X;
-  long count_115X;
-  long *sizes_114X;
-  char * *areas_113X;
-  char v_112X;
-  char * start_hp_111X;
- {  Sfinding_typeS = type_107X;
-  start_hp_111X = ShpS;
-  *((long *) (ShpS)) = 0;
-  ShpS = ((ShpS) + 4);
-  merged_arg0K0 = (Snewspace_beginS);
-  merged_arg0K1 = start_hp_111X;
-  Hproc758108_return_tag = 0;
-  goto Hproc758108;
- Hproc758108_return_0:
-  v_112X = Hproc7581080_return_value;
-  if (v_112X) {
-    areas_113X = Simpure_areasS;
-    sizes_114X = Simpure_sizesS;
-    count_115X = Simpure_area_countS;
-    arg1K0 = 0;
-    goto L4020;}
-  else {
-    goto L3980;}}
- L4020: {
-  i_116X = arg1K0;
-  if ((i_116X < count_115X)) {
-    merged_arg0K0 = (*(areas_113X + i_116X));
-    merged_arg0K1 = ((*(areas_113X + i_116X)) + (*(sizes_114X + i_116X)));
-    Hproc758108_return_tag = 1;
-    goto Hproc758108;
-   Hproc758108_return_1:
-    v_117X = Hproc7581080_return_value;
-    if (v_117X) {
-      arg1K0 = (1 + i_116X);
-      goto L4020;}
-    else {
-      goto L3980;}}
-  else {
-    areas_118X = Spure_areasS;
-    sizes_119X = Spure_sizesS;
-    count_120X = Spure_area_countS;
-    arg1K0 = 0;
-    goto L4039;}}
- L3980: {
-  ShpS = start_hp_111X;
-  return 1;}
- L4039: {
-  i_121X = arg1K0;
-  if ((i_121X < count_120X)) {
-    merged_arg0K0 = (*(areas_118X + i_121X));
-    merged_arg0K1 = ((*(areas_118X + i_121X)) + (*(sizes_119X + i_121X)));
-    Hproc758108_return_tag = 2;
-    goto Hproc758108;
-   Hproc758108_return_2:
-    v_122X = Hproc7581080_return_value;
-    if (v_122X) {
-      arg1K0 = (1 + i_121X);
-      goto L4039;}
-    else {
-      goto L3980;}}
-  else {
-    *((long *) start_hp_111X) = (10 + (((((ShpS) - (start_hp_111X + 4)))<<8)));
-    return (3 + (((long) (start_hp_111X + 4))));}}
- Hproc758108: {
-  start_109X = merged_arg0K0;
-  end_110X = merged_arg0K1;{
-  type_123X = Sfinding_typeS;
-  arg0K0 = start_109X;
-  goto L3168;}
- L3168: {
-  addr_124X = arg0K0;
-  if ((addr_124X < end_110X)) {
-    d_125X = *((long *) addr_124X);
-    if ((2 == (3 & d_125X))) {
-      if ((type_123X == (31 & (((d_125X)>>2))))) {
-        if ((((ShpS) + 16) < (SlimitS))) {
-          *((long *) (ShpS)) = (3 + (((long) (addr_124X + 4))));
-          ShpS = ((ShpS) + 4);
-          goto L3200;}
-        else {
-          Hproc7581080_return_value = 0;
-          goto Hproc758108_return;}}
-      else {
-        goto L3200;}}
-    else {
-      ps_write_string("heap is in an inconsistent state.", (stderr));
-      Hproc7581080_return_value = 0;
-      goto Hproc758108_return;}}
-  else {
-    Hproc7581080_return_value = 1;
-    goto Hproc758108_return;}}
- L3200: {
-  arg0K0 = (addr_124X + (4 + (-4 & (3 + ((long)(((unsigned long)d_125X)>>8))))));
-  goto L3168;}
- Hproc758108_return:
-  switch (Hproc758108_return_tag) {
-  case 0: goto Hproc758108_return_0;
-  case 1: goto Hproc758108_return_1;
-  default: goto Hproc758108_return_2;
-  }}
-
-}
-long trace_stob_contentsB(long stob_126X)
-{
-  char * start_128X;
-  long h_127X;
- {  h_127X = *((long *) ((((char *) (-3 + stob_126X))) + -4));
-  start_128X = ((char *) (-3 + stob_126X));
-  return trace_locationsB(start_128X, (start_128X + (-4 & (3 + ((long)(((unsigned long)h_127X)>>8))))));}
-}
-long trace_value(long stob_129X)
-{
-  char * new_hp_132X;
-  long new_thing_131X;
-  char * a_130X;
- {  if ((3 == (3 & stob_129X))) {
-    a_130X = ((char *) (-3 + stob_129X));
-    if ((a_130X < (Soldspace_beginS))) {
-      return stob_129X;}
-    else {
-      if ((a_130X < (Soldspace_endS))) {
-        new_thing_131X = real_copy_object(stob_129X, (ShpS), &new_hp_132X);
-        ShpS = new_hp_132X;
-        return new_thing_131X;}
-      else {
-        return stob_129X;}}}
-  else {
-    return stob_129X;}}
-}
-long find_all_records(long record_type_133X)
-{
-  char * arg0K0;
-  long arg1K0;
-  char * merged_arg0K1;
-  char * merged_arg0K0;
-
-  int Hproc764134_return_tag;
-  char Hproc7641340_return_value;
-  char * start_135X;
-  char * end_136X;
-  long record_152X;
-  long d_151X;
-  char * addr_150X;
-  long type_149X;
-  char v_148X;
-  long i_147X;
-  long count_146X;
-  long *sizes_145X;
-  char * *areas_144X;
-  char v_143X;
-  long i_142X;
-  long count_141X;
-  long *sizes_140X;
-  char * *areas_139X;
+  int Hproc923124_return_tag;
+  char Hproc9231240_return_value;
+  char * start_125X;
+  char * end_126X;
+  char * next_142X;
+  long d_141X;
+  char * addr_140X;
+  long type_139X;
   char v_138X;
-  char * start_hp_137X;
- {  Hthe_record_type7610 = record_type_133X;
-  Sfinding_typeS = 8;
-  start_hp_137X = ShpS;
-  *((long *) (ShpS)) = 0;
-  ShpS = ((ShpS) + 4);
+  long i_137X;
+  long count_136X;
+  long *sizes_135X;
+  char * *areas_134X;
+  char v_133X;
+  long i_132X;
+  long count_131X;
+  long *sizes_130X;
+  char * *areas_129X;
+  char v_128X;
+  char * start_hp_127X;
+ {  Sfinding_typeS = type_123X;
+  start_hp_127X = s48_ShpS;
+  *((long *) (s48_ShpS)) = 0;
+  s48_ShpS = ((s48_ShpS) + 4);
   merged_arg0K0 = (Snewspace_beginS);
-  merged_arg0K1 = start_hp_137X;
-  Hproc764134_return_tag = 0;
-  goto Hproc764134;
- Hproc764134_return_0:
-  v_138X = Hproc7641340_return_value;
-  if (v_138X) {
-    areas_139X = Simpure_areasS;
-    sizes_140X = Simpure_sizesS;
-    count_141X = Simpure_area_countS;
-    arg1K0 = 0;
-    goto L4167;}
-  else {
-    goto L4127;}}
- L4167: {
-  i_142X = arg1K0;
-  if ((i_142X < count_141X)) {
-    merged_arg0K0 = (*(areas_139X + i_142X));
-    merged_arg0K1 = ((*(areas_139X + i_142X)) + (*(sizes_140X + i_142X)));
-    Hproc764134_return_tag = 1;
-    goto Hproc764134;
-   Hproc764134_return_1:
-    v_143X = Hproc7641340_return_value;
-    if (v_143X) {
-      arg1K0 = (1 + i_142X);
-      goto L4167;}
+  merged_arg0K1 = start_hp_127X;
+  Hproc923124_return_tag = 0;
+  goto Hproc923124;
+ Hproc923124_return_0:
+  v_128X = Hproc9231240_return_value;
+  if (v_128X) {
+    if ((0 < (Simpure_area_countS))) {
+      areas_129X = Simpure_areasS;
+      sizes_130X = Simpure_sizesS;
+      count_131X = Simpure_area_countS;
+      arg1K0 = 0;
+      goto L5577;}
     else {
-      goto L4127;}}
+      goto L5517;}}
   else {
-    areas_144X = Spure_areasS;
-    sizes_145X = Spure_sizesS;
-    count_146X = Spure_area_countS;
+    goto L5535;}}
+ L5577: {
+  i_132X = arg1K0;
+  if ((i_132X < count_131X)) {
+    merged_arg0K0 = (*(areas_129X + i_132X));
+    merged_arg0K1 = ((*(areas_129X + i_132X)) + (*(sizes_130X + i_132X)));
+    Hproc923124_return_tag = 1;
+    goto Hproc923124;
+   Hproc923124_return_1:
+    v_133X = Hproc9231240_return_value;
+    if (v_133X) {
+      arg1K0 = (1 + i_132X);
+      goto L5577;}
+    else {
+      goto L5535;}}
+  else {
+    goto L5517;}}
+ L5517: {
+  if ((0 < (Spure_area_countS))) {
+    areas_134X = Spure_areasS;
+    sizes_135X = Spure_sizesS;
+    count_136X = Spure_area_countS;
     arg1K0 = 0;
-    goto L4186;}}
- L4127: {
-  ShpS = start_hp_137X;
+    goto L5598;}
+  else {
+    goto L5524;}}
+ L5535: {
+  s48_ShpS = start_hp_127X;
   return 1;}
- L4186: {
-  i_147X = arg1K0;
-  if ((i_147X < count_146X)) {
-    merged_arg0K0 = (*(areas_144X + i_147X));
-    merged_arg0K1 = ((*(areas_144X + i_147X)) + (*(sizes_145X + i_147X)));
-    Hproc764134_return_tag = 2;
-    goto Hproc764134;
-   Hproc764134_return_2:
-    v_148X = Hproc7641340_return_value;
-    if (v_148X) {
-      arg1K0 = (1 + i_147X);
-      goto L4186;}
+ L5598: {
+  i_137X = arg1K0;
+  if ((i_137X < count_136X)) {
+    merged_arg0K0 = (*(areas_134X + i_137X));
+    merged_arg0K1 = ((*(areas_134X + i_137X)) + (*(sizes_135X + i_137X)));
+    Hproc923124_return_tag = 2;
+    goto Hproc923124;
+   Hproc923124_return_2:
+    v_138X = Hproc9231240_return_value;
+    if (v_138X) {
+      arg1K0 = (1 + i_137X);
+      goto L5598;}
     else {
-      goto L4127;}}
+      goto L5535;}}
   else {
-    *((long *) start_hp_137X) = (10 + (((((ShpS) - (start_hp_137X + 4)))<<8)));
-    return (3 + (((long) (start_hp_137X + 4))));}}
- Hproc764134: {
-  start_135X = merged_arg0K0;
-  end_136X = merged_arg0K1;{
-  type_149X = Sfinding_typeS;
-  arg0K0 = start_135X;
-  goto L3315;}
- L3315: {
-  addr_150X = arg0K0;
-  if ((addr_150X < end_136X)) {
-    d_151X = *((long *) addr_150X);
-    if ((2 == (3 & d_151X))) {
-      if ((type_149X == (31 & (((d_151X)>>2))))) {
-        record_152X = 3 + (((long) (addr_150X + 4)));
-        if (((Hthe_record_type7610) == (*((long *) (((char *) (-3 + record_152X))))))) {
-          if ((((ShpS) + 16) < (SlimitS))) {
-            *((long *) (ShpS)) = record_152X;
-            ShpS = ((ShpS) + 4);
-            goto L3347;}
-          else {
-            Hproc7641340_return_value = 0;
-            goto Hproc764134_return;}}
+    goto L5524;}}
+ L5524: {
+  *((long *) start_hp_127X) = (10 + (((((s48_ShpS) - (start_hp_127X + 4)))<<8)));
+  return (3 + (((long) (start_hp_127X + 4))));}
+ Hproc923124: {
+  start_125X = merged_arg0K0;
+  end_126X = merged_arg0K1;{
+  type_139X = Sfinding_typeS;
+  arg0K0 = start_125X;
+  goto L4503;}
+ L4503: {
+  addr_140X = arg0K0;
+  if ((addr_140X < end_126X)) {
+    d_141X = *((long *) addr_140X);
+    next_142X = addr_140X + (4 + (-4 & (3 + ((long)(((unsigned long)d_141X)>>8)))));
+    if ((2 == (3 & d_141X))) {
+      if ((type_139X == (31 & (((d_141X)>>2))))) {
+        if ((((s48_ShpS) + 16) < (s48_SlimitS))) {
+          *((long *) (s48_ShpS)) = (3 + (((long) (addr_140X + 4))));
+          s48_ShpS = ((s48_ShpS) + 4);
+          arg0K0 = next_142X;
+          goto L4503;}
         else {
-          goto L3347;}}
+          Hproc9231240_return_value = 0;
+          goto Hproc923124_return;}}
       else {
-        goto L3347;}}
+        arg0K0 = next_142X;
+        goto L4503;}}
     else {
       ps_write_string("heap is in an inconsistent state.", (stderr));
-      Hproc7641340_return_value = 0;
-      goto Hproc764134_return;}}
+      Hproc9231240_return_value = 0;
+      goto Hproc923124_return;}}
   else {
-    Hproc7641340_return_value = 1;
-    goto Hproc764134_return;}}
- L3347: {
-  arg0K0 = (addr_150X + (4 + (-4 & (3 + ((long)(((unsigned long)d_151X)>>8))))));
-  goto L3315;}
- Hproc764134_return:
-  switch (Hproc764134_return_tag) {
-  case 0: goto Hproc764134_return_0;
-  case 1: goto Hproc764134_return_1;
-  default: goto Hproc764134_return_2;
+    Hproc9231240_return_value = 1;
+    goto Hproc923124_return;}}
+ Hproc923124_return:
+  switch (Hproc923124_return_tag) {
+  case 0: goto Hproc923124_return_0;
+  case 1: goto Hproc923124_return_1;
+  default: goto Hproc923124_return_2;
   }}
 
 }
-long read_image(long startup_space_153X)
+long s48_read_image(void)
 {
   FILE * arg4K0;
   char *arg3K1;
   char arg2K1;
   char arg2K0;
   char * arg0K0;
-  long arg1K2;
   long arg1K0;
-  long d_195X;
-  long descriptor_194X;
-  char * ptr_193X;
-  long descriptor_192X;
-  long status_191X;
-  long status_190X;
-  long status_189X;
-  long status_188X;
-  char * next_187X;
-  long value_186X;
-  long x_185X;
-  long x_184X;
-  char * ptr_183X;
-  long status_182X;
-  long status_181X;
-  long status_180X;
-  char eofP_179X;
-  char v_178X;
-  char *string_177X;
-  char okayP_176X;
-  long status_175X;
-  long status_174X;
-  long status_173X;
-  char eofP_172X;
-  long got_171X;
-  long need_170X;
-  char * start_169X;
-  char * new_limit_168X;
-  char * new_hp_167X;
-  long delta_166X;
-  long startup_space_165X;
-  char reverseP_164X;
-  FILE * port_163X;
-  long x_162X;
-  long x_161X;
-  char * addr_160X;
-  char *string_159X;
-  char okayP_158X;
-  long status_157X;
-  char eofP_156X;
-  long got_155X;
-  FILE * port_154X;
- {  port_154X = Simage_portS;
-  got_155X = ps_read_block(port_154X, ((char *) (ShpS)), 4, &eofP_156X, &status_157X);
-  if ((status_157X == NO_ERRORS)) {
-    if (eofP_156X) {
+  long v_192X;
+  long descriptor_191X;
+  long v_190X;
+  long descriptor_189X;
+  long v_188X;
+  long descriptor_187X;
+  long v_186X;
+  long d_185X;
+  long descriptor_184X;
+  long v_183X;
+  long descriptor_182X;
+  char * ptr_181X;
+  long descriptor_180X;
+  long status_179X;
+  long status_178X;
+  long status_177X;
+  long status_176X;
+  char * next_175X;
+  long value_174X;
+  long x_173X;
+  long x_172X;
+  char * ptr_171X;
+  long status_170X;
+  long status_169X;
+  long status_168X;
+  char eofP_167X;
+  char v_166X;
+  char *string_165X;
+  char okayP_164X;
+  long status_163X;
+  long status_162X;
+  long status_161X;
+  char eofP_160X;
+  long got_159X;
+  long need_158X;
+  char * start_157X;
+  char * new_limit_156X;
+  char * new_hp_155X;
+  long delta_154X;
+  char reverseP_153X;
+  FILE * port_152X;
+  long x_151X;
+  long x_150X;
+  char * addr_149X;
+  char *string_148X;
+  char okayP_147X;
+  long status_146X;
+  char eofP_145X;
+  long got_144X;
+  FILE * port_143X;
+ {  port_143X = Simage_portS;
+  got_144X = ps_read_block(port_143X, ((char *) (s48_ShpS)), 4, &eofP_145X, &status_146X);
+  if ((status_146X == NO_ERRORS)) {
+    if (eofP_145X) {
       arg2K0 = 0;
       arg3K1 = "Premature EOF when reading image file";
-      goto L4922;}
+      goto L6079;}
     else {
-      if ((got_155X < 4)) {
+      if ((got_144X < 4)) {
         arg2K0 = 0;
         arg3K1 = "Read returned too few bytes";
-        goto L4922;}
+        goto L6079;}
       else {
         arg2K0 = 1;
         arg3K1 = "";
-        goto L4922;}}}
+        goto L6079;}}}
   else {
-    SstatusS = status_157X;
+    SstatusS = status_146X;
     arg2K0 = 0;
     arg3K1 = "Error reading from image file";
-    goto L4922;}}
- L4922: {
-  okayP_158X = arg2K0;
-  string_159X = arg3K1;
-  if (okayP_158X) {
-    if ((1 == (*((long *) (ShpS))))) {
-      arg4K0 = port_154X;
+    goto L6079;}}
+ L6079: {
+  okayP_147X = arg2K0;
+  string_148X = arg3K1;
+  if (okayP_147X) {
+    if ((1 == (*((long *) (s48_ShpS))))) {
+      arg4K0 = port_143X;
       arg2K1 = 0;
-      arg1K2 = startup_space_153X;
-      goto L4243;}
+      goto L5092;}
     else {
-      addr_160X = ShpS;
-      x_161X = *((unsigned char *) addr_160X);
-      *((unsigned char *) addr_160X) = (*((unsigned char *) (addr_160X + 3)));
-      *((unsigned char *) (addr_160X + 3)) = x_161X;
-      x_162X = *((unsigned char *) (addr_160X + 1));
-      *((unsigned char *) (addr_160X + 1)) = (*((unsigned char *) (addr_160X + 2)));
-      *((unsigned char *) (addr_160X + 2)) = x_162X;
-      if ((1 == (*((long *) (ShpS))))) {
-        arg4K0 = port_154X;
+      addr_149X = s48_ShpS;
+      x_150X = *((unsigned char *) addr_149X);
+      *((unsigned char *) addr_149X) = (*((unsigned char *) (addr_149X + 3)));
+      *((unsigned char *) (addr_149X + 3)) = x_150X;
+      x_151X = *((unsigned char *) (addr_149X + 1));
+      *((unsigned char *) (addr_149X + 1)) = (*((unsigned char *) (addr_149X + 2)));
+      *((unsigned char *) (addr_149X + 2)) = x_151X;
+      if ((1 == (*((long *) (s48_ShpS))))) {
+        arg4K0 = port_143X;
         arg2K1 = 1;
-        arg1K2 = startup_space_153X;
-        goto L4243;}
+        goto L5092;}
       else {
         ps_write_string("Unable to correct byte order", (stderr));
         { long ignoreXX;
         PS_WRITE_CHAR(10, (stderr), ignoreXX) }
         if (((SstatusS) == NO_ERRORS)) {
-          goto L5018;}
+          goto L6187;}
         else {
           ps_write_string((ps_error_string((SstatusS))), (stderr));
           { long ignoreXX;
           PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-          goto L5018;}}}}
+          goto L6187;}}}}
   else {
-    ps_write_string(string_159X, (stderr));
+    ps_write_string(string_148X, (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     if (((SstatusS) == NO_ERRORS)) {
-      goto L4972;}
+      goto L6135;}
     else {
       ps_write_string((ps_error_string((SstatusS))), (stderr));
       { long ignoreXX;
       PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-      goto L4972;}}}
- L4243: {
-  port_163X = arg4K0;
-  reverseP_164X = arg2K1;
-  startup_space_165X = arg1K2;
-  delta_166X = (ShpS) - (Sold_beginS);
-  new_hp_167X = (Sold_hpS) + delta_166X;
-  new_limit_168X = Snewspace_endS;
-  start_169X = ShpS;
-  if (((new_hp_167X + startup_space_165X) < new_limit_168X)) {
-    need_170X = (Sold_hpS) - (Sold_beginS);
-    got_171X = ps_read_block(port_163X, ((char *) (ShpS)), need_170X, &eofP_172X, &status_173X);
-    if ((status_173X == NO_ERRORS)) {
-      if (eofP_172X) {
+      goto L6135;}}}
+ L5092: {
+  port_152X = arg4K0;
+  reverseP_153X = arg2K1;
+  delta_154X = (s48_ShpS) - (Sold_beginS);
+  new_hp_155X = (Sold_hpS) + delta_154X;
+  new_limit_156X = Snewspace_endS;
+  start_157X = s48_ShpS;
+  if ((new_hp_155X < new_limit_156X)) {
+    need_158X = (Sold_hpS) - (Sold_beginS);
+    got_159X = ps_read_block(port_152X, ((char *) (s48_ShpS)), need_158X, &eofP_160X, &status_161X);
+    if ((status_161X == NO_ERRORS)) {
+      if (eofP_160X) {
         arg2K0 = 0;
         arg3K1 = "Premature EOF when reading image file";
-        goto L4259;}
+        goto L5114;}
       else {
-        if ((got_171X < need_170X)) {
+        if ((got_159X < need_158X)) {
           arg2K0 = 0;
           arg3K1 = "Read returned too few bytes";
-          goto L4259;}
+          goto L5114;}
         else {
           arg2K0 = 1;
           arg3K1 = "";
-          goto L4259;}}}
+          goto L5114;}}}
     else {
-      SstatusS = status_173X;
+      SstatusS = status_161X;
       arg2K0 = 0;
       arg3K1 = "Error reading from image file";
-      goto L4259;}}
+      goto L5114;}}
   else {
     ps_write_string("Heap not big enough to restore this image", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     if (((SstatusS) == NO_ERRORS)) {
-      goto L4325;}
+      goto L5210;}
     else {
       ps_write_string((ps_error_string((SstatusS))), (stderr));
       { long ignoreXX;
       PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-      goto L4325;}}}
- L5018: {
-  status_174X = ps_close(port_154X);
-  if ((status_174X == NO_ERRORS)) {
+      goto L5210;}}}
+ L6187: {
+  status_162X = ps_close(port_143X);
+  if ((status_162X == NO_ERRORS)) {
     return -1;}
   else {
     ps_write_string("Error closing image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L4972: {
-  status_175X = ps_close(port_154X);
-  if ((status_175X == NO_ERRORS)) {
+ L6135: {
+  status_163X = ps_close(port_143X);
+  if ((status_163X == NO_ERRORS)) {
     return -1;}
   else {
     ps_write_string("Error closing image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L4259: {
-  okayP_176X = arg2K0;
-  string_177X = arg3K1;
-  PS_READ_CHAR(port_163X, v_178X, eofP_179X, status_180X)
-  if (okayP_176X) {
-    if ((status_180X == NO_ERRORS)) {
-      if (eofP_179X) {
-        status_181X = ps_close(port_163X);
-        if ((status_181X == NO_ERRORS)) {
-          if (reverseP_164X) {
+ L5114: {
+  okayP_164X = arg2K0;
+  string_165X = arg3K1;
+  PS_READ_CHAR(port_152X, v_166X, eofP_167X, status_168X)
+  if (okayP_164X) {
+    if ((status_168X == NO_ERRORS)) {
+      if (eofP_167X) {
+        status_169X = ps_close(port_152X);
+        if ((status_169X == NO_ERRORS)) {
+          if (reverseP_153X) {
             ps_write_string("Correcting byte order of resumed image.", (stderr));
             { long ignoreXX;
             PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-            arg0K0 = start_169X;
-            goto L3472;}
+            arg0K0 = start_157X;
+            goto L4309;}
           else {
-            goto L4297;}}
+            goto L5152;}}
         else {
           ps_write_string("Error closing image file", (stderr));
           { long ignoreXX;
           PS_WRITE_CHAR(10, (stderr), ignoreXX) }
           if (((SstatusS) == NO_ERRORS)) {
-            goto L4460;}
+            goto L5345;}
           else {
             ps_write_string((ps_error_string((SstatusS))), (stderr));
             { long ignoreXX;
             PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-            goto L4460;}}}
+            goto L5345;}}}
       else {
         ps_write_string("Image file has extraneous data after image", (stderr));
         { long ignoreXX;
         PS_WRITE_CHAR(10, (stderr), ignoreXX) }
         if (((SstatusS) == NO_ERRORS)) {
-          goto L4430;}
+          goto L5315;}
         else {
           ps_write_string((ps_error_string((SstatusS))), (stderr));
           { long ignoreXX;
           PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-          goto L4430;}}}
+          goto L5315;}}}
     else {
       ps_write_string("Error reading from image file", (stderr));
       { long ignoreXX;
       PS_WRITE_CHAR(10, (stderr), ignoreXX) }
       if (((SstatusS) == NO_ERRORS)) {
-        goto L4400;}
+        goto L5285;}
       else {
         ps_write_string((ps_error_string((SstatusS))), (stderr));
         { long ignoreXX;
         PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-        goto L4400;}}}
+        goto L5285;}}}
   else {
-    ps_write_string(string_177X, (stderr));
+    ps_write_string(string_165X, (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     if (((SstatusS) == NO_ERRORS)) {
-      goto L4370;}
+      goto L5255;}
     else {
       ps_write_string((ps_error_string((SstatusS))), (stderr));
       { long ignoreXX;
       PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-      goto L4370;}}}
- L4325: {
-  status_182X = ps_close(port_163X);
-  if ((status_182X == NO_ERRORS)) {
+      goto L5255;}}}
+ L5210: {
+  status_170X = ps_close(port_152X);
+  if ((status_170X == NO_ERRORS)) {
     return -1;}
   else {
     ps_write_string("Error closing image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L3472: {
-  ptr_183X = arg0K0;
-  if ((ptr_183X < new_hp_167X)) {
-    x_184X = *((unsigned char *) ptr_183X);
-    *((unsigned char *) ptr_183X) = (*((unsigned char *) (ptr_183X + 3)));
-    *((unsigned char *) (ptr_183X + 3)) = x_184X;
-    x_185X = *((unsigned char *) (ptr_183X + 1));
-    *((unsigned char *) (ptr_183X + 1)) = (*((unsigned char *) (ptr_183X + 2)));
-    *((unsigned char *) (ptr_183X + 2)) = x_185X;
-    value_186X = *((long *) ptr_183X);
-    next_187X = ptr_183X + 4;
-    if ((2 == (3 & value_186X))) {
-      if (((31 & (((value_186X)>>2))) < 16)) {
-        arg0K0 = next_187X;
-        goto L3472;}
+ L4309: {
+  ptr_171X = arg0K0;
+  if ((ptr_171X < new_hp_155X)) {
+    x_172X = *((unsigned char *) ptr_171X);
+    *((unsigned char *) ptr_171X) = (*((unsigned char *) (ptr_171X + 3)));
+    *((unsigned char *) (ptr_171X + 3)) = x_172X;
+    x_173X = *((unsigned char *) (ptr_171X + 1));
+    *((unsigned char *) (ptr_171X + 1)) = (*((unsigned char *) (ptr_171X + 2)));
+    *((unsigned char *) (ptr_171X + 2)) = x_173X;
+    value_174X = *((long *) ptr_171X);
+    next_175X = ptr_171X + 4;
+    if ((2 == (3 & value_174X))) {
+      if (((31 & (((value_174X)>>2))) < 16)) {
+        arg0K0 = next_175X;
+        goto L4309;}
       else {
-        arg0K0 = (next_187X + (-4 & (3 + ((long)(((unsigned long)value_186X)>>8)))));
-        goto L3472;}}
+        arg0K0 = (next_175X + (-4 & (3 + ((long)(((unsigned long)value_174X)>>8)))));
+        goto L4309;}}
     else {
-      arg0K0 = next_187X;
-      goto L3472;}}
+      arg0K0 = next_175X;
+      goto L4309;}}
   else {
-    goto L4297;}}
- L4297: {
-  if ((0 == delta_166X)) {
-    goto L4307;}
+    goto L5152;}}
+ L5152: {
+  if ((0 == delta_154X)) {
+    goto L5162;}
   else {
-    arg0K0 = start_169X;
-    goto L3571;}}
- L4460: {
-  status_188X = ps_close(port_163X);
-  if ((status_188X == NO_ERRORS)) {
+    arg0K0 = start_157X;
+    goto L4408;}}
+ L5345: {
+  status_176X = ps_close(port_152X);
+  if ((status_176X == NO_ERRORS)) {
     return -1;}
   else {
     ps_write_string("Error closing image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L4430: {
-  status_189X = ps_close(port_163X);
-  if ((status_189X == NO_ERRORS)) {
+ L5315: {
+  status_177X = ps_close(port_152X);
+  if ((status_177X == NO_ERRORS)) {
     return -1;}
   else {
     ps_write_string("Error closing image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L4400: {
-  status_190X = ps_close(port_163X);
-  if ((status_190X == NO_ERRORS)) {
+ L5285: {
+  status_178X = ps_close(port_152X);
+  if ((status_178X == NO_ERRORS)) {
     return -1;}
   else {
     ps_write_string("Error closing image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L4370: {
-  status_191X = ps_close(port_163X);
-  if ((status_191X == NO_ERRORS)) {
+ L5255: {
+  status_179X = ps_close(port_152X);
+  if ((status_179X == NO_ERRORS)) {
     return -1;}
   else {
     ps_write_string("Error closing image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L4307: {
-  ShpS = new_hp_167X;
-  descriptor_192X = Sstartup_procS;
-  if ((3 == (3 & descriptor_192X))) {
-    return (3 + (((long) ((((char *) (-3 + descriptor_192X))) + delta_166X))));}
+ L5162: {
+  s48_ShpS = new_hp_155X;
+  descriptor_180X = Sstartup_procedureS;
+  if ((3 == (3 & descriptor_180X))) {
+    arg1K0 = (3 + (((long) ((((char *) (-3 + descriptor_180X))) + delta_154X))));
+    goto L5166;}
   else {
-    return descriptor_192X;}}
- L3571: {
-  ptr_193X = arg0K0;
-  if ((ptr_193X < new_hp_167X)) {
-    descriptor_194X = *((long *) ptr_193X);
-    if ((3 == (3 & descriptor_194X))) {
-      arg1K0 = (3 + (((long) ((((char *) (-3 + descriptor_194X))) + delta_166X))));
-      goto L3576;}
+    arg1K0 = descriptor_180X;
+    goto L5166;}}
+ L4408: {
+  ptr_181X = arg0K0;
+  if ((ptr_181X < new_hp_155X)) {
+    descriptor_182X = *((long *) ptr_181X);
+    if ((3 == (3 & descriptor_182X))) {
+      arg1K0 = (3 + (((long) ((((char *) (-3 + descriptor_182X))) + delta_154X))));
+      goto L4413;}
     else {
-      arg1K0 = descriptor_194X;
-      goto L3576;}}
+      arg1K0 = descriptor_182X;
+      goto L4413;}}
   else {
-    goto L4307;}}
- L3576: {
-  d_195X = arg1K0;
-  *((long *) ptr_193X) = d_195X;
-  if ((2 == (3 & d_195X))) {
-    if (((31 & (((d_195X)>>2))) < 16)) {
-      goto L3590;}
+    goto L5162;}}
+ L5166: {
+  v_183X = arg1K0;
+  Sstartup_procedureS = v_183X;
+  descriptor_184X = SsymbolsS;
+  if ((3 == (3 & descriptor_184X))) {
+    arg1K0 = (3 + (((long) ((((char *) (-3 + descriptor_184X))) + delta_154X))));
+    goto L5171;}
+  else {
+    arg1K0 = descriptor_184X;
+    goto L5171;}}
+ L4413: {
+  d_185X = arg1K0;
+  *((long *) ptr_181X) = d_185X;
+  if ((2 == (3 & d_185X))) {
+    if (((31 & (((d_185X)>>2))) < 16)) {
+      goto L4427;}
     else {
-      arg0K0 = (ptr_193X + (4 + (-4 & (3 + ((long)(((unsigned long)d_195X)>>8))))));
-      goto L3571;}}
+      arg0K0 = (ptr_181X + (4 + (-4 & (3 + ((long)(((unsigned long)d_185X)>>8))))));
+      goto L4408;}}
   else {
-    goto L3590;}}
- L3590: {
-  arg0K0 = (ptr_193X + 4);
-  goto L3571;}
+    goto L4427;}}
+ L5171: {
+  v_186X = arg1K0;
+  SsymbolsS = v_186X;
+  descriptor_187X = Simported_bindingsS;
+  if ((3 == (3 & descriptor_187X))) {
+    arg1K0 = (3 + (((long) ((((char *) (-3 + descriptor_187X))) + delta_154X))));
+    goto L5176;}
+  else {
+    arg1K0 = descriptor_187X;
+    goto L5176;}}
+ L4427: {
+  arg0K0 = (ptr_181X + 4);
+  goto L4408;}
+ L5176: {
+  v_188X = arg1K0;
+  Simported_bindingsS = v_188X;
+  descriptor_189X = Sexported_bindingsS;
+  if ((3 == (3 & descriptor_189X))) {
+    arg1K0 = (3 + (((long) ((((char *) (-3 + descriptor_189X))) + delta_154X))));
+    goto L5181;}
+  else {
+    arg1K0 = descriptor_189X;
+    goto L5181;}}
+ L5181: {
+  v_190X = arg1K0;
+  Sexported_bindingsS = v_190X;
+  descriptor_191X = Sresumer_recordsS;
+  if ((3 == (3 & descriptor_191X))) {
+    arg1K0 = (3 + (((long) ((((char *) (-3 + descriptor_191X))) + delta_154X))));
+    goto L5186;}
+  else {
+    arg1K0 = descriptor_191X;
+    goto L5186;}}
+ L5186: {
+  v_192X = arg1K0;
+  Sresumer_recordsS = v_192X;
+  return 0;}
 }
-long write_image(long resume_proc_196X, FILE * port_197X, void (*mark_traced_channels_closedB_198X)(void))
+long s48_find_all_records(long record_type_193X)
 {
   char * arg0K0;
   long arg1K0;
-  long h_225X;
+  char * merged_arg0K1;
+  char * merged_arg0K0;
+
+  int Hproc969194_return_tag;
+  char Hproc9691940_return_value;
+  char * start_195X;
+  char * end_196X;
+  long obj_213X;
+  char * next_212X;
+  long d_211X;
+  char * addr_210X;
+  long type_209X;
+  char v_208X;
+  long i_207X;
+  long count_206X;
+  long *sizes_205X;
+  char * *areas_204X;
+  char v_203X;
+  long i_202X;
+  long count_201X;
+  long *sizes_200X;
+  char * *areas_199X;
+  char v_198X;
+  char * start_hp_197X;
+ {  Hthe_record_type9260 = record_type_193X;
+  Sfinding_typeS = 8;
+  start_hp_197X = s48_ShpS;
+  *((long *) (s48_ShpS)) = 0;
+  s48_ShpS = ((s48_ShpS) + 4);
+  merged_arg0K0 = (Snewspace_beginS);
+  merged_arg0K1 = start_hp_197X;
+  Hproc969194_return_tag = 0;
+  goto Hproc969194;
+ Hproc969194_return_0:
+  v_198X = Hproc9691940_return_value;
+  if (v_198X) {
+    if ((0 < (Simpure_area_countS))) {
+      areas_199X = Simpure_areasS;
+      sizes_200X = Simpure_sizesS;
+      count_201X = Simpure_area_countS;
+      arg1K0 = 0;
+      goto L5742;}
+    else {
+      goto L5682;}}
+  else {
+    goto L5700;}}
+ L5742: {
+  i_202X = arg1K0;
+  if ((i_202X < count_201X)) {
+    merged_arg0K0 = (*(areas_199X + i_202X));
+    merged_arg0K1 = ((*(areas_199X + i_202X)) + (*(sizes_200X + i_202X)));
+    Hproc969194_return_tag = 1;
+    goto Hproc969194;
+   Hproc969194_return_1:
+    v_203X = Hproc9691940_return_value;
+    if (v_203X) {
+      arg1K0 = (1 + i_202X);
+      goto L5742;}
+    else {
+      goto L5700;}}
+  else {
+    goto L5682;}}
+ L5682: {
+  if ((0 < (Spure_area_countS))) {
+    areas_204X = Spure_areasS;
+    sizes_205X = Spure_sizesS;
+    count_206X = Spure_area_countS;
+    arg1K0 = 0;
+    goto L5763;}
+  else {
+    goto L5689;}}
+ L5700: {
+  s48_ShpS = start_hp_197X;
+  return 1;}
+ L5763: {
+  i_207X = arg1K0;
+  if ((i_207X < count_206X)) {
+    merged_arg0K0 = (*(areas_204X + i_207X));
+    merged_arg0K1 = ((*(areas_204X + i_207X)) + (*(sizes_205X + i_207X)));
+    Hproc969194_return_tag = 2;
+    goto Hproc969194;
+   Hproc969194_return_2:
+    v_208X = Hproc9691940_return_value;
+    if (v_208X) {
+      arg1K0 = (1 + i_207X);
+      goto L5763;}
+    else {
+      goto L5700;}}
+  else {
+    goto L5689;}}
+ L5689: {
+  *((long *) start_hp_197X) = (10 + (((((s48_ShpS) - (start_hp_197X + 4)))<<8)));
+  return (3 + (((long) (start_hp_197X + 4))));}
+ Hproc969194: {
+  start_195X = merged_arg0K0;
+  end_196X = merged_arg0K1;{
+  type_209X = Sfinding_typeS;
+  arg0K0 = start_195X;
+  goto L4670;}
+ L4670: {
+  addr_210X = arg0K0;
+  if ((addr_210X < end_196X)) {
+    d_211X = *((long *) addr_210X);
+    next_212X = addr_210X + (4 + (-4 & (3 + ((long)(((unsigned long)d_211X)>>8)))));
+    if ((2 == (3 & d_211X))) {
+      if ((type_209X == (31 & (((d_211X)>>2))))) {
+        obj_213X = 3 + (((long) (addr_210X + 4)));
+        if (((*((long *) (((char *) (-3 + obj_213X))))) == (Hthe_record_type9260))) {
+          if ((((s48_ShpS) + 16) < (s48_SlimitS))) {
+            *((long *) (s48_ShpS)) = obj_213X;
+            s48_ShpS = ((s48_ShpS) + 4);
+            arg0K0 = next_212X;
+            goto L4670;}
+          else {
+            Hproc9691940_return_value = 0;
+            goto Hproc969194_return;}}
+        else {
+          arg0K0 = next_212X;
+          goto L4670;}}
+      else {
+        arg0K0 = next_212X;
+        goto L4670;}}
+    else {
+      ps_write_string("heap is in an inconsistent state.", (stderr));
+      Hproc9691940_return_value = 0;
+      goto Hproc969194_return;}}
+  else {
+    Hproc9691940_return_value = 1;
+    goto Hproc969194_return;}}
+ Hproc969194_return:
+  switch (Hproc969194_return_tag) {
+  case 0: goto Hproc969194_return_0;
+  case 1: goto Hproc969194_return_1;
+  default: goto Hproc969194_return_2;
+  }}
+
+}
+long s48_trace_locationsB(char * start_214X, char * end_215X)
+{
+  char * arg0K0;
+  char * arg0K1;
+  long arg1K0;
+  long new_232X;
+  char * data_addr_231X;
+  char * frontier_230X;
+  long new_thing_229X;
+  char * frontier_228X;
+  long new_thing_227X;
+  char * a_226X;
+  long descriptor_225X;
   long h_224X;
-  long d_223X;
-  char * addr_222X;
-  char * e_221X;
-  char * b_220X;
-  long status_219X;
-  long v_218X;
-  long v_217X;
-  long v_216X;
-  long cells_215X;
-  long v_214X;
-  long cells_213X;
-  long v_212X;
-  long v_211X;
-  long v_210X;
-  long v_209X;
-  long v_208X;
-  char * end_207X;
-  char * start_206X;
-  char * start_205X;
-  long resume_proc_204X;
-  char * new_hp_203X;
-  long new_thing_202X;
-  char * a_201X;
-  char * e_200X;
-  char * b_199X;
- {  b_199X = Snewspace_beginS;
-  Snewspace_beginS = (Soldspace_beginS);
-  Soldspace_beginS = b_199X;
-  e_200X = Snewspace_endS;
-  Snewspace_endS = (Soldspace_endS);
-  Soldspace_endS = e_200X;
-  Ssaved_limitS = (SlimitS);
-  Ssaved_hpS = (ShpS);
-  SlimitS = (Snewspace_endS);
-  ShpS = (Snewspace_beginS);
-  Sweak_pointer_hpS = NULL;
-  if ((3 == (3 & resume_proc_196X))) {
-    a_201X = ((char *) (-3 + resume_proc_196X));
-    if ((a_201X < (Soldspace_beginS))) {
-      arg1K0 = resume_proc_196X;
-      goto L5059;}
-    else {
-      if ((a_201X < (Soldspace_endS))) {
-        new_thing_202X = real_copy_object(resume_proc_196X, (ShpS), &new_hp_203X);
-        ShpS = new_hp_203X;
-        arg1K0 = new_thing_202X;
-        goto L5059;}
+  char * a_223X;
+  char v_222X;
+  long type_221X;
+  char v_220X;
+  char * next_219X;
+  long thing_218X;
+  char * frontier_217X;
+  char * addr_216X;
+ {  arg0K0 = start_214X;
+  arg0K1 = (s48_ShpS);
+  goto L6441;}
+ L6441: {
+  addr_216X = arg0K0;
+  frontier_217X = arg0K1;
+  if ((addr_216X < end_215X)) {
+    thing_218X = *((long *) addr_216X);
+    next_219X = addr_216X + 4;
+    if ((2 == (3 & thing_218X))) {
+      if ((2 == (3 & thing_218X))) {
+        if (((31 & (((thing_218X)>>2))) < 16)) {
+          arg0K0 = next_219X;
+          arg0K1 = frontier_217X;
+          goto L6441;}
+        else {
+          arg0K0 = (next_219X + (-4 & (3 + ((long)(((unsigned long)thing_218X)>>8)))));
+          arg0K1 = frontier_217X;
+          goto L6441;}}
       else {
-        arg1K0 = resume_proc_196X;
-        goto L5059;}}}
-  else {
-    arg1K0 = resume_proc_196X;
-    goto L5059;}}
- L5059: {
-  resume_proc_204X = arg1K0;
-  start_205X = Snewspace_beginS;
-  arg0K0 = start_205X;
-  goto L5111;}
- L5111: {
-  start_206X = arg0K0;
-  end_207X = ShpS;
-  trace_locationsB(start_206X, end_207X);
-  if (((ShpS) < (SlimitS))) {
-    if ((end_207X < (ShpS))) {
-      arg0K0 = end_207X;
-      goto L5111;}
+        arg0K0 = next_219X;
+        arg0K1 = frontier_217X;
+        goto L6441;}}
     else {
-      goto L5063;}}
+      if ((Swriting_imagePS)) {
+        v_220X = gc_recordP(thing_218X);
+        if (v_220X) {
+          type_221X = *((long *) (((char *) (-3 + thing_218X))));
+          v_222X = gc_recordP(type_221X);
+          if (v_222X) {
+            if ((1 == (*((long *) ((((char *) (-3 + type_221X))) + 4))))) {
+              note_undumpableB(thing_218X);
+              *((long *) addr_216X) = (*((long *) ((((char *) (-3 + thing_218X))) + 4)));
+              arg0K0 = addr_216X;
+              arg0K1 = frontier_217X;
+              goto L6441;}
+            else {
+              goto L6475;}}
+          else {
+            goto L6475;}}
+        else {
+          goto L6475;}}
+      else {
+        goto L6475;}}}
   else {
-    ps_error("GC error: ran out of space in new heap", 0);
-    goto L5063;}}
- L5063: {
-  clean_weak_pointers();
-  (*mark_traced_channels_closedB_198X)();
-  SstatusS = NO_ERRORS;
-  if (((SstatusS) == NO_ERRORS)) {
-    PS_WRITE_CHAR(10, port_197X, v_208X)
-    SstatusS = v_208X;
-    goto L1658;}
-  else {
-    goto L1658;}}
- L1658: {
-  if (((SstatusS) == NO_ERRORS)) {
-    PS_WRITE_CHAR(12, port_197X, v_209X)
-    SstatusS = v_209X;
-    goto L1667;}
-  else {
-    goto L1667;}}
- L1667: {
-  if (((SstatusS) == NO_ERRORS)) {
-    PS_WRITE_CHAR(10, port_197X, v_210X)
-    SstatusS = v_210X;
-    goto L1676;}
-  else {
-    goto L1676;}}
- L1676: {
-  if (((SstatusS) == NO_ERRORS)) {
-    SstatusS = (ps_write_string("Vanilla 19", port_197X));
-    goto L1683;}
-  else {
-    goto L1683;}}
- L1683: {
-  if (((SstatusS) == NO_ERRORS)) {
-    PS_WRITE_CHAR(10, port_197X, v_211X)
-    SstatusS = v_211X;
-    goto L1692;}
-  else {
-    goto L1692;}}
- L1692: {
-  if (((SstatusS) == NO_ERRORS)) {
-    SstatusS = (ps_write_integer(4, port_197X));
-    goto L1736;}
-  else {
-    goto L1736;}}
- L1736: {
-  if (((SstatusS) == NO_ERRORS)) {
-    PS_WRITE_CHAR(10, port_197X, v_212X)
-    SstatusS = v_212X;
-    goto L1694;}
-  else {
-    goto L1694;}}
- L1694: {
-  cells_213X = ((long) (Snewspace_beginS));
-  if (((SstatusS) == NO_ERRORS)) {
-    SstatusS = (ps_write_integer((((cells_213X)>>2)), port_197X));
-    goto L1754;}
-  else {
-    goto L1754;}}
- L1754: {
-  if (((SstatusS) == NO_ERRORS)) {
-    PS_WRITE_CHAR(10, port_197X, v_214X)
-    SstatusS = v_214X;
-    goto L1698;}
-  else {
-    goto L1698;}}
- L1698: {
-  cells_215X = ((long) (ShpS));
-  if (((SstatusS) == NO_ERRORS)) {
-    SstatusS = (ps_write_integer((((cells_215X)>>2)), port_197X));
-    goto L1772;}
-  else {
-    goto L1772;}}
- L1772: {
-  if (((SstatusS) == NO_ERRORS)) {
-    PS_WRITE_CHAR(10, port_197X, v_216X)
-    SstatusS = v_216X;
-    goto L1702;}
-  else {
-    goto L1702;}}
- L1702: {
-  if (((SstatusS) == NO_ERRORS)) {
-    SstatusS = (ps_write_integer(resume_proc_204X, port_197X));
-    goto L1787;}
-  else {
-    goto L1787;}}
- L1787: {
-  if (((SstatusS) == NO_ERRORS)) {
-    PS_WRITE_CHAR(10, port_197X, v_217X)
-    SstatusS = v_217X;
-    goto L1704;}
-  else {
-    goto L1704;}}
- L1704: {
-  if (((SstatusS) == NO_ERRORS)) {
-    PS_WRITE_CHAR(12, port_197X, v_218X)
-    SstatusS = v_218X;
-    goto L1713;}
-  else {
-    goto L1713;}}
- L1713: {
-  *((long *) (ShpS)) = 1;
-  if (((SstatusS) == NO_ERRORS)) {
-    SstatusS = (ps_write_block(port_197X, ((char *) (ShpS)), (((ShpS) + 4) - (ShpS))));
-    goto L1724;}
-  else {
-    goto L1724;}}
- L1724: {
-  if (((SstatusS) == NO_ERRORS)) {
-    SstatusS = (ps_write_block(port_197X, ((char *) (Snewspace_beginS)), ((ShpS) - (Snewspace_beginS))));
-    goto L1731;}
-  else {
-    goto L1731;}}
- L1731: {
-  status_219X = SstatusS;
-  b_220X = Snewspace_beginS;
-  Snewspace_beginS = (Soldspace_beginS);
-  Soldspace_beginS = b_220X;
-  e_221X = Snewspace_endS;
-  Snewspace_endS = (Soldspace_endS);
-  Soldspace_endS = e_221X;
-  SlimitS = (Ssaved_limitS);
-  ShpS = (Ssaved_hpS);
-  arg0K0 = (Snewspace_beginS);
-  goto L2960;}
- L2960: {
-  addr_222X = arg0K0;
-  if ((addr_222X < (ShpS))) {
-    d_223X = *((long *) addr_222X);
-    if ((2 == (3 & d_223X))) {
-      arg1K0 = d_223X;
-      goto L2979;}
+    s48_ShpS = frontier_217X;
+    return 0;}}
+ L6475: {
+  if ((3 == (3 & thing_218X))) {
+    a_223X = ((char *) (-3 + thing_218X));
+    if ((a_223X < (Sfrom_beginS))) {
+      arg0K0 = next_219X;
+      arg0K1 = frontier_217X;
+      goto L6441;}
     else {
-      h_224X = *((long *) ((((char *) (-3 + d_223X))) + -4));
-      *((long *) addr_222X) = h_224X;
-      arg1K0 = h_224X;
-      goto L2979;}}
+      if ((a_223X < (Sfrom_endS))) {
+        h_224X = *((long *) ((((char *) (-3 + thing_218X))) + -4));
+        if ((3 == (3 & h_224X))) {
+          arg1K0 = h_224X;
+          arg0K1 = frontier_217X;
+          goto L6482;}
+        else {
+          if ((1074 == h_224X)) {
+            descriptor_225X = *((long *) (((char *) (-3 + thing_218X))));
+            if ((3 == (3 & descriptor_225X))) {
+              a_226X = ((char *) (-3 + descriptor_225X));
+              if ((a_226X < (Sfrom_beginS))) {
+                goto L7062;}
+              else {
+                if ((a_226X < (Sfrom_endS))) {
+                  new_thing_227X = copy_weak_pointer(thing_218X, frontier_217X, &frontier_228X);
+                  arg1K0 = new_thing_227X;
+                  arg0K1 = frontier_228X;
+                  goto L6482;}
+                else {
+                  goto L7062;}}}
+            else {
+              goto L7062;}}
+          else {
+            goto L7062;}}}
+      else {
+        arg0K0 = next_219X;
+        arg0K1 = frontier_217X;
+        goto L6441;}}}
   else {
-    return status_219X;}}
- L2979: {
-  h_225X = arg1K0;
-  arg0K0 = (addr_222X + (4 + (-4 & (3 + ((long)(((unsigned long)h_225X)>>8))))));
-  goto L2960;}
+    arg0K0 = next_219X;
+    arg0K1 = frontier_217X;
+    goto L6441;}}
+ L6482: {
+  new_thing_229X = arg1K0;
+  frontier_230X = arg0K1;
+  *((long *) addr_216X) = new_thing_229X;
+  arg0K0 = next_219X;
+  arg0K1 = frontier_230X;
+  goto L6441;}
+ L7062: {
+  *((long *) frontier_217X) = h_224X;
+  data_addr_231X = frontier_217X + 4;
+  new_232X = 3 + (((long) data_addr_231X));
+  *((long *) ((((char *) (-3 + thing_218X))) + -4)) = new_232X;
+  memcpy((void *)data_addr_231X, (void *)(((char *) (-3 + thing_218X))),((long)(((unsigned long)h_224X)>>8)));
+  arg1K0 = new_232X;
+  arg0K1 = (data_addr_231X + (-4 & (3 + ((long)(((unsigned long)h_224X)>>8)))));
+  goto L6482;}
 }
-long do_gc(long finalizer_alist_226X, long *TT0)
+void s48_do_gc(void)
 {
   char * arg0K0;
-  char arg2K0;
-  long arg1K2;
-  long arg1K1;
-  long arg1K0;
-  long thing_258X;
-  char tracedP_257X;
-  char * new_hp_256X;
-  long new_thing_255X;
-  char * a_254X;
-  long next_253X;
-  long thing_252X;
-  char * new_hp_251X;
-  long new_thing_250X;
-  char * new_hp_249X;
-  long new_thing_248X;
-  long goners_247X;
-  long okay_246X;
-  long alist_245X;
-  long value_244X;
-  char * new_hp_243X;
-  long new_thing_242X;
-  char * a_241X;
-  long stob_240X;
-  char * end_239X;
-  char * start_238X;
+  char * end_234X;
+  char * start_233X;
+ {  arg0K0 = (Snewspace_beginS);
+  goto L6697;}
+ L6697: {
+  start_233X = arg0K0;
+  end_234X = s48_ShpS;
+  s48_trace_locationsB(start_233X, end_234X);
+  if (((((((s48_SlimitS) - (s48_ShpS)))>>2)) < 0)) {
+    ps_error("GC error: ran out of space in new heap", 0);
+    return clean_weak_pointers();}
+  else {
+    if ((end_234X < (s48_ShpS))) {
+      arg0K0 = end_234X;
+      goto L6697;}
+    else {
+      return clean_weak_pointers();}}}
+}
+long s48_trace_stob_contentsB(long stob_235X)
+{
   char * start_237X;
   long h_236X;
-  long stob_235X;
-  long descriptor_234X;
-  long pair_233X;
-  char * start_232X;
-  long alist_231X;
-  long i_230X;
-  long count_229X;
-  long *sizes_228X;
-  char * *areas_227X;
- {  areas_227X = Simpure_areasS;
-  sizes_228X = Simpure_sizesS;
-  count_229X = Simpure_area_countS;
-  arg1K0 = 0;
-  goto L5283;}
- L5283: {
-  i_230X = arg1K0;
-  if ((i_230X < count_229X)) {
-    trace_locationsB((*(areas_227X + i_230X)), ((*(areas_227X + i_230X)) + (*(sizes_228X + i_230X))));
-    arg1K0 = (1 + i_230X);
-    goto L5283;}
+ {  h_236X = *((long *) ((((char *) (-3 + stob_235X))) + -4));
+  start_237X = ((char *) (-3 + stob_235X));
+  return s48_trace_locationsB(start_237X, (start_237X + (-4 & (3 + ((long)(((unsigned long)h_236X)>>8))))));}
+}
+void s48_begin_collection(void)
+{
+  long arg1K0;
+  long i_245X;
+  long count_244X;
+  long *sizes_243X;
+  char * *areas_242X;
+  char * temp_241X;
+  char * temp_240X;
+  char * temp_239X;
+  char * temp_238X;
+ {  Sfrom_beginS = (Snewspace_beginS);
+  Sfrom_endS = (Snewspace_endS);
+  temp_238X = s48_SlimitS;
+  s48_SlimitS = (Soldspace_limitS);
+  Soldspace_limitS = temp_238X;
+  temp_239X = s48_ShpS;
+  s48_ShpS = (Soldspace_hpS);
+  Soldspace_hpS = temp_239X;
+  temp_240X = Snewspace_beginS;
+  Snewspace_beginS = (Soldspace_beginS);
+  Soldspace_beginS = temp_240X;
+  temp_241X = Snewspace_endS;
+  Snewspace_endS = (Soldspace_endS);
+  Soldspace_endS = temp_241X;
+  s48_ShpS = (Snewspace_beginS);
+  Sweak_pointer_hpS = NULL;
+  Swriting_imagePS = 0;
+  if ((0 < (Simpure_area_countS))) {
+    areas_242X = Simpure_areasS;
+    sizes_243X = Simpure_sizesS;
+    count_244X = Simpure_area_countS;
+    arg1K0 = 0;
+    goto L6812;}
   else {
-    arg1K0 = finalizer_alist_226X;
-    goto L5134;}}
- L5134: {
-  alist_231X = arg1K0;
-  if ((25 == alist_231X)) {
-    start_232X = Snewspace_beginS;
-    arg0K0 = start_232X;
-    goto L5298;}
+    return;}}
+ L6812: {
+  i_245X = arg1K0;
+  if ((i_245X < count_244X)) {
+    s48_trace_locationsB((*(areas_242X + i_245X)), ((*(areas_242X + i_245X)) + (*(sizes_243X + i_245X))));
+    arg1K0 = (1 + i_245X);
+    goto L6812;}
   else {
-    pair_233X = *((long *) (((char *) (-3 + alist_231X))));
-    descriptor_234X = *((long *) ((((char *) (-3 + (*((long *) (((char *) (-3 + pair_233X)))))))) + -4));
-    if ((2 == (3 & descriptor_234X))) {
-      stob_235X = *((long *) (((char *) (-3 + pair_233X))));
-      h_236X = *((long *) ((((char *) (-3 + stob_235X))) + -4));
-      start_237X = ((char *) (-3 + stob_235X));
-      trace_locationsB(start_237X, (start_237X + (-4 & (3 + ((long)(((unsigned long)h_236X)>>8))))));
-      goto L5159;}
-    else {
-      goto L5159;}}}
- L5298: {
-  start_238X = arg0K0;
-  end_239X = ShpS;
-  trace_locationsB(start_238X, end_239X);
-  if (((ShpS) < (SlimitS))) {
-    if ((end_239X < (ShpS))) {
-      arg0K0 = end_239X;
-      goto L5298;}
-    else {
-      goto L5269;}}
-  else {
-    ps_error("GC error: ran out of space in new heap", 0);
-    goto L5269;}}
- L5159: {
-  stob_240X = *((long *) ((((char *) (-3 + pair_233X))) + 4));
-  if ((3 == (3 & stob_240X))) {
-    a_241X = ((char *) (-3 + stob_240X));
-    if ((a_241X < (Soldspace_beginS))) {
-      arg1K0 = stob_240X;
-      goto L5163;}
-    else {
-      if ((a_241X < (Soldspace_endS))) {
-        new_thing_242X = real_copy_object(stob_240X, (ShpS), &new_hp_243X);
-        ShpS = new_hp_243X;
-        arg1K0 = new_thing_242X;
-        goto L5163;}
-      else {
-        arg1K0 = stob_240X;
-        goto L5163;}}}
-  else {
-    arg1K0 = stob_240X;
-    goto L5163;}}
- L5269: {
-  clean_weak_pointers();
-  arg1K0 = finalizer_alist_226X;
-  arg1K1 = 25;
-  arg1K2 = 25;
-  goto L4718;}
- L5163: {
-  value_244X = arg1K0;
-  *((long *) ((((char *) (-3 + pair_233X))) + 4)) = value_244X;
-  arg1K0 = (*((long *) ((((char *) (-3 + alist_231X))) + 4)));
-  goto L5134;}
- L4718: {
-  alist_245X = arg1K0;
-  okay_246X = arg1K1;
-  goners_247X = arg1K2;
-  if ((25 == alist_245X)) {
-    *TT0 = goners_247X;
-    return okay_246X;}
-  else {
-    new_thing_248X = real_copy_object(alist_245X, (ShpS), &new_hp_249X);
-    ShpS = new_hp_249X;
-    new_thing_250X = real_copy_object((*((long *) (((char *) (-3 + new_thing_248X))))), (ShpS), &new_hp_251X);
-    ShpS = new_hp_251X;
-    thing_252X = *((long *) (((char *) (-3 + new_thing_250X))));
-    next_253X = *((long *) ((((char *) (-3 + new_thing_248X))) + 4));
-    if ((3 == (3 & thing_252X))) {
-      a_254X = ((char *) (-3 + thing_252X));
-      if ((a_254X < (Soldspace_beginS))) {
-        arg2K0 = 1;
-        arg1K1 = thing_252X;
-        goto L4762;}
-      else {
-        if ((a_254X < (Soldspace_endS))) {
-          if ((3 == (3 & (*((long *) ((((char *) (-3 + thing_252X))) + -4)))))) {
-            arg2K0 = 1;
-            arg1K1 = (*((long *) ((((char *) (-3 + thing_252X))) + -4)));
-            goto L4762;}
-          else {
-            new_thing_255X = real_copy_object(thing_252X, (ShpS), &new_hp_256X);
-            ShpS = new_hp_256X;
-            arg2K0 = 0;
-            arg1K1 = new_thing_255X;
-            goto L4762;}}
+    return;}}
+}
+long s48_trace_value(long stob_246X)
+{
+  char * arg0K1;
+  long arg1K0;
+  long new_261X;
+  char * data_addr_260X;
+  char * new_hp_259X;
+  long new_thing_258X;
+  char * new_hp_257X;
+  long new_thing_256X;
+  char * a_255X;
+  long descriptor_254X;
+  long h_253X;
+  char * frontier_252X;
+  char * a_251X;
+  char v_250X;
+  long type_249X;
+  char v_248X;
+  long stob_247X;
+ {  arg1K0 = stob_247X;
+  goto L7253;}
+ L7253: {
+  stob_247X = arg1K0;
+  if ((Swriting_imagePS)) {
+    v_248X = gc_recordP(stob_246X);
+    if (v_248X) {
+      type_249X = *((long *) (((char *) (-3 + stob_246X))));
+      v_250X = gc_recordP(type_249X);
+      if (v_250X) {
+        if ((1 == (*((long *) ((((char *) (-3 + type_249X))) + 4))))) {
+          note_undumpableB(stob_246X);
+          arg1K0 = (*((long *) ((((char *) (-3 + stob_246X))) + 4)));
+          goto L7253;}
         else {
-          arg2K0 = 1;
-          arg1K1 = thing_252X;
-          goto L4762;}}}
+          goto L6840;}}
+      else {
+        goto L6840;}}
     else {
-      arg2K0 = 1;
-      arg1K1 = thing_252X;
-      goto L4762;}}}
- L4762: {
-  tracedP_257X = arg2K0;
-  thing_258X = arg1K1;
-  *((long *) (((char *) (-3 + new_thing_250X)))) = thing_258X;
-  *((long *) (((char *) (-3 + new_thing_248X)))) = new_thing_250X;
-  if (tracedP_257X) {
-    *((long *) ((((char *) (-3 + new_thing_248X))) + 4)) = okay_246X;
-    arg1K0 = next_253X;
-    arg1K1 = new_thing_248X;
-    arg1K2 = goners_247X;
-    goto L4718;}
+      goto L6840;}}
   else {
-    *((long *) ((((char *) (-3 + new_thing_248X))) + 4)) = goners_247X;
-    arg1K0 = next_253X;
-    arg1K1 = okay_246X;
-    arg1K2 = new_thing_248X;
-    goto L4718;}}
+    goto L6840;}}
+ L6840: {
+  if ((3 == (3 & stob_246X))) {
+    a_251X = ((char *) (-3 + stob_246X));
+    if ((a_251X < (Sfrom_beginS))) {
+      return stob_246X;}
+    else {
+      if ((a_251X < (Sfrom_endS))) {
+        frontier_252X = s48_ShpS;
+        h_253X = *((long *) ((((char *) (-3 + stob_246X))) + -4));
+        if ((3 == (3 & h_253X))) {
+          arg1K0 = h_253X;
+          arg0K1 = frontier_252X;
+          goto L6862;}
+        else {
+          if ((1074 == h_253X)) {
+            descriptor_254X = *((long *) (((char *) (-3 + stob_246X))));
+            if ((3 == (3 & descriptor_254X))) {
+              a_255X = ((char *) (-3 + descriptor_254X));
+              if ((a_255X < (Sfrom_beginS))) {
+                goto L4193;}
+              else {
+                if ((a_255X < (Sfrom_endS))) {
+                  new_thing_256X = copy_weak_pointer(stob_246X, frontier_252X, &new_hp_257X);
+                  arg1K0 = new_thing_256X;
+                  arg0K1 = new_hp_257X;
+                  goto L6862;}
+                else {
+                  goto L4193;}}}
+            else {
+              goto L4193;}}
+          else {
+            goto L4193;}}}
+      else {
+        return stob_246X;}}}
+  else {
+    return stob_246X;}}
+ L6862: {
+  new_thing_258X = arg1K0;
+  new_hp_259X = arg0K1;
+  s48_ShpS = new_hp_259X;
+  return new_thing_258X;}
+ L4193: {
+  *((long *) frontier_252X) = h_253X;
+  data_addr_260X = frontier_252X + 4;
+  new_261X = 3 + (((long) data_addr_260X));
+  *((long *) ((((char *) (-3 + stob_246X))) + -4)) = new_261X;
+  memcpy((void *)data_addr_260X, (void *)(((char *) (-3 + stob_246X))),((long)(((unsigned long)h_253X)>>8)));
+  arg1K0 = new_261X;
+  arg0K1 = (data_addr_260X + (-4 & (3 + ((long)(((unsigned long)h_253X)>>8)))));
+  goto L6862;}
+}
+long s48_write_image(long resume_proc_262X, FILE * port_263X)
+{
+  char * arg0K0;
+  long arg1K0;
+  char * merged_arg0K1;
+  char * merged_arg0K0;
+
+  int abort_collection_return_tag;
+  int Hproc967264_return_tag;
+  char Hproc9672640_return_value;
+  char * start_265X;
+  char * end_266X;
+  long h_320X;
+  long h_319X;
+  long d_318X;
+  char * addr_317X;
+  char * temp_316X;
+  char * temp_315X;
+  char * temp_314X;
+  char * temp_313X;
+  long type_312X;
+  long obj_311X;
+  char * next_310X;
+  long d_309X;
+  char * addr_308X;
+  long type_307X;
+  long status_306X;
+  long v_305X;
+  long v_304X;
+  long v_303X;
+  long v_302X;
+  long v_301X;
+  long v_300X;
+  long v_299X;
+  char * v_298X;
+  long v_297X;
+  char * v_296X;
+  long v_295X;
+  long v_294X;
+  long v_293X;
+  long v_292X;
+  long v_291X;
+  long imported_bindings_290X;
+  long resumer_records_289X;
+  char v_288X;
+  long i_287X;
+  long count_286X;
+  long *sizes_285X;
+  char * *areas_284X;
+  char v_283X;
+  long i_282X;
+  long count_281X;
+  long *sizes_280X;
+  char * *areas_279X;
+  char v_278X;
+  char * start_hp_277X;
+  long symbols_276X;
+  char * end_275X;
+  char * start_274X;
+  long resume_proc_273X;
+  long exported_bindings_272X;
+  long v_271X;
+  char * temp_270X;
+  char * temp_269X;
+  char * temp_268X;
+  char * temp_267X;
+ {  Sfrom_beginS = (Snewspace_beginS);
+  Sfrom_endS = (Snewspace_endS);
+  temp_267X = s48_SlimitS;
+  s48_SlimitS = (Soldspace_limitS);
+  Soldspace_limitS = temp_267X;
+  temp_268X = s48_ShpS;
+  s48_ShpS = (Soldspace_hpS);
+  Soldspace_hpS = temp_268X;
+  temp_269X = Snewspace_beginS;
+  Snewspace_beginS = (Soldspace_beginS);
+  Soldspace_beginS = temp_269X;
+  temp_270X = Snewspace_endS;
+  Snewspace_endS = (Soldspace_endS);
+  Soldspace_endS = temp_270X;
+  s48_ShpS = (Snewspace_beginS);
+  Sweak_pointer_hpS = NULL;
+  Swriting_imagePS = 1;
+  Sundumpable_recordsS = 25;
+  Sundumpable_countS = 0;
+  v_271X = s48_exported_bindings();
+  exported_bindings_272X = s48_trace_value(v_271X);
+  resume_proc_273X = s48_trace_value(resume_proc_262X);
+  arg0K0 = (Snewspace_beginS);
+  goto L6983;}
+ L6983: {
+  start_274X = arg0K0;
+  end_275X = s48_ShpS;
+  s48_trace_locationsB(start_274X, end_275X);
+  if (((((((s48_SlimitS) - (s48_ShpS)))>>2)) < 0)) {
+    ps_error("GC error: ran out of space in new heap", 0);
+    clean_weak_pointers();
+    goto L6952;}
+  else {
+    if ((end_275X < (s48_ShpS))) {
+      arg0K0 = end_275X;
+      goto L6983;}
+    else {
+      clean_weak_pointers();
+      goto L6952;}}}
+ L6952: {
+  s48_mark_traced_channels_closedB();
+  symbols_276X = s48_copy_symbol_table();
+  Sfinding_typeS = 8;
+  start_hp_277X = s48_ShpS;
+  *((long *) (s48_ShpS)) = 0;
+  s48_ShpS = ((s48_ShpS) + 4);
+  merged_arg0K0 = (Snewspace_beginS);
+  merged_arg0K1 = start_hp_277X;
+  Hproc967264_return_tag = 0;
+  goto Hproc967264;
+ Hproc967264_return_0:
+  v_278X = Hproc9672640_return_value;
+  if (v_278X) {
+    if ((0 < (Simpure_area_countS))) {
+      areas_279X = Simpure_areasS;
+      sizes_280X = Simpure_sizesS;
+      count_281X = Simpure_area_countS;
+      arg1K0 = 0;
+      goto L5907;}
+    else {
+      goto L5847;}}
+  else {
+    goto L5865;}}
+ L5907: {
+  i_282X = arg1K0;
+  if ((i_282X < count_281X)) {
+    merged_arg0K0 = (*(areas_279X + i_282X));
+    merged_arg0K1 = ((*(areas_279X + i_282X)) + (*(sizes_280X + i_282X)));
+    Hproc967264_return_tag = 1;
+    goto Hproc967264;
+   Hproc967264_return_1:
+    v_283X = Hproc9672640_return_value;
+    if (v_283X) {
+      arg1K0 = (1 + i_282X);
+      goto L5907;}
+    else {
+      goto L5865;}}
+  else {
+    goto L5847;}}
+ L5847: {
+  if ((0 < (Spure_area_countS))) {
+    areas_284X = Spure_areasS;
+    sizes_285X = Spure_sizesS;
+    count_286X = Spure_area_countS;
+    arg1K0 = 0;
+    goto L5928;}
+  else {
+    goto L5854;}}
+ L5865: {
+  s48_ShpS = start_hp_277X;
+  arg1K0 = 1;
+  goto L7002;}
+ L5928: {
+  i_287X = arg1K0;
+  if ((i_287X < count_286X)) {
+    merged_arg0K0 = (*(areas_284X + i_287X));
+    merged_arg0K1 = ((*(areas_284X + i_287X)) + (*(sizes_285X + i_287X)));
+    Hproc967264_return_tag = 2;
+    goto Hproc967264;
+   Hproc967264_return_2:
+    v_288X = Hproc9672640_return_value;
+    if (v_288X) {
+      arg1K0 = (1 + i_287X);
+      goto L5928;}
+    else {
+      goto L5865;}}
+  else {
+    goto L5854;}}
+ L5854: {
+  *((long *) start_hp_277X) = (10 + (((((s48_ShpS) - (start_hp_277X + 4)))<<8)));
+  arg1K0 = (3 + (((long) (start_hp_277X + 4))));
+  goto L7002;}
+ L7002: {
+  resumer_records_289X = arg1K0;
+  imported_bindings_290X = s48_cleaned_imported_bindings();
+  if ((1 == resumer_records_289X)) {
+    abort_collection_return_tag = 0;
+    goto abort_collection;
+   abort_collection_return_0:
+    return ENOMEM;}
+  else {
+    SstatusS = NO_ERRORS;
+    if (((SstatusS) == NO_ERRORS)) {
+      PS_WRITE_CHAR(10, port_263X, v_291X)
+      SstatusS = v_291X;
+      goto L2019;}
+    else {
+      goto L2019;}}}
+ L2019: {
+  if (((SstatusS) == NO_ERRORS)) {
+    PS_WRITE_CHAR(12, port_263X, v_292X)
+    SstatusS = v_292X;
+    goto L2028;}
+  else {
+    goto L2028;}}
+ L2028: {
+  if (((SstatusS) == NO_ERRORS)) {
+    PS_WRITE_CHAR(10, port_263X, v_293X)
+    SstatusS = v_293X;
+    goto L2037;}
+  else {
+    goto L2037;}}
+ L2037: {
+  if (((SstatusS) == NO_ERRORS)) {
+    SstatusS = (ps_write_string("Vanilla 20", port_263X));
+    goto L2044;}
+  else {
+    goto L2044;}}
+ L2044: {
+  if (((SstatusS) == NO_ERRORS)) {
+    PS_WRITE_CHAR(10, port_263X, v_294X)
+    SstatusS = v_294X;
+    goto L2053;}
+  else {
+    goto L2053;}}
+ L2053: {
+  if (((SstatusS) == NO_ERRORS)) {
+    SstatusS = (ps_write_integer(4, port_263X));
+    goto L2123;}
+  else {
+    goto L2123;}}
+ L2123: {
+  if (((SstatusS) == NO_ERRORS)) {
+    PS_WRITE_CHAR(10, port_263X, v_295X)
+    SstatusS = v_295X;
+    goto L2055;}
+  else {
+    goto L2055;}}
+ L2055: {
+  v_296X = Snewspace_beginS;
+  if (((SstatusS) == NO_ERRORS)) {
+    SstatusS = (ps_write_integer(((((((long) v_296X)))>>2)), port_263X));
+    goto L2143;}
+  else {
+    goto L2143;}}
+ L2143: {
+  if (((SstatusS) == NO_ERRORS)) {
+    PS_WRITE_CHAR(10, port_263X, v_297X)
+    SstatusS = v_297X;
+    goto L2061;}
+  else {
+    goto L2061;}}
+ L2061: {
+  v_298X = s48_ShpS;
+  if (((SstatusS) == NO_ERRORS)) {
+    SstatusS = (ps_write_integer(((((((long) v_298X)))>>2)), port_263X));
+    goto L2163;}
+  else {
+    goto L2163;}}
+ L2163: {
+  if (((SstatusS) == NO_ERRORS)) {
+    PS_WRITE_CHAR(10, port_263X, v_299X)
+    SstatusS = v_299X;
+    goto L2067;}
+  else {
+    goto L2067;}}
+ L2067: {
+  if (((SstatusS) == NO_ERRORS)) {
+    SstatusS = (ps_write_integer(symbols_276X, port_263X));
+    goto L2178;}
+  else {
+    goto L2178;}}
+ L2178: {
+  if (((SstatusS) == NO_ERRORS)) {
+    PS_WRITE_CHAR(10, port_263X, v_300X)
+    SstatusS = v_300X;
+    goto L2069;}
+  else {
+    goto L2069;}}
+ L2069: {
+  if (((SstatusS) == NO_ERRORS)) {
+    SstatusS = (ps_write_integer(imported_bindings_290X, port_263X));
+    goto L2193;}
+  else {
+    goto L2193;}}
+ L2193: {
+  if (((SstatusS) == NO_ERRORS)) {
+    PS_WRITE_CHAR(10, port_263X, v_301X)
+    SstatusS = v_301X;
+    goto L2071;}
+  else {
+    goto L2071;}}
+ L2071: {
+  if (((SstatusS) == NO_ERRORS)) {
+    SstatusS = (ps_write_integer(exported_bindings_272X, port_263X));
+    goto L2208;}
+  else {
+    goto L2208;}}
+ L2208: {
+  if (((SstatusS) == NO_ERRORS)) {
+    PS_WRITE_CHAR(10, port_263X, v_302X)
+    SstatusS = v_302X;
+    goto L2073;}
+  else {
+    goto L2073;}}
+ L2073: {
+  if (((SstatusS) == NO_ERRORS)) {
+    SstatusS = (ps_write_integer(resumer_records_289X, port_263X));
+    goto L2223;}
+  else {
+    goto L2223;}}
+ L2223: {
+  if (((SstatusS) == NO_ERRORS)) {
+    PS_WRITE_CHAR(10, port_263X, v_303X)
+    SstatusS = v_303X;
+    goto L2075;}
+  else {
+    goto L2075;}}
+ L2075: {
+  if (((SstatusS) == NO_ERRORS)) {
+    SstatusS = (ps_write_integer(resume_proc_273X, port_263X));
+    goto L2238;}
+  else {
+    goto L2238;}}
+ L2238: {
+  if (((SstatusS) == NO_ERRORS)) {
+    PS_WRITE_CHAR(10, port_263X, v_304X)
+    SstatusS = v_304X;
+    goto L2077;}
+  else {
+    goto L2077;}}
+ L2077: {
+  if (((SstatusS) == NO_ERRORS)) {
+    PS_WRITE_CHAR(12, port_263X, v_305X)
+    SstatusS = v_305X;
+    goto L2086;}
+  else {
+    goto L2086;}}
+ L2086: {
+  *((long *) (s48_ShpS)) = 1;
+  if (((SstatusS) == NO_ERRORS)) {
+    SstatusS = (ps_write_block(port_263X, ((char *) (s48_ShpS)), (((s48_ShpS) + 4) - (s48_ShpS))));
+    goto L2105;}
+  else {
+    goto L2105;}}
+ L2105: {
+  if (((SstatusS) == NO_ERRORS)) {
+    SstatusS = (ps_write_block(port_263X, ((char *) (Snewspace_beginS)), ((s48_ShpS) - (Snewspace_beginS))));
+    goto L2118;}
+  else {
+    goto L2118;}}
+ L2118: {
+  status_306X = SstatusS;
+  abort_collection_return_tag = 1;
+  goto abort_collection;
+ abort_collection_return_1:
+  return status_306X;}
+ Hproc967264: {
+  start_265X = merged_arg0K0;
+  end_266X = merged_arg0K1;{
+  type_307X = Sfinding_typeS;
+  arg0K0 = start_265X;
+  goto L4852;}
+ L4852: {
+  addr_308X = arg0K0;
+  if ((addr_308X < end_266X)) {
+    d_309X = *((long *) addr_308X);
+    next_310X = addr_308X + (4 + (-4 & (3 + ((long)(((unsigned long)d_309X)>>8)))));
+    if ((2 == (3 & d_309X))) {
+      if ((type_307X == (31 & (((d_309X)>>2))))) {
+        obj_311X = 3 + (((long) (addr_308X + 4)));
+        type_312X = *((long *) (((char *) (-3 + obj_311X))));
+        if ((3 == (3 & type_312X))) {
+          if ((8 == (31 & ((((*((long *) ((((char *) (-3 + type_312X))) + -4))))>>2))))) {
+            if ((3 == (3 & (*((long *) ((((char *) (-3 + type_312X))) + 4)))))) {
+              if ((((s48_ShpS) + 16) < (s48_SlimitS))) {
+                *((long *) (s48_ShpS)) = obj_311X;
+                s48_ShpS = ((s48_ShpS) + 4);
+                arg0K0 = next_310X;
+                goto L4852;}
+              else {
+                Hproc9672640_return_value = 0;
+                goto Hproc967264_return;}}
+            else {
+              arg0K0 = next_310X;
+              goto L4852;}}
+          else {
+            arg0K0 = next_310X;
+            goto L4852;}}
+        else {
+          arg0K0 = next_310X;
+          goto L4852;}}
+      else {
+        arg0K0 = next_310X;
+        goto L4852;}}
+    else {
+      ps_write_string("heap is in an inconsistent state.", (stderr));
+      Hproc9672640_return_value = 0;
+      goto Hproc967264_return;}}
+  else {
+    Hproc9672640_return_value = 1;
+    goto Hproc967264_return;}}
+ Hproc967264_return:
+  switch (Hproc967264_return_tag) {
+  case 0: goto Hproc967264_return_0;
+  case 1: goto Hproc967264_return_1;
+  default: goto Hproc967264_return_2;
+  }}
+
+ abort_collection: {
+{ temp_313X = s48_SlimitS;
+  s48_SlimitS = (Soldspace_limitS);
+  Soldspace_limitS = temp_313X;
+  temp_314X = s48_ShpS;
+  s48_ShpS = (Soldspace_hpS);
+  Soldspace_hpS = temp_314X;
+  temp_315X = Snewspace_beginS;
+  Snewspace_beginS = (Soldspace_beginS);
+  Soldspace_beginS = temp_315X;
+  temp_316X = Snewspace_endS;
+  Snewspace_endS = (Soldspace_endS);
+  Soldspace_endS = temp_316X;
+  arg0K0 = (Snewspace_beginS);
+  goto L4085;}
+ L4085: {
+  addr_317X = arg0K0;
+  if ((addr_317X < (s48_ShpS))) {
+    d_318X = *((long *) addr_317X);
+    if ((2 == (3 & d_318X))) {
+      arg1K0 = d_318X;
+      goto L4106;}
+    else {
+      h_319X = *((long *) ((((char *) (-3 + d_318X))) + -4));
+      *((long *) addr_317X) = h_319X;
+      arg1K0 = h_319X;
+      goto L4106;}}
+  else {
+    goto abort_collection_return;}}
+ L4106: {
+  h_320X = arg1K0;
+  arg0K0 = (addr_317X + (4 + (-4 & (3 + ((long)(((unsigned long)h_320X)>>8))))));
+  goto L4085;}
+ abort_collection_return:
+  switch (abort_collection_return_tag) {
+  case 0: goto abort_collection_return_0;
+  default: goto abort_collection_return_1;
+  }}
+
+}
+void s48_initializing_gc_root(void)
+{
+  long v_325X;
+  long v_324X;
+  long v_323X;
+  long v_322X;
+  long v_321X;
+ {  if ((SinitializingPS)) {
+    v_321X = s48_trace_value((Sstartup_procedureS));
+    Sstartup_procedureS = v_321X;
+    v_322X = s48_trace_value((SsymbolsS));
+    SsymbolsS = v_322X;
+    v_323X = s48_trace_value((Simported_bindingsS));
+    Simported_bindingsS = v_323X;
+    v_324X = s48_trace_value((Sexported_bindingsS));
+    Sexported_bindingsS = v_324X;
+    v_325X = s48_trace_value((Sresumer_recordsS));
+    Sresumer_recordsS = v_325X;
+    return;}
+  else {
+    return;}}
 }void
 s48_heap_init(void)
 {
 Spure_area_countS = 0;
 Simpure_area_countS = 0;
 Sfinding_typeS = 1;
+Sgc_countS = 0;
 SstatusS = NO_ERRORS;
 SeofPS = 0;
-Sgc_countS = 0;
-Hthe_record_type7610 = 536870911;
+SinitializingPS = 1;
+Hthe_record_type9260 = 1;
 }

@@ -1,3 +1,5 @@
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+
 ; Printing the node tree as Scheme code
 
 ; Sample output:

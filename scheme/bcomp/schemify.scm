@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; schemify
 
@@ -33,11 +32,18 @@
 				       (schemify-nodes (cdr form) env)))
 			       form)))))
 
+; We cache the no-env version because that's the one used to generate the
+; sources in the debugging info (which takes up a lot of space).
+
 (define (schemify-node node env)
-  ((operator-table-ref schemifiers
-		       (node-operator-id node))
-     node
-     env))
+  (or (and (not env)
+	   (node-ref node 'schemify))
+      (let ((form ((operator-table-ref schemifiers (node-operator-id node))
+		     node
+		     env)))
+	(if (not env)
+	    (node-set! node 'schemify form))
+	form)))
 
 (define (schemify-nodes nodes env)
   (map (lambda (node)
@@ -65,11 +71,15 @@
 	   (schemify-node node env))
 	 (node-form node))))
 
-(define-schemifier 'lambda syntax-type
-  (lambda (node env)
-    (let ((form (node-form node)))
-      `(lambda ,(schemify-formals (cadr form) env)
-	 ,(schemify-node (caddr form) env)))))
+; We ignore the list of free variables in flat lambdas.
+
+(define (schemify-lambda node env)
+  (let ((form (node-form node)))
+    `(lambda ,(schemify-formals (cadr form) env)
+       ,(schemify-node (last form) env))))
+
+(define-schemifier 'lambda syntax-type schemify-lambda)
+(define-schemifier 'flat-lambda syntax-type schemify-lambda)
 
 (define (schemify-formals formals env)
   (cond ((node? formals)

@@ -1,6 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
-
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 (define (concatenate-symbol . stuff)
   (string->symbol
@@ -186,6 +184,21 @@
 	   (let ((next (cdr list)))
 	     (set-cdr! list res)
 	     (loop next list))))))
+
+; Copying strings.
+
+(define (copy-string string)
+  (let* ((length (string-length string))
+	 (new (make-string length #\?)))
+    ((structure-ref primitives copy-bytes!) string 0 new 0 length)
+    new))
+
+(define (string->immutable-string string)
+  (if (immutable? string)
+      string
+      (let ((copy (copy-string string)))
+	(make-immutable! copy)
+	copy)))
 
 
 

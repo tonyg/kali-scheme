@@ -1,4 +1,4 @@
-; Copyright (c) 1994 Richard Kelsey.  See file COPYING.
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
 
 ; This code determines which procedures are called from one other form, and
 ; thus can be compiled as part of that form and called with a `goto' instead
@@ -87,7 +87,8 @@
 				 (variable-flags (form-var form))))))
 
 (define (used-as-label? node)
-  (and (goto-call? (node-parent node))
+  (and (node? (node-parent node))
+       (goto-call? (node-parent node))
        (= 1 (node-index node))))
 
 ;------------------------------------------------------------

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Command levels for the command processor
 
@@ -19,30 +18,22 @@
 ;----------------
 ; User context.
 ;
-; This is a symbol table stored in the fluid $USER-CONTEXT.
+; The is a symbol table stored in a slot in the session state (see below).
 ; *USER-CONTEXT-INITIALIZERS* is a list of (<name> . <initial-value-thunk>)
 ; pairs.  The <thunk>s are called to get the initial value of the <name>d
-; slots.  MAKE-USER-CONTEXT also takes an initalizing thunk that is called
-; after the standard initializers have been run.
+; slots.
 
-(define (make-user-context thunk)
-  (let ((t (make-symbol-table)))
-    (let-fluid $user-context t
-      (lambda ()
-        (for-each (lambda (name+thunk)
-                    (table-set! t (car name+thunk) ((cdr name+thunk))))
-                  *user-context-initializers*)
-        (thunk)
-        t))))
+(define (make-user-context)
+  (make-symbol-table))
+  
+(define (initialize-user-context!)
+  (let ((t (user-context)))
+    (for-each (lambda (name+thunk)
+		(table-set! t (car name+thunk) ((cdr name+thunk))))
+	      *user-context-initializers*)
+    t))
 
 (define *user-context-initializers* '())
-
-(define $user-context (make-fluid #f))
-
-; (set-fluid! $user-context (make-user-context unspecific)) ;Bad for GC
-
-(define (user-context)
-  (fluid $user-context))
 
 ; Add a new slot to the user context.
 
@@ -50,8 +41,9 @@
   (set! *user-context-initializers*
         (append *user-context-initializers*
                 (list (cons name initializer))))
-  (let ((probe (fluid $user-context)))
-    (if probe (table-set! probe name (initializer))))
+  (let ((context (user-context)))
+    (if context
+	(table-set! context name (initializer))))
   (lambda ()
     (table-ref (or (user-context)
 		   (error "command interpreter not initialized - no user context"
@@ -63,28 +55,35 @@
     (table-set! (or (user-context)
 		    (error "command interpreter not initialized - no user context"
 			   name))
-		name new)))
+		name
+		new)))
 
-; If true exceptions cause a new command level to be pushed.
+; There are a few places that have alternate behavior based on this, but mostly
+; it's used to detect premature uses of the user context.
 
-(define push-command-levels?
-  (user-context-accessor 'push-command-levels (lambda () #t)))
+(define (user-context)
+  (if (session-started?)
+      (real-user-context)
+      #f))
 
 ;----------------
 ; Session state.
 
-; This is a record stored in the fluid $SESSION.
+; This is a record stored in the session data.
 ; It has the command interpreter's ports, the most recent values returned
 ; by a command, an exit status, and the batch-mode and break-on-warnings
 ; switches.
 
 (define-record-type session :session
   (make-session command-thread
+		user-context
                 input-port output-port error-port
 		focus-values
 		exit-status
 		batch-mode? break-on-warnings?)
+  session?
   (command-thread session-command-thread)
+  (user-context session-user-context)
   (input-port session-input-port)
   (output-port session-output-port)
   (error-port session-error-port)
@@ -93,16 +92,19 @@
   (batch-mode? session-batch-mode? set-session-batch-mode?!)
   (break-on-warnings? session-break-on-warnings? set-session-break-on-warnings?!))
 
-(define $session
-  (make-fluid 'session-not-initialized))
+(define session-slot (make-session-data-slot! #f))
+
+(define (session-started?)
+  (session? (session-data-ref session-slot)))
 
 (define (session-accessor accessor)
-  (lambda () (accessor (fluid $session))))
+  (lambda () (accessor (session-data-ref session-slot))))
 
 (define (session-modifier modifier)
-  (lambda (new) (modifier (fluid $session) new)))
+  (lambda (new) (modifier (session-data-ref session-slot) new)))
 
 (define command-thread (session-accessor session-command-thread))
+(define real-user-context (session-accessor session-user-context))
 (define command-input (session-accessor session-input-port))
 (define command-output (session-accessor session-output-port))
 (define command-error-output (session-accessor session-error-port))
@@ -117,15 +119,15 @@
 
 ; Log in
 
-(define (with-new-session context iport oport eport resume-args batch? thunk)
-  (let-fluids $user-context context
-	      $session (make-session (current-thread)
-				     iport oport eport
-				     resume-args
-				     #f            ; no exit status yet
-				     batch?
-				     #f)           ; don't break on warnings
-    thunk))
+(define (start-new-session context iport oport eport resume-args batch?)
+  (session-data-set! session-slot
+		     (make-session (current-thread)
+				   context
+				   iport oport eport
+				   resume-args
+				   #f            ; no exit status yet
+				   batch?
+				   #f)))         ; don't break on warnings
 
 ;----------------
 ; Command levels
@@ -213,21 +215,27 @@
 (define (start-command-levels resume-args context
 			      start-thunk repl-thunk repl-data)
   (notify-on-interrupts (current-thread))
-  (with-new-session context
-		    (current-input-port)
-		    (current-output-port)
-		    (current-error-port)
-		    resume-args
-		    (and (pair? resume-args)
-			 (equal? (car resume-args) "batch"))
-    (lambda ()
-      (start-thunk)
-      (let ((thunk (really-push-command-level repl-thunk
-					      repl-data
-					      (get-dynamic-env)
-					      '())))
-	(ignore-further-interrupts)
-	thunk))))
+  (start-new-session (or context (make-user-context))
+		     (current-input-port)
+		     (current-output-port)
+		     (current-error-port)
+		     resume-args
+		     (and (pair? resume-args)
+			  (equal? (car resume-args) "batch")))
+  (if (not context)
+      (initialize-user-context!))
+  (start-thunk)
+  (let ((thunk (really-push-command-level repl-thunk
+					  repl-data
+					  (get-dynamic-env)
+					  '())))
+    (ignore-further-interrupts)
+    thunk))
+
+; If true exceptions cause a new command level to be pushed.
+
+(define push-command-levels?
+  (user-context-accessor 'push-command-levels (lambda () #t)))
 
 (define (notify-on-interrupts thread)
   (set-interrupt-handler! (enum interrupt keyboard)
@@ -286,7 +294,9 @@
 		(if (thread-continuation thread)
 		    (begin
                       (remove-thread-from-queue! thread)
-		      (interrupt-thread thread terminate-current-thread)
+		      (interrupt-thread thread
+					(lambda ignore
+					  (terminate-current-thread)))
 		      (enqueue-thread! queue thread))))
 	      threads)
     (dynamic-wind
@@ -503,6 +513,7 @@
 
 ; Kill the thread on LEVEL that caused a new level to be pushed.  This is
 ; used when the user wants to continue running the rest of LEVEL's threads.
+; We enqueue the paused thread so that its dynamic-winds will be run.
 
 (define (kill-paused-thread! level)
   (let ((paused (command-level-paused-thread level)))
@@ -510,7 +521,10 @@
 	(error "level has no paused thread" level))
     (if (eq? paused (command-level-repl-thread level))
 	(spawn-repl-thread! level))
-    (kill-thread! paused)
+    (interrupt-thread paused terminate-current-thread)
+;		      (lambda ignore
+;			(terminate-current-thread)))
+    ;(enqueue-thread! (command-level-queue level) paused)
     (set-command-level-paused-thread! level #f)))
 
 

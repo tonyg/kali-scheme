@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; The barest skeleton of a test suite.
@@ -63,6 +62,7 @@
 	placeholders
 	locks
 	interrupts
+	sockets
 	sicp)
   (begin
 
@@ -150,6 +150,20 @@
 (test "apply" equal? '(1 2 3 4) (apply list 1 2 '(3 4)))
 
 (test "char<->integer" eq? #\a (integer->char (char->integer #\a)))
+
+(test "number->string" equal?
+      '("12" "14" "-12" "-14")
+      (list (number->string 12)
+	    (number->string 12 8)
+	    (number->string -12)
+	    (number->string -12 8)))
+
+(test "string->number" equal?
+      '(12 10 -12 -10)
+      (list (string->number "12")
+	    (string->number "12" 8)
+	    (string->number "-12")
+	    (string->number "-12" 8)))
 
 (test "lap" equal? #f ((lap #f () (protocol 0) (false) (return))))
 (let ((q (make-queue)))
@@ -245,6 +259,36 @@
 	(search-tree-set! t 4 'a)
 	(search-tree-set! t 5 'c)
 	(search-tree-ref t 4)))
+
+(test "sockets" equal? '(303 202 101)
+      (let ((server (open-socket))
+	    (name (get-host-name)))
+	(spawn (lambda ()
+		 (let loop ((i 100))
+		   (if (= i 400)
+		       (close-socket server)
+		       (call-with-values (lambda ()
+					   (socket-accept server))
+					 (lambda (in out)
+					   (spawn (lambda ()
+						    (write (+ i (read in)) out)
+						    (write-char #\space out)
+						    (close-input-port in)
+						    (close-output-port out)))
+					   (loop (+ i 100))))))))
+	(let loop ((i 1) (result '()))
+	  (if (= i 4)
+	      result
+	      (call-with-values
+	       (lambda ()
+		 (socket-client name (socket-port-number server)))
+	       (lambda (in out)
+		 (write i out)
+		 (write-char #\space out)
+		 (let ((result (cons (read in) result)))
+		   (close-input-port in)
+		   (close-output-port out)
+		   (loop (+ i 1) result))))))))
 
 ))))
 

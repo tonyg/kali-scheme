@@ -1,3 +1,5 @@
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+
 
 (define-local-syntax (define-primitive id nargs)
   (let ((args (reverse (list-tail '(z y x) (- '3 nargs)))))

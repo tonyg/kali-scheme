@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey.  See file COPYING.
 
 ; -*- Mode: Scheme; -*-
 
@@ -22,9 +21,7 @@
 	      (display "Pre-Scheme compiler version 0.")
 	      (display minor-number)
 	      (newline)
-	      (display "Copyright (c) 1994 by Richard Kelsey.")
-	      (newline)
-	      (display "Copyright (c) 1997 by NEC Research Institute.")
+	      (display "Copyright (c) 1994-1999 by Richard Kelsey.")
 	      (newline)
 	      (display "Please report bugs to pre-scheme@martigny.ai.mit.edu.")
 	      (newline)

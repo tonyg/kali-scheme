@@ -1,4 +1,4 @@
-; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Stuff in Pre-Scheme that is not in Scheme.

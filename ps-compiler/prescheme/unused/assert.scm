@@ -1,3 +1,5 @@
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
+
 
 ; Inferencer needs to recognize predicates as such.
 ; Also accessors if we want to get pattern matching working properly.

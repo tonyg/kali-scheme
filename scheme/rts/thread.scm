@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Threads.
 
@@ -85,13 +84,16 @@
     thread))
 
 ;----------------
-; Call THUNK and then suspend.
+; Call THUNK and then suspend.  The LET is just to give the thunk a name
+; in the debugger.  This thunk shows up at the bottom of every ,preview.
 
 (define (thread-top-level thunk)
-  (lambda ()
-    (call-with-values thunk
-		      (lambda values
-			(suspend (enum event-type completed) values)))))
+  (let ((thread-start (lambda ()
+			(call-with-values
+			  thunk
+			  (lambda values
+			    (suspend (enum event-type completed) values))))))
+    thread-start))
 
 ; Find the thread with the indicated uid.  This is expensive.  It is used
 ; by rts/channel-port.scm to when forcibly unlocking one of the REPL's ports.
@@ -516,10 +518,11 @@
 ; Debugging routine
 
 (define (show-running)
-  (apply user-message "Running:" (do ((e (current-thread) (thread-scheduler e))
-				 (l '() (cons (thread-name e) (cons " " l))))
-				((not e)
-				 (reverse l)))))
+  (apply debug-message "Running:" (do ((e (current-thread) (thread-scheduler e))
+				       (l '() (cons (thread-name e)
+						    (cons " " l))))
+				      ((not e)
+				       (reverse l)))))
 
 ; Walk up the scheduler pointers from the current thread to see if THREAD is
 ; running.
@@ -623,12 +626,13 @@
 		   (set-thread-time! thread #f)
 		   (set-thread-dynamic-point! thread (get-dynamic-point))
 		   (set-current-thread! thread)
-		   (session-data-set! root-scheduler-slot thread)
-		   ;; Interrupts were turned off by START-THREADS
-		   (enable-interrupts!)
-		   ;; EXIT to avoid the SUSPEND below because we have no one
-		   ;; to suspend to
-		   (exit-multitasking (thunk)))))))
+		   (session-data-set! root-scheduler-slot thread))
+		 ;; End the LET to get THREAD out of the continuation to THUNK
+		 ;; Interrupts were turned off by START-THREADS
+		 (enable-interrupts!)
+		 ;; We throw out after THUNK to avoid teh EXIT below, as we
+		 ;; have no scheduler to exit to.
+		 (exit-multitasking (thunk))))))
 	 ;; land here when terminating a thread
 	 (exit (enum event-type completed) '()))))))
 
@@ -642,16 +646,16 @@
 (define-condition-type 'terminate '())
 (define terminate? (condition-predicate 'terminate))
 
-; Kill the current thread.  USER-MESSAGE is used to try and make sure that some
+; Kill the current thread.  DEBUG-MESSAGE is used to try and make sure that some
 ; record exists when an error occured.  The system may be too broken for ERROR
 ; to work properly.
 
 (define (terminate-current-thread)
   (signal 'terminate)
-  (user-message "Can't terminate current thread "
-		(thread-uid (current-thread))
-		" "
-		(thread-name (current-thread)))
+  (debug-message "Can't terminate current thread "
+		 (thread-uid (current-thread))
+		 " "
+		 (thread-name (current-thread)))
   (error "can't terminate current thread")
   0)    ; suppress bogus compiler warning
 

@@ -1,0 +1,97 @@
+\newcommand{\xsubsection}[1]{%
+\texonly{\subsection{#1}}%
+\htmlonly{\strong{#1}\\}%
+}
+
+\newcommand{\evalsto}{%
+\texonly{$\rightarrow$}%
+\htmlonly{\code{->}}%
+}
+
+\newcommand{\cvar}[1]{%
+\texonly{{\rm\em{#1}}}%
+\htmlonly{\code{\var{#1}}}%
+}
+
+%%%%%%%%%%%%%%%% Latex prototypes
+\texonly{
+\newenvironment{protos}{\list{$\bullet$}
+{\leftmargin1.2em\rightmargin0pt\itemsep0pt\parsep0pt\partopsep-2pt}}
+{\endlist}
+
+% The following is for prototypes that have return types.
+%    (foo int int) -> int
+
+\newcommand{\proto}[3]{\item\noindent\unskip%
+\cindex{\code{#1}}%
+\hbox{\spaceskip=0.5em\code{({#1}{\it#2\/})} {$\rightarrow$} {\it#3}}}
+
+\newcommand{\cproto}[1]{\item\noindent\unskip%
+\hbox{\spaceskip=0.5em\code{{#1}}}}
+
+\newcommand{\cgcproto}[1]{\item\noindent\unskip%
+\hbox{\spaceskip=0.5em\code{{#1}}}\hfill\penalty 0%
+\hbox{ }\nobreak\hfill\hbox{\rm (may GC)}}
+
+\newcommand{\protonoresult}[2]{\item\noindent\unskip%
+\hbox{\spaceskip=0.5em\code{(\hbox{#1}{\it#2\/})}}}
+
+% Syntax prototypes
+
+\newcommand{\syntaxprotonoresult}[2]{\item\noindent\unskip%
+\hbox{\spaceskip=0.5em\code{(\hbox{#1}{#2})}}\hfill\penalty 0%
+\hbox{ }\nobreak\hfill\hbox{\rm syntax}}
+
+\newcommand{\syntaxproto}[3]{\syntaxprotonoresult{#1}{#2}%
+\hspace*{24pt}{$\rightarrow$} {\it#3}}
+
+% This can be reduced
+
+\newcommand{\pconstproto}[2]{\item\noindent\unskip%
+\hbox{\spaceskip=0.5em#1}\code\hfill\penalty 0%
+\hbox{ }\nobreak\hfill\hbox{\rm #2}}
+
+% Variable prototype
+\newcommand{\constproto}[2]{\pconstproto{#1}{#2}}
+
+}
+%%%%%%%%%%%%%%%% end of Latex proto definitions
+
+%%%%%%%%%%%%%%%% HTML prototypes
+\htmlonly{
+\newenvironment{protos}{\begin{itemize}}{\end{itemize}}
+
+% The following is for prototypes that have return types.
+%    (foo int int) -> int
+
+\newcommand{\proto}[3]{%
+%\cindex{\code{#1}}%
+\item\noindent\code{({#1}{\var{#2}\/})~-->~{\var{#3}}}}
+
+\newcommand{\protonoresult}[2]{%
+%\cindex{\code{#1}}%
+\item\noindent\code{({#1}{\var{#2}\/})}}
+
+\newcommand{\constproto}[2]{%
+\item\noindent\prototagstart\code{{#1}}\prototag{{#2}}}
+
+\newcommand{\cproto}[1]{%
+\item\noindent\code{{#1}}}
+
+\newcommand{\cgcproto}[1]{%
+\item\noindent\prototagstart\code{{#1}}\prototag{(may GC)}}
+
+\newcommand{\syntaxprotonoresult}[2]{%
+\item\noindent\prototagstart\code{({#1}{#2})}\prototag{syntax}}
+
+\newcommand{\prototagstart}{%
+\begin{rawhtml}<table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td>\end{rawhtml}}
+
+\newcommand{\prototag}[1]{%
+\begin{rawhtml}</td> <td align=right>\end{rawhtml}%
+{#1}%
+\begin{rawhtml}</td></tr></table>\end{rawhtml}}
+
+}
+%%%%%%%%%%%%%%%% end of HTML proto definitions

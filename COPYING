@@ -1,41 +1,27 @@
-Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-Copyright (c) 1996 by NEC Research Institute, Inc.
+Copyright (c) 1993-1999 Richard Kelsey and Jonathan Rees
+All rights reserved.
 
-Use of this software for non-commercial academic purposes is
-permitted provided that the above copyright notice appears
-in the software itself and in the accompanying documentation
-and this permission notice appears in the documentation.
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the authors may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
 
-Use of this software for commerical purposes is also
-permitted, but only if, in addition to the conditions
-required for non-commerical users, written notification of
-such use is provided by the commerical user to NEC Research
-Institute, Inc. (NECI) prior to the fabrication and
-distribution of the software.
-
-This software is experimental.  NECI does not make any
-representations regarding the suitability of the software
-for any purpose and NECI will not support the software.  The
-software is provided "AS IS".  NECI does not make any
-warranties either express or implied with regard to the
-software.
-
-NECI also disclaims any warranty that the software is free
-of infringement of any intellectual property rights of
-others.  No other license express or implied is hereby
-provided.  Users of this software for commercial purposes
-agree to indemnify and hold harmless NECI from any claims
-whatsoever arising from the commercial use or distribution
-of the software, including claims and/or actions arising
-from infringement of intellectual property rights.
-
-NECI shall not be liable for any damages, including general,
-special, incidental or consequential, arising out of the use
-or inability to use the software.
-
-The name of NEC Research Institute, Inc. shall not be used in
-advertising or publicity related to the distribution of the
-software, without the prior written consent of NECI.
+THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 Distributing Autoconf Output

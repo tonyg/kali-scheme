@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This file contains things that tie together the compiler and the
@@ -48,10 +47,9 @@
 					 (package->environment package))
 		  (package->environment package)))
 	 (template (compile-forms (map (lambda (form)
-					 (lambda () (expand-form form env)))
+					 (delay (expand-scanned-form form env)))
 				       (scan-forms forms env))
-				  maybe-filename
-				  #f)))
+				  maybe-filename)))
     (link! template package note-undefined?)
     (invoke-closure
       (make-closure template

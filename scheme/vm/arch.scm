@@ -1,12 +1,11 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file arch.scm.
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 19")
+(define architecture-version "Vanilla 20")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -64,12 +63,13 @@
   (local          byte byte)     ; back and over
   ((local0 local1 local2)
    byte)		         ; back encoded into op-code for efficiency
-  (big-local      byte two-bytes)   ; same, but OVER is two bytes
-  (set-local!     byte two-bytes 1) ; back over value, OVER is two bytes
+  (big-local      two-bytes two-bytes)   ; same, but counts are two bytes
+  (set-local!     two-bytes two-bytes 1) ; back over value, counts are two bytes
   (global         index)         ; value to *val*
   (set-global!    index 1)
-  (closure        index)         ; use environment in *env*
-  (flat-closure   env-data index) ; make new environment from var-data
+  (closure        index byte)    ; byte = 0 -> use environment in *env*
+                                 ; byte = 1 -> use environment in *val*
+  (make-flat-env  env-data)      ; make new environment from env-data
   (push 1)		         ; push *val* onto stack
   ((local0-push push-local0)	 ; common combination
 		  byte junk 1)
@@ -162,15 +162,17 @@
   (stored-object-indexed-ref  stob 2) ; vector + offset
   (stored-object-indexed-set! stob 3) ; vector + offset + value
 
-  (make-code-vector 2)
-  (code-vector-length 1)
-  (code-vector-ref 2)
-  (code-vector-set! 3)
+  (make-byte-vector 2)
+  (byte-vector-length 1)
+  (byte-vector-ref 2)
+  (byte-vector-set! 3)
 
   (make-string 2)
   (string-length 1)
   (string-ref 2)
   (string-set! 3)
+
+  (intern 1)
                      
   (location-defined? 1)
   (set-location-defined?! 2)
@@ -182,6 +184,7 @@
   (channel-maybe-read 5)
   (channel-maybe-write 4)
   (channel-abort 1)             ; stop channel operation
+  (open-channels-list)		; return a list of the open channels
   
   ;; Misc
   ((unassigned unspecific))
@@ -190,10 +193,10 @@
   (eof-object)                  ; hard to get otherwise
   (write-image 3)
   (collect)
+  (string-hash 1)		; used by the static linker for the initial table
   (add-finalizer! 2)
   (memory-status 2)
   (find-all 1)	                ; makes a vector of all objects of a given type
-  (find-all-symbols 1)		; puts the symbols in a table
   (find-all-records 1)          ; makes a vector of all records of a given type
   (current-thread)
   (set-current-thread! 1)
@@ -206,17 +209,17 @@
   (return-from-interrupt)
   (schedule-interrupt 1)
   (wait 2)                      ; do nothing until something happens
-  (external-lookup 1)
-  (external-call 1 +)
+  (call-external-value 1 +)
+  (lookup-shared-binding 2)
+  (define-shared-binding 3)
+  (undefine-shared-binding 2)
   (time 2)
   (vm-extension 2)		; access to extensions of the virtual machine
-  (vm-return 2)			; return from the vm in a restartable fashion
+  (return-from-callback 2)	; return from an callback
 
   ;; Unnecessary primitives
   (string=? 2)
-  (string-hash 1)
   (reverse-list->string 2)
-  (intern 2)
   (assq 2)
   (checked-record-ref 3)
   (checked-record-set! 4)
@@ -237,6 +240,7 @@
    keyboard
    post-gc         ; handler is passed a list of finalizers
    i/o-completion  ; handler is passed channel and status
+   os-signal
    ))
 
 ; Possible problems
@@ -262,9 +266,14 @@
    proceeding-after-exception
    bad-option
    unbound-external-name
+   too-many-arguments-to-external-procedure
+   too-many-arguments-in-callback
+   callback-return-uncovered
    extension-exception
    extension-return-error
    os-error
+   unresumable-records-in-image
+   gc-protection-mismatch
    ))
 
 ; Used by (READ-CHAR) and (WRITE-CHAR) to get the appropriate ports from
@@ -320,6 +329,11 @@
 ; 3+ case this is the same as args+nargs above.
 
 (define nary-dispatch-protocol (next-protocol))
+
+; The maximum number of arguments that can be passed to EXTERNAL-CALL.
+; This is determined by the C procedure `external_call()'.
+
+(define maximum-external-call-args 12)
 
 ;----------------
 ; The number of stack slots available to each procedure by default.
@@ -391,13 +405,13 @@
    extended-number
    template
    weak-pointer
-   external
+   shared-binding
    unused-d-header1
    unused-d-header2
 
    ;; B-vector types (not traced by GC)
    string        ; = least b-vector type
-   code-vector
+   byte-vector
    double        ; double precision floating point
    bignum
    ))
@@ -412,7 +426,7 @@
 (define stob-data
   '((pair pair? cons
       (car set-car!) (cdr set-cdr!))
-    (symbol symbol? #f       ; symbols actually made using op/intern
+    (symbol symbol? #f       ; RTS calls op/string->symbol
       (symbol->string))
     (location location? make-location
       (location-id set-location-id!)
@@ -421,8 +435,10 @@
       (closure-template) (closure-env))
     (weak-pointer weak-pointer? make-weak-pointer
       (weak-pointer-ref))
-    (external external? make-external
-      (external-name) (external-value))
+    (shared-binding shared-binding? make-shared-binding
+      (shared-binding-name)
+      (shared-binding-is-import?)
+      (shared-binding-ref shared-binding-set!))
     (port port? make-port
       (port-handler)
       (port-status  set-port-status!)

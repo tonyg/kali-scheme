@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Byte-code assembler (Richard's version)
 ;
@@ -39,7 +38,7 @@
 				  (cdddr exp)
 				  bindings)))
       (fixup-template-refs! template)
-      (deliver-value (instruction-with-literal (enum op closure) template)
+      (deliver-value (instruction-with-literal (enum op closure) template 0)
 		     cont))))
 
 ;----------------
@@ -90,7 +89,7 @@
 ;----------------
 
 (define (compile-lap id insts bindings)
-  (segment->template (really-compile-lap insts bindings) id 0 #f))
+  (segment->template (really-compile-lap insts bindings) id #f #f))
     
 ; Assemble each instruction, keeping track of which ones use labels.
 ; STUFF is a list of lists of the form (<inst> <offset> . <preceding-insts>)

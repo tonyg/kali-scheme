@@ -1,4 +1,4 @@
-; Copyright (c) 1994 Richard Kelsey.  See file COPYING.
+; Copyright (c) 1994 by Richard Kelsey.  See file COPYING.
 
 ; Translating the node tree into C
 
@@ -128,6 +128,9 @@
 	       (values value (final-variable-type value)))
 	      ((literal-node? value)
 	       (values (literal-value value) (literal-type value)))
+	      ((reference-node? value)
+	       (let ((var (reference-variable value)))
+		 (values var (final-variable-type var))))
 	      (else
 	       (error "unknown kind of initial value ~S" value)))
       (cond ((not (unspecific? value))

@@ -1,6 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file vmio.scm.
 
@@ -8,7 +7,7 @@
 
 (define *number-of-channels* 100)
 
-(define *vm-channels* (unspecific))
+(define *vm-channels*)
 
 (define closed-status
   (enter-fixnum (enum channel-status-option closed)))
@@ -30,7 +29,7 @@
 (define (open? channel)
   (not (= (channel-status channel) closed-status)))
 
-(define (initialize-i/o-system)
+(define (initialize-i/o-system+gc)
   (set! *number-of-channels*
 	(max *number-of-channels*
 	     (+ 1
@@ -44,32 +43,31 @@
   (if (null-pointer? *vm-channels*)
       (error "out of memory, unable to continue"))
   (vector+length-fill! *vm-channels* *number-of-channels* false)
-  (values (make-initial-channel (input-port->channel (current-input-port))
-				input-status
-				"standard input")
-	  (make-initial-channel (output-port->channel (current-output-port))
-				output-status
-				"standard output")
-	  (make-initial-channel (output-port->channel (current-error-port))
-				output-status
-				"standard error")))
+  (let ((key (ensure-space (* 3 (+ channel-size
+				   (vm-string-size
+				     (string-length "standard output")))))))
+    (values (make-initial-channel (input-port->channel (current-input-port))
+				  input-status
+				  "standard input"
+				  key)
+	    (make-initial-channel (output-port->channel (current-output-port))
+				  output-status
+				  "standard output"
+				  key)
+	    (make-initial-channel (output-port->channel (current-error-port))
+				  output-status
+				  "standard error"
+				  key))))
 
-(define (make-initial-channel channel status name)
+(define (make-initial-channel channel status name key)
   (let ((vm-channel (make-channel status
-				  (enter-string name)
+				  (enter-string name key)
 				  (enter-fixnum channel)
 				  false    ; next
 				  false    ; os-status
-				  universal-key)))
+				  key)))
     (vector-set! *vm-channels* channel vm-channel)
     vm-channel))
-
-; A channel and a name for each of initial-input-port, initial-output-port,
-; and initial-error-port.
-
-(define initial-i/o-heap-space
-  (* 3 (+ channel-size
-	  (vm-string-size (string-length "standard output")))))
 
 (define (os-index->channel index)
   (vector-ref *vm-channels* index))
@@ -94,6 +92,37 @@
 	(else
 	 (values false (enum exception channel-os-index-already-in-use)))))
 
+; Called from outside the VM.  It's up to the caller to be GC-safe.
+; Returns FALSE if anything goes wrong.
+
+(define (s48-add-channel mode id os-index)
+  (receive (channel status)
+      (make-registered-channel (extract-fixnum mode)
+			       id
+			       os-index
+			       (ensure-space channel-size))
+    (if (channel? channel)
+	channel
+	(enter-fixnum status))))
+
+; Called from outside to change the os-index of a particular channel.
+
+(define (s48-set-channel-os-index channel os-index)
+  (cond ((not (or (< os-index *number-of-channels*)
+		  (add-more-channels os-index)))
+	 (enter-fixnum (enum exception out-of-memory)))
+	((false? (vector-ref *vm-channels* os-index))
+	 (let ((old-index (extract-fixnum (channel-os-index channel))))
+	   (if (vm-eq? (channel-os-status channel)
+		       true)
+	       (enqueue-channel! old-index (channel-abort old-index)))
+	   (vector-set! *vm-channels* old-index false)
+	   (vector-set! *vm-channels* os-index channel)
+	   (set-channel-os-index! channel (enter-fixnum os-index))
+	   true))
+	(else
+	 (enter-fixnum (enum exception channel-os-index-already-in-use)))))
+
 ; Extend the vector of channels.
 
 (define (add-more-channels index)
@@ -115,15 +144,34 @@
 	   (set! *number-of-channels* new-count)
 	   #t))))
 
+; We abort any operation pending on the channel and then close it, freeing
+; up the index.  The status from the OS's close function is returned.
+
 (define (close-channel! channel)
-  (let* ((os-index (extract-fixnum (channel-os-index channel)))
-	 (status (if (or (= input-status (channel-status channel))
-			 (= special-input-status (channel-status channel)))
-		     (close-input-channel os-index)
-		     (close-output-channel os-index))))
-    (vector-set! *vm-channels* os-index false)
-    (set-channel-status! channel closed-status)
-    status))
+  (let ((os-index (extract-fixnum (channel-os-index channel))))
+    (if (vm-eq? (channel-os-status channel)
+		true)
+	(enqueue-channel! os-index (channel-abort os-index)))
+    (let ((status (if (or (= input-status (channel-status channel))
+			  (= special-input-status (channel-status channel)))
+		      (close-input-channel os-index)
+		      (close-output-channel os-index))))
+      (vector-set! *vm-channels* os-index false)
+      (set-channel-status! channel closed-status)
+      status)))
+
+; Called from outside the VM.  Closes the channel at OS-INDEX, should we have
+; such.
+
+(define (s48-close-channel os-index)
+  (if (and (<= 0 os-index)
+	   (< os-index *number-of-channels*)
+	   (channel? (os-index->channel os-index)))
+      (close-channel! (os-index->channel os-index)))
+  (unspecific))
+
+; Called to close an OS channel when we have been unable to make the
+; corresponding Scheme channel.
 
 (define (close-channel-index! index name mode)
   (let ((status (if (input-channel-status? mode)
@@ -145,6 +193,21 @@
       (write-error-string (extract-string id))
       (write-error-integer (extract-fixnum index)))
   (write-error-newline))
+
+; Return a list of the open channels, for the opcode of the same name.
+; Not that it's important, but the list has the channels in order of
+; their os-indexes.
+
+(define (open-channels-list)
+  (let ((key (ensure-space (* vm-pair-size *number-of-channels*))))
+    (do ((i (- *number-of-channels* 1) (- i 1))
+	 (res null
+	      (let ((channel (vector-ref *vm-channels* i)))
+		(if (channel? channel)
+		    (vm-cons channel res key)
+		    res))))
+	((= i -1)
+	 res))))
 
 ;----------------------------------------------------------------
 ; Handling i/o-completion interrupts
@@ -194,6 +257,7 @@
 (define (vm-channel-abort channel)
   (let ((head *pending-channels-head*))
     (cond ((false? head)
+	   (set-channel-os-status! channel false) ; no longer pending
 	   (enter-fixnum (channel-abort
 			  (extract-fixnum (channel-os-index channel)))))
 	  ((vm-eq? channel head)
@@ -202,6 +266,7 @@
 	  (else
 	   (let loop ((ch (channel-next head)) (prev head))
 	     (cond ((false? ch)
+		    (set-channel-os-status! channel false) ; no longer pending
 		    (enter-fixnum (channel-abort
 				    (extract-fixnum (channel-os-index channel)))))
 		   ((vm-eq? ch channel)
@@ -252,11 +317,13 @@
     (if (fixnum? id)
 	(write-error-integer (extract-fixnum id))
 	(write-error-string (extract-string id)))
+    (write-error-string " ")
+    (write-error-integer (extract-fixnum (channel-os-index channel)))
     (write-error-newline)))
 
 ; Mark channels in about-to-be-dumped heaps as closed.
 
-(define (mark-traced-channels-closed!)
+(define (s48-mark-traced-channels-closed!)
   (do ((i 0 (+ i 1)))
       ((= i *number-of-channels*))
     (let ((channel (vector-ref *vm-channels* i)))

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Commands for debugging.
@@ -568,5 +567,5 @@ Kind should be one of: names maps files source tabulate"
 		 (car maybe-exp)))
 	(env (package->environment (environment-for-commands))))
     (set-focus-object!
-     (schemify ((structure-ref syntactic expand) exp env)
+     (schemify ((structure-ref syntactic expand-form) exp env)
 	       env))))

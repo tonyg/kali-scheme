@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Arithmetic that checks for overflow
@@ -63,15 +62,24 @@
 ;     (newline))
 
 (define (divide-carefully x y succ fail)
-  (quotient-carefully x y
-                      (lambda (q)
-                        (remainder-carefully x y
-                                             (lambda (r)
-                                               (if (= r (enter-fixnum 0))
-                                                   (goto succ q)
-                                                   (goto fail x y)))
-                                             fail))
-                      fail))
+  (if (= y (enter-fixnum 0))
+      (fail x y)
+      (let* ((a (extract-fixnum x))
+	     (b (extract-fixnum y))
+	     (positive-result? (if (>= a 0)
+				   (>= b 0)
+				   (< b 0)))
+	     (a (abs a))
+	     (b (abs b))
+	     (c (quotient a b)))
+	(cond ((not (= 0 (remainder a b)))
+	       (goto fail x y))
+	      ((not positive-result?)
+	       (goto succ (enter-fixnum (- 0 c))))
+	      ((too-big-for-fixnum? c)  ; (divide least-fixnum -1)
+	       (goto fail x y))
+	      (else
+	       (goto succ (enter-fixnum c)))))))
 
 ; Watch out for (quotient least-fixnum -1)
 (define (quotient-carefully x y succ fail)
@@ -119,7 +127,7 @@
 
 ; beware of (abs least-fixnum)
 (define (abs-carefully n succ fail)
-  (let ((r (abs n)))
+  (let ((r (abs (extract-fixnum n))))
     (if (too-big-for-fixnum? r)
 	(goto fail n)
 	(goto succ (enter-fixnum r)))))

@@ -1,3 +1,6 @@
+/* Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees.
+   See file COPYING. */
+
 #include <stdio.h>
 #include <stdlib.h>		/* for getenv(), etc. (POSIX?/ANSI) */
 #include <string.h>		/* for strncpy(), etc. (POSIX/ANSI) */
@@ -22,7 +25,7 @@
    Note: strncpy(x, y, n) copies from y to x.
 */
 
-char *expand_file_name (name, buffer, buffer_len)
+char *s48_expand_file_name (name, buffer, buffer_len)
   char *name, *buffer;
   int buffer_len;
 {
@@ -45,14 +48,14 @@ char *expand_file_name (name, buffer, buffer_len)
       for (i = 0, p = name; i < name_len && *p != '/'; i++, p++)
 	if (i > (USER_NAME_SIZE - 2)) {
 	  fprintf(stderr,
-		  "\nexpand_file_name: user name longer than %d characters\n",
+		  "\ns48_expand_file_name: user name longer than %d characters\n",
 		  USER_NAME_SIZE - 3);
 	  return(NULL); };
       strncpy(user_name, name, i);
       user_name[i] = 0;
       user_data = getpwnam(user_name);
       if (!user_data) {
-	fprintf(stderr, "\nexpand_file_name: unknown user \"%s\"\n",
+	fprintf(stderr, "\ns48_expand_file_name: unknown user \"%s\"\n",
 		user_name);
 	return(NULL); };
       name_len -= i;
@@ -65,7 +68,7 @@ char *expand_file_name (name, buffer, buffer_len)
     for (i = 0, p = name; i < name_len && *p != '/'; i++, p++)
       if (i > (USER_NAME_SIZE - 2)) {
 	fprintf(stderr,
-		"\nexpand_file_name: environment variable longer than %d characters\n",
+		"\ns48_expand_file_name: environment variable longer than %d characters\n",
 		USER_NAME_SIZE - 3);
 	return(NULL); };
     strncpy(user_name, name, i);
@@ -78,7 +81,7 @@ char *expand_file_name (name, buffer, buffer_len)
   if (dir) {
     dir_len = strlen(dir);
     if ((name_len + dir_len + 1) > buffer_len) {
-      fprintf(stderr, "\nexpand_file_name: supplied buffer is too small\n");
+      fprintf(stderr, "\ns48_expand_file_name: supplied buffer is too small\n");
       return(NULL); };
     strncpy(buffer, dir, dir_len);
     strncpy(buffer + dir_len, name, name_len);
@@ -86,7 +89,7 @@ char *expand_file_name (name, buffer, buffer_len)
 
   else {
     if ((name_len + 1) > buffer_len) {
-      fprintf(stderr, "\nexpand_file_name: supplied buffer is too small\n");
+      fprintf(stderr, "\ns48_expand_file_name: supplied buffer is too small\n");
       return(NULL); };
     strncpy(buffer, name, name_len);
     buffer[name_len] = 0; }
@@ -100,7 +103,7 @@ main(argc, argv)
   char *argv[];
 {
   char buffer[32];
-  expand_file_name(argv[1], buffer, 32);
+  s48_expand_file_name(argv[1], buffer, 32);
   printf("%s\n", buffer);
   return(0);
 }
@@ -109,18 +112,18 @@ main(argc, argv)
 
 /* Driver loop for tail-recursive calls */
 
-long TTreturn_value;
+long s48_return_value;
 
 long
-TTrun_machine(long (*proc) (void))
+s48_run_machine(long (*proc) (void))
 {
   while (proc != 0)
     proc = (long (*) (void)) (*proc)();
-  return TTreturn_value;
+  return s48_return_value;
 }
 
 unsigned char *
-ps_error_string(long errno)
+ps_error_string(long the_errno)
 {
-  return((unsigned char *)strerror(errno));
+  return((unsigned char *)strerror(the_errno));
 }

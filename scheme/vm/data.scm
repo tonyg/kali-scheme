@@ -1,6 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file data.scm.
 ; Requires DEFINE-ENUMERATION macro.
@@ -99,12 +98,19 @@
   (enter-fixnum (descriptor-data p)))
 
 ; These happen to work out, given our representation for fixnums.
-(define vm-= =)
-(define vm-< <)
-(define vm-> >)
-(define vm-<= <=)
-(define vm->= >=)
-
+(define fixnum= =)
+(define fixnum< <)
+(define fixnum> >)
+(define fixnum<= <=)
+(define fixnum>= >=)
+
+(define (fixnum-bitwise-not x)
+  (bitwise-not (bitwise-ior x 3)))
+(define fixnum-bitwise-and bitwise-and)
+(define fixnum-bitwise-ior bitwise-ior)
+(define fixnum-bitwise-xor bitwise-xor)
+
+;----------------
 ; Immediates
 ;  The number 8 is chosen to streamline 8-bit-byte-oriented implementations.
 
@@ -227,6 +233,9 @@
 
 (define (header-length-in-cells header)
   (bytes->cells (header-length-in-bytes header)))
+
+(define (header-length-in-a-units h)
+  (cells->a-units (header-length-in-cells h)))
 
 (define (d-vector-header? h)
   (< (header-type h) least-b-vector-type))

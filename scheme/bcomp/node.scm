@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; --------------------
 ; Operators (= special operators and primitives)
@@ -29,6 +28,8 @@
     (if (operator? probe)
 	(let ((previous-type (operator-type probe)))
 	  (cond ((not type))
+		((not previous-type)
+		 (set-operator-type! probe type))
 		((symbol? type)		; 'leaf or 'internal
 		 (if (not (eq? type previous-type))
 		     (warn "operator type inconsistency" name type previous-type)))
@@ -41,9 +42,9 @@
 		       (type->sexp type 'foo))))
 	  probe)
 	(let* ((uid *operator-uid*)
-	       (type (or type usual-operator-type))
 	       (op (make-operator type
-				  (if (and (not (symbol? type))
+				  (if (and type
+					   (not (symbol? type))
 					   (fixed-arity-procedure-type? type))
 				      (procedure-type-arity type)
 				      #f)

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Low-level things that rely on the fact that we're running under the
@@ -85,24 +84,9 @@
 ; The symbol table
 
 (define (string->symbol string)
-  (if (eq? *the-symbol-table* #f)
-      (restore-the-symbol-table!))
   (intern (if (immutable? string)
 	      string			;+++
-	      (make-immutable! (string-copy string)))
-	  *the-symbol-table*))
-
-(define *the-symbol-table* #f)
-
-(define (flush-the-symbol-table!)
-  (set! *the-symbol-table* #f))
-
-(define (restore-the-symbol-table!)
-  (set! *the-symbol-table* (make-vector 1024 '()))
-  (find-all-symbols *the-symbol-table*))
-
-(restore-the-symbol-table!)
-
+	      (make-immutable! (string-copy string)))))
 
 ; The following magic bitmasks are derived from PORT-STATUS-OPTIONS in arch.scm.
 
@@ -115,10 +99,19 @@
        (= 2 (bitwise-and 2 (port-status port)))))
 
 
+; code-vectors == byte-vectors
+; These are functions so that they will be inlined.
+
+(define (make-code-vector length init) (make-byte-vector length init))
+(define (code-vector? x) (byte-vector? x))
+(define (code-vector-length bv) (byte-vector-length bv))
+(define (code-vector-ref bv i) (byte-vector-ref bv i))
+(define (code-vector-set! bv i x) (byte-vector-set! bv i x))
+
 ; Block reads and writes in terms of partial reads and writes.
 
 ; CHANNEL-READ returns the number of characters read or the EOF object.
-; BUFFER is either a string or code vector and START is the index at which
+; BUFFER is either a string or byte vector and START is the index at which
 ; to place the first character read.  NEEDED is one of
 ;  <integer> : the call returns when this many characters has been read or
 ;     an EOF is reached.
@@ -153,11 +146,11 @@
 		   have))))))))
 
 (define (buffer-length buffer)	   
-  (if (code-vector? buffer)
-      (code-vector-length buffer)
+  (if (byte-vector? buffer)
+      (byte-vector-length buffer)
       (string-length buffer)))
 
-; Write COUNT characters from BUFFER, which is either a string or a code-vector,
+; Write COUNT characters from BUFFER, which is either a string or a byte-vector,
 ; to CHANNEL, beginning with the character at START.  No meaningful value is
 ; returned.
 
@@ -170,7 +163,31 @@
 				      (- count sent)
 				      channel))))))
 
+; Shared bindings - six procedures from two primitives.  The lookup and
+; undefine primitives take a flag which is true for imports and false for
+; exports.
+
+(define (lookup-imported-binding name)
+  (lookup-shared-binding name #t))
+
+(define (lookup-exported-binding name)
+  (lookup-shared-binding name #f))
+
+(define (define-imported-binding name value)
+  (shared-binding-set! (lookup-shared-binding name #t)
+		       value))
+  
+(define (define-exported-binding name value)
+  (shared-binding-set! (lookup-shared-binding name #f)
+		       value))
+
+(define (undefine-imported-binding name)
+  (undefine-shared-binding name #t))
+
+(define (undefine-exported-binding name)
+  (undefine-shared-binding name #f))
+
 ; Writing debugging messages.
 
-(define (user-message . stuff)
+(define (debug-message . stuff)
   (message stuff))

@@ -1,5 +1,4 @@
-; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
-; Copyright (c) 1997 by NEC Research Institute, Inc.    See file COPYING.
+; Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This determines the maximum stack depth needed by a code vector.
 
@@ -180,10 +179,18 @@
 
 ; Skip over the environment specification.
 
-(define-delta flat-closure
+(define-delta make-flat-env
   (lambda (code-vector i depth maximum jumps)
-    (let ((args (code-vector-ref code-vector i)))
-      (stack-max code-vector (+ i 1 (* args 2)) depth maximum jumps))))
+    (let ((include-*val*? (= 1 (code-vector-ref code-vector i)))
+	  (count (code-vector-ref code-vector (+ i 1))))
+      (let loop ((i (+ i 2)) (count (if include-*val*? (- count 1) count)))
+	(if (= count 0)
+	    (stack-max code-vector
+		       i
+		       depth maximum jumps)
+	    (let ((level-count (code-vector-ref code-vector (+ i 1))))
+	      (loop (+ i 2 level-count)
+		    (- count level-count))))))))
 
 ; Adds the target to the list of jumps.
 ; The -1 is to back up over the opcode.
@@ -236,10 +243,6 @@
 		  (cons (cons (+ base (get-offset code-vector (+ i (* c 2))))
 			      depth)
 			jumps)))))))
-
-; (external-call 1 +)
-; External call is a problem - the number of arguments is on the stack.
-; For now we'll just leave them there.
 
 ;----------------
 ; Fill in the `normal' opcodes using the information in OPCODE-ARG-SPECS.
