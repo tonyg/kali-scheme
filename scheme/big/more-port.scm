@@ -5,65 +5,40 @@
 ;----------------
 ; Ports which keep track of the current row and column.
 ;
-; When the row or column data is requested we need to process the characters
-; between the port's current index and the index at the time of the previous
-; check.
-;
-; When a buffer operation is requested we need to process any remaining
-; characters in the old buffer.
+; Note that we're only counting character access---single-byte access
+; or block access are ignored.
 ;
 ; sub-port:    port being tracked
-; index:       the index of the next character to be processed
-; row, column: position of the character at BUFFER[INDEX - 1] 
+; row, column: position of the next character
 
 (define-record-type port-location :port-location
-  (really-make-port-location sub-port index row column)
+  (really-make-port-location sub-port row column)
   port-location?
   (sub-port port-location-sub-port)
-  (index    port-location-index  set-port-location-index!)
   (row      port-location-row    set-port-location-row!)
   (column   port-location-column set-port-location-column!))
 
 (define (make-port-location sub-port)
-  (really-make-port-location sub-port 0 0 0))
-
-; Update the data and return what you get.
+  (really-make-port-location sub-port 0 0))
 
 (define (row-column-accessor accessor)
   (lambda (port)
     (let ((data (port-data port)))
       (if (port-location? data)
-	  (begin
-	    (update-row-and-column! port data)
-	    (accessor data))
+	  (accessor data)
 	  #f))))
 
 (define current-row    (row-column-accessor port-location-row))
 (define current-column (row-column-accessor port-location-column))
 
-; Bring LOCATION up to date.
-
-(define (update-row-and-column! port location)
-  (let ((at (port-index port))
-	(checked-to (port-location-index location))
-	(buffer (port-buffer port)))
-    (if (< checked-to at)
-	(begin
-	  (get-row-and-column! buffer checked-to at location)
-	  (set-port-location-index! location at)))))
-
-(define (get-row-and-column! buffer start end location)
-  (let loop ((i start)
-	     (row (port-location-row location))
-	     (column (port-location-column location)))
-    (cond ((= i end)
-	   (set-port-location-row! location row)
-	   (set-port-location-column! location column))
-	  ((= (char->ascii #\newline)
-	      (byte-vector-ref buffer i))
-	   (loop (+ i 1) (+ row 1) 0))
-	  (else
-	   (loop (+ i 1) row (+ column 1))))))
+(define (port-location-update! location ch)
+  (if (char=? ch #\newline)
+      (begin
+	(set-port-location-row! location
+				(+ 1 (port-location-row location)))
+	(set-port-location-column! location 0))
+      (set-port-location-column! location
+				 (+ 1 (port-location-column location)))))
 
 ;----------------
 ; Input ports that keep track of the current row and column.
@@ -77,64 +52,92 @@
 				0)
       (call-error "not an input port" make-tracking-input-port port)))
 
+(define (make-tracking-one-char-input plain-one-char-input)
+  (lambda (port mode)
+    (let ((thing (plain-one-char-input port mode)))
+      (cond
+       (mode thing)			; PEEK or READY?
+       ((eof-object? thing) thing)
+       (else
+	(port-location-update! (port-data port) thing)
+	thing)))))
+
 (define tracking-input-port-handler
-  (make-buffered-input-port-handler
-   (lambda (location)
-     (list 'tracking-port (port-location-sub-port location)))
-   (lambda (port)			; close
-     (maybe-commit))
-   (lambda (port wait?)
-     (if (maybe-commit)
-	 (let ((location (port-data port)))
-	   (update-row-and-column! port location)
-	   (let ((got (read-block (port-buffer port)
-				  0
-				  (byte-vector-length (port-buffer port))
-				  (port-location-sub-port location)
-				  wait?)))
-	     ;(note-buffer-reuse! port)
-	     (if (eof-object? got)
-		 (set-port-pending-eof?! port #t)
-		 (begin
-		   (set-port-location-index! location 0)
-		   (set-port-index! port 0)
-		   (set-port-limit! port got)))
-	     #t))
-	 #f))
-   (lambda (port)
-     (let ((ready? (char-ready? (port-location-sub-port (port-data port)))))
-       (if (maybe-commit)
-	   (values #t ready?)
-	   (values #f #f))))))
+  (let ((plain-handler
+	 (make-buffered-input-port-handler
+	  (lambda (location)
+	    (list 'tracking-port (port-location-sub-port location)))
+	  (lambda (port)		; close
+	    (maybe-commit))
+	  (lambda (port wait?)
+	    (if (maybe-commit)
+		(let ((got (read-block (port-buffer port)
+				       0
+				       (byte-vector-length (port-buffer port))
+				       (port-location-sub-port (port-data port))
+				       wait?)))
+		  ;;(note-buffer-reuse! port)
+		  (if (eof-object? got)
+		      (set-port-pending-eof?! port #t)
+		      (begin
+			(set-port-index! port 0)
+			(set-port-limit! port got)))
+		  #t)
+		#f))
+	  (lambda (port)
+	    (let ((ready? (byte-ready? (port-location-sub-port (port-data port)))))
+	      (if (maybe-commit)
+		  (values #t ready?)
+		  (values #f #f)))))))
+    (make-port-handler
+     (port-handler-discloser plain-handler)
+     (port-handler-close plain-handler)
+     (port-handler-byte plain-handler)
+     (make-tracking-one-char-input (port-handler-char plain-handler))
+     (port-handler-block plain-handler)
+     (port-handler-ready? plain-handler)
+     (port-handler-force plain-handler))))
 
 ;----------------
 ; Output ports that keep track of the current row and column.
 
+(define (make-tracking-one-char-output plain-one-char-output)
+  (lambda (port ch)
+    (plain-one-char-output port ch)
+    (port-location-update! (port-data port) ch)))
+
 (define tracking-output-port-handler
-  (make-buffered-output-port-handler
-   (lambda (location)
-     (list 'tracking-port (port-location-sub-port location)))
-   (lambda (port)			; close
-     (maybe-commit))
-   (lambda (port necessary?)		; we ignore necessary? and always write
-     (if (maybe-commit)			; out whatever we have
-	 (let ((location (port-data port)))
-	   (update-row-and-column! port location)
-	   (write-block (port-buffer port)
-			0
-			(port-index port)
-			(port-location-sub-port location))
-	   ;(note-buffer-reuse! port)
-	   (set-port-location-index! location 0)
-	   (set-port-index! port 0)
-	   #t)
-	 #f))
-   (lambda (port)
-     (let ((ready? (output-port-ready?
-		    (port-location-sub-port (port-data port)))))
-       (if (maybe-commit)
-	   (values #t ready?)
-	   (values #f #f))))))
+  (let ((plain-handler
+	 (make-buffered-output-port-handler
+	  (lambda (location)
+	    (list 'tracking-port (port-location-sub-port location)))
+	  (lambda (port)			; close
+	    (maybe-commit))
+	  (lambda (port necessary?)		; we ignore necessary? and always write
+	    (if (maybe-commit)			; out whatever we have
+		(begin
+		  (write-block (port-buffer port)
+			       0
+			       (port-index port)
+			       (port-location-sub-port (port-data port)))
+		  ;;(note-buffer-reuse! port)
+		  (set-port-index! port 0)
+		  #t)
+		#f))
+	  (lambda (port)
+	    (let ((ready? (output-port-ready?
+			   (port-location-sub-port (port-data port)))))
+	      (if (maybe-commit)
+		  (values #t ready?)
+		  (values #f #f)))))))
+    (make-port-handler
+     (port-handler-discloser plain-handler)
+     (port-handler-close plain-handler)
+     (port-handler-byte plain-handler)
+     (make-tracking-one-char-output (port-handler-char plain-handler))
+     (port-handler-block plain-handler)
+     (port-handler-ready? plain-handler)
+     (port-handler-force plain-handler))))
 
 (define (make-tracking-output-port port)
   (if (output-port? port)
@@ -279,6 +282,8 @@
    make-output-port-closed!
    (lambda (port byte)
      ((port-data port) byte))
+   (lambda (port ch)
+     'lose) ; ####
    (lambda (port buffer start count)
      (let ((proc (port-data port)))
        (do ((i 0 (+ i 1)))
@@ -344,6 +349,8 @@
      ((source-data-close (port-data port))))
    (lambda (port read?)
      (byte-source-read-byte port (port-data port) read?))
+   (lambda (port mode)
+     'lose) ; ####
    (lambda (port buffer start count wait?)
      (if (or (= count 0)
 	     (port-pending-eof? port))
