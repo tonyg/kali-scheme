@@ -11,8 +11,11 @@
     ; If no name we go straight to the standard LET.
     ((let () body ...)
      (standard-let () body ...))
-    ((let ((variable value) bindings ...) body ...)
-     (standard-let ((variable value) bindings ...) body ...))
+    ((let ((variable value) ...) body ...)
+     (standard-let ((variable value) ...) body ...))
+    ; Rest binding
+    ((let ((var val) . bindings) body ...)
+     (let-loop #f bindings (var) (val) (body ...)))
 
     ;; Signature-style and standard named LET.
     ((let (name bindings ...) body ...)
@@ -30,6 +33,10 @@
      ((letrec ((name (lambda (vars ...) . body)))
         name)
       vals ...))
+
+    ; Rest binding, no name
+    ((let-loop #f (rest-var rest-val ...) (var ...) (val ...) body)
+     (standard-let ((var val) ... (rest-var (list rest-val ...))) . body))
 
     ; Process a (var val) pair.
     ((let-loop name ((var val) more ...) (vars ...)     (vals ...)     body)
