@@ -232,7 +232,7 @@
 
 (define (check-stack-continuation-contents cont code-vector pc)
   (let ((code-pointer (stack-cont-code-pointer cont)))
-    (let ((mask-size (fetch-byte (address- code-pointer 3)))
+    (let ((mask-size (fetch-byte (address+ code-pointer gc-mask-size-offset)))
 	  (contents-pointer (address1+ cont)))
       (if (= mask-size 0)
 	  (check-locations contents-pointer
@@ -252,8 +252,8 @@
 
 					; -1 -2        frame size
 (define gc-mask-size-offset -3)		; -3           gc mask size
-					; -4 -5 -6 -7  offset
-(define gc-mask-offset      -8)         ; -8 ...       mask
+					; -4 -5        offset
+(define gc-mask-offset      -6)         ; -6 ...       mask
 
 (define (check-continuation-contents contents-pointer code-pointer mask-size)
   (let ((mask-pointer (address+ code-pointer (+ gc-mask-offset 1))))

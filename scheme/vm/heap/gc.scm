@@ -144,8 +144,8 @@
 
 					; -1 -2        frame size
 (define gc-mask-size-offset -3)		; -3           gc mask size
-					; -4 -5 -6 -7  offset
-(define gc-mask-offset      -8)         ; -8 ...       mask
+					; -4 -5        offset
+(define gc-mask-offset      -6)         ; -6 ...       mask
 
 ; Exported for use by the stack code.
 
