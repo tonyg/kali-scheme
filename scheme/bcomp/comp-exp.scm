@@ -322,7 +322,9 @@
 	 (body (caddr proc-exp)))
     (cond ((not (= (length formals)
 		   (length args)))
-	   (generate-trap cont
+	   (generate-trap depth
+			  frame
+			  cont
 			  "wrong number of arguments"
 			  (cons (schemify proc-node)
 				(map schemify args))))
