@@ -160,7 +160,7 @@
            (contents ,(contents thing))))
 
 	((weak-pointer? thing)
-	 `(ref ,(weak-pointer-ref thing)))
+	 `((ref ,(weak-pointer-ref thing))))
 
         (else '())))
 

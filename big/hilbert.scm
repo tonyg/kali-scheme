@@ -1,8 +1,26 @@
 ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
+;Date: Thu, 4 Nov 93 14:34:04 EST
+;Subject: binary search trees
+;From: kelsey@research.nj.nec.com
+;
+;If you want to add the Hilbert tables I think you should change
+;the name and add some documentation.  Neither the name nor the
+;only comment in the file are particulary informative.  They are
+;not infinite dimensional vectors, just arbitrarily large one
+;dimensional ones.
+;
+;How about make-big-vector etc.?
 
-; "Hilbert tables" - so-called because they're infinite-dimensional
-; vectors.
+
+; Hilbert vectors are like vectors that grow as large as they need to.
+; That is, they can be indexed by arbitrarily large nonnegative integers.
+
+; The implementation allows for arbitrarily large gaps by arranging
+; the entries in a tree.
+
+; So-called because they live in an infinite-dimensional vector
+; space...
 
 ; ,open bitwise define-record-types
 
@@ -65,7 +83,7 @@
 (define (make-node-if-necessary node index)
   (or (vector-ref node index)
       (let ((new (make-vector hilbert-node-size #f)))
-	(write `(wider ,index)) (newline)
+	;; (write `(wider ,index)) (newline)
 	(vector-set! node index new)
 	new)))
 

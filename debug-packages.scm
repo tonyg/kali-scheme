@@ -22,7 +22,7 @@
 
 ; Miniature EVAL, for debugging runtime system sans package system.
 
-(define-package ((mini-eval evaluation-signature)
+(define-package ((mini-eval evaluation-interface)
 		 (mini-eval-internal
 		  (export set-interaction-environment!
 			  set-scheme-report-environment!))
@@ -34,7 +34,7 @@
   (files (debug mini-eval)))
 
 (define-module (make-scheme environments evaluation)
-  (define-package ((scheme scheme-signature))
+  (define-package ((scheme scheme-interface))
     (open scheme-level-2
 	  environments
 	  evaluation))
@@ -58,7 +58,7 @@
 ; --------------------
 ; Hack: smallest possible reified system.
 
-(define-package ((mini-packages for-reification-signature))
+(define-package ((mini-packages for-reification-interface))
   (open scheme-level-2
 	table
 	features		;contents
@@ -89,7 +89,7 @@
 ; --------------------
 ; S-expression interpreter
 
-(define-package ((run evaluation-signature))
+(define-package ((run evaluation-interface))
   (open scheme-level-2 syntactic packages scan types
 	environments
 	signals

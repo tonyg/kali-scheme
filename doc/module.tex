@@ -15,7 +15,7 @@
 
 \vspace{2ex}
 Jonathan Rees \\
-3 January 1993
+3 January 1993 (updated 4 December 1993)
 \end{center}
 
 \vspace{3ex}
@@ -59,7 +59,7 @@ package.  Such a view is called a {\em structure} (terminology from
 Standard ML).  One module may provide several different views.  A
 structure is just a subset of the package's bindings.  The particular
 set of names whose bindings are exported is the structure's {\em
-signature}.
+interface}.
 
 A module imports bindings from other modules by either {\em opening}
 or {\em accessing} some structures that are built on other packages.
@@ -84,7 +84,7 @@ This configuration defines two structures, {\tt foo} and {\tt bar}.
 {\tt foo} is a view on a package in which the {\tt scheme} structure's
 bindings (including {\tt define} and {\tt +}) are visible, together
 with bindings for {\tt a}, {\tt b},
-and {\tt c}.  {\tt foo}'s signature is {\tt (export a c cons)}, so of
+and {\tt c}.  {\tt foo}'s interface is {\tt (export a c cons)}, so of
 the bindings in its underlying package, {\tt foo} only exports those
 three.  Similarly, structure {\tt bar} consists of the binding of {\tt
 d} from a package in which both {\tt scheme}'s and {\tt foo}'s
@@ -103,7 +103,7 @@ become so by {\tt scheme} (or an equivalent structure) being opened.
 \subsection*{The configuration language}
 
 The configuration language consists of top-level defining forms for
-modules and signatures.  Its syntax is given in figure~1.
+modules and interfaces.  Its syntax is given in figure~1.
 
 \setbox0\hbox{\goesto}
 \newcommand{\altz}{\hbox to 1\wd0{\hfil\alt}}
@@ -115,18 +115,18 @@ modules and signatures.  Its syntax is given in figure~1.
 \begin{tabbing}
    \syn{configuration} \=\goesto{}~\arbno{\syn{definition}} \\
    \syn{definition} \=\goesto{}~
-      \tt(define-package (\arbno{(\syn{name} \syn{signature})})
+      \tt(define-package (\arbno{(\syn{name} \syn{interface})})
           \arbno{\syn{clause}}) \\
-	\>\altz{}~ \tt(define-signature \syn{name} \syn{signature}) \\
+	\>\altz{}~ \tt(define-interface \syn{name} \syn{interface}) \\
 	\>\altz{}~ \tt(define-syntax \syn{name} \syn{transformer-spec}) \\
    \syn{clause} \=\goesto{}~ \tt(open \arbno{\syn{name}}) \\
 	\>\altz{}~ \tt(access \arbno{\syn{name}}) \\
 	\>\altz{}~ \tt(begin \syn{program}) \\
 	\>\altz{}~ \tt(files \arbno{\syn{filespec}}) \\
 	\>\altz{}~ \tt(optimize \arbno{\syn{optimize-spec}}) \\
-   \syn{signature} \=\goesto{}~ \tt(export \arbno{\syn{item}}) \\
+   \syn{interface} \=\goesto{}~ \tt(export \arbno{\syn{item}}) \\
 	\>\altz{}~ \syn{name} \\
-	\>\altz{}~ \tt(compound-signature \arbno{\syn{signature}}) \\
+	\>\altz{}~ \tt(compound-interface \arbno{\syn{interface}}) \\
    \syn{item} \=\goesto{}~ \syn{name} ~\alt{}~ \tt(\syn{name} \syn{type})
 \end{tabbing}
 \caption{The configuration language.}
@@ -137,7 +137,7 @@ modules and signatures.  Its syntax is given in figure~1.
 A {\tt define-package} form introduces bindings of some names to some
 structures.  Each structure is a view on a package which is created
 according to the clauses of the {\tt define-package} form.  Each
-structure has a signature that specifies which bindings in the
+structure has a interface that specifies which bindings in the
 structure's underlying package can be seen via that structure in other
 packages.
 
@@ -210,51 +210,51 @@ directory in which the file containing the {\tt define-package} form
 was found.
 
 
-\subsection*{Signatures}
+\subsection*{Interfaces}
 
-A signature can be thought of as the type of a structure.  In its
+A interface can be thought of as the type of a structure.  In its
 basic form it is just a list of variable names, written {\tt(export
 \var{name} \etc)}.  However, in place of
 a name one may write {\tt(\var{name} \var{type})}, indicating the type
 of \var{name}'s binding.  Currently the type field is ignored, except
 that exported macros must be indicated with type {\tt syntax}.
 
-Signatures may be either anonymous, as in the example in the
-introduction, or they may be given names by a {\tt define-signature}
+Interfaces may be either anonymous, as in the example in the
+introduction, or they may be given names by a {\tt define-interface}
 form, for example
 \begin{code}
-    (define-signature foo-signature (export a c cons))
-    (define-package ((foo foo-signature)) \etc)
+    (define-interface foo-interface (export a c cons))
+    (define-package ((foo foo-interface)) \etc)
 \end{code}
-In principle, signatures needn't ever be named.  If a signature
+In principle, interfaces needn't ever be named.  If a interface
 had to be given at the point of a structure's use as well as at the
-point of its definition, it would be important to name signatures in
+point of its definition, it would be important to name interfaces in
 order to avoid having to write them out twice, with risk of mismatch
-should the signature ever change.  But they don't.
+should the interface ever change.  But they don't.
 
-Still, there are several reasons to use {\tt define-signature}:
+Still, there are several reasons to use {\tt define-interface}:
 \begin{enumerate}
-\item It is important to separate the signature definition from the
+\item It is important to separate the interface definition from the
 package definitions when there are multiple distinct structures that
-have the same signature --- that is, multiple implementations of the
+have the same interface --- that is, multiple implementations of the
 same abstraction.
 
 \item It is conceptually cleaner, and useful for documentation
-purposes, to separate a module's specification (signature) from its
+purposes, to separate a module's specification (interface) from its
 implementation (package).
 
 \item My experience is that configurations that are separated into
-signature definitions and package definitions are easier to read; the
+interface definitions and package definitions are easier to read; the
 long lists of exported bindings just get in the way most of the time.
 \end{enumerate}
 
-The {\tt compound-signature} operator forms a signature that is the
-union of two or more component signatures.  For example,
+The {\tt compound-interface} operator forms a interface that is the
+union of two or more component interfaces.  For example,
 \begin{code}
-    (define-signature bar-signature
-      (compound-signature foo-signature (export mumble)))
+    (define-interface bar-interface
+      (compound-interface foo-interface (export mumble)))
 \end{code}
-defines {\tt bar-signature} to be {\tt foo-signature} with the name
+defines {\tt bar-interface} to be {\tt foo-interface} with the name
 {\tt mumble} added.
 
 
@@ -289,7 +289,7 @@ If you must know, figure it out from the following grammar.
 \begin{tabbing}
 \qquad
    \syn{definition} \=\goesto{}~
-      \tt(d\=\tt{}efine-module (\syn{name} \arbno{(\syn{name} \syn{signature})}) \\
+      \tt(d\=\tt{}efine-module (\syn{name} \arbno{(\syn{name} \syn{interface})}) \\
        \>  \>\arbno{\syn{definition}} \\
        \>  \>\syn{name}\tt) \\
 	\>\altz{}~ \tt(define-structure \syn{name}
@@ -312,7 +312,7 @@ be difficult to implement separate compilation.  The unit of
 compilation is one module (not one file).  Any opened or accessed
 structures from which macros are obtained must be processed to the
 extent of extracting its macro definitions.  The compiler knows from
-the signature of an opened or accessed structure which of its exports
+the interface of an opened or accessed structure which of its exports
 are macros.  Except for macros, a module may be compiled without any
 knowledge of the implementation of its opened and accessed structures.
 However, inter-module optimization will be available as an option.
@@ -332,7 +332,7 @@ package being loaded or linked.
 \subsection*{Semantics of configuration mutation}
 
 During program development it is often desirable to make changes to
-packages and signatures.  In static languages it may be necessary to
+packages and interfaces.  In static languages it may be necessary to
 recompile and re-link a program in order for such changes to be
 reflected in a running system.  Even in interactive Common Lisp
 implementations, a change to a package's exports often requires
@@ -345,12 +345,12 @@ The \hack{} development environment supports rapid turnaround in
 modular program development by allowing mutations to a program's
 configuration, and giving a clear semantics to such mutations.  The
 rule is that variable bindings in a running program are always
-resolved according to current structure and signature bindings, even
+resolved according to current structure and interface bindings, even
 when these bindings change as a result of edits to the configuration.
 For example, consider the following:
 \begin{code}
-    (define-signature foo-signature (export a c))
-    (define-package ((foo foo-signature))
+    (define-interface foo-interface (export a c))
+    (define-package ((foo foo-interface))
       (open scheme)
       (begin (define a 1)
 	     (define (b x) (+ a x))
@@ -362,9 +362,9 @@ For example, consider the following:
 This program has a bug.  The variable {\tt b}, which is free in the
 definition of {\tt d}, has no binding in {\tt bar}'s package.  Suppose
 that {\tt b} was supposed to be exported by {\tt foo}, but was omitted
-from {\tt foo-signature} by mistake.  It is not necessary to
+from {\tt foo-interface} by mistake.  It is not necessary to
 re-process {\tt bar} or any of {\tt foo}'s other clients at this point.
-One need only change {\tt foo-signature} and inform the development
+One need only change {\tt foo-interface} and inform the development
 system of that one change (using, say, an appropriate Emacs command),
 and {\tt foo}'s binding of {\tt b} will be found when procedure {\tt
 d} is called.
@@ -383,7 +383,7 @@ earlier.
 
 This semantics might appear to require a large amount of computation
 on every variable reference: The specified behavior requires scanning
-the package's list of opened structures, examining their signatures,
+the package's list of opened structures, examining their interfaces,
 on every variable reference, not just at compile time.  However, the
 development environment uses caching with cache invalidation to make
 variable references fast.
@@ -491,11 +491,11 @@ current package followed by a greater-than ({\tt>}).
 
 \item
 \begin{code}
-,structure \var{name} \var{signature}
+,structure \var{name} \var{interface}
 \end{code}
     The {\tt,structure} command defines \var{name} in the
-    configuration package to be a structure with signature
-    \var{signature} based on the current package.
+    configuration package to be a structure with interface
+    \var{interface} based on the current package.
 
 \item
 \begin{code}
@@ -523,24 +523,15 @@ capture common idioms.
 
 \item
 \begin{code}
-,in \var{struct-name} \var{form}
+,in \var{struct-name} \var{comand}
 \end{code}
-    This form of the {\tt,in} command evaluates a single form in the
+    This form of the {\tt,in} command evaluates a single comand in the
     specified package without moving the command processor into that
-    package. 
-
-\item
+    package.  Example:
 \begin{code}
-,load-into \var{struct-name} \var{file} \etc
+    ,in mumble (cons 1 2)
+    ,in mumble ,trace foo
 \end{code}
-    The {\tt,load-into} command loads one or more files into a specified
-    package.  It is similar to
-\begin{code}
-    ,in \var{struct-name}
-    ,load \var{file} \etc
-\end{code}
-    except that the command processor's current package is unchanged
-    afterwards.
 
 \item
 \begin{code}
@@ -565,7 +556,7 @@ capture common idioms.
 It is possible to set up multiple configuration packages.
 Configuration packages open the {\tt defpackage} structure instead of
 the {\tt scheme} structure, and in addition use structures that export
-structures and signatures.  The initial configuration package opens
+structures and interfaces.  The initial configuration package opens
 the two structures {\tt built-in-structures} and {\tt
 more-structures}.  The {\tt built-in-structures} structure exports
 most of the basic structures, including {\tt scheme}, {\tt table},
@@ -623,14 +614,14 @@ By forcing us to write down interfaces and module dependencies, the
 module system helps us to keep the system clean, or at least to keep
 us honest about how clean or not it is.
 
-The need to make structures and signatures second-class instead of
+The need to make structures and interfaces second-class instead of
 first-class results from the requirements of static program analysis:
 it must be possible for the compiler and linker to expand macros and
 resolve variable bindings before the program is executed.  Structures
 could be made first-class (as in FX\cite{Sheldon-Gifford:Static}) if a
 type system were added to Scheme and the definitions of exported
-macros were defined in signatures instead of in module bodies, but
-even in that case types and signatures would remain second-class.
+macros were defined in interfaces instead of in module bodies, but
+even in that case types and interfaces would remain second-class.
 
 The prohibition on assignment to imported bindings makes substitution
 a valid optimization when a module is compiled as a block.  The block
@@ -673,7 +664,7 @@ modules, which Scheme Xerox considers unimportant.
 %[Discuss or flush OPTIMIZE clause.]
 %
 %[Future work: ideas for anonymous structures and more of a module
-%calculus; dealing with name conflicts; signature subtraction.]
+%calculus; dealing with name conflicts; interface subtraction.]
 
 
 \begin{thebibliography}{10}

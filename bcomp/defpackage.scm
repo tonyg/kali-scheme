@@ -1,7 +1,7 @@
 ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
-; The DEFINE-PACKAGE and DEFINE-SIGNATURE macros.
+; The DEFINE-PACKAGE and DEFINE-INTERFACE macros.
 
 (define-syntax define-modular
   (syntax-rules ()
@@ -28,26 +28,26 @@
 		  (frob ?name ...))))))))
 
 
-; Signatures
+; Interfaces
 
-; <definition> ::= (define-signature <name> <sig>)
-; <sig> ::= <name> | (export <item> ...) | (compound-signature <sig> ...)
+; <definition> ::= (define-interface <name> <int>)
+; <int> ::= <name> | (export <item> ...) | (compound-interface <int> ...)
 
-(define-syntax define-signature
+(define-syntax define-interface
   (syntax-rules ()
-    ((define-signature ?name ?sig)
+    ((define-interface ?name ?int)
      (define ?name
        (begin (verify-later! (lambda () ?name))
-	      (a-signature ?name ?sig))))))
+	      (a-interface ?name ?int))))))
 
-(define-syntax a-signature
-  (syntax-rules (export compound-signature)
-    ((a-signature ?name (export ?item ...))
+(define-syntax a-interface
+  (syntax-rules (export compound-interface)
+    ((a-interface ?name (export ?item ...))
      (really-export '?name ?item ...))
-    ((a-signature ?name (compound-signature ?sig ...))
-     (make-compound-signature '?name (a-signature #f ?sig) ...))
-    ((a-signature ?name ?sig)	;name
-     ?sig)))
+    ((a-interface ?name (compound-interface ?int ...))
+     (make-compound-interface '?name (a-interface #f ?int) ...))
+    ((a-interface ?name ?int)	;name
+     ?int)))
 
 
 ; <item> ::= <name> | (<name> <type>) | ((<name> ...) <type>)
@@ -60,7 +60,7 @@
 		 (plain '())
 		 (others '()))
 	(if (null? items)
-	    `(,(r 'make-simple-signature)
+	    `(,(r 'make-simple-interface)
 	      ,(cadr e)
 	      (,(r 'list) (,(r 'quote) ,(list (reverse plain)
 					      'undeclared))
@@ -75,7 +75,7 @@
 		  (loop (cdr items)
 			(cons item plain)
 			others)))))))
-  (make-simple-signature list quote value))
+  (make-simple-interface list quote value))
 
 		    
 
@@ -92,11 +92,11 @@
 
 (define-syntax define-package
   (syntax-rules (implement export)
-    ((define-package ((?name ?sig) ...)
+    ((define-package ((?name ?int) ...)
        (?keyword ?stuff ...) ...)
      (define-modular (?name ...)
        (let ((p (a-package (?name ...) (?keyword ?stuff ...) ...)))
-	 (values (make-structure p (lambda () (a-signature #f ?sig)) '?name)
+	 (values (make-structure p (lambda () (a-interface #f ?int)) '?name)
 		 ...))))))
 
 (define-syntax a-package

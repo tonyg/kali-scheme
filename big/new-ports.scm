@@ -4,7 +4,7 @@
 ; Additional port types
 
 (define close-port (structure-ref primitives close-port))
-(define write-string (structure-ref port write-string))
+(define write-string (structure-ref ports write-string))
 
 ; Keeping track of a port's current row and column.
 

@@ -1,12 +1,12 @@
 ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
-; Signatures for packages that can get loaded after the initial.image
+; Interfaces for packages that can get loaded after the initial.image
 ; starts up.
 
 ; Command processor
 
-(define-signature command-signature
+(define-interface command-interface
   (export command-processor
 	  $command-levels
 	  $write-length
@@ -55,17 +55,17 @@
 	  batch-mode?
 	  set-batch-mode?!))
 
-(define-signature package-commands-signature
+(define-interface package-commands-interface
   (export config-package
 	  new-command-processor
 	  get-structure
 	  get-package))
 
-(define-signature debuginfo-signature
+(define-interface debuginfo-interface
   (export read-debug-info
 	  write-debug-info))
 
-(define-signature disclosers-signature
+(define-interface disclosers-interface
   (export make-print-name
 	  template-file-name
 	  value->expression
@@ -73,17 +73,17 @@
 	  location-info
 	  location-name))
 
-(define-signature package-mutation-signature
+(define-interface package-mutation-interface
   (export package-system-sentinel	;env/command.scm
 	  package-open!			;env/debug.scm
 	  ))
 
-(define-signature packages-cruft-signature
+(define-interface packages-cruft-interface
   (export 
 	  assume-denotation
 	  ;; new-location-uid    ;?
-	  signature-ref
-	  structure-signature
+	  interface-ref
+	  structure-interface
 	  verify-package		;for debugging the package system
 	  ))
 
@@ -91,14 +91,14 @@
 ; --------------------
 ; Linker
 
-(define-signature linker-signature
+(define-interface linker-interface
   (export link-simple-system
 	  link-reified-system
 	  link-semireified-system
 	  (struct-list syntax)
 	  compile-structures))
 
-(define-signature expander-signature
+(define-interface expander-interface
   (export expand-forms
 	  expand-form
 	  expand-stuff
@@ -111,7 +111,7 @@
 ; --------------------
 ; Extended numbers: bignums, ratnums, etc.
 
-(define-signature extended-number-support-signature
+(define-interface extended-number-support-interface
   (export make-extended-number-type
 	  extended-number-constructor
 	  extended-number-accessor
@@ -146,22 +146,22 @@
 ; --------------------
 ; Big Scheme
 
-(define-signature defrecord-signature  ;The competition.
+(define-interface defrecord-interface  ;The competition.
   (export (define-record-type syntax)
 	  define-record-discloser))
 
-(define-signature externals-signature
+(define-interface externals-interface
   (export get-external
 	  lookup-all-externals
 	  external-call
 	  null-terminate))
 
-(define-signature queue-signature
+(define-interface queues-interface
   (export make-queue enqueue dequeue queue-empty?
 	  queue? queue->list queue-length delete-from-queue!))
 
 
-(define-signature threads-signature
+(define-interface threads-interface
   (export spawn
 	  make-lock with-lock obtain-lock release-lock
 	  make-condvar condvar-ref condvar-set!
@@ -181,18 +181,18 @@
 	  terminate-current-thread
 	  with-multitasking
 
-	  (with-interrupts-inhibited syntax)
-	  (with-interrupts-allowed syntax)))
+	  with-interrupts-inhibited
+	  with-interrupts-allowed))
 
 
-(define-signature dump/restore-signature
+(define-interface dump/restore-interface
   (export dump
 	  restore
 	  note-location!
 	  $dump-index
 	  $restore-index))
 
-(define-signature extended-ports-signature
+(define-interface extended-ports-interface
   (export make-tracking-input-port make-tracking-output-port
 	  make-string-input-port
 	  call-with-string-output-port
@@ -200,7 +200,7 @@
 	  current-row current-column fresh-line
 	  input-port? output-port?))
 
-(define-signature general-tables-signature
+(define-interface general-tables-interface
   (export make-table
 	  make-string-table
 	  make-symbol-table
@@ -211,8 +211,7 @@
 	  table-set!
 	  table-walk))
 
-
-(define-signature arrays-signature
+(define-interface arrays-interface
   (export make-array		; <initial-value> <bound1> ...
 	  array-shape		; <array>
 	  array-ref		; <array> <index1> ...
@@ -222,16 +221,25 @@
 	  array->vector		; <array>
 	  array))		; <bounds> . <elements>
 
-(define-signature big-scheme-signature
-  (compound-signature
-      (signature-of ascii)
-      (signature-of bitwise)
-      (signature-of table)
-      (signature-of enumerated)
-      defrecord-signature
-      extended-ports-signature
-      queue-signature
-      general-tables-signature
+(define-interface search-trees-interface
+  (export make-search-tree
+          search-tree-ref
+          search-tree-set!
+          search-tree-modify!
+          search-tree-max
+          search-tree-min
+          walk-search-tree))
+
+(define-interface big-scheme-interface
+  (compound-interface
+      (interface-of ascii)
+      (interface-of bitwise)
+      (interface-of tables)
+      (interface-of enumerated)
+      defrecord-interface
+      extended-ports-interface
+      queues-interface
+      general-tables-interface
       (export concatenate-symbol
 	      error breakpoint
 	      atom? null-list? neq? n=
@@ -249,12 +257,12 @@
 ; --------------------
 ; Miscellaneous
 
-; Copied from signatures.scm.
-(define-signature define-record-types-signature
+; Copied from interfaces.scm.
+(define-interface define-record-types-interface
   (export (define-record-type syntax)
 	  define-record-discloser))
 
-(define-signature sicp-signature
+(define-interface sicp-interface
   (export and or (sequence syntax)
 	  mapcar mapc 1+ -1+ t nil atom? print princ prin1 error
 	  (cons-stream syntax) head tail the-empty-stream empty-stream?

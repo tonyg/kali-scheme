@@ -7,10 +7,10 @@
 
 
 (define-module (make-command scheme)
-  (define-package ((command command-signature))
+  (define-package ((command command-interface))
     (open scheme		; eval
-	  record table fluids signals
-	  condition handle
+	  records tables fluids signals
+	  conditions handle
 	  reading		; gobble-line, with-sharp-sharp
 	  display-conditions	; display-condition
 	  packages		; package?
@@ -36,8 +36,8 @@
   (open scheme-level-2
 	command
 	signals
-	condition handle
-	low-level		; flush-the-symbol-table!
+	conditions handle
+	low-level		; flush-the-symbol-tables!
 	scheme-level-2-internal ; usual-resumer
 	filenames		; translate
 	display-conditions	; display-condition
@@ -47,7 +47,7 @@
 
 ; Package commands.
 
-(define-package ((package-commands package-commands-signature))
+(define-package ((package-commands package-commands-interface))
   (open scheme
 	command
 	signals
@@ -65,28 +65,28 @@
 
 ; Disclosers: this makes objects and conditions print nicely.
 
-(define-package ((disclosers disclosers-signature))
+(define-package ((disclosers disclosers-interface))
   (open scheme-level-1
-	table
-	condition
+	tables
+	conditions
 	display-conditions
 	locations
 	code-vectors
 	closures
-	packages-internal	; location-info-table
+	packages-internal	; location-info-tables
 	debug-data		; template-names
 	enumerated		; enumerand->name
 	weak			; weak-pointer?
 	generics
-	template continuation
+	templates continuations
 	architecture)
   (files (env disclosers)))
 
 ; For printing procedures with their names, etc.
 
-(define-package ((debuginfo debuginfo-signature))
+(define-package ((debuginfo debuginfo-interface))
   (open scheme-level-2
-	table
+	tables
 	debug-data
 	packages
 	packages-internal
@@ -105,17 +105,17 @@
 	util			; filter
 	evaluation		; eval-from-file, eval
 	environments		; environment-define! (for ,trace)
-	condition		; define-condition-type
+	conditions		; define-condition-type
 	filenames		; translate
 	debug-data		; template-name
 	packages		; flush-location-names, package-integrate?
 	packages-internal	; ?
-	continuation		; continuation-template
+	continuations		; continuation-template
 	architecture		; op/global, etc.
 	interrupts		; all-interrupts, set-enabled-interrupts!
 	vm-exposure		; fluid-let suppression kludge - fix later
-	exception		; continuation-preview
-	table
+	exceptions		; continuation-preview
+	tables
 	syntactic		; for ,bound? command
 	scan			; $note-file-package
 	primitives)		; memory-status, time
@@ -131,14 +131,14 @@
 	debugging		; command-loop-continuation
 	closures		; closure-template
 	debug-data		; template-debug-data, etc.
-	template
-	continuation
+	templates
+	continuations
 	syntactic		; desyntaxify
-	record-internal
+	records-internal
 	low-level		; vector-unassigned?
 	locations
 	signals			; error
-	;; table  - not yet.
+	;; tables  - not yet.
 	weak
 	util			; sublist
 	primitives		; unassigned (only)
@@ -146,21 +146,21 @@
   (files (env inspect)))
 
 
-; Package and signature mutation.
+; Package and interface mutation.
 
-(define-package ((package-mutation package-mutation-signature))
+(define-package ((package-mutation package-mutation-interface))
   (open scheme-level-2
 	shadowing		; shadow-location!
 	compiler		; package-undefineds
 	packages
-	signatures
+	interfaces
 	syntactic
 	packages-internal
 	defpackage		; set-verify-later!
 	locations
 	disclosers		; location-info
 	handle
-	table fluids weak signals)
+	tables fluids weak signals)
   (files (env pedit)))
 
 ; The following hooks the compiler up with an exception handler for
@@ -169,8 +169,8 @@
 (define-package ((shadowing (export shadow-location!)))
   (open scheme-level-1
 	vm-exposure		;primitive-catch
-	continuation template locations code-vectors
-	exception signals
+	continuations templates locations code-vectors
+	exceptions signals
 	architecture)	;(enum op global)
   (files (rts shadow)))     ;Exception handler to support package system
 
@@ -184,8 +184,8 @@
 	debug-data		; template-name, byte-limit
 	enumerated		; enumerand->name
 	disclosers		; location-name
-	template
-	continuation
+	templates
+	continuations
 	locations
 	code-vectors
 	closures
@@ -199,7 +199,7 @@
   (open scheme-level-2 compiler segments architecture
 	syntactic		;lookup
 	meta-types		;value-type
-	template		; for Richard's version
+	templates		; for Richard's version
 	signals			;error
 	enumerated		;name->enumerand
 	code-vectors
@@ -219,11 +219,11 @@
 
 ; Large integers and rational and complex numbers.
 
-(define-package ((extended-number-support extended-number-support-signature))
+(define-package ((extended-number-support extended-number-support-interface))
   (open scheme-level-2
 	signals
-	record
-	exception		; make-opcode-generic!
+	records
+	exceptions		; make-opcode-generic!
 	primitives
 	generics
 	architecture
@@ -257,15 +257,15 @@
 	primitives)             ;vm-extension
   (files (rts floatnum)))
 
-(define-package ((define-record-types define-record-types-signature))
-  (open scheme-level-1 record)
+(define-package ((define-record-types define-record-types-interface))
+  (open scheme-level-1 records)
   (files (rts jar-defrecord)))
 
 
 ; --------------------
 ; Big Scheme
 
-(define-package ((queues queue-signature))
+(define-package ((queues queues-interface))
   (open scheme-level-1 bummed-define-record-types signals)
   (files (big queue))
   (optimize auto-integrate))
@@ -280,7 +280,7 @@
 
 (define-package ((pp (export p pretty-print define-indentation)))
   (open scheme-level-2
-	table
+	tables
 	generics)		;disclose
   (files (big pp)))
 
@@ -290,7 +290,7 @@
 (define-package ((bigbit (export )))  ;No exports
   (open scheme-level-2
         extended-number-support
-        exception architecture
+        exceptions architecture
         bitwise generics signals
 	number-i/o)
   (files (rts bignum)
@@ -299,8 +299,8 @@
 
 ; Richard's stuff
 
-(define-package ((defrecord defrecord-signature))
-  (open scheme-level-1 record)
+(define-package ((defrecord defrecord-interface))
+  (open scheme-level-1 records)
   (files (big defrecord)))
 
 (define-package ((formats (export format)))
@@ -308,11 +308,11 @@
 	scheme-level-2 signals)
   (files (big format)))
 
-(define-package ((extended-ports extended-ports-signature))
-  (open scheme-level-2 record defrecord
+(define-package ((extended-ports extended-ports-interface))
+  (open scheme-level-2 records defrecord
 	architecture
-	condition signals exception structure-refs)
-  (access port primitives) ;write-string, close-port, etc.
+	conditions signals exceptions structure-refs)
+  (access ports primitives) ;write-string, close-port, etc.
   (files (big xport)
 	 (big new-ports)))
 
@@ -320,17 +320,21 @@
   (open scheme-level-2)
   (files (big destructure)))
 
-(define-package ((general-tables general-tables-signature))
-  (open scheme-level-2 record define-record-types signals structure-refs)
+(define-package ((general-tables general-tables-interface))
+  (open scheme-level-2 records define-record-types signals structure-refs)
   (access features) ; string-hash
   (files (big general-table)))
 
-(define-package ((arrays arrays-signature))
+(define-package ((arrays arrays-interface))
   (open scheme-level-2 defrecord signals)
   (files (big array)))
 
+(define-package ((receiving (export (receive syntax))))
+  (open scheme-level-2)
+  (files (big receive)))
 
-(define-package ((big-scheme big-scheme-signature))
+
+(define-package ((big-scheme big-scheme-interface))
   (open extended-ports		;Exports input-port? and output-port?
 	scheme-level-2 formats queues sort defrecord
 	pp enumerated
@@ -339,30 +343,30 @@
 	bigbit
 	general-tables
 	structure-refs		; for structure-ref
-	bigbit
-	destructuring)
+	destructuring
+	receiving)
   (access signals		; for error
 	  debugging)		; for breakpoint	
-  (files (big big-util)
-	 (big receive)))
+  (files (big big-util)))
 
 ; Externals
 
-(define-package ((externals externals-signature))
-  (open scheme-level-2 handle exception table
+(define-package ((externals externals-interface))
+  (open scheme-level-2 handle exceptions tables
 	primitives
 	architecture		;stob
-	condition		;exception-arguments
+	conditions		;exception-arguments
+	signals			;warn
 	ascii code-vectors)
   (files (big external)))
 
 ; Rudimentary object dump and restore
 
-(define-package ((dump/restore dump/restore-signature))
+(define-package ((dump/restore dump/restore-interface))
   (open scheme-level-1
 	number-i/o
-	table
-	record
+	tables
+	records
         signals			;error
 	locations		;make-undefined-location
 	closures
@@ -371,19 +375,19 @@
 	ascii
 	bitwise
         generics		;disclose
-	template)		;template-info
+	templates)		;template-info
   (files (big dump)))
 
 ; Threads
 
-(define-package ((threads threads-signature))
+(define-package ((threads threads-interface))
   (open scheme-level-1
 	wind			; still needed?
 	bummed-define-record-types queues fluids
 	interrupts		;interrupt-handlers, one-second
 	escapes			;primitive-cwcc
 	fluids-internal		;get-dynamic-state, etc.
-	condition		;error?
+	conditions		;error?
 	handle			;with-handler
 	signals			;signal
 	architecture		;(enum time-option real-time)
@@ -398,7 +402,7 @@
 
 (define-package ((more-threads (export threads)))
   (open scheme threads
-	handle condition interrupts signals
+	handle conditions interrupts signals
 	command
 	debugging		;breakpoint
 	display-conditions
@@ -413,7 +417,7 @@
 			  set-leaf-predicate! usual-leaf-predicate)))
   (open scheme-level-2
 	primitives		; ?
-	queues table
+	queues tables
 	bitwise locations closures code-vectors
 	debug-data		; foo
 	features		; string-hash
@@ -422,8 +426,8 @@
 
 ; Structure & Interpretation compatibility
 
-(define-package ((sicp sicp-signature))
-  (open scheme-level-2 signals table)
+(define-package ((sicp sicp-interface))
+  (open scheme-level-2 signals tables)
   (files (misc sicp)))
 
 ; Unix sockets
@@ -433,6 +437,10 @@
 	primitives)
   (files (misc socket)))
 
+(define-package ((search-trees search-trees-interface))
+  (open scheme-level-2 defrecord receiving)
+  (optimize auto-integrate)
+  (files (big search-tree)))
 
 
 ; ... end of package definitions.
@@ -442,8 +450,7 @@
 ; Stuff to load into initial.image to make scheme48.image.
 
 (define-package ((usual-features (export )))  ;No exports
-  (open expander     ;Allow (optimize expand)
-	disclosers
+  (open disclosers
 	command
 	package-commands
 	build
@@ -455,13 +462,18 @@
 	disassembler
 	pp))
 
+; Temporary compatibility stuff
+(define-syntax define-signature
+  (syntax-rules () ((define-signature . ?rest) (define-interface . ?rest))))
+(define-structure table tables)
+(define-structure record records)
+
 ; Must list all the packages defined in this file that are to be
 ; visible in the command processor's config package.
 
-(define-signature more-structures-signature
+(define-interface more-structures-interface
   (export ((more-structures
 	    usual-features
-	    analysis
 	    arrays
 	    assembler
 	    assembling
@@ -487,6 +499,8 @@
 	    pp
 	    queues
 	    random
+	    receiving
+	    search-trees
 	    sicp
 	    sockets
 	    sort
@@ -502,5 +516,8 @@
 	    link-config
 	    reification  ;?
 	    shadowing
+	    ;; Compatibility
+	    record table
 	    )
-	   structure)))
+	   structure)
+	  (define-signature syntax)))

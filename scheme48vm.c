@@ -931,8 +931,8 @@ char Tinterpret()
   extern char Tinterpret();
   static const struct{long length; char contents[34];} XX127
      = {33, "Heap is in an inconsistent state."};
-  static const struct{long length; char contents[36];} XX128
-     = {35, "This is a Scheme48 heap image file."};
+  static const struct{long length; char contents[37];} XX128
+     = {36, "This is a Scheme 48 heap image file."};
   static const struct{long length; char contents[38];} XX21
      = {37, "block write did not send enough bytes"};
   static const struct{long length; char contents[17];} XX129

@@ -164,14 +164,10 @@
 		(let ((command (read-command-carefully (command-prompt)
 						       (form-preferred?)
 						       (command-input))))
-		  (cond ((eof-object? command)
-			 (newline (command-output))
-			 (pop-command-level))
-			(else
-			 (showing-focus-object
-			  (lambda ()
-			    (execute-command command)))
-			 (loop))))))))))))
+		  (showing-focus-object
+		   (lambda ()
+		     (execute-command command)))
+		  (loop))))))))))
 
 (define form-preferred?
   (user-context-accessor 'form-preferred? (lambda () #t)))
@@ -272,7 +268,10 @@
   (call-with-values (lambda ()
 		      (evaluate form env))
     (lambda results
-      (set-focus-values! results))))
+      (if (or (null? results)
+	      (not (null? (cdr results)))
+	      (not (eq? (car results) (unspecific))))
+	  (set-focus-values! results)))))
 
 (define (evaluate form env)
   (if (package? env)
@@ -306,7 +305,7 @@
 	   (display " values" out)
 	   (newline out))
 	 (for-each show-command-result results))
-	((not (eq? (car results) (unspecific)))
+	(else ;(not (eq? (car results) (unspecific)))
 	 (show-command-result (car results)))))
 
 (define (show-command-result result)
@@ -368,11 +367,15 @@
 (define make-command cons)	;(name . args) -- called by command reader
 
 (define (execute-command command)
-  (let ((probe (table-ref command-table (car command))))
-    (if probe
-	(apply probe (cdr command))
-	(write-line "Unrecognized command name." (command-output))))
-  (run-sentinels))
+  (cond ((eof-object? command)
+	 (newline (command-output))
+	 (pop-command-level))
+	(else
+	 (let ((probe (table-ref command-table (car command))))
+	   (if probe
+	       (apply probe (cdr command))
+	       (write-line "Unrecognized command name." (command-output))))
+	 (run-sentinels))))
 
 
 ; Particular commands.

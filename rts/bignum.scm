@@ -420,3 +420,4 @@
 (define-integer-method <-table         (when-integers integer<))
 (define-integer-method quotient-table  (when-integers integer-quotient))
 (define-integer-method remainder-table (when-integers integer-remainder))
+

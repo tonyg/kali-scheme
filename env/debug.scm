@@ -267,9 +267,11 @@
     (let ((after (memory-status memory-status-option/available #f)))
       (display "Before: " port)
       (write before port)
+      (display " words free in semispace")
       (newline)
       (display "After:  " port)
       (write after port)
+      (display " words free in semispace")
       (newline))))
 
 (define memory-status-option/available (enum memory-status-option available))

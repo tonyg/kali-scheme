@@ -1,34 +1,18 @@
-[Renamed "Vulgar Scheme" to "Big Scheme" -- JAR 6/18/93]
 
-Date: Tue, 26 Jan 93 16:03:43 -0500
-To: jar@cs.cornell.edu
-Subject: documentation for Big Scheme
-From: kelsey@flora.ccs.northeastern.edu
-Sender: kelsey@dec5120c.ccs.northeastern.edu
+		     Documentation for Big Scheme
 
+				   
+Big Scheme is a set of generally useful facilities.
 
-I have written up a brief description of the stuff exported by
-big-scheme.  While doing so I made some changes, so don't put this in
-the distribution yet.  Besides, the name is going to have to change.
-[This last remark made before name changed from "Vulgar" to "Big".
---JAR] 
+Easiest way to access these things:
 
-After some effort I managed to come up with a version of the table
-code allows comparators other than EQ? and doesn't slow the system
-down too much (like less than 10%).  Little changes to tables can
-have quite an impact on the speed of loading files.
+    > ,open big-scheme
+    Load structure big-scheme (y/n)? y
+    ...
 
-While doing that I noticed that using negative numbers as keys
-breaks the table package.  La fix:
+A better way is to use the module system.
 
-  % diff rts/table.scm~ rts/table.scm
-  181c181
-  < 	((integer? obj) obj)
-  ---
-  > 	((integer? obj) (abs obj))
-
-I couldn't bear to document DEFINE-RECORD-TYPE.
-
+-----
 
 Ascii conversions
 
@@ -37,7 +21,8 @@ Ascii conversions
   These are identical to CHAR->INTEGER and INTEGER->CHAR except that
   they use the ASCII encoding.
 
-
+-----
+
 Bitwise operations
 
 (BITWISE-NOT <integer>) => <integer>
@@ -52,7 +37,8 @@ Bitwise operations
   counts and right for negative ones.  A two's complement
   representation is used.
 
-
+-----
+
 Hash tables
 
 (MAKE-TABLE) => <table>
@@ -82,7 +68,8 @@ Hash tables
   Apply <procedure>, which must accept two arguments, to every
   associated key and value in <table>.
 
-
+-----
+
 Enumerations
 
 (DEFINE-ENUMERATION <type-name> (<name0> <name1> ...))      *SYNTAX*
@@ -100,7 +87,8 @@ Enumerations
 (NAME->ENUMERAND <symbol> <enumeration>)  => <integer>
   Returns the integer associated with <symbol> within <enumeration>.
 
-
+-----
+
 Port extensions
 
 (MAKE-TRACKING-INPUT-PORT  <input-port>)  => <input-port>
@@ -133,7 +121,8 @@ Port extensions
   These are versions of the standard Scheme predicates that answer true for
   extended ports.
 
-
+-----
+
 Queues
 
 (MAKE-QUEUE) => <queue>
@@ -161,7 +150,8 @@ Queues
   Removes the first occurance of <x> from the queue, returning true if
   it was found and false otherwise.
 
-
+-----
+
 Little utility procedures
 
 (ATOM? <any>)          => <boolean>
@@ -182,7 +172,8 @@ Little utility procedures
   These both just return their argument.  NO-OP is guaranteed not to
   be compiled in-line, IDENTITY may be.
 
-
+-----
+
 List utilities
 
 (MEMQ? <element> <list>) => <boolean>
@@ -238,7 +229,8 @@ List utilities
   Returns a sorted copy of <list>.  The sorting algorithm is stable.
   (SORT-LIST '(6 5 1 3 2 4) <) => '(1 2 3 4 5 6)
 
-
+-----
+
 Additional syntax
 
 (DESTRUCTURE ((<pattern> <init>) ...) <body> ...)              *SYNTAX*
@@ -263,7 +255,8 @@ Additional syntax
   Bind <identifiers> to the values returned by <exp>, and evaluate the
   body in the resulting environment.
 
-
+-----
+
 Printing and related procedures
 
 (CONCATENATE-SYMBOL . <components>)
@@ -303,4 +296,14 @@ Printing and related procedures
 (PRETTY-PRINT <thing> <output-port> <position>)
   Pretty-print <thing>.  The current output port is used if no port is
   specified.  <position> is the starting offset.  <thing> will be
-  pretty- printed to the left of this column.
+  pretty-printed to the right of this column.
+
+-----
+
+I couldn't bear to document DEFINE-RECORD-TYPE.
+
+
+-----
+
+Original by RK, 26 Jan 1993.
+Minor changes by JAR, 5 Dec 1993.

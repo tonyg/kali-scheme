@@ -6,7 +6,7 @@
 
 ; Scheme 48 run time system.
 
-(define-signature run-time-structures-signature
+(define-interface run-time-structures-interface
   (export ((architecture
 	    bummed-define-record-types
 	    closures
@@ -17,62 +17,62 @@
 	    source-file-names
 	    scheme-level-1
 	    scheme-level-2
-	    template
+	    templates
 	    util
 	    weak
 	    write-images)
 	   structure)))
 
-(define-signature features-structures-signature
+(define-interface features-structures-interface
   (export ((ascii
 	    bitwise
 	    code-vectors
 	    features
 	    handle
-	    record
+	    records
 	    signals)
 	   structure)))
 
-(define-signature run-time-internals-signature
-  (export ((condition
-	    continuation
+(define-interface run-time-internals-interface
+  (export ((conditions
+	    continuations
 	    display-conditions
 	    escapes
-	    exception
+	    exceptions
 	    fluids-internal
 	    generics
 	    interrupts
 	    low-level
 	    number-i/o
-	    port
+	    ports
 	    primitives
 	    reading
-	    record-internal
+	    records-internal
 	    scheme-level-2-internal
 	    structure-refs
 	    vm-exposure
 	    wind)
 	   structure)))
 
-(define-package ((run-time-structures run-time-structures-signature)
-		 (features-structures features-structures-signature)
-		 (run-time-internals  run-time-internals-signature))
+(define-package ((run-time-structures run-time-structures-interface)
+		 (features-structures features-structures-interface)
+		 (run-time-internals  run-time-internals-interface))
   (open module-system
-	;; the-signatures
+	;; the-interfaces
 	)
   (files rts-packages))
   
 
 ; Byte-code compiler and related things.
 
-(define-signature compiler-structures-signature
+(define-interface compiler-structures-interface
   (export ((compiler
 	    debug-data
 	    defpackage
 	    filenames
 	    inline
 	    meta-types
-	    signatures
+	    interfaces
 	    module-system  ;?
 	    packages
 	    packages-internal
@@ -80,7 +80,7 @@
 	    scan
 	    segments
 	    syntactic
-	    table
+	    tables
 	    types
 	    usual-macros)
 	   structure)))
@@ -88,11 +88,11 @@
 (define-module (make-compiler-structures run-time-structures
 					 features-structures)
 
-  (define-package ((compiler-structures compiler-structures-signature))
+  (define-package ((compiler-structures compiler-structures-interface))
     (open module-system
 	  run-time-structures
 	  features-structures
-	  ;; the-signatures
+	  ;; the-interfaces
 	  )
     (files comp-packages))
 
@@ -104,7 +104,7 @@
 
 ; Initial system (initial.image).
 
-(define-signature initial-structures-signature
+(define-interface initial-structures-interface
   (export environments
 	  evaluation
 	  scheme
@@ -115,10 +115,10 @@
 	  ;; for-reification
 	  ))
 
-(define-package ((initial-structures initial-structures-signature))
+(define-package ((initial-structures initial-structures-interface))
   (open run-time-structures
 	compiler-structures
-	;; the-signatures
+	;; the-interfaces
 	)
   (files initial-packages))
 
@@ -129,7 +129,7 @@
 				       run-time-structures
 				       compiler-structures)
 
-  (define-package ((linker-structures linker-structures-signature))
+  (define-package ((linker-structures linker-structures-interface))
     (open module-system
 	  features-structures
 	  run-time-structures
@@ -141,11 +141,11 @@
 
 ; Initial + usual (scheme48.image).
 
-(define-signature usual-structures-signature
+(define-interface usual-structures-interface
   (export ((?)
 	   structure)))
 
-(define-signature linker-structures-signature
+(define-interface linker-structures-interface
   (export ((analysis
 	    debuginfo
 	    expander
@@ -156,7 +156,7 @@
 	    reification)
 	   structure)))
 
-(define-package ((usual-structures usual-structures-signature))
+(define-package ((usual-structures usual-structures-interface))
   (open module-system
 	run-time-structures
 	compiler-structures
@@ -164,7 +164,7 @@
 	(make-linker-structures features-structures
 				run-time-structures
 				compiler-structures))
-  (files ;; more-signatures
+  (files ;; more-interfaces
 	 more-packages))
 
 
@@ -173,25 +173,25 @@
 
 (define-module (make-alternate-structures features-structures)
 
-  (define-package ((alternate-structures run-time-structures-signature))
+  (define-package ((alternate-structures run-time-structures-interface))
     (open module-system features-structures)
     (files alt-packages))
 
   alternate-structures)
 
-(define-package ((vanilla-features-structures features-structures-signature))
+(define-package ((vanilla-features-structures features-structures-interface))
   (open module-system)
   (files (alt packages)))
 
-(define-package ((cheat features-structures-signature))
+(define-package ((cheat features-structures-interface))
   (open module-system)
-  (begin (define-package ((signals signals-signature)
-			  (handle handle-signature)
-			  (features features-signature)
-			  (record record-signature)
-			  (ascii ascii-signature)
-			  (bitwise bitwise-signature)
-			  (code-vectors code-vectors-signature))
+  (begin (define-package ((signals signals-interface)
+			  (handle handle-interface)
+			  (features features-interface)
+			  (records records-interface)
+			  (ascii ascii-interface)
+			  (bitwise bitwise-interface)
+			  (code-vectors code-vectors-interface))
 	   ;; Implemented with a manual ,open signals handle ...
 	   )))
 

@@ -1,0 +1,113 @@
+
+			       Threads
+
+
+The following are exported by the THREADS structure.
+
+(WITH-MULTITASKING thunk)
+  Initializes for multitasking, then starts up a thread for the execution
+  of <thunk>.  That thread and all others created will run in the dynamic
+  context of the call to with-multitasking.  The call to with-multitasking
+  finally returns only when the scheduler runs out of things to do.
+
+(SPAWN thunk) => thread
+  Create and schedule a new thread that will execute <thunk>.
+
+(MAKE-LOCK) => lock
+(WITH-LOCK lock thunk) => whatever <thunk> returns
+(OBTAIN-LOCK lock)
+(RELEASE-LOCK lock)
+  Locks are semaphores.
+
+(MAKE-CONDVAR) => condvar
+(CONDVAR-REF condvar) => value of condvar
+(CONDVAR-SET! condvar value)
+  Condition Variables; attempts to reference a condition variable before
+  it has been set cause the referencing thread to block.  Setting a
+  condition variable to two different values is an error.
+
+(RELINQUISH-TIMESLICE)
+  Let other threads run for a while.
+
+ONE-SECOND
+  The number of time units in one second.
+
+(SLEEP time)
+  Sleep for <time> time units.
+
+(TIME) => integer
+  The current time in time units.
+
+(WITH-INTERRUPTS-INHIBITED thunk) => whatever <thunk> returns
+(WITH-INTERRUPTS-ALLOWED thunk) => whatever <thunk> returns
+  Execute the thunk with or without interrupts.  Interrupts are normally
+  enabled.
+
+(THREAD-READ-CHAR port) => character or EOF
+(THREAD-PEEK-CHAR port) => character or EOF
+(READ-CHAR-WITH-TIMEOUT port time) => character or EOF or 'TIMEOUT
+  Read and peek for characters letting other threads run util a character
+  is available.  READ-CHAR-WITH-TIMEOUT will return the symbol TIMEOUT if
+  <time> time units go by without a character being available.
+
+(THREAD? thing)
+  #T if thing is a thread, #F otherwise.
+
+-----
+
+Debugging utilities:
+
+(CURRENT-THREAD)
+(TERMINATE-CURRENT-THREAD)
+(KILL-THREAD thread)
+(START-THREAD thread)
+(STOP-THREAD thread)
+
+
+(INTERRUPT-THREAD thread thunk)
+  Interrupt <thread> and make it execute <thunk> before continuing.
+
+(ACTIVE-THREADS)
+  Returns a list containing all currently active threads.
+
+(KILL-CONDVAR condvar)
+  Kill all threads waiting for <condvar>.
+
+
+-----
+
+The MORE-THREADS structure defines a command ,START-THREADS that
+starts the scheduler with the command loop as its initial thread.
+For example:
+
+    > ,load-package more-threads
+    [more-threads ...]
+    > ,open threads
+    > ,start-threads
+    Multitasking started
+    > (define (foo) (sleep one-second) (display "Hi") (newline) (foo))
+    > (define th (spawn foo))
+    > th
+    Hi
+    '#{Thread 1}
+    > (let loop () (loop))
+    Hi
+    Hi
+    Hi
+    Hi
+
+    Interrupt: keyboard
+    1> 
+    > th
+    Hi
+    '#{Thread 1}
+    > (kill-thread th)
+    #t
+    > th
+    '#{Thread 1}
+    > 
+
+-----
+
+Original by RK, 18 Nov 1993.
+Sample transcript added by JAR, 5 Dec 1993.

@@ -6,13 +6,13 @@
 ; variants that are much better for one reason or another than
 ; the generic versions defined here.
 
-(define-package ((signals signals-signature)
+(define-package ((signals signals-interface)
 		 (handle (export ignore-errors))
-		 (features features-signature))
+		 (features features-interface))
   (open scheme-level-2)
   (files (alt features)))
 
-(define-package ((record record-signature))
+(define-package ((records records-interface))
   (open scheme-level-2 signals)
   (files (alt record)))
 
@@ -20,11 +20,11 @@
   (open scheme-level-2 signals)
   (files (alt ascii)))
 
-(define-package ((bitwise bitwise-signature))
+(define-package ((bitwise bitwise-interface))
   (open scheme-level-2 signals)
   (files (alt bitwise)))
 
-(define-package ((code-vectors code-vectors-signature))
+(define-package ((code-vectors code-vectors-interface))
   (open scheme-level-1)
   (files (alt code-vectors)))
 

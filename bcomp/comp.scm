@@ -132,11 +132,10 @@
   (lambda (node cenv depth cont)
     (let ((exp (node-form node))
 	  (alt-label (make-label))
-	  (join-label (make-label))
-	  (join-segment empty-segment))
+	  (join-label (make-label)))
       (sequentially
        ;; Test
-       (compile (cadr exp) cenv depth (fall-through-cont node 1))
+       (compile (cadr exp) cenv depth (fall-through-cont (schemify node) 1))
        (instruction-using-label op/jump-if-false alt-label)
        ;; Consequent
        (compile (caddr exp) cenv depth cont)
@@ -147,7 +146,7 @@
        (attach-label alt-label
 		     (compile (cadddr exp) cenv depth cont))
        (attach-label join-label
-		     join-segment)))))
+		     empty-segment)))))
 
 
 (define-compilator '(begin syntax)
@@ -158,7 +157,7 @@
 (define (compile-begin exp-list cenv depth cont)
   (if (null? exp-list)
       (generate-trap cont "null begin")
-      (let ((dummy `(begin ,@exp-list))) ;for debugging database
+      (let ((dummy `(begin ,@(map schemify exp-list))));for debugging database
 	(let loop ((exp-list exp-list) (i 1))
 	  (if (null? (cdr exp-list))
 	      (compile (car exp-list) cenv depth cont)
@@ -177,9 +176,9 @@
 	 (proc-node (car exp)))
     (if (and (lambda-node? proc-node)
 	     (let ((formals (cadr (node-form proc-node))))
-	       ((if (n-ary? formals) >= =)
-		(length (cdr exp))
-		(number-of-required-args formals))))
+	       (and (not (n-ary? formals))
+		    (= (length (cdr exp))
+		       (number-of-required-args formals)))))
 	(compile-redex proc-node (cdr exp) cenv depth cont)
 	(let ((new-node (maybe-transform-call proc-node node cenv)))
 	  (if (eq? new-node node)

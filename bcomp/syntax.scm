@@ -579,6 +579,12 @@
 		(car bindings)
 		(bind (cdr names) (cdr bindings) env)))))
 
+(define (bindrec names env->bindings env)
+  (set! env (bind names
+		  (env->bindings (lambda (a-name) (env a-name)))
+		  env))
+  env)
+
 
 ; --------------------
 ; Utilities
@@ -634,11 +640,32 @@
 		(values (caddr form)
 			(bind (map car specs)
 			      (map (lambda (spec)
-				     (cons (process-syntax
-					      (cadr spec) env (car spec) env)
-					   (list 'let-syntax)))
+				     (make-binding syntax-type
+						   (list 'let-syntax)
+						   (process-syntax (cadr spec)
+								   env
+								   (car spec)
+								   env)))
 				   specs)
 			      env))))))
+
+  (operator-define! table '(letrec-syntax syntax)
+    (mumble (lambda (node env)
+	      (let* ((form (node-form node))
+		     (specs (cadr form)))
+		(values (caddr form)
+			(bindrec (map car specs)
+				 (lambda (new-env)
+				   (map (lambda (spec)
+					  (make-binding
+					     syntax-type
+					     (list 'letrec-syntax)
+					     (process-syntax (cadr spec)
+							     new-env
+							     (car spec)
+							     new-env)))
+					specs))
+				 env))))))
 
   (operator-define! table 'with-aliases
     (mumble (lambda (node env)

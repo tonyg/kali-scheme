@@ -14,7 +14,7 @@
 ; As you noted in your comments, pp.scm is not a straight forward
 ; program.  You could add some comments that would greatly ease the task
 ; of figuring out what his going on.  In particular, you should describe
-; the signature of various objects---most importantly the signature of a
+; the interface of various objects---most importantly the interface of a
 ; formatter.  You might also add some description as to what protocol
 ; they are to follow.
 

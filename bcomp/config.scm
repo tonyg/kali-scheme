@@ -28,7 +28,7 @@
 (define *evaluator* loser)
 (define *make-package-for-syntax-promise* loser)
 
-(define signature-of structure-signature)
+(define interface-of structure-interface)
 
 (define *verify-later!* (lambda (thunk) #f))
 

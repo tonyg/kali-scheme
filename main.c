@@ -121,7 +121,7 @@ main(argc, argv)
   if (errors != 0) {
     fprintf(stderr,
 "Usage: %s [options]\n\
-Options: -h <heap size in bytes>\n\
+Options: -h <total heap size in words>\n\
          -i <image file name>\n\
          -o <object file name>\n\
          -a <startup arguments (must come last)>\n",

@@ -14,13 +14,13 @@
  cd ~/s48
  x48 -h 4000000
  ,translate =scheme48/ ./
- ,load-config signatures.scm debug/packages-for-debugging.scm
+ ,load-config interfaces.scm debug/packages-for-debugging.scm
  ,in debug-config 
  y
  ,config make-compiler-base
  (define make-compiler-base ##)
 
- ,load scripts.scm    ;Or whatever, to load signatures.scm and the rest.
+ ,load scripts.scm    ;Or whatever, to load interfaces.scm and the rest.
 
  (define go (link-initial-system))
  (?start go #f)
@@ -37,7 +37,7 @@
 
 ; cf. definition in alt-packages.scm
 
-(define-package ((primitives primitives-signature)
+(define-package ((primitives primitives-interface)
 		 (primitives-internal (export maybe-handle-interrupt
 					      raise-exception
 					      get-exception-handler
@@ -52,15 +52,15 @@
 	 ("../alt" weak)))
 
 
-(define-signature all-primitives-signature ;Cf. rts-packages.scm
-  (signature-of ((structure-ref defpackage make-compiler-base))))
+(define-interface all-primitives-interface ;Cf. rts-packages.scm
+  (interface-of ((structure-ref defpackage make-compiler-base))))
 
 
 ; Replacement for the package returned by MAKE-COMPILER-BASE
 
 (define-structure (make-compiler-base) all-primitives)
 
-(define-package ((all-primitives all-primitives-signature))
+(define-package ((all-primitives all-primitives-interface))
   (open scheme
 	signals			;error
 	structure-refs

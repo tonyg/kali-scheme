@@ -3,7 +3,7 @@
 
 ; Link scripts.
 
-(load-configuration "signatures.scm")
+(load-configuration "interfaces.scm")
 
 (define-package ((module-system (export ))) ) ;Necessary for flatload.
 (load-configuration "packages.scm")
@@ -43,9 +43,9 @@
 					 (eval name env))
 				   l)))
 		     sig))
-	      (list run-time-structures-signature
-		    features-structures-signature
-		    run-time-internals-signature
-		    compiler-structures-signature
-		    initial-structures-signature))
+	      (list run-time-structures-interface
+		    features-structures-interface
+		    run-time-internals-interface
+		    compiler-structures-interface
+		    initial-structures-interface))
     (reverse l)))

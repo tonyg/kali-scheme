@@ -16,14 +16,20 @@
   (user-context-modifier 'user-environment))
 
 
-(define-command 'in "<struct> [<form>]"
-  "go to package, or run single form in package"
-  '(name &opt form)
-  (lambda (name form)
-    (in-package (if (symbol? form)
-		    (really-get-package name)
-		    (get-package name))
-      form)))
+(define-command 'in "<struct> [<command>]"
+  "go to package, or run single command in package"
+  '(name &opt command)
+  (lambda (name command)
+    (if (command-just-evaluates-symbol? command)
+	(set-focus-object! (environment-ref (really-get-package name)
+					    (cadr command)))
+	(in-package (get-package name) command))))
+
+(define (command-just-evaluates-symbol? command)
+  (and (pair? command)
+       (eq? 'evaluate (car command))
+       (symbol? (cadr command))))
+
 
 (define-command 'new-package "" "make and enter a new package"
   '()
@@ -55,16 +61,6 @@
     (let ((s (get-structure name)))
       (set-package-loaded?! (structure-package s) #f)
       (ensure-loaded s))))
-
-(define-command 'load-into "<struct> <filename> ..."
-  "load source file(s) into given package"
-  '(name &rest filename)
-  (lambda (name . filenames)
-    (let ((p (get-package name)))
-      (noting-undefined-variables p
-        (lambda ()
-	  (for-each (lambda (filename) (load filename p))
-		    filenames))))))
 
 (define-command 'load-config "<filename> ..."
   "load configuration file(s)"
@@ -118,20 +114,19 @@
 	(else #f)))
 
 
-(define-command 'for-syntax "[<form>]"
+(define-command 'for-syntax "[<command>]"
   "go to current package's package for syntax"
-  '(&opt form)
-  (lambda (form)
-    (in-package (package-for-syntax (environment-for-commands))
-      form)))
+  '(&opt command)
+  (lambda (command)
+    (in-package (package-for-syntax (environment-for-commands)) command)))
 
 
 ; ,user  goes to the user initial environment.
 
-(define-command 'user "[<form>]" "user package"
-  '(&opt form)
-  (lambda (form)
-    (in-package (user-environment) form)))
+(define-command 'user "[<command>]" "user package"
+  '(&opt command)
+  (lambda (command)
+    (in-package (user-environment) command)))
 
 (define-command 'user-package-is "<struct>" "designate package for ,user"
   '(name)
@@ -144,10 +139,10 @@
 
 ; Configuration package  (should there be ,load-config as well?)
 
-(define-command 'config "[<form>]" "go to configuration package"
-  '(&opt form)
-  (lambda (form)
-    (in-package (config-package) form)))
+(define-command 'config "[<command>]" "go to configuration package"
+  '(&opt command)
+  (lambda (command)
+    (in-package (config-package) command)))
 
 (define-command 'config-package-is "<struct>"
   "designate configuration package"
@@ -156,23 +151,13 @@
     (set-config-package! (get-package name))))
 
 
-; Go to current package's package for syntax
-
-;(define-comand 'syntax "" "package for syntax"
-;  '(&opt form)
-;  (lambda (form)
-;    (in-package (package-for-syntax (environment-for-commands)) form)))
-
-
 ; Auxiliaries for package commands
 
-(define (in-package p form)
-  (if form
-      (if (symbol? form)
-	  (set-focus-object! (environment-ref p form))
-	  (with-interaction-environment p
-	    (lambda ()
-	      (evaluate-and-select form p))))
+(define (in-package p command)
+  (if command
+      (with-interaction-environment p
+	(lambda ()
+	  (execute-command command)))
       (set-environment-for-commands! p)))
 
 (define config-package

@@ -8,7 +8,15 @@
 
 (define (add-to-population! x pop)
   (if (not x) (error "can't put #f in a population"))
-  (set-cdr! pop (cons (make-weak-pointer x) (cdr pop))))
+  (if (not (weak-memq x (cdr pop)))
+      (set-cdr! pop (cons (make-weak-pointer x) (cdr pop)))))
+
+(define (weak-memq x weaks)
+  (if (null? weaks)
+      #f
+      (if (eq? x (weak-pointer-ref (car weaks)))
+	  weaks
+	  (weak-memq x (cdr weaks)))))
 
 (define (population-reduce cons nil pop)
   (do ((l (cdr pop) (cdr l))

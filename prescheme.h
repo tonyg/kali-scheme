@@ -2,19 +2,18 @@
 #include <errno.h>
 
 #define PS_GETC(PORT,RESULT)      /* RESULT = getc(PORT); */ \
-/* optional definition for Unix's that are even more losing than usual */ \
-{                                  \
-  FILE * TTport = PORT;            \
-  RESULT = getc(TTport);           \
-  if (EOF == RESULT)               \
-    clearerr(TTport);              \
+/* optional definition for Unixes that are even more losing than usual */ \
+{                                          \
+  FILE * TTport = PORT;			   \
+  int errorp;				   \
+  while (EOF == (RESULT = getc(TTport))	   \
+	 && (errorp = ferror(TTport),	   \
+	     clearerr(TTport),		   \
+	     (errorp && errno == EINTR)))  \
+    ;					   \
 }
-
-/* How to fix alarm interrupt retry problem?
-  while (EOF == (RESULT = getc(TTport)) \
-	 && (clearerr(TTport), errno == EINTR)) \
-    ; \
- */
+/* The trouble with the above is that all read errors look like
+   EOF's.  */
 
 /* C shifts may not work if the amount is greater than the machine word size */
 /* Patched by JAR 6/6/93 */

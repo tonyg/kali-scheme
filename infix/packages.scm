@@ -2,28 +2,28 @@
 
 ; Infix stuff
 
-(define-package tokenizer
-  (export make-tokenizer-table
-	  set-up-usual-tokenization!
-	  set-char-tokenization!
-	  tokenize)
-  (open scheme record signals defpackage)
+(define-package ((tokenizer (export make-tokenizer-table
+				    set-up-usual-tokenization!
+				    set-char-tokenization!
+				    tokenize)))
+  (open scheme records signals defpackage)
   (access primitives)
   (files tokenize))
 
-(define-package pratt
-  (export toplevel-parse
-	  parse
-	  make-operator
-	  make-lexer-table set-char-tokenization!
-	  lexer-ttab define-keyword define-punctuation
-	  prsmatch comma-operator delim-error erb-error if-operator
-	  then-operator else-operator parse-prefix parse-nary parse-infix
-	  parse-matchfix end-of-input-operator port->stream)
-  (open scheme record signals tokenizer table)
+(define-package ((pratt (export toplevel-parse
+				parse
+				make-operator
+				make-lexer-table set-char-tokenization!
+				lexer-ttab define-keyword define-punctuation
+				prsmatch comma-operator delim-error erb-error
+				if-operator
+				then-operator else-operator parse-prefix
+				parse-nary parse-infix
+				parse-matchfix end-of-input-operator
+				port->stream)))
+  (open scheme records signals tokenizer tables)
   (files pratt))
 
-(define-package sgol
-  (export sgol-read)
+(define-package ((sgol (export sgol-read)))
   (open scheme signals pratt)
   (files sgol))

@@ -183,7 +183,7 @@
 	((null? obj) 3005)
 	(else (error "value cannot be used as a table key" obj))))
 
-(define string-hash (structure-ref primitives string-hash))
+(define string-hash (structure-ref features string-hash))
 
 (define (symbol-hash symbol)
   (string-hash (symbol->string symbol)))

@@ -29,6 +29,8 @@
 		(newline))
 	      irritants)))
 
+; Linker also needs SIGNAL, SYNTAX-ERROR, CALL-ERROR
+
 
 ; HANDLE
 

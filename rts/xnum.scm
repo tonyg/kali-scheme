@@ -127,13 +127,14 @@
 
 (define-default-method sqrt-table
   (lambda (n)
-    (if (integer? n)
-	(integer-sqrt n)
+    (if (and (integer? n)
+	     (>= n 0))
+	(non-negative-integer-sqrt n)
 	(fail))))
 
-(define (integer-sqrt n)
-  (cond ((= n 0)
-	 0)
+(define (non-negative-integer-sqrt n)
+  (cond ((<= n 1)    ; for both 0 and 1
+	 n)
 	;; ((< n 0)
 	;;  (make-rectangular 0 (integer-sqrt (- 0 n))))
 	(else

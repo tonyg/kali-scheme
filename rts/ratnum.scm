@@ -246,9 +246,8 @@
 			#f))))
 	    ((string-position #\. s)
 	     => (lambda (dot)
-		  ;; Decimal point implies base 10.
 		  ;; Talk about kludges.  This is REALLY kludgey.
-		  (if (and (= radix 10) (> len 1))
+		  (if (> len 1)
 		      (let* ((j (if (or (char=? (string-ref s 0) #\+)
 					(char=? (string-ref s 0) #\-))
 				    1
@@ -256,16 +255,15 @@
 			     (p (if (= dot j)
 				    0
 				    (string->integer (substring s j dot)
-						     10 #t)))
+						     radix exact?)))
 			     (q (if (= dot (- len 1))
 				    0
 				    (string->integer (substring s (+ dot 1)
 								len)
-						     10 #t))))
+						     radix exact?))))
 			(if (and p q)
-			    (let ((n (exact->inexact
-				      (+ p (/ q (expt 10 (- len
-							    (+ dot 1))))))))
+			    (let ((n (+ p (/ q (expt radix
+						     (- len (+ dot 1)))))))
 			      (if (char=? (string-ref s 0) #\-)
 				  (- 0 n)
 				  n))

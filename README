@@ -1,15 +1,15 @@
 -*- Mode: Text; -*-
 
-Copyright (c) 1992 Richard Kelsey and Jonathan Rees.
+Copyright (c) 1993 Richard Kelsey and Jonathan Rees.
 See file COPYING for copying information.
 
 This is what might be called an alpha release.  Please report bugs to
-scheme48-bugs@altdorf.ai.mit.edu.
+scheme48-bugs@altdorf.ai.mit.edu, and include the version number in
+your message.
 
 Installation instructions in file INSTALL.
 
-A user's guide for the purpose of actually using the system is in file
-doc/user-guide.txt.
+A user's guide is in file doc/user-guide.txt.
 
 Recent changes are listed in file NEWS.
 

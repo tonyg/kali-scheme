@@ -63,9 +63,9 @@
 
 ; Structures
 
-(define (make-structure package signature name)
+(define (make-structure package interface name)
   (let ((lookup (package '%%lookup%%))
-	(names (map (lambda (x) (if (pair? x) (cadr x) x)) signature)))
+	(names (map (lambda (x) (if (pair? x) (cadr x) x)) interface)))
     (cons name
 	  (lambda (name)
 	    (if (memq name names)
@@ -79,7 +79,7 @@
 
 ; Etc.
 
-(define (make-simple-signature names)
+(define (make-simple-interface names)
   names)
 
 (define (get-operator . rest)   (cons 'get-operator rest))

@@ -48,30 +48,32 @@
 ;------------------------------------------------------------
 
 (define (get-external name)
-  (let ((name (if (null-terminated? name)
-		  name
-		  (null-terminate name))))
-    (cond ((table-ref *the-external-table* name)
+  (let ((name^@ (if (null-terminated? name)
+		    name
+		    (null-terminate name))))
+    (cond ((table-ref *the-external-table* name^@)
 	   => (lambda (x) x))
 	  (else
-	   (let ((new (make-external name (make-code-vector 4 0))))
-	     (table-set! *the-external-table* name new)
-	     (maybe-external-lookup new)
+	   (let ((new (maybe-external-lookup
+		       (make-external name^@ (make-code-vector 4 0)))))
+	     (if new
+		 (table-set! *the-external-table* name^@ new)
+		 (warn "External not found" name))
 	     new)))))
 
 (define (maybe-external-lookup external)
-  (with-handler
-   (lambda (c punt)
-     (cond ((or (not (exception? c))
-		(not (= op/external-lookup (exception-opcode c))))
-	    (punt))
-	   (else
-	    (display "External ")
-	    (display (external-name (car (exception-arguments c))))
-	    (display " not found")
-	    (newline))))
-   (lambda ()
-     (external-lookup external))))
+  (call-with-current-continuation
+    (lambda (lose)
+      (with-handler
+	  (lambda (c punt)
+	    (cond ((or (not (exception? c))
+		       (not (= op/external-lookup (exception-opcode c))))
+		   (punt))
+		  (else
+		   (lose #f))))
+	(lambda ()
+	  (external-lookup external)
+	  external)))))
 
 (define op/external-lookup (enum op external-lookup))
 

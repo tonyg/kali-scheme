@@ -2,7 +2,7 @@
 
 To install the system, you can use the Unix "make" program:
 
-    1. If you intend to ever install scheme48 somewhere, then
+    1. If you intend to ever install Scheme 48 somewhere, then
        edit the definitions of BIN, LIB, and MAN at top of Makefile as
        appropriate for your system (see comments in Makefile).
        E.g. BIN = /usr/local/bin, LIB = /usr/local/lib/scheme48,
@@ -14,7 +14,7 @@ To install the system, you can use the Unix "make" program:
        If you're using a DEC MIPS, and want to use the foreign function
        interface, uncomment VMLINKFLAGS = -N.
 
-       If you don't have gcc, Scheme48 will probably run very slowly,
+       If you don't have gcc, Scheme 48 will probably run very slowly,
        but you can try it anyhow by changing CC and CFLAGS as
        appropriate.  Try CFLAGS = -O.
 
@@ -26,7 +26,7 @@ To install the system, you can use the Unix "make" program:
        This initial "make" might fail, complaining that ./scheme48vm
        doesn't exist.  This probably means that "make" believes
        filenames.make to be out of date.  Unfortunately, the make rule
-       for this file won't work until there's a runnable scheme48
+       for this file won't work until there's a runnable Scheme 48
        system.  If this happens, do "touch filenames.make" to fake it out.
 
        At this point you may want to test the system.  Do
@@ -36,7 +36,7 @@ To install the system, you can use the Unix "make" program:
        and type a few Scheme forms.
 
     3. Installation: do "make install" to copy scheme48vm, the heap
-       image file, and the library to BIN/s48.
+       image file, and the library to BIN/s48 and LIB/s48.
 
 A more thorough test of the system is to have it build a fresh heap
 image from sources.  Do this with:
@@ -50,7 +50,7 @@ See below for information on customizing the default heap image.
 
 -----
 
-The scheme48 directory should contain the following subdirectories:
+The Scheme 48 root directory should contain the following subdirectories:
 
     doc		   some documentation
     emacs	   gnu emacs support
@@ -60,11 +60,11 @@ The scheme48 directory should contain the following subdirectories:
     env		   development environment modules (debugger, etc.)
     big		   useful Scheme libraries and extensions ("Big Scheme")
     vm             virtual machine sources
-    alt		   portable implementations of some Scheme48 features
+    alt		   portable implementations of some Scheme 48 features
     opt		   optional code optimizer for the byte-code compiler
     misc           very miscellaneous things (e.g. AMB operator)
 
-The scheme48 directory should contain the following files:
+The Scheme 48 root directory should contain the following files:
 
     README              
     INSTALL		this file
@@ -81,15 +81,15 @@ The scheme48 directory should contain the following files:
     extension.c		stub definition of vm_extension()
     dynload.c		dynamic Unix object file loader
     scheme48.man        a Unix-style manual page
-    signatures.scm	internal interfaces
-    rts-packages.scm	module configurations
+    interfaces.scm	internal interfaces
+    initial.scm		module definitions
+    rts-packages.scm
     comp-packages.scm
-    more-signatures.scm
+    more-interfaces.scm
     more-packages.scm
     debug-packages.scm
+    link-packages.scm
     alt-packages.scm
-    defpackage.scm      define-package and related macros
-    flatload.scm	bootstrap package loader
 
 The PreScheme compiler isn't included in this distribution because
 it's too rickety.  The vm directory should therefore be considered to
@@ -108,7 +108,7 @@ because Gnu make will do it automatically.)
 
 Editor support
 
-We recommend interacting with the Scheme48 command processor using the
+We recommend interacting with the Scheme 48 command processor using the
 emacs/scheme interface written by Olin Shivers at CMU.  Copies of the
 relevant .el files, together with a "cmuscheme48.el", are in the
 emacs/ subdirectory of the release.  Usage information is in

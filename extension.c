@@ -62,6 +62,17 @@ This software is provided ``as is'' without express or implied warranty.
 #include <stdio.h>
 #include <errno.h>
 
+/* hack by Basile STARYNKEVITCH */
+#if defined(svr4) || defined(__svr4__) || defined(SYSV)
+#include <string.h>
+#define NO_BCOPY
+#endif
+
+#ifdef NO_BCOPY
+#define bcopy(From,To,Len) memcpy(To,From,Len)
+#define bzero(To,Len) memset(To, 0, Len)
+#endif /*NO_BCOPY*/
+
 int internet_stream_socket()
 {
   int sock = socket(AF_INET, SOCK_STREAM, 0);

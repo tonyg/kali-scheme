@@ -1,9 +1,8 @@
 # Scheme 48 Makefile
-# Last updated May 1993 by JAR
-# More documentation in file INSTALL
+# Last updated December 1993 by JAR
+# Documentation in file INSTALL
 
-# To change the set of features included in the standard image, edit
-# the definition of usual-features in more-packages.scm.
+# One of these days maybe we'll figure out how to use Gnu autoconf.
 
 # If you want to install Scheme 48 somewhere, set BIN, LIB, and MAN as
 # appropriate for your site.  RUNNABLE is what the command by which
@@ -16,9 +15,10 @@
 # ,load-package command work for the "extra" packages defined in
 # more-packages.scm. 
 
-BIN = /usr/local/bin
-LIB = /usr/local/lib/scheme48
-MAN = /usr/local/man/man1
+TOPDIR = /usr/local
+BIN = $(TOPDIR)/bin
+LIB = $(TOPDIR)/lib/scheme48
+MAN = $(TOPDIR)/man/man1
 
 # You might want to change RUNNABLE to "s48"
 RUNNABLE = scheme48
@@ -26,11 +26,21 @@ RUNNABLE = scheme48
 # -N is needed to allow dynamic loading (at least on a DEC MIPS)
 # VMLINKFLAGS = -N
 
+# Libraries used by the VM:
+#on most systems
+VMLIBS=
+#on SGI
+#VMLIBS = -lmld
+#on SunOS5
+#VMLIBS= -lnsl -lgen -ldl -lsocket
+#on SunOS4
+#VMLIBS= -ldl
+
 CC = gcc
 CFLAGS = -O2 -g
-# On an HP "snake," you'll probably want:
-#  CC = cc -Aa
-#  CFLAGS = -D_HPUX_SOURCE -O +Obb1500
+# On an HP "snake," you may instead want:
+#   CC = cc -Aa
+#   CFLAGS = -D_HPUX_SOURCE -O +Obb1500
 CP = cp -p
 INSTALL_METHOD = install_method_2
 DISTDIR = /users/ftp/pub/jar
@@ -63,39 +73,20 @@ OBJFILES = main.o unix.o dynload.o error.o extension.o scheme48vm.o
 # system.  You can run the linker in a Scheme other than Scheme 48;
 # see e.g. the rule for link/linker-in-lucid, below.
 
-#LINKER_RUNNABLE = ./$(VM) -i ./$(IMAGE)
+LINKER_RUNNABLE = ./$(VM) -i ./$(IMAGE)
 LINKER_IMAGE = link/linker.image
 START_LINKER_RUNNABLE = echo ,batch; echo ,bench on;
 
 # or,
-LINKER_RUNNABLE = $(RUNNABLE)
+#LINKER_RUNNABLE = $(RUNNABLE)
 # and the other two as above
-
-# Temporary while debugging version 0.22 (10/11/93)
-#LINKER_RUNNABLE = ../0.21/scheme48vm -i ../0.21/scheme48.image
-
-# or,
-#LINKER_RUNNABLE = ./$(VM) -i initial.image
-#LINKER_IMAGE = link/linker.image
-#START_LINKER_RUNNABLE = 
-# To make this work, you'll probably have to change the line 
-#   ,open features ascii bitwise signals record
-# to
-#   ,load alt/record.scm alt/vanilla-features.scm alt/more-features.scm 
-# in the rule for $(LINKER).  This hasn't been tested.
-
-# or,
-OLD_RUNNABLE = s48.10-19-92-with-patches
-#LINKER_RUNNABLE = $(OLD_RUNNABLE)
-#LINKER_IMAGE = link/old-linker.image
-#START_LINKER_RUNNABLE = echo :batch;
 
 
 # Sources:
 
 CFILES = main.c unix.c dynload.c error.c extension.c scheme48vm.c \
          prescheme.h scheme48.h
-CONFIG_FILES = signatures.scm rts-packages.scm comp-packages.scm
+CONFIG_FILES = interfaces.scm rts-packages.scm comp-packages.scm
 
 
 ### Rules
@@ -104,50 +95,57 @@ CONFIG_FILES = signatures.scm rts-packages.scm comp-packages.scm
 enough: $(VM) $(IMAGE)
 
 $(VM): $(OBJFILES)
-	$(CC) $(VMLINKFLAGS) -o $(VM) $(OBJFILES)
+	$(CC) $(VMLINKFLAGS) -o $(VM) $(OBJFILES) $(VMLIBS)
 
 scheme48vm.o: scheme48vm.c prescheme.h
 extension.o: extension.c scheme48.h
+dynload.o: dynload.c scheme48.h
 
 # The following hack traces the module dependencies described in the
 # various configuration files and converts them into dependency lists
 # that "make" can use for its purposes.
 # You can actually feed these forms to any Scheme implementation.
-# It doesn't have to be the LINKER_RUNNABLE.
-# The line "(define syntactic 0) (define table 0)" exists only to suppress
+# It doesn't have to be the initial.image.
+# The line "(define syntactic 0) (define tables 0)" exists only to suppress
 # an annoying "undefined" warning for some forward references.
 
-filenames.make: rts-packages.scm alt-packages.scm comp-packages.scm \
-	   initial-packages.scm link-packages.scm more-packages.scm
-	($(START_LINKER_RUNNABLE)                       \
-	 echo ,load alt/config.scm alt/flatload.scm ;   \
-	 echo "(load \"bcomp/defpackage.scm\")" ;       \
-	 echo "(load-configuration \"packages.scm\")" ; \
-	 echo "(define syntactic 0) (define table 0)" ; \
-	 echo "(flatload linker-structures)" ; \
+# If there are errors running this script, and you need to debug,
+# don't use the initial.image, use something that has a reasonable
+# environment, e.g. any version of the full Scheme 48 system.
+
+# If this fails and you don't feel like debugging or fixing the problem,
+# try "touch filenames.make" and hope for the best.
+
+filenames.make: packages.scm rts-packages.scm alt-packages.scm \
+		comp-packages.scm initial-packages.scm link-packages.scm \
+		more-packages.scm
+	touch filenames.make
+	$(MAKE) $(VM)
+	(echo ,load alt/config.scm alt/flatload.scm bcomp/defpackage.scm ; \
+	 echo "(load-configuration \"packages.scm\")" ;  \
+	 echo "(define syntactic 0) (define tables 0)" ; \
+	 echo "(flatload linker-structures)" ;		 \
 	 echo "(define q-f (all-file-names link-config))" ; \
-	 echo "(flatload usual-structures)" ; \
+	 echo "(flatload usual-structures)" ;		 \
 	 echo "(define i-f (all-file-names initial-system))" ; \
 	 echo "(define u-f (all-file-names usual-features initial-system))" ; \
-	 echo "(write-file-names \"filenames.make\"    \
+	 echo "(write-file-names \"filenames.make\"      \
 		 'initial-files i-f 'usual-files u-f 'linker-files q-f)") \
-	| $(LINKER_RUNNABLE)
+	| $(VM) -i initial.image -a batch
 include filenames.make
 
 # The linker is capable of rebuilding an image from sources, even
 # across an incompatible change in VM data representations.
 # The ,bench command here turns benchmark mode on.
-
-#	 echo ,open features ;  echo ,open ascii ;   \
-#	 echo ,open bitwise ;   echo ,open signals ; \
-#	 echo ,open record ;    echo ,open handle ;  \
+# (set! *package-uid* 0) is a kludge.
 
 link/linker.image: $(linker-files)
 	(echo ,batch ; echo ,bench on ;              \
-	 echo ,open features ascii bitwise signals record handle ; \
-	 echo ,open code-vectors ; \
+	 echo ,open signals handle features ;        \
+	 echo ,open bitwise ascii code-vectors record ; \
 	 echo ,load $(linker-files) ;		     \
 	 echo ,load alt/init-defpackage.scm ;        \
+	 echo "(set! *package-uid* 0)";	             \
 	 echo ,dump link/linker.image)		     \
 	| $(LINKER_RUNNABLE)
 
@@ -172,17 +170,17 @@ initial.image: \
 # This rule ought to work regardless of whether the system starts in
 # the mini-command processor or the full command processor.
 
-$(IMAGE): $(VM) more-signatures.scm more-packages.scm $(usual-files) \
+$(IMAGE): $(VM) more-interfaces.scm more-packages.scm $(usual-files) \
 	  initial.debug
 	(echo ,load env/init-defpackage.scm ; \
 	 echo "((*structure-ref filenames 'set-translation!)         \
 	        \"=scheme48/\" \"./\")" ;			     \
-	 echo ,load more-signatures.scm =scheme48/link-packages.scm ; \
+	 echo ,load more-interfaces.scm =scheme48/link-packages.scm ; \
 	 echo ,load =scheme48/more-packages.scm ; \
 	 echo "(ensure-loaded package-commands)" ;		     \
 	 echo ",go ((*structure-ref command 'command-processor) \"batch\")" ; \
 	 echo "(ensure-loaded usual-features)" ;		     \
-	 echo ,structure more-structures more-structures-signature ; \
+	 echo ,structure more-structures more-structures-interface ; \
 	 echo ,in debuginfo "(read-debug-info \"initial.debug\")" ;  \
 	 echo ,keep maps source files ;				     \
 	 echo ,translate =scheme48/ $(LIB)/  ;			     \
@@ -190,7 +188,7 @@ $(IMAGE): $(VM) more-signatures.scm more-packages.scm $(usual-files) \
 				       'new-command-processor)	     \
 		       \"(made by $$USER on `date`)\"		     \
 		       built-in-structures more-structures)" $(IMAGE) ) \
-	| ./$(VM) -i initial.image
+	| ./$(VM) -i initial.image -a batch
 
 main.o: main.c
 	$(CC) $(CFLAGS) -c -DDEFAULT_IMAGE_NAME=\"$(LIB)/$(IMAGE)\" main.c
@@ -201,33 +199,6 @@ $(RUNNABLE).1: scheme48.man Makefile
 	sed 's=LBIN=$(BIN)=g' scheme48.man \
 	| sed 's=LLIB=$(LIB)=g' \
 	| sed 's=LS48=$(RUNNABLE)=g' >$@
-
-# Distribution...
-
-# DISTFILES should include all sources.  initial.image should appear
-# late in the list, so that when the distribution is extracted from the
-# tar file, the file dates get set so that initial.image is newer than
-# the files it depends on.
-
-DISTFILES = COPYING README INSTALL NEWS TODO Makefile $(CFILES) \
-	    filenames.make scheme48.man \
-	    doc/*.txt doc/*.tex *.scm \
-	    rts/*.scm bcomp/*.scm env/*.scm big/*.scm misc/*.scm \
-	    link/*.scm opt/*.scm vm/*.scm alt/*.scm debug/*.scm infix/*.scm \
-	    initial.image initial.debug \
-	    link/lucid-script.lisp \
-	    emacs/*.el emacs/README .gdbinit
-
-dist:
-	tar cf - $(DISTFILES) | gzip -c >$(DISTDIR)/$(RUNNABLE)-0-`cat minor-version-number`.tar.gz
-	$(MAKE) increment-minor-version
-
-increment-minor-version:
-	(cat minor-version-number; echo 1+p) | dc >minor-version-number.tmp
-	mv minor-version-number.tmp minor-version-number
-	echo "(define version-info \"0.`cat minor-version-number`\")" \
-	  >env/version-info.scm
-
 
 
 ### Fake targets:  all clean install man dist
@@ -243,19 +214,20 @@ clean:
 	-rm -f $(VM) *.o *.1 TAGS $(IMAGE) *.tmp \
 	    link/*.image debug/*.image debug/*.debug
 
-install: $(VM) $(INSTALL_METHOD) $(RUNNABLE).1 install_misc
+install: enough $(INSTALL_METHOD) $(RUNNABLE).1 install_misc
 	$(CP) $(VM) $(LIB)/
 	chmod +x $(BIN)/$(RUNNABLE)
 	if test -d $(MAN);  \
 	  then $(CP) $(RUNNABLE).1 $(MAN)/; chmod +r $(MAN)/$(RUNNABLE).1; \
           else echo "No man directory, not installing man page" ; fi
 
-install_misc: $(LIB)/rts $(LIB)/env $(LIB)/big $(LIB)/opt $(LIB)/misc
+install_misc: $(LIB)/rts $(LIB)/env $(LIB)/big $(LIB)/opt $(LIB)/misc $(LIB)/link
 	$(CP) env/*.scm $(LIB)/env/
 	$(CP) big/*.scm $(LIB)/big/
 	$(CP) opt/*.scm $(LIB)/opt/
 	$(CP) rts/jar-defrecord.scm $(LIB)/rts/
 	$(CP) rts/*num.scm $(LIB)/rts/
+	$(CP) link/*.scm $(LIB)/link/
 	$(CP) misc/*.scm $(LIB)/misc/
 $(LIB)/rts:
 	mkdir -p $(LIB)/rts
@@ -267,6 +239,8 @@ $(LIB)/big:
 	mkdir -p $(LIB)/big
 $(LIB)/misc:
 	mkdir -p $(LIB)/misc
+$(LIB)/link:
+	mkdir -p $(LIB)/link
 $(LIB):
 	mkdir $(LIB)
 
@@ -296,6 +270,35 @@ tags:
 	  link/*.scm opt/*.scm debug/*.scm misc/*.scm
 
 
+# Distribution...
+
+# DISTFILES should include all sources.  initial.image should appear
+# late in the list, so that when the distribution is extracted from the
+# tar file, the file dates get set so that initial.image is newer than
+# the files it depends on.
+# Also, filenames.make must follow *.scm in this list, or else it will
+# appear to be out of date.
+
+DISTFILES = COPYING README INSTALL NEWS TODO Makefile $(CFILES) \
+	    scheme48.man doc/*.txt doc/*.tex \
+	    *.scm filenames.make \
+	    rts/*.scm bcomp/*.scm env/*.scm big/*.scm misc/*.scm \
+	    link/*.scm opt/*.scm vm/*.scm alt/*.scm debug/*.scm infix/*.scm \
+	    initial.image initial.debug \
+	    link/*.lisp \
+	    emacs/*.el emacs/README .gdbinit
+
+dist: initial.image
+	tar cf - $(DISTFILES) | gzip -c >$(DISTDIR)/$(RUNNABLE)-0-`cat minor-version-number`.tar.gz
+#	$(MAKE) new-version
+
+new-version:
+	(cat minor-version-number; echo 1+p) | dc >minor-version-number.tmp
+	mv minor-version-number.tmp minor-version-number
+	echo "(define version-info \"0.`cat minor-version-number`\")" \
+	  >env/version-info.scm
+
+
 ### To bootstrap from Lucid Common Lisp:
 
 PSEUDODIR = ../pseudo
@@ -323,9 +326,3 @@ debug/little.image: \
 	 echo "(load-configuration \"debug-packages.scm\")" ; \
 	 echo "(link-little-system)")   \
 	| time $(LINKER_RUNNABLE) $(BIG_HEAP) -i $(LINKER_IMAGE)
-
-l.image: l.s48
-	(echo ",batch"; \
-	 echo ",take l.s48"; \
-	 echo ",dump l.image") \
-	| $(RUNNABLE)

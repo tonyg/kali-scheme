@@ -1,13 +1,12 @@
 ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
-; Some signatures.  Order of presentation is a bit random.
+; Some interfaces.  Order of presentation is a bit random.
 
-(define-signature scheme-level-0-signature
+(define-interface scheme-level-0-interface
   (export ((if begin lambda letrec quote set!
-	       define define-syntax let-syntax)
+	       define define-syntax let-syntax letrec-syntax)
 	   syntax)
-	  ;; letrec-syntax  -- not yet implemented
 	  
 	  ;; The basic derived expression types.
 	  ((and cond do let let* or) syntax)
@@ -54,7 +53,7 @@
 
 ; Miscellaneous primitives.
 
-(define-signature primitives-signature
+(define-interface primitives-interface
   (export close-port			;extended-ports
 	  collect			; ,collect command
 	  continuation-length
@@ -71,7 +70,7 @@
 	  external-value
 	  external?
 	  find-all-xs			; externals.scm
-	  force-output			;port re-exports this.
+	  force-output			;ports re-exports this.
 	  get-dynamic-state		;fluids
 	  make-continuation
 	  make-extended-number
@@ -99,13 +98,13 @@
 	  vm-return
 	  weak-pointer-ref
 	  weak-pointer?
-	  write-string))		;port
+	  write-string))		;ports
 
-(define-signature bitwise-signature
+(define-interface bitwise-interface
   (export arithmetic-shift
 	  bitwise-not bitwise-and bitwise-ior bitwise-xor))
 
-(define-signature locations-signature
+(define-interface locations-interface
   (export location?
 	  location-assigned?
 	  location-defined?
@@ -116,13 +115,13 @@
 	  contents
 	  set-contents!))
 
-(define-signature closures-signature
+(define-interface closures-interface
   (export closure?
 	  make-closure
 	  closure-env
 	  closure-template))
 
-(define-signature code-vectors-signature
+(define-interface code-vectors-interface
   (export code-vector?
 	  code-vector-length
 	  code-vector-ref
@@ -131,7 +130,7 @@
 
 ; Miscellaneous useful primitives used in various random places.
 
-(define-signature features-signature
+(define-interface features-interface
   (export force-output
 	  immutable?
 	  make-immutable!
@@ -140,21 +139,21 @@
 
 ; Another hodge-podge.
 
-(define-signature low-level-signature
+(define-interface low-level-interface
   (export vector-unassigned?		; inspector
 	  flush-the-symbol-table!	;build.scm
 	  maybe-open-input-file		;mobot system
 	  maybe-open-output-file))
 
-(define-signature vm-exposure-signature
+(define-interface vm-exposure-interface
   (export invoke-closure		;eval
 	  primitive-catch))		;shadowing, start, command
 
-(define-signature escapes-signature
+(define-interface escapes-interface
   (export primitive-cwcc
 	  with-continuation))
 
-(define-signature ascii-signature
+(define-interface ascii-interface
   (export ascii->char
 	  char->ascii
 	  ascii-limit
@@ -163,7 +162,7 @@
 
 ; Level 1: The rest of Scheme except for I/O.
 
-(define-signature scheme-level-1-adds-signature
+(define-interface scheme-level-1-adds-interface
   (export ((case delay quasiquote syntax-rules) syntax)
 	  <= > >=
 	  abs
@@ -207,11 +206,11 @@
 	  vector vector->list vector-fill!
 	  zero?))
 
-(define-signature scheme-level-1-signature
-  (compound-signature scheme-level-0-signature
-		      scheme-level-1-adds-signature))
+(define-interface scheme-level-1-interface
+  (compound-interface scheme-level-0-interface
+		      scheme-level-1-adds-interface))
 
-(define-signature util-signature
+(define-interface util-interface
   (export any
 	  every
 	  filter
@@ -225,7 +224,7 @@
 
 ; Level 2 consists of harder things built on level 1.
 
-(define-signature generics-signature
+(define-interface generics-interface
   (export define-default-method
 	  define-method
 	  disclose
@@ -236,7 +235,7 @@
 	  make-generic-exception-handler
 	  make-method-table))
 
-(define-signature number-i/o-signature
+(define-interface number-i/o-interface
   (export number->string
 	  number->string-table
 	  really-number->string
@@ -246,7 +245,7 @@
 	  string->number-table))
 
 
-(define-signature record-signature
+(define-interface records-interface
   (export make-record-type
 	  record-constructor
 	  record-accessor
@@ -254,7 +253,7 @@
 	  record-predicate
 	  define-record-discloser))
 
-(define-signature record-internal-signature
+(define-interface records-internal-interface
   (export record?
 	  record-length
 	  record-ref
@@ -263,18 +262,18 @@
 	  record-type
 	  record-type-field-names))
 
-(define-signature define-record-types-signature
+(define-interface define-record-types-interface
   (export (define-record-type syntax)
 	  define-record-discloser))
 
-(define-signature fluids-signature
+(define-interface fluids-interface
   (export make-fluid
 	  let-fluid
 	  let-fluids
 	  fluid
 	  set-fluid!))
 
-(define-signature fluids-internal-signature
+(define-interface fluids-internal-interface
   (export initialize-dynamic-state!
 	  current-thread
 	  set-current-thread!
@@ -282,21 +281,21 @@
 	  set-dynamic-env!		;wind.scm
 	  fluid-lookup))		;wind.scm
 
-(define-signature enumerated-signature
+(define-interface enumerated-interface
   (export (define-enumeration syntax)
 	  (enum syntax)
 	  enumerand->name
 	  name->enumerand))
 
-(define-signature signals-signature
+(define-interface signals-interface
   (export error warn syntax-error call-error
 	  signal signal-condition
 	  make-condition))
 
-(define-signature handle-signature
+(define-interface handle-interface
   (export ignore-errors with-handler))
 
-(define-signature condition-signature
+(define-interface conditions-interface
   (export define-condition-type
 	  condition-predicate
 	  condition-stuff condition-type
@@ -309,11 +308,11 @@
 	  exception?
 	  make-exception))
 
-(define-signature wind-signature
+(define-interface wind-interface
   (export call-with-current-continuation
 	  dynamic-wind))
 
-(define-signature port-signature
+(define-interface ports-interface
   (export call-with-input-file call-with-output-file
 	  current-input-port current-output-port
 	  with-input-from-file with-output-to-file
@@ -327,7 +326,7 @@
 	  input-port?
 	  output-port?))
 
-(define-signature exception-signature
+(define-interface exceptions-interface
   (export define-exception-handler
 	  initialize-exceptions!
 	  make-opcode-generic!
@@ -335,7 +334,7 @@
 	  continuation-preview		;env/debug.scm
 	  really-signal-condition))	;rts/xprim.scm
 
-(define-signature interrupts-signature
+(define-interface interrupts-interface
   (export initialize-interrupts!	;init.scm
 	  interrupt-handlers		;thread.scm
 	  interrupt?
@@ -350,13 +349,13 @@
 	  interrupt
 	  (enum syntax)))
 
-(define-signature writing-signature
+(define-interface writing-interface
   (export write
 	  display
 	  display-type-name
 	  recurring-write))
 
-(define-signature reading-signature
+(define-interface reading-interface
   (export read
 	  define-sharp-macro		;command.scm
 	  reading-error
@@ -364,7 +363,7 @@
 
 ; Level 2: the harder stuff.
 
-(define-signature scheme-level-2-adds-signature
+(define-interface scheme-level-2-adds-interface
   (export call-with-current-continuation
 	  call-with-input-file call-with-output-file
 	  current-input-port current-output-port
@@ -374,26 +373,26 @@
 	  newline display write
 	  read))
 
-(define-signature scheme-level-2-signature
-  (compound-signature scheme-level-1-signature
-		      scheme-level-2-adds-signature))
+(define-interface scheme-level-2-interface
+  (compound-interface scheme-level-1-interface
+		      scheme-level-2-adds-interface))
 
-(define-signature scheme-adds-signature
+(define-interface scheme-adds-interface
   (export eval load
 	  interaction-environment
 	  scheme-report-environment))
 
-(define-signature scheme-signature
-  (compound-signature scheme-level-2-signature
-		      scheme-adds-signature))
+(define-interface scheme-interface
+  (compound-interface scheme-level-2-interface
+		      scheme-adds-interface))
 
 
 ; Stuff that comes for free with level 2.
 
-(define-signature scheme-level-2-internal-signature
+(define-interface scheme-level-2-internal-interface
   (export usual-resumer))
 
-(define-signature continuation-signature
+(define-interface continuations-interface
   (export continuation-arg
 	  continuation-arg-count
 	  continuation-cont
@@ -404,7 +403,7 @@
 	  continuation?
 	  continuation-parent))
 
-(define-signature template-signature
+(define-interface templates-interface
   (export make-template
 	  template-code
 	  template-info
@@ -416,7 +415,7 @@
 	  template-set!
 	  template?))
 
-(define-signature weak-signature
+(define-interface weak-interface
   (export weak-pointer?			;disclosers.scm
 	  weak-pointer-ref
 	  make-weak-pointer
@@ -425,7 +424,7 @@
 	  population->list
 	  walk-population))
 
-(define-signature filenames-signature
+(define-interface filenames-interface
   (export namestring *scheme-file-type* *load-file-type*
 	  file-name-directory
 	  file-name-nondirectory
@@ -436,17 +435,17 @@
 
 ; Things for the compiler.
 
-(define-signature table-signature
+(define-interface tables-interface
   (export make-table
 	  table?
 	  table-ref
 	  table-set!
 	  table-walk))
 
-(define-signature usual-macros-signature
+(define-interface usual-macros-interface
   (export usual-transform))
 
-(define-signature meta-types-signature
+(define-interface meta-types-interface
   (export syntax-type
 	  any-values-type
 	  undeclared-type
@@ -482,7 +481,7 @@
 	  unspecific-type
 	  usual-variable-type))
 
-(define-signature syntactic-signature
+(define-interface syntactic-interface
   (export $source-file-name
 	  binding?
 	  binding-place
@@ -530,7 +529,7 @@
 	  unbound?
 	  schemify))
 
-(define-signature nodes-signature
+(define-interface nodes-interface
   (export classify
 	  make-node
 	  ;; name-node-binding
@@ -549,21 +548,21 @@
 	  bind-evaluator-for-syntax))
 
 
-; Signatures.
+; Interfaces.
 
-(define-signature signatures-signature
-  (export make-compound-signature
-	  make-simple-signature
-	  note-reference-to-signature!
-	  signature-ref
-	  signature?
-	  signature-clients
+(define-interface interfaces-interface
+  (export make-compound-interface
+	  make-simple-interface
+	  note-reference-to-interface!
+	  interface-ref
+	  interface?
+	  interface-clients
 	  for-each-declaration))
 
 
 ; Packages.
 
-(define-signature packages-signature
+(define-interface packages-interface
   (export make-package
 	  make-simple-package		;start.scm
 	  make-structure
@@ -573,7 +572,7 @@
 	  structure-lookup		;env.scm
 	  generic-lookup		;inline.scm
 	  package-lookup-type		;reify.scm
-	  structure-signature		;config.scm
+	  structure-interface		;config.scm
 	  package->environment
 	  structure?
 	  package-uid			;reifier
@@ -581,7 +580,7 @@
 	  package-note-caching
 	  structure-package))
 
-(define-signature packages-internal-signature
+(define-interface packages-internal-interface
   (export package-loaded?		;env/load-package.scm
 	  set-package-loaded?!		;env/load-package.scm
 	  package-name
@@ -611,12 +610,12 @@
 	  ;; For package mutation
 	  for-each-definition
 	  set-package-opens!
-	  set-structure-signature!
+	  set-structure-interface!
 	  set-package-opens-thunk!
 	  structure-clients
 	  package-opens-thunk
 	  package-opens-really
-	  structure-signature-really
+	  structure-interface-really
 	  make-new-location
 	  $get-location
 	  set-package-get-location!
@@ -627,7 +626,7 @@
 	  package-definitions
 	  package-clients))
 
-(define-signature scan-signature
+(define-interface scan-interface
   (export scan-forms
 	  scan-file
 	  scan-structures		;load-package.scm, link/link.scm
@@ -638,7 +637,7 @@
 	  $note-undefined		;env/command.scm
 	  note-undefined!))
 
-(define-signature segments-signature
+(define-interface segments-interface
   (export attach-label
 	  byte-limit
 	  empty-segment
@@ -654,7 +653,7 @@
 	  segment-size
 	  sequentially))
 
-(define-signature compiler-signature
+(define-interface compiler-interface
   (export compile
 	  compile-and-run-file		;for LOAD
 	  compile-and-run-forms		;for EVAL
@@ -674,7 +673,7 @@
 	  bind-vars			;assem.scm
 	  ))
 
-(define-signature debug-data-signature
+(define-interface debug-data-interface
   (export debug-data-env-maps
 	  debug-data-name
 	  debug-data-names
@@ -696,10 +695,10 @@
 	  debug-flag-modifier
 	  with-fresh-compiler-state))  ;for linker
 
-(define-signature evaluation-signature
+(define-interface evaluation-interface
   (export eval load eval-from-file eval-scanned-forms))
 
-(define-signature environments-signature  ;cheesy
+(define-interface environments-interface  ;cheesy
   (export *structure-ref
 	  environment-define!
 	  environment-ref
@@ -711,21 +710,21 @@
 	  set-scheme-report-environment!
 	  with-interaction-environment))
 
-(define-signature defpackage-signature
+(define-interface defpackage-interface
   (export ((define-package 
-	    define-signature
+	    define-interface
 	    define-structure
 	    define-module
 	    define-syntax
-	    ;; compound-signature
+	    ;; compound-interface
 	    ;; export
 	    begin)
 	   syntax)
-	  signature-of
+	  interface-of
 	  init-defpackage!
 	  set-verify-later!))
 
-(define-signature types-signature
+(define-interface types-interface
   (export (syntax type)
 	  (any-values type)
 	  some-values			; (some-values T1 ... Tn)
@@ -747,7 +746,7 @@
 
 ; VM architecture
 
-(define-signature architecture-signature
+(define-interface architecture-interface
   (export (enum syntax) ;so you don't have to remember to open enumerated
 	  bits-used-per-byte
 	  interrupt
@@ -763,22 +762,22 @@
 	  time-option
 	  time-option-count))
 
-(define-signature display-conditions-signature
+(define-interface display-conditions-interface
   (export display-condition		;command.scm
 	  disclose-condition-methods	;misc/disclosers.scm
 	  limited-write))
 
 
-(define-signature inline-signature
+(define-interface inline-interface
   (export inline-transform
 	  name->qualified qualified->name qualified?
 	  substitute))
 
 ; Bindings needed by the form composed by REIFY-STRUCTURES.
 
-(define-signature for-reification-signature
-  (compound-signature
-    packages-signature
+(define-interface for-reification-interface
+  (compound-interface
+    packages-interface
     (export ;; From usual-macros
 	    usual-transform
 	    ;; From syntactic
@@ -787,4 +786,4 @@
 	    ;; From inline
 	    inline-transform)))
 
-;(define-signature command-signature ...)  -- moved to more-signatures.scm
+;(define-interface command-interface ...)  -- moved to more-interfaces.scm

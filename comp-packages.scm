@@ -6,49 +6,49 @@
 
 ; Two basic structures needed to support the compiler.
 
-(define-package ((table table-signature))
+(define-package ((tables tables-interface))
   (open scheme-level-1 signals bummed-define-record-types
 	features)			;string-hash
   (files (big table))
   (optimize auto-integrate))
 
-(define-package ((filenames filenames-signature))
+(define-package ((filenames filenames-interface))
   (open scheme-level-1 signals)
   (files (big filename)))
 
 
 ; Type system
 
-(define-package ((meta-types meta-types-signature))
+(define-package ((meta-types meta-types-interface))
   (open scheme-level-2 util signals)
   (files (bcomp mtype))
   (optimize auto-integrate))
 
-(define-package ((signatures signatures-signature))
+(define-package ((interfaces interfaces-interface))
   (open scheme-level-2 syntactic meta-types
-	signals bummed-define-record-types table
+	signals bummed-define-record-types tables
 	weak)
-  (files (bcomp signature))
+  (files (bcomp interface))
   (optimize auto-integrate))
 
 
 ; Transforms and operators
 
-(define-package ((syntactic (compound-signature syntactic-signature
-						nodes-signature)))
+(define-package ((syntactic (compound-interface syntactic-interface
+						nodes-interface)))
   (open scheme-level-2 meta-types
-	signals bummed-define-record-types table fluids
+	signals bummed-define-record-types tables fluids
 	features		;make-immutable!
 	;; locations		;location?
 	)
   (files (bcomp syntax))
   (optimize auto-integrate))
 
-(define-package ((usual-macros usual-macros-signature))
+(define-package ((usual-macros usual-macros-interface))
   (open scheme-level-2
 	syntactic	;name?, $source-file-name
 	fluids		;used in definition of %file-name%
-	table signals)
+	tables signals)
   (files (bcomp usual)
 	 (bcomp rules)))
 
@@ -61,19 +61,19 @@
 
 ; Package system
 
-(define-package ((packages packages-signature)
-		 (packages-internal packages-internal-signature))
-  (open scheme-level-2 syntactic meta-types signatures
-	signals bummed-define-record-types table fluids
+(define-package ((packages packages-interface)
+		 (packages-internal packages-internal-interface))
+  (open scheme-level-2 syntactic meta-types interfaces
+	signals bummed-define-record-types tables fluids
 	util features locations weak)
   (files (bcomp package))
   (optimize auto-integrate))
 
-(define-package ((scan scan-signature))
+(define-package ((scan scan-interface))
   (open scheme-level-2
 	packages syntactic usual-macros meta-types
 	packages-internal
-	signals fluids table util
+	signals fluids tables util
 	features		;force-output
 	filenames)		;translate
   (files (bcomp scan)
@@ -81,13 +81,13 @@
 
 ; Compiler back end
 
-(define-package ((segments segments-signature)
-		 (debug-data debug-data-signature))
-  (open scheme-level-2 code-vectors template
+(define-package ((segments segments-interface)
+		 (debug-data debug-data-interface))
+  (open scheme-level-2 code-vectors templates
 	syntactic
 	architecture
 	bummed-define-record-types
-	record util table fluids signals)
+	records util tables fluids signals)
   (files (bcomp segment)
 	 (bcomp state)
 	 (bcomp ddata))
@@ -95,16 +95,16 @@
 
 ; Byte-code compiler
 
-(define-package ((compiler compiler-signature))
+(define-package ((compiler compiler-interface))
   (open scheme-level-2 syntactic scan meta-types
 	architecture
 	packages
 	packages-internal       ;only for structure-package ?
-	signatures		;signature-ref
+	interfaces		;interface-ref
 	reconstruction
 	segments
 	signals
-	table
+	tables
 	enumerated		;enumerand->name
 	util			;reduce
 	fluids 
@@ -116,24 +116,24 @@
 
 ; DEFINE-PACKAGE and friends
 
-(define-package ((defpackage defpackage-signature))
+(define-package ((defpackage defpackage-interface))
   (open scheme-level-2
 	packages syntactic usual-macros types
-	signatures
+	interfaces
 	source-file-names	;%file-name%
 	signals			;error
-	table)
+	tables)
   (for-syntax (open scheme-level-2 signals))     ;syntax-error
   (files (bcomp defpackage)
 	 (bcomp config)))
 
-(define-package ((types types-signature)) ;Typing language
+(define-package ((types types-interface)) ;Typing language
   (open scheme-level-2 meta-types loopholes)
   (files (bcomp type)))
 
 ; Static linker
 
-(define-package ((inline inline-signature))
+(define-package ((inline inline-interface))
   (open scheme-level-2
 	syntactic
 	packages

@@ -73,13 +73,14 @@
 		  ((2 b) 2) ((8 o) 8) ((10 d) 10) ((16 x) 16)
 		  (else (call-error "invalid radix"
 				    'string->number
-				    string radix)))))
+				    string radix))))
+	 (len (string-length string)))
     (let loop ((pos 0) (exactness? #f) (exact? #t) (radix? #f) (radix radix))
-      (cond ((<= (string-length string) pos)
+      (cond ((>= pos len)
 	     #f)
 	    ((char=? (string-ref string pos) #\#)
 	     (let ((pos (+ pos 1)))
-	       (if (<= (string-length string) pos)
+	       (if (>= pos len)
 		   #f
 		   (let ((radix-is
 			  (lambda (radix)
@@ -99,43 +100,57 @@
 		       ((#\e) (exactness-is #t))
 		       ((#\i) (exactness-is #f))
 		       (else #f))))))
-	    (else (really-string->number
-		     (substring string pos (string-length string))
-		     radix
-		     exact?))))))
+	    (else
+	     (really-string->number
+	        (substring string pos len)
+		radix
+		(if exactness?
+		    exact?
+		    (let loop ((pos pos))
+		      (cond ((>= pos len) #t) ;exact
+			    ((char=? (string-ref string pos) #\.)
+			     (if (not (= radix 10))
+				 (warn "non-base-10 number has decimal point"
+				       string))
+			     #f)	;inexact
+			    ((char=? (string-ref string pos) #\#)
+			     #f)
+			    (else (loop (+ pos 1))))))))))))
 
 (define string->integer
   (let ()
 
-    (define (string->integer string radix exact?)
+    (define (string->integer string radix xact?)
       (cond ((= (string-length string) 0) #f)
 	    ((char=? (string-ref string 0) #\+)
-	     (do-it string 1 1 radix exact?))
+	     (do-it string 1 1 radix xact?))
 	    ((char=? (string-ref string 0) #\-)
-	     (do-it string 1 -1 radix exact?))
+	     (do-it string 1 -1 radix xact?))
 	    (else
-	     (do-it string 0 1 radix exact?))))
+	     (do-it string 0 1 radix xact?))))
 
-    (define (do-it string pos sign radix exact?)
-      (if (>= pos (string-length string))
-	  #f
-	  (let loop ((n 0)
-		     (pos pos))
-	    (cond ((>= pos (string-length string))
-		   (if exact? n (exact->inexact n)))
-		  (else
-		   (let ((d (digit->integer (string-ref string pos)
-					    radix)))
-		     (if d
-			 (loop (+ (* n radix) (* sign d))
-			       (+ pos 1))
-			 #f)))))))
+    (define (do-it string pos sign radix xact?)
+      (let* ((len (string-length string))
+	     (len (if (char=? (string-ref string (- len 1)) #\.)
+		      (- len 1)    ;Allow nnnnn.
+		      len)))
+	(if (>= pos len)
+	    #f
+	    (let loop ((n 0) (pos pos))
+	      (if (>= pos len)
+		  (if (or xact? (not (exact? n))) n (exact->inexact n))
+		  (let ((d (digit->integer (string-ref string pos)
+					   radix)))
+		    (if d
+			(loop (+ (* n radix) (* sign d))
+			      (+ pos 1))
+			#f)))))))
 
     (define (digit->integer c radix)
       (cond ((char-numeric? c)
 	     (let ((n (- (char->ascii c) zero)))
 	       (if (< n radix) n #f)))
-	    ((char=? c #\#) 0)		;And set inexactness bit...
+	    ((char=? c #\#) 5)  ;and warn if exact?
 	    ((<= radix 10) #f)
 	    (else
 	     (let ((n (- (char->ascii (char-downcase c)) a-minus-ten)))

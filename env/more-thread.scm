@@ -17,12 +17,14 @@
 (define-command 'start-threads "" "initiate multitasking"
   '()
   (lambda ()
-    (let ((context (user-context)))
+    (let ((context (user-context))
+	  (env (environment-for-commands)))
       (exit (lambda ()
 	      (with-threads
 		(lambda ()
 		  (start-command-processor
 		    #f context
+		    env
 		    (lambda ()
 		      (write-line "Multitasking started"
 				  (command-output)))))))))))

@@ -1,7 +1,7 @@
 ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
-; Package / structure / signature mutation operations.
+; Package / structure / interface mutation operations.
 
 ; None of these is essential for the static semantics of packages.
 ; They only come into play in order to implement dynamic package
@@ -30,8 +30,8 @@
 (define (reinitialize-structure! s)
   (if *debug?*
       (begin (write `(reinitialize ,s)) (newline)))
-  ;; (set-structure-signature! s #f)
-  (if (structure-signature-really s)
+  ;; (set-structure-interface! s #f)
+  (if (structure-interface-really s)
       (initialize-structure! s)))
 
 
@@ -45,9 +45,14 @@
 (define (get-new-location-carefully p name)
   (let* ((prev (package-lookup p name))
 	 (new (if (binding? prev)
-		  (let ((new (make-new-location p name)))
+		  (let ((new (make-new-location p name))
+			(cached (table-ref (package-cached p) name)))
 		    (copy-shadowed-contents! (binding-place prev) new)
-		    (cope-with-mutation p name new (binding-place prev))
+		    (cond (cached
+			   (if (eq? (binding-place prev) cached)
+			       (cope-with-mutation p name new cached)
+			       (error "binding cache inconsistency"
+				      p name new cached))))
 		    new)
 		  (get-new-location-non-shadowing p name)))
 	 (aloc (table-ref (package-undefined-but-assigneds p)
@@ -73,7 +78,7 @@
 	(let recur ((q p))
 	  (let loop ((opens (package-opens q)))
 	    (if (not (null? opens))
-		(if (signature-ref (structure-signature (car opens)) name)
+		(if (interface-ref (structure-interface (car opens)) name)
 		    ;; Shadowing
 		    (let* ((q (structure-package (car opens)))
 			   (probe (table-ref (package-undefineds q)
@@ -100,7 +105,6 @@
   (if (eq? new prev)
       (error "lossage in cope-with-mutation" p name new prev))
   (let ((replacement (make-new-location p name)))
-    ;; (set-location-defined?! replacement #t)  - ?
     (copy-location-info! prev replacement)
     (if *debug?*
 	(begin (write `(mutation ,prev ,new ,replacement)) (newline)))
@@ -108,36 +112,7 @@
 		      (map package-uid
 			   (packages-seeing-location p name prev))
 		      new
-		      replacement)
-;; This appears to be garbage.
-;    (let recur ((q p))
-;      (let loop ((opens (package-opens q)))
-;        (if (null? opens)
-;            (call-error "this shouldn't happen"
-;                        cope-with-mutation p name new prev)
-;            (if (signature-ref (structure-signature (car opens)) name)
-;                (let* ((q (structure-package (car opens)))
-;                       (probe (table-ref (package-definitions q) name)))
-;                  (cond (probe
-;                         (if *debug?*
-;                             (note "replacing defined"
-;                                   q name replacement probe))
-;                         (if (binding? probe)
-;                             (if (not (eq? (binding-place probe) new))
-;                                 (set-binding-place! probe replacement))
-;                             (if (not (eq? probe new))
-;                                 (table-set! (package-definitions q) name
-;                                             replacement))))
-;                        ((table-ref (package-undefineds q) name)
-;                         (if *debug?*
-;                             (note "replacing undefined" q name replacement))
-;			  (if (not (eq? ...))
-;                             (table-set! (package-undefineds q) name
-;                                         replacement)))
-;                        (else
-;                         (recur q))))
-;                (loop (cdr opens))))))
-    ))
+		      replacement)))
 
 (define (set-binding-place! b foo) (vector-set! b 1 foo))
 
@@ -162,7 +137,7 @@
           (begin (set! losers (cons p losers))
                  (walk-population
                    (lambda (struct)
-                     (if (signature-ref (structure-signature struct) name)
+                     (if (interface-ref (structure-interface struct) name)
                          (walk-population recur (structure-clients struct))))
                    (package-clients p)))))
     losers))
@@ -187,7 +162,7 @@
 (define (really-verify-later! thunk)           ;cf. define-package macro
   (let ((loser (ignore-errors thunk)))
     (cond ((or (structure? loser)
-               (signature? loser))
+               (interface? loser))
 	   ;; (write `(loser: ,loser)) (newline)
            (set-fluid! $losers (cons loser (fluid $losers))))))
   #f)
@@ -212,8 +187,8 @@
 		  (set-fluid! $package-losers
 			      (cons p ps)))))
 	  (structure-clients loser)))
-	((signature? loser)
-	 (walk-population verify-loser (signature-clients loser)))))
+	((interface? loser)
+	 (walk-population verify-loser (interface-clients loser)))))
 
 (define (drain flu check)
   (let loop ()

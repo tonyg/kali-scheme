@@ -12,12 +12,12 @@
 
 (define (noting-undefined-variables p thunk)
   (let* ((losers '())
-	 (foo (lambda (q name)
-		(let ((probe (assq q losers)))
+	 (foo (lambda (env name)
+		(let ((probe (assq env losers)))
 		  (if probe
 		      (if (not (member name (cdr probe)))
 			  (set-cdr! probe (cons name (cdr probe))))
-		      (set! losers (cons (list q name) losers)))))))
+		      (set! losers (cons (list env name) losers)))))))
     (let-fluid $note-undefined
 	(or (fluid $note-undefined)	;Recursive LOAD
 	    (lambda (name)
@@ -29,18 +29,17 @@
 	(let ((result (thunk)))
 	  (for-each
 	    (lambda (p+names)
-	      (let* ((q (car p+names))
+	      (let* ((env (car p+names))
 		     (names
 		      (filter (lambda (name)
 				;; Keep the ones that are still unbound.
-				(unbound? (package-lookup q name)))
+				(unbound? (generic-lookup env name)))
 			      (cdr p+names))))
 		(if (not (null? names))
 		    (begin (display "Undefined")
-			   (if (not (eq? q p))
-			       (begin (display " ")
-				      (write `(package ,(package-name
-							 (car p+names))))))
+			   (if (not (eq? env p))
+			       (begin (display " in ")
+				      (write (car p+names))))
 			   (display ": ")
 			   (write (map (lambda (name)
 					 (if (generated? name)

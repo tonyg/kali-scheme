@@ -1,8 +1,53 @@
 -*- Mode: Indented-text; -*-
 
-New features
+Recent changes to Scheme 48.
 
-7/20/p3  Features:
+12/6/93  Incompatible changes:
+	   Change of terminology: "signature" --> "interface".
+	     This means that DEFINE-SIGNATURE is now called
+	     DEFINE-INTERFACE, etc.
+           Some structures have been renamed:
+	     condition -> conditions
+	     continuation -> continuations
+	     exception -> exceptions
+	     queue -> queues
+	     port -> ports
+	     record -> records, record-internal -> records-internal
+	     table -> tables
+	     template -> templates
+	   The ,load-into command has been removed.  Use ,in ... ,load
+	     instead (see below), e.g.
+	       ,in mumble ,load myfile.scm
+           The heap size for -h is specified in words, not bytes.  As
+	     before, the size must account for both semispaces; -h 2n
+	     means n words per semispace.  This change was actually
+	     made a while ago, but I was confused as to what it meant.
+         Bug fixes:
+	   #e1.7 reads as 17/10, (exact? 1+1.0i) => #f, and 1.0+i prints.
+         Features:
+	   Things like ((structure-ref scheme if) 1 2 3) work.
+	   The following commands now take arbitrary commands to execute
+	     in the specified package, not just forms:
+	       ,config   ,user   ,for-syntax   ,in <package>
+             For example, you can say
+	       ,in mumble ,trace foo
+             This subsumes the functionality of the ,load-into and
+	     ,load-config commands.
+           Dynamic loading of shared libraries for System V systems
+	     (untested).
+         Documentation:
+	   Somewhat improved.  user-guide.txt now lists most of the
+	   interesting built-in packages.  lsc.ps is a draft of "A
+	   Tractable Scheme Implementation," a paper submitted to Lisp
+	   and Symbolic Computation.  See also doc/big-scheme.txt,
+	   doc/thread.txt, and doc/external.txt.
+
+
+10/30/93 LET-SYNTAX and LETREC-SYNTAX.
+	 Arrays (see big/array.scm).
+	 Lots of internal changes.
+
+7/20/93  Features:
 	   Type system.  See doc/types.txt.
 
 7/4/93   Features:
@@ -21,7 +66,7 @@ New features
 	     Sometimes you may get an association you don't want.  In that
 	     situation, you can use the ,forget command to delete an
 	     entry in the table.
-           A new ,push command goes to a deeper level.
+           A new ,push command goes to a deeper command level.
 	   Experimental "command preferred" command processor mode: if
 	     you give the command ",form-preferred off", commands will
 	     be "preferred" to forms, meaning that you don't need to
@@ -105,7 +150,7 @@ New features
 	     code, and defines a handy "preview" command.
 
 1/18/93  Feature:
-           Scheme48 distributions now have version numbers.  The
+           Scheme 48 distributions now have version numbers.  The
 	     version number is printed in the image startup message.
 	     Please include it in bug reports.
          The module system is now documented.  See doc/module.tex.
@@ -138,7 +183,7 @@ New features
 
 	 Features removed:
 	   #\page and #\tab.  These aren't in the Scheme report.
-	     Their absence in Scheme48 will encourage portability.
+	     Their absence in Scheme 48 will encourage portability.
 	   access-scheme48 works with fewer names than before.  Use the
 	     package system instead.
            Complex numbers not in the system, by default.  Get them

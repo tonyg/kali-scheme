@@ -112,6 +112,13 @@
 (define-rectangular-method /-table  (when-complexes rectangular/))
 (define-rectangular-method =-table  (when-complexes rectangular=))
 
+(define-rectangular-method sqrt-table
+  (lambda (n)
+    (if (and (integer? n)
+             (< n 0))
+        (make-rectangular 0 (sqrt (- n)))
+        (fail))))  ; not that we have to
+
 ; Gleep!  Can we do quotient and remainder on Gaussian integers?
 ; Can we do numerator and denominator on complex rationals?
 
@@ -151,6 +158,9 @@
 
 (define-method make-rectangular-table recnum-family
   (lambda (x y)
-    (if (= y 0)
-	x
-	(make-recnum x y))))
+    (if (eq? (exact? x) (exact? y))
+	(if (= y 0)
+	    x
+	    (make-recnum x y))
+	(make-rectangular (if (exact? x) (exact->inexact x) x)
+			  (if (exact? y) (exact->inexact y) y)))))

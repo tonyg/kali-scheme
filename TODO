@@ -1,6 +1,7 @@
--*- Mode: Indented-text; -*-
+--*- Mode: Indented-text; -*-
 
-Scheme 48: list of things to do.  JAR 16 June 1993.
+Scheme 48: list of bugs and things to do.
+Last update by JAR one 5 December 1993.
 
 The one thing that ought to be done before alpha release:
     Create a command language module, so that scripts can be written
@@ -10,40 +11,36 @@ The one thing that ought to be done before alpha release:
     Once that is done, flush the ,take command.
 
 Run-time system bugs:
+    Calling primitives with the wrong number of arguments and
+      ,bench on can crash the system.  (New bug.)
     Compiler needs to treat calls with more than 63 arguments specially.
-    #e1.7 should be exact.
     MAX and MIN don't do inexact contagion.
     Shadowing is broken for macro-referenced variables:
         (define (foo x) `(a ,x))
 	(define cons list)
 	(foo 1) => (a (1 ()))
-    (> 1 2 3) generates a warning at compile time, but shouldn't
-
-Revised^5 Scheme compliance:
-    Implement let-syntax and letrec-syntax.
-    Vector patterns and templates ought to be supported in
-      SYNTAX-RULES.
+    (> 1 2 3) generates a warning at compile time, but shouldn't.
+    If (find-all-symbols) fails due to lack of space, it should GC and
+      retry (I think) (bug reported by Basile Starynkevitch, 7-21-93)
 
 Programming environment:
-    Better error checking for macro & special form syntax (CLASSIFY ?).
+    Error checking for macro & special form syntax.
     Help system:
       - Implement hierarchical help, a la gdb.
       - Fuller on-line documentation, a la gdb.
       - ,from-file command shouldn't be listed.
     Error recovery.  Can do better than ,proceed.  LOAD should set up
       restart continuations.
-    Types in scheme-signature (and elsewhere) aren't as tight as they
+    Types in scheme-interface (and elsewhere) aren't as tight as they
       could be.
     Shouldn't produce multiple wrong number of arguments warnings.
     LET continuation "pessimization" to retain the environment longer.
-    Make sure that the disassembler and assembler are inverses of one
-      another.  Disassembler should generate S-expression first, and then
-      print it independently.
     Have the disassembler display local variable names.
     This ought to be recoverable, but isn't always:
 	> (let loop ((x '())) (loop (cons 3 x)))
 	not enough room in heap for stack
-    Put the inspector at its own command level?
+    Put the inspector at its own command level, so that ^D after
+      errors puts you back in the right place.
     The get-cont-from-heap instruction should have an exception
       discloser that indicates the actual error (returning a
       non-fixnum from application top level).
@@ -53,10 +50,6 @@ Programming environment:
       required).
 
 Performance:
-    (signature-items sig) should be implemented as a vector or something,
-      not as a list.  There should be a procedure
-      (signature-for-each proc sig) to map over a signature; proc
-      would take two arguments, name and type.
     More compact representation for debugging data?
     Leaf procedure compilation (RK's rts/no-leaf-env.scm): if no
       continuations or lambdas, skip the make-env and access locals
@@ -65,49 +58,50 @@ Performance:
       opportunistic compilation).
     CAML light has good documentation and patches for optimizing the
       interpreter's switch (*pc++).  (Range check isn't necessary.)
-    Ratnum multiplication and division might be made more efficient by
-      taking cross-GCD's.
     Use MIT Scheme bignums, or GNU Multiple Precision Arithmetic
       Library?  (Torbjorn Granlund <tege@sics.se>)
+    Ratnum multiplication and division might be made more efficient by
+      taking cross-GCD's.
     Native code compiler...
 
 Big Scheme features:
-    Trouble: threads package gets warning when loaded
-      "Extrinsic: with-interrupts-inhibited#with-interrupts"
+    Add Olin's "cig" (C interface generator).
     Floating point.
     How about deleting entries from tables?
     Non-blocking I/O for threads.  I think access to Unix select() might
       be sufficient (with pause() and sleep() as degenerate cases).
+      Look at concurrent ML source code, which gets this right.
     RPC.
-    Arrays.
     Add call/gcc (invokes the Gnu C compiler).
+    It would be nice if WITH-MULTITASKING returned whatever the thunk
+      returned.
 
 Module system bugs:
-    The following goes into an infinite loop:
-	> ,config
-	config> ,open table
-	config> table
     ,untrace should undefine as well if the variable wasn't bound
       before.
+    Compound signatures don't get updated when a component signature
+      changes.  They contain a list of signatures with no reinitialization
+      thunk a la structures and packages.
 
 Module system features:
+    How about making ,in take a command as an argument instead of
+      just an expression?  I often want to trace a procedure or open
+      a structure in some package other than the one I am currently in.
+      This would subsume ,load-into.
     Add an ,undefine command.  Useful to undo shadowing, flush a
       structure, etc.
     Better error message when you do (structure-ref foo ...) where foo
       isn't an accessed structure.
     Check for name conflicts between opened structures.
+    Implement interface subtraction as a way of dealing with such
+      conflicts.
     Check for cycles in structure inheritance.
-    Similarly for ,load-package and ,reload-package.
     An ,access command, similar to ,open.
-    Make structure-ref work with syntax and packages.  E.g.
-      ((structure-ref scheme cond) ...)
     Deal with package system state better (for linker).  Maybe each
       package should point to a data structure containing
       *location-uid*, location-name-table, *package-uid*,
       package-name-table, and perhaps the compiler-state as well (see
       segment.scm).
-    Implement signature subtraction as a way of dealing with such
-      conflicts.
 
 VM:
     Merge in Olin's changes and extensions (command line processing,
@@ -121,27 +115,29 @@ VM:
     Get VM interp.scm-without-gc.scm working again.
 
 Documentation:
+    (optimize auto-integrate) and ,load-package analysis.
     How to use the static linker.
     Techniques for debugging the runtime system (debug/for-debugging.scm).
     Threads, fluids, records, tables.
     File name translation and the ,translate command.
 
 Cleanup:
+    No type reconstructed for CAAAR, etc. (this is because name
+      lookups are cached under 'binding property of node but later
+      mutated).
+    Vector patterns and templates ought to be supported in
+      SYNTAX-RULES.
+    Interfaces should have types for every exported variable; code in
+      cprim.scm shouldn't have to worry about setting up types.
+    Make sure that the disassembler and assembler are inverses of one
+      another.  Disassembler should generate S-expression first, and then
+      print it independently.
     The Makefile ends up doing
         ... | ./scheme48vm -i ./scheme48.image -i link/linker.image
       to run the linker.  This seems wrong somehow.
-    Rename structures table -> tables, port -> ports, continuations,
-      conditions, exception, records, templates, etc.
     debug/mini-package.scm doesn't define INITIALIZE-REIFIED-PACKAGE!.
       This is why the mini-system (see debug-packages.scm) doesn't work.
-    The package reification stuff is way too complicated, and it's
-      buggy besides -- the (set! i (+ i 1)) can happen too early,
-      producing package initializations in the wrong order.
-    Rename "Scheme48" to "Scheme 48", "PreScheme" to "Pre-Scheme".
-    The order of arguments to the MAKE-STRUCTURE procedure should be
-      changed to (make-structure package signature [name-option]).
     Combine condition, signals, and handle into a single structure?
-    Package code is pretty ugly.  Figure out how to simplify it.
     Figure out a better way to implement ##.
     Rename "unassigned" to "uninitialized".
     Write a program that will automagically generate scheme48.h from
@@ -150,6 +146,9 @@ Cleanup:
       single procedure), and each handler gets an exception code.
     Rename DEFINE-PACKAGE to DEFINE-STRUCTURE ?  Boy, that would sure
       confuse Chez Scheme hackers.
+    Add ENVIRONMENT-DEFINED? ?
+    Make USUAL-TRANSFORM return a transform?
+    Add enough to the node signature to make it usable on its own?
 
 
 Date: Mon, 14 Jun 93 18:33:30 HKT

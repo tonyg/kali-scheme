@@ -1,12 +1,6 @@
 
-[Original by RK, modifications by JAR 6/24/93]
+		       External function calls
 
-   From: jar@cs.cornell.edu (Jonathan Rees)
-   Date: Fri, 18 Dec 92 12:46:41 -0500
-
-   Oh, and one other thing... I have no idea how to use the external
-   call stuff, can you give me a hint or two?
-   TNX
 
 (GET-EXTERNAL string)
 Returns an external pointer to the given name.  A null will be added to the
@@ -26,7 +20,7 @@ The file dynload.c contains the function s48_dynamic_load which can
 be called using EXTERNAL-CALL.  To make it work you need to do the
 following:
 
- 1) Link the VM using -N (at least on my DECstation).
+ 1) If you're using ultrix, link the VM using -N.
 
  2) Use the -o flag to pass the name of the executable to the VM.
     [This is done automatically by the "scheme48" shell script created
@@ -56,3 +50,10 @@ Load structure externals (y/n)? y
 > (external-call dynamic-load (null-terminate "test.o"))
 #t
 > 
+
+It have to be (get-external "_s48_dynamic_load") on some versions of
+Unix (like SGI perhaps).
+
+-----
+
+[Original by RK, modifications by JAR 6/24/93]

@@ -21,7 +21,6 @@
 (define type/template    #\a)  ;length objects
 (define type/code-vector #\k)  ;length bytes (each byte is 2 hex digits?)
 (define type/location	 #\l)  ;uid
-(define type/undefined-location #\m)  ;uid
 (define type/closure	 #\q)  ;template-info
 (define type/ellipsis	 #\e)
 (define type/random	 #\r)
@@ -239,10 +238,7 @@
 ; Locations
 
 (define (dump-location obj write-char)
-  (dump-type (if (location-defined? obj)
-		 type/location
-		 type/undefined-location)
-	     write-char)
+  (dump-type type/location write-char)
   (dump-number (location->uid obj) write-char))
 
 (define (location->uid obj)
@@ -252,24 +248,15 @@
 (define-restorer! type/location
   (lambda (c read-char)
     c ;ignored
-    (uid->location (restore-number read-char) #t)))
+    (uid->location (restore-number read-char))))
 
-(define-restorer! type/undefined-location
-  (lambda (c read-char)
-    c ;ignored
-    (uid->location (restore-number read-char) #f)))
-
-(define (uid->location uid define?)
-  (let ((loc (or ((fluid $restore-index) uid define?)
-		 (table-ref uid->location-table uid)
-		 (let ((loc (make-undefined-location uid)))
-		   (note-location! loc)
-		   loc))))
-    (if (and define?
-	     (not (location-defined? loc)))
-	(set-location-defined?! loc #t))
-    loc))
-(define $restore-index (make-fluid (lambda (uid define?) #f)))
+(define (uid->location uid)
+  (or ((fluid $restore-index) uid)
+      (table-ref uid->location-table uid)
+      (let ((loc (make-undefined-location uid)))
+	(note-location! loc)
+	loc)))
+(define $restore-index (make-fluid (lambda (uid) #f)))
 
 (define uid->location-table (make-table))
 

@@ -38,7 +38,7 @@
 
 
 (define (count-bits x)		; Count 1's in the positive 2's comp rep
-  (let ((x (if (< x 0) (lognot x) x)))
+  (let ((x (if (< x 0) (bitwise-not x) x)))
     (do ((x x (arithmetic-shift x 1))
 	 (result 0 (+ result (modulo x 2))))
 	((= x 0) result))))

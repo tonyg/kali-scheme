@@ -65,7 +65,7 @@
 
 	   `(make-structure
 	     ,p-form
-	     ,(signature-expression thing)
+	     ,(interface-expression thing)
 	     ',(structure-name thing))))
 	((package? thing)
 	 (process-one-object thing
@@ -85,7 +85,7 @@
 	((operator? thing)
 	 `(get-operator ',(operator-name thing)
 			',(operator-type thing)))
-	;; ((signature? thing) ...)
+	;; ((interface? thing) ...)
 	(else (error "don't know how to reify this" thing))))
 
 ; General utility for uniquifying objects.
@@ -213,12 +213,12 @@
 			 '()))))))))
 
 
-(define (signature-expression struct)
+(define (interface-expression struct)
   (let ((items '()))
     (for-each-export (lambda (name type binding)
 		       (set! items (cons (list name type) items)))
 		     struct)
-    `(make-simple-signature #f ',(list->vector items))))
+    `(make-simple-interface #f ',(list->vector items))))
 
 
 ; The compiler doesn't like to see unusual objects quoted, but this will

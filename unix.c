@@ -5,12 +5,18 @@
    Unix Sucks
    Richard Kelsey Wed Jan 17 21:40:26 EST 1990
    Later modified by others who wish to remain anonymous
+   "ps_" stands for "Pre-Scheme"
 */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pwd.h>
+
+#if defined(svr4) || defined(SVR4) || defined (__svr4__) || defined(sun) 
+#define HAS_DLOPEN
+#define HAS_GETTIMEOFDAY
+#endif /*svr4*/
 
 #define USER_NAME_SIZE 256
 
@@ -108,7 +114,9 @@ main(argc, argv)
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/times.h>
+#ifndef sgi
 #include <sys/timeb.h>
+#endif
 
 #define PS_STRING_LENGTH(s)   (strlen(s))
 #define FILENAME_SIZE 256
@@ -155,23 +163,46 @@ int char_ready_p( FILE* stream )
 }
 
 /* Timer functions, for the time instruction */
+/* gettimeofday() versino courtesy Basile Starynkevitch */
 
 #define TICKS_PER_SECOND 1000	/* should agree with ps_real_time() */
 
 long ps_real_time()
 {
+#if defined(HAS_GETTIMEOFDAY)
+  struct timeval tv;
+  static struct timeval tv_orig;
+  static int initp = 0;
+  if (!initp) {
+    gettimeofday(&tv_orig);
+    initp = 1;
+  };
+  gettimeofday(&tv);
+  return ((long)((tv.tv_sec - tv_orig.tv_sec)*TICKS_PER_SECOND
+		 + (tv.tv_usec - tv_orig.tv_usec)/(1000000/TICKS_PER_SECOND)));
+#elif defined(sgi)
+  struct timezone tz;
+  static struct timeval tb_origin;
+  static int initp = 0;
+  if (!initp) {
+    gettimeofday(&tb_origin, &tz);
+    initp = 1;
+  }
+  gettimeofday(&tb, &tz);
+  return ((long)((tv.tv_sec - tv_orig.tv_sec)*TICKS_PER_SECOND
+		 + (tv.tv_usec - tv_orig.tv_usec)/(1000000/TICKS_PER_SECOND)));
+#else /*! HAS_GETTIMEOFDAY*/
   struct timeb tb;
   static struct timeb tb_origin;
   static int initp = 0;
-
   if (!initp) {
     ftime(&tb_origin);
     initp = 1;
   }
-
   ftime(&tb);
   return((long)((tb.time - tb_origin.time) * TICKS_PER_SECOND
 		+ (tb.millitm / (1000 / TICKS_PER_SECOND))));
+#endif /*HAS_GETTIMEOFDAY */
 }
 
 long ps_ticks_per_second()
@@ -239,6 +270,13 @@ long TTrun_machine(proc)
   return TTreturn_value;
 }
 
+
+/* 
+   lookup_external_name(name, loc):
+   - On success, stores location in "loc" and returns 1.
+   - On failure, returns 0.
+ */
+
 extern char *object_file;   /* specified via a command line argument */
 extern char *reloc_file;    /* dynamic loading will set this */
 
@@ -264,6 +302,10 @@ char
 long
 lookup_external_name( char *name, long *location )
 {
+#ifdef HAS_DLOPEN
+  extern int lookup_dlsym(char*, long*);
+  return lookup_dlsym(name, location);
+#else /* !HAS_DLOPEN */
   char *reloc_info_file;
   struct nlist name_list[2];
   int status;
@@ -280,17 +322,14 @@ lookup_external_name( char *name, long *location )
 
   status = nlist(reloc_info_file, name_list);
 
-  if (status == 0) {
-    *location = name_list[0].n_value;
-    return(1);
-  }
-  else if (status == 1) {
-    return(0);
-  }
+  if (status != 0 || (name_list[0].n_value  == 0
+		      && name_list[0].n_type == 0))
+    return 0;
   else {
-    printf("Error during external name lookup: nlist failed\n");
-    return(0);
+    *location = name_list[0].n_value;
+    return 1;
   }
+#endif /*! HAS_DLOPEN */
 }
 
 /* temporary hack until this is added as a PreScheme primitive */

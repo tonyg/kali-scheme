@@ -157,7 +157,9 @@
 		  (call-with-current-continuation
 		    (lambda (terminate)
 		      (with-handler (lambda (c punt)
-				      (if (terminate? c) (terminate #t) (punt)))
+				      (if (terminate? c)
+					  (terminate 0)
+					  (punt)))
 			(lambda ()
 			  ;; Schedule-thread never returns.
 			  (schedule-thread (make-thread thunk
@@ -210,8 +212,7 @@
       (call-error "invalid argument" stop-thread thread)))
 
 (define (kill-thread thread)
-  (interrupt-thread thread (lambda ()
-			     (terminate-current-thread))))
+  (interrupt-thread thread terminate-current-thread))
 
 (define (interrupt-thread thread thunk)
   (if (thread? thread)

@@ -5,7 +5,8 @@
 
 (define (command-processor arg)
   (let ((in (current-input-port))
-	(out (current-output-port)))
+	(out (current-output-port))
+	(batch? (equal? arg "batch")))
     (let loop ()
       ((call-with-current-continuation
 	 (lambda (go)
@@ -13,12 +14,14 @@
 	       (lambda (c punt)
 		 (cond ((or (error? c) (interrupt? c))
 			(display-condition c out)
-			(go loop))
+			(go (if batch?
+				(lambda () 1)
+				loop)))
 		       ((warning? c)
 			(display-condition c out))
 		       (else (punt))))
 	     (lambda ()
-	       (display "- " out)
+	       (if (not batch?) (display "- " out))
 	       (let ((form (read in)))
 		 (cond ((eof-object? form)
 			(newline out)

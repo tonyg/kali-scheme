@@ -19,7 +19,7 @@
   (let* ((p (make-simple-package '() #f #f 'built-in-structures))
 	 (s (make-structure p
 		  (lambda ()
-		    (make-simple-signature
+		    (make-simple-interface
 		       #f			;name
 		       (cons 'built-in-structures (map car structs))))
 		  'built-in-structures)))

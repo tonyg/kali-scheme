@@ -6,33 +6,33 @@
 ; compiler, and linker.
 
 
-; Run-time structures: (cf. signature definition in packages.scm)
+; Run-time structures: (cf. interface definition in packages.scm)
 
 ; Same as in rts-packages.scm:
-(define-package ((architecture architecture-signature))
+(define-package ((architecture architecture-interface))
   (open scheme-level-1 signals enumerated)
   (files (rts arch)))
 
-(define-package ((define-record-types define-record-types-signature))
-  (open scheme-level-1 record)
+(define-package ((define-record-types define-record-types-interface))
+  (open scheme-level-1 records)
   (files (rts jar-defrecord)))
 (define-structure bummed-define-record-types define-record-types)
 
-(define-package ((closures closures-signature))
-  (open scheme-level-1 record)
+(define-package ((closures closures-interface))
+  (open scheme-level-1 records)
   (files (alt closure)))
 
 ; Same as in rts-packages.scm:
-(define-package ((enumerated enumerated-signature))
+(define-package ((enumerated enumerated-interface))
   (open scheme-level-1 signals)
   (files (rts enum)
 	 (rts defenum scm)))
 
-(define-package ((fluids fluids-signature))
+(define-package ((fluids fluids-interface))
   (open scheme-level-1 signals)
   (files (alt fluid)))
 
-(define-package ((locations locations-signature))
+(define-package ((locations locations-interface))
   (open scheme-level-2 signals)
   (files (alt locations)))
 
@@ -44,30 +44,30 @@
   (open scheme-level-1 fluids syntactic)
   (files (alt file-name)))  ;tiny file
 
-(define-package ((scheme-level-2 scheme-level-2-signature)
-		 (scheme-level-1 scheme-level-1-signature))
+(define-package ((scheme-level-2 scheme-level-2-interface)
+		 (scheme-level-1 scheme-level-1-interface))
   (open scheme))
 
-(define-package ((template template-signature))
+(define-package ((templates templates-interface))
   (open scheme-level-1)
   (files (alt template)
 	 (rts template)))
 
-(define-package ((util util-signature))
+(define-package ((util util-interface))
   (open scheme-level-1)
   (files (rts util)))
 
-(define-package ((weak weak-signature))
+(define-package ((weak weak-interface))
   (open scheme-level-1 signals)
   (files (alt weak)
 	 (rts population)))
 
 (define-package ((write-images (export write-image)))
   (open scheme-level-2
-	table			;Forward reference
+	tables			;Forward reference
 	features bitwise ascii enumerated
 	architecture
-	template
+	templates
 	closures
 	signals)
   (files (link data)
@@ -76,13 +76,13 @@
 
 
 ; --------------------
-; Run-time internal structures: (cf. signature definition in packages.scm)
+; Run-time internal structures: (cf. interface definition in packages.scm)
 
-; condition            - same as run-time's
-; continuation	       - same as run-time's
+; conditions           - same as run-time's
+; continuations	       - same as run-time's
 ; display-conditions   - same as run-time's
 
-(define-package ((escapes escapes-signature))
+(define-package ((escapes escapes-interface))
   (open scheme-level-2 define-record-types signals)
   (files (alt escape)))
 
@@ -91,35 +91,35 @@
 ; generics	       - same as run-time's
 ; interrupts	       - no way
 
-(define-package ((low-level low-level-signature)
+(define-package ((low-level low-level-interface)
 		 (silly (export really-string->symbol reverse-list->string)))
   (open scheme-level-2 signals escapes)
   (files (alt low)))
 
 ; number-i/o	       - ?
-; port		       - ?
+; ports		       - ?
 
 ; These are mentioned in more-packages.scm:
-;  reading wind exception record-internal number-i/o strucure-refs
-;  fluids-internal port
+;  reading wind exception records-internal number-i/o strucure-refs
+;  fluids-internal ports
 
-(define-package ((alt-primitives primitives-signature)
+(define-package ((alt-primitives primitives-interface)
 		 (primitives-internal (export maybe-handle-interrupt
 					      raise-exception
 					      get-exception-handler
 					      ?start)))
   (open scheme-level-2
-	bitwise record
+	bitwise records
 	features
 	signals
-	template)
+	templates)
   (files (alt primitives)
 	 (alt weak)
 	 (alt contin)))
 
-; port		       - ?
+; ports		       - ?
 ; reading	       - ?
-; record-internal      - ?
+; records-internal      - ?
 ; scheme-level-2-internal  - no way
 ; shadowing	       - no way
 ; structure-refs       - ?

@@ -6,13 +6,13 @@
 
 ; "Level 1"
 
-(define-package ((scheme-level-1 scheme-level-1-signature)
-		 (scheme-level-1-internal scheme-level-1-internal-signature)
-		 (bitwise bitwise-signature)
-		 (util util-signature)
-		 (signals signals-signature)
-		 (features features-signature)
-		 (ascii ascii-signature)
+(define-package ((scheme-level-1 scheme-level-1-interface)
+		 (scheme-level-1-internal scheme-level-1-internal-interface)
+		 (bitwise bitwise-interface)
+		 (util util-interface)
+		 (signals signals-interface)
+		 (features features-interface)
+		 (ascii ascii-interface)
 		 (structure-refs (export structure-ref)))
   (open primitives)
   (usual-transforms)

@@ -1,9 +1,9 @@
 ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
-; Stub support for DEFINE-PACKAGE and DEFINE-SIGNATURE macros.
+; Stub support for DEFINE-PACKAGE and DEFINE-INTERFACE macros.
 
-; Signatures are ignored.  Only dependencies are significant.
+; Interfaces are ignored.  Only dependencies are significant.
 
 
 (define (load-configuration filename . rest)
@@ -43,23 +43,23 @@
 
 ; --------------------
 
-(define (make-indirect-signature name thunk)
+(define (make-indirect-interface name thunk)
   (thunk))
 
 
-(define (make-simple-signature name items)
+(define (make-simple-interface name items)
   (cons 'export items))
 
-(define (make-compound-signature name . sigs)
-  (cons 'compound-signature sigs))
+(define (make-compound-interface name . sigs)
+  (cons 'compound-interface sigs))
 
 
 ; Structures are views into packages.
-; In this implementation, signature information is completely ignored.
+; In this implementation, interface information is completely ignored.
 
 (define-syntax make-structure
   (syntax-rules ()
-    ((make-structure package signature name)
+    ((make-structure package interface name)
      (vector '<structure> name package))))
 
 (define (structure-name s) (vector-ref s 1))

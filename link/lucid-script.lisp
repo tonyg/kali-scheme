@@ -1,10 +1,11 @@
 
 ; Script to load the Scheme48 linker into Lucid Common Lisp.
+; Not tested recently.
 
 (defvar pseudoscheme-directory "../pseudo/")
 (load (string-append pseudoscheme-directory "loadit"))
 (setq *use-scheme-read* t)
-(load-pseudoscheme (string-append pseudoscheme-directory))
+(load-pseudoscheme pseudoscheme-directory)
 
 (progn (revised^4-scheme::define-sharp-macro #\.
 	 #'(lambda (c port)
@@ -25,13 +26,12 @@
 
 (benchmark-mode)
 
-(load "defpackage.scm")
-(load "flatload.scm")
-(load-configuration "alt-packages.scm")
-(load-configuration "comp-packages.scm")
-(load-configuration "more-packages.scm")
+(load "alt/config.scm")
+(load "alt/flatload.scm")
+(load "bcomp/defpackage.scm")
+(load-configuration "packages.scm")
 
-
+(flatload linker-structures)
 
 ; Make no more bootstrap structures - clobber its definition as syntax.
 (define (make-structure . rest) (error "make-structure" rest))
@@ -40,16 +40,15 @@
   (let ((#.'ps:*scheme-read* #.'#'ps::scheme-read-using-commonlisp-reader))
     (load "alt/pseudoscheme-record")
     (load "alt/pseudoscheme-features"))
-  ;; Inhibit FLATLOAD from loading the vanilla versions of the packages that
-  ;; we have just made available.
-  (inhibit-usual-structures!)
-  (flatload-package linker-etc))
+  (flatload link-config))
 
-(define-syntax struct-list    ;not in config.sbin
+(load "alt/init-defpackage.scm")
+(set! *package-uid* 0)
+
+(define-syntax struct-list    ;not in link.sbin
   (syntax-rules ()
     ((struct-list name ...) (list (cons 'name name) ...))))
-(set-kludge-eval-for-syntax! (lambda () eval-for-syntax))
-(reset-packages-state!)
+
 (quit)
 
 (defun disksave-restart-function ()

@@ -61,7 +61,7 @@
 		    (set! *initial-bindings*
 			  (cons (cons name loc) *initial-bindings*))
 		    loc))))
-    (set-location-defined?! loc #t)
+    ;; (set-location-defined?! loc #t)  - obsolescent?
     (set-contents! loc val)))
 
 (for-each (lambda (name val)

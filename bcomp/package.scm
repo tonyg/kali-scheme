@@ -7,10 +7,10 @@
 ; Structures
 
 (define-record-type structure type/structure
-  (really-make-structure package signature-thunk signature clients name)
+  (really-make-structure package interface-thunk interface clients name)
   structure?
-  (signature-thunk structure-signature-thunk)
-  (signature structure-signature-really set-structure-signature!)
+  (interface-thunk structure-interface-thunk)
+  (interface structure-interface-really set-structure-interface!)
   (package   structure-package)    ; allow #f
   (clients   structure-clients)
   (name	     structure-name))
@@ -20,17 +20,17 @@
 		    (package-uid (structure-package s))
 		    (structure-name s))))
 
-(define (structure-signature s)
-  (or (structure-signature-really s)
+(define (structure-interface s)
+  (or (structure-interface-really s)
       (begin (initialize-structure! s)
-	     (structure-signature-really s))))
+	     (structure-interface-really s))))
 
 (define (initialize-structure! s)
-  (let ((sig ((structure-signature-thunk s))))
-    (if (signature? sig)
-	(begin (set-structure-signature! s sig)
-	       (note-reference-to-signature! sig s))
-	(call-error "invalid signature" initialize-structure! s))))
+  (let ((sig ((structure-interface-thunk s))))
+    (if (interface? sig)
+	(begin (set-structure-interface! s sig)
+	       (note-reference-to-interface! sig s))
+	(call-error "invalid interface" initialize-structure! s))))
 
 (define (make-structure package sig-thunk name)
   (if (not (package? package))
@@ -49,7 +49,7 @@
   (package-unstable? (structure-package struct)))
 
 (define (for-each-export proc struct)
-  (let ((sig (structure-signature struct)))
+  (let ((sig (structure-interface struct)))
     (for-each-declaration
         (lambda (name want-type)
 	  (let ((binding (structure-lookup struct name #t)))
@@ -260,7 +260,7 @@
 ; Exported names
 
 (define (structure-lookup struct name integrate?)
-  (let ((type (signature-ref (structure-signature struct) name)))
+  (let ((type (interface-ref (structure-interface struct) name)))
     (if type
 	(let ((probe (really-package-lookup (structure-package struct)
 					    name
@@ -395,7 +395,7 @@
       (if (not (table-ref (package-definitions p) name))
 	  (let loop ((opens (package-opens p)))
 	    (if (not (null? opens))
-		(if (signature-ref (structure-signature (car opens))
+		(if (interface-ref (structure-interface (car opens))
 				   name)
 		    (begin (table-set! (package-cached p) name place)
 			   (package-note-caching

@@ -2,8 +2,166 @@
 /* Dynamic loading.  Copyright unclear. */
 
 #include <stdio.h>
+#include "scheme48.h"
 
-#if !defined(__hpux) && !defined(NeXT)
+/* 
+   Hey folks, please help us out with conditions under which the
+   ANCIENT_DYNLOAD and/or HAS_DLOPEN code might work.  About all we
+   know is that ANCIENT_DYNLOAD worked once upon a time on the DEC
+   MIPS (how to conditionalize for that I don't know -- #ifdef ultrix
+   perhaps?), is very similar to something that worked under BSD 4.2,
+   and doesn't work under HPUX, NeXT, or SGI.
+ */
+#if defined(ultrix)
+#define ANCIENT_DYNLOAD
+#endif
+
+#if defined(svr4) || defined(SVR4) || defined (__svr4__) || defined(sun) 
+#define HAS_DLOPEN
+#endif /*svr4*/
+
+
+#if defined(HAS_DLOPEN)
+
+/*-------------------------------------------------------------------
+   Following is the preferred modern method, supposedly.  dlopen() is
+   some kind of newfangled SYSV thing.  This code was contributed by
+   Basile Starynkevitch <basile@soleil.serma.cea.fr> in October 1993 --
+   thanks!
+ */
+
+#if defined(svr4) || defined(SVR4) || defined(__svr4__)
+#define HAS_LIBGEN
+#endif
+
+#include <stdlib.h>
+#include <unistd.h>
+#include <dlfcn.h>
+
+#ifdef HAS_LIBGEN
+#include <libgen.h>
+/* if we have pathfind, get the file name with $LD_LIBRARY_PATH or $S48_EXTERN_PATH */
+static char *shared_object_name(char *name)
+{
+  char *res=0;
+  res = pathfind(getenv("LD_LIBRARY_PATH"), name, "r");
+  if (res) 
+    return res;
+  res = pathfind(getenv("S48_EXTERN_PATH"), name, "r");
+  if (res) 
+    return res;
+  return name;
+} /* end of shared_object_name */
+#define SHARED_OBJECT_NAME(Name) shared_object_name(Name)
+#else /* no HAS_LIBGEN */
+#define SHARED_OBJECT_NAME(Name) (Name)
+#endif /*HAS_LIBGEN*/
+
+
+#ifndef MAXNB_DLOPEN
+#define MAXNB_DLOPEN 40
+#endif MAXNB_DLOPEN
+
+#ifndef S48_DLOPEN_MODE
+/* SunoS5 & SVR4 define RTLD_NOW */
+#ifdef RTLD_NOW
+#define S48_DLOPEN_MODE RTLD_NOW
+#else 
+/* SunOS4 just says that mode should be 1 ie RTLD_LAZY */
+#define S48_DLOPEN_MODE 1
+#endif /*RTLD_NOW*/
+#endif /*!S48_DLOPEN_MODE*/
+
+static void* dlopened_handle[MAXNB_DLOPEN];
+
+/* with dlopen the only user argument is the full shared object name */
+int
+dynamic_load(char*sharedobjname)
+{
+  char pathname[520];
+  int  rank= -1;
+  int cnt;
+  void *newhandle;
+  pathname[0]='\0';
+  strncpy(pathname, SHARED_OBJECT_NAME(sharedobjname), sizeof(pathname)-1);
+  pathname[sizeof(pathname)-1]='\0';
+  /* find an unused slot */
+  for (cnt=0; cnt<MAXNB_DLOPEN; cnt++)
+    if (!dlopened_handle[cnt]) {
+      rank=cnt;
+      break;
+    }
+  if (rank<0) {
+    fprintf(stderr,
+	    " dynamic_load - table of dlopened handles is full (MAXNB_DLOPEN=%d) ",
+	    MAXNB_DLOPEN);
+    return -1;
+  };
+  newhandle=dlopen(pathname, S48_DLOPEN_MODE);
+  if (!newhandle) {
+    fprintf(stderr, " dynamic_load of %s can't dlopen %s: %s ",
+	    sharedobjname, pathname, dlerror());
+    return -1;
+  };
+  dlopened_handle[rank] = newhandle;
+#ifdef DLDEBUG
+  printf(" %s:%d %s sharedobjname='%s' pathname='%s' handle %#x rank=%d \n",
+	 __FILE__, __LINE__, __FUNCTION__, 
+	 sharedobjname, pathname, newhandle, rank);
+#endif /*DLDEBUG*/
+  return 0;
+} /*------end of dlopening dynamic load -----*/
+
+/* this function implements lookup_external_name with dlsym */
+long
+lookup_dlsym(char *name, long *location)
+{
+  void *adr;
+  static void *selfhandle;
+  int rank;
+/* perhaps i should scan the dlopened_handle from last to first,
+   to find newest incarnation of symbol? in practice it should be faster
+   to go from first (oldest) to last,
+   and i hope that every external symbol is defined exactly once most of
+   the time!*/
+  for (rank=0; rank<MAXNB_DLOPEN; rank++)
+    if (dlopened_handle[rank] && (adr=dlsym(dlopened_handle[rank], name))) {
+      *location = (long) adr;
+#ifdef DLDEBUG
+  printf(" %s:%d %s name='%s' in rank=%d at adr=%#x\n",
+	 __FILE__, __LINE__, __FUNCTION__, 
+	 name, rank, (long) adr);
+#endif /*DLDEBUG*/
+      return 1;
+    };
+  /* find the name in the self process image - ie original scheme48
+     executable file */
+  if (!selfhandle) 
+    selfhandle=dlopen((char*)0, S48_DLOPEN_MODE);
+  if (adr=dlsym(selfhandle, name)) {
+    *location = (long) adr;
+#ifdef DLDEBUG
+  printf(" %s:%d %s name='%s' in self at adr=%#x\n",
+	 __FILE__, __LINE__, __FUNCTION__, 
+	 name, (long) adr);
+#endif /*DLDEBUG*/
+    return 1;
+  };
+  /* can't find name so return 0 */
+#ifdef DLDEBUG
+  printf(" %s:%d %s name='%s' not found\n",
+	 __FILE__, __LINE__, __FUNCTION__, 
+	 name);
+#endif /*DLDEBUG*/
+  return 0;
+} /*----end of lookup_dlsym ---*/
+
+#elif defined(ANCIENT_DYNLOAD)
+
+/*-------------------------------------------------------------------
+   This is the ancient Berkeley method for dynamic loading, using the
+   disgusting -A flag to "ld".
+ */
 
 #include <a.out.h>
 #include <sys/types.h>      /* sbrk   */
@@ -57,47 +215,12 @@ dynamic_load( char *user_args )
   return(0);
 }
 
-/* stub for the above that can be called from Scheme48 */
-
-/* this stuff should be in an automatically generated .h file */
-#define S48_FALSE 1L
-#define S48_TRUE 5L
-#define S48_HEADER_TAG 2
-#define S48_STOB_TAG 3
-#define S48_STRING_TYPE 15
-
-long
-s48_dynamic_load( long nargs, long *argv )
-{
-  long arg, header;
-  char *user_args;
-
-  if (nargs != 1)
-    return(S48_FALSE);
-
-  arg = argv[0];
-  
-  if (arg & 3 != S48_STOB_TAG)
-    return(S48_FALSE);
-
-  header = (*((long *)(arg - S48_STOB_TAG - 4)));
-  user_args = (char *)(arg - S48_STOB_TAG);
-
-  if (((header & 3) != S48_HEADER_TAG) ||
-      (((header >> 2) & 31) != S48_STRING_TYPE))
-    return(S48_FALSE);
-
-  if (0 == dynamic_load(user_args))
-    return(S48_TRUE);
-  else
-    return(S48_FALSE);
-}
-
 /*
 
-  This executes an `ld' command that links `user_args' into `output_file',
-  including relocation information from `reloc_info_file'.  `output_file'
-  is then loaded into the current process.
+  really_dynamic_load() executes an `ld' command that links
+  `user_args' into `output_file', including relocation information
+  from `reloc_info_file'.  `output_file' is then loaded into the
+  current process.
 
   `output_file' can then be used as `reloc_info_file' for subsequent
   dynamic loads.
@@ -316,13 +439,39 @@ abort_load( char *command, FILE *file_desc, char *filename )
       fprintf(stderr, "unable to delete file %s\n", filename);
 }
 
-#else
+
+#else /* !ANCIENT_DYNLOAD */
+
+/*-------------------------------------------------------------------
+   Dummy definition in case we don't have a clue.
+ */
+
 int
 dynamic_load( char *user_args )
 {
-  fprintf(stderr, "Dynamic .o loading not implemented under HP-UX\n");
+  fprintf(stderr, "Dynamic .o loading not implemented\n");
   return -1;
 }
 
-#endif /* not hpux and not next */
+#endif
 
+
+/* Stub for dynamic_load() that can be called from Scheme using
+   external call interface */
+
+scheme_value
+s48_dynamic_load( long nargs, scheme_value *argv )
+{
+  scheme_value arg;
+
+  if (nargs != 1) return(SCHFALSE);
+
+  arg = argv[0];
+  
+  if (!stringp(arg)) return(SCHFALSE);
+
+  if (0 == dynamic_load(&string_ref(arg, 0)))
+    return(SCHTRUE);
+  else
+    return(SCHFALSE);
+}

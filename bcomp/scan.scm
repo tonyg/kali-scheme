@@ -225,9 +225,9 @@
 	   (if (binding? binding)
 	       (let ((have-type (binding-type binding)))
 		 (if (not (compatible-types? have-type want-type))
-		     (warn "Type in signature doesn't match binding"
+		     (warn "Type in interface doesn't match binding"
 			   name
-			   `(binding: ,have-type signature: ,want-type)
+			   `(binding: ,have-type interface: ,want-type)
 			   s)))
 	       (set! undefined (cons name undefined))))
 	 s)

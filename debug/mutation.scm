@@ -7,7 +7,7 @@
 "
 ,translate =scheme48/ ./
 ,open packages compiler built-in-structures handle condition
-,open signatures table defpackage package-mutation
+,open interfaces table defpackage package-mutation
 "
 
 (define (try exp env . should-return-option)
@@ -35,7 +35,7 @@
 (try '(foo) p1 'bb)
 
 
-(define s1-sig (make-simple-signature 's1-sig '(((a b c d e f) value))))
+(define s1-sig (make-simple-interface 's1-sig '(((a b c d e f) value))))
 (define s1 (make-structure p1 (lambda () s1-sig) 's1))
 
 (define p2 (make-simple-package (list s1 scheme) eval #f 'p2))
@@ -100,7 +100,7 @@
 
 ; (set-verify-later! really-verify-later!)
 
-(define-signature s3-sig (export a b x y z))
+(define-interface s3-sig (export a b x y z))
 
 (define s3
   (make-structure p1 (lambda () s3-sig) 's3))
@@ -113,7 +113,7 @@
 (try '(fuu2) p4 'error)
 
 ; Remove a, add d
-(define-signature s3-sig (export b d x y z))
+(define-interface s3-sig (export b d x y z))
 ;(package-system-sentinel)
 
 (try 'a p4 'error)

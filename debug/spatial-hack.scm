@@ -27,16 +27,16 @@
 
 ((*structure-ref spatial 'init-space) eval assembler)
 
-(define-signature define-record-types-signature
+(define-interface define-record-types-interface
   (export (define-record-type syntax)
 	  define-record-discloser))
-(define-package ((define-record-types define-record-types-signature))
+(define-package ((define-record-types define-record-types-interface))
   (open scheme-level-1 record)
   (files (rts jar-defrecord)))
-(define-signature queue-signature
+(define-interface queue-interface
   (export make-queue enqueue dequeue queue-empty?
 	  queue? queue->list queue-length delete-from-queue!))
-(define-package ((queues queue-signature))
+(define-package ((queues queue-interface))
   (open scheme-level-1 define-record-types signals)
   (files (big queue))
   (optimize auto-integrate))

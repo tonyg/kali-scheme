@@ -1,5 +1,5 @@
 .TH LS48 1
-.\" File scheme48.man:  Manual page template for Scheme48.
+.\" File scheme48.man:  Manual page template for Scheme 48.
 .\" Replace LS48 with the name of your default image and LLIB with the
 .\" directory containing scheme48vm and default image.
 .SH NAME
@@ -13,7 +13,7 @@ is an implementation of the Scheme programming language as described in
 the
 .I "Revised^4 Report on the Algorithmic Language Scheme."
 A runnable system requires two parts, an executable program that implements
-the Scheme48 virtual machine, and an image that is used to initialize
+the Scheme 48 virtual machine, and an image that is used to initialize
 the store of the virtual machine.
 .B LS48
 is a shell script that starts the virtual machine with an image that runs
@@ -32,11 +32,12 @@ The
 .B \-h
 option causes 
 .IR heapsize
-bytes to be allocated for both semispaces of the copying garbage collector.
-Cons cells are currently 12 bytes, so if you want to make
-sure you can allocate, say, a million cons cells, you should specify 
+words to be allocated for both semispaces of the copying garbage
+collector.  One word is four bytes.  Cons cells are currently 3 words,
+so if you want to make sure you can allocate, say, a million cons
+cells, you should specify
 .B \-h
-24000000 (actually a little more, to account for the initial heap
+6000000 (actually a little more, to account for the initial heap
 image and breathing room).
 .PP
 The 

@@ -82,11 +82,11 @@
 ; These will work for any code loaded subsequently...
 
 (define (input-port? thing)
-  (or ((structure-ref port input-port?) thing)
+  (or ((structure-ref ports input-port?) thing)
       (extensible-input-port? thing)))
 
 (define (output-port? thing)
-  (or ((structure-ref port output-port?) thing)
+  (or ((structure-ref ports output-port?) thing)
       (extensible-output-port? thing)))
 
 ; Other methods
@@ -167,4 +167,4 @@
 									 
 
 
-(define force-output (structure-ref port force-output))
+(define force-output (structure-ref ports force-output))

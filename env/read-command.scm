@@ -97,11 +97,15 @@
 	  ((null? ds)
 	   (read-command-error port "too many command arguments"))
 	  ((eq? (car ds) '&rest)
-	   (cons (read-command-argument (cadr ds) port)
-		 (read-command-arguments ds #f port)))
+	   (let ((arg (read-command-argument (cadr ds) port)))
+	     (cons arg (read-command-arguments ds #f port))))
+	  ((eq? (car ds) 'command)     ; must be the last argument
+	   (if (not (null? (cdr ds)))
+	       (error "invalid argument descriptions" ds))
+	   (list (read-command #f (form-preferred?) port)))
 	  (else
-	   (cons (read-command-argument (car ds) port)
-		 (read-command-arguments (cdr ds) opt? port))))))
+	   (let ((arg (read-command-argument (car ds) port)))
+	     (cons arg (read-command-arguments (cdr ds) opt? port)))))))
 
 (define (read-command-argument d port)
   (case d

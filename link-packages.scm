@@ -5,9 +5,9 @@
 ; screwed up), so it's probably better to continue using linker.image
 ; instead.
 
-(define-package ((linker linker-signature))
+(define-package ((linker linker-interface))
   (open scheme-level-2
-	table compiler write-images debuginfo
+	tables compiler write-images debuginfo
 	packages
 	packages-internal       ;set-package-integrate?!
 	scan
@@ -30,18 +30,18 @@
 	syntactic		;name-hash, etc.
 	meta-types			;usual-variable-type
 	locations
-	table record
+	tables records
 	signals			;error
 	features		;force-output
 	util			;filter
 	inline)			;name->extrinsic
   (files (link reify)))
 
-(define-package ((expander expander-signature))
+(define-package ((expander expander-interface))
   (open scheme-level-2
 	syntactic packages scan meta-types reconstruction
 	bummed-define-record-types
-	util signals table fluids)
+	util signals tables fluids)
   (files (opt expand)))
 
 (define-package ((analysis (export analyze-forms)))
@@ -52,7 +52,7 @@
 	signals
 	locations
 	features		;force-output
-	table
+	tables
 	fluids
 	util)
   (files (opt analyze)))
@@ -61,9 +61,9 @@
 ; Database of procedure names 'n' stuff.
 ; (copy in more-packages.scm ...)
 
-(define-package ((debuginfo debuginfo-signature))
+(define-package ((debuginfo debuginfo-interface))
   (open scheme-level-2
-	table
+	tables
 	debug-data
 	packages
 	packages-internal
@@ -94,5 +94,5 @@
 	analysis
 	loadc
 	flatloading
-	signatures))
+	interfaces))
 
