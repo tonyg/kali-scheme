@@ -5,14 +5,14 @@ set srcdir_cooked=%~f1
 set srcdir_cooked=%srcdir_cooked:\=\\%
 set lib=%~f2
 set lib=%lib:\=\\%
-set image=%3
+set image=%~3
 set vm=%4
-set builddate=%~t4
 set initial=%5
+set builddate=%~t5
 
-echo ,load "%srcdir_cooked%/scheme/env/init-defpackage.scm" > %srcdir%\build\build-usual-image.input
+echo ,load "%srcdir_cooked%scheme/env/init-defpackage.scm" > %srcdir%\build\build-usual-image.input
 echo ((*structure-ref filenames 'set-translation!) >> %srcdir%\build\build-usual-image.input
-echo  "=scheme48/" "%srcdir_cooked%/scheme/") >> %srcdir%\build\build-usual-image.input
+echo  "=scheme48/" "%srcdir_cooked%scheme/") >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/more-interfaces.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/link-packages.scm >> %srcdir%\build\build-usual-image.input
@@ -31,7 +31,7 @@ echo      (structure-package usual-commands) >> %srcdir%\build\build-usual-image
 echo      (list "batch")) >> %srcdir%\build\build-usual-image.input
 echo (ensure-loaded usual-features) >> %srcdir%\build\build-usual-image.input
 echo ,structure more-structures more-structures-interface >> %srcdir%\build\build-usual-image.input
-echo ,in debuginfo (read-debug-info "%srcdir_cooked%/build/initial.debug") >> %srcdir%\build\build-usual-image.input
+echo ,in debuginfo (read-debug-info "%srcdir_cooked%build/initial.debug") >> %srcdir%\build\build-usual-image.input
 echo ,keep maps source files >> %srcdir%\build\build-usual-image.input
 echo ,translate =scheme48/ "%lib%/" >> %srcdir%\build\build-usual-image.input
 echo ,build ((*structure-ref package-commands-internal >> %srcdir%\build\build-usual-image.input
