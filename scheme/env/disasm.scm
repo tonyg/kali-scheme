@@ -264,6 +264,13 @@
 	      (else
 	       (error "unknown protocol" protocol)))))
 
+; pc -> (enum op cont-data)
+; size = gc-mask-size + 8
+; gc mask ...
+; offset = pc + size
+; gc mask size (1 byte)
+; frame size
+
 (define (display-cont-data pc code)
   (let* ((size (get-offset code (+ pc 1)))
 	 (gc-mask-size (code-vector-ref code (- (+ pc size) 3)))
