@@ -578,6 +578,7 @@
 (define-interface threads-interface
   (export thread?
 	  thread-name thread-uid        ;for debugging
+	  current-thread
 
 	  spawn
 	  relinquish-timeslice
@@ -590,9 +591,8 @@
 	  thread-continuation           ;debugger
 	  thread-uid->thread            ;expensive!
 	  thread-scheduler set-thread-scheduler!
+	  thread-dynamic-env set-thread-dynamic-env!
 	  set-thread-arguments!
-
-	  current-thread
 
 	  event-pending?
 	  get-next-event!

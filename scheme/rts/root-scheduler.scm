@@ -30,8 +30,9 @@
 	(thread-count (make-counter))
 	(safe-dynamic-env (with-handler root-handler get-dynamic-env))
 	(thread (make-thread thunk
-			     (get-dynamic-env)
 			     'scheduler-initial-thread)))
+    (set-thread-scheduler! thread (current-thread))
+    (set-thread-dynamic-env! thread (get-dynamic-env))
     (increment-counter! thread-count)
     (enqueue! runnable thread)
     (round-robin-event-handler

@@ -60,12 +60,16 @@
 ; run queue.
 
 (define (spawn-on-command-level level thunk id)    
-  (let ((thread (make-thread thunk (command-level-dynamic-env level) id)))
-    (set-thread-scheduler! thread (command-thread))
-    (set-thread-data! thread level)
-    (enqueue! (command-level-queue level) thread)
-    (increment-counter! (command-level-thread-counter level))
+  (let ((thread (make-thread thunk id)))
+    (spawn-thread-on-command-level level thread)
     thread))
+
+(define (spawn-thread-on-command-level level thread)
+  (set-thread-dynamic-env! thread (command-level-dynamic-env level))
+  (set-thread-scheduler! thread (command-thread))
+  (set-thread-data! thread level)
+  (enqueue! (command-level-queue level) thread)
+  (increment-counter! (command-level-thread-counter level)))
 
 ; Add a new REPL thread to LEVEL.
 
@@ -312,7 +316,7 @@
     (lambda (event args)
       (enum-case event-type event
 	((spawned)
-	 (spawn-on-command-level level (car args) (cadr args))
+	 (spawn-thread-on-command-level level (car args))
 	 #t)
 	((runnable)
 	 (let* ((thread (car args))

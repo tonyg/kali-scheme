@@ -97,10 +97,10 @@
 	   (enqueue! runnable (car event-data)))
 	  ((spawned)
 	   (increment-counter! thread-count)
-	   (enqueue! runnable
-			    (make-thread (car event-data)
-					 dynamic-env
-					 (cadr event-data))))
+	   (let ((thread (car event-data)))
+	     (set-thread-dynamic-env! thread dynamic-env)
+	     (set-thread-scheduler! thread (current-thread))
+	     (enqueue! runnable thread)))
 	  ((no-event)
 	   (values))
 	  (else

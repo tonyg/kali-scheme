@@ -47,7 +47,8 @@
   thread?
 
   ; These first three fields hold dynamic data used by various VM opcodes.
-  (dynamic-env    thread-dynamic-env)   ;Must be first!  (See fluid.scm)
+  (dynamic-env    thread-dynamic-env set-thread-dynamic-env!)
+					;Must be first!  (See fluid.scm)
   (dynamic-point  thread-dynamic-point set-thread-dynamic-point!)
   					;Must be second! (See fluid.scm)
   (proposal       thread-proposal)	;Must be third!  (See fluid.scm)
@@ -83,13 +84,13 @@
 
 (define *thread-uid* 0)
 
-(define (make-thread thunk dynamic-env name)
-  (let ((thread (really-make-thread dynamic-env
+(define (make-thread thunk name)
+  (let ((thread (really-make-thread #f		     ; dynamic-env
 				    #f               ; dynamic-point root
 				    #f		     ; proposal
 				    (thunk->continuation
 				     (thread-top-level thunk))
-				    (current-thread) ; scheduler
+				    #f 		     ; scheduler
 				    #f               ; cell
 				    '()              ; arguments
 				    #f               ; events
@@ -630,10 +631,12 @@
       (thunk)))
 
 (define (spawn-on-scheduler scheduler thunk . id)
-  (schedule-event scheduler
-		  (enum event-type spawned)
-		  thunk
-		  (if (null? id) #f (car id))))
+  (let ((thread (make-thread thunk
+			     (if (null? id) #f (car id)))))
+    (schedule-event scheduler
+		    (enum event-type spawned)
+		    thread)
+    thread))
 
 ; Enqueue a RUNNABLE event for THREAD's scheduler.
 
@@ -734,9 +737,8 @@
 	       (lambda ()
 		 (set! *thread-uid* 0)
 		 (let ((thread (make-thread #f    ; thunk
-					    (get-dynamic-env)
 					    'initial-thread)))
-		   (set-thread-scheduler! thread #f)
+		   (set-thread-dynamic-env! thread (get-dynamic-env))
 		   (set-thread-time! thread #f)
 		   (set-thread-dynamic-point! thread (get-dynamic-point))
 		   (set-current-thread! thread)
