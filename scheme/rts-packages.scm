@@ -328,7 +328,7 @@
 	(subset wind            (call-with-current-continuation))
 	(subset channel-i/o	(waiting-for-i/o?
 				 initialize-channel-i/o!
-				 abort-unwanted-i/o!))
+				 abort-unwanted-reads!))
 	(modify primitives      (rename (wait primitive-wait))
 		                (expose wait unspecific)))
   (files (rts root-scheduler)))

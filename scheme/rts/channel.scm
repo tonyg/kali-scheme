@@ -105,7 +105,7 @@
 ; This should check the list for condvars which have no waiters.
 
 (define (waiting-for-i/o?)
-  (abort-unwanted-i/o!)
+  (abort-unwanted-reads!)
   (not (null? (channel-condvars))))
 
 ;----------------
@@ -151,9 +151,20 @@
 		   (else
 		    (loop (cdr condvars) condvars))))))))
   
-; Abort the i/o operations for any channel whose condvar no longer has waiters.
+; Abort the read operations for any channel whose condvar no longer has waiters.
 
-(define (abort-unwanted-i/o!)
+; The main purpose of ABORT-UNWANTED-READS is to abort reads after the
+; reading threads have died.  The Scheme process sticks around until
+; all I/O has been completed and there is no point in waiting for a
+; read if no one wants the result.
+
+; One upon a time, the intention was to have this procedure abort
+; unwanted writes as well.  However, we must not abort writes which
+; come from the automatic buffer flushing routine, which is hard to
+; detect here.  Moreover, the automatic buffer flushing is currently
+; hard to abort.
+
+(define (abort-unwanted-reads!)
   (let ((ints (disable-interrupts!)))
     (let loop ((condvars (channel-condvars)) (okay '()))
       (if (null? condvars)
@@ -162,7 +173,8 @@
 	    (set-enabled-interrupts! ints))
 	  (let ((condvar (cdar condvars)))
 	    (loop (cdr condvars)
-		  (if (condvar-has-waiters? condvar)
+		  (if (or (not (input-channel? (caar condvars)))
+			  (condvar-has-waiters? condvar))
 		      (cons (car condvars) okay)
 		      (begin
 			(channel-abort (caar condvars))

@@ -560,7 +560,7 @@
 
 	  initialize-channel-i/o!       ;scheduler
 	  waiting-for-i/o?              ;scheduler
-	  abort-unwanted-i/o!		;scheduler
+	  abort-unwanted-reads!		;scheduler
 
 	  ; call this with interrupts disabled
 	  wait-for-channel))		;big/socket.scm

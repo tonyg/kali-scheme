@@ -16,7 +16,7 @@
 					 quantum
 					 abort)
 				      (lambda ()
-					(abort-unwanted-i/o!)
+					(abort-unwanted-reads!)
 					(spawn-output-forcers #t)
 					(wake-some-threads))
 				      housekeeping-quantum)
