@@ -663,7 +663,7 @@
   (let ((ints (set-enabled-interrupts! 0)))
     (cond ((maybe-commit)
 	   (if (queue? thread-or-queue)
-	       (make-threads-ready thread-or-queue)
+	       (apply make-threads-ready thread-or-queue args)
 	       (apply make-ready thread-or-queue args))
 	   (set-enabled-interrupts! ints)
 	   #t)
@@ -686,13 +686,13 @@
 ; Make all of the threads on QUEUE ready (and don't run any of them until
 ; all have been processed).
 
-(define (make-threads-ready queue)
+(define (make-threads-ready queue . args)
   (let loop ()
     (if (queue-empty? queue)
 	(maybe-suspend)
 	(let ((thread (cell-ref (dequeue! queue))))
 	  (if thread
-	      (make-ready thread))
+	      (apply make-ready thread args))
 	  (loop)))))
 
 ;----------------
