@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; A dirty little inspector.
@@ -26,10 +26,10 @@
   (cons (cons position menu) stack))
 (define $inspector-state (make-fluid (make-inspector-state '() 0 '())))
 
-(define-command-syntax 'inspect "<exp>" "inspector (? for help)"
+(define-command-syntax 'inspect "[<exp>]" "invoke the inspector"
   '(&opt form))
 
-(define-command-syntax 'debug "" "inspect the stack" '())
+(define-command-syntax 'debug "" "inspect the current continuation" '())
 
 (define (debug)
   (showing-focus-object
@@ -376,7 +376,8 @@
 	    (loop (debug-data-parent dd)))
 	#f)))
 
-(define-command-syntax 'where "<procedure>" "show source file name"
+(define-command-syntax 'where "[<procedure>]"
+  "show procedure's source file name"
   '(&opt expression))
 
 (define (where . maybe-exp)

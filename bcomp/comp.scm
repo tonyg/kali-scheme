@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; This is file comp.scm.
@@ -34,17 +34,12 @@
 ; Main dispatch for compiling a single expression.
 
 (define (compile exp cenv depth cont)
-  (let* ((node (classify exp cenv))
-	 (node (if *type-check?*
-		   (type-check node cenv)
-		   node)))
+  (let ((node (type-check (classify exp cenv) cenv)))
     ((operator-table-ref compilators (node-operator-id node))
      node
      cenv
      depth
      cont)))
-(define *type-check?* #t) ;for compiler timings
-
 
 ; Specialists
 
@@ -67,7 +62,7 @@
     (let ((obj (node-form node)))
       (if (eq? obj #f)
 	  ;; +++ hack for bootstrap from Schemes that don't distinguish #f/()
-	  (deliver-value (instruction op/false) cont)
+	  (deliver-value (instruction (enum op false)) cont)
 	  (compile-constant obj depth cont)))))
 
 (define-compilator 'quote
@@ -80,7 +75,7 @@
 (define (compile-constant obj depth cont)
   (if (ignore-values-cont? cont)
       empty-segment			;+++ dead code
-      (deliver-value (instruction-with-literal op/literal obj)
+      (deliver-value (instruction-with-literal (enum op literal) obj)
 		     cont)))
 
 ; Variable reference
@@ -96,12 +91,12 @@
 					 (car level+over)))
 				(over (cdr level+over)))
 			   (case back
-			     ((0) (instruction op/local0 over)) ;+++
-			     ((1) (instruction op/local1 over)) ;+++
-			     ((2) (instruction op/local2 over)) ;+++
-			     (else (instruction op/local back over))))
+			     ((0) (instruction (enum op local0) over)) ;+++
+			     ((1) (instruction (enum op local1) over)) ;+++
+			     ((2) (instruction (enum op local2) over)) ;+++
+			     (else (instruction (enum op local) back over))))
 			 (instruction-with-location
-			        op/global
+			        (enum op global)
 				(get-location binding cenv name value-type)))
 		     cont))))
 
@@ -119,10 +114,10 @@
        (deliver-value
 	(if (and (binding? binding) (pair? (binding-place binding)))
 	    (let ((level+over (binding-place binding)))
-	      (instruction op/set-local!
+	      (instruction (enum op set-local!)
 			   (- (environment-level cenv) (car level+over))
 			   (cdr level+over)))
-	    (instruction-with-location op/set-global!
+	    (instruction-with-location (enum op set-global!)
 	      (get-location binding cenv name usual-variable-type)))
 	cont)))))
 
@@ -135,12 +130,12 @@
 	  (join-label (make-label)))
       (sequentially
        ;; Test
-       (compile (cadr exp) cenv depth (fall-through-cont (schemify node) 1))
-       (instruction-using-label op/jump-if-false alt-label)
+       (compile (cadr exp) cenv depth (fall-through-cont node 1))
+       (instruction-using-label (enum op jump-if-false) alt-label)
        ;; Consequent
        (compile (caddr exp) cenv depth cont)
        (if (fall-through-cont? cont)
-	   (instruction-using-label op/jump join-label)
+	   (instruction-using-label (enum op jump) join-label)
 	   empty-segment)
        ;; Alternate
        (attach-label alt-label
@@ -154,36 +149,37 @@
     (let ((exp (node-form node)))
       (compile-begin (cdr exp) cenv depth cont))))
 
-(define (compile-begin exp-list cenv depth cont)
-  (if (null? exp-list)
-      (generate-trap cont "null begin")
-      (let ((dummy `(begin ,@(map schemify exp-list))));for debugging database
-	(let loop ((exp-list exp-list) (i 1))
-	  (if (null? (cdr exp-list))
-	      (compile (car exp-list) cenv depth cont)
-	      (careful-sequentially
-		 (compile (car exp-list) cenv depth
-			  (ignore-values-cont dummy i))
-		 (loop (cdr exp-list) (+ i 1))
-		 depth
-		 cont))))))
+(define compile-begin
+  (let ((operator/begin (get-operator 'begin)))
+    (lambda (exp-list cenv depth cont)
+      (if (null? exp-list)
+	  (generate-trap cont "null begin")
+	  (let ((dummy
+		 (make-node operator/begin ;For debugging database
+			    `(begin ,@exp-list))))
+	    (let loop ((exp-list exp-list) (i 1))
+	      (if (null? (cdr exp-list))
+		  (compile (car exp-list) cenv depth cont)
+		  (careful-sequentially
+		   (compile (car exp-list) cenv depth
+			    (ignore-values-cont dummy i))
+		   (loop (cdr exp-list) (+ i 1))
+		   depth
+		   cont))))))))
 
 
 ; Compile a call
 
 (define (compile-call node cenv depth cont)
-  (let* ((exp (node-form node))
-	 (proc-node (car exp)))
-    (if (and (lambda-node? proc-node)
-	     (let ((formals (cadr (node-form proc-node))))
-	       (and (not (n-ary? formals))
-		    (= (length (cdr exp))
-		       (number-of-required-args formals)))))
-	(compile-redex proc-node (cdr exp) cenv depth cont)
-	(let ((new-node (maybe-transform-call proc-node node cenv)))
-	  (if (eq? new-node node)
-	      (compile-unknown-call node cenv depth cont)
-	      (compile new-node cenv depth cont))))))
+  (if (node-ref node 'type-error)
+      (compile-unknown-call node cenv depth cont)
+      (let ((proc-node (classify (car (node-form node)) cenv)))
+	(if (lambda-node? proc-node)
+	    (compile-redex proc-node (cdr (node-form node)) cenv depth cont)
+	    (let ((new-node (maybe-transform-call proc-node node cenv)))
+	      (if (eq? new-node node)
+		  (compile-unknown-call node cenv depth cont)
+		  (compile new-node cenv depth cont)))))))
 
 (define-compilator 'call compile-call)
 
@@ -213,15 +209,15 @@
 			      (compile (car exp)
 				       cenv
 				       (length (cdr exp))
-				       (fall-through-cont (schemify node) 0))
-			      (instruction op/call (length (cdr exp))))))
+				       (fall-through-cont node 0))
+			      (instruction (enum op call) (length (cdr exp))))))
       (maybe-push-continuation call depth cont))))
 
 (define (maybe-push-continuation code depth cont)
   (if (return-cont? cont) 
       code
       (let ((label (make-label)))
-	(sequentially (instruction-using-label op/make-cont
+	(sequentially (instruction-using-label (enum op make-cont)
 					       label
 					       depth)
 		      (note-source-code (cont-source-info cont)
@@ -232,14 +228,13 @@
 ; Continuation is implicitly fall-through.
 
 (define (push-arguments node cenv depth)
-  (let ((exp (schemify node)))
-    (let recur ((args (cdr (node-form node))) (depth depth) (i 1))
-      (if (null? args)
-	  empty-segment
-	  (sequentially (compile (car args) cenv depth
-				 (fall-through-cont exp i))
-			(instruction op/push)
-			(recur (cdr args) (+ depth 1) (+ i 1)))))))
+  (let recur ((args (cdr (node-form node))) (depth depth) (i 1))
+    (if (null? args)
+	empty-segment
+	(sequentially (compile (car args) cenv depth
+			       (fall-through-cont node i))
+		      (instruction (enum op push))
+		      (recur (cdr args) (+ depth 1) (+ i 1))))))
 
 (define (push-all-with-names exp-list names cenv depth)
   (if (null? exp-list)
@@ -247,7 +242,7 @@
       (sequentially (compile (car exp-list)
 			     cenv depth
 			     (named-cont (car names)))
-		    (instruction op/push)
+		    (instruction (enum op push))
                     (push-all-with-names (cdr exp-list)
 					 (cdr names)
 					 cenv
@@ -260,8 +255,13 @@
     (let ((exp (node-form node))
 	  (name (cont-name cont)))
       (deliver-value
-       (instruction-with-template op/closure
-				  (compile-lambda exp cenv (if name #t #f))
+       (instruction-with-template (enum op closure)
+				  (compile-lambda exp
+						  cenv
+						  ;; Hack for constructors.
+						  ;; Cf. disclose method
+						  ;; (if name #t #f)
+						  #f)
 				  name)
        cont))))
 
@@ -272,9 +272,9 @@
      ;; Check number of arguments
      (if (n-ary? formals)
 	 (if (pair? formals)
-	     (instruction op/check-nargs>= nargs)
+	     (instruction (enum op check-nargs>=) nargs)
 	     empty-segment)		;+++ (lambda x ...) needs no check
-	 (instruction op/check-nargs= nargs))
+	 (instruction (enum op check-nargs=) nargs))
      (compile-lambda-code formals (cddr exp) cenv body-name))))
 
 ; name isn't the name of the procedure, it's the name to be given to
@@ -291,10 +291,10 @@
        (let ((nargs (number-of-required-args formals)))
 	 (if (n-ary? formals)
 	     (sequentially
-	      (instruction op/make-rest-list nargs)
-	      (instruction op/push)
-	      (instruction op/make-env (+ nargs 1)))
-	     (instruction op/make-env nargs)))
+	      (instruction (enum op make-rest-list) nargs)
+	      (instruction (enum op push))
+	      (instruction (enum op make-env) (+ nargs 1)))
+	     (instruction (enum op make-env) nargs)))
        (let* ((vars (normalize-formals formals))
 	      (cenv (bind-vars (reverse vars) cenv)))
 	 (note-environment
@@ -307,6 +307,7 @@
 (define compile-letrec
   (let ((operator/lambda     (get-operator 'lambda syntax-type))
 	(operator/set!	     (get-operator 'set!   syntax-type))
+	(operator/call	     (get-operator 'call))
 	(operator/unassigned (get-operator 'unassigned)))
     (lambda (node cenv depth cont)
       ;; (if (node-ref node 'pure-letrec) ...)
@@ -319,8 +320,10 @@
 					      (make-node operator/set!
 							 `(set! ,@spec)))
 					    specs)
-				     (,(make-node operator/lambda
-						  `(lambda () ,@body)))))
+				     ,(make-node
+				       operator/call
+				       `(,(make-node operator/lambda
+						     `(lambda () ,@body))))))
 		       (map (lambda (spec)
 			      (make-node operator/unassigned
 					 `(unassigned)))
@@ -381,8 +384,8 @@
 
 ; Fall through into next instruction
 
-(define (fall-through-cont exp i)
-  (make-cont empty-segment (cons i exp)))
+(define (fall-through-cont node i)
+  (make-cont empty-segment (cons i node)))
 
 (define (fall-through-cont? cont)
   (not (return-cont? cont)))
@@ -392,8 +395,8 @@
 (define ignore-values-segment
   (instruction (enum op ignore-values)))
 
-(define (ignore-values-cont exp i)
-  (make-cont ignore-values-segment (cons i exp)))
+(define (ignore-values-cont node i)
+  (make-cont ignore-values-segment (cons i node)))
 
 (define (ignore-values-cont? cont)
   (eq? (cont-segment cont) ignore-values-segment))
@@ -422,7 +425,7 @@
 (define (bind-vars names cenv)
   (let ((level (+ (environment-level cenv) 1)))
     (lambda (name)
-      (if (eq? name *level-key*)
+      (if (eq? name funny-name/lexical-level)
 	  level
 	  (let loop ((over 1) (names names))
 	    (cond ((null? names)
@@ -433,12 +436,12 @@
 		  (else (loop (+ over 1) (cdr names)))))))))
 
 (define (initial-cenv cenv)
-  (bind1 *level-key* -1 cenv))
+  (bind1 funny-name/lexical-level -1 cenv))
 
 (define (environment-level cenv)
-  (lookup cenv *level-key*))
+  (lookup cenv funny-name/lexical-level))
 
-(define *level-key* (string->symbol "Lexical nesting level"))
+(define funny-name/lexical-level (string->symbol "Lexical nesting level"))
 
 ; Find lookup result that was cached by classifier
 
@@ -454,8 +457,8 @@
 
 (define (generate-trap cont . stuff)
   (apply warn stuff)
-  (sequentially (instruction-with-literal op/literal (cons 'error stuff))
-		(deliver-value (instruction op/trap)
+  (sequentially (instruction-with-literal (enum op literal) (cons 'error stuff))
+		(deliver-value (instruction (enum op trap))
 			       cont)))
 
 ; Make a segment smaller, if it seems necessary, by introducing an
@@ -474,11 +477,11 @@
 	  (sequentially (maybe-push-continuation
 			 (sequentially 
 			  (instruction-with-template
-			   op/closure
+			   (enum op closure)
 			   (sequentially seg1
-					 (instruction op/return))
+					 (instruction (enum op return)))
 			   #f)
-			  (instruction op/call 0))
+			  (instruction (enum op call) 0))
 			 0
 			 (fall-through-cont #f #f))
 			seg2)
@@ -486,82 +489,81 @@
 			(maybe-push-continuation
 			 (sequentially 
 			  (instruction-with-template
-			   op/closure
+			   (enum op closure)
 			   (if (return-cont? cont)
 			       seg2
 			       (sequentially seg2
-					     (instruction op/return)))
+					     (instruction (enum op return))))
 			   #f)
-			  (instruction op/call 0))
+			  (instruction (enum op call) 0))
 			 0
 			 cont)))
       (sequentially seg1 seg2)))
 
 (define large-segment-size (* byte-limit 2))
 
-
-(define op/call (enum op call))
-(define op/check-nargs= (enum op check-nargs=))
-(define op/check-nargs>= (enum op check-nargs>=))
-(define op/closure (enum op closure))
-(define op/false (enum op false))
-(define op/global (enum op global))
-(define op/ignore-values (enum op ignore-values))
-(define op/jump (enum op jump))
-(define op/jump-if-false (enum op jump-if-false))
-(define op/literal (enum op literal))
-(define op/local (enum op local))
-(define op/local0 (enum op local0))
-(define op/local1 (enum op local1))
-(define op/local2 (enum op local2))
-(define op/make-cont (enum op make-cont))
-(define op/make-env (enum op make-env))
-(define op/make-rest-list (enum op make-rest-list))
-(define op/push (enum op push))
-(define op/return (enum op return))
-(define op/set-global! (enum op set-global!))
-(define op/set-local! (enum op set-local!))
-(define op/trap (enum op trap))
-(define op/unspecific (enum op unspecific))
-
-
-
 ; --------------------
-; Type checking.  This only handles calls; special forms have their
-; own checks.
+; Type checking.  This gets called on all nodes.
 
 (define (type-check node cenv)
-  (let ((form (node-form node)))
-    (if (and (pair? form)
-	     (node? (car form)))
-	(let ((proc-type (node-type (car form) cenv)))
-	  (if (eq? proc-type syntax-type)
-	      node
-	      (let ((args (cdr form)))
-		;; or (map (lambda (arg) (classify arg cenv)) (cdr form))
-		(if (fixed-arity-procedure-type? proc-type)
-		    (if (= (procedure-type-arity proc-type) (length args))
-			(if (not (compatible-type-lists?
-				  (map (lambda (arg) (node-type arg cenv))
-				       args)
-				  (procedure-type-argument-types proc-type)))
-			    (report-type-error "argument type error"
-					       node proc-type))
-			(report-type-error "wrong number of arguments"
-					   node proc-type))
-		    (if (not (compatible-types? proc-type any-procedure-type))
-			;; Could also check args for one-valuedness.
-			(report-type-error "non-procedure in operator position"
-					   node proc-type)))
-		;; (make-similar-node node (cons (car form) args))
-		node)))
-	node)))
+  (if *type-check?*
+      (let ((form (node-form node)))
+	(if (pair? form)
+	    (let ((proc-node (car form)))
+	      (if (node? proc-node)
+		  (let ((proc-type (node-type proc-node cenv)))
+		    (cond ((procedure-type? proc-type)
+			   (if (restrictive? proc-type)
+			       (let* ((args (if (eq? *type-check?* 'heavy)
+						(map (lambda (exp) (classify exp cenv)) 
+						     (cdr form))
+						(cdr form)))
+				      (args-type (make-some-values-type
+						  (map (lambda (arg)
+							 (meet-type
+							  (node-type arg cenv)
+							  value-type))
+						       args)))
+				      (node (make-similar-node node
+							       (cons proc-node args))))
+				 (if (not (meet? args-type
+						 (procedure-type-domain proc-type)))
+				     (diagnose-call-error node proc-type args-type))
+				 node)
+			       node))
+			  ((not (meet? proc-type any-procedure-type))
+			   ;; Could also check args for one-valuedness.
+			   (let ((message "non-procedure in operator position"))
+			     (warn message (schemify node) `(procedure: ,proc-type))
+			     (node-set! node 'type-error message))
+			   node)
+			  (else node)))
+		  node))
+	    node))
+      node))
 
-(define (report-type-error message node proc-type)
-  (warn message
-	(schemify node)
-	`(procedure: ,proc-type))
-  #f)
+(define (set-type-check?! check?)
+  (set! *type-check?* check?))
+
+(define *type-check?* 'heavy)
+
+
+(define (diagnose-call-error node proc-type args-type)
+  (let ((message
+	 (cond ((not (fixed-arity-procedure-type? proc-type))
+		"invalid arguments")
+	       ((= (procedure-type-arity proc-type)
+		   (length (cdr (node-form node))))
+		"argument type error")
+	       (else
+		"wrong number of arguments"))))
+    (warn message
+	  (schemify node)
+	  `(procedure wants:
+		      ,(rail-type->sexp (procedure-type-domain proc-type)
+					#f))
+	  `(arguments are: ,(rail-type->sexp args-type #t)))
+    (node-set! node 'type-error message)))
 
 
 ; Type system loophole

@@ -2,7 +2,7 @@
 			   The Type System
 
 
-Scheme 48 has a rudimentary type system.  It main purpose is to
+Scheme 48 has a rudimentary type system.  Its main purpose is to
 generate helpful compile-time diagnostics.
 
 Currently you don't get much checking beyond wrong number of arguments

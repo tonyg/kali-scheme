@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; A little interpreter.
@@ -48,7 +48,7 @@
   (lambda (node env)
     (let ((binding (name-node-binding node env)))
       (cond ((binding? binding)		;(type . location)
-	     (if (and (compatible-types? (binding-type binding) 'value)
+	     (if (and (compatible-types? (binding-type binding) value-type)
 		      (location? (binding-place binding)))
 		 (let ((loc (cdr binding)))
 		   (if (location-defined? loc)

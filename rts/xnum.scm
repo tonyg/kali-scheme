@@ -1,145 +1,158 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ; This is file xnum.scm.
 
 ;;;; Extended numbers
 
-; This is pretty much a replica of the record facility.
+(define (extended-number-type x) (extended-number-ref x 0))
 
-(define (extended-number-type r)
-  (extended-number-ref r 0))
+(define-simple-type :extended-number (:number) extended-number?)
 
-(define extended-number-type-type
-  (make-record-type "Extended-number-type" '(id field-names)))
+(define-record-type extended-number-type :extended-number-type
+  (really-make-extended-number-type field-names supers priority predicate id)
+  extended-number-type?
+  (field-names extended-number-type-field-names)
+  (supers      extended-number-type-supers)
+  (priority    extended-number-type-priority)
+  (predicate   extended-number-predicate)
+  (id	       extended-number-type-identity))
 
-(define make-extended-number-type
-  (record-constructor extended-number-type-type '(id field-names)))
+(define (make-extended-number-type field-names supers id)
+  (letrec ((t (really-make-extended-number-type
+	       field-names
+	       supers
+	       (+ (apply max
+			 (map type-priority
+			      (cons :extended-number supers)))
+		  10)
+	       (lambda (x)
+		 (and (extended-number? x)
+		      (eq? (extended-number-type x) id)))
+	       id)))
+    t))
 
-(define extended-number-type?
-  (record-predicate extended-number-type-type))
+(define-method &type-priority ((t :extended-number-type))
+  (extended-number-type-priority t))
 
-(define extended-number-type-identification
-  (record-accessor extended-number-type-type 'id))
+(define-method &type-predicate ((t :extended-number-type))
+  (extended-number-predicate t))
 
-(define extended-number-type-field-names
-  (record-accessor extended-number-type-type 'field-names))
 
 (define (extended-number-type-field-index nt name)
   (let loop ((names (extended-number-type-field-names nt))
 	     (i 1))
     (cond ((null? names) (error "unknown field index"
-				(extended-number-type-identification nt)
+				nt
 				name))
 	  ((eq? name (car names))
 	   i)
 	  (else (loop (cdr names) (+ i 1))))))
 
 (define (extended-number-constructor nt names)
-  (define indexes (map (lambda (name)
-			 (extended-number-type-field-index nt name))
-		       names))
-  (define size (+ 1 (length (extended-number-type-field-names nt))))
-  (define (constructor . args)
-    (let ((n (make-extended-number size (unspecific))))
-      (extended-number-set! n 0 nt)
-      (let loop ((is indexes) (args args))
-	(if (and (null? is) (null? args))
-	    n
-	    (begin (extended-number-set! n (car is) (car args))
-		   (loop (cdr is) (cdr args)))))))
-  constructor)
+  (let ((indexes (map (lambda (name)
+			(extended-number-type-field-index nt name))
+		      names))
+	(size (+ 1 (length (extended-number-type-field-names nt))))
+	(id (extended-number-type-identity nt)))
+    (lambda args
+      (let ((n (make-extended-number size id)))
+	(let loop ((is indexes) (args args))
+	  (if (and (null? is) (null? args))
+	      n
+	      (begin (extended-number-set! n (car is) (car args))
+		     (loop (cdr is) (cdr args)))))))))
 
 (define (extended-number-accessor nt name)
-  (define index (extended-number-type-field-index nt name))
-  (define (accessor n)	;Use internal define to get proc to print better
-    (extended-number-ref n index))
-  accessor)
+  (let ((index (extended-number-type-field-index nt name)))
+    (lambda (n)
+      (extended-number-ref n index))))
 
-(define (extended-number-predicate nt)
-  (define (predicate x)
-    (and (extended-number? x)
-	 (eq? (extended-number-type x) nt)))
-  predicate)
 
 ; Make all the numeric instructions be extensible.
 
-(define plus-table           (make-method-table '+))
-(define minus-table          (make-method-table '-))
-(define *-table              (make-method-table '*))
-(define /-table              (make-method-table '/))
-(define =-table              (make-method-table '=))
-(define <-table              (make-method-table '<))
-(define quotient-table       (make-method-table 'quotient))
-(define remainder-table      (make-method-table 'remainder))
+(define-syntax define-opcode-extension
+  (syntax-rules ()
+    ((define-opcode-extension ?name ?table-name)
+     (begin (define ?table-name (make-method-table '?name))
+	    (make-opcode-generic! (enum op ?name) ?table-name)))))
+
+
+(define-opcode-extension +              &+)
+(define-opcode-extension -              &-)
+(define-opcode-extension *              &*)
+(define-opcode-extension /              &/)
+(define-opcode-extension =              &=)
+(define-opcode-extension <              &<)
+(define-opcode-extension quotient       &quotient)
+(define-opcode-extension remainder      &remainder)
   
-(define integer?-table       (make-method-table 'integer?))
-(define rational?-table      (make-method-table 'rational?))
-(define real?-table          (make-method-table 'real?))
-(define complex?-table       (make-method-table 'complex?))
-(define number?-table        (make-method-table 'number?))
-(define exact?-table         (make-method-table 'exact?))
+(define-opcode-extension integer?       &integer?)
+(define-opcode-extension rational?      &rational?)
+(define-opcode-extension real?          &real?)
+(define-opcode-extension complex?       &complex?)
+(define-opcode-extension number?        &number?)
+(define-opcode-extension exact?         &exact?)
 
-(define exact->inexact-table (make-method-table 'exact->inexact))
-(define inexact->exact-table (make-method-table 'inexact->exact))
-(define real-part-table      (make-method-table 'real-part))
-(define imag-part-table      (make-method-table 'imag-part))
+(define-opcode-extension exact->inexact &exact->inexact)
+(define-opcode-extension inexact->exact &inexact->exact)
+(define-opcode-extension real-part      &real-part)
+(define-opcode-extension imag-part      &imag-part)
 
-(define floor-table          (make-method-table 'floor))
-(define numerator-table      (make-method-table 'numerator))
-(define denominator-table    (make-method-table 'denominator))
+(define-opcode-extension floor          &floor)
+(define-opcode-extension numerator      &numerator)
+(define-opcode-extension denominator    &denominator)
 
-(define make-rectangular-table (make-method-table 'make-rectangular))
+(define-opcode-extension make-rectangular &make-rectangular)
 
-(define exp-table (make-method-table 'exp))
-(define log-table (make-method-table 'log))
-(define sin-table (make-method-table 'sin))
-(define cos-table (make-method-table 'cos))
-(define tan-table (make-method-table 'tan))
-(define asin-table (make-method-table 'asin))
-(define acos-table (make-method-table 'acos))
-(define atan-table (make-method-table 'atan))
-(define sqrt-table (make-method-table 'sqrt))
+(define-opcode-extension exp  &exp)
+(define-opcode-extension log  &log)
+(define-opcode-extension sin  &sin)
+(define-opcode-extension cos  &cos)
+(define-opcode-extension tan  &tan)
+(define-opcode-extension asin &asin)
+(define-opcode-extension acos &acos)
+(define-opcode-extension atan &atan)
+(define-opcode-extension sqrt &sqrt)
 
 ; Default methods.
 
-(define-default-method integer?-table  (lambda (x) #f))
-(define-default-method rational?-table integer?)
-(define-default-method real?-table     rational?)
-(define-default-method complex?-table  real?)
-(define-default-method number?-table   complex?)
+(define-method &integer?  (x) #f)
+(define-method &rational? (x) (integer? x))
+(define-method &real?     (x) (rational? x))
+(define-method &complex?  (x) (real? x))
+(define-method &number?   (x) (complex? x))
 
-(define-default-method exact?-table    (lambda (x) #t))
+(define-method &real-part ((x :real)) x)
 
-; there's no default method for exact->inexact or inexact->exact
+(define-method &imag-part ((x :real))
+  (if (exact? x) 0 (exact->inexact 0)))
 
-(define-default-method real-part-table
-  (lambda (x)
-    (if (real? x) x (fail))))
+(define-method &floor ((n :integer)) n)
 
-(define-default-method imag-part-table
-  (lambda (x) 
-    (if (real? x)
-	(if (exact? x) 0 (exact->inexact 0))
-	(fail))))
+(define-method &numerator ((n :integer)) n)
 
-(define-default-method floor-table
-  (lambda (n) (if (integer? n) n (fail))))
+(define-method &denominator ((n :integer))
+  (if (exact? n) 1 (exact->inexact 1)))
 
-(define-default-method numerator-table
-  (lambda (n) (if (integer? n) n (fail))))
+; Make sure this has very low priority, so that it's only tried as a
+; last resort.
 
-(define-default-method denominator-table
-  (lambda (n)
-    (if (integer? n)
-	(if (exact? n) 1 (exact->inexact 1))
-	(fail))))
+(define-method &/ (m n)
+  (if (and (integer? m) (integer? n))
+      (if (= 0 (remainder m n))
+	  (quotient m n)
+	  (let ((z (abs (quotient n 2))))
+	    (set-exactness (quotient (if (< m 0)
+					 (- m z)
+					 (+ m z))
+				     n)
+			   #f)))
+      (next-method)))
 
-(define-default-method sqrt-table
-  (lambda (n)
-    (if (and (integer? n)
-	     (>= n 0))
-	(non-negative-integer-sqrt n)
-	(fail))))
+(define-method &sqrt ((n :integer))
+  (if (>= n 0)
+      (non-negative-integer-sqrt n)	;Dubious
+      (next-method)))
 
 (define (non-negative-integer-sqrt n)
   (cond ((<= n 1)    ; for both 0 and 1
@@ -156,42 +169,109 @@
 		   (else
 		    (exact->inexact m))))))))
 
-; Allow access to extended number methods from primitive byte codes.
-; Think of the VM's implementation of the opcode as just one method among
-; many.
+(define-simple-type :exact (:number)
+  (lambda (n) (and (number? n) (exact? n))))
 
-(make-opcode-generic! (enum op +) plus-table)
-(make-opcode-generic! (enum op -) minus-table)
-(make-opcode-generic! (enum op *) *-table)
-(make-opcode-generic! (enum op /) /-table)
-(make-opcode-generic! (enum op =) =-table)
-(make-opcode-generic! (enum op <) <-table)
-(make-opcode-generic! (enum op quotient) quotient-table)
-(make-opcode-generic! (enum op remainder) remainder-table)
+(define-simple-type :inexact (:number)
+  (lambda (n) (and (number? n) (inexact? n))))
 
-(make-opcode-generic! (enum op integer?) integer?-table)
-(make-opcode-generic! (enum op rational?) rational?-table)
-(make-opcode-generic! (enum op real?) real?-table)
-(make-opcode-generic! (enum op complex?) complex?-table)
-(make-opcode-generic! (enum op number?) number?-table)
 
-(make-opcode-generic! (enum op exact?) exact?-table)
-(make-opcode-generic! (enum op exact->inexact) exact->inexact-table)
-(make-opcode-generic! (enum op inexact->exact) inexact->exact-table)
-(make-opcode-generic! (enum op real-part) real-part-table)
-(make-opcode-generic! (enum op imag-part) imag-part-table)
-(make-opcode-generic! (enum op floor) floor-table)
-(make-opcode-generic! (enum op numerator) numerator-table)
-(make-opcode-generic! (enum op denominator) denominator-table)
+; Whattakludge.
 
-(make-opcode-generic! (enum op make-rectangular) make-rectangular-table) ;weird
+; Replace the default method (which in the initial image always returns #f).
 
-(make-opcode-generic! (enum op exp) exp-table)
-(make-opcode-generic! (enum op log) log-table)
-(make-opcode-generic! (enum op sin) sin-table)
-(make-opcode-generic! (enum op cos) cos-table)
-(make-opcode-generic! (enum op tan) tan-table)
-(make-opcode-generic! (enum op asin) asin-table)
-(make-opcode-generic! (enum op acos) acos-table)
-(make-opcode-generic! (enum op atan) atan-table)
-(make-opcode-generic! (enum op sqrt) sqrt-table)
+(define-method &really-string->number (s radix xact?)
+  (let ((len (string-length s)))
+    (cond ((<= len 1) #f)
+	  ((char=? (string-ref s (- len 1)) #\i)
+	   (parse-rectangular s radix xact?))
+	  ((string-position #\@ s)
+	   => (lambda (at)
+		(let ((r (really-string->number (substring s 0 at)
+						radix xact?))
+		      (theta (really-string->number (substring s (+ at 1) len)
+						    radix xact?)))
+		  (if (and (real? r) (real? theta))
+		      (make-polar r theta)))))
+	  ((string-position #\/ s)
+	   => (lambda (slash)
+		(let ((m (string->integer (substring s 0 slash) radix))
+		      (n (string->integer (substring s (+ slash 1) len)
+					  radix)))
+		  (if (and m n)
+		      (set-exactness (/ m n) xact?)
+		      #f))))
+	  ((string-position #\# s)
+	   (if xact?
+	       #f
+	       (really-string->number
+		   (list->string (map (lambda (c) (if (char=? c #\#) #\5 c))
+				      (string->list s)))
+		   radix
+		   xact?)))
+	  ((string-position #\. s)
+	   => (lambda (dot)
+		(parse-decimal s radix xact? dot)))
+	  (else #f))))
+
+(define (parse-decimal s radix xact? dot)
+  ;; Talk about kludges.  This is REALLY kludgey.
+  (let* ((len (string-length s))
+	 (j (if (or (char=? (string-ref s 0) #\+)
+		    (char=? (string-ref s 0) #\-))
+		1
+		0))
+	 (m (if (= dot j)
+		0
+		(string->integer (substring s j dot)
+				 radix)))
+	 (n (if (= dot (- len 1))
+		0
+		(string->integer (substring s (+ dot 1)
+					    len)
+				 radix))))
+    (if (and m n)
+	(let ((n (+ m (/ n (expt radix
+				 (- len (+ dot 1)))))))
+	  (set-exactness (if (char=? (string-ref s 0) #\-)
+			     (- 0 n)
+			     n)
+			 xact?))
+	#f)))
+
+(define (parse-rectangular s radix xact?)
+  (let ((len (string-length s)))
+    (let loop ((i (- len 2)))
+      (if (< i 0)
+	  #f
+	  (let ((c (string-ref s i)))
+	    (if (or (char=? c #\+)
+		    (char=? c #\-))
+		(let ((x (if (= i 0)
+			     0
+			     (really-string->number (substring s 0 i)
+						    radix xact?)))
+		      (y (if (= i (- len 2))
+			     (if (char=? c #\+) 1 -1)
+			     (really-string->number (substring s i (- len 1))
+						    radix xact?))))
+		  (if (and (real? x) (real? y))
+		      (make-rectangular x y)
+		      #f))
+		(loop (- i 1))))))))
+
+(define (set-exactness n xact?)
+  (if (exact? n)
+      (if xact? n (exact->inexact n))
+      ;; ?what to do? (if xact? (inexact->exact n) n)
+      n))
+
+; Utility
+
+(define (string-position c s)
+  (let loop ((i 0))
+    (if (>= i (string-length s))
+	#f
+	(if (char=? c (string-ref s i))
+	    i
+	    (loop (+ i 1))))))

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; This is file pseudoscheme-features.scm.
@@ -12,17 +12,7 @@
 
 (define error #'ps:scheme-error)
 
-(define (warn message . irritants)
-  (apply #'lisp:warn
-	 (apply #'lisp:concatenate
-		'lisp:string
-		(if (string? message) "~a" "~s")
-		(map (lambda (irritant)
-		       irritant
-		       "~%  ~s")
-		     irritants))
-	 message
-	 irritants))
+(define warn #'ps:scheme-warn)
 
 (define (signal type . stuff)
   (apply warn "condition signalled" type stuff))

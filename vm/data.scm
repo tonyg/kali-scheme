@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; This is file data.scm.
@@ -65,16 +65,16 @@
 ;;             (vector-length tag)))
 
 (define (fixnum? descriptor)
-  (= (descriptor-tag descriptor) tag/fixnum))
+  (= (descriptor-tag descriptor) (enum tag fixnum)))
 
 (define (immediate? descriptor)
-  (= (descriptor-tag descriptor) tag/immediate))
+  (= (descriptor-tag descriptor) (enum tag immediate)))
 
 (define (header? descriptor)
-  (= (descriptor-tag descriptor) tag/header))
+  (= (descriptor-tag descriptor) (enum tag header)))
 
 (define (stob? descriptor)
-  (= (descriptor-tag descriptor) tag/stob))
+  (= (descriptor-tag descriptor) (enum tag stob)))
 
 ; Fixnums
 
@@ -99,7 +99,7 @@
 
 (define (enter-fixnum n)
   (assert (not (overflows? n)))
-  (make-descriptor tag/fixnum n))
+  (make-descriptor (enum tag fixnum) n))
 
 (define (extract-fixnum p)
   (assert (fixnum? p))
@@ -228,7 +228,7 @@
   (- 8 tag-field-width))
 
 (define (make-immediate type info)
-  (make-descriptor tag/immediate
+  (make-descriptor (enum tag immediate)
                    (adjoin-bits info type immediate-type-field-width)))
 
 (define (immediate-type imm)
@@ -245,7 +245,7 @@
   (low-bits descriptor (+ tag-field-width immediate-type-field-width)))
 
 (define (make-tag&immediate-type type)
-  (adjoin-bits type tag/immediate tag-field-width))
+  (adjoin-bits type (enum tag immediate) tag-field-width))
 
 (define-enumeration imm
   (false      ; #f
@@ -265,18 +265,18 @@
     (= (tag&immediate-type descriptor)
 	(make-tag&immediate-type type))))
 
-(define false?     (immediate-predicate imm/false))
-(define vm-char?   (immediate-predicate imm/char))
-(define undefined? (immediate-predicate imm/undefined))
+(define false?     (immediate-predicate (enum imm false)))
+(define vm-char?   (immediate-predicate (enum imm char)))
+(define undefined? (immediate-predicate (enum imm undefined)))
 
-(define true          (make-immediate imm/true 0))
-(define false         (make-immediate imm/false 0))
-(define eof-object    (make-immediate imm/eof  0))
-(define null          (make-immediate imm/null 0))
-(define unspecific    (make-immediate imm/unspecific 0))
-(define quiescent         (make-immediate imm/undefined 0))
-(define unbound-marker    (make-immediate imm/undefined 1))
-(define unassigned-marker (make-immediate imm/undefined 2))
+(define true          (make-immediate (enum imm true) 0))
+(define false         (make-immediate (enum imm false) 0))
+(define eof-object    (make-immediate (enum imm eof)  0))
+(define null          (make-immediate (enum imm null) 0))
+(define unspecific    (make-immediate (enum imm unspecific) 0))
+(define quiescent         (make-immediate (enum imm undefined) 0))
+(define unbound-marker    (make-immediate (enum imm undefined) 1))
+(define unassigned-marker (make-immediate (enum imm undefined) 2))
 
 (define (enter-boolean b)
   (if b true false))
@@ -292,7 +292,7 @@
 ; Characters
 
 (define (enter-char c)
-  (make-immediate imm/char (char->ascii c)))
+  (make-immediate (enum imm char) (char->ascii c)))
 
 (define (extract-char d)
   (assert (vm-char? d))
@@ -308,7 +308,7 @@
 (define header-type-field-width (- immediate-type-field-width 1))
 
 (define (make-header type length-in-bytes)
-  (make-descriptor tag/header (adjoin-bits length-in-bytes
+  (make-descriptor (enum tag header) (adjoin-bits length-in-bytes
                                             type
                                             (+ 1 header-type-field-width))))
 
@@ -352,18 +352,18 @@
 
 ;;; Moved from STRUCT to get LEAST-B-VECTOR-TYPE in this file.
 
-(define least-b-vector-type stob/string)
+(define least-b-vector-type (enum stob string))
 
 (define (make-stob-descriptor addr)
-  (set-descriptor-tag! addr tag/stob))
+  (set-descriptor-tag! addr (enum tag stob)))
 
 (define (address-at-header stob)
   (assert (stob? stob))
-  (- stob (+ tag/stob addressing-units-per-cell))) 
+  (- stob (+ (enum tag stob) addressing-units-per-cell))) 
 
 (define (address-after-header stob)
   (assert (stob? stob))
-  (- stob tag/stob))
+  (- stob (enum tag stob)))
 
 (define (stob-length-in-bytes stob)
   (header-length-in-bytes (stob-header stob)))

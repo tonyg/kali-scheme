@@ -2,22 +2,65 @@
 
 Recent changes to Scheme 48.
 
-1/11/94  Incompatible changes to package system:
+1/30/94  Fixed ps_run_time() to call sysconf() to find out how many
+	   ticks there are per second.  It used to assume 60.  This
+	   affects the output of the ,time command, so don't try
+	   comparing numbers from this version with numbers from older
+	   versions.
+	 ,time command will now accept a command, e.g.
+	   ,time ,load foo.scm.
+	 It appears that if multiple arguments follow -a on the
+	   argument line, they are concatenated together with spaces
+	   separating them and passed to the startup procedure.  I
+	   don't know how long this has worked.  This will change in
+	   the future so that the startup procedure gets a list of
+	   strings.
+	 Installed what used to be called the GENERAL-TABLES structure
+	   as the TABLES structure used by the system.  This allows
+	   the use of other comparison predicates besides EQ?, and
+	   eliminates some code that had a restrictive copyright
+	   notice.
+
+1/23/94  (version 0.29)
+	 Fixed bad multiplication bug: (* 214760876 10) was returning
+	   125112.
+	 Moved RECORD-TYPE? and RECORD-TYPE-FIELD-NAMES from the
+	   RECORDS-INTERNAL interface to the RECORDS interface, for
+	   a somewhat closer approximation to MIT Scheme.
+         Various type system improvements.
+	 Still no documentation for the ,exec package, but see
+	   link/load-linker.exec for an example.
+	 New generic function feature, exported by the METHODS
+	   interface (see interfaces.scm), almost like in a certain
+	   dynamic object-oriented language.
+
+1/11/94  (version 0.27)
+	 Change:
+	   The isomorphism used by CHAR->INTEGER and INTEGER->CHAR is
+	     no longer ASCII.  This change was introduced in order to
+	     assist the development of portable programs.  If you need
+	     ASCII encoding, you should open the ASCII structure and
+	     use the procedures CHAR->ASCII and ASCII->CHAR.
+         Features:
+	   The help system is somewhat improved.
+	   New form DEFINE-STRUCTURE defines a single structure.
+	 Incompatible changes to package system:
 	   Renamed DEFINE-PACKAGE to DEFINE-STRUCTURES
 	   Renamed DEFINE-STRUCTURE to DEFINE
-	   Renamed all base types: now :FOO instead of FOO.  E.g.
-	     :SYNTAX, :VALUE, etc.
-	 New form DEFINE-STRUCTURE defines a single structure.
+	   Renamed all the base types from FOO to :FOO.  E.g.
+	     :SYNTAX, :VALUE, :PAIR, etc.
+         Other:
+	   Removed socket support due to restrictive copyright on some
+	     of the C code that was in extension.c.
 
-12/21/93 (version 0.27)
-	 ,take has been flushed in favor of ,exec.  Commands are now
-	   accessed via a distinguished package instead of a table.
+12/21/93 ,take has been flushed in favor of ,exec ,load.  Commands are
+	   now accessed via a distinguished package instead of a table.
 	   Documentation pending.
          Postscript (.ps) files now included in doc/ subdirectory.  (I
            thought they had been there all along, but apparently I was
            wrong.)
          Enhanced, but still kludgey, floating point support.  Use
-	   ,open floatnum.scm.
+	   ,open floatnum.
 
 12/12/93 (version 0.26)
 	 NetBSD port.

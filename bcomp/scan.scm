@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Macro-expand and process top-level forms.
@@ -103,12 +103,6 @@
 					 source
 					 `(cons ,source ',(cadddr form))) ;foo
 				     env name p))))
-
-
-(define (eval-for-syntax p form)
-  (let ((f (package-for-syntax p)))
-    ((package-evaluator f) form f)))
-
 
 ; Package system stuff
 
@@ -227,7 +221,8 @@
 		 (if (not (compatible-types? have-type want-type))
 		     (warn "Type in interface doesn't match binding"
 			   name
-			   `(binding: ,have-type interface: ,want-type)
+			   `(binding: ,(type->sexp have-type #t))
+			   `(interface: ,(type->sexp want-type #t))
 			   s)))
 	       (set! undefined (cons name undefined))))
 	 s)

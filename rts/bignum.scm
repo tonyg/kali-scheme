@@ -1,57 +1,41 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ; This is file bignum.scm.
 
 ; Integer arithmetic
 
-(define bignum-type
-  (make-extended-number-type "Bignum" '(sign magnitude exact?)))
+(define :bignum
+  (make-extended-number-type '(sign magnitude)
+			     (list :exact-integer)
+			     'bignum))
 
 (define make-bignum
-  (extended-number-constructor bignum-type '(sign magnitude exact?)))
-(define bignum?          (extended-number-predicate bignum-type))
-(define bignum-exact?	 (extended-number-accessor bignum-type 'exact?))
-(define bignum-sign	 (extended-number-accessor bignum-type 'sign))
-(define bignum-magnitude (extended-number-accessor bignum-type 'magnitude))
+  (extended-number-constructor :bignum '(sign magnitude)))
+(define bignum?          (extended-number-predicate :bignum))
+(define bignum-sign	 (extended-number-accessor :bignum 'sign))
+(define bignum-magnitude (extended-number-accessor :bignum 'magnitude))
 
 
 (define (integer->bignum m)
   (if (bignum? m)
       m
-      (let ((x (exact? m)))
-	(cond ((>= m 0)
-	       (make-bignum 1 (integer->magnitude m) x))
-	      ((= m least-non-bignum)
-	       (make-bignum -1 least-non-bignum-magnitude x))
-	      (else
-	       (make-bignum -1 (integer->magnitude (- 0 m)) x))))))
+      (cond ((>= m 0)
+	     (make-bignum 1 (integer->magnitude m)))
+	    ((= m least-non-bignum)
+	     (make-bignum -1 least-non-bignum-magnitude))
+	    (else
+	     (make-bignum -1 (integer->magnitude (- 0 m)))))))
 
-(define (make-integer sign mag exact?)
-  (if exact?
-      (if (> sign 0)
-	  (if (smaller-magnitude? greatest-non-bignum-magnitude mag)
-	      (make-bignum sign mag #t)
-	      (magnitude->integer mag))
-	  (if (smaller-magnitude? least-non-bignum-magnitude mag)
-	      (make-bignum sign mag #t)
-	      (if (same-magnitude? mag least-non-bignum-magnitude)
-		  least-non-bignum
-		  (- 0 (magnitude->integer mag)))))
-      (make-bignum sign mag #f)))
-
-; Exactness crud
-
-(define (integer-exact->inexact n)
-  (let ((n (integer->bignum n)))
-    (make-integer (bignum-sign n)
-		  (bignum-magnitude n)
-		  #f)))
-
-(define (integer-inexact->exact n)
-  (let ((n (integer->bignum n)))
-    (make-integer (bignum-sign n)
-		  (bignum-magnitude n)
-		  #t)))
+(define (make-integer sign mag)
+  (if (> sign 0)
+      (if (smaller-magnitude? greatest-non-bignum-magnitude mag)
+	  (make-bignum sign mag)
+	  (magnitude->integer mag))
+      (if (smaller-magnitude? least-non-bignum-magnitude mag)
+	  (make-bignum sign mag)
+	  (if (same-magnitude? mag least-non-bignum-magnitude)
+	      least-non-bignum
+	      (- 0 (magnitude->integer mag))))))
 
 ; Arithmetic
 
@@ -61,20 +45,18 @@
     (let ((m-sign (bignum-sign m))
 	  (m-mag (bignum-magnitude m))
 	  (n-sign (bignum-sign n))
-	  (n-mag (bignum-magnitude n))
-	  (exact? (and (bignum-exact? m) (bignum-exact? n))))
+	  (n-mag (bignum-magnitude n)))
     (if (= m-sign n-sign)
-	(make-integer m-sign (add-magnitudes m-mag n-mag) exact?)
+	(make-integer m-sign (add-magnitudes m-mag n-mag))
 	(if (> m-sign 0)
 	    ;; (+ X -Y)
 	    (if (smaller-magnitude? m-mag n-mag)
-		(make-integer -1 (subtract-magnitudes n-mag m-mag) exact?)
-		(make-integer  1 (subtract-magnitudes m-mag n-mag) exact?))
+		(make-integer -1 (subtract-magnitudes n-mag m-mag))
+		(make-integer  1 (subtract-magnitudes m-mag n-mag)))
 	    ;; (+ -X Y)
 	    (if (smaller-magnitude? m-mag n-mag)
-		(make-integer  1 (subtract-magnitudes n-mag m-mag) exact?)
-		(make-integer -1 (subtract-magnitudes m-mag n-mag) exact?)
-		))))))
+		(make-integer  1 (subtract-magnitudes n-mag m-mag))
+		(make-integer -1 (subtract-magnitudes m-mag n-mag))))))))
 
 (define (integer- m n)
   (integer+ m (integer-negate n)))
@@ -82,10 +64,9 @@
 (define (integer-negate m)
   (cond ((bignum? m)
 	 (make-integer (- 0 (bignum-sign m))
-		       (bignum-magnitude m)
-		       (bignum-exact? m)))
+		       (bignum-magnitude m)))
 	((= m least-non-bignum)
-	 (make-bignum 1 least-non-bignum-magnitude #t))
+	 (make-bignum 1 least-non-bignum-magnitude))
 	(else (- 0 m))))
 
 (define (integer* m n)
@@ -94,8 +75,7 @@
     (make-integer (* (bignum-sign m) (bignum-sign n))
 		  (multiply-magnitudes
 		   (bignum-magnitude m)
-		   (bignum-magnitude n))
-		  (and (bignum-exact? m) (bignum-exact? n)))))
+		   (bignum-magnitude n)))))
 
 (define (integer-divide m n cont)
   (let ((m (integer->bignum m))
@@ -104,9 +84,8 @@
        (bignum-magnitude m)
        (bignum-magnitude n)
        (lambda (q r)
-	 (let ((exact? (and (bignum-exact? m) (bignum-exact? n))))
-	   (cont (make-integer (* (bignum-sign m) (bignum-sign n)) q exact?)
-		 (make-integer (bignum-sign m) r exact?)))))))
+	 (cont (make-integer (* (bignum-sign m) (bignum-sign n)) q)
+	       (make-integer (bignum-sign m) r))))))
 
 (define (integer-quotient m n)
   (integer-divide m n (lambda (q r) q)))
@@ -135,9 +114,6 @@
 					 (bignum-magnitude m))
 		     (smaller-magnitude? (bignum-magnitude m)
 					 (bignum-magnitude n)))))))))
-
-; bitwise-{and, ior, xor, not}
-; arithmetic-shift
 
 
 ; Magnitude (unsigned integer) arithmetic
@@ -169,9 +145,7 @@
   (if (= n 0)
       zero-magnitude
       (let ((digit (remainder n radix)))
-	(adjoin-digit (if (exact? digit)
-			  digit
-			  (inexact->exact digit))
+	(adjoin-digit digit
 		      (integer->magnitude (quotient n radix))))))
 
 (define (magnitude->integer m)
@@ -352,61 +326,19 @@
 ;                                  (error "division error" m n q q1 r r1)))))
 ;        (loop)))))
 
-
-
 
 ; Extend the generic arithmetic operators.
 
-(define bignum-family (make-family 'bignum 10))
+(define-method &integer? ((n :bignum)) #t)
+(define-method &exact? ((n :bignum)) #t)
 
-(define (define-integer-method table proc)
-  (define-method table bignum-family proc))
+(define-method &+ ((n1 :exact-integer) (n2 :exact-integer)) (integer+ n1 n2))
+(define-method &- ((n1 :exact-integer) (n2 :exact-integer)) (integer- n1 n2))
+(define-method &* ((n1 :exact-integer) (n2 :exact-integer)) (integer* n1 n2))
+(define-method &= ((n1 :exact-integer) (n2 :exact-integer)) (integer= n1 n2))
+(define-method &< ((n1 :exact-integer) (n2 :exact-integer)) (integer< n1 n2))
 
-; Methods for bignums only:
-
-(define (true-for-bignums n)
-  (if (bignum? n) #t (fail)))
-
-(define-integer-method integer?-table  true-for-bignums)
-(define-integer-method rational?-table true-for-bignums)
-(define-integer-method real?-table     true-for-bignums)
-(define-integer-method complex?-table  true-for-bignums)
-(define-integer-method number?-table   true-for-bignums)
-
-(define-integer-method exact?-table
-  (lambda (n)
-    (if (bignum? n) (bignum-exact? n) (fail))))
-
-; Methods for arbitrary integers.
-
-(define (when-integer proc)
-  (lambda (m)
-    (if (integer? m) (proc m) (fail))))
-
-(define-integer-method exact->inexact-table
-  (when-integer integer-exact->inexact))
-(define-integer-method inexact->exact-table
-  (when-integer integer-inexact->exact))
-
-(define (when-integers proc)
-  (lambda (m n)
-    (if (and (integer? m) (integer? n))
-	(proc m n)
-	(fail))))
-
-(define (when-integer&bignum proc)
-  (lambda (m n)
-    (if (or (and (bignum? m) (integer? n))
-	    (and (integer? m) (bignum? n)))
-	(proc m n)
-	(fail))))
-
-(define-integer-method plus-table      (when-integers integer+))
-(define-integer-method minus-table     (when-integers integer-))
-(define-integer-method *-table         (when-integers integer*))
-
-(define-integer-method =-table         (when-integers integer=))
-(define-integer-method <-table         (when-integers integer<))
-(define-integer-method quotient-table  (when-integers integer-quotient))
-(define-integer-method remainder-table (when-integers integer-remainder))
-
+(define-method &quotient ((n1 :exact-integer) (n2 :exact-integer))
+  (integer-quotient n1 n2))
+(define-method &remainder ((n1 :exact-integer) (n2 :exact-integer))
+  (integer-remainder n1 n2))

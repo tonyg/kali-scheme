@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Stuff moved from segment.scm  6/5/93
@@ -10,7 +10,7 @@
 ; Entries in an environment-maps list have the form
 ;   #(parent-uid pc-in-parent (env-map ...))
 
-(define-record-type debug-data debug-data-type
+(define-record-type debug-data :debug-data
   (make-debug-data uid name parent pc-in-parent env-maps source)
   debug-data?
   (uid      debug-data-uid)
@@ -23,7 +23,7 @@
 (define (new-debug-data name parent pc-in-parent)
   (make-debug-data (new-template-uid) name parent pc-in-parent '() '()))
 
-(define-record-discloser debug-data-type
+(define-record-discloser :debug-data
   (lambda (dd)
     (list 'debug-data (debug-data-uid dd) (debug-data-name dd))))
 

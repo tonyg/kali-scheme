@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ;;;; Raising and handling conditions
@@ -33,10 +33,17 @@
 
 ; This is for generic arithmetic, mostly
 
-(define (make-opcode-generic! opcode table)
-  (define-exception-handler opcode
-    (make-generic-exception-handler table opcode signal-exception)))
-
+(define make-opcode-generic!
+  (let ((f (lambda (opcode)
+	     (lambda (next-method . args)
+	       (signal-exception opcode args))))
+	(p (lambda (perform)
+	     (lambda (opcode args)
+	       ((perform) args)))))
+    (lambda (opcode mtable)
+      (set-final-method! mtable (f opcode))
+      (define-exception-handler opcode
+	(p (method-table-get-perform mtable))))))
 
 ; Raising and handling conditions.
 ; (fluid $condition-handlers) is a list of handler procedures.
@@ -103,6 +110,13 @@
 		    (continuation-preview c))
 	  (newline out)))))
 
+(define (continuation-preview c)
+  (if (continuation? c)
+      (cons (cons (template-info (continuation-template c))
+		  (continuation-pc c))
+	    (continuation-preview (continuation-parent c)))
+      '()))
+
 
 ; ERROR is a compiler primitive, but if it weren't, it could be
 ; defined as follows:
@@ -124,24 +138,10 @@
 
 ; Define disclosers that are most important for error messages.
 
-(define-method disclose-methods (make-family 'easy-disclosers -100)
-  (lambda (obj)
-    (cond ((closure? obj)
-	   (list 'procedure (template-ref (closure-template obj) 1)))
-	  ((location? obj)
-	   (list 'location (location-id obj)))
-	  ((continuation? obj)
-	   (list 'continuation
-		 `(pc ,(continuation-pc obj))
-		 (template-info (continuation-template obj))))
-	  (else
-	   (fail)))))
+(define-method &disclose ((obj :closure))
+  (list 'procedure (template-ref (closure-template obj) 1)))
 
-(define (continuation-preview c)
-  (if (continuation? c)
-      (cons (cons (template-info (continuation-template c))
-		  (continuation-pc c))
-	    (continuation-preview (continuation-parent c)))
-      '()))
+(define-method &disclose ((obj :location))
+  (list 'location (location-id obj)))
 
 ; (put 'with-handler 'scheme-indent-hook 1)

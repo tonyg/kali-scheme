@@ -1,13 +1,16 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ; flatloaded -> load
 
 (define *noisy?* #f)
 
-(define (flatload . structs)
-  (let ((l '())
+(define (flatload struct . env-option)
+  (let ((env (if (null? env-option)
+		 (interaction-environment)
+		 (car env-option)))
+	(l '())
 	(set-package-loaded?! set-package-loaded?!))
-    (walk-packages structs
+    (walk-packages (list struct)
 		   (lambda (p)
 		     (not (package-loaded? p)))
 		   (lambda (file p)
@@ -17,15 +20,16 @@
 						  (file-name-directory fn)
 						  #f)
 					     *load-file-type*)))
-		       (set! l (cons (lambda () (load file))
+		       (if *noisy?*
+			   (begin (display " ") (display file)))
+		       (set! l (cons (lambda () (apply load file env-option))
 				     l))))
 		   (lambda (forms p)
-		     (let ((env (interaction-environment)))
-		       (set! l (cons (lambda ()
-				       (for-each (lambda (form)
-						   (eval form env))
-						 forms))
-				     l))))
+		     (set! l (cons (lambda ()
+				     (for-each (lambda (form)
+						 (eval form env))
+					       forms))
+				   l)))
 		   (lambda (p)
 		     (set! l (cons (lambda ()
 				     (set-package-loaded?! p #t))
@@ -93,4 +97,3 @@
 		     (newline))
 		   (lambda (p) #f))
     (reverse l)))
-

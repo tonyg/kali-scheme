@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 
@@ -37,3 +37,9 @@
 
 (define (set-verify-later! proc)
   (set! *verify-later!* proc))
+
+
+;(define evaluator-for-syntax-interface
+;  (make-simple-interface 'evaluator-for-syntax-interface
+;                         (list (list funny-name/evaluator-for-syntax
+;                                     syntax-type))))

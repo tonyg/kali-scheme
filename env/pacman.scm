@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; PACkage-manipulation comMANds
@@ -17,7 +17,7 @@
 
 
 (define-command-syntax 'in "<struct> [<command>]"
-  "go to package, or run single command in package"
+  "go to package, or execute single command in package"
   '(name &opt command))
 
 (define (in name . maybe-command)
@@ -40,7 +40,7 @@
   (let ((p (make-simple-package (list (get-structure 'scheme))
 				eval
 				(environment-for-syntax-promise)
-				'*unnamed*)))
+				#f)))
     (set-package-integrate?! p
 			     (package-integrate? (environment-for-commands)))
     (set-environment-for-commands! p)))
@@ -53,13 +53,13 @@
 
 ; load-package
 
-(define-command-syntax 'load-package "<struct>" "load package's files"
+(define-command-syntax 'load-package "<struct>" "load package's source code"
   '(name))
 
 (define (load-package name)
   (ensure-loaded (get-structure name)))
 
-(define-command-syntax 'reload-package "<struct>" "load package's files again"
+(define-command-syntax 'reload-package "<struct>" "load package's source code again"
   '(name))
 
 (define (reload-package name)
@@ -67,31 +67,21 @@
     (set-package-loaded?! (structure-package s) #f)
     (ensure-loaded s)))
 
-(define-command-syntax 'load-config "<filename> ..."
-  "load configuration file(s)"
-  '(&rest filename))
-
-(define (load-config filenames)
-  (let ((p (config-package)))
-    (noting-undefined-variables p
-      (lambda ()
-	(for-each (lambda (filename)
-		    (load filename p))
-		  filenames)))))
-
-
-(define-command-syntax 'structure "<name> <sig>" "create new structure"
+(define-command-syntax 'structure "<name> <interface>"
+  "create new structure over the current package"
   '(name expression))
 
-(define (structure name sig-expression)
+(define (structure name interface-expression)
   (let* ((c (config-package))
-	 (p (environment-for-commands)))
-    (environment-define! c name
-			 (make-structure p
-					 (lambda ()
-					   (evaluate sig-expression c))
-					 name))
-    (set-package-name! p name)))
+	 (p (environment-for-commands))
+	 (s (make-structure p
+			    (lambda ()
+			      (evaluate interface-expression c))
+			    name)))
+    ;; (check-structure s)
+    (environment-define! c name s)
+    (if (not (package-name p))
+	(set-package-name! p name))))
 
 
 (define-command-syntax 'open "<struct> ..." "open a structure"
@@ -110,16 +100,21 @@
 	    names))
 
 (define (ensure-loaded-query struct)
-  (cond ((or (package-loaded? (structure-package struct))
-	     (null? (package-clauses (structure-package struct))))
-	 #t)
-	((y-or-n? (string-append "Load structure "
-				 (symbol->string
-				  (structure-name struct)))
-		  #f)
-	 (ensure-loaded struct)
-	 #t)
-	(else #f)))
+  (let ((p (structure-package struct)))
+    (cond ((or (package-loaded? p)
+	       (and (null? (package-clauses p))
+		    (every (lambda (struct)
+			     (package-loaded? (structure-package struct)))
+			   (package-opens p))))
+	   #t)
+	  ((or (batch-mode?)
+	       (y-or-n? (string-append "Load structure "
+				       (symbol->string
+					(structure-name struct)))
+			#f))
+	   (ensure-loaded struct)
+	   #t)
+	  (else #f))))
 
 
 (define-command-syntax 'for-syntax "[<command>]"
@@ -132,17 +127,20 @@
 
 ; ,user  goes to the user initial environment.
 
-(define-command-syntax 'user "[<command>]" "user package"
+(define-command-syntax 'user "[<command>]" "go to user package"
   '(&opt command))
 
 (define (user . maybe-command)
   (in-package (user-environment) maybe-command))
 
-(define-command-syntax 'user-package-is "<struct>" "designate package for ,user"
-  '(name))
+(define-command-syntax 'user-package-is "[<struct>]"
+  "designate user package (for ,user command)"
+  '(&opt name))
 
-(define (user-package-is name)
-  (set-user-environment! (get-package name)))
+(define (user-package-is . name-option)
+  (set-user-environment! (if (null? name-option)
+			     (environment-for-commands)
+			     (get-package (car name-option)))))
 
 (define set-user-environment!
   (user-context-modifier 'user-environment))
@@ -166,12 +164,23 @@
 
 ; ,exec  goes to the exec initial environment.
 
-(define-command-syntax 'exec "[<command>]" "exec package"
+(define-command-syntax 'exec "[<command>]" "go to command execution package"
   '(&opt command))
 
 (define (exec . maybe-command)
   (in-package (user-command-environment) maybe-command))
 
+
+; ,undefine foo  removes definition of foo from current package.
+
+(define-command-syntax 'undefine "<name>" "remove definition"
+  '(name))
+
+(define (undefine name)
+  (package-undefine! (interaction-environment) name))
+
+
+; --------------------
 ; Auxiliaries for package commands
 
 (define (in-package p maybe-command)
@@ -249,22 +258,17 @@
 			       (trivial-delay for-syntax)
 			       'user)))
     (set-package-integrate?! user #f)
-;    (environment-define! user
-;                         'access-scheme48
-;                         (make-access-scheme48 built-in-structures))
     user))
 
 ; Configuration package
 
 (define (make-config-package name user built-in more-structures)
-  (let* ((defpackage (*structure-ref built-in 'defpackage))
-	 (types (*structure-ref built-in 'types))
+  (let* ((module-system (*structure-ref built-in 'module-system))
 	 (for-syntax (package-for-syntax user))
 	 (config-package
-	  (make-simple-package (cons defpackage
-				     (cons types
-					   (append more-structures
-						   (list built-in))))
+	  (make-simple-package (cons module-system
+				     (append more-structures
+					     (list built-in)))
 			       eval
 			       (trivial-delay for-syntax)
 			       name)))

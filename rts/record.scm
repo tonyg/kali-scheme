@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ; This is file record.scm.
 
@@ -10,33 +10,33 @@
 (define (record-type r)
   (record-ref r 0))
 
-(define *record-type-uid* 0)
-(define record-type-marker (list 'record-type))
+(define *record-type-uid* -1)
+(define *record-type* #f)
 
-(define (make-record-type id field-names)
+(define (make-record-type name field-names)
   (set! *record-type-uid* (+ *record-type-uid* 1))
   (let ((r (make-record 5 (unspecific))))
-    (record-set! r 0 record-type-marker)
+    (record-set! r 0 *record-type*)
     (record-set! r 1 *record-type-uid*)
-    (record-set! r 2 id)
+    (record-set! r 2 name)
     (record-set! r 3 field-names)
     (record-set! r 4 default-record-discloser)
     r))
 
 (define (record-type? obj)
   (and (record? obj)
-       (eq? (record-type obj) record-type-marker)))
+       (eq? (record-type obj) *record-type*)))
 
-(define (record-type-uid rt)            (record-ref rt 1))
-(define (record-type-identification rt) (record-ref rt 2))
-(define (record-type-field-names rt)    (record-ref rt 3))
-(define (record-type-discloser rt)      (record-ref rt 4))
+(define (record-type-uid rt)         (record-ref rt 1))
+(define (record-type-name rt)        (record-ref rt 2))
+(define (record-type-field-names rt) (record-ref rt 3))
+(define (record-type-discloser rt)   (record-ref rt 4))
 
 (define (record-field-index rt name)
   (let loop ((names (record-type-field-names rt))
 	     (i 1))
     (cond ((null? names) (error "unknown field"
-				(record-type-identification rt)
+				(record-type-name rt)
 				name))
 	  ((eq? name (car names))
 	   i)
@@ -87,26 +87,33 @@
 ; whose head is a string and whose tail is other stuff.
 
 (define (define-record-discloser rt proc)
-  (if (record-type? rt)
+  (if (and (record-type? rt)
+	   (procedure? proc))
       (record-set! rt 4 proc)
-      (call-error "invalid record type" define-record-discloser rt proc)))
+      (call-error "invalid argument" define-record-discloser rt proc)))
 
 (define (disclose-record r)
-  (let ((p (record-type-discloser (record-type r))))
-    (if (procedure? p)
-	(p r)
-	(list (record-type-uid (record-type r))))))
+  (if (record? r)
+      (let ((rt (record-type r)))
+	(if (record-type? rt)
+	    (or ((record-type-discloser rt) r)
+		(list (record-type-name rt)))
+	    #f))			;Not one of ours.
+      #f))
 
-(define (default-record-discloser r)
-  (list (record-type-identification (record-type r))))
+(define default-record-discloser
+  (lambda (r) #f))
 
-(define-method disclose-methods (make-family 'record 0)
-  (lambda (obj)
-    (cond ((not (record? obj)) (fail))
-	  ((record-type? obj)
-	   (list 'record-type
-		 (record-type-uid obj)
-		 (record-type-identification obj)))
-	  ((record-type? (record-type obj))
-	   (disclose-record obj))
-	  (else (fail)))))
+; Patch
+
+(set! *record-type*
+      (make-record-type 'record-type '(uid name field-names discloser)))
+(record-set! *record-type* 0 *record-type*)
+
+(define :record-type *record-type*)
+
+(define-record-discloser :record-type
+  (lambda (rt)
+    (list 'record-type
+	  (record-type-uid rt)
+	  (record-type-name rt))))

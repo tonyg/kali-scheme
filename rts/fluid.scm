@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ; This is file fluid.scm.
 
@@ -21,7 +21,7 @@
 ; deep-binding dynamic environment.  This is kind of gross but it is
 ; motivated by efficiency concerns.
 
-(define-record-type thread thread-type
+(define-record-type thread :thread
   (make-thread dynamic-env)
   (dynamic-env thread-dynamic-env))
 
@@ -55,7 +55,7 @@
 
 ; Fluids
 
-(define-record-type fluid fluid-type
+(define-record-type fluid :fluid
   (make-fluid top)
   (top fluid-top-level-value set-fluid-top-level-value!))
 

@@ -1,32 +1,18 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
-;Date: Sat, 30 May 92 09:43:39 -0400
-;To: jar@cs.cornell.edu
-;Subject: bignum code
-;From: kelsey@corwin.ccs.northeastern.edu
+; Bitwise logical operators on bignums.
 
 
-; rts/number.scm
+(define-opcode-extension bitwise-not &bitwise-not)
+(define-opcode-extension bitwise-and &bitwise-and)
+(define-opcode-extension bitwise-ior &bitwise-ior)
+(define-opcode-extension bitwise-xor &bitwise-xor)
+(define-opcode-extension arithmetic-shift &arithmetic-shift)
 
-(define bitwise-not-table      (make-method-table 'bitwise-not))
-(define bitwise-and-table      (make-method-table 'bitwise-and))
-(define bitwise-ior-table      (make-method-table 'bitwise-ior))
-(define bitwise-xor-table      (make-method-table 'bitwise-xor))
-(define arithmetic-shift-table (make-method-table 'arithmetic-shift))
-
-; rts/hair.scm
-
-(make-opcode-generic! (enum op bitwise-not)      bitwise-not-table)
-(make-opcode-generic! (enum op bitwise-and)	 bitwise-and-table)
-(make-opcode-generic! (enum op bitwise-ior)	 bitwise-ior-table)
-(make-opcode-generic! (enum op bitwise-xor)	 bitwise-xor-table)
-(make-opcode-generic! (enum op arithmetic-shift) arithmetic-shift-table)
-
-
-; misc/bitnum.scm
 
 (define (integer-bitwise-not m)
-  (integer+ (integer-negate m) -1))
+  ;; (integer+ (integer-negate m) -1)
+  (integer- -1 m))
 
 (define (integer-bitwise-and m n)
   (if (or (integer= 0 m) (integer= 0 n))
@@ -55,9 +41,7 @@
 		      (make-integer (if (= 0 sign-bit) 1 -1)
 				    (if (= 0 sign-bit)
 					mag
-					(negate-magnitude mag))
-				    (and (bignum-exact? m)
-					 (bignum-exact? n)))))))
+					(negate-magnitude mag)))))))
       (if (>= (bignum-sign m) 0)
 	  (if (>= (bignum-sign n) 0)
 	      (finish (op 0 0) magnitude-bitwise-binop-pos-pos)
@@ -130,8 +114,7 @@
 			((= 1 (bignum-sign m))
 			 (shift-right-pos-magnitude (bignum-magnitude m) n))
 			(else
-			 (shift-right-neg-magnitude (bignum-magnitude m) n)))
-		  (bignum-exact? m))))
+			 (shift-right-neg-magnitude (bignum-magnitude m) n))))))
 
 (define (shift-left-magnitude mag n)
   (if (< n log-radix)
@@ -201,12 +184,14 @@
 ;(define random (make-random 17))
 
 
-(define-integer-method bitwise-not-table (when-integer integer-bitwise-not))
-(define-integer-method bitwise-and-table (when-integers integer-bitwise-and))
-(define-integer-method bitwise-ior-table (when-integers integer-bitwise-ior))
-(define-integer-method bitwise-xor-table (when-integers integer-bitwise-xor))
+(define-method &bitwise-not ((n :integer)) (integer-bitwise-not n))
 
-(define-integer-method arithmetic-shift-table
-  (when-integers integer-arithmetic-shift))
+(define-method &bitwise-and ((n1 :exact-integer) (n2 :exact-integer))
+  (integer-bitwise-and n1 n2))
+(define-method &bitwise-ior ((n1 :exact-integer) (n2 :exact-integer))
+  (integer-bitwise-ior n1 n2))
+(define-method &bitwise-xor ((n1 :exact-integer) (n2 :exact-integer))
+  (integer-bitwise-xor n1 n2))
 
-
+(define-method &arithmetic-shift ((n1 :exact-integer) (n2 :exact-integer))
+  (integer-arithmetic-shift n1 n2))

@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Interfaces for packages that can get loaded after the initial.image
@@ -86,7 +86,6 @@
 	  new-package
 	  load-package
 	  reload-package
-	  load-config
 	  structure
 	  open
 	  for-syntax
@@ -94,7 +93,8 @@
 	  user
 	  user-package-is
 	  config
-	  config-package-is))
+	  config-package-is
+	  undefine))
 
 (define-interface debug-commands-interface
   (export translate
@@ -151,6 +151,7 @@
 (define-interface package-mutation-interface
   (export package-system-sentinel	;env/command.scm
 	  package-open!			;env/debug.scm
+	  package-undefine!
 	  ))
 
 (define-interface packages-cruft-interface
@@ -186,44 +187,57 @@
 ; --------------------
 ; Extended numbers: bignums, ratnums, etc.
 
-(define-interface extended-number-support-interface
+(define-interface extended-numbers-interface
   (export make-extended-number-type
 	  extended-number-constructor
 	  extended-number-accessor
 	  extended-number-predicate
-	  plus-table
-	  minus-table
-	  *-table
-	  /-table
-	  =-table
-	  <-table
-	  quotient-table
-	  remainder-table
-	  integer?-table
-	  rational?-table
-	  real?-table
-	  complex?-table
-	  number?-table
-	  exact?-table
-	  exact->inexact-table
-	  inexact->exact-table
-	  real-part-table
-	  imag-part-table
-	  floor-table
-	  numerator-table
-	  denominator-table
-	  exp-table log-table
-	  sin-table cos-table tan-table asin-table acos-table atan-table
-	  sqrt-table
-	  make-rectangular-table
-	  number->string-table
-	  string->number-table))
+	  (define-opcode-extension :syntax)
+	  :exact :inexact
+	  string-position
+	  &+
+	  &-
+	  &*
+	  &/
+	  &=
+	  &<
+	  &quotient
+	  &remainder
+	  &integer?
+	  &rational?
+	  &real?
+	  &complex?
+	  &number?
+	  &exact?
+	  &exact->inexact
+	  &inexact->exact
+	  &real-part
+	  &imag-part
+	  &floor
+	  &numerator
+	  &denominator
+	  &exp &log
+	  &sin &cos &tan &asin &acos &atan
+	  &sqrt
+	  &make-rectangular
+	  &number->string
+	  &really-string->number))
 
+(define-interface bignums-interface  ;Things used by bigbit
+  (export integer->bignum bignum-magnitude bignum-sign
+	  zero-magnitude?
+	  integer->magnitude
+	  adjoin-digit
+	  low-digit high-digits
+	  make-integer
+	  zero-magnitude
+	  radix
+	  integer-negate integer- integer=))
 
 ; --------------------
 ; Big Scheme
 
-(define-interface defrecord-interface  ;The competition.
+(define-interface defrecord-interface  ;RK's
   (export (define-record-type :syntax)
 	  define-record-discloser))
 
@@ -277,17 +291,6 @@
 	  current-row current-column fresh-line
 	  input-port? output-port?))
 
-(define-interface general-tables-interface
-  (export make-table
-	  make-string-table
-	  make-symbol-table
-	  make-integer-table
-	  make-table-maker
-	  table?
-	  table-ref
-	  table-set!
-	  table-walk))
-
 (define-interface arrays-interface
   (export make-array		; <initial-value> <bound1> ...
 	  array-shape		; <array>
@@ -316,7 +319,7 @@
       defrecord-interface
       extended-ports-interface
       queues-interface
-      general-tables-interface
+      (interface-of tables)
       (export concatenate-symbol
 	      error breakpoint
 	      atom? null-list? neq? n=
@@ -344,3 +347,14 @@
 	  mapcar mapc 1+ -1+ t nil atom? print princ prin1 error
 	  (cons-stream :syntax) head tail the-empty-stream empty-stream?
 	  explode implode get put))
+
+(define-interface generics-interface    ;Obsolescent
+  (export make-method-table
+	  apply-generic
+	  make-generic
+	  disclose
+	  disclose-methods
+	  define-method
+	  define-default-method
+	  fail
+	  make-family))

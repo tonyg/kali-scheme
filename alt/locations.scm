@@ -1,10 +1,13 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Locations
 
 (define location-rtd
   (make-record-type 'location '(id defined? contents)))
+
+(define-record-discloser location-rtd
+  (lambda (l) `(location ,(location-id l))))
 
 (define make-undefined-location
   (let ((make (record-constructor location-rtd

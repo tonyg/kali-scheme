@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ;;;; A pretty-printer
 
@@ -110,7 +110,7 @@
          (make-leaf (string-length (symbol->string obj))
                     obj hang))
         ((number? obj)
-         (make-leaf (string-length (number->string obj '(heur)))
+         (make-leaf (string-length (number->string obj))
                     obj hang))
         ((boolean? obj)
          (make-leaf 2 obj hang))

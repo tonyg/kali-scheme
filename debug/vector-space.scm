@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 
@@ -128,5 +128,5 @@
   (let ((z (vector-length v)))
     (do ((i (- z 1) (- i 1)))
 	((< i 0) #f)
-      (if (not (eq? (vector-ref v i) (unassigned)))
+      (if (not (vector-unassigned? v i))
 	  (proc (vector-ref v i))))))

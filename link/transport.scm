@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ; This is file transport.scm.
 
@@ -59,9 +59,9 @@
 
 (define (transport-immediate thing)
   (cond ((integer? thing)
-	 (make-descriptor tag/fixnum thing))
+	 (make-descriptor (enum tag fixnum) thing))
 	((char? thing)
-	 (make-immediate imm/char (char->ascii thing)))
+	 (make-immediate (enum imm char) (char->ascii thing)))
 	((eq? thing '())
 	 vm-null)
 	((eq? thing #f)
@@ -72,16 +72,6 @@
 	 vm-unspecific)
 	(else
 	 (error "cannot transport literal" thing))))
-
-(define stob/closure (enum stob closure))
-(define stob/code-vector (enum stob code-vector))
-(define stob/location (enum stob location))
-(define stob/pair (enum stob pair))
-(define stob/string (enum stob string))
-(define stob/symbol (enum stob symbol))
-(define stob/template (enum stob template))
-(define stob/vector (enum stob vector))
-
 
 ;==============================================================================
 ; The heap is a list of transported stored objects, each of which is either a
@@ -149,13 +139,13 @@
 ; Closures and pairs are transported using TRANSPORT-TWO-SLOT.
 
 (define transport-closure
-  (transport-two-slot stob/closure
+  (transport-two-slot (enum stob closure)
 		      closure-template closure-template-offset
 		      closure-env      closure-env-offset
 		      #t))  ; ***
 
 (define transport-pair
-  (transport-two-slot stob/pair
+  (transport-two-slot (enum stob pair)
 		      car car-offset
 		      cdr cdr-offset
 		      #t))  ; *** ?
@@ -164,7 +154,7 @@
 ; when the location is unbound.
 
 (define (transport-location loc)
-  (let* ((data (allocate-d-vector stob/location 2 #f))
+  (let* ((data (allocate-d-vector (enum stob location) 2 #f))
 	 (descriptor (car data))
 	 (vector (cdr data)))
     (vector-set! vector
@@ -181,7 +171,7 @@
 ; Characters in the symbol name are made to be lower case.
 
 (define (transport-symbol symbol)
-  (let* ((data (allocate-d-vector stob/symbol 1 #t))
+  (let* ((data (allocate-d-vector (enum stob symbol) 1 #t))
 	 (descriptor (car data))
 	 (vector (cdr data)))
     (vector-set! vector
@@ -213,14 +203,14 @@
 
 (define (transport-template template)
   (transport-vector-like template
-			 stob/template
+			 (enum stob template)
 			 (template-length template)
 			 template-ref
 			 #f))
 
 (define (transport-vector vector)
   (transport-vector-like vector
-			 stob/vector
+			 (enum stob vector)
 			 (vector-length vector)
 			 vector-ref
 			 #t))  ;***
@@ -248,13 +238,13 @@
   (cond ((string? thing)
 	 (let ((len (string-length thing)))
 	   (write-stob (make-header-immutable ; ***
-			(make-header stob/string len))
+			(make-header (enum stob string) len))
 		       thing len string-ref write-char port)
 	   (align-port len port)))
 	((code-vector? thing)
 	 (let ((len (code-vector-length thing)))
 	   (write-stob (make-header-immutable  ; ***
-			(make-header stob/code-vector len))
+			(make-header (enum stob code-vector) len))
 		       thing len code-vector-ref write-byte port)
 	   (align-port len port)))
 	((vector? thing)

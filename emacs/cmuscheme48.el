@@ -1,4 +1,4 @@
-;;; cmuscheme48.el -- Scheme process in a buffer. Adapted from cmuscheme.el.
+;;; cmuscheme48.el -- Scheme process in a buffer.  Adapted from cmuscheme.el.
 
 (provide 'cmuscheme48)
 (require 'cmuscheme)
@@ -22,25 +22,43 @@
   (comint-send-region (scheme-proc) start end)
   (comint-send-string (scheme-proc) " ,end\n"))
 
+; This assumes that when you load things into Scheme 48, you type
+; names of files in your home directory using the syntax "~/".
+; Similarly for current directory.  Maybe we ought to send multiple
+; file names to Scheme and let it look at all of them.
+
 (defun enough-scheme-file-name (file)
   (let* ((scheme-dir
 	  (save-excursion
-	    (switch-to-buffer scheme-buffer)
-	    default-directory))
+	    (set-buffer scheme-buffer)
+	    (expand-file-name default-directory)))
 	 (len (length scheme-dir)))
     (if (and (> (length file) len)
 	     (string-equal scheme-dir (substring file 0 len)))
 	(substring file len)
-	file)))
+	(if *scheme48-home-directory-kludge*
+	    (let* ((home-dir (expand-file-name "~/"))
+		   (len (length home-dir)))
+	      (if (and (> (length file) len)
+		       (string-equal home-dir (substring file 0 len)))
+		  (concat "~/" (substring file len))
+		  file))
+	    file))))
 
-(defun scheme48-send-definition ()
+(defvar *scheme48-home-directory-kludge* t)
+
+(defun scheme48-send-definition (losep)
   "Send the current definition to the inferior Scheme48 process."
-  (interactive)
+  (interactive "P")
   (save-excursion
    (end-of-defun)
    (let ((end (point)))
      (beginning-of-defun)
-     (scheme48-send-region (point) end))))
+     (if losep
+	 (let ((loser "/tmp/s48lose.tmp"))
+	   (write-region (point) end loser)
+	   (scheme48-load-file loser))
+	 (scheme48-send-region (point) end)))))
 
 (defun scheme48-send-last-sexp ()
   "Send the previous sexp to the inferior Scheme process."
@@ -54,11 +72,11 @@ and switch to the process buffer."
   (scheme48-send-region start end)
   (switch-to-scheme t))
 
-(defun scheme48-send-definition-and-go ()
+(defun scheme48-send-definition-and-go (losep)
   "Send the current definition to the inferior Scheme48,
 and switch to the process buffer."
-  (interactive)
-  (scheme48-send-definition)
+  (interactive "P")
+  (scheme48-send-definition losep)
   (switch-to-scheme t))
 
 (defun scheme48-load-file (file-name)

@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Compiler state, including flags controlling debug data retention.
@@ -14,7 +14,7 @@
     (set! *template-uid* (+ *template-uid* 1))
     uid))
 
-(define *template-uid* 5000)
+(define *template-uid* 5000)  ; 1548 in initial system as of 1/22/94
 
 (define (template-uid) *template-uid*)
 (define (set-template-uid! uid) (set! *template-uid* uid))
@@ -58,7 +58,7 @@
 
 ; Kludge for static linker.
 
-(define (with-fresh-compiler-state thunk)
+(define (with-fresh-compiler-state template-uid-origin thunk)
   (let-fluid $debug-flags (make-debug-flags #t ;proc names
 					    #t ;env maps
 					    #f ;no file names
@@ -68,7 +68,7 @@
     (lambda ()
       (saving-and-restoring (lambda () *template-uid*)
 			    (lambda (s) (set! *template-uid* s))
-			    0
+			    template-uid-origin
 			    thunk))))
 
 (define (saving-and-restoring fetch store! other thunk)

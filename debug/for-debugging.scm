@@ -1,35 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
-
-
-; --------------------
-
-; Redefinitions of some usual scheme things so as to make the new
-; exception system kick in when it needs to.
-
-(define (number? n)
-  (or ((structure-ref scheme number?) n)
-      (extended-number? n)))
-
-;(define (integer? n)
-;  (if ((structure-ref scheme number?) n)
-;      ((structure-ref scheme integer?) n)
-;      (and (extended-number? n)
-;           ... raise exception ...)))
-
-(define (+ x y) ((structure-ref scheme +) x y))
-(define (* x y) ((structure-ref scheme *) x y))
-(define (- x y) ((structure-ref scheme -) x y))
-(define (/ x y) ((structure-ref scheme /) x y))
-(define (= x y) ((structure-ref scheme =) x y))
-(define (< x y) ((structure-ref scheme <) x y))
-(define (make-vector x y) ((structure-ref scheme make-vector) x y))
-(define (make-string x y) ((structure-ref scheme make-string) x y))
-(define (apply x y) ((structure-ref scheme apply) x y))
-
-(define (read-char x) ((structure-ref scheme read-char) x))
-(define (peek-char x) ((structure-ref scheme peek-char) x))
-(define (char-ready? x) ((structure-ref scheme char-ready?) x))
-(define (write-char x y) ((structure-ref scheme write-char) x y))
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; --------------------
@@ -88,41 +57,3 @@
 
 (define (in struct form)
   (eval form (structure-package struct)))
-
-
-; Fake linker to make scripts.scm possible
-
-(define (link-simple-system filename resumer-exp . structs)
-  (link-system structs (lambda () resumer-exp) filename))
-
-(define (link-reified-system some filename make-resumer-exp . structs)
-  (link-system (append structs (map (lambda (name+struct)
-				      (if (pair? name+struct)
-					  (cdr name+struct)
-					  name+struct))
-				    some))
-	       (lambda ()
-		 (display "Reifying") (newline)
-		 `(,make-resumer-exp
-		   (lambda ()
-		     ,(reify-structures some
-					(lambda (loc) loc)))))
-	       filename))
-
-
-(define (link-system structs make-resumer filename)
-  (for-each ensure-loaded structs)
-  (let* ((p (make-simple-package structs eval #f))
-	 (r (eval (make-resumer) p)))
-    (check-package p)
-    r))
-
-(define (check-package p)
-  (let ((names (undefined-variables p)))
-    (if (not (null? names))
-	(begin (display "Undefined: ") 
-	       (write names) (newline)))))
-
-(define-syntax struct-list
-  (syntax-rules ()
-    ((struct-list name ...) (list (cons 'name name) ...))))

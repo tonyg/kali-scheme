@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Substitution
@@ -13,9 +13,10 @@
 	   (let ((args (cdr e)))
 	     (if (= (length formals) (length args))
 		 (substitute body (make-substitution r formals args))
-		 (begin (warn "wrong number of arguments to in-line procedure"
-			      e)
-			e)))))
+		 ;; No need to generate warning since the type checker will
+		 ;; produce one.  Besides, we don't want to produce a warning
+		 ;; for things like (> x y z).
+		 e))))
        (lambda (e r c)
 	 (cons (substitute form r)
 	       (cdr e))))
@@ -33,26 +34,30 @@
 
 
 ; Substitute into an expression.
+; FORM is an S-expression as returned by MAKE-SUBSTITUTION-TEMPLATE.
+; Make nodes instead of just s-expression because otherwise TYPE-CHECK and
+; SCHEMIFY will get confused.
 
 (define (substitute form r)
   (cond ((symbol? form)
-	 (r form)
-;         (let ((foo (r form)))
-;           (if (name? foo)
-;               (make-node (get-operator 'name) foo)
-;               foo))
-	 )
+	 ;; Was (r form)
+         (let ((foo (r form)))
+           (if (name? foo)
+               (make-node (get-operator 'name) foo)
+               foo)))
 	((qualified? form)
-	 ;; (make-node (get-operator 'name) ...)
-	 (qualified->name form r))
+	 ;; Was (qualified->name form r)
+	 (make-node (get-operator 'name)
+		    (qualified->name form r)))
 	((pair? form)
 	 (case (car form)
 	   ((quote) (make-node (get-operator 'quote) form))
 	   ((lambda) (error "lambda substitution NYI" form))
 	   ((call)
-	    ;; ? (make-node (get-operator 'call) ...)
-	    (map (lambda (form) (substitute form r))
-		 (cdr form)))
+	    ;; Was just (map ...)
+	    (make-node (get-operator 'call)
+		       (map (lambda (form) (substitute form r))
+			    (cdr form))))
 	   (else
 	    (let ((keyword (car form)))
 	      (make-node (get-operator keyword)

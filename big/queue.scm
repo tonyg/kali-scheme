@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ; Queues
 ; Richard's code with Jonathan's names.
@@ -8,7 +8,7 @@
 ;      add-to-queue!	    enqueue
 ;      remove-from-queue!   dequeue
 
-(define-record-type queue queue-type
+(define-record-type queue :queue
   (really-make-queue uid head tail)
   queue?
   (uid queue-uid)

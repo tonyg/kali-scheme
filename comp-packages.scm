@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Package definitions for byte-code compiler and initial image.
@@ -6,10 +6,12 @@
 
 ; Two basic structures needed to support the compiler.
 
-(define-structure tables tables-interface
-  (open scheme-level-1 signals bummed-define-record-types
-	features)			;string-hash
-  (files (big table))
+(define-structure tables general-tables-interface
+  (open scheme-level-1
+	bummed-define-record-types
+	signals
+	features)    ; string-hash
+  (files (big general-table))
   (optimize auto-integrate))
 
 (define-structure filenames filenames-interface
@@ -20,7 +22,9 @@
 ; Type system
 
 (define-structure meta-types meta-types-interface
-  (open scheme-level-2 util signals)
+  (open scheme-level-2
+	bummed-define-record-types tables bitwise
+	util signals)
   (files (bcomp mtype))
   (optimize auto-integrate))
 
@@ -53,7 +57,7 @@
   (files (bcomp usual)
 	 (bcomp rules)))
 
-(define-structure reconstruction (export node-type)
+(define-structure reconstruction (export node-type reconstruct-type)
   (open scheme-level-2
 	syntactic meta-types
 	signals)
@@ -72,7 +76,9 @@
 
 (define-structure scan scan-interface
   (open scheme-level-2
-	packages syntactic usual-macros meta-types
+	packages syntactic
+	usual-macros		; for dealing with (usual-transforms ...)
+	meta-types
 	packages-internal
 	signals fluids tables util
 	features		;force-output
@@ -115,7 +121,7 @@
 	 (bcomp ctop))
   (optimize auto-integrate))
 
-; DEFINE-STRUCTURES and friends
+; DEFINE-STRUCTURE and friends
 
 (define-structure defpackage defpackage-interface
   (open scheme-level-2
@@ -125,12 +131,16 @@
 	signals			;error
 	tables)
   (for-syntax (open scheme-level-2 signals))     ;syntax-error
-  (files (bcomp defpackage)
+  (files (bcomp module-language)
 	 (bcomp config)))
 
 (define-structure types types-interface  ;Typing language
-  (open scheme-level-2 meta-types loopholes)
+  (open scheme-level-2 meta-types syntactic loopholes)
   (files (bcomp type)))
+
+(define-structure module-system (compound-interface defpackage-interface
+						    types-interface)
+  (open defpackage types))
 
 ; Static linker
 

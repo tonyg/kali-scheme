@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; This is file record.scm.
@@ -67,7 +67,9 @@
 	((constructor) constructor)
 	((predicate) predicate)
 	((accessor) accessor)
-	((modifier) modifier))))
+	((modifier) modifier)
+	((name) type-id)
+	((field-names) field-names))))
 
   the-descriptor)
 
@@ -82,6 +84,13 @@
 
 (define (record-modifier r-t field-name)
   ((r-t 'modifier) field-name))
+
+(define (record-type-name r-t) (r-t 'name))
+(define (record-type-field-names r-t) (r-t 'field-names))
+
+(define (record-type? r-t)
+  (and (procedure? r-t)
+       (error "record-type? not implemented" r-t)))
 
 (define (define-record-discloser r-t proc)
   "ignoring define-record-discloser form")

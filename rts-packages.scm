@@ -1,34 +1,9 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Package definitions for runtime system (without compiler).
 
 ; Assumes interface definitions in interfaces.scm.
-
-(define-structures ((scheme-level-0 scheme-level-0-interface)
-		    (primitives primitives-interface)
-		    (bitwise bitwise-interface)
-		    (closures closures-interface)
-		    (code-vectors code-vectors-interface)
-		    (features features-interface)
-		    (write-images (export write-image))	;for linker
-		    (source-file-names (export (%file-name% :syntax)))
-		    (loopholes (export (loophole :syntax)))
-
-		    (low-level low-level-interface)
-		    (escapes escapes-interface)
-		    (vm-exposure vm-exposure-interface)
-		    (ascii ascii-interface)
-		    (locations locations-interface)
-		    (signals signals-interface)
-		    (silly (export really-string->symbol reverse-list->string))
-		    (structure-refs (export (structure-ref :syntax))))
-  (define-all-operators)		; Primitive Scheme, in the LSC paper
-  (usual-transforms and cond do let let* or)
-  (files (rts low)
-	 (rts signal))
-  (optimize auto-integrate))
-
 
 ; "Level 1" - all the easy things.  There is no dependence on any
 ; low-level or unusual primitives.
@@ -46,23 +21,30 @@
 
 ; "Level 2"
 
-(define-structure generics generics-interface
-  (open scheme-level-1 signals)
-  (files (rts generic)))
-
-(define-structure number-i/o number-i/o-interface
-  (open scheme-level-1 signals ascii generics)
-  (files (rts numio)))
-
 (define-structures ((records records-interface)
 		    (records-internal records-internal-interface))
-  (open scheme-level-1 signals generics primitives)
+  (open scheme-level-1 signals
+	primitives)
   (files (rts record))
   (optimize auto-integrate))
 
 (define-structure bummed-define-record-types define-record-types-interface
   (open scheme-level-1 records records-internal loopholes)
   (files (rts bummed-jar-defrecord)))
+
+(define-structures ((methods methods-interface)
+		    (meta-methods meta-methods-interface))
+  (open scheme-level-1
+	bummed-define-record-types
+	records records-internal
+	bitwise util
+	signals)
+  (files (rts method))
+  (optimize auto-integrate))
+
+(define-structure number-i/o number-i/o-interface
+  (open scheme-level-1 methods signals ascii)
+  (files (rts numio)))
 
 (define-structures ((fluids fluids-interface)
 		    (fluids-internal fluids-internal-interface))
@@ -85,7 +67,7 @@
 
 (define-structure enumerated enumerated-interface
   (open scheme-level-1 signals)
-  (files (rts enum)
+  (files ;; (rts enum)
 	 (rts defenum scm)))
 
 (define-structure architecture architecture-interface
@@ -99,12 +81,21 @@
 ; Hairier stuff now.
 
 (define-structure templates templates-interface
-  (open scheme-level-1 primitives)
+  (open scheme-level-1 primitives methods)
   (files (rts template)))
 
 (define-structure continuations continuations-interface
-  (open scheme-level-1 primitives)
+  (open scheme-level-1 primitives templates methods)
   (files (rts continuation)))
+
+(define-structure more-types (export :closure :code-vector :location :template)
+  (open methods
+	closures code-vectors locations templates)
+  (begin (define-simple-type :closure     (:value) closure?)
+	 (define-simple-type :code-vector (:value) code-vector?)
+	 (define-simple-type :location    (:value) location?)
+	 (define-simple-type :template    (:value) template?)))
+
 
 (define-structures ((exceptions exceptions-interface)
 		    (handle handle-interface))
@@ -114,7 +105,9 @@
 	primitives	  ;set-exception-handler!, etc.
 	wind		  ;CWCC
 	util		  ;reduce used in xprim.scm
-	generics
+	methods
+	meta-methods
+	more-types
 	;; low-level	  ;halt
 	vm-exposure	  ;primitive-catch
 	templates	  ;template-code, template-info
@@ -139,7 +132,7 @@
   (open scheme-level-1
 	number-i/o
 	ports				;output-port-option, write-string
-	generics)			;disclose
+	methods)			;disclose
   (files (rts write)))
 	 
 (define-structure reading reading-interface
@@ -185,6 +178,6 @@
 (define-structure display-conditions display-conditions-interface
   (open scheme-level-2
 	writing
-	generics
+	methods
 	handle)			;ignore-errors
   (files (env dispcond)))

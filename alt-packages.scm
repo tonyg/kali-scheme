@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; This configuration file provides alternative implementations of many
@@ -9,60 +9,60 @@
 ; Run-time structures: (cf. interface definition in packages.scm)
 
 ; Same as in rts-packages.scm:
-(define-structures ((architecture architecture-interface))
+(define-structure architecture architecture-interface
   (open scheme-level-1 signals enumerated)
   (files (rts arch)))
 
-(define-structures ((define-record-types define-record-types-interface))
+(define-structure define-record-types define-record-types-interface
   (open scheme-level-1 records)
   (files (rts jar-defrecord)))
 (define-structure bummed-define-record-types define-record-types)
 
-(define-structures ((closures closures-interface))
+(define-structure closures closures-interface
   (open scheme-level-1 records)
   (files (alt closure)))
 
 ; Same as in rts-packages.scm:
-(define-structures ((enumerated enumerated-interface))
+(define-structure enumerated enumerated-interface
   (open scheme-level-1 signals)
   (files (rts enum)
 	 (rts defenum scm)))
 
-(define-structures ((fluids fluids-interface))
+(define-structure fluids fluids-interface
   (open scheme-level-1 signals)
   (files (alt fluid)))
 
-(define-structures ((locations locations-interface))
+(define-structure locations locations-interface
   (open scheme-level-2 signals)
   (files (alt locations)))
 
-(define-structures ((loopholes (export (loophole :syntax))))
+(define-structure loopholes (export (loophole :syntax))
   (open scheme-level-2)
   (files (alt loophole)))
 
-(define-structures ((source-file-names (export (%file-name% :syntax))))
+(define-structure source-file-names (export (%file-name% :syntax))
   (open scheme-level-1 fluids syntactic)
   (files (alt file-name)))  ;tiny file
 
 (define-structures ((scheme-level-2 scheme-level-2-interface)
-		 (scheme-level-1 scheme-level-1-interface))
+		    (scheme-level-1 scheme-level-1-interface))
   (open scheme))
 
-(define-structures ((templates templates-interface))
+(define-structure templates templates-interface
   (open scheme-level-1)
   (files (alt template)
 	 (rts template)))
 
-(define-structures ((util util-interface))
+(define-structure util util-interface
   (open scheme-level-1)
   (files (rts util)))
 
-(define-structures ((weak weak-interface))
+(define-structure weak weak-interface
   (open scheme-level-1 signals)
   (files (alt weak)
 	 (rts population)))
 
-(define-structures ((write-images (export write-image)))
+(define-structure write-images (export write-image)
   (open scheme-level-2
 	tables			;Forward reference
 	features bitwise ascii enumerated
@@ -82,7 +82,7 @@
 ; continuations	       - same as run-time's
 ; display-conditions   - same as run-time's
 
-(define-structures ((escapes escapes-interface))
+(define-structure escapes escapes-interface
   (open scheme-level-2 define-record-types signals)
   (files (alt escape)))
 
@@ -91,10 +91,18 @@
 ; generics	       - same as run-time's
 ; interrupts	       - no way
 
-(define-structures ((low-level low-level-interface)
-		    (silly (export really-string->symbol reverse-list->string)))
+(define-structure low-level low-level-interface
   (open scheme-level-2 signals escapes)
   (files (alt low)))
+
+(define-structure silly (export really-string->symbol
+				reverse-list->string)
+  (open scheme-level-1)
+  (begin
+    (define really-string->symbol string->symbol)
+
+    (define (reverse-list->string l n)
+      (list->string (reverse l)))))
 
 ; number-i/o	       - ?
 ; ports		       - ?
@@ -124,3 +132,15 @@
 ; shadowing	       - no way
 ; structure-refs       - ?
 ; wind		       - ?
+
+(define-structure environments (export *structure-ref)
+  (open )				;Assume flatloading
+  (files (alt environments)))
+
+
+; Procedure annotations
+
+(define-structure annotations
+    (export annotate-procedure procedure-annotation)
+  (open scheme-level-1)
+  (files (alt annotate)))

@@ -1,18 +1,60 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Alternate implementation of PRIMITIVES module.
 
+; Based on
+;(define-interface primitives-interface
+;  (export close-port                    ;extended-ports
+;          collect                       ; ,collect command
+;          continuation-length
+;          continuation-ref
+;          continuation-set!
+;          continuation?
+;          extended-number-length
+;          extended-number-ref
+;          extended-number-set!
+;          extended-number?
+;          external-call
+;          external-lookup
+;          external-name
+;          external-value
+;          external?
+;          find-all-xs                   ; externals.scm
+;          force-output                  ;ports re-exports this.
+;          get-dynamic-state             ;fluids
+;          make-continuation
+;          make-extended-number
+;          make-external
+;          make-record
+;          make-template
+;          make-weak-pointer
+;          memory-status                 ;interrupts
+;          record-length
+;          record-ref
+;          record-set!
+;          record?
+;          schedule-interrupt            ;interrupts re-exports
+;          set-dynamic-state!            ;fluids
+;          set-enabled-interrupts!       ;interrupts
+;          set-exception-handler!
+;          set-interrupt-handlers!       ;interrupts
+;          template-length
+;          template-ref
+;          template-set!
+;          template?
+;          time                          ;interrupts
+;          unspecific                    ;record
+;          vm-extension
+;          vm-return
+;          weak-pointer-ref
+;          weak-pointer?
+;          write-string))
+
+
 (define underlying-error error)
 
-
-(define *vm-return* #f)
-
-(define (vm-return . rest)
-  (if *vm-return*
-      (apply *vm-return* rest)
-      (underlying-error "vm-return" rest)))
-
+(define (unspecific) (if #f #f))
 
 ; Shadow record primitives so that the existing inspector and printer
 ; don't get confused.
@@ -164,6 +206,14 @@
   (set! *pseudo-enabled-interrupts* 0)
   (set! *pseudo-interrupt-handlers* #f)
   (set! *pseudo-exception-handler* #f))
+
+(define *vm-return* #f)
+
+(define (vm-return . rest)
+  (if *vm-return*
+      (apply *vm-return* rest)
+      (underlying-error "vm-return" rest)))
+
 
 (define (?start entry-point arg) ;E.g. (?start (usual-resumer bare) 0)
   (clear-registers!)

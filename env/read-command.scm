@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Read a command.  No command name completion, yet.
@@ -71,8 +71,8 @@
 ; output.
 
 (define (read-form port)
-  (with-sharp-sharp (make-node (get-operator 'literal 'leaf)
-			       (focus-object))
+  (with-sharp-sharp (make-node (get-operator 'quote)
+			       (list 'quote (focus-object)))
     (lambda () (read port))))
 
 ; Read a command line:  <name> <arg> ... <newline>

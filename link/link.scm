@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ; The static linker.
 
@@ -11,42 +11,40 @@
 
 
 ; resumer-exp should evaluate to a procedure
-;   (lambda (structs) ... (lambda (arg i-port o-port ...) ...))
+;   (lambda (structs-thunk) ... (lambda (arg i-port o-port ...) ...))
 
 (define (link-reified-system some filename make-resumer-exp . structs)
   (link-system (append structs (map cdr some))
 	       (lambda ()
 		 `(,make-resumer-exp
 		   (lambda ()
-		     ,(reify-structures some
-					(lambda (loc) loc)
-					`(lambda (loc) loc)))))
+		     ,(call-with-values
+			  (lambda () (reify-structures some))
+			(lambda (exp locs least-uid)
+			  `(,exp (lambda (i)
+				   (vector-ref ,(strange-quotation locs)
+					       (- i ,least-uid)))))))))
 	       filename))
 
+(define strange-quotation
+  (let ((operator/quote (get-operator 'quote)))
+    (lambda (thing)
+      (make-node operator/quote `',thing))))
 
-; resumer-exp should evaluate to a procedure
+
+; `(,make-resumer-exp ',vector) should evaluate to a procedure
 ;   (lambda (locs) ... (lambda (arg i-port o-port ...) ...))
 
 (define (link-semireified-system some filename
 				 make-resumer-exp . structs)
-  (let ((locs (make-table))
-	(loser #f))
+  (let ((loser #f))
     (link-system (append structs (map cdr some))
 		 (lambda ()
-		   (set! loser
-			 (reify-structures
-			  	some
-				(lambda (loc)
-				  (let ((id (location-id loc)))
-				    (table-set! locs id loc)
-				    id))
-				`location-from-id))
-		   `(,make-resumer-exp
-		     ',(let ((l '()))
-			 (table-walk (lambda (id loc)
-				       (set! l (cons loc l)))
-				     locs)
-			 (list->vector l))))
+		   (call-with-values (lambda ()
+				       (reify-structures some))
+		     (lambda (exp locs least)
+		       (set! loser exp)
+		       `(,make-resumer-exp ',locs))))
 		 filename)
     (let ((f (namestring filename #f 'env)))
       (call-with-output-file f
@@ -54,7 +52,11 @@
 	  (display "Writing environment structure to ")
 	  (display f)
 	  (newline)
-	  (write `(define the-structures ,loser) port))))))
+	  ;; loser evaluates to a procedure
+	  ;;  (lambda (uid->location) struct-alist)
+	  (write `(define make-the-structures
+		    (,loser location-from-id))
+		 port))))))
 
 
 ; (link-system structs make-resumer filename)
@@ -67,27 +69,30 @@
 
 (define (link-system structs make-resumer filename)
   (with-fresh-compiler-state
+   (if *debug-linker?* 100000 0)    ;Location uid
    (lambda ()
-     (set! *loser* #f)
-     (let* ((location-info (make-table))
-	    (generator (make-location-generator location-info
-						(if *debug-linker?* 4000 0)))
-	    (thunks (compile-structures structs
-					generator
-					package->environment))
-	    (p (make-simple-package structs #f #f))
-	    (r (noting-undefined-variables p
-		 (lambda ()
-		   (set-package-get-location! p generator)
-		   (compile-form (make-resumer) p)))))
-       (let ((startup (make-closure 
-		       (make-startup-procedure thunks r)
-		       0)))
-	 (if *debug-linker?* (set! *loser* startup))
-	 (write-image-file startup
-			   (namestring filename #f 'image)))
-       (write-debug-info location-info
-			 (namestring filename #f 'debug))))))
+     (with-fresh-packages-state (if *debug-linker?* 1000 0)  ;Package uid
+       (lambda ()
+	 (set! *loser* #f)
+	 (let* ((location-info (make-table))
+		(generator (make-location-generator location-info
+						    (if *debug-linker?* 10000 0)))
+		(thunks (compile-structures structs
+					    generator
+					    package->environment))
+		(p (make-simple-package structs #f #f))
+		(r (noting-undefined-variables p
+					       (lambda ()
+						 (set-package-get-location! p generator)
+						 (compile-form (make-resumer) p)))))
+	   (let ((startup (make-closure 
+			   (make-startup-procedure thunks r)
+			   0)))
+	     (if *debug-linker?* (set! *loser* startup))
+	     (write-image-file startup
+			       (namestring filename #f 'image)))
+	   (write-debug-info location-info
+			     (namestring filename #f 'debug))))))))
 (define *loser* #f)
 (define *debug-linker?* #f)
 

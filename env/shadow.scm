@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Deal with shadowed variables.
@@ -9,32 +9,44 @@
 ; name (structure-ref p name) (define name ...) within a single template
 ; will lose big.
 
-(define *replaced-locations* '()) ;alist of (old rep ((uid ...) . new))
+;(define *replaced-locations* '()) ;alist of (old rep ((uid ...) . new))
 
 (define (shadow-location! old p-uids new replacement)
   (if (location-defined? old)
       (set-contents! replacement (contents old)))
-  (let ((bar (cdr (or (assq old *replaced-locations*)
-		      (let ((foo (list old replacement)))
-			(set! *replaced-locations*
-			      (cons foo *replaced-locations*))
-			foo)))))
-    (set-cdr! bar (cons (cons p-uids new) (cdr bar)))
-    (set-location-defined?! old #f)))  ;so that exceptions will be raised
+  (set-location-id! old
+		    (vector replacement p-uids new))
+
+;  (let ((bar (cdr (or (assq old *replaced-locations*)
+;                      (let ((foo (list old replacement)))
+;                        (set! *replaced-locations*
+;                              (cons foo *replaced-locations*))
+;                        foo)))))
+;    (set-cdr! bar (cons (cons p-uids new) (cdr bar))))
+
+  (set-location-defined?! old #f))  ;so that exceptions will be raised
 
 (define maybe-replace-location
   (let ((assq assq)	;paranoia
 	(memv memv))
-    (lambda (loc p-uid)			;a package's unique id
-      (let ((probe (assq loc *replaced-locations*)))
-	(if probe
-	    (let ((bar (cdr probe)))
-	      (let loop2 ((frobs (cdr bar)))
-		(if (eq? frobs '())	;(null? frobs)
-		    (maybe-replace-location (car bar) p-uid)
-		    (if (memv p-uid (car (car frobs)))
-			(maybe-replace-location (cdr (car frobs)) p-uid)
-			(loop2 (cdr frobs))))))
+    (lambda (loc p-uid)			;Package's unique id
+;      (let ((probe (assq loc *replaced-locations*)))
+;        (if probe
+;            (let ((bar (cdr probe)))
+;              (let loop2 ((frobs (cdr bar)))
+;                (if (eq? frobs '())     ;(null? frobs)
+;                    (maybe-replace-location (car bar) p-uid)
+;                    (if (memv p-uid (car (car frobs)))
+;                        (maybe-replace-location (cdr (car frobs)) p-uid)
+;                        (loop2 (cdr frobs))))))
+;            loc))
+      (let ((foo (location-id loc)))
+	(if (vector? foo)
+	    (maybe-replace-location
+	     (if (memv p-uid (vector-ref foo 1))
+		 (vector-ref foo 2)
+		 (vector-ref foo 0))
+	     p-uid)
 	    loc)))))
 
 ; Exception handler:

@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Syntactic stuff: transforms and operators.
@@ -6,53 +6,66 @@
 
 
 (define usual-operator-type
-  (procedure-type any-values-type value-type))
+  (procedure-type any-arguments-type value-type #f))
 
 ; --------------------
 ; Operators (= special operators and primitives)
 
-(define-record-type operator type/operator
-  (make-operator type name uid transform)  ; transform ?
+(define-record-type operator :operator
+  (make-operator type nargs uid name)
   operator?
-  (type operator-type)
-  (name operator-name)
-  (transform operator-transform set-operator-transform!)
-  (uid operator-uid-maybe set-operator-uid-maybe!))
+  (type operator-type set-operator-type!)
+  (nargs operator-nargs)
+  (uid operator-uid)
+  (name operator-name))
 
-(define-record-discloser type/operator
-  (lambda (s) (list 'operator (operator-name s) (operator-type s))))
+(define-record-discloser :operator
+  (lambda (s)
+    (list 'operator
+	  (operator-name s)
+	  (type->sexp (operator-type s) #t))))
 
 (define (get-operator name . type-option)
   (let ((type (if (null? type-option) #f (car type-option)))
 	(probe (table-ref operators-table name)))
     (if (operator? probe)
 	(let ((previous-type (operator-type probe)))
-	  ;; E.g. for +, type = (procedure any-values value),
-	  ;;	previous-type = (procedure any-values boolean),
-	  ;;    previous-type is definitely compatible with type.
-	  (if (and type
-		   (not (compatible-types? previous-type type)))
-	      (warn "operator type inconsistency" name type previous-type))
+	  (cond ((not type))
+		((symbol? type)		; 'leaf or 'internal
+		 (if (not (eq? type previous-type))
+		     (warn "operator type inconsistency" name type previous-type)))
+		((same-type? type previous-type))
+		((subtype? type previous-type)
+		 (signal 'note
+			 "improving operator type"
+			 name
+			 (type->sexp previous-type 'foo)
+			 (type->sexp type 'foo))
+		 (set-operator-type! probe type))
+		((not (subtype? previous-type type))
+		 (warn "operator type inconsistency"
+		       name
+		       (type->sexp previous-type 'foo)
+		       (type->sexp type 'foo))))
 	  probe)
-	(let ((op (make-operator (or type
-				     (begin (signal 'note
-						    "default type for operator"
-						    name)
-					    usual-operator-type))
-				 name #f #f)))
-	  (operator-uid op)
+	(let* ((uid *operator-uid*)
+	       (op (make-operator (or type
+				      (begin (signal 'note
+						     "default type for operator"
+						     name)
+					     usual-operator-type))
+				  (if (and (not (symbol? type))
+					   (fixed-arity-procedure-type? type))
+				      (procedure-type-arity type)
+				      #f)
+				  uid
+				  name)))
+	  (if (>= uid number-of-operators)
+	      (warn "too many operators" (operator-name op) (operator-type op)))
+	  (set! *operator-uid* (+ *operator-uid* 1))
+	  (table-set! operators-table (operator-name op) op)
+	  (vector-set! the-operators uid op)
 	  op))))
-
-(define (operator-uid op)
-  (or (operator-uid-maybe op)
-      (let ((uid *operator-uid*))
-	(if (>= uid number-of-operators)
-	    (warn "too many operators" (operator-name op) (operator-type op)))
-	(set! *operator-uid* (+ *operator-uid* 1))
-	(table-set! operators-table (operator-name op) op)
-	(vector-set! the-operators uid op)
-	(set-operator-uid-maybe! op uid)
-	uid)))
 
 (define *operator-uid* 0)
 
@@ -86,27 +99,18 @@
 ; --------------------
 ; Nodes
 
-(define-record-type node type/node
+(define-record-type node :node
   (really-make-node uid form plist)
   node?
   (uid node-operator-id)
   (form node-form)
   (plist node-plist set-node-plist!))
 
-(define (make-node operator form)
-  ;; (vector '*node* (operator-uid operator) form '())
-  (really-make-node (operator-uid operator) form '()))
-
-;(define (node? x)
-;  (and (vector? x)
-;       (= (vector-length x) 4)
-;       (eq? (vector-ref x 0) '*node*)))
-;
-;(define (node-operator-id node) (vector-ref node 1))
-;(define (node-form node) (vector-ref node 2))
-
-(define-record-discloser type/node
+(define-record-discloser :node
   (lambda (n) (list (operator-name (node-operator n)) (node-form n))))
+
+(define (make-node operator form)
+  (really-make-node (operator-uid operator) form '()))
 
 (define (node-ref node key)
   (let ((probe (assq key (node-plist node))))
@@ -148,7 +152,7 @@
 ; The parent chain provides an access path, should one ever be needed.
 ; That is: transform = (binding-static (lookup env parent)).
 
-(define-record-type generated type/generated
+(define-record-type generated :generated
   (make-generated symbol token env parent-name)
   generated?
   (symbol      generated-symbol)
@@ -156,7 +160,7 @@
   (env	       generated-env)
   (parent-name generated-parent-name))
 
-(define-record-discloser type/generated
+(define-record-discloser :generated
   (lambda (name) (list 'generated (generated-symbol name))))
 
 (define (generate-name symbol env parent-name)    ;for opt/inline.scm
@@ -224,7 +228,7 @@
 ; A transform represents a source-to-source rewrite rule: either a
 ; macro or an in-line procedure.
 
-(define-record-type transform type/transform
+(define-record-type transform :transform
   (really-make-transform xformer env type aux-names source id)
   transform?
   (xformer   transform-procedure)
@@ -235,11 +239,14 @@
   (id	     transform-id))
 
 (define (make-transform thing env type source id)
-  (if (pair? thing)
-      (really-make-transform (car thing) env type (cdr thing) source id)
-      (really-make-transform thing env type #f source id)))
+  (let ((type (if (or (pair? type) (symbol? type))
+		  (sexp->type type #t)
+		  type)))
+    (if (pair? thing)
+	(really-make-transform (car thing) env type (cdr thing) source id)
+	(really-make-transform thing env type #f source id))))
 
-(define-record-discloser type/transform
+(define-record-discloser :transform
   (lambda (m) (list 'transform (transform-id m))))
 
 (define (maybe-transform t exp env-of-use)
@@ -301,6 +308,8 @@
 (define (binding-place b) (vector-ref b 1))
 (define (binding-static b) (vector-ref b 2))
 
+(define (set-binding-place! b place) (vector-set! b 1 place))
+
 (define (really-make-binding type place static)
   (let ((b (make-vector 3 place)))
     (vector-set! b 0 type)
@@ -322,7 +331,7 @@
 (define (clobber-binding! b type place static)
   (vector-set! b 0 type)
   (if place
-      (vector-set! b 1 place))
+      (set-binding-place! b place))
   (vector-set! b 2 static))
 
 (define (binding-transform b)
@@ -347,41 +356,49 @@
 			       #f))))
 
 ; Return a binding that's similar to the given one, but has any
-; procedure integrations removed.
+; procedure integration or other static information removed.
+; But don't remove static information for macros (or structures,
+; interfaces, etc.)
 
 (define (forget-integration b)
-  (if (eq? (binding-type b) syntax-type)
-      b
+  (if (and (binding-static b)
+	   (subtype? (binding-type b) any-values-type))
       (really-make-binding (binding-type b)
 			   (binding-place b)
-			   #f)))
+			   #f)
+      b))
 
 ; --------------------
 ; Expression classifier.  Returns a node.
 
 (define (classify form env)
-  (cond ((name? form)
-	 (classify-name form env))
-	((pair? form)
-	 (let ((op-node (classify (car form) env)))
-	   (if (name-node? op-node)
-	       (let ((probe (node-ref op-node 'binding)))
-		 (if (and (binding? probe)
-			  (eq? (binding-type probe) syntax-type))
-		     (let ((s (binding-static probe)))
-		       (if (operator? s)
-			   (classify-operator-form s op-node form env)
-			   (classify-macro-application
-			    s (cons op-node (cdr form)) env)))
-		     (classify-call op-node form env)))
-	       (classify-call op-node form env))))
-        ((literal? form)
-	 (classify-literal form))
-	((node? form)
+  (cond ((node? form)
 	 (if (and (name-node? form)
 		  (not (node-ref form 'binding)))
 	     (classify-name (node-form form) env)
 	     form))
+	((name? form)
+	 (classify-name form env))
+        ((pair? form)
+	 (let ((op-node (classify (car form) env)))
+	   (if (name-node? op-node)
+	       (let ((probe (node-ref op-node 'binding)))
+		 (if (binding? probe)
+		     (let ((s (binding-static probe)))
+		       (cond ((operator? s)
+			      (classify-operator-form s op-node form env))
+			     ((and (transform? s)
+				   (eq? (binding-type probe) syntax-type))
+			      ;; Non-syntax transforms (i.e. procedure
+			      ;; integrations) get done by MAYBE-TRANSFORM-CALL.
+			      (classify-macro-application
+			               s (cons op-node (cdr form)) env))
+			     (else
+			      (classify-call op-node form env))))
+		     (classify-call op-node form env)))
+	       (classify-call op-node form env))))
+	((literal? form)
+	 (classify-literal form))
 	(else
 	 (classify (syntax-error "invalid expression" form) env))))
 
@@ -451,7 +468,8 @@
 
 (define (maybe-transform-call proc-node node env)
   (if (name-node? proc-node)
-      (let ((b (lookup env (node-form proc-node))))
+      (let ((b (or (node-ref proc-node 'binding)
+		   (lookup env (node-form proc-node)))))
 	(if (binding? b)
 	    (let ((s (binding-static b)))
 	      (cond ((transform? s)
@@ -459,8 +477,7 @@
 						     (node-form node)
 						     env
 						     (lambda () node)))
-		    ((operator? s)
-		     (make-node s (node-form node)))
+		    ;; ((operator? s) (make-node s (node-form node)))
 		    (else node)))
 	    node))
       node))
@@ -470,14 +487,16 @@
 ; Specialist classifiers for particular operators
 
 (define (classify-operator-form op op-node form env)
-  (if (ok-number-of-args? form (operator-type op))
-      ((operator-table-ref classifiers (operator-uid op))
-       op op-node form env)
-      (classify-call op-node form env)))
+  ((operator-table-ref classifiers (operator-uid op))
+   op op-node form env))
 
 (define classifiers
   (make-operator-table (lambda (op op-node form env)
-			 (make-node op (cons op-node (cdr form))))))
+			 (if (let ((nargs (operator-nargs op)))
+			       (or (not nargs)
+				   (= nargs (length (cdr form)))))
+			     (make-node op (cons op-node (cdr form)))
+			     (classify-call op-node form env)))))
 
 (define (define-classifier name proc)
   (operator-define! classifiers (list name syntax-type) proc))
@@ -503,8 +522,8 @@
 
 (define-classifier 'define
   (let ((operator/lambda (get-operator 'lambda syntax-type))
-	(operator/unassigned (get-operator 'unassigned
-					   (proc () 'unassigned))))
+	(operator/unassigned (get-operator 'unassigned 
+					   (proc () value-type)))) ;foo
     (lambda (op op-node form env)
       (make-node op
 		 (let ((pat (cadr form)))
@@ -676,7 +695,7 @@
 				           (node-ref (cadr form) 'binding))
 				      env)))))))
 
-(define (process-syntax form env name p)
+(define (process-syntax form env name env-or-whatever)
   (let ((thing ((evaluator-for-syntax env)
 		;; Bootstrap kludge to macro expand SYNTAX-RULES
 		(let ((probe (lookup env (car form))))
@@ -684,21 +703,27 @@
 			   (binding-transform probe))
 		      ((transform-procedure (binding-transform probe))
 		       form (lambda (x) x) eq?)
-		      form))
-		env)))
-    (make-transform thing p syntax-type form name)))
+		      form)))))
+    (make-transform thing env-or-whatever syntax-type form name)))
 
-(define (bind-evaluator-for-syntax eval-for-syntax env)
-  (lambda (kludge)
-    (if (eq? kludge *evaluator-for-syntax-key*)
-	eval-for-syntax
-	(lookup env kludge))))
+(define (get-funny name)
+  (lambda (env)
+    (let ((binding (lookup env name)))
+      (if (binding? binding)
+	  (binding-static binding)
+	  (error "no binding of funny name" env binding)))))
 
-(define (evaluator-for-syntax env)
-  (lookup env *evaluator-for-syntax-key*))
+(define funny-name/evaluator-for-syntax
+  (string->symbol ".evaluator-for-syntax."))
 
-(define *evaluator-for-syntax-key*
-  (string->symbol "Evaluator for syntax"))
+(define evaluator-for-syntax 
+  (get-funny funny-name/evaluator-for-syntax))
+
+;(define funny-name/environment-for-syntax
+;  (string->symbol ".environment-for-syntax."))
+;
+;(define environment-for-syntax 
+;  (get-funny funny-name/environment-for-syntax))
 
 
 ; --------------------
@@ -762,8 +787,12 @@
 
 (define (schemify node)
   (if (node? node)
-      ((operator-table-ref schemifiers (node-operator-id node)) node)
-      node))
+      (or (node-ref node 'schemify)
+	  (let ((form ((operator-table-ref schemifiers (node-operator-id node))
+		       node)))
+	    (node-set! node 'schemify form)
+	    form))
+      (desyntaxify node)))
 
 (define schemifiers
   (make-operator-table (lambda (node)
@@ -790,10 +819,35 @@
 		     (cadr form))
 	 ,@(map schemify (cddr form))))))
 
+; --------------------
+; Variable types
+
+(define (variable-type type)
+  (list 'variable type))
+
+(define (variable-type? type)
+  (and (pair? type) (eq? (car type) 'variable)))
+(define variable-value-type cadr)
+
+; Used in two places:
+; 1. GET-LOCATION checks to see if the context of use (either variable
+;    reference or assignment) is compatible with the declared type.
+; 2. CHECK-STRUCTURE checks to see if the reconstructed type is compatible
+;    with any type declared in the interface.
+
+(define (compatible-types? have-type want-type)
+  (if (variable-type? want-type)
+      (and (variable-type? want-type)
+	   (same-type? (variable-value-type have-type)
+		       (variable-value-type want-type)))
+      (if (variable-type? have-type)
+	  (meet? (variable-value-type have-type)
+		 want-type))))
 
 
+; Usual type for Scheme variables.
 
-(define (ok-number-of-args? form type)
-  (if (fixed-arity-procedure-type? type)
-      (= (procedure-type-arity type) (length (cdr form)))
-      #t))
+(define usual-variable-type (variable-type value-type))
+
+
+(define undeclared-type ':undeclared)    ;cf. really-export macro

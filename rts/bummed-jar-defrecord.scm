@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Same as jar-defrecord.scm, but field access is "optimized" in a
@@ -19,8 +19,8 @@
        (?field . ?field-stuff)
        ...)
      (begin (define ?type (make-record-type '?id '(?field ...)))
-	    (define-constructor ?constructor ?id ?type (?arg :value) ...)
-	    (define-accessors ?type ?id (?field . ?field-stuff) ...)))
+	    (define-constructor ?constructor ?type (?arg :value) ...)
+	    (define-accessors ?type (?field . ?field-stuff) ...)))
     ((define-record-type ?id ?type
        (?constructor ?arg ...)
        ?pred
@@ -32,9 +32,9 @@
 
 (define-syntax define-constructor
   (syntax-rules ()
-    ((define-constructor ?constructor ?id ?type (?arg ?arg-type) ...)
+    ((define-constructor ?constructor ?type (?arg ?arg-type) ...)
      (define ?constructor
-       (loophole (proc (?arg-type ...) ?id)
+       (loophole (proc (?arg-type ...) ?type)
 		 (record-constructor ?type '(?arg ...)))))))
 
 (define-syntax define-accessors
@@ -42,12 +42,11 @@
     (let ((%define-accessor (r 'define-accessor))
 	  (%begin (r 'begin))
 	  (type (cadr e))
-	  (id (caddr e))
-	  (field-specs (cdddr e)))
+	  (field-specs (cddr e)))
       (do ((i 1 (+ i 1))
 	   (field-specs field-specs (cdr field-specs))
 	   (ds '()
-	       (cons `(,%define-accessor ,id ,i ,@(cdar field-specs))
+	       (cons `(,%define-accessor ,type ,i ,@(cdar field-specs))
 		     ds)))
 	  ((null? field-specs)
 	   `(,%begin ,@ds)))))
@@ -55,12 +54,16 @@
 
 (define-syntax define-accessor
   (syntax-rules ()
-    ((define-accessor ?id ?index ?accessor)
+    ((define-accessor ?type ?index ?accessor)
      (define ?accessor
-       (loophole (proc (?id) :value)
-		 (lambda (r) (record-ref r ?index)))))
-    ((define-accessor ?id ?index ?accessor ?modifier)
-     (begin (define-accessor ?id ?index ?accessor)
+       (loophole (proc (?type) :value)
+		 (lambda (r)
+		   (record-ref (loophole :record r) ?index)))))
+    ((define-accessor ?type ?index ?accessor ?modifier)
+     (begin (define-accessor ?type ?index ?accessor)
 	    (define ?modifier
-	      (loophole (proc (?id :value) :unspecific)
-			(lambda (r new) (record-set! r ?index new))))))))
+	      (loophole (proc (?type :value) :unspecific)
+			(lambda (r new)
+			  (record-set! (loophole :record r) ?index new))))))
+    ((define-accessor ?type ?index)
+     (begin))))

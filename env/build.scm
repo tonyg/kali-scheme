@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Commands for writing images.
@@ -11,7 +11,8 @@
 
 ; dump <filename>
 
-(define-command-syntax 'dump "<filename>" "write a heap image"
+(define-command-syntax 'dump "<filename>"
+  "write the current heap to an image file"
   '(filename &opt form))
 
 (define (dump filename . maybe-info)
@@ -27,7 +28,8 @@
 
 ; build <exp> <filename>
 
-(define-command-syntax 'build "<exp> <filename>" "application builder"
+(define-command-syntax 'build "<exp> <filename>"
+  "build a heap image file with <exp> as entry procedure"
   '(expression filename))
 
 (define (build exp filename)

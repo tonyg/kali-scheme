@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Multitasking
@@ -25,7 +25,7 @@
 
 ; Threads
 
-(define-record-type thread thread-type
+(define-record-type thread :thread
   (really-make-thread dynamic-env
 		      continuation env-for-spawn
 		      status queue uid name)
@@ -240,7 +240,7 @@
 ; --------------------
 ; Locks (= semaphores)
 
-(define-record-type lock lock-type
+(define-record-type lock :lock
   (really-make-lock owner queue uid)
   lock?
   (owner lock-owner set-lock-owner!)
@@ -371,7 +371,7 @@
       (queue->list runnable-threads))))
 
 
-(define-record-discloser thread-type
+(define-record-discloser :thread
   (lambda (thread)
     (cons 'thread
 	  (cons (thread-uid thread)

@@ -1,17 +1,22 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Complex arithmetic, built on real arithmetic.
 
-(define recnum-type
-  (make-extended-number-type "Recnum" '(real-part imag-part)))
+(define :recnum
+  (make-extended-number-type '(real-part imag-part) (list :complex) 'recnum))
 
-(define recnum? (extended-number-predicate recnum-type))
+(define recnum? (extended-number-predicate :recnum))
 (define make-recnum
-  (extended-number-constructor recnum-type '(real-part imag-part)))
+  (extended-number-constructor :recnum '(real-part imag-part)))
 
-(define recnum-real-part (extended-number-accessor recnum-type 'real-part))
-(define recnum-imag-part (extended-number-accessor recnum-type 'imag-part))
+(define recnum-real-part (extended-number-accessor :recnum 'real-part))
+(define recnum-imag-part (extended-number-accessor :recnum 'imag-part))
+
+(define (rectangulate x y)    ; Assumes (eq? (exact? x) (exact? y))
+  (if (= y 0)
+      x
+      (make-recnum x y)))
 
 (define (rectangular-real-part z)
   (if (recnum? z)
@@ -24,20 +29,20 @@
       (imag-part z)))
 
 (define (rectangular+ a b)
-  (make-rectangular (+ (rectangular-real-part a) (rectangular-real-part b))
-		    (+ (rectangular-imag-part a) (rectangular-imag-part b))))
+  (rectangulate (+ (rectangular-real-part a) (rectangular-real-part b))
+		(+ (rectangular-imag-part a) (rectangular-imag-part b))))
 
 (define (rectangular- a b)
-  (make-rectangular (- (rectangular-real-part a) (rectangular-real-part b))
-		    (- (rectangular-imag-part a) (rectangular-imag-part b))))
+  (rectangulate (- (rectangular-real-part a) (rectangular-real-part b))
+		(- (rectangular-imag-part a) (rectangular-imag-part b))))
 
 (define (rectangular* a b)
   (let ((a1 (rectangular-real-part a))
 	(a2 (rectangular-imag-part a))
 	(b1 (rectangular-real-part b))
 	(b2 (rectangular-imag-part b)))
-    (make-rectangular (- (* a1 b1) (* a2 b2))
-		      (+ (* a1 b2) (* a2 b1)))))
+    (rectangulate (- (* a1 b1) (* a2 b2))
+		  (+ (* a1 b2) (* a2 b1)))))
 
 (define (rectangular/ a b)
   (let ((a1 (rectangular-real-part a))
@@ -45,8 +50,8 @@
 	(b1 (rectangular-real-part b))
 	(b2 (rectangular-imag-part b)))
     (let ((d (+ (* b1 b1) (* b2 b2))))
-      (make-rectangular (/ (+ (* a1 b1) (* a2 b2)) d)
-			(/ (- (* a2 b1) (* a1 b2)) d)))))
+      (rectangulate (/ (+ (* a1 b1) (* a2 b2)) d)
+		    (/ (- (* a2 b1) (* a1 b2)) d)))))
 
 (define (rectangular= a b)
   (let ((a1 (rectangular-real-part a))
@@ -58,109 +63,60 @@
 
 ; Methods
 
-(define recnum-family (make-family 'recnum 6))
+(define-method &complex? ((z :recnum)) #t)
 
-(define (define-rectangular-method table proc)
-  (define-method table recnum-family proc))
-
-; Methods on recnums
-
-(define (true-for-recnums n)
-  (if (recnum? n) #t (fail)))
-
-(define-rectangular-method complex?-table  true-for-recnums)
-(define-rectangular-method number?-table   true-for-recnums)
-
-(define (when-recnum proc)
-  (lambda (n) (if (recnum? n) (proc n) (fail))))
-
-(define-rectangular-method real-part-table (when-recnum recnum-real-part))
-(define-rectangular-method imag-part-table (when-recnum recnum-imag-part))
+(define-method &real-part ((z :recnum)) (recnum-real-part z))
+(define-method &imag-part ((z :recnum)) (recnum-imag-part z))
 
 ; Methods on complexes in terms of real-part and imag-part
 
-(define-rectangular-method exact?-table
-  (lambda (z)
-    (if (and (complex? z) (not (real? z)))
-	(exact? (real-part z))
-	(fail))))
+(define-method &exact? ((z :recnum))
+  (exact? (recnum-real-part z)))
 
-(define-rectangular-method inexact->exact-table
-  (lambda (z)
-    (if (and (complex? z) (not (real? z)))
-	(make-rectangular (inexact->exact (real-part z))
-			  (inexact->exact (imag-part z)))
-	(fail))))
+(define-method &inexact->exact ((z :recnum))
+  (make-recnum (inexact->exact (recnum-real-part z))
+	       (inexact->exact (recnum-imag-part z))))
 
-(define-rectangular-method exact->inexact-table
-  (lambda (z)
-    (if (and (complex? z) (not (real? z)))
-	(make-rectangular (exact->inexact (real-part z))
-			  (exact->inexact (imag-part z)))
-	(fail))))
+(define-method &exact->inexact ((z :recnum))
+  (make-recnum (exact->inexact (recnum-real-part z))
+	       (exact->inexact (recnum-imag-part z))))
 
-(define (when-complexes proc)
-  (lambda (m n)
-    (if (and (complex? m) (complex? n)
-	     (not (and (real? m) (real? n))))
-	(proc m n)
-	(fail))))
+(define (define-recnum-method mtable proc)
+  (define-method mtable ((m :recnum) (n :complex)) (proc m n))
+  (define-method mtable ((m :complex) (n :recnum)) (proc m n)))
 
-(define-rectangular-method plus-table  (when-complexes rectangular+))
-(define-rectangular-method minus-table  (when-complexes rectangular-))
-(define-rectangular-method *-table  (when-complexes rectangular*))
-(define-rectangular-method /-table  (when-complexes rectangular/))
-(define-rectangular-method =-table  (when-complexes rectangular=))
+(define-recnum-method &+ rectangular+)
+(define-recnum-method &- rectangular-)
+(define-recnum-method &* rectangular*)
+(define-recnum-method &/ rectangular/)
+(define-recnum-method &= rectangular=)
 
-(define-rectangular-method sqrt-table
-  (lambda (n)
-    (if (and (integer? n)
-             (< n 0))
-        (make-rectangular 0 (sqrt (- n)))
-        (fail))))  ; not that we have to
+(define-method &sqrt ((n :real))
+  (if (< n 0)
+      (make-rectangular 0 (sqrt (- 0 n)))
+      (next-method)))			; not that we have to
 
 ; Gleep!  Can we do quotient and remainder on Gaussian integers?
 ; Can we do numerator and denominator on complex rationals?
 
-(define-rectangular-method number->string-table
-  (lambda (n radix)
-    (if (and (complex? n) (not (real? n)) (exact? n))
-	(let ((x (real-part n))
-	      (y (imag-part n)))
-	  (string-append (really-number->string x radix)
-			 (if (< y 0) "-" "+")
-			 (really-number->string (abs y) radix)
-			 "i"))
-	(fail))))
+(define-method &number->string ((z :recnum) radix)
+  (let ((x (real-part z))
+	(y (imag-part z)))
+    (let ((r (number->string x radix))
+	  (i (number->string (abs y) radix))
+	  (& (if (< y 0) "-" "+")))
+      (if (and (inexact? y)		;gross
+	       (char=? (string-ref i 0) #\#))
+	  (string-append (if (char=? (string-ref r 0) #\#)
+			     ""
+			     "#i")
+			 r &
+			 (substring i 2 (string-length i))
+			 "i")
+	  (string-append r & i "i")))))
 
-(define-rectangular-method string->number-table
-  (lambda (s radix exact?)
-    (let ((len-1 (- (string-length s) 1)))
-      (if (char=? (string-ref s len-1) #\i)
-	  (let loop ((i (- len-1 1)))
-	    (if (< i 0) (fail)
-		(let ((c (string-ref s i)))
-		  (if (or (char=? c #\+)
-			  (char=? c #\-))
-		      (let ((x (if (= i 0)
-				   0
-				   (really-string->number (substring s 0 i)
-							  radix exact?)))
-			    (y (if (= i (- len-1 1))
-				   (if (char=? c #\+) 1 -1)
-				   (really-string->number (substring s i len-1)
-							  radix exact?))))
-			(if (and (real? x) (real? y))
-			    (make-rectangular x y)
-			    (fail)))
-		      (loop (- i 1))))))
-	  (fail)))))
-
-(define-method make-rectangular-table recnum-family
-  (lambda (x y)
-    (if (eq? (exact? x) (exact? y))
-	(if (= y 0)
-	    x
-	    (make-recnum x y))
-	(make-rectangular (if (exact? x) (exact->inexact x) x)
-			  (if (exact? y) (exact->inexact y) y)))))
+(define-method &make-rectangular ((x :real) (y :real))
+  (if (eq? (exact? x) (exact? y))
+      (rectangulate x y)
+      (rectangulate (if (exact? x) (exact->inexact x) x)
+		    (if (exact? y) (exact->inexact y) y))))

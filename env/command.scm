@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; This is file command.scm.
@@ -22,11 +22,11 @@
   (let ((t (make-table)))
     (let-fluid $user-context t
       (lambda ()
-	(for-each (lambda (name+thunk)
-		    (table-set! t (car name+thunk) ((cdr name+thunk))))
-		  *user-context-initializers*)
-	(thunk)
-	t))))
+        (for-each (lambda (name+thunk)
+                    (table-set! t (car name+thunk) ((cdr name+thunk))))
+                  *user-context-initializers*)
+        (thunk)
+        t))))
 
 (define *user-context-initializers* '())
 
@@ -36,8 +36,8 @@
 
 (define (user-context-accessor name initializer)
   (set! *user-context-initializers*
-	(append *user-context-initializers*
-		(list (cons name initializer))))
+        (append *user-context-initializers*
+                (list (cons name initializer))))
   (let ((probe (fluid $user-context)))
     (if probe (table-set! probe name (initializer))))
   (lambda ()
@@ -54,11 +54,11 @@
   (make-record-type 'session '(input output values batch-mode? bow?)))
 (define make-session
   (record-constructor session-type
-		      '(input output values batch-mode? bow?)))
+                      '(input output values batch-mode? bow?)))
 (define $session
   (make-fluid (make-session (current-input-port)
-			    (current-output-port)
-			    '() #f #f)))
+                            (current-output-port)
+                            '() #f #f)))
 (define (session-accessor name)
   (let ((a (record-accessor session-type name)))
     (lambda () (a (fluid $session)))))
@@ -83,10 +83,10 @@
 
 (define command-level-type
   (make-record-type 'command-level
-		    '(throw vm-cont condition interrupts env)))
+                    '(throw vm-cont condition interrupts env)))
 (define make-command-level
   (record-constructor command-level-type
-		      '(throw vm-cont condition interrupts env)))
+                      '(throw vm-cont condition interrupts env)))
 (define command-level? (record-predicate command-level-type))
 (define command-level-throw
   (record-accessor command-level-type 'throw))
@@ -105,21 +105,21 @@
 
 (define (command-processor arg)
   (start-command-processor arg
-			   (make-user-context unspecific)
-			   (interaction-environment)
-			   unspecific))
+                           (make-user-context unspecific)
+                           (interaction-environment)
+                           unspecific))
 
 ; Main entry point.
 
 (define (start-command-processor resume-arg context initial-env start-thunk)
   (interrupt-before-heap-overflow!)
   ((let-fluids $command-levels '()
-	       $user-context context  ;Log in
-	       $session (make-session (current-input-port)
-				      (current-output-port)
-				      '("Hello")
-				      (equal? resume-arg "batch")
-				      #f)
+               $user-context context  ;Log in
+               $session (make-session (current-input-port)
+                                      (current-output-port)
+                                      '("Hello")
+                                      (equal? resume-arg "batch")
+                                      #f)
      (lambda ()
        (command-loop start-thunk #f initial-env)))))
 
@@ -135,37 +135,37 @@
   (primitive-catch
     (lambda (vm-cont)
       ((call-with-current-continuation
-	 (lambda (throw)
-	   (proc (make-command-level throw vm-cont condition
-				     (enabled-interrupts)
-				     env))))))))
+         (lambda (throw)
+           (proc (make-command-level throw vm-cont condition
+                                     (enabled-interrupts)
+                                     env))))))))
 
 (define (start-command-level start-thunk level)
   (with-handler command-loop-condition-handler
     (lambda ()
       (let-fluids $command-levels (cons level (fluid $command-levels))
-		  $note-undefined #f	;necessary?
-	(lambda ()
-	  (with-interaction-environment (command-level-env level)
-	    (lambda ()
-	      (start-thunk)
-	      (let ((condition (command-level-condition level)))
-		(if condition
-		    (display-condition condition (command-output)))
-		(if (not (= (enabled-interrupts) all-interrupts))
-		    (begin (if (not (and (interrupt? condition)
-					 (= (caddr condition) all-interrupts)))
-			       (write-line "(Enabling interrupts)"
-					   (command-output)))
-			   (set-enabled-interrupts! all-interrupts))))
-	      (let loop ()
-		(let ((command (read-command-carefully (command-prompt)
-						       (form-preferred?)
-						       (command-input))))
-		  (showing-focus-object
-		   (lambda ()
-		     (execute-command command)))
-		  (loop))))))))))
+                  $note-undefined #f    ;necessary?
+        (lambda ()
+          (with-interaction-environment (command-level-env level)
+            (lambda ()
+              (start-thunk)
+              (let ((condition (command-level-condition level)))
+                (if condition
+                    (display-condition condition (command-output)))
+                (if (not (= (enabled-interrupts) all-interrupts))
+                    (begin (if (not (and (interrupt? condition)
+                                         (= (caddr condition) all-interrupts)))
+                               (write-line "(Enabling interrupts)"
+                                           (command-output)))
+                           (set-enabled-interrupts! all-interrupts))))
+              (let loop ()
+                (let ((command (read-command-carefully (command-prompt)
+                                                       (form-preferred?)
+                                                       (command-input))))
+                  (showing-focus-object
+                   (lambda ()
+                     (execute-command command)))
+                  (loop))))))))))
 
 (define form-preferred?
   (user-context-accessor 'form-preferred? (lambda () #t)))
@@ -175,49 +175,49 @@
 (define (pop-command-level)
   (let ((levels (fluid $command-levels)))
     (if (null? (cdr levels))
-	(if (or (batch-mode?)
-		(y-or-n? "Exit Scheme 48" #t))
-	    (exit-command-processor (lambda () 0))
-	    (abort-to-command-level (car levels)))
-	(abort-to-command-level (cadr levels)))))
+        (if (or (batch-mode?)
+                (y-or-n? "Exit Scheme 48" #t))
+            (exit-command-processor (lambda () 0))
+            (abort-to-command-level (car levels)))
+        (abort-to-command-level (cadr levels)))))
 
 (define (abort-to-command-level level)
   (throw-to-command-level
        level
        (lambda ()
-	 (start-command-level
-	  (lambda ()
-	    (cond ((command-level-condition level)
-		   (display "Back to" (command-output)))
-		  ((null? (fluid $command-levels))
-		   (newline (command-output))
-		   (write-line "Top level" (command-output)))))
-	  ;; Condition will be displayed.
-	  level))))
+         (start-command-level
+          (lambda ()
+            (cond ((command-level-condition level)
+                   (display "Back to" (command-output)))
+                  ((null? (fluid $command-levels))
+                   (newline (command-output))
+                   (write-line "Top level" (command-output)))))
+          ;; Condition will be displayed.
+          level))))
 
 (define (throw-to-command-level level thunk)
   ((command-level-throw level) thunk))
 
 (define (exit-command-processor thunk)
   (throw-to-command-level (top-command-level)
-			  (lambda () thunk)))
+                          (lambda () thunk)))
 
 ; Condition handler
 
 (define (command-loop-condition-handler c next-handler)
   (cond ((or (warning? c) (note? c))
-	 (if (break-on-warnings?)
-	     (deal-with-condition c)
-	     (begin (display-condition c (command-output))
-		    (unspecific))))	;proceed
-	((or (error? c) (interrupt? c))
-	 (if (batch-mode?)
-	     (begin (display-condition c (command-output))
-		    (let ((status (if (error? c) 1 2)))
-		      (exit-command-processor (lambda () status))))
-	     (deal-with-condition c)))
-	(else				
-	 (next-handler))))
+         (if (break-on-warnings?)
+             (deal-with-condition c)
+             (begin (display-condition c (command-output))
+                    (unspecific))))     ;proceed
+        ((or (error? c) (interrupt? c))
+         (if (batch-mode?)
+             (begin (display-condition c (command-output))
+                    (let ((status (if (error? c) 1 2)))
+                      (exit-command-processor (lambda () status))))
+             (deal-with-condition c)))
+        (else                           
+         (next-handler))))
 
 (define push-command-levels?
   (user-context-accessor 'push-command-levels (lambda () #t)))
@@ -229,10 +229,10 @@
   (if (push-command-levels?)
       (command-loop list c (interaction-environment))
       (call-with-command-level c (interaction-environment)
-	(lambda (level)
-	  (set-focus-object! level)
-	  (display-condition c (command-output))
-	  (abort-to-command-level (car (fluid $command-levels)))))))
+        (lambda (level)
+          (set-focus-object! level)
+          (display-condition c (command-output))
+          (abort-to-command-level (car (fluid $command-levels)))))))
 
 
 (define-condition-type 'note '())
@@ -240,21 +240,21 @@
 
 (define (command-prompt)
   (let ((level (- (length (fluid $command-levels)) 1))
-	(env (environment-for-commands)))
+        (env (environment-for-commands)))
     (let ((name? (and (package? env)
-		      (not (eq? env (user-environment))))))
+                      (not (eq? env (user-environment))))))
       (string-append (if (= level 0)
-			 ""
-			 (number->string level))
-		     (if (or (= level 0) (not name?))
-			 ""
-			 " ")
-		     (if name?
-			 (if (symbol? (package-name env))
+                         ""
+                         (number->string level))
+                     (if (or (= level 0) (not name?))
+                         ""
+                         " ")
+                     (if name?
+                         (if (symbol? (package-name env))
 			     (symbol->string (package-name env))
-			     (number->string (package-uid env)))
-			 "")
-		     "> "))))
+                             (number->string (package-uid env)))
+                         "")
+                     "> "))))
 
 (define user-environment
   (user-context-accessor 'user-environment interaction-environment))
@@ -264,12 +264,13 @@
 
 (define (evaluate-and-select form env)
   (call-with-values (lambda ()
-		      (evaluate form env))
+                      (evaluate form env))
     (lambda results
       (if (or (null? results)
-	      (not (null? (cdr results)))
-	      (not (eq? (car results) (unspecific))))
-	  (set-focus-values! results)))))
+              (not (null? (cdr results)))
+              (not (eq? (car results) (unspecific))))
+          (set-focus-values! results))
+      (apply values results))))
 
 (define (evaluate form env)
   (if (package? env)
@@ -283,7 +284,7 @@
     (thunk)
     (let ((focus-after (focus-values)))
       (if (not (eq? focus-after focus-before))
-	  (show-command-results focus-after)))))
+          (show-command-results focus-after)))))
 
 
 (define (focus-object)
@@ -296,19 +297,19 @@
 
 (define (show-command-results results)
   (cond ((null? results))
-	((not (null? (cdr results)))
-	 (let ((out (command-output)))
-	   (display "; " out)
-	   (write (length results) out)
-	   (display " values" out)
-	   (newline out))
-	 (for-each show-command-result results))
-	(else ;(not (eq? (car results) (unspecific)))
-	 (show-command-result (car results)))))
+        ((not (null? (cdr results)))
+         (let ((out (command-output)))
+           (display "; " out)
+           (write (length results) out)
+           (display " values" out)
+           (newline out))
+         (for-each show-command-result results))
+        (else ;(not (eq? (car results) (unspecific)))
+         (show-command-result (car results)))))
 
 (define (show-command-result result)
   (write-carefully (value->expression result)
-		   (command-output))
+                   (command-output))
   (newline (command-output)))
 
 (define $write-depth (make-fluid -1))
@@ -316,10 +317,10 @@
 
 (define (write-carefully x port)
   (if (error? (ignore-errors (lambda ()
-			       (limited-write x port
-					      (fluid $write-depth)
-					      (fluid $write-length))
-			       #f)))
+                               (limited-write x port
+                                              (fluid $write-depth)
+                                              (fluid $write-length))
+                               #f)))
       (display "<Error while printing.>" port)))
 
 
@@ -360,17 +361,12 @@
       (set! *command-help* (add-help *command-help* name help1 help2))))
 
 (define (add-help help name help1 help2)  
-  (insert (list (symbol->string name)
-		(string-append (symbol->string name) " " help1)
-		help2)
-	  help
-	  (lambda (z1 z2)
-	    (string<=? (car z1) (car z2)))))
-
-(define (insert x l <)
-  (cond ((null? l) (list x))
-	((< x (car l)) (cons x l))
-	(else (cons (car l) (insert x (cdr l) <)))))
+  (insert (list name
+                (string-append (symbol->string name) " " help1)
+                help2)
+          help
+          (lambda (z1 z2)
+            (string<=? (cadr z1) (cadr z2)))))
 
 (define user-command-syntax-table
   (user-context-accessor 'user-command-syntax-table (lambda () (make-table))))
@@ -392,32 +388,57 @@
   (if help1
       (set-user-command-help! (add-help (user-command-help) name help1 help2))))
 
-(define make-command cons)	;(name . args) -- called by command reader
+(define make-command cons)      ;(name . args) -- called by command reader
 
 (define (execute-command command)
   (cond ((eof-object? command)
-	 (newline (command-output))
-	 (pop-command-level))
-	((not command))       ; error while reading
-	(else
-	 (let* ((name (car command))
-		(proc (cond ((not name)
-			     (lambda (exp)
-			       (evaluate-and-select exp
-						    (environment-for-commands))))
-			    ((table-ref (user-command-syntax-table) name)
-			     (environment-ref (user-command-environment) name))
-			    (else
-			     (*structure-ref *command-structure* name)))))
-	   (apply proc (cdr command))
-	   (run-sentinels)))))
+         (newline (command-output))
+         (pop-command-level))
+        ((not command))       ; error while reading
+        (else
+         (let* ((name (car command))
+                (proc (cond ((not name)
+                             (lambda (exp)
+                               (evaluate-and-select exp
+                                                    (environment-for-commands))))
+                            ((table-ref (user-command-syntax-table) name)
+                             (environment-ref (user-command-environment) name))
+                            (else
+                             (*structure-ref *command-structure* name)))))
+	   (dynamic-wind
+	    (lambda () #f)
+	    (lambda ()
+	      (apply proc (cdr command)))
+	    run-sentinels)))))
 
 ; help
 
-(define (help)
+(define (help . maybe-id)
+  (if (null? maybe-id)
+      (list-commands)
+      (print-command-help (car maybe-id))))
+
+(define (print-command-help id)
+  (let ((o-port (command-output)))
+    (display #\space o-port)
+    (cond ((assq id (user-command-help))
+           => (lambda (data)
+                (if (form-preferred?) (display command-prefix o-port))
+                (display (cadr data) o-port)
+                (display "    " o-port)
+                (display (caddr data) o-port)))
+          (else
+           (display #\" o-port)
+           (display id o-port)
+           (display #\" o-port)
+           (display #\space o-port)
+           (display "is not a command.")))
+    (newline o-port)))
+
+(define (list-commands)
   (let ((o-port (command-output))
-	(widest 28)
-	(f? (form-preferred?)))
+        (widest 28)
+        (f? (form-preferred?)))
     (for-each (lambda (s)
                 (write-line s o-port))
               '(
@@ -426,22 +447,37 @@
 "or a Scheme form to evaluate.  Commands are:"
 ""))
 
-    (for-each (lambda (z)
-		(display #\space o-port)
-		(if f? (display command-prefix o-port))
-                (display (pad-right (cadr z) widest #\space) o-port)
-		(display #\space o-port)
-		(display (caddr z) o-port)
-		(newline o-port))
-	      (user-command-help))
+    (list-command-help (user-command-help) f? o-port)
     (for-each (lambda (s)
                 (write-line s o-port))
               '(
+""
+"Square brackets [...] indicate optional arguments."
 ""
 "The expression ## evaluates to the last value displayed by the command"
 "processor."
                 ))))
 
+(define (list-command-help data prefix? o-port)
+  (let* ((strings (map (if prefix?
+                           (lambda (d)
+                             (string-append (command-prefix-string
+                                             command-prefix)
+                                            (cadr d)))
+                           cadr)
+                       data))
+         (count (length strings))
+         (back-half (list-tail strings (quotient (+ 1 count) 2))))
+    (let loop ((s1 strings) (s2 back-half))
+      (cond ((not (eq? s1 back-half))
+             (display #\space o-port)
+             (display (car s1) o-port)
+             (write-spaces (max 1 (- 32 (string-length (car s1)))) o-port)
+             (if (not (null? s2))
+                 (display (car s2) o-port))
+             (newline o-port)
+             (loop (cdr s1) (if (null? s2) s2 (cdr s2))))))))
+                   
 
 ; Utilities
 
@@ -451,16 +487,20 @@
 (define (error-form proc args)
   (cons proc (map value->expression args)))
 
-(define (value->expression obj)		;mumble
+(define (value->expression obj)         ;mumble
   (if (or (number? obj) (char? obj) (string? obj) (boolean? obj))
       obj
       `',obj))
 
-(define (pad-right string width padchar)
-  (let ((n (- width (string-length string))))
-    (if (<= n 0)
-	string
-	(string-append string (make-string n padchar)))))
+(define (write-spaces count o-port)
+  (do ((count count (- count 1)))
+      ((<= count 0))
+    (display #\space o-port)))
+
+(define (command-prefix-string prefix)
+  (cond ((string? prefix) prefix)
+        ((char? prefix) (string prefix))
+        ((symbol? prefix) (symbol->string prefix))))
 
 (define (write-line string port)
   (display string port)
@@ -469,24 +509,24 @@
 
 (define (y-or-n? question eof-value)
   (let ((i-port (command-input))
-	(o-port (command-output)))
+        (o-port (command-output)))
     (let loop ((count *y-or-n-eof-count*))
       (display question o-port)
       (display " (y/n)? " o-port)
       (let ((line (read-line i-port)))
-	(cond ((eof-object? line)
-	       (newline o-port)
-	       (if (= count 0)
-		   eof-value
-		   (begin (display "I'll only ask another " o-port)
-			  (write count o-port)
-			  (display " times." o-port)
-			  (newline o-port)
-			  (loop (- count 1)))))
-	      ((< (string-length line) 1) (loop count))
-	      ((char=? (string-ref line 0) #\y) #t)
-	      ((char=? (string-ref line 0) #\n) #f)
-	      (else (loop count)))))))
+        (cond ((eof-object? line)
+               (newline o-port)
+               (if (= count 0)
+                   eof-value
+                   (begin (display "I'll only ask another " o-port)
+                          (write count o-port)
+                          (display " times." o-port)
+                          (newline o-port)
+                          (loop (- count 1)))))
+              ((< (string-length line) 1) (loop count))
+              ((char=? (string-ref line 0) #\y) #t)
+              ((char=? (string-ref line 0) #\n) #f)
+              (else (loop count)))))))
 
 (define *y-or-n-eof-count* 100)
 
@@ -494,10 +534,10 @@
   (let loop ((l '()))
     (let ((c (read-char port)))
       (if (eof-object? c)
-	  c
-	  (if (char=? c #\newline)
-	      (list->string (reverse l))
-	      (loop (cons c l)))))))
+          c
+          (if (char=? c #\newline)
+              (list->string (reverse l))
+              (loop (cons c l)))))))
 
 
 (define (greet-user info)
@@ -505,19 +545,19 @@
     (display "Welcome to Scheme 48 " port)
     (display version-info port)
     (if info
-	(begin (write-char #\space port)
-	       (display info port)))
+        (begin (write-char #\space port)
+               (display info port)))
     (display "." port)
     (newline port)
     (write-line "Copyright (c) 1993 by Richard Kelsey and Jonathan Rees." port)
     (write-line "Please report bugs to scheme48-bugs@altdorf.ai.mit.edu."
-		port)
+                port)
     (write-line "Type ,? (comma question-mark) for help." port)))
 
 
-(define (command-continuation)		;utility for debugger
+(define (command-continuation)          ;utility for debugger
   (let ((obj (focus-object)))
     (command-level-vm-cont
      (if (command-level? obj)
-	 obj
-	 (command-level)))))
+         obj
+         (command-level)))))

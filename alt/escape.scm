@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 
@@ -10,7 +10,7 @@
 ; debugging a program running under a VM that's different from
 ; whatever machine is running the debugger.
 
-(define-record-type escape type/escape
+(define-record-type escape :escape
   (make-escape proc)
   (proc escape-procedure))
 

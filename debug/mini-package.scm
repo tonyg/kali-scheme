@@ -1,95 +1,75 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Miniature package system.  This links mini-eval up to the output of
 ; the package reifier.
 
-(define (make-simple-package opens eval for-syntax . name-option)
+(define (package names locs get-location) ;Reified package
+  (lambda (name)
+    (let loop ((i (- (vector-length names) 1)))
+      (if (< i 0)
+	  (error "unbound" name)
+	  (if (eq? name (vector-ref names i))
+	      (contents (get-location (vector-ref locs i)))
+	      (loop (- i 1)))))))
 
-  (define operators (make-table))
-  (define locations (make-table))
-
-  (define (lookup-operator name)
-    (table-ref operators name))
-
-  (define (lookup name)
-    (or (table-ref locations name)
-	(table-ref operators name)
-	(let loop ((opens opens))
-	  (if (null? opens)
-	      (error "unbound" name)
-	      (or (structure-lookup (car opens) name)
-		  (loop (cdr opens)))))))
-
-  (define (define-operator! name op)
-    (table-set! operators name op))
-
-  (define (define-location! name loc)
-    (table-set! locations name loc))
-
-  (table-set! operators '%%lookup-operator%% lookup-operator)
-  (table-set! operators '%%lookup%% lookup)  ;for make-structure, below
-
-  (table-set! operators '%%define-operator%% define-operator!)
-  (table-set! operators '%%define-location%% define-location!)
-
-  (table-set! operators '%%define%%		;for mini-eval
-	      (lambda (name val)
-		(or (table-ref locations name)
-		    (define-location! name (make-location val name)))))
+(define (make-simple-package opens foo1 foo2 name)
+  
+  (define bindings
+    (list (cons '%%define%%
+		(lambda (name val)
+		  (set! bindings (cons (cons name val) bindings))))))
 
   (lambda (name)
-    (let ((den (lookup name)))
-      (if (location? den)
-	  (if (location-defined? den)
-	      (contents den)
-	      (error "undefined" name))
-	  (begin (warn "not a variable" name)
-		 den)))))
-
-(define (package-define! p name op)
-  ((p '%%define-operator%%) name op))
-
-(define (probe-package p name) name)
-
-(define (package-lookup p name)
-  ((p '%%lookup-operator%%) name))
-
-(define (package-ensure-defined! p name)
-  (package-define! p name (make-location 'defined name)))
-
-(define (set-package-name! . rest) 'lose)
+    (let ((probe (assq name bindings)))
+      (if probe
+	  (cdr probe)
+	  (let loop ((opens opens))
+	    (if (null? opens)
+		(error "unbound" name)
+		(if (memq name (structure-interface (car opens)))
+		    ((structure-package (car opens)) name)
+		    (loop (cdr opens)))))))))
 
 ; Structures
 
 (define (make-structure package interface name)
-  (let ((lookup (package '%%lookup%%))
-	(names (map (lambda (x) (if (pair? x) (cadr x) x)) interface)))
-    (cons name
-	  (lambda (name)
-	    (if (memq name names)
-		(lookup name)
-		#f)))))
+  (cons package (vector->list interface)))
 
-(define (structure-lookup struct name)
-  ((cdr struct) name))
+(define structure-interface cdr)
+(define structure-package car)
 
-(define structure-name car)
+
+; Things used by reification form
+
+(define (operator name type-exp)
+  `(operator ,name ,type-exp))
+
+(define (simple-interface names type) names)
 
 ; Etc.
 
-(define (make-simple-interface names)
-  names)
-
-(define (get-operator . rest)   (cons 'get-operator rest))
-(define (make-transform . rest) (cons 'make-transform rest))
-(define (usual-transform-procedure . rest)
-  (cons 'usual-transform-procedure rest))
-
-(define (integrate-all-primitives! . rest) 'lose)
-(define (structure-package s) 'lose)
+(define (transform . rest) (cons 'transform rest))
+(define (usual-transform . rest)
+  (cons 'usual-transform rest))
 
 (define (transform-for-structure-ref . rest)
   (cons 'transform-for-structure-ref rest))
-(define (make-procedure-for-inline-transform . rest)
-  (cons 'make-procedure-for-inline-transform rest))
+(define (inline-transform . rest)
+  (cons 'inline-transform rest))
+
+(define (package-define! p name op) 'lose)
+
+
+; --------------------
+; ???
+
+; (define (integrate-all-primitives! . rest) 'lose)
+
+;(define (package-lookup p name)
+;  ((p '%%lookup-operator%%) name))
+
+;(define (package-ensure-defined! p name)
+;  (package-define! p name (make-location 'defined name)))
+
+;(define (set-package-name! . rest) 'lose)

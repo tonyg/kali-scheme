@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Static linker.  Doesn't work very well this way (debug info is
@@ -78,9 +78,11 @@
   (files (alt flatload)))
 
 (define-structure loadc (export load-configuration
-				(structure-ref :syntax))
+				;; (structure-ref :syntax)
+				)
   (open scheme
-	syntactic		;$source-file-name
+	environments		; *structure-ref
+	syntactic		; $source-file-name
 	fluids)
   (files (link loadc)))
 
@@ -94,5 +96,6 @@
 	analysis
 	loadc
 	flatloading
-	interfaces))
-
+	interfaces)
+  ;; (files (alt init-defpackage.scm))  -- or (env ...), depending
+  )

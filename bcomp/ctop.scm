@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; File processing, etc. for compiler
@@ -66,15 +66,14 @@
 ; compile-scanned-forms: returns a template.
 
 (define (compile-scanned-forms scanned-forms p filename noisy? . env-option)
-  (let ((cenv (prepare-cenv p
-			    (if (null? env-option)
-				(package->environment p)
-				(car env-option)))))
+  (let ((cenv (if (null? env-option)
+		  (package->environment p)
+		  (car env-option))))
     (let-fluid $source-file-name filename
       (lambda ()
 	(segment->template
 	 (if (null? scanned-forms)
-	     (deliver-value (instruction op/unspecific)
+	     (deliver-value (instruction (enum op unspecific))
 			    (return-cont #f))
 	     (let recur ((scanned-forms scanned-forms))
 	       (if (null? (cdr scanned-forms))
@@ -101,65 +100,55 @@
 	segment)
       (compile-top node cenv 0 cont)))
 
+(define define-node? (node-predicate 'define))
+
+
 ; Definitions must be treated differently from assignments: we must
 ; use SET-CONTENTS! instead of SET-GLOBAL! because the SET-GLOBAL!
 ; instruction traps if an attempt is made to store into an undefined
 ; location.
 
 (define compile-definition
-  (let ((stob/location (enum stob location))
-	(location-contents-offset 0))	;should be found in stob-data
+  (let ((location-contents-offset 0))	;should be found in stob-data
     (lambda (node cenv cont noisy?)
       (let* ((form (node-form node))
 	     (name (cadr form))
 	     (loc (binding-place (lookup cenv name))))
-	(sequentially (instruction-with-location op/literal (lambda () loc))
-		      (instruction op/push)
+	(sequentially (instruction-with-location (enum op literal) (lambda () loc))
+		      (instruction (enum op push))
 		      (compile-top (caddr form)
 				   cenv
 				   1
 				   (named-cont name))
 		      (deliver-value
-		       (instruction op/stored-object-set!
-				    stob/location
+		       (instruction (enum op stored-object-set!)
+				    (enum stob location)
 				    location-contents-offset)
 		       cont))))))
 
 ; --------------------
 ; Hairy stuff for dealing with undefined variables.
 
-; Package isn't available down in the depths of the compiler, so we've
-; got to perform any necessary package operations through the
-; environment that's passed in.
-
-(define (prepare-cenv p env)
-  (bind1 *the-package* p env))
-(define (cenv-package env)
-  (lookup env *the-package*))
-(define *the-package* (string->symbol "The package"))
-
-(define define-node? (node-predicate 'define))
-
-
-; Return a thunk that will obtain a location to be stored away in a
-; template.  The hair here results from a desire to be able to recover
-; from errors.
+; GET-LOCATION returns a thunk that will obtain a location to be
+; stored away in a template.  The hair here results from a desire to
+; be able to recover from errors.
 
 (define (get-location binding cenv name want-type)
-  (cond ((binding? binding)
-	 (if (compatible-types? (binding-type binding) want-type)
+  (if (binding? binding)
+      (let ((win (lambda ()
+		   (note-caching cenv name (binding-place binding))))
+	    (have-type (binding-type binding)))
+	(if (compatible-types? have-type want-type)
+	    win
+	    (if (variable-type? want-type)
+		(begin (warn "invalid assignment" name)
+		       (lambda ()
+			 (location-for-undefined cenv name want-type)))
+		(begin (warn "invalid variable reference" name)
+		       win))))
+      (begin (note-undefined! (grumble cenv) name)
 	     (lambda ()
-	       (note-caching cenv name (binding-place binding)))
-	     (if (variable-type? want-type)
-		 (begin (warn "invalid assignment" name)
-			(lambda ()
-			  (location-for-undefined cenv name want-type)))
-		 (begin (warn "invalid variable reference" name)
-			(lambda ()
-			  (note-caching cenv name (binding-place binding)))))))
-	(else (note-undefined! name)
-	      (lambda ()
-		(location-for-undefined cenv name want-type)))))
+	       (location-for-undefined cenv name want-type)))))
 
 (define (location-for-undefined cenv name want-type)
   (if (generated? name)
@@ -228,7 +217,7 @@
       (package-note-caching (grumble cenv) name place)))
 
 (define (grumble cenv)
-  (cond ((procedure? cenv) (cenv-package cenv))
+  (cond ((procedure? cenv) (extract-package-from-environment cenv))
 	((package? cenv) cenv)
 	((structure? cenv) (structure-package cenv))))
 
@@ -243,20 +232,20 @@
 		(sequentially
 		 (maybe-push-continuation
 		  (sequentially
-		   (instruction-with-literal op/closure init)
-		   (instruction op/call 0))
+		   (instruction-with-literal (enum op closure) init)
+		   (instruction (enum op call) 0))
 		  nargs
 		  an-ignore-values-cont)
 		 seg))
 	      (sequentially
 	       (maybe-push-continuation
 		  (sequentially
-		   (instruction-with-literal op/closure resumer)
-		   (instruction op/call 0))
+		   (instruction-with-literal (enum op closure) resumer)
+		   (instruction (enum op call) 0))
 		  nargs
 		  (fall-through-cont #f #f))
 	       ;; was (compile resumer p nargs (fall-through-cont))
-	       (instruction op/call nargs))
+	       (instruction (enum op call) nargs))
 	      inits)
       #f #f)))
 

@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Random number generator, extracted from T sources.  Original
@@ -19,20 +19,20 @@
   (make-random-vector seed
     (lambda (vec a b)
       (lambda ()
-	(set! a (randomize a random-1 random-2))
-	(let* ((index (arithmetic-shift a (- index-log full-log)))
-	       (c (vector-ref vec index)))
-	  (vector-set! vec index (randomize b random-2 random-1))
-	  (set! b c)
-	  c)))))
+        (set! a (randomize a random-1 random-2))
+        (set! b (randomize b random-2 random-1))
+        (let* ((index (arithmetic-shift a (- index-log full-log)))
+               (c (vector-ref vec index)))
+          (vector-set! vec index b)
+          c)))))
 
 (define (randomize x mult ad)
   (bitwise-and (+ (low-bits-of-product x mult) ad)
-	       full-mask))
+               full-mask))
 
 (define (make-random-vector seed return)
   (let* ((size (arithmetic-shift 1 index-log))
-	 (vec (make-vector size 0)))
+         (vec (make-vector size 0)))
     (do ((i 0 (+ i 1))
          (b seed (randomize b random-2 random-1)))
         ((>= i size)
@@ -44,11 +44,11 @@
 
 (define (low-bits-of-product x y)
   (let ((x1 (arithmetic-shift x (- 0 half-log)))
-	(y1 (arithmetic-shift y (- 0 half-log)))
-	(x2 (bitwise-and x half-mask))
-	(y2 (bitwise-and y half-mask)))
+        (y1 (arithmetic-shift y (- 0 half-log)))
+        (x2 (bitwise-and x half-mask))
+        (y2 (bitwise-and y half-mask)))
      (bitwise-and (+ (* x2 y2)
-		     (arithmetic-shift (bitwise-and (+ (* x1 y2) (* x2 y1))
-						    half-mask)
-				       half-log))
-		  full-mask)))
+                     (arithmetic-shift (bitwise-and (+ (* x1 y2) (* x2 y1))
+                                                    half-mask)
+                                       half-log))
+                  full-mask)))

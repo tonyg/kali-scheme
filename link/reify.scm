@@ -1,7 +1,37 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Structure reification.
+
+(define *least* #f)
+
+(define (reify-structures some)
+  (let* ((count 0)
+	 (least 1000000)
+	 (greatest -1000000)
+	 (locs (make-table))
+	 (loser (reify-structures-1 some
+				    (lambda (loc)
+				      (let ((id (location-id loc)))
+					(if (not (table-ref locs id))
+					    (begin 
+					      (if (< id least)
+						  (set! *least* loc))
+					      (set! least (min least id))
+					      (set! greatest (max greatest id))
+					      (set! count (+ count 1))
+					      (table-set! locs id loc)))
+					id))))
+	 (size (+ (- greatest least) 1)))
+    (write `(least ,least size ,size count ,count)) (newline)
+    (values loser
+	    (let ((v (make-vector size #f)))
+	      (table-walk (lambda (id loc)
+			    (vector-set! v (- id least) loc))
+			  locs)
+	      v)
+	    least)))
+
 
 ; This is pretty gross.  We really want some kind of object dumper
 ; instead.
@@ -13,80 +43,90 @@
 (define *package-table* #f)     ;Entries are package-info structures
 
 
-; REIFY-STRUCTURES returns a form that evaluates to an alist of
-; (name . structure).
-; deal-with-location is a procedure that maps locations to labels for
-; them (e.g. integers); get-location is an expression that evaluates
-; to a procedure that will be applied to the labelsat startup time to
-; re-obtain the corresponding locations.
+; REIFY-STRUCTURES returns a form that evaluates to a procedure that
+; returns an alist of (name . structure).  deal-with-location is a
+; procedure that maps locations to labels for them (e.g. integers).
+; The procedure takes one argument, a procedure that will be applied
+; to the labels at startup time to re-obtain the corresponding
+; locations.
 
-(define (reify-structures alist deal-with-location get-location)
-  (set! *objects* '())
-  (set! *object-count* 0)
-  (set! *initializations* '())
-  (set! *package-table* (make-table package-uid))
+(define (reify-structures-1 alist deal-with-location)
+  (flush-state)
   (set! *deal-with-location* deal-with-location)
 
   (display "Reifying") (force-output (current-output-port))
 
   (let* ((result-form (reify-object alist))
 	 (shebang
-	  `(let ((the-objects (make-vector ,*object-count* #f))
-		 (get-location ,get-location))
-	     (begin ,@(reverse *initializations*))
-	     (begin ,@(let ((l '()))
-			(table-walk (lambda (p info)
-				      (set! l
-					    (cons (make-package-init-form info)
-						  l)))
-				    *package-table*)
-			l))
-	     (let ((structs ,result-form))
-	       (set! the-objects #f)	;SO IT CAN BE GC'D
-	       (set! get-location #f)
-	       structs))))
+	  `(lambda (get-location)
+	     (let ((the-objects (make-vector ,*object-count* #f)))
+	       (begin ,@(map (lambda (init) (init))
+			     (reverse *initializations*)))
+	       (let ((structs ,result-form))
+		 (set! the-objects #f)	;SO IT CAN BE GC'D
+		 (set! get-location #f)
+		 structs)))))
     (newline)
     (if *reify-debug* (*reify-debug* shebang))
 
-    (set! *objects* '())
-    (set! *initializations* '())
-    (set! *package-table* (make-table package-uid))
+    (flush-state)
     (set! *deal-with-location* (lambda (loc) loc))
 
     shebang))
+
+(define (flush-state)
+  (set! *objects* '())
+  (set! *object-count* 0)
+  (set! *initializations* '())
+  (set! *package-table* (make-table package-uid)))
+
 
 ; Return an expression that will evaluate to thing.
 
 (define (reify-object thing)
   (cond ((structure? thing)
-	 (let* ((p-form (process-exports thing)))
-
-	   (write-char #\.) (force-output (current-output-port))
-
-	   `(make-structure
-	     ,p-form
-	     ,(interface-expression thing)
-	     ',(structure-name thing))))
-	((package? thing)
-	 (process-one-object thing
-			     (lambda ()
-			       `(make-simple-package '() #f #f))
-			     (lambda (form)
-			       (table-set! *package-table* thing
-					   (make-package-info form)))))
+	 (let ((p-form (reify-package (structure-package thing))))
+	   (process-one-object
+	        thing
+		(lambda ()
+		  `(make-structure
+		    ,p-form
+		    ,(interface-expression thing)
+		    ',(structure-name thing)))
+		(lambda ()
+		  (process-exports thing p-form)
+		  (write-char #\.)
+		  (force-output (current-output-port))))))
 	((null? thing) ''())
 	((pair? thing)
-	 `(cons ,(reify-object (car thing))
-		,(reify-object (cdr thing))))
+	 (if (list? thing)
+	     `(list ,@(map reify-object thing))
+	     `(cons ,(reify-object (car thing))
+		    ,(reify-object (cdr thing)))))
 	((symbol? thing)
 	 `',thing)
 	((transform? thing)
 	 (process-transform thing))
 	((operator? thing)
-	 `(get-operator ',(operator-name thing)
-			',(operator-type thing)))
+	 `(operator ',(operator-name thing)
+		    ',(type->sexp (operator-type thing) #t)))
 	;; ((interface? thing) ...)
 	(else (error "don't know how to reify this" thing))))
+
+(define (reify-package thing)
+  (process-one-object thing
+		      (lambda ()
+			(let ((bindings (package-info-bindings (package-info thing))))
+			  `(package
+			    ;; Each binding is a pair (name . loc)
+			    ',(list->vector (map car bindings)) ;names
+			    ',(list->vector (map cdr bindings)) ;location ids
+			    get-location)))
+		      (lambda ()
+			(table-set! *package-table*
+				    thing
+				    (make-package-info)))))
+
 
 ; General utility for uniquifying objects.
 
@@ -100,125 +140,116 @@
 	  (set! *objects*
 		(cons (cons obj form) *objects*))
 	  (add-initialization!
-		`(vector-set! the-objects ,index ,(make-creation-form)))
-	  (when-new form)
+	    (lambda ()
+	      `(vector-set! the-objects ,index ,(make-creation-form))))
+	  (when-new)
 	  form))))
 
-(define (add-initialization! form)
+(define (add-initialization! thunk)
   (set! *initializations*
-	(cons form *initializations*)))
+	(cons thunk *initializations*)))
 
 
 ; Add initializers that will create a structure's exported bindings.
 
-(define (process-exports struct)
+(define (process-exports struct p-form)
   (let* ((p (structure-package struct))
-	 (info (process-one-package p)))
+	 (info (package-info p)))
     (for-each-export (lambda (name want-type binding)
-		       (if (not (process-one-binding name p info))
+		       (if (not (process-one-binding name p info p-form))
 			   (warn "undefined export" name p)))
-		     struct)
-    (package-info-form info)))
+		     struct)))
 
 
 ; Packages...
 
-(define (process-one-package p)
-  (reify-object p)
-  (table-ref *package-table* p))
-
 (define package-info-type
   (make-record-type 'reify-info
 		    '(bindings  ;List of (name static-info location)
-		      form      ;'(vector-ref the-objects <index>)
 		      table)))  ;Caches (assq? name bindings)
+
+(define (package-info p)
+  (table-ref *package-table* p))
 
 (define make-package-info
   (let ((make (record-constructor package-info-type
-				  '(bindings form table))))
-    (lambda (form)
+				  '(bindings table))))
+    (lambda ()
       (make '()
-	    form
 	    (make-table name-hash)))))
 
 (define package-info-bindings (record-accessor package-info-type 'bindings))
-(define package-info-form     (record-accessor package-info-type 'form))
 (define package-info-table    (record-accessor package-info-type 'table))
 
 (define set-package-info-bindings!
   (record-modifier package-info-type 'bindings))
 
 
-(define (make-package-init-form info)
-  (let* ((bindings (package-info-bindings info)))
-    `(initialize-reified-package!
-	,(package-info-form info)
-	;; Each binding is a list (name static loc)
-	',(list->vector (map car bindings))    ;names
-	,(strange-quotation (list->vector (map caddr bindings))) ;locations
-	get-location)))
-
-
-(define (process-one-binding name p info)	; => #t iff bound
+(define (process-one-binding name p info p-form)	; => #t iff bound
   (let ((table (package-info-table info)))
     (if (table-ref table name)
 	#t
 	(let ((binding (package-lookup p name)))
 	  (table-set! (package-info-table info) name #t)
 	  (if (binding? binding)
-	      (begin (really-process-one-binding name info binding)
+	      (begin (really-process-one-binding name info binding p-form)
 		     #t)
 	      #f)))))
 
-(define (really-process-one-binding name info binding)
+(define (really-process-one-binding name info binding p-form)
   (let ((static (binding-static binding))
 	(loc (*deal-with-location* (binding-place binding))))
+    (set-package-info-bindings!
+         info
+	 (cons (cons name loc)
+	       (package-info-bindings info)))
     (if static
-	(add-initialization!
-	    `(package-define! ,(package-info-form info)
-			      ',name
-			      ,(reify-object static)
-			      (get-location ,(strange-quotation loc))))
-	(let ((type (binding-type binding)))
-	  (set-package-info-bindings!
-	    info
-	    (cons (list name
-			(if (equal? static usual-variable-type)
-			    #f
-			    static)
-			loc)
-		  (package-info-bindings info)))))))
+	(add-package-define! p-form name (reify-object static)))))
+
+(define (add-package-define! p-form name s-form)
+  (add-initialization!
+   (lambda ()
+     `(package-define! ,p-form
+		       ',name
+		       ,s-form))))
 
 (define (process-transform t)
-  (let* ((env (transform-env t))
-	 (name (transform-id t))
-	 (env-form (reify-object env)))
-    (process-one-object
-     t
-     (lambda ()
+  (let ((name (transform-id t))
+	(env (transform-env t)))
+    (let ((env-form
+	   (if (package? env)
+	       (reify-package env)
+	       (reify-object env))))
+      (process-one-object
+       t
        (let ((source (transform-source t)))
-	 `(make-transform ,source	;transformer
-			  ,env-form
-			  ',(transform-type t) ;type
-			  #f		;',source  -- omitted to save space...
-			  ',name)))
-     (lambda (form)
-       (let ((info (process-one-package env)))
-	 (for-each (lambda (name)
-		     (process-one-binding name env info))
-		   (or (transform-aux-names t)    ; () must be true
-		       (begin
-			 (warn "reified macro's auxiliary bindings are unknown"
-			       name)
-			 '()))))))))
+	 (lambda ()
+	   `(transform ,source		;transformer
+		       ,env-form
+		       ',(type->sexp (transform-type t) #t) ;type
+		       #f		;',source  -- omitted to save space...
+		       ',name)))
+       (if (package? env)
+	   (lambda ()
+	     (let ((info (package-info env)))
+	       (for-each (lambda (name)
+			   (process-one-binding name env info env-form))
+			 (or (transform-aux-names t) ; () must be true
+			     (begin
+			       (warn "reified macro's auxiliary bindings are unknown"
+				     name)
+			       '())))))
+	   (lambda () #f))))))
 
 
 (define (interface-expression struct)
-  (let ((items '()))
+  (let ((names '())
+	(types '()))
     (for-each-export (lambda (name type binding)
-		       (set! items (cons (list name type) items)))
+		       (set! names (cons name names))
+		       (set! types (cons (type->sexp type #t) types)))
 		     struct)
-    `(make-simple-interface #f ',(list->vector items))))
+    `(simple-interface ',(list->vector names) ',(list->vector types))))
 
 
 ; The compiler doesn't like to see unusual objects quoted, but this will

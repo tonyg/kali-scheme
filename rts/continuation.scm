@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ; Continuations
 
@@ -35,3 +35,9 @@
 	(continuation-parent b)
 	b)))
 
+(define-simple-type :continuation (:value) continuation?)
+
+(define-method &disclose ((obj :continuation))
+  (list 'continuation
+	`(pc ,(continuation-pc obj))
+	(template-info (continuation-template obj))))

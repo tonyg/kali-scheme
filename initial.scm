@@ -1,31 +1,26 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Link scripts.
-
-(load-configuration "interfaces.scm")
-
-(define-structure module-system (export ) (open )) ;Necessary for flatload.
-(load-configuration "packages.scm")
-
-(flatload initial-structures)
-
 
 (define (link-initial-system)
   (let ((structures-to-open		;Structures to open for the initial
 	 (struct-list scheme		;system's read-eval-print loop.
 		      environments
-		      defpackage	; contains macros...
-		      types
+		      module-system
 		      ensures-loaded
 		      packages
 		      packages-internal)))  ; package-for-syntax
     (link-reified-system (append (desirable-structures)
 				 structures-to-open)
 			 'initial
+			 ;; The expression that evaluates to the
+			 ;; procedure that maps the reified-structure alist
+			 ;; to the startup procedure:
 			 `(start ',(map car structures-to-open))
-			 ;; Structures to open for evaluating the expression
-			 ;; that evaluates to the startup procedure
+			 ;; Structures to open for evaluating that
+			 ;; expression and the expression that
+			 ;; evaluates to the reified-structure alist:
 			 initial-system
 			 for-reification
 			 ;; scheme-level-1

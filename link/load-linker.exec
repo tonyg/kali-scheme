@@ -1,0 +1,87 @@
+; Load the linker.    -*- Mode: Scheme; -*-
+
+; Run this script with  ,exec ,load l.exec.
+; After the script is loaded, you can, in principle, do whatever
+; you might do in the usual linker image.  For example, you might do
+; (this is from the Makefile)
+;
+;         ,in link-config
+;         (load-configuration "interfaces.scm") 
+;         (load-configuration "packages.scm") 
+;         (flatload initial-structures) 
+;         (load "initial.scm")  
+;         (link-initial-system)
+;
+; This is intended to be used to debug new versions of the compiler or
+; static linker.
+
+(config '(run (define :arguments :values)))  ;temporary hack
+
+(translate "=scheme48/" "./")
+
+(load-package 'flatloading)
+(open 'flatloading)
+
+(define (r x) (config `(run ,x)))
+
+(r '(define-structure source-file-names (export (%file-name% :syntax))
+      (open scheme-level-1
+	    syntactic
+	    fluids)
+      (begin (define-syntax %file-name%
+	       (syntax-rules ()
+		 ((%file-name%) (fluid $source-file-name)))))))
+
+(r '(define-structure enumerated enumerated-interface
+      (open scheme-level-1 signals)
+      (files (rts enum)
+	     (rts defenum scm))))
+
+(r '(define-structure architecture architecture-interface
+      (open scheme-level-1 signals enumerated)
+      (files (rts arch))))
+
+; Make the new linker obtain its table, record, etc. structures from
+; the currently running Scheme.
+
+(config '(load "packages.scm"))
+(config '(structure %run-time-structures run-time-structures-interface))
+(config '(structure %features-structures features-structures-interface))
+
+(r
+ '(define-structure %linker-structures
+    (make-linker-structures %run-time-structures
+			    %features-structures
+			    (make-compiler-structures %run-time-structures
+						      %features-structures))))
+
+; Load the linker's interface and structure definitions.
+(config '(load "interfaces.scm" "more-interfaces.scm"))
+(let ((z (config '(run %linker-structures)))
+      (env (config interaction-environment)))
+  (config (lambda () (flatload z env))))
+
+; Load the linker.
+(load-package 'link-config)
+
+; Initialize
+(in 'link-config
+    '(open scheme packages packages-internal)) ;Needed for init-defpackage
+(in 'link-config
+    '(load "alt/init-defpackage.scm")) ;For nonincestuous bootstrap
+
+(in 'linker '(run (set! *debug-linker?* #t)))
+(in 'link-config '(open flatloading))    ; A different one.
+
+; ,open debuginfo packages-internal compiler scan syntactic meta-types
+
+; (in 'link-config '(dump "l.image"))
+
+; ,exec (usual-stuff)
+
+(define (usual-stuff)
+  (in 'link-config)
+  (run '(begin (load-configuration "interfaces.scm")
+	       (load-configuration "packages.scm")
+	       (flatload initial-structures)))
+  (load "initial.scm"))

@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Commands for debugging.
@@ -52,7 +52,9 @@
 	   (eq? (template-id (continuation-template c)) id)))))
 
 
-(define-command-syntax 'preview "" "show continuations (stack trace)" '())
+(define-command-syntax 'preview ""
+  "show pending continuations (stack trace)"
+  '())
 
 ; Proceed
 
@@ -74,7 +76,7 @@
 	       (apply values vals)))
 	(write-line "No way to proceed from here." (command-output)))))
 
-(define-command-syntax 'proceed "<exp>" "proceed after interrupt or error"
+(define-command-syntax 'proceed "<exp>" "proceed after an interrupt or error"
   '(&rest expression))
 
 (define (proceed . exps)
@@ -137,12 +139,14 @@
 	(abort-to-command-level (list-ref levels n))
 	(write-line "invalid command level" (command-output)))))
 
-(define-command-syntax 'level "<number>" "go to command level"
+(define-command-syntax 'level "<number>" "go to specific command level"
   '(expression))
 
 (define level go-to-level)
 
-(define-command-syntax 'condition "" "select condition object" '())
+(define-command-syntax 'condition ""
+  "select an object that describes the current error condition"
+  '())
 
 (define (condition)
   (let ((c (command-level-condition (command-level))))
@@ -173,7 +177,8 @@
 
 ; Batch mode
 
-(define-command-syntax 'batch "" "toggle batch mode (no prompt, errors exit)"
+(define-command-syntax 'batch "[on | off]"
+  "enable/disable batch mode (no prompt, errors exit)"
   syntax-for-toggle)
 
 (define batch
@@ -183,7 +188,8 @@
 
 ; Benchmark mode (i.e., inline primitives)
 
-(define-command-syntax 'bench "" "benchmark mode (integrate primitives)"
+(define-command-syntax 'bench "[on | off]"
+  "enable/disable benchmark mode (integrate primitives)"
   syntax-for-toggle)
 
 (define bench
@@ -195,7 +201,8 @@
 
 ; Break on warnings
 
-(define-command-syntax 'break-on-warnings "" "treat warnings as errors"
+(define-command-syntax 'break-on-warnings "[on | off]"
+  "treat warnings as errors"
   syntax-for-toggle)
 
 (define break-on-warnings
@@ -204,7 +211,8 @@
 		  "enter breakpoint on warnings"))
 
 
-(define-command-syntax 'form-preferred "" "enable/disable form-preferred mode"
+(define-command-syntax 'form-preferred "[on | off]"
+  "enable/disable form-preferred command processor mode"
   syntax-for-toggle)
 
 (define form-preferred
@@ -212,7 +220,8 @@
 		  (user-context-modifier 'form-preferred?)
 		  "prefer forms to commands"))
 
-(define-command-syntax 'levels "" "disable/enable command levels"
+(define-command-syntax 'levels "[on | off]"
+  "disable/enable command levels"
   syntax-for-toggle)
 
 (define levels
@@ -223,7 +232,7 @@
 
 ; Flush debug data base
 
-(define-command-syntax 'flush "<kind>" "start forgetting debug information"
+(define-command-syntax 'flush "[<kind>]" "start forgetting debug information"
   '(&rest name))
 
 (define (flush . kinds)
@@ -246,7 +255,8 @@
 
 ; Control retention of debugging information
 
-(define-command-syntax 'keep "<kind>" "start remembering debug information"
+(define-command-syntax 'keep "[<kind>]"
+  "start remembering debug information"
   '(&rest name))
 
 (define (keep . kinds)
@@ -288,7 +298,7 @@
 
 (define memory-status-option/available (enum memory-status-option available))
 
-(define-command-syntax 'collect "" "GC" '())
+(define-command-syntax 'collect "" "invoke the garbage collector" '())
 
 ; Undefined (this is sort of pointless now that NOTING-UNDEFINED-VARIABLES
 ; exists)
@@ -315,7 +325,8 @@
 	(newline port))
       (for-each trace-1 names)))
 
-(define-command-syntax 'trace "<name> ..." "trace calls to given procedure(s)"
+(define-command-syntax 'trace "<name> ..."
+  "trace calls to given procedure(s)"
   '(&rest name))
 
 (define (untrace . names)
@@ -398,8 +409,11 @@
 
 (define ptime (structure-ref primitives time))
 
-(define (time form)
-  (let* ((thunk (evaluate `(lambda () ,form) (environment-for-commands)))
+(define (time command)
+  (let* ((thunk (if (eq? (car command) 'run)
+		    (evaluate `(lambda () ,(cadr command))
+			      (environment-for-commands))
+		    (lambda () (execute-command command))))
 	 (start-time (ptime time-option/run-time #f)))
     (call-with-values thunk
       (lambda results
@@ -426,7 +440,7 @@
     (write r port)))
 
 (define-command-syntax 'time "<exp>" "measure execution time"
-  '(expression))
+  '(command))
 
 ; Support for stuffing things from Emacs.
 
@@ -437,19 +451,21 @@
   '())
 
 (define (from-file . maybe-filename)
-  (let ((env (let ((probe (if (null? maybe-filename)
-			      #f
-			      (get-file-environment (car maybe-filename))))
-		   (c (environment-for-commands)))
-	       (if (and probe (not (eq? probe c)))
-		   (let ((port (command-output)))
-		     (newline port)
-		     (display "In " port)
-		     (write probe port)
-		     (display " " port) ;dots follow
-		     probe)
-		   c)))
-	(in (command-input)))
+  (let* ((filename (if (null? maybe-filename) #f (car maybe-filename)))
+	 (env (let ((probe (if filename
+			       (get-file-environment filename)
+			       #f))
+		    (c (environment-for-commands)))
+		(if (and probe (not (eq? probe c)))
+		    (let ((port (command-output)))
+		      (newline port)
+		      (display filename port)
+		      (display " => " port)
+		      (write probe port)
+		      (display " " port) ;dots follow
+		      probe)
+		    c)))
+	 (in (command-input)))
     (let ((forms (let recur ()
 		   (let ((command (read-command #f #t in)))
 		     (if (eof-object? command)
@@ -504,7 +520,7 @@
 (set-fluid! $note-file-package note-file-environment!)
 
 (define-command-syntax 'forget "<filename>"
-  "forget that file goes in package"
+  "forget file/package association"
   '(filename))
 
 (define (forget filename)
@@ -521,9 +537,6 @@
 	(probe (package-lookup (environment-for-commands) name)))
     (if probe
 	(begin (display "Bound to " port)
-	       (if (operator? probe)
-		   (begin (write (operator-type probe))
-			  (display #\space)))
 	       (write probe)
 	       (newline port))
 	(write-line "Not bound" port))))

@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ; Byte-code assembler (Richard's version)
 
@@ -25,7 +25,7 @@
 ; The assembler uses opcode-arg-specs to check the number and type of arguments
 ; to the opcodes.
 
-(define-compilator '(lap syntax)
+(define-compilator (list 'lap syntax-type)
   (lambda (node cenv depth cont)
     (let* ((exp (node-form node))
 	   (template (compile-lap (cadr exp) (cddr exp) cenv)))

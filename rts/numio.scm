@@ -1,39 +1,21 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ;;;; number->string and string->number
 
-(define number->string-table (make-method-table 'number->string))
-(define string->number-table (make-method-table 'string->number))
+; NUMBER->STRING
 
-(define-default-method number->string-table
-  (lambda (n radix)
-    (if (exact? n)
-	(if (integer? n)
-	    (integer->string n radix)
-	    (fail))
-	(let ((s (number->string (inexact->exact n) radix)))
-	  (if (integer? n)
-	      (string-append s ".")
-	      (string-append "#i" s))))))
+(define-generic number->string &number->string)
 
-(define-default-method string->number-table
-  (lambda (string radix exact?)
-    (string->integer string radix exact?)))
+(define-method &number->string (n)
+  (number->string n 10))
 
-(define really-number->string (make-generic number->string-table))
-(define really-string->number (make-generic string->number-table))
+(define-method &number->string (n radix)
+  "#{Number}")    ;Shouldn't happen
 
-; Number->string
+(define-method &number->string ((n :exact-integer) radix)
+  (integer->string n radix))
 
-(define (number->string n . radix-or-format-option)
-  (really-number->string n
-			 (cond ((null? radix-or-format-option) 10)
-			       ((pair? (car radix-or-format-option)) 10) ;R3RS
-			       (else (car radix-or-format-option)))))
-
-; Assumes n is exact
-
-(define integer->string
+(define integer->string    ;Won't necessarily work if n is inexact
   (let ()
 
     (define (integer->string n radix)
@@ -60,7 +42,9 @@
 
     integer->string))
 
-; String->number
+
+; STRING->NUMBER
+
 ; This just strips off any # prefixes and hands the rest off to
 ; really-string->number, which is generic.
 
@@ -70,7 +54,8 @@
 		      ;; Revised^3 Scheme compatibility
 		      (else (cadr options))))
 	 (radix (case radix
-		  ((2 b) 2) ((8 o) 8) ((10 d) 10) ((16 x) 16)
+		  ((2 8 10 16) radix)
+		  ((b) 2) ((o) 8) ((d) 10) ((x) 16)    ;R3RS only?
 		  (else (call-error "invalid radix"
 				    'string->number
 				    string radix))))
@@ -117,28 +102,57 @@
 			     #f)
 			    (else (loop (+ pos 1))))))))))))
 
+(define-generic really-string->number &really-string->number)
+
+(define-method &really-string->number (string radix xact?) #f)
+
+
+; Read exact integers
+
+(define-simple-type :integer-string (:string)
+  (lambda (s)
+    (and (string? s)
+	 (let loop ((i (- (string-length s) 1)))
+	   (if (< i 0)
+	       #t
+	       (let ((c (string-ref s i)))
+		 (and (or (char-numeric? c)
+			  (and (char>=? c #\a)
+			       (char<=? c #\f))
+			  (and (char>=? c #\A)
+			       (char<=? c #\F))
+			  (and (= i 0)
+			       (or (char=? c #\+) (or (char=? c #\-)))))
+		      (loop (- i 1)))))))))
+
+(define-method &really-string->number ((string :integer-string) radix xact?)
+  (let ((n (string->integer string radix)))
+    (if n (set-exactness n xact?) #f)))
+
+(define (set-exactness n xact?)
+  (if (exact? n)
+      (if xact? n (exact->inexact n))
+      (if xact? (inexact->exact n) n)))
+
 (define string->integer
   (let ()
 
-    (define (string->integer string radix xact?)
+    (define (string->integer string radix)
       (cond ((= (string-length string) 0) #f)
 	    ((char=? (string-ref string 0) #\+)
-	     (do-it string 1 1 radix xact?))
+	     (do-it string 1 1 radix))
 	    ((char=? (string-ref string 0) #\-)
-	     (do-it string 1 -1 radix xact?))
+	     (do-it string 1 -1 radix))
 	    (else
-	     (do-it string 0 1 radix xact?))))
+	     (do-it string 0 1 radix))))
 
-    (define (do-it string pos sign radix xact?)
-      (let* ((len (string-length string))
-	     (len (if (char=? (string-ref string (- len 1)) #\.)
-		      (- len 1)    ;Allow nnnnn.
-		      len)))
+    (define (do-it string pos sign radix)
+      (let* ((len (string-length string)))
 	(if (>= pos len)
 	    #f
 	    (let loop ((n 0) (pos pos))
 	      (if (>= pos len)
-		  (if (or xact? (not (exact? n))) n (exact->inexact n))
+		  n
 		  (let ((d (digit->integer (string-ref string pos)
 					   radix)))
 		    (if d
@@ -150,7 +164,6 @@
       (cond ((char-numeric? c)
 	     (let ((n (- (char->ascii c) zero)))
 	       (if (< n radix) n #f)))
-	    ((char=? c #\#) 5)  ;and warn if exact?
 	    ((<= radix 10) #f)
 	    (else
 	     (let ((n (- (char->ascii (char-downcase c)) a-minus-ten)))

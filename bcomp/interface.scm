@@ -1,9 +1,9 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Interfaces
 
-(define-record-type interface type/interface
+(define-record-type interface :interface
   (really-make-interface ref walk clients name)
   interface?
   (ref ref-method)
@@ -11,7 +11,7 @@
   (clients interface-clients)
   (name interface-name))
 
-(define-record-discloser type/interface
+(define-record-discloser :interface
   (lambda (int) (list 'interface (interface-name int))))
 
 
@@ -50,9 +50,7 @@
 				    name)
 			  (table-set! table name type)))
 		    (table-set! table item undeclared-type)))
-	      (if (vector? items)
-		  (vector->list items)
-		  items))
+	      items)
     (really-make-simple-interface table name)))
 
 (define (really-make-simple-interface table name)

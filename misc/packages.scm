@@ -1,10 +1,15 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
+; Miscellaneous things.
 
+(define-structures ((sockets (export socket-client socket-server)))
+  (open scheme-level-2
+        primitives)
+  (files socket))  ;file removed from distribution due to copyright worries
 
-(define-package ((remote (export remote-repl
+(define-structure remote (export remote-repl
 				 serve
-				 make-socket)))
+				 make-socket)
   (open scheme
 	;; For server
 	closures
@@ -24,7 +29,7 @@
 	signals features)
   (files remote))
 
-(define-package ((requirements (export (require syntax))))
+(define-structure requirements (export (require :syntax))
   (open scheme-level-2
 	packages
 	environments
@@ -33,3 +38,49 @@
 	signals)
   (files require))
 
+
+; Procedure annotations
+
+(define-structure annotations
+    (export annotate-procedure procedure-annotation)
+  (open scheme-level-1 assembler)
+  (files annotate))
+
+
+; DOODL
+
+(define-structure doodl doodl-interface
+  (open scheme
+	methods
+	meta-methods
+	annotations
+	define-record-types
+	records
+	;; handle	; ignore-errors
+	;; conditions	; error?
+	util 
+	signals)
+  (files doodl))
+
+
+(define-interface doodl-interface
+  (export ((method
+	    define-class
+	    define-method
+	    define-generic-function
+	    define-class
+	    set)
+	   :syntax)
+	  <function>
+	  <generic-function>
+	  <method>
+	  <class>
+	  <singleton>
+	  ;; etc.
+	  make
+	  initialize
+	  car-setter cdr-setter vector-ref-setter
+	  id?
+	  (bind :syntax)
+	  ;; etc. etc.
+	  ))

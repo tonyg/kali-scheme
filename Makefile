@@ -1,5 +1,5 @@
 # Scheme 48 Makefile
-# Last updated December 1993 by JAR
+# Last updated January 1994 by JAR
 # Documentation in file INSTALL
 
 # One of these days maybe we'll figure out how to use Gnu autoconf.
@@ -30,7 +30,7 @@ RUNNABLE = scheme48
 #on most systems
 VMLIBS= -lm
 #on SGI
-#VMLIBS = -lmld
+#VMLIBS = -lm -lmld
 #on SunOS5
 #VMLIBS= -lnsl -lgen -ldl -lsocket
 #on SunOS4
@@ -48,7 +48,6 @@ DISTDIR = /users/ftp/pub/jar
 
 # The static linker can use a lot of space.
 BIG_HEAP = -h 4000000
-
 
 ###
 ### Avoid changing anything below this point.
@@ -81,7 +80,7 @@ LINKER = $(LINKER_VM) -i $(LINKER_IMAGE)
 START_LINKER = echo ,batch; echo ,bench on;
 
 # or,
-#LINKER_RUNNABLE = $(RUNNABLE)
+LINKER_RUNNABLE = $(RUNNABLE)
 # and the other two as above
 
 
@@ -89,13 +88,20 @@ START_LINKER = echo ,batch; echo ,bench on;
 
 CFILES = main.c unix.c dynload.c error.c extension.c scheme48vm.c \
          prescheme.h scheme48.h
-CONFIG_FILES = interfaces.scm rts-packages.scm comp-packages.scm
+CONFIG_FILES = interfaces.scm low-packages.scm rts-packages.scm \
+	       comp-packages.scm
 
 
 ### Rules
 
 # This is the first rule and therefore the make command's default target.
-enough: $(VM) $(IMAGE)
+enough: $(VM) $(IMAGE) .notify
+
+# The developers are curious to know.
+.notify:
+	echo Another 0.`cat minor-version-number` installation. \
+	   | mail scheme-48-notifications@martigny.ai.mit.edu 
+	touch .notify
 
 $(VM): $(OBJFILES)
 	$(CC) $(VMLINKFLAGS) -o $(VM) $(OBJFILES) $(VMLIBS)
@@ -124,17 +130,17 @@ filenames.make: packages.scm rts-packages.scm alt-packages.scm \
 		more-packages.scm
 	touch filenames.make
 	$(MAKE) $(VM)
-	(echo ,load alt/config.scm alt/flatload.scm bcomp/defpackage.scm ; \
-	 echo "(load-configuration \"packages.scm\")" ;  \
-	 echo "(define syntactic 0) (define tables 0)" ; \
-	 echo "(flatload linker-structures)" ;		 \
-	 echo "(define q-f (all-file-names link-config))" ; \
-	 echo "(flatload usual-structures)" ;		 \
-	 echo "(define i-f (all-file-names initial-system))" ; \
-	 echo "(define u-f (all-file-names usual-features initial-system))" ; \
-	 echo "(write-file-names \"filenames.make\"      \
-		 'initial-files i-f 'usual-files u-f 'linker-files q-f)") \
-	| $(VM) -i initial.image -a batch
+	(echo ,load alt/config.scm alt/flatload.scm bcomp/module-language.scm;\
+	 echo \(load-configuration \"packages.scm\"\);  \
+	 echo \(define syntactic 0\) \(define tables 0\); \
+	 echo \(flatload linker-structures\);		 \
+	 echo \(define q-f \(all-file-names link-config\)\); \
+	 echo \(flatload usual-structures\);		 \
+	 echo \(define i-f \(all-file-names initial-system\)\); \
+	 echo \(define u-f \(all-file-names usual-features initial-system\)\);\
+	 echo \(write-file-names \"filenames.make\"      \
+		 \'initial-files i-f \'usual-files u-f \'linker-files q-f\)) \
+	| ./$(VM) -i initial.image -a batch
 # or:	| $(RUNNABLE) -a batch
 
 # If make barfs on this include line, just comment it out.  It's only
@@ -149,24 +155,26 @@ include filenames.make
 # (set! *package-uid* 0) is a kludge.
 
 link/linker.image: $(linker-files)
-	(echo ,batch ; echo ,bench on ;              \
-	 echo ,open signals handle features ;        \
-	 echo ,open bitwise ascii code-vectors record ; \
-	 echo ,load $(linker-files) ;		     \
-	 echo ,load alt/init-defpackage.scm ;        \
-	 echo "(set! *package-uid* 0)";	             \
-	 echo ,dump link/linker.image)		     \
+	(echo ,batch; echo ,bench on;                  \
+	 echo ,open signals handle features;           \
+	 echo ,open bitwise ascii code-vectors record; \
+	 echo ,load $(linker-files);		       \
+	 echo ,load alt/init-defpackage.scm;	       \
+	 echo \(set! *package-uid* 0\);		       \
+	 echo ,dump link/linker.image)		       \
 	| $(LINKER_RUNNABLE)
 
 # The initial Scheme 48 heap image is built by the linker.  It
 # contains Scheme, the byte-code compiler, and a minimal
 # command processor, and no debugging environment to speak of.
 
-initial.image: \
-    $(LINKER_IMAGE) $(CONFIG_FILES) $(initial-files) initial.scm
+initial.image: $(LINKER_IMAGE) $(CONFIG_FILES) initial.scm $(initial-files)
 	($(START_LINKER)               \
-	 echo "(load \"initial.scm\")" ;  \
-	 echo "(link-initial-system)")   \
+	 echo \(load-configuration \"interfaces.scm\"\); \
+	 echo \(load-configuration \"packages.scm\"\); \
+	 echo \(flatload initial-structures\); \
+	 echo \(load \"initial.scm\"\);  \
+	 echo \(link-initial-system\))   \
 	| $(LINKER)
 
 
@@ -181,24 +189,26 @@ initial.image: \
 
 $(IMAGE): $(VM) more-interfaces.scm more-packages.scm $(usual-files) \
 	  initial.debug
-	(echo ,load env/init-defpackage.scm ; \
-	 echo "((*structure-ref filenames 'set-translation!)         \
-	        \"=scheme48/\" \"./\")" ;			     \
-	 echo ,load more-interfaces.scm =scheme48/link-packages.scm ; \
-	 echo ,load =scheme48/more-packages.scm ; \
-	 echo "(ensure-loaded command-processor)" ;		     \
-	 echo "(ensure-loaded usual-commands)" ;		     \
-	 echo "((*structure-ref command-processor 'set-command-structure!) usual-commands)" ; \
-	 echo ",go ((*structure-ref command-processor 'command-processor) \"batch\")" ; \
-	 echo "(ensure-loaded usual-features)" ;		     \
-	 echo ,structure more-structures more-structures-interface ; \
-	 echo ,in debuginfo "(read-debug-info \"initial.debug\")" ;  \
-	 echo ,keep maps source files ;				     \
-	 echo ,translate =scheme48/ $(LIB)/  ;			     \
-	 echo ,build "((*structure-ref package-commands-internal     \
-				       'new-command-processor)	     \
-		       \"(made by $$USER on `date`)\"		     \
-		       built-in-structures more-structures)" $(IMAGE) ) \
+	(echo ,load env/init-defpackage.scm; \
+	 echo \(\(\*structure-ref filenames \'set-translation!\)     \
+	        \"=scheme48/\" \"./\"\);			     \
+	 echo ,load more-interfaces.scm =scheme48/link-packages.scm; \
+	 echo ,load =scheme48/more-packages.scm;		     \
+	 echo \(ensure-loaded command-processor\);		     \
+	 echo \(ensure-loaded usual-commands\);			     \
+	 echo \(\(\*structure-ref command-processor \'set-command-structure!\)\
+	        usual-commands\); \
+	 echo ,go \(\(*structure-ref command-processor \'command-processor\) \
+	            \"batch\"\); \
+	 echo \(ensure-loaded usual-features\);		            \
+	 echo ,structure more-structures more-structures-interface; \
+	 echo ,in debuginfo \(read-debug-info \"initial.debug\"\);  \
+	 echo ,keep maps source files;				     \
+	 echo ,translate =scheme48/ $(LIB)/ ;			     \
+	 echo ,build \(\(*structure-ref package-commands-internal    \
+				        \'new-command-processor\)    \
+		       \"\(made by $$USER on `date`\)\"		     \
+		       built-in-structures more-structures\) $(IMAGE) ) \
 	| ./$(VM) -i initial.image -a batch
 
 main.o: main.c
@@ -226,11 +236,14 @@ clean:
 	    link/*.image debug/*.image debug/*.debug
 
 install: enough $(INSTALL_METHOD) $(RUNNABLE).1 install_misc
-	$(CP) $(VM) $(LIB)/
+	install-vm
 	chmod +x $(BIN)/$(RUNNABLE)
 	if test -d $(MAN);  \
 	  then $(CP) $(RUNNABLE).1 $(MAN)/; chmod +r $(MAN)/$(RUNNABLE).1; \
-          else echo "No man directory, not installing man page" ; fi
+          else echo "No man directory, not installing man page"; fi
+
+install-vm:
+	$(CP) $(VM) $(LIB)/
 
 install_misc: $(LIB)/rts $(LIB)/env $(LIB)/big $(LIB)/opt $(LIB)/misc $(LIB)/link
 	$(CP) env/*.scm $(LIB)/env/
@@ -296,8 +309,8 @@ DISTFILES = COPYING README INSTALL NEWS TODO Makefile $(CFILES) \
 	    rts/*.scm bcomp/*.scm env/*.scm big/*.scm misc/*.scm \
 	    link/*.scm opt/*.scm vm/*.scm alt/*.scm debug/*.scm infix/*.scm \
 	    initial.image initial.debug \
-	    link/*.lisp \
-	    emacs/*.el emacs/README .gdbinit
+	    link/*.lisp link/*.exec \
+	    emacs/*.el emacs/README .gdbinit *-version-number
 
 dist: initial.image
 	tar cf - $(DISTFILES) | gzip -c >$(DISTDIR)/$(RUNNABLE)-0-`cat minor-version-number`.tar.gz
@@ -306,7 +319,7 @@ dist: initial.image
 inc:
 	(cat minor-version-number; echo 1+p) | dc >minor-version-number.tmp
 	mv minor-version-number.tmp minor-version-number
-	echo "(define version-info \"0.`cat minor-version-number`\")" \
+	echo \(define version-info \"0.`cat minor-version-number`\"\) \
 	  >env/version-info.scm
 
 
@@ -316,24 +329,36 @@ PSEUDODIR = ../pseudo
 
 link/linker-in-lucid: link/lucid-script.lisp $(linker-files) \
 	    alt/pseudoscheme-features.scm alt/pseudoscheme-record.scm
-	(echo "(defvar pseudoscheme-directory \"$(PSEUDODIR)/\")"; \
+	(echo \(defvar pseudoscheme-directory \"$(PSEUDODIR)/\"\); \
 	 cat link/lucid-script.lisp; \
-	 echo "(dump-linker) (lcl:quit)") \
+	 echo \(dump-linker\) \(lcl:quit\)) \
 	| lisp
 
 # Various things for debugging
 
 debug/medium.image: $(LINKER_IMAGE) $(CONFIG_FILES) $(medium-files)
 	($(START_LINKER)                 \
-	 echo "(load \"initial.scm\")";  \
-	 echo "(load-configuration \"debug-packages.scm\")";  \
-	 echo "(link-medium-system)")    \
+	 echo \(load-configuration \"interfaces.scm\"\); \
+	 echo \(load-configuration \"packages.scm\"\); \
+	 echo \(flatload initial-structures\); \
+	 echo \(load-configuration \"debug-packages.scm\"\);  \
+	 echo \(link-medium-system\))    \
 	| $(LINKER)
 
-debug/little.image: \
-    $(LINKER_IMAGE) $(CONFIG_FILES) debug-packages.scm initial.scm
+debug/mini.image: $(LINKER_IMAGE) $(CONFIG_FILES)
 	($(START_LINKER)                 \
-	 echo "(load \"initial.scm\")";  \
-	 echo "(load-configuration \"debug-packages.scm\")"; \
-	 echo "(link-little-system)")    \
+	 echo \(load-configuration \"interfaces.scm\"\); \
+	 echo \(load-configuration \"packages.scm\"\); \
+	 echo \(flatload initial-structures\); \
+	 echo \(load-configuration \"debug-packages.scm\"\);  \
+	 echo \(link-mini-system\))    \
+	| $(LINKER)
+
+debug/little.image: $(LINKER_IMAGE) $(CONFIG_FILES) debug-packages.scm
+	($(START_LINKER)                 \
+	 echo \(load-configuration \"interfaces.scm\"\); \
+	 echo \(load-configuration \"packages.scm\"\); \
+	 echo \(flatload initial-structures\); \
+	 echo \(load-configuration \"debug-packages.scm\"\); \
+	 echo \(link-little-system\))    \
 	| time $(LINKER)

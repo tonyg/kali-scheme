@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Debugging stuff.
@@ -58,10 +58,13 @@
 ; --------------------
 ; Hack: smallest possible reified system.
 
-(define-structure mini-packages for-reification-interface
+(define-structure mini-packages
+    (compound-interface for-reification-interface
+			(export make-simple-package))
   (open scheme-level-2
 	tables
 	features		;contents
+	locations
 	signals)		;error
   (files (debug mini-package)))
 

@@ -76,7 +76,7 @@ it starts up.
     single string to the procedure specified in the ,build command.
     E.g.
 
-        > ,build (lambda (a) (display a) (newline)) foo.image
+        > ,build (lambda (a) (display a) (newline) 0) foo.image
 	> ,exit
 	% scheme48vm -i foo.image -a mumble foo
 	mumble foo
@@ -193,21 +193,22 @@ Building images:
 Modes:
 
 When given no argument, all of these commands toggle the corresponding
-mode.  If given an argument, the argument should be ON or OFF.
+mode.  With the argument ?, the current setting is displayed.
+Otherwise the argument should be ON or OFF.
 
- ,batch [on | off]
+ ,batch [on | off | ?]
     In "batch mode," any error or interrupt that comes up will cause
     Scheme 48 to exit immediately with a non-zero exit status.  Also,
     the command processor doesn't print prompts.  The default is
     interactive mode.
 
- ,form-preferred [on | off]
+ ,form-preferred [on | off | ?]
     Enable or disable "form preferred" mode.  In this mode, command
     processor commands needn't be prefixed by comma.  To see the value
     of a variable (or number - this should be fixed), do (begin
     <name>).  "Command preferred" mode is the default.
 
- ,levels [on | off]
+ ,levels [on | off | ?]
     Enable or disable command levels.  With levels enabled (the
     default), errors "push" a new command level, and <eof> (see above)
     or ,reset is required to return to top level.  The effects of
@@ -226,6 +227,10 @@ mode.  If given an argument, the argument should be ON or OFF.
     confusing recursive command loop levels are to newcomers to
     Scheme.  Let me know (jar@ai.mit.edu) if you like it; otherwise it
     might get flushed.
+
+ ,break-on-warnings [on | off | ?]
+    When a warning is produced, enter a new command level, just as
+    when an error occurs.
 
 
 Resource query and control:
@@ -260,20 +265,7 @@ Resource query and control:
     messages.
 
 
-Command files:
-
- ,take <filename>
-    Read commands and forms from the specified file as if they were
-    typed at the command processor.
-    *** The way this command works is likely to change in the near
-    future. ***
-
-
 Quite obscure:
-
- ,break-on-warnings
-    When a warning is produced, enter a new command level, just as
-    when an error occurs.
 
  ,go <exp>
     This is like ,exit <exp> except that the evaluation of <exp>

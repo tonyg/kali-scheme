@@ -7,7 +7,11 @@
 #include <fcntl.h>		/* for O_RDWR */
 #include <string.h>
 #include "scheme48.h"
+#include <stdlib.h>
+#include <math.h>
+#include <unistd.h>		/* setuid & setgid */
 
+#if defined(SOCKET_SUPPORT)
 /* Things for socket library... */
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -17,6 +21,7 @@
 #include <netdb.h>
 #include <signal.h>
 #include <errno.h>
+#endif
 
 FILE **port_to_stream(scheme_value port)
 {
@@ -33,143 +38,18 @@ FILE **port_to_stream(scheme_value port)
   return &Sopen_portsS[index];
 }
 
-
-/* Sockets */
-
-/*
- *  This code based upon:
- *            The simple socket library
- *            Examples from "UNIX Programmer' Supplementary Documents Vol. 1
- *            Examples from "BSD Sockets: A Quick and Dirty Primer" by
- *                          Jim Frost.
- *            Geoffrey Brown's experimental xscheme functions 
- *
- *   The following copyright covers code derived from the simple socket library
- */
-
-/* Simple Socket Libary
-   Written by Mat Watson and Hubert Bartels.  12/01/90
- */
-/*
-Copyright (c) 1990 Mat Watson and Hubert Bartels. All rights reserved. 
-
-Permission to use, copy, and/or distribute for any purpose and 
-without fee is hereby granted, provided that both the above copyright 
-notice and this permission notice appear in all copies and derived works. 
-Fees for distribution of this software or for derived sources may only 
-be charged with the express written permission of the copyright holders. 
-This software is provided ``as is'' without express or implied warranty.
-*/
-
-
-/* hack by Basile STARYNKEVITCH */
-#if defined(svr4) || defined(__svr4__) || defined(SYSV)
-#define NO_BCOPY
-#endif
-
-#ifdef NO_BCOPY
-#define bcopy(From,To,Len) memcpy(To,From,Len)
-#define bzero(To,Len) memset(To, 0, Len)
-#endif /*NO_BCOPY*/
-
-int internet_stream_socket()
+/* 0 = failure, 1 = success */
+int null_terminate(scheme_value string, char *buffer, long buffer_size)
 {
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock < 0)
-    perror("opening stream socket");
-  return sock;
+  if (!stringp(string)) return 0;
+  {
+    size_t len = string_length(string);
+    if (len >= buffer_size) return 0;
+    strncpy(buffer, &string_ref(string, 0), len);
+    buffer[len] = '\0';
+    return 1;
+  }
 }
-
-int socket_bind(int sock, int portno) /* returns assigned port number */
-{
-  int length;
-  struct sockaddr_in name;
-
-  /* Create name with wildcards */
-  
-  name.sin_family = AF_INET;
-  name.sin_addr.s_addr = INADDR_ANY;
-
-  /* ..., htons, ...  - convert values between host and network byte order
-     u_short htons(u_short hostshort); */
-  name.sin_port = htons(portno);
-
-  /* bind() assigns a name to an unnamed socket.
-     int bind(int s, struct sockaddr *name, int namelen); */
-  if (bind(sock, &name, sizeof(name)) < 0) {
-    perror("binding datagram socket");
-    return -1; }
- 
-  /* Find out the assigned port number */
-  length = sizeof(name);
-  if (getsockname(sock, &name, &length)) {
-    perror("getting socket name");
-    return -1; }
-
-  /* Max # of queued connects */
-  listen(sock, 5);
-
-  return ntohs(name.sin_port);
-} /* SockServer */
-
-
-/*
- *  Accept a connection from a server port.
- *  Returns a file descriptor.
- */
-
-int socket_accept(int s)
-{
-  int fd;
-  do
-    fd = accept(s, NULL, NULL);
-  while (fd < 0 && errno == EINTR);
-  if (fd < 0)
-    perror("accept");
-  return fd;
-}
-
-
-/*
- * Connect to a server port.
- * Returns a file descriptor.
- *  
- */
-
-int socket_connect(char *hostname, int portnum)
-{
-  int sock;
-  struct sockaddr_in name;
-  struct hostent *hp;
-  
-  /* Construct name, with no wildcards, of the socket to send to.
-   * Gethostbyname() returns a structure including the network address
-   * of the specified host.
-   */
-
-  hp = gethostbyname(hostname);
-  if (hp == 0) {
-    fprintf(stderr, "unknown host: %s\n", hostname);
-    return -1; }
- 
-  bzero(&name, sizeof(name));
-  bcopy(hp->h_addr_list[0], (char *) &name.sin_addr, (int) hp->h_length);
-  name.sin_family = AF_INET;
-  name.sin_port = htons(portnum);
-
-  /* create socket */
-
-  sock = internet_stream_socket();
-  if (sock < 0) {
-    perror("opening stream socket");
-    return -1; }
-    
-  if (connect(sock, &name, sizeof(name)) < 0) {
-    perror(hostname);
-    close(sock); }
-  return sock; 
-}
-
 
 /******************************************/
 
@@ -181,6 +61,7 @@ extended_vm (long key, scheme_value value)
   case 0:			/* read jumpers on 68000 board */
     return 0;
 
+#if defined(SOCKET_SUPPORT)
   case 20:
     { int s = internet_stream_socket();
       return (s < 0) ? UNDEFINED : ENTER_FIXNUM(s);
@@ -207,7 +88,9 @@ extended_vm (long key, scheme_value value)
       fd = socket_connect(hostname, port);
       return (fd < 0) ? UNDEFINED : ENTER_FIXNUM(fd);
     }
+#endif
 
+  /* fdopen() support */
   case 24:
   case 25:
     if (!pairp(value)) return UNDEFINED;
@@ -224,6 +107,42 @@ extended_vm (long key, scheme_value value)
       return SCHTRUE;
     }
 
+  /* getenv() */
+  case 26: {
+#   define GETENV_BUFFER_SIZE 200
+    scheme_value env_var, result_buffer;
+    char buffer[GETENV_BUFFER_SIZE];
+    char *result;
+    size_t result_len;
+    
+    if (!pairp(value)) return UNDEFINED;
+    env_var = car(value);
+    result_buffer = cdr(value);
+    if (!stringp(env_var) || !stringp(result_buffer)) return UNDEFINED;
+    if (!null_terminate(env_var, buffer, GETENV_BUFFER_SIZE))
+      return UNDEFINED;
+    result = getenv(buffer);
+    if (result == NULL)
+      return SCHFALSE;
+    result_len = strlen(result);
+    if (result_len > string_length(result_buffer))
+      return UNDEFINED;
+    strncpy(&string_ref(result_buffer, 0), result, result_len);
+    return ENTER_FIXNUM(result_len);
+  }
+
+  case 27: {
+    /* This is intended for use by HTTP scripts... */
+    if (!pairp(value) || !FIXNUMP(car(value)) || !FIXNUMP(cdr(value)))
+      return UNDEFINED;
+    if (setgid(EXTRACT_FIXNUM(cdr(value))) != 0 ||
+	setuid(EXTRACT_FIXNUM(car(value))) != 0)
+      return SCHFALSE;
+    else
+      return SCHTRUE;
+  }
+
+  /* popen() support */
   case 97:
   case 98: {
 #   define POPEN_BUFFER_SIZE 200
@@ -232,17 +151,12 @@ extended_vm (long key, scheme_value value)
       FILE **pstream = port_to_stream(port);
       scheme_value command = cdr(value);
       char buffer[POPEN_BUFFER_SIZE];
-      long len;
       FILE *new_stream;
       /* extern FILE *popen(const char *, const char *);  --POSIX stdio.h */
 
       if (pstream == NULL) return UNDEFINED;
-      if (!stringp(command)) return UNDEFINED;
-
-      len = string_length(command);
-      if (len >= POPEN_BUFFER_SIZE) return UNDEFINED;
-      strncpy(buffer, &string_ref(command, 0), len);
-      buffer[len] = '\0';
+      if (!null_terminate(command, buffer, POPEN_BUFFER_SIZE))
+	return UNDEFINED;
 
       new_stream = popen(buffer, key == 97 ? "r" : "w");
       if (new_stream == NULL) return UNDEFINED;
@@ -252,6 +166,7 @@ extended_vm (long key, scheme_value value)
     }
   }
 
+  /* Floating point */
   case 99: {
     extern scheme_value vm_float_op(long, scheme_value);
     if (!vectorp(value)) return UNDEFINED;
@@ -264,9 +179,6 @@ extended_vm (long key, scheme_value value)
 }
 
 /* stdlib.h declares atof */
-
-#include <stdlib.h>
-#include <math.h>
 
 #define get_arg(args,i) vector_ref(args,(i)+1)
 #define get_int_arg(args,i) EXTRACT_FIXNUM(get_arg(args,i))
@@ -343,7 +255,7 @@ vm_float_op( long op, scheme_value args )
     set_float_arg(args, 2, atof(buffer));
     return 0;}
   case 8: {
-    int len;
+    size_t len;
     char *str =   get_string_arg(args,1);
     get_float_arg(args, 0, x);
     sprintf(str, "%g", x);

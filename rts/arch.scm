@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; This is file arch.scm.
@@ -249,7 +249,7 @@
     (symbol symbol? make-symbol       ; symbols actually made using op/intern
       (symbol->string #f))
     (location location? make-location
-      (contents set-contents!) (location-id #f))
+      (contents set-contents!) (location-id set-location-id!))
     (closure closure? make-closure
       (closure-template #f) (closure-env #f))
     (weak-pointer weak-pointer? make-weak-pointer

@@ -1,13 +1,13 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ; Inexact rational arithmetic using hacked-in floating point numbers.
 
-(define floatnum-type
-  (make-extended-number-type "Floatnum" '(code-vec)))
+(define :floatnum
+  (make-extended-number-type '(code-vec) (list :rational) 'floatnum))
 
-(define floatnum? (extended-number-predicate floatnum-type))
-(define make-floatnum (extended-number-constructor floatnum-type '(code-vec)))
-(define floatnum-code-vec (extended-number-accessor floatnum-type 'code-vec))
+(define floatnum? (extended-number-predicate :floatnum))
+(define make-floatnum (extended-number-constructor :floatnum '(code-vec)))
+(define floatnum-code-vec (extended-number-accessor :floatnum 'code-vec))
 
 (define float-vec (make-vector 4))
 
@@ -143,92 +143,61 @@
   (define atan float-atan)
   (define sqrt float-sqrt))
 
+(define (float-denominator z)
+  (do ((z z (float* z 2))
+       (n (integer->float 1) (float* n 2)))
+      ((integral-floatnum? z) n)))
+
+(define (float-numerator z)
+  (float* z (float-denominator z)))
+
 
-; Methods
-
-(define floatnum-family (make-family 'floatnum 12))  ; higher than rationals
-                                                     ; so that 1.1 is a float
-
-(define (define-float-method table proc)
-  (define-method table floatnum-family proc))
-
 ; Methods on floatnums
 
-(define (true-for-floatnums n)
-  (if (floatnum? n) #t (fail)))
+(define-method &integer? ((z :floatnum))
+  (integral-floatnum? z))
 
-(define-float-method rational?-table true-for-floatnums)
-(define-float-method real?-table     true-for-floatnums)
-(define-float-method complex?-table  true-for-floatnums)
-(define-float-method number?-table   true-for-floatnums)
+(define-method &rational? ((n :floatnum)) #t)
 
-; Methods on complexes in terms of real-part and imag-part
+(define-method &exact? ((z :floatnum)) #f)
 
-(define-float-method exact?-table
-  (lambda (z)
-    (if (floatnum? z)
-	#f
-	(fail))))
+(define-method &inexact->exact ((z :floatnum))
+  (if (and (integral-floatnum? z)
+	   (in-fixnum-range? z))
+      (floatnum->fixnum z)
+      (next-method)))				; ain't no way
 
-(define-float-method inexact->exact-table
-  (lambda (z)
-    (if (and (floatnum? z)
-	     (integral-floatnum? z)
-	     (in-fixnum-range? z))
-	(floatnum->fixnum z)
-	(fail))))  ; ain't no way
+(define-method &exact->inexact ((z :rational))
+  (x->float z))		;Should do this only if the number is within range.
 
-(define-float-method exact->inexact-table
-  (lambda (z)
-    (if (rational? z)
-	(x->float z)
-	(fail))))
+(define-method &floor ((z :floatnum)) (float-floor z))
 
-(define (when-floatnum proc)
-  (lambda (n)
-    (if (floatnum? n) (proc n) (fail))))
+; beware infinite regress
+;(define-method &numerator ((z :floatnum)) (float-numerator z))
+;(define-method &denominator ((z :floatnum)) (float-denominator z))
 
-(define (when-floatable proc)
-  (lambda (n)
-    (if (rational? n) (proc n) (fail))))
+(define (define-floatnum-method mtable proc)
+  (define-method mtable ((m :rational) (n :rational)) (proc m n)))
 
-(define-float-method integer?-table (when-floatnum integral-floatnum?))
+(define :lose :rational)
 
-(define (when-floatnums proc)
-  (lambda (m n)
-    (if (and (or (floatnum? m) (floatnum? n))
-	     (real? m)
-	     (real? n))
-	(proc m n)
-	(fail))))
+(define-floatnum-method &+ float+)
+(define-floatnum-method &- float-)
+(define-floatnum-method &* float*)
+(define-floatnum-method &/ float/)
+(define-floatnum-method &quotient float-quotient)
+(define-floatnum-method &remainder float-remainder)
+(define-floatnum-method &= float=)
+(define-floatnum-method &< float<)
 
-(define-float-method plus-table (when-floatnums float+))
-(define-float-method minus-table (when-floatnums float-))
-(define-float-method *-table (when-floatnums float*))
-(define-float-method /-table (when-floatnums float/))
-(define-float-method quotient-table (when-floatnums float-quotient))
-(define-float-method remainder-table (when-floatnums float-remainder))
-(define-float-method =-table (when-floatnums float=))
-(define-float-method <-table (when-floatnums float<))
-(define-float-method floor-table (when-floatnum float-floor))
+(define-method &exp ((z :rational)) (float-exp z))
+(define-method &log ((z :rational)) (float-log z))
+(define-method &sqrt ((z :rational)) (float-sqrt z))
 
-(define-float-method exp-table (when-floatable float-exp))
-(define-float-method log-table (when-floatable float-log))
-(define-float-method sqrt-table (when-floatable float-sqrt))
-
-(define-float-method number->string-table
-  (lambda (n radix)
-    (if (and (floatnum? n) (= radix 10))
-	(float->string n)
-	(fail))))
-
-(define-float-method string->number-table
-  (lambda (s radix exact?)
-    (if (and (= radix 10)
-	     (float-string? s)
-	     (not exact?))
-	(string->float s)
-	(fail))))
+(define-method &number->string ((n :floatnum) radix)
+  (if (= radix 10)
+      (float->string n)
+      (next-method)))
 
 ; Oog.
 
@@ -273,3 +242,11 @@
 	    (else #f)))
     
     (start)))
+
+(define-simple-type :float-string (:string) float-string?)
+
+(define-method &really-string->number ((s :float-string) radix exact?)
+  (if (and (= radix 10)
+	   (not exact?))
+      (string->float s)
+      (next-method)))

@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 
@@ -10,7 +10,7 @@
 (define (*require interface-id)
   (let ((start-thunk
 	 (case (car interface-id)
-	   ((scheme48)
+	   ((scheme-48)
 	    (let ((p (config-package)))
 	      (lambda () p)))
 	   ((scheme-library-1)

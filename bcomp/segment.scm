@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; The byte code compiler's assembly phase.
@@ -38,7 +38,7 @@
 
 ; "astate" is short for "assembly state"
 
-(define-record-type assembly-state type/assembly-state
+(define-record-type assembly-state :assembly-state
   (make-assembly-state cv pc count lits)
   (cv    astate-code-vector)
   (pc    astate-pc    set-astate-pc!)
@@ -189,7 +189,13 @@
 		      (let ((dd (fluid $debug-data)))
 			(set-debug-data-source!
 			 dd
-			 (cons (cons (astate-pc astate) info)
+			 (cons (cons (astate-pc astate)
+				     ;; Abbreviate this somehow?
+				     (if (pair? info)
+					 (cons (car info)
+					       (schemify (cdr info)))
+					 ;; Name might be generated...
+					 info))
 			       (debug-data-source dd))))))
       segment))
 

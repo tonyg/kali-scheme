@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; This is file util.scm.
@@ -60,3 +60,8 @@
   (if (null? (cdr x))
       (car x)
       (last (cdr x))))
+
+(define (insert x l <)
+  (cond ((null? l) (list x))
+        ((< x (car l)) (cons x l))
+        (else (cons (car l) (insert x (cdr l) <)))))

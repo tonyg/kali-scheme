@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Front end for Scheme 48 compilation, optimization, or whatever.
@@ -41,16 +41,15 @@
 (define (maybe-update-known-type node p table)
   (let ((lhs (cadr (node-form node))))
     (if (not (table-ref table lhs))
-	(let* ((new-type (node-type (caddr (node-form node))
-				    (package->environment p)))
-	       (compat (compatible-types? new-type value-type)))
-	  (if compat
-	      (package-define! p lhs (if (eq? compat 'definitely)
+	(let ((new-type (reconstruct-type (caddr (node-form node))
+					  (package->environment p))))
+	  (if (subtype? new-type any-values-type)
+	      (package-define! p lhs (if (subtype? new-type value-type)
 					 new-type
 					 value-type))
 	      (warn "ill-typed right-hand side"
 		    (schemify node)
-		    new-type))))))
+		    (type->sexp new-type #t)))))))
 
 (define define-node? (node-predicate 'define syntax-type))
 (define lambda-node? (node-predicate 'lambda))

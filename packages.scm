@@ -1,10 +1,33 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Structures that export structures: the big picture.
 
+; The two definitions assume that we're "flat loading."
+(define-structure the-interfaces (export ) (open ))
+(define-structure meta-module-system (export ) (open ))  ;Kludge
 
 ; Scheme 48 run time system.
+
+(define-interface low-structures-interface
+  (export ((scheme-level-0
+	    primitives
+	    bitwise
+	    closures
+	    code-vectors
+	    features
+	    write-images
+	    source-file-names
+	    loopholes
+	    low-level
+	    escapes
+	    vm-exposure
+	    ascii
+	    locations
+	    signals
+	    silly
+	    structure-refs)
+	   :structure)))
 
 (define-interface run-time-structures-interface
   (export ((architecture
@@ -40,9 +63,11 @@
 	    escapes
 	    exceptions
 	    fluids-internal
-	    generics
+	    methods
+	    meta-methods
 	    interrupts
 	    low-level
+	    more-types
 	    number-i/o
 	    ports
 	    primitives
@@ -55,12 +80,17 @@
 	    writing)
 	   :structure)))
 
+(define-structure low-structures low-structures-interface
+  (open meta-module-system 
+	the-interfaces)
+  (files low-packages))
+
 (define-structures ((run-time-structures run-time-structures-interface)
 		    (features-structures features-structures-interface)
 		    (run-time-internals  run-time-internals-interface))
-  (open module-system
-	;; the-interfaces
-	)
+  (open meta-module-system
+	low-structures
+	the-interfaces)
   (files rts-packages))
   
 
@@ -74,7 +104,7 @@
 	    inline
 	    meta-types
 	    interfaces
-	    module-system  ;?
+	    meta-module-system
 	    packages
 	    packages-internal
 	    reconstruction
@@ -90,10 +120,10 @@
 					 features-structures)
 
   (define-structure compiler-structures compiler-structures-interface
-    (open module-system
+    (open meta-module-system
 	  run-time-structures
 	  features-structures
-	  ;; the-interfaces
+	  the-interfaces
 	  )
     (files comp-packages))
 
@@ -119,7 +149,7 @@
 (define-structure initial-structures initial-structures-interface
   (open run-time-structures
 	compiler-structures
-	;; the-interfaces
+	the-interfaces
 	)
   (files initial-packages))
 
@@ -131,7 +161,7 @@
 				       compiler-structures)
 
   (define-structure linker-structures linker-structures-interface
-    (open module-system
+    (open meta-module-system
 	  features-structures
 	  run-time-structures
 	  compiler-structures)
@@ -158,7 +188,7 @@
 	   :structure)))
 
 (define-structure usual-structures usual-structures-interface
-  (open module-system
+  (open meta-module-system
 	run-time-structures
 	compiler-structures
 	initial-structures
@@ -175,17 +205,17 @@
 (define-module (make-alternate-structures features-structures)
 
   (define-structure alternate-structures run-time-structures-interface
-    (open module-system features-structures)
+    (open meta-module-system features-structures)
     (files alt-packages))
 
   alternate-structures)
 
 (define-structure vanilla-features-structures features-structures-interface
-  (open module-system)
+  (open meta-module-system)
   (files (alt packages)))
 
 (define-structure cheat features-structures-interface
-  (open module-system)
+  (open meta-module-system)
   (begin (define-structures ((signals signals-interface)
 			     (handle handle-interface)
 			     (features features-interface)

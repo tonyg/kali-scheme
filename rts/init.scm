@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 
@@ -10,9 +10,9 @@
 (define (usual-resumer entry-point)
   (lambda (resume-arg in out)
     (initialize-dynamic-state!)
-    (initialize-exceptions!
-     (lambda ()
-       (initialize-interrupts!)
-       (with-initial-ports in out
+    (with-initial-ports in out
+      (lambda ()
+	(initialize-exceptions!
 	 (lambda ()
+	   (initialize-interrupts!)
 	   (entry-point resume-arg)))))))

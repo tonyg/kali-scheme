@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Package / structure / interface mutation operations.
@@ -114,7 +114,7 @@
 		      new
 		      replacement)))
 
-(define (set-binding-place! b foo) (vector-set! b 1 foo))
+;(define (set-binding-place! b foo) (vector-set! b 1 foo))
 
 
 ; Hmm.  It ought to be possible to turn this into an RPC.
@@ -138,7 +138,7 @@
                      (if (interface-ref (structure-interface struct) name)
                          (walk-population recur (structure-clients struct))))
                    (package-clients p)))))
-    losers))
+    (cons p losers)))
 
 
 (define (set-location-forward! loser new)
@@ -227,7 +227,11 @@
 			  (if (eq? place prev)
 			      (error "lossage - verify-package-undefineds"
 				     p name binding))
-			  (shadow-location! prev '() #f place)
+			  (if *debug?*
+			      (begin (write `(forward ,prev ,place))
+				     (newline)))
+			  (package-note-caching p name place)  ;Yowza
+			  (set-location-forward! prev place)
 			  (set! newly-defined
 				(cons name newly-defined))))))
 		undefs)
@@ -323,3 +327,14 @@
 ;         (if (syntax? d) "special operator" "primitive procedure"))
 ;        (else "variable")))
 
+
+
+(define (package-undefine! p name)
+  (let ((probe (table-ref (package-definitions p) name)))
+    (if probe
+	(begin (table-set! (package-definitions p) name #f)
+	       (set-location-defined?! (binding-place probe) #f)
+	       (set-location-forward! (binding-place probe)
+				      (location-for-reference p name)))
+	(warn "can't undefine, because not defined here"
+	      p name))))

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; This is file wind.scm.  (Rhymes with "find," not "pinned.")
@@ -58,16 +58,13 @@
 ; Point in state space = <depth, in, out, dynamic-env, parent>
 ; dynamic-env = dynamic environment for execution of the in and out thunks
 
-(define-record-type point point-type
+(define-record-type point :point
   (make-point depth in out dynamic-env parent)
   (depth point-depth)
   (in point-in)
   (out point-out)
   (dynamic-env point-dynamic-env)
   (parent point-parent))
-
-(define-record-discloser point-type
-  (lambda (p) (list 'point (point-depth p))))
 
 (define root-point			;Shared among all state spaces
   (make-point 0

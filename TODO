@@ -4,9 +4,6 @@ Scheme 48: list of bugs and things to do.
 Last update by JAR on 11 January 1994.
 
 Run-time system bugs:
-    Calling primitives with the wrong number of arguments and
-      ,bench on can crash the system.  (New bug.)
-    (> 1 2 3) generates a warning at compile time, but shouldn't.
     Compiler needs to treat calls with more than 63 arguments specially.
     MAX and MIN don't do inexact contagion.
     Shadowing is broken for macro-referenced variables:
@@ -18,15 +15,11 @@ Run-time system bugs:
 
 Programming environment:
     Error checking for macro & special form syntax.
-    Help system:
-      - Implement hierarchical help, a la gdb.
-      - Fuller on-line documentation, a la gdb.
-      - ,from-file command shouldn't be listed.
+    Fuller on-line documentation.
     Error recovery.  Can do better than ,proceed.  LOAD should set up
       restart continuations.
     Types in scheme-interface (and elsewhere) aren't as tight as they
       could be.
-    Shouldn't produce multiple wrong number of arguments warnings.
     LET continuation "pessimization" to retain the environment longer.
     Have the disassembler display local variable names.
     This ought to be recoverable, but isn't always:
@@ -47,7 +40,7 @@ Performance:
     More compact representation for debugging data?
     Leaf procedure compilation (RK's rts/no-leaf-env.scm): if no
       continuations or lambdas, skip the make-env and access locals
-      using stack-ref.  Expected to gain us about 6% in speed.
+      using stack-ref.  Expected to gain about 6% in speed.
     Optimize loops somehow (maybe using call-template opcode and/or
       opportunistic compilation).
     The CAML light implementation has good documentation and patches
@@ -55,6 +48,8 @@ Performance:
       could lift some of it.  (Range check isn't necessary.)
     Bignum support in VM: use MIT Scheme bignums or GNU Multiple
       Precision Arithmetic Library (Torbjorn Granlund <tege@sics.se>).
+    Faster bignum printer (e.g. the one Richard wrote - it would be
+      nice if it were an option tied to bignums)
     Floating point support in VM.
     Ratnum multiplication and division might be made more efficient by
       taking cross-GCD's.
@@ -81,17 +76,9 @@ Module system bugs:
       thunk a la structures and packages.
 
 Module system features:
-    How about making ,in take a command as an argument instead of
-      just an expression?  I often want to trace a procedure or open
-      a structure in some package other than the one I am currently in.
-      This would subsume ,load-into.
-    Add an ,undefine command.  Useful to undo shadowing, flush a
-      structure, etc.
-    Better error message when you do (structure-ref foo ...) where foo
-      isn't an accessed structure.
     Check for name conflicts between opened structures.
     Implement interface subtraction as a way of dealing with such
-      conflicts.
+      conflicts: (WITHOUT (<name> ...) <interface>)
     Check for cycles in structure inheritance.
     An ,access command, similar to ,open.
     Deal with package system state better (for linker).  Maybe each
@@ -101,10 +88,12 @@ Module system features:
       segment.scm).
 
 VM:
+    Fix alleged non-ANSI C gotos, the ones that go in and out of block
+      expecting locals to be preserved.
     The ATAN byte code should take two operands, not one.
     Maximum vector length checking is unjustly conservative, with the
       result that you can't make vectors (and stored objects
-      generally.) larger than 1/4 the size of one semispace.
+      generally) larger than 1/4 the size of one semispace.
     Merge in Olin's changes and extensions (command line processing,
       the #! syntax for scripts, external function call, etc.).
     Interrupt while writing out image causes an exit.  [Fixed?]
@@ -114,16 +103,18 @@ VM:
       just cause open-port to return #f or an error code.
     Get VM debugging environment (load-debug in vm/load.scm) working.
     Get VM interp.scm-without-gc.scm working again.
+    Null terminated strings [fixed in RK's version].
 
 Documentation:
-    user-guide.txt should point to the existing documentation
-      (big-scheme.txt, threads.txt, external.txt, module.ps, lsc.ps).
+    user-guide.txt should point to the existing lsc.ps?
     (optimize auto-integrate) and ,load-package analysis.
     How to use the static linker.
     How scheme48.image gets built.
     Techniques for debugging the runtime system (debug/for-debugging.scm).
     Threads, fluids, records, tables.
     File name translation and the ,translate command.
+    Retrieve the external function call-back code that I wrote for
+      Mark Sheldon, and put it in the doc/ directory.
 
 Cleanup:
   VM:
@@ -131,42 +122,36 @@ Cleanup:
       extent possible.  E.g. use sigaction() instead of signal() and
       time() instead of ftime().  Default case for every compile-time
       conditionalization should assume Posix.
-    Write a program that will automagically generate scheme48.h from
-      vm/data.scm and friends.
     Revert to the old exception system: vector of handlers (not just a
       single procedure), and each handler gets an exception code.
-    Rename "unassigned" to "uninitialized"?  Or phase it out even.
+    Rename "unassigned" to "uninitialized"?  Or phase it out entirely.
   Run-time:
-    Figure out how to make the bummed define-record-type do
-      (loophole ... :foo ...) instead of (loophole ... foo ...).
+    Flush (optimize ...) clause in DEFINE-STRUCTURE in favor of
+      optimizer argument to SCAN-STRUCTURES.
+    Figure out how to merge the two type systems (META-METHODS and
+      META-TYPES).  The generic function system could make use of the
+      SUBTYPE? and INTERSECT? predicates.
     Correct floating point, esp. reading and printing.
-    No type reconstructed for CAAAR, etc. (this is because name
-      lookups are cached under 'binding property of node but later
-      mutated).
     Parameterize over file name syntax somehow.  Currently
       big/filename.scm assumes Unix (cf. DIRECTORY-COMPONENT-SEPARATOR,
-      FILE-NAME-PREFERRED-CASE).
+      FILE-NAME-PREFERRED-CASE).  Perhaps there should be VM support for
+      this.
     Vector patterns and templates ought to be supported in
       SYNTAX-RULES.
-    Interfaces should have types for every exported variable; code in
-      cprim.scm shouldn't have to worry about setting up types.
+    The DEFINE-INTERFACE forms should contain types for every exported
+      variable; the code in cprim.scm (and recon.scm?) shouldn't have
+      to worry about setting up types.
     Make sure that the disassembler and assembler are inverses of one
       another.
     Disassembler should generate S-expression first, and then print
       it independently.
     Combine condition, signals, and handle into a single structure?
     Figure out a better way to implement ##.
-    Rename DEFINE-PACKAGE to DEFINE-STRUCTURE ?  Boy, that would sure
-      confuse Chez Scheme hackers.
     Add ENVIRONMENT-DEFINED? ?
     Make USUAL-TRANSFORM return a transform?
     Add enough to the node signature to make it usable on its own?
   Etc:
-    The Makefile ends up doing
-        ... | ./scheme48vm -i ./scheme48.image -i link/linker.image
-      to run the linker.  This seems wrong somehow.
-    debug/mini-package.scm doesn't define INITIALIZE-REIFIED-PACKAGE!.
-      This is why the mini-system (see debug-packages.scm) doesn't work.
+    Start using a source control system (like rcs).
 
 
 Date: Mon, 14 Jun 93 18:33:30 HKT

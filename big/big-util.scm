@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 (define (concatenate-symbol . stuff)
@@ -36,7 +36,7 @@
 
 (define (identity x) x)
 
-(define (no-op x) x)    ; guarenteed not to be in-lined
+(define (no-op x) x)    ; guaranteed not to be in-lined
 
 (define (null-list? x)
   (cond ((null? x) #t)

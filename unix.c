@@ -1,6 +1,12 @@
 /*Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.*/
 
 /*
+   This module is a collection of quick and dirty hacks written mostly
+   by people who don't know much about writing portable Unix code and
+   don't particularly want to take the time to learn how.  If you have
+   concrete suggestions for improvements, they are quite welcome.
+   Please send them to scheme-48-bugs@martigny.ai.mit.edu.
+
    Expanding Unix filenames
    Unix Sucks
    Richard Kelsey Wed Jan 17 21:40:26 EST 1990
@@ -14,6 +20,7 @@
 #include <pwd.h>
 
 #include <time.h>
+#include <unistd.h>		/* for sysconf() */
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/times.h>
@@ -191,8 +198,13 @@ int char_ready_p( FILE* stream )
 		NULL, NULL, &timeout);
 }
 
-/* Timer functions, for the time instruction */
-/* gettimeofday() version courtesy Basile Starynkevitch */
+/* Timer functions, for the time instruction.
+   gettimeofday() version courtesy Basile Starynkevitch.
+
+   gettimeofday() is a Berkeleyism, and ftime() is an old System 7
+   thing.  The only function that is POSIX.1 / ANSI C compliant is
+   time(), but its resolution is only to the nearest second.  Ugh. */
+
 
 #define TICKS_PER_SECOND 1000	/* should agree with ps_real_time() */
 
@@ -231,9 +243,12 @@ long ps_ticks_per_second()
 long ps_run_time()
 {
   struct tms time_buffer;
+  static long clock_tick = 0;
 
+  if (clock_tick == 0)
+    clock_tick = sysconf(_SC_CLK_TCK); /* POSIX.1, POSIX.2 */
   times(&time_buffer);		/* On Sun, getrusage() would be better */
-  return((long)(time_buffer.tms_utime) * (TICKS_PER_SECOND / 60));
+  return((long)(time_buffer.tms_utime) * (TICKS_PER_SECOND / clock_tick));
 }
 
 void when_alarm_interrupt(sig, code, scp)

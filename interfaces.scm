@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Some interfaces.  Order of presentation is a bit random.
@@ -108,6 +108,7 @@
   (export location?
 	  location-defined?
 	  location-id
+	  set-location-id!
 	  make-location			;run.scm ? mini-packages.scm ?
 	  make-undefined-location	;defined in base.scm
 	  set-location-defined?!
@@ -206,8 +207,8 @@
 	  zero?))
 
 (define-interface scheme-level-1-interface
-  (compound-interface scheme-level-0-interface
-		      scheme-level-1-adds-interface))
+  (compound-interface scheme-level-1-adds-interface
+		      scheme-level-0-interface))
 
 (define-interface util-interface
   (export any
@@ -217,32 +218,12 @@
 	  posq
 	  posv
 	  position
-	  reduce			;command.scm
+	  reduce
 	  sublist
+	  insert
 	  unspecific))
 
 ; Level 2 consists of harder things built on level 1.
-
-(define-interface generics-interface
-  (export define-default-method
-	  define-method
-	  disclose
-	  disclose-methods
-	  fail
-	  make-family
-	  make-generic
-	  make-generic-exception-handler
-	  make-method-table))
-
-(define-interface number-i/o-interface
-  (export number->string
-	  number->string-table
-	  really-number->string
-	  really-string->number
-	  string->integer
-	  string->number
-	  string->number-table))
-
 
 (define-interface records-interface
   (export make-record-type
@@ -250,20 +231,75 @@
 	  record-accessor
 	  record-modifier
 	  record-predicate
-	  define-record-discloser))
+	  define-record-discloser
+	  record-type?
+	  record-type-field-names
+	  record-type-name))
 
 (define-interface records-internal-interface
   (export record?
+	  record-type
 	  record-length
 	  record-ref
 	  record-set!
-	  record-type?
-	  record-type
-	  record-type-field-names))
+	  :record-type
+	  disclose-record))
 
 (define-interface define-record-types-interface
   (export (define-record-type :syntax)
 	  define-record-discloser))
+
+(define-interface methods-interface
+  (export (define-generic :syntax)
+	  (define-method :syntax)
+	  (define-simple-type :syntax)
+	  :values
+	  :value
+	  :number
+	  :complex
+	  :real
+	  :rational
+	  :integer
+	  :exact-integer
+	  :boolean
+	  :symbol
+	  :char
+	  :null
+	  :pair
+	  :vector
+	  :string
+	  :procedure
+	  :input-port
+	  :output-port
+	  :eof-object
+	  :record
+	  :record-type
+	  :zero
+	  singleton
+	  disclose &disclose))
+
+(define-interface meta-methods-interface
+  (export type-predicate &type-predicate
+	  type-priority  &type-priority
+	  type-superiors &type-superiors
+	  same-type?	 &same-type?
+	  add-method!	 &add-method!
+	  set-final-method!
+	  make-method-table         ;rts/exception.scm
+	  method-table-get-perform  ;rts/exception.scm
+	  make-simple-type
+	  ;; Hooks for DOODL or other future extension
+	  :simple-type :method-info :method-table :singleton
+	  make-generic
+	  (method-info :syntax)
+	  methods->perform))
+
+(define-interface number-i/o-interface
+  (export number->string &number->string
+	  string->number
+	  really-string->number &really-string->number ;exactness argument
+	  string->integer))
+
 
 (define-interface fluids-interface
   (export make-fluid
@@ -283,8 +319,10 @@
 (define-interface enumerated-interface
   (export (define-enumeration :syntax)
 	  (enum :syntax)
-	  enumerand->name
-	  name->enumerand))
+	  (enumerand->name :syntax)
+	  (name->enumerand :syntax)))
+
+(define :enumeration :syntax)
 
 (define-interface signals-interface
   (export error warn syntax-error call-error
@@ -361,9 +399,17 @@
 	  gobble-line))
 
 ; Level 2: the harder stuff.
+; Various primitives get promoted to n-ary at this point.
 
 (define-interface scheme-level-2-adds-interface
-  (export call-with-current-continuation
+  (export ((+ - * /)     (proc (&rest :number) :number))
+	  ((< = > <= >=) (proc (&rest :number) :boolean))
+	  (make-vector	 (proc (:exact-integer &opt :value) :vector))
+	  (make-string	 (proc (:exact-integer &opt :char) :string))
+	  ((write-char)  (proc (:char &opt :output-port) :unspecific))
+	  ((read-char peek-char char-ready?)
+	   (proc (&opt :input-port) :value))
+	  call-with-current-continuation
 	  call-with-input-file call-with-output-file
 	  current-input-port current-output-port
 	  dynamic-wind			;New in R5RS
@@ -373,8 +419,8 @@
 	  read))
 
 (define-interface scheme-level-2-interface
-  (compound-interface scheme-level-1-interface
-		      scheme-level-2-adds-interface))
+  (compound-interface scheme-level-2-adds-interface
+		      scheme-level-1-interface))
 
 (define-interface scheme-adds-interface
   (export eval load
@@ -382,8 +428,8 @@
 	  scheme-report-environment))
 
 (define-interface scheme-interface
-  (compound-interface scheme-level-2-interface
-		      scheme-adds-interface))
+  (compound-interface scheme-adds-interface
+		      scheme-level-2-interface))
 
 
 ; Stuff that comes for free with level 2.
@@ -399,8 +445,9 @@
 	  continuation-overhead		;foo
 	  continuation-pc
 	  continuation-template
+	  continuation-parent
 	  continuation?
-	  continuation-parent))
+	  :continuation))
 
 (define-interface templates-interface
   (export make-template
@@ -434,8 +481,12 @@
 
 ; Things for the compiler.
 
-(define-interface tables-interface
+(define-interface general-tables-interface
   (export make-table
+	  make-string-table
+	  make-symbol-table
+	  make-integer-table
+	  make-table-maker
 	  table?
 	  table-ref
 	  table-set!
@@ -445,48 +496,62 @@
   (export usual-transform))
 
 (define-interface meta-types-interface
-  (export syntax-type
+  (export same-type?
+	  subtype?
+	  meet?
+	  join-type
+	  meet-type
+	  sexp->type type->sexp rail-type->sexp
+	  syntax-type
 	  any-values-type
-	  undeclared-type
+	  any-arguments-type
+	  value-type
+	  error-type
 
 	  make-some-values-type
-	  some-values-type?
-	  some-values-type-components
-	  some-values-type        ; (some-values-type T1 ... Tn)
 
-	  value-type
+	  empty-rail-type
+	  rail-type
+	  make-optional-type
+	  make-rest-type
+	  empty-rail-type?
+	  rest-type?
+	  head-type
+	  tail-type
 
 	  procedure-type
 	  procedure-type-domain
 	  procedure-type-codomain
+	  restrictive?
 	  procedure-type?
 	  fixed-arity-procedure-type?
 	  procedure-type-argument-types
 	  procedure-type-arity
 	  any-procedure-type
 	  (proc :syntax)
-
-	  variable-type
-	  variable-type?
-	  variable-value-type
-
-	  compatible-types?
-	  compatible-type-lists?
+	  (some-values :syntax)
 
 	  boolean-type
 	  char-type
-	  number-type
 	  null-type
 	  unspecific-type
+
+	  exact-integer-type
+	  integer-type
+	  rational-type
+	  real-type
+	  complex-type
+	  number-type
+	  exact-type
+	  inexact-type
 
 	  pair-type
 	  string-type
 	  symbol-type
 	  vector-type
 
-	  zero-type
 	  escape-type
-	  usual-variable-type))
+	  structure-type))
 
 (define-interface syntactic-interface
   (export $source-file-name
@@ -520,13 +585,12 @@
 	  operator-table-ref
 	  operator-define!
 	  operator-lookup
-	  operator-transform
 	  operator-type
 	  operator-uid
 	  operator?
 	  operators-table		;config.scm
 	  process-syntax
-	  set-operator-transform!
+	  set-binding-place!
 	  same-denotation?		;for redefinition messages
 	  syntax?
 	  transform-env transform-aux-names ;link/reify.scm
@@ -534,7 +598,16 @@
 	  transform-type
 	  transform?
 	  unbound?
-	  schemify))
+	  schemify
+	  get-funny
+	  funny-name/evaluator-for-syntax
+	  ;; Stuff moved from meta-types
+	  variable-type
+	  variable-type?
+	  variable-value-type
+	  usual-variable-type
+	  compatible-types?
+	  undeclared-type))
 
 (define-interface nodes-interface
   (export classify
@@ -551,8 +624,7 @@
 	  scan-body
 	  lookup
 	  bind
-	  bind1
-	  bind-evaluator-for-syntax))
+	  bind1))
 
 
 ; Interfaces.
@@ -585,7 +657,8 @@
 	  package-uid			;reifier
 	  make-new-location		;ctop.scm
 	  package-note-caching
-	  structure-package))
+	  structure-package
+	  extract-package-from-environment))
 
 (define-interface packages-internal-interface
   (export package-loaded?		;env/load-package.scm
@@ -600,9 +673,6 @@
 	  package-get
 	  package-put!
 
-	  ;; For linker
-	  initialize-reified-package!	;reify.scm
-
 	  ;; For scanner
 	  for-each-export
 	  package-accesses
@@ -613,6 +683,9 @@
 	  package-opens
 	  set-package-integrate?!
 	  structure-name
+
+	  ;; For linker
+	  with-fresh-packages-state
 
 	  ;; For package mutation
 	  for-each-definition
@@ -629,6 +702,7 @@
 	  initialize-structure!
 	  initialize-package!
 
+	  extract-package-from-environment ;foo
 	  package-cached
 	  package-definitions
 	  package-clients))
@@ -642,7 +716,8 @@
 	  $note-file-package
 	  noting-undefined-variables
 	  $note-undefined		;env/command.scm
-	  note-undefined!))
+	  note-undefined!
+	  check-structure))
 
 (define-interface segments-interface
   (export attach-label
@@ -672,7 +747,7 @@
 	  package-undefineds		; env/pedit.scm
 	  package-undefined-but-assigneds
 	  location-for-reference
-	  ;; (*type-check?* (variable boolean))
+	  set-type-check?!		; for timings
 	  define-compilator		;assem.scm
 	  deliver-value			;assem.scm
 	  get-location			;assem.scm
@@ -733,54 +808,52 @@
 	  set-verify-later!))
 
 (define-interface types-interface
-  (export ((:syntax :values :value) :type)
-	  (some-values (procedure :values :type)) ; (some-values T1 ... Tn)
-	  (variable (proc (:type) :type))         ; (variable T)
+  (export ((:syntax :values :arguments :value) :type)
 	  (procedure (proc (:type :type) :type))  ; (procedure T1 T2)
-	  (proc :syntax)			  ; (proc (T1 ... Tn) T)
-
+	  (proc :syntax)		; (proc (T1 ... Tn) T)
+	  (some-values :syntax)		; (some-values T1 ... Tn)
 	  ((:boolean
 	    :char
 	    :number
+	    :complex :real :rational :integer :exact-integer
 	    :null
 	    :unspecific
-
 	    :pair
 	    :string
 	    :symbol
 	    :vector
 	    :procedure
-
-	    :zero
+	    :input-port :output-port
+	    :error
 	    :escape)
 	   :type)
-
 	  (:structure :type)
-
 	  :type))		;Holy stratification, Batman!
 
 
 ; VM architecture
 
 (define-interface architecture-interface
-  (export (enum :syntax) ;so you don't have to remember to open enumerated
+  (export (enum :syntax)  ;So you don't have to remember to open ENUMERATED
+	  (enumerand->name :syntax)
+	  (name->enumerand :syntax)
 	  bits-used-per-byte
-	  interrupt
+	  (interrupt :enumeration)
 	  interrupt-count
-	  memory-status-option
+	  (memory-status-option :enumeration)
 	  memory-status-option-count
-	  op
+	  (op :enumeration)
 	  op-count
 	  opcode-arg-specs
-	  stob
+	  (stob :enumeration)
 	  stob-count
 	  stob-data
-	  time-option
+	  (time-option :enumeration)
 	  time-option-count))
 
 (define-interface display-conditions-interface
   (export display-condition		;command.scm
-	  disclose-condition-methods	;misc/disclosers.scm
+	  &disclose-condition      	;env/disclosers.scm
 	  limited-write))
 
 
@@ -792,14 +865,17 @@
 ; Bindings needed by the form composed by REIFY-STRUCTURES.
 
 (define-interface for-reification-interface
-  (compound-interface
-    packages-interface
-    (export ;; From usual-macros
-	    usual-transform
-	    ;; From syntactic
-	    get-operator
-	    make-transform
-	    ;; From inline
-	    inline-transform)))
+  (export operator
+	  simple-interface
+	  package
+	  transform
+	  ;; From usual-macros
+	  usual-transform
+	  ;; From inline
+	  inline-transform
+	  ;; From packages
+	  package-define!
+	  make-structure
+	  ))
 
 ;(define-interface command-interface ...)  -- moved to more-interfaces.scm

@@ -1,9 +1,9 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Hash table package that allows for different hash and comparison functions.
 
-(define-record-type table table-type
+(define-record-type table :table
   (really-make-table size data ref set)
   table?
   (size table-size set-table-size!)
@@ -159,7 +159,8 @@
 (define (alist-walk proc alist)
   (do ((alist alist (vector-ref alist 2)))
       ((not alist))
-    (proc (vector-ref alist 0) (vector-ref alist 1))))
+    (let ((value (vector-ref alist 1)))
+      (if value (proc (vector-ref alist 0) value)))))
 
 (define (table->entry-list table)
   (let ((list '()))
@@ -183,12 +184,18 @@
 	((null? obj) 3005)
 	(else (error "value cannot be used as a table key" obj))))
 
-(define string-hash (structure-ref features string-hash))
+; (define string-hash (structure-ref features string-hash))
 
 (define (symbol-hash symbol)
   (string-hash (symbol->string symbol)))
 
-(define make-table         (make-table-maker eq? default-table-hash-function))
+(define make-table
+  (let ((make-usual-table (make-table-maker eq? default-table-hash-function)))
+    (lambda hash-function-option
+      (if (null? hash-function-option)
+	  (make-usual-table)
+	  ((make-table-maker eq? (car hash-function-option)))))))
+
 (define make-string-table  (make-table-maker string=? string-hash))
 (define make-symbol-table  (make-table-maker eq?      symbol-hash))
 (define make-integer-table (make-table-maker =	      (lambda (x) x)))

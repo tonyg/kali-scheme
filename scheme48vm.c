@@ -2031,15 +2031,16 @@ char Tinterpret()
         long lo_c_280X;
         long mid_c_281X;
         long c_282X;
-        lo_a_276X = 32767 & a_274X;
-        lo_b_277X = 32767 & b_275X;
-        hi_a_278X = 32767 & (a_274X >> 15);
-        hi_b_279X = 32767 & (b_275X >> 15);
-	/* Mobot patch  -JAR */
+	/* Attempted fix by JAR 1/21/94 */
+        lo_a_276X = 65535 & a_274X; /* was 32767 */
+        lo_b_277X = 65535 & b_275X; /* was 32767 */
+        hi_a_278X = 65535 & (a_274X >> 16); /* was 15 */
+        hi_b_279X = 65535 & (b_275X >> 16); /* was 15 */
+	/* Mobot patch to use mulu instruction on 68K -JAR */
         lo_c_280X = small_multiply(lo_a_276X, lo_b_277X);
         mid_c_281X = small_multiply(lo_a_276X, hi_b_279X)
 	  + small_multiply(lo_b_277X, hi_a_278X);
-        c_282X = lo_c_280X + (mid_c_281X << 15);
+        c_282X = lo_c_280X + (mid_c_281X << 16); /* was 15 */
         if ((0 < hi_a_278X)) {
           if ((0 < hi_b_279X)) {
             goto L20703;}
@@ -2051,7 +2052,8 @@ char Tinterpret()
         if ((536870911 < lo_c_280X)) {
           goto L20703;}
         else {
-          if ((65535 < mid_c_281X)) {
+	  long Sign = ((a_272X < 0) == (b_273X < 0)); /* hack */
+          if ((mid_c_281X > (Sign ? 8191 : 8192))) { /* was 65535 */
             goto L20703;}
           else {
             if ((a_272X < 0)) {

@@ -15,7 +15,7 @@
 
 \vspace{2ex}
 Jonathan Rees \\
-3 January 1993 (updated 11 January 1994)
+3 January 1993 (updated 15 January 1994)
 \end{center}
 
 \vspace{3ex}
@@ -73,8 +73,8 @@ For example:
     (define-structure foo (export a c cons)
       (open scheme)
       (begin (define a 1)
-	     (define (b x) (+ a x))
-	     (define (c y) (* (b a) y))))
+             (define (b x) (+ a x))
+             (define (c y) (* (b a) y))))
 \codeskip
     (define-structure bar (export d)
       (open scheme foo)
@@ -117,19 +117,22 @@ modules and interfaces.  Its syntax is given in figure~1.
    \syn{definition} \=\goesto{}~
       \tt(define-structure \syn{name} \syn{interface}
           \arbno{\syn{clause}}) \\
-	\>\altz{}~ \tt(define-structures (\arbno{(\syn{name} \syn{interface})})
+        \>\altz{}~ \tt(define-structures (\arbno{(\syn{name} \syn{interface})})
           \arbno{\syn{clause}}) \\
-	\>\altz{}~ \tt(define-interface \syn{name} \syn{interface}) \\
-	\>\altz{}~ \tt(define-syntax \syn{name} \syn{transformer-spec}) \\
+        \>\altz{}~ \tt(define-interface \syn{name} \syn{interface}) \\
+        \>\altz{}~ \tt(define-syntax \syn{name} \syn{transformer-spec}) \\
    \syn{clause} \=\goesto{}~ \tt(open \arbno{\syn{name}}) \\
-	\>\altz{}~ \tt(access \arbno{\syn{name}}) \\
-	\>\altz{}~ \tt(begin \syn{program}) \\
-	\>\altz{}~ \tt(files \arbno{\syn{filespec}}) \\
-	\>\altz{}~ \tt(optimize \arbno{\syn{optimize-spec}}) \\
+        \>\altz{}~ \tt(access \arbno{\syn{name}}) \\
+        \>\altz{}~ \tt(begin \syn{program}) \\
+        \>\altz{}~ \tt(files \arbno{\syn{filespec}}) \\
+        \>\altz{}~ \tt(optimize \arbno{\syn{optimize-spec}}) \\
+        \>\altz{}~ \tt(for-syntax \arbno{\syn{clause}}) \\
    \syn{interface} \=\goesto{}~ \tt(export \arbno{\syn{item}}) \\
-	\>\altz{}~ \syn{name} \\
-	\>\altz{}~ \tt(compound-interface \arbno{\syn{interface}}) \\
-   \syn{item} \=\goesto{}~ \syn{name} ~\alt{}~ \tt(\syn{name} \syn{type})
+        \>\altz{}~ \syn{name} \\
+        \>\altz{}~ \tt(compound-interface \arbno{\syn{interface}}) \\
+   \syn{item} \=\goesto{}~ \syn{name}~ 
+          \alt{}~ \tt(\syn{name} \syn{type})
+          \alt{}~ \tt((\arbno{\syn{name}}) \syn{type})
 \end{tabbing}
 \caption{The configuration language.}
 %\end{frameit}
@@ -158,7 +161,7 @@ available in the \hack{} implementation.
 
 An {\tt access} clause specifies which bindings of names to structures
 will be visible inside the package body for use in {\tt structure-ref}
-forms.  {\tt structure-ref} has the following syntax:
+forms.  {\tt structure-\ok{}ref} has the following syntax:
 \begin{tabbing}
 \qquad \syn{expression} \goesto{}~
    \tt(structure-ref \syn{struct-name} \syn{name})
@@ -181,7 +184,7 @@ begin} exists mainly for expository purposes.
 
 A name's imported binding may be lexically overridden or {\em shadowed}
 by simply defining the name using a defining form such as {\tt define}
-or {\tt define-syntax}.  This will create a new binding without having
+or {\tt define-\ok{}syntax}.  This will create a new binding without having
 any effect on the binding in the opened package.  For example, one can
 do {\tt(define car 'chevy)} without affecting the binding of the name
 {\tt car} in the {\tt scheme} package.
@@ -192,10 +195,11 @@ package body must contain a {\tt define} form defining that variable.
 Applied to bindings from the {\tt scheme} structure, this restriction
 is compatible with the requirements of the Revised$^5$ Scheme report.
 
-It is an error for two of a package's opened structures to both export
-the same name.  However, the current implementation does not check for
-this situation; the binding is taken from the structure that is comes
-first within the {\tt open} clause.
+It is an error for two of a package's opened structures to export two
+different bindings for the same name.  However, the current
+implementation does not check for this situation; a name's binding is
+always taken from the structure that is listed first within the {\tt
+open} clause.  This may be fixed in the future.
 
 File names in a {\tt files} clause can be symbols, strings, or lists
 (Maclisp-style ``namelists'').  A ``{\tt.scm}'' file type suffix is
@@ -206,10 +210,11 @@ obtained from a subdirectory.  For example, the namelist {\tt(rts
 record)} specifies the file {\tt record.scm} in the {\tt rts}
 subdirectory.
 
-If the {\tt define-structure} form was itself obtained from a file, then
-file names in {\tt files} clauses are interpreted relative to the
+If the {\tt define-structure} form was itself obtained from a file,
+then file names in {\tt files} clauses are interpreted relative to the
 directory in which the file containing the {\tt define-structure} form
-was found.
+was found.  You can't at present put an absolute path name in the {\tt
+files} list.
 
 
 \subsection*{Interfaces}
@@ -219,7 +224,7 @@ basic form it is just a list of variable names, written {\tt(export
 \var{name} \etc)}.  However, in place of
 a name one may write {\tt(\var{name} \var{type})}, indicating the type
 of \var{name}'s binding.  Currently the type field is ignored, except
-that exported macros must be indicated with type {\tt syntax}.
+that exported macros must be indicated with type {\tt :syntax}.
 
 Interfaces may be either anonymous, as in the example in the
 introduction, or they may be given names by a {\tt define-interface}
@@ -294,8 +299,8 @@ If you must know, figure it out from the following grammar.
       \tt(d\=\tt{}efine-module (\syn{name} \arbno{(\syn{name} \syn{interface})}) \\
        \>  \>\arbno{\syn{definition}} \\
        \>  \>\syn{name}\tt) \\
-	\>\altz{}~ \tt(define \syn{name}
-		        (\syn{name} \arbno{\syn{name}}))
+        \>\altz{}~ \tt(define \syn{name}
+                        (\syn{name} \arbno{\syn{name}}))
 \end{tabbing}
 
 
@@ -355,8 +360,8 @@ For example, consider the following:
     (define-structure foo foo-interface
       (open scheme)
       (begin (define a 1)
-	     (define (b x) (+ a x))
-	     (define (c y) (* (b a) y))))
+             (define (b x) (+ a x))
+             (define (c y) (* (b a) y))))
     (define-structure bar (export d)
       (open scheme foo)
       (begin (define (d w) (+ (b w) a))))
@@ -430,9 +435,22 @@ current package followed by a greater-than ({\tt>}).
 \begin{code}
 ,config
 \end{code}
-    The {\tt,config} command sets the command processor's current package
-    to be the current configuration package.  Forms entered at this point are
-    interpreted as being configuration language forms, not Scheme forms.
+    The {\tt,config} command sets the command processor's current
+    package to be the current configuration package.  Forms entered at
+    this point are interpreted as being configuration language forms,
+    not Scheme forms.
+
+\item
+\begin{code}
+,config \var{command}
+\end{code}
+    This form of the {\tt,config} command executes another command in
+    the current configuration package.  For example,
+\begin{code}
+    ,config ,load foo.scm
+\end{code}
+    interprets configuration language forms from the file {\tt
+    foo.scm} in the current configuration package.
 
 \item
 \begin{code}
@@ -443,7 +461,7 @@ current package followed by a greater-than ({\tt>}).
 \begin{code}
     user> ,config
     config> (define-structure foo (export a)
-	      (open scheme))
+              (open scheme))
     config> ,in foo
     foo> (define a 13)
     foo> a
@@ -460,6 +478,35 @@ current package followed by a greater-than ({\tt>}).
     A package's body isn't executed (evaluated) until the package is
     {\em loaded}, which is accomplished by the {\tt ,load-package}
     command.
+
+\item
+\begin{code}
+,in \var{struct-name} \var{command}
+\end{code}
+    This form of the {\tt,in} command executes a single command in the
+    specified package without moving the command processor into that
+    package.  Example:
+\begin{code}
+    ,in mumble (cons 1 2)
+    ,in mumble ,trace foo
+\end{code}
+
+\item
+\begin{code}
+,user $[$\var{command}$]$
+\end{code}
+    This is similar to the {\tt ,config} and {\tt ,in} commands.  It
+    moves to or executes a command in the user package (which is the
+    default package when the \hack{} command processor starts).
+
+\item
+\begin{code}
+,for-syntax $[$\var{command}$]$
+\end{code}
+    This is similar to the {\tt ,config} and {\tt ,in} commands.  It
+    moves to or executes a command in the current package's ``package
+    for syntax,'' which is the package in which the forms $f$ in
+    {\tt (define-syntax \var{name} $f$)} are evaluated.
 
 \item
 \begin{code}
@@ -501,53 +548,11 @@ current package followed by a greater-than ({\tt>}).
 
 \item
 \begin{code}
-,open \var{struct-name}
+,open \arbno{\var{struct-name}}
 \end{code}
     The {\tt,open} command opens a new structure in the current
-    package, as if the package definition's {\tt open} clause
-    had listed \var{struct-name}.  (Not currently implemented, but
-    easy to add.)
-\end{list}
-
-
-A number of other commands are not strictly necessary, but they
-capture common idioms.
-
-\begin{list}{}{}{}
-\item
-\begin{code}
-,load-config \var{filespec} \etc
-\end{code}
-    The {\tt,load-config} command loads configuration language forms from
-    the specified file or files into the current configuration package.
-    Similar to {\tt,config} followed by {\tt,load} except that the current
-    package is unchanged afterwards.
-
-\item
-\begin{code}
-,in \var{struct-name} \var{comand}
-\end{code}
-    This form of the {\tt,in} command evaluates a single comand in the
-    specified package without moving the command processor into that
-    package.  Example:
-\begin{code}
-    ,in mumble (cons 1 2)
-    ,in mumble ,trace foo
-\end{code}
-
-\item
-\begin{code}
-,new-package \var{name} \var{open} \etc
-\end{code}
-    The {\tt,new-package} command creates a new package.  It
-    abbreviates the sequence 
-\begin{code}
-    > ,in config
-    config> (define-structure \var{name} (export)
-	      (open \var{open} \etc{} scheme))
-    config> ,in name
-    name> 
-\end{code}
+    package, as if the package's definition's {\tt open} clause
+    had listed \var{struct-name}.
 
 \end{list}
 
@@ -555,26 +560,38 @@ capture common idioms.
 
 \subsection*{Configuration packages}
 
-It is possible to set up multiple configuration packages.
-Configuration packages open the {\tt defpackage} structure instead of
-the {\tt scheme} structure, and in addition use structures that export
-structures and interfaces.  The initial configuration package opens
-the two structures {\tt built-in-structures} and {\tt
-more-structures}.  The {\tt built-in-structures} structure exports
-most of the basic structures, including {\tt scheme}, {\tt table},
-{\tt record}, and {\tt compiler}.  {\tt more-structures} exports
-structures involved in the programming environment and optional
-features such as {\tt sort}, {\tt random}, and {\tt threads}.
+It is possible to set up multiple configuration packages.  The default
+configuration package opens the following structures:
+\begin{itemize}
+\item {\tt module-system}, which exports {\tt define-structure} and the
+      other configuration language keywords, as well as standard types
+      and type constructors ({\tt :syntax}, {\tt :value}, {\tt proc}, etc.).
+\item {\tt built-in-structures}, which exports structures that are
+      built into the initial \hack{} image; these include {\tt
+      scheme}, {\tt tables}, and {\tt records}.
+\item {\tt more-structures}, which exports additional structures that
+      are available in the development environment; these include
+      {\tt sort}, {\tt random}, and {\tt threads}.
+\end{itemize}
+Note that it does not open {\tt scheme}.
+
+You can define other configuration packages by simply making a package
+that opens {\tt module-system} and, optionally, {\tt
+built-in-\ok{}structures}, {\tt more-\ok{}structures}, or other structures that
+export structures and interfaces.
 
 For example:
 \begin{code}
-    > ,new-package foo defpackage built-in-structures more-structures
+    > ,config (define-structure foo (export )
+                (open module-system
+                      built-in-structures
+                      more-structures))
+    > ,in foo
     foo> (define-structure x (export a b)
            (open scheme)
-	   (files x))
+           (files x))
     foo> 
 \end{code}
-
 
 \begin{list}{}{}{}
 \item
@@ -583,9 +600,9 @@ For example:
 \end{code}
     The {\tt,config-package-is} command designates a new configuration
     package for use by the {\tt,config} command and resolution of
-    \var{struct-name}s for other commands.
+    \var{struct-name}s for other commands such as {\tt,in} and
+    {\tt,open}.
 \end{list}
-
 
 
 

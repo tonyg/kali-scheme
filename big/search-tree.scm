@@ -1,3 +1,5 @@
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
+
 ;Date: Thu, 4 Nov 93 13:30:46 EST
 ;To: jar@ai.mit.edu
 ;Subject: binary search trees

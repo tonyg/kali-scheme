@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ;Date: Thu, 4 Nov 93 14:34:04 EST
 ;Subject: binary search trees
@@ -32,7 +32,7 @@
 
 
 
-(define-record-type hilbert type/hilbert
+(define-record-type hilbert :hilbert
   (really-make-hilbert height root)
   (height hilbert-height set-hilbert-height!)
   (root hilbert-root set-hilbert-root!))

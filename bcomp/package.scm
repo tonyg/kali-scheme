@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Structures 'n' packages.
@@ -6,7 +6,7 @@
 ; --------------------
 ; Structures
 
-(define-record-type structure type/structure
+(define-record-type structure :structure
   (really-make-structure package interface-thunk interface clients name)
   structure?
   (interface-thunk structure-interface-thunk)
@@ -15,7 +15,7 @@
   (clients   structure-clients)
   (name	     structure-name))
 
-(define-record-discloser type/structure
+(define-record-discloser :structure
   (lambda (s) (list 'structure
 		    (package-uid (structure-package s))
 		    (structure-name s))))
@@ -68,38 +68,37 @@
 ; --------------------
 ; Packages
 
-(define-record-type package type/package
+(define-record-type package :package
   (really-make-package uid
 		       opens-thunk opens accesses-thunk
 		       definitions
 		       get-location
 		       plist
-		       seen cached
+		       cached
 		       clients
-		       eval
-		       env-for-syntax
+		       unstable?
 		       file-name clauses loaded?)
   package?
   (uid	           package-uid)
   (opens           package-opens-really set-package-opens!)
-  (opens-thunk     package-opens-thunk set-package-opens-thunk!)
-  (accesses-thunk  package-accesses-thunk)
   (definitions     package-definitions)
-  (get-location    package-get-location set-package-get-location!)
-  (eval		   package-evaluator)
-  (env-for-syntax  package-for-syntax-promise)
+  (unstable?       package-unstable?)
   (integrate?      package-integrate? set-package-integrate?!)
+
+  ;; For EVAL and LOAD (which can only be done in unstable packages)
+  (get-location    package-get-location set-package-get-location!)
   (file-name       package-file-name)
   (clauses         package-clauses)
+  (loaded?         package-loaded? set-package-loaded?!)
 
-  ;; extra
+  ;; For package mutation
+  (opens-thunk     package-opens-thunk set-package-opens-thunk!)
+  (accesses-thunk  package-accesses-thunk)
   (plist           package-plist set-package-plist!)
   (clients         package-clients)
-  (seen	           package-seen)
-  (cached	   package-cached)
-  (loaded?         package-loaded? set-package-loaded?!))
+  (cached	   package-cached))
 
-(define-record-discloser type/package
+(define-record-discloser :package
   (lambda (p)
     (let ((name (package-name p)))
       (if name
@@ -116,17 +115,16 @@
 	      accesses-thunk		;list of thunks
 	      (make-table name-hash)	;definitions
 	      (fluid $get-location)	;procedure for making new locations
-	      '()
-	      (make-table name-hash)	;names seen
+	      '()			;property list...
 	      (make-table name-hash)	;bindings cached in templates
-	      (make-population)
-	      evaluator for-syntax-promise
-	      dir clauses #f)))
+	      (make-population)		;structures
+	      (if evaluator #t #f)      ;unstable
+	      dir
+	      clauses
+	      #f)))			;loaded?
       (if name (set-package-name! p name))
+      (define-funny-names! p evaluator for-syntax-promise)
       p)))
-
-(define (package-for-syntax p)
-  (force (package-for-syntax-promise p)))
 
 ; Unique id's
 
@@ -147,6 +145,15 @@
 (define (set-package-name! package name)
   (table-set! package-name-table (package-uid package) name))
 
+(define (package-opens p)
+  (or (package-opens-really p)
+      (begin (initialize-package! p)
+	     (package-opens-really p))))
+
+(define (package-accesses p)		;=> alist
+  ((package-accesses-thunk p)))
+
+; --------------------
 ; A simple package has no ACCESSes or other far-out clauses.
 
 (define (make-simple-package opens evaluator efs-promise . name-option)
@@ -164,16 +171,6 @@
     (set-package-loaded?! p #t)
     p))
 
-(define (package-opens p)
-  (or (package-opens-really p)
-      (begin (initialize-package! p)
-	     (package-opens-really p))))
-
-(define (package-accesses p)		;=> alist
-  ((package-accesses-thunk p)))
-
-(define package-unstable? package-evaluator)
-
 ; --------------------
 ; The definitions table
 
@@ -186,10 +183,14 @@
 (define (package-definition p name)
   (let ((probe (table-ref (package-definitions p) name)))
     (if probe
-	(if (binding? probe)
-	    probe
-	    (make-binding usual-variable-type probe))
-	#f)))
+	;; Special kludge for shadowing and package mutation.
+	;; Ignore this on first reading.  See env/shadow.scm.
+	(let ((place (binding-place probe)))
+	  (if (and (location? place)
+		   (vector? (location-id place)))
+	      ;; should iterate, really
+	      (set-binding-place! probe (vector-ref (location-id place) 0)))))
+    probe))
 
 ; disgusting
 
@@ -216,16 +217,13 @@
 
 (define (really-package-define! p name type place static)
   (let ((probe (table-ref (package-definitions p) name)))
-    (if (binding? probe)			;ugh, microhackery
+    (if probe
 	(begin (clobber-binding! probe type place static)
 	       (binding-place probe))
-	(let ((place (or place probe (get-new-location p name))))
+	(let ((place (or place (get-new-location p name))))
 	  (table-set! (package-definitions p)
 		      name
-		      (if (and (not static)
-			       (equal? type usual-variable-type))
-			  place
-			  (make-binding type place static)))
+		      (make-binding type place static))
 	  place))))
 
 
@@ -286,18 +284,8 @@
 ; Environments for CLASSIFY are procedures.
 
 (define (package->environment p)
-  (bind-evaluator-for-syntax
-     (lambda (form env)
-       ;; ENV is the environment in which the define-syntax or let-syntax
-       ;; form appears.  For now, it is the same as the environment that
-       ;; package->environment returns, but in the future it may differ,
-       ;; and contain good stuff that needs to be seen by the code in the
-       ;; macro transformer.
-       (let ((f (package-for-syntax p)))
-	 ((package-evaluator f) form f)))
-     (lambda (name)
-       (package-lookup p name))))
-
+  (lambda (name)
+    (package-lookup p name)))
 
 (define (package-lookup-type p name)
   (let ((probe (package-lookup p name)))
@@ -319,35 +307,87 @@
 	      ;; Cf. CLASSIFY method for STRUCTURE-REF
 	      (really-package-define! p
 				      (car name+struct)
-				      'structure
+				      structure-type
 				      #f
 				      (cdr name+struct)))
 	    (package-accesses p)))
 
+; --------------------
+; Eventually, it should be possible to inherit everything (except
+; the-package).
 
-; Cf. link/reify.scm
+(define (define-funny-names! p evaluator for-syntax-promise)
+  (package-define-funny! p funny-name/the-package p)
+  (if for-syntax-promise
+      (begin
+	(package-define-funny! p funny-name/for-syntax-promise for-syntax-promise)
+	(package-define-funny! p funny-name/evaluator-for-syntax
+	  (lambda (form)
+	    (generic-eval form (force for-syntax-promise))))))
+  (if evaluator
+      (set-package-evaluator! p evaluator)))
 
-(define (initialize-reified-package! p names locs get-location)
-  (let ((end (vector-length names)))
-    (do ((i 0 (+ i 1)))
-	((= i end))
-      (let* ((name (vector-ref names i))
-	     (probe (package-lookup p name)))
-	(if (not (binding? probe))
-	    (package-define! p
-			     name
-			     usual-variable-type
-			     (get-location (vector-ref locs i))))))))
+(define (generic-eval form env)
+  ;; Not very generic right now.  It ought to do different things
+  ;; depending on what kind of environment it gets.
+  ((package-evaluator env) form env))
+
+(define (package-define-funny! p name static)
+  (table-set! (package-definitions p)
+	      name
+	      (make-binding syntax-type (cons 'dummy-place name) static)))
 
 
+; The following funny name is bound in every package to the package
+; itself.  This is a special hack used by the byte-code compiler
+; (procedures LOCATION-FOR-UNDEFINED and NOTE-CACHING) so that it can
+; extract the underlying package from any environment.
+
+(define funny-name/the-package (string->symbol ".the-package."))
+
+(define extract-package-from-environment
+  (get-funny funny-name/the-package))
+
+
+
+(define (generic-get-funny name)
+  (let ((f (get-funny name)))
+    (lambda (p)
+      (f (if (package? p)
+	     (package->environment p)
+	     p)))))
+
+; Evaluator, for command processor and for evaluating transformers.
+; Eventually, we also want load, eval-from-file, eval-scanned-forms,
+; and perhaps other things used by the command processor to be generic
+; over different kinds of environments.
+
+(define funny-name/evaluator (string->symbol ".evaluator."))
+
+(define (set-package-evaluator! p evaluator)
+  (package-define-funny! p funny-name/evaluator evaluator))
+
+(define package-evaluator
+  (generic-get-funny funny-name/evaluator))
+
+
+
+; Environment for syntax (for command processor's ,for-syntax command)
+
+(define funny-name/for-syntax-promise (string->symbol ".for-syntax-promise."))
+
+(define package-for-syntax-promise
+  (generic-get-funny funny-name/for-syntax-promise))
+
+(define (package-for-syntax p)
+  (force (package-for-syntax-promise p)))
+
+
+; --------------------
 ; For implementation of INTEGRATE-ALL-PRIMITIVES! in scanner, etc.
 
 (define (for-each-definition proc p)
-  (table-walk (lambda (name stuff)
-		(if (binding? stuff)
-		    (proc name stuff)
-		    (proc name (make-binding usual-variable-type stuff))))
-	      (package-definitions p)))
+  (table-walk proc (package-definitions p)))
 
 ; --------------------
 ; Locations
@@ -366,7 +406,7 @@
 
 (define $get-location (make-fluid make-new-location))
 
-(define *location-uid* 2000)
+(define *location-uid* 5000)  ; 1510 in initial system as of 1/22/94
 
 (define location-info-table (make-table))
 
@@ -403,5 +443,12 @@
 			       name place))
 		    (loop (cdr opens)))))))
   place)
+
+(define (with-fresh-packages-state uid thunk)
+  (let ((swap (lambda ()
+		(let ((temp *package-uid*))
+		  (set! *package-uid* uid)
+		  (set! uid temp)))))
+    (dynamic-wind swap thunk swap)))
 
 ; (put 'package-define! 'scheme-indent-hook 2)

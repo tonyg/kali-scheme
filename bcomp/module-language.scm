@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; The DEFINE-INTERFACE and DEFINE-STRUCTURE macros.
@@ -43,7 +43,8 @@
 
 (define-syntax export
   (syntax-rules ()
-    ((export ?spec ...) (an-interface (export ?spec ...)))))
+    ((export ?item ...)
+     (really-export #f ?item ...))))
 
 (define-syntax an-interface
   (syntax-rules (export compound-interface)

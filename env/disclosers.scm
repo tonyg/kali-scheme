@@ -1,70 +1,57 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; --------------------
 ; DISCLOSE methods
 
-(define-method disclose-methods (make-family 'closure 0)
-  (lambda (obj)
-    (if (closure? obj)
-	(let ((id (template-id (closure-template obj)))
-	      (name (template-print-name (closure-template obj))))
-	  (if name
-	      (list 'procedure
-		    id
-		    ;; A heuristic that sometimes loses.
-		    (if (and (pair? name)
-			     (eq? (car name) '#t) ;Curried
-			     (vector? (closure-env obj)))
-			(error-form
-			  (if (null? (cdddr name))
-			      (caddr name)
-			      (cdddr name))
-			  (reverse (cdr (vector->list (closure-env obj)))))
-			name))
-	      (list 'procedure id)))
-	(fail))))
+(define-method &disclose ((obj :closure))
+  (let ((id (template-id (closure-template obj)))
+	(name (template-print-name (closure-template obj))))
+    (if name
+	(list 'procedure
+	      id
+	      ;; A heuristic that sometimes loses.
+;                 (if (and (pair? name)
+;                          (eq? (car name) '#t) ;Curried
+;                          (vector? (closure-env obj)))
+;                     (error-form
+;                       (if (null? (cdddr name))
+;                           (caddr name)
+;                           (cdddr name))
+;                       (reverse (cdr (vector->list (closure-env obj)))))
+;                     name)
+	      name)
+	(list 'procedure id))))
 
-(define-method disclose-methods (make-family 'template 0)
-  (lambda (obj)
-    (if (template? obj)
-	(let ((id (template-id obj))
-	      (name (template-print-name obj)))
-	  (if name
-	      (list 'template id name)
-	      (list 'template id)))
-	(fail))))
+(define-method &disclose ((obj :template))
+  (let ((id (template-id obj))
+	(name (template-print-name obj)))
+    (if name
+	(list 'template id name)
+	(list 'template id))))
 
-(define-method disclose-methods (make-family 'location 0)
-  (lambda (obj)
-    (if (location? obj)
-	(cons 'location
-	      (cons (location-id obj)
-		    (let ((name (location-name obj)))
-		      (if (and name (not (eq? name (location-id obj))))
-			  (list name (location-package-name obj))
-			  '()))))
-        (fail))))
+(define-method &disclose ((obj :location))
+  (cons 'location
+	(cons (location-id obj)
+	      (let ((name (location-name obj)))
+		(if (and name (not (eq? name (location-id obj))))
+		    (list name (location-package-name obj))
+		    '())))))
 
-(define-method disclose-methods (make-family 'continuation 0)
-  (lambda (obj)
-    (if (continuation? obj)
-        (list 'continuation
-	      (list 'pc (continuation-pc obj))
-	      (let ((tem (continuation-template obj)))
-		(or (template-print-name tem) (template-id tem))))
-        (fail))))
+(define-method &disclose ((obj :continuation))
+  (list 'continuation
+	(list 'pc (continuation-pc obj))
+	(let ((tem (continuation-template obj)))
+	  (or (template-print-name tem) (template-id tem)))))
 
-(define-method disclose-methods (make-family 'code-vector 0)
-  (lambda (obj)
-    (if (code-vector? obj)
-	(list 'code-vector (code-vector-length obj))
-;        (cons 'code-vector
-;              (let ((z (code-vector-length obj)))
-;                (do ((i (- z 1) (- i 1))
-;                     (l '() (cons (code-vector-ref obj i) l)))
-;                    ((< i 0) l))))
-	(fail))))
+(define-method &disclose ((obj :code-vector))
+  (list 'code-vector (code-vector-length obj))
+; (cons 'code-vector
+;	(let ((z (code-vector-length obj)))
+;	  (do ((i (- z 1) (- i 1))
+;	       (l '() (cons (code-vector-ref obj i) l)))
+;	      ((< i 0) l))))
+  )
 
 
 (define (template-print-name tem)
@@ -115,43 +102,47 @@
 ; --------------------
 ; Condition disclosers
 
-(define-default-method disclose-condition-methods
-  (lambda (c)
-    (cons (cond ((error? c) 'error)
-		((warning? c) 'warning)
-		(else (car c)))
-	  (condition-stuff c))))
+(define *condition-disclosers* '())
 
-(define-method disclose-condition-methods (make-family 'interrupt 0)
+(define (define-condition-discloser pred proc)
+  (set! *condition-disclosers*
+	(cons (cons pred proc) *condition-disclosers*)))
+
+(define-method &disclose-condition ((c :pair))
+  (let loop ((l *condition-disclosers*))
+    (if (null? l)
+	(cons (cond ((error? c) 'error)
+		    ((warning? c) 'warning)
+		    (else (car c)))
+	      (condition-stuff c))
+	(if ((caar l) c)
+	    ((cdar l) c)
+	    (loop (cdr l))))))
+
+(define-condition-discloser interrupt?
   (lambda (c)
-    (if (interrupt? c)
-	(list 'interrupt (enumerand->name (cadr c) interrupt))
-	(fail))))
+    (list 'interrupt (enumerand->name (cadr c) interrupt))))
 	
 
 ; Make prettier error messages for exceptions
 
-(define-method disclose-condition-methods (make-family 'exception 0)
+(define-condition-discloser exception?
   (lambda (c)
-    (if (exception? c)
-	(let ((opcode (exception-opcode c))
-	      (args   (exception-arguments c)))
-	  ((vector-ref exception-disclosers opcode)
-	   opcode
-	   args))
-	(fail))))
+    (let ((opcode (exception-opcode c))
+	  (args   (exception-arguments c)))
+      ((vector-ref exception-disclosers opcode)
+       opcode
+       args))))
 
 (define exception-disclosers
-  (make-vector (vector-length op)
+  (make-vector op-count
 	       (lambda (opcode args)
 		 (list 'error
 		       "exception"
 		       (let ((name (enumerand->name opcode op)))
-			 (if (>= opcode op/eq?)
+			 (if (>= opcode (enum op eq?))
 			     (error-form name args)
 			     (cons name args)))))))
-
-(define op/eq? (enum op eq?))
 
 (define (define-exception-discloser opcode discloser)
   (vector-set! exception-disclosers opcode discloser))
@@ -263,11 +254,9 @@
 
 ; Call-errors should print as (proc 'arg1 'arg2 ...)
 
-(define-method disclose-condition-methods (make-family 'call-error 0)
+(define-condition-discloser call-error?
   (lambda (c)
-    (if (call-error? c)
-	(list 'error (cadr c) (error-form (caddr c) (cdddr c)))
-	(fail))))
+    (list 'error (cadr c) (error-form (caddr c) (cdddr c)))))
 
 ; --------------------
 ; Utilities

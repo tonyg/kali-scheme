@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 
@@ -11,7 +11,7 @@
 			   (newline port)
 			   (really-display-condition c port)
 			   #f))
-	  (begin (display "(Error while displaying condition.)" port)
+	  (begin (display "<Error while displaying condition.>" port)
 		 (newline port))))))
 
 (define (really-display-condition c port)
@@ -43,14 +43,9 @@
 (define *depth* 5)
 (define *length* 6)
 
-(define disclose-condition-methods
-  (make-method-table 'disclose-condition))
+(define-generic disclose-condition &disclose-condition)
 
-(define disclose-condition
-  (make-generic disclose-condition-methods))
-
-(define-default-method disclose-condition-methods
-  (lambda (c) c))
+(define-method &disclose-condition (c) c)
 
 
 

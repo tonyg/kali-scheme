@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 ; Somewhat redundant with vm/istruct.scm.  Fix this some day.
 
@@ -24,3 +24,4 @@
 (define (template-info tem) (template-ref tem 1))
 (define (set-template-code! tem cv)   (template-set! tem 0 cv))
 (define (set-template-info! tem info) (template-set! tem 1 info))
+

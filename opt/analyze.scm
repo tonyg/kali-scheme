@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 
@@ -289,6 +289,10 @@
 	 (cons 'call
 	       (map (lambda (node) (clean-node node env))
 		    (node-form node))))
+	((loophole-node? node)		;Uck
+	 (let ((args (cdr (node-form node))))
+	   `(loophole ,(schemify (car args))
+		      ,(clean-node (cadr args) env))))
 	;; LETREC had better not occur, since we ain't prepared for it
 	((pair? (node-form node))
 	 (cons (operator-name (node-operator node))

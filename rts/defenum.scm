@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; define-enumeration macro
@@ -6,7 +6,7 @@
 (define-syntax define-enumeration
   (lambda (form rename compare)
     (let ((name (cadr form))
-	  (parts (caddr form))
+	  (components (list->vector (caddr form)))
 	  (conc (lambda things
 		  (string->symbol (apply string-append
 					 (map (lambda (thing)
@@ -15,28 +15,57 @@
 						    thing))
 					      things)))))
 	  (%define (rename 'define))
+	  (%define-syntax (rename 'define-syntax))
 	  (%begin (rename 'begin))
 	  (%quote (rename 'quote)))
-      (do ((i 0 (+ i 1))
-	   (p parts (cdr p))
-	   (r '() (cons `(,%define ,(conc name "/" (car p)) ,i)
-			r)))
-	  ((null? p)
-	   `(,%begin ,@r
-		     (,%define ,(conc name "-" 'count) ,i)
-		     ;; ?
-		     (,%define ,name (,%quote #(,@parts))))))))
-  (begin define quote))
+      (let ((e-name (conc name '- 'enumeration))
+	    (count (vector-length components)))
+	`(,%begin (,%define-syntax ,name
+		    (cons (let ((components ',components))
+			    (lambda (e r c)
+			      (case (cadr e)
+				((components) (r ',e-name))
+				((enum)
+				 (let ((which (caddr e)))
+				   (let loop ((i 0)) ;vector-posq
+				     (if (< i ,count)
+					 (if (eq? which (vector-ref components i))
+					     i
+					     (loop (+ i 1)))
+					 ;; (syntax-error "unknown enumerand name"
+					 ;;               `(,(cadr e) ,(car e) ,(caddr e)))
+					 e))))
+				(else e))))
+			  '(,e-name)))	;Auxiliary binding
+		  (,%define ,e-name ',components)
+		  (,%define ,(conc name '- 'count) ,count)))))
+  (begin define define-syntax quote))
 
-; enum macro
+
+(define-syntax components
+  (cons (lambda (e r c) `(,(cadr e) components))
+	'()))
 
 (define-syntax enum
-  (lambda (form rename compare)
-    (let ((type-name (cadr form))
-	  (component-name (caddr form))
-	  (%definitely-name->enumerand (rename 'definitely-name->enumerand))
-	  (%quote (rename 'quote)))
-      `(,%definitely-name->enumerand (,%quote ,component-name)
-				     ,type-name
-				     (,%quote ,type-name))))
-  (definitely-name->enumerand quote))
+  (cons (lambda (e r c) `(,(cadr e) enum ,(caddr e)))
+	'()))
+
+
+(define-syntax enumerand->name
+  (syntax-rules ()
+    ((enumerand->name ?enumerand ?type)
+     (vector-ref (components ?type) ?enumerand))))
+
+(define-syntax name->enumerand
+  (syntax-rules ()
+    ((name->enumerand ?name ?type)
+     (lookup-enumerand (components ?type) ?name))))
+
+(define (lookup-enumerand components name)
+  (let ((len (vector-length components)))
+    (let loop ((i 0))			;vector-posq
+      (if (>= i len)
+	  #f
+	  (if (eq? name (vector-ref components i))
+	      i
+	      (loop (+ i 1)))))))

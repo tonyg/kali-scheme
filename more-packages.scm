@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; More and more packages.  Some of these get loaded into the initial
@@ -7,7 +7,7 @@
 
 
 (define-module (make-command-processor scheme)
-  (define-structures ((command-processor command-processor-interface))
+  (define-structure command-processor command-processor-interface
     (open scheme                ; eval
           records tables fluids signals
           conditions handle
@@ -29,7 +29,7 @@
 
 (define command-processor (make-command-processor scheme))
 
-(define-structures ((usual-commands usual-commands-interface))
+(define-structure usual-commands usual-commands-interface
   (open basic-commands
         build-commands
         package-commands
@@ -37,7 +37,7 @@
         inspect-commands
         disassemble-commands))
                 
-(define-structures ((basic-commands basic-commands-interface))
+(define-structure basic-commands basic-commands-interface
   (open scheme
         command-processor
         scan                    ; noting-undefined-variables
@@ -49,7 +49,7 @@
 ; Image builder.
 
 (define-structures ((build (export build-image))
-                (build-commands build-commands-interface))
+		    (build-commands build-commands-interface))
   (open scheme-level-2
         command-processor
         signals
@@ -65,8 +65,8 @@
 ; Package commands.
 
 (define-structures ((package-commands package-commands-interface)
-		 (package-commands-internal
-		      package-commands-internal-interface))
+		    (package-commands-internal
+		       package-commands-internal-interface))
   (open scheme
         command-processor
         signals
@@ -76,6 +76,7 @@
         package-mutation        ; package-system-sentinel
         environments            ; *structure-ref, etc.
         ensures-loaded          ; ensure-loaded
+	util			; every
         fluids)
   (files (env pacman)))
 
@@ -84,8 +85,9 @@
 
 ; Disclosers: this makes objects and conditions print nicely.
 
-(define-structures ((disclosers disclosers-interface))
+(define-structure disclosers disclosers-interface
   (open scheme-level-1
+        methods more-types
         tables
         conditions
         display-conditions
@@ -96,14 +98,19 @@
         debug-data              ; template-names
         enumerated              ; enumerand->name
         weak                    ; weak-pointer?
-        generics
         templates continuations
         architecture)
   (files (env disclosers)))
 
+;(define-structure generics generics-interface    ;Obsolescent
+;  (open scheme-level-1
+;        methods)
+;  (files (rts generic))
+;  (optimize auto-integrate))
+
 ; For printing procedures with their names, etc.
 
-(define-structures ((debuginfo debuginfo-interface))
+(define-structure debuginfo debuginfo-interface
   (open scheme-level-2
         tables
         debug-data
@@ -114,10 +121,10 @@
 
 ; Most of the debugging commands.
 
-(define-structures ((debugging     ;additional exports in future
-                  (export breakpoint
-                          continuation-parent))
-		 (debug-commands debug-commands-interface))
+(define-structures ((debugging		;additional exports in future
+		     (export breakpoint
+			     continuation-parent))
+		    (debug-commands debug-commands-interface))
   (open scheme-level-2
         command-processor       ; define-command, etc.
         fluids
@@ -147,7 +154,7 @@
 ; Inspector
 
 (define-structures ((inspector (export inspect))
-                 (inspect-commands inspect-commands-interface))
+		    (inspect-commands inspect-commands-interface))
   (open scheme-level-2
         command-processor       ; define-command, etc.
         fluids
@@ -157,7 +164,8 @@
         templates
         continuations
         syntactic               ; desyntaxify
-        records-internal
+        records
+	records-internal
         low-level               ; vector-unassigned?
         locations
         signals                 ; error
@@ -171,7 +179,7 @@
 
 ; Package and interface mutation.
 
-(define-structures ((package-mutation package-mutation-interface))
+(define-structure package-mutation package-mutation-interface
   (open scheme-level-2
         shadowing               ; shadow-location!
         compiler                ; package-undefineds
@@ -189,20 +197,20 @@
 ; The following hooks the compiler up with an exception handler for
 ; unbound variables.
 
-(define-structures ((shadowing (export shadow-location!)))
+(define-structure shadowing (export shadow-location!)
   (open scheme-level-1
         vm-exposure             ;primitive-catch
         continuations templates locations code-vectors
         exceptions signals
         architecture)   ;(enum op global)
-  (files (rts shadow)))     ;Exception handler to support package system
+  (files (env shadow)))     ;Exception handler to support package system
 
 
 ; Disassembler
 
 (define-structures ((disassembler
-                  (export disassemble write-instruction))
-		 (disassemble-commands disassemble-commands-interface))
+		       (export disassemble write-instruction))
+		    (disassemble-commands disassemble-commands-interface))
   (open scheme-level-2
         command-processor       ; define-command
         debug-data              ; template-name, byte-limit
@@ -219,7 +227,7 @@
 
 ; Assembler.
 
-(define-structures ((assembling (export )))
+(define-structure assembling (export )
   (open scheme-level-2 compiler segments architecture
         syntactic               ;lookup
         meta-types              ;value-type
@@ -230,7 +238,7 @@
         locations)              ;location?
   (files (env assem)))
 
-(define-structures ((assembler (export (lap :syntax))))
+(define-structure assembler (export (lap :syntax))
   ;; Open the assembling structure to make sure it gets loaded.
   ;; (Ensure-loaded neglects to examine the package for syntax.)
   (open scheme-level-2 assembling)
@@ -243,47 +251,54 @@
 
 ; Large integers and rational and complex numbers.
 
-(define-structures ((extended-number-support extended-number-support-interface))
+(define-structure extended-numbers extended-numbers-interface
   (open scheme-level-2
-        signals
-        records
+        methods meta-methods
+        bummed-define-record-types
         exceptions              ; make-opcode-generic!
         primitives
-        generics
         architecture
+        signals
         number-i/o)
   (files (rts xnum)))
 
-(define-structures ((bignum (export )))
+(define-structure bignums bignums-interface
   (open scheme-level-2
-        extended-number-support
-        generics signals)
+        extended-numbers
+        methods signals)
   (files (rts bignum)))
 
-(define-structures ((ratnum (export )))    ;No exports
+(define-structure innums (export )    ;inexact numbers
   (open scheme-level-2
-        extended-number-support
-        generics signals
+        extended-numbers
+        methods signals
+        number-i/o)             ;string->integer
+  (files (rts innum)))
+
+(define-structure ratnums (export )    ;No exports
+  (open scheme-level-2
+        extended-numbers
+        methods signals
         number-i/o)             ;string->integer
   (files (rts ratnum)))
 
-(define-structures ((recnum (export )))    ;No exports
+(define-structure recnums (export )    ;No exports
   (open scheme-level-2
-        extended-number-support
-        generics signals
+        extended-numbers
+        methods signals
         number-i/o)             ;really-number->string
   (files (rts recnum)))
 
-(define-structures ((floatnum
-		  (export exp log sin cos tan asin acos atan sqrt)))
+(define-structure floatnums
+		  (export exp log sin cos tan asin acos atan sqrt)
   (open scheme-level-2
-        extended-number-support
+        extended-numbers
         code-vectors
-        generics signals
+        methods signals
         primitives)             ;vm-extension
   (files (rts floatnum)))
 
-(define-structures ((define-record-types define-record-types-interface))
+(define-structure define-record-types define-record-types-interface
   (open scheme-level-1 records)
   (files (rts jar-defrecord)))
 
@@ -291,51 +306,53 @@
 ; --------------------
 ; Big Scheme
 
-(define-structures ((queues queues-interface))
+(define-structure queues queues-interface
   (open scheme-level-1 bummed-define-record-types signals)
   (files (big queue))
   (optimize auto-integrate))
 
-(define-structures ((random (export make-random)))
+(define-structure random (export make-random)
   (open scheme-level-2 bitwise)
   (files (big random)))
 
-(define-structures ((sort (export sort-list sort-list!)))
+(define-structure sort (export sort-list sort-list!)
   (open scheme-level-2)
   (files (big sort)))
 
-(define-structures ((pp (export p pretty-print define-indentation)))
+(define-structure pp (export p pretty-print define-indentation)
   (open scheme-level-2
         tables
-        generics)               ;disclose
+        methods)               ;disclose
   (files (big pp)))
 
 
-; Bigbit can replace bignum.
+; Bitwise logical operators on bignums.
 
-(define-structures ((bigbit (export )))  ;No exports
+(define-structure bigbit (export )  ;No exports
   (open scheme-level-2
-        extended-number-support
-        exceptions architecture
-        bitwise generics signals
-        number-i/o)
-  (files (rts bignum)
-         (big bigbit)))
+	bignums
+	methods
+        extended-numbers
+        ;; exceptions
+	;; architecture
+        bitwise
+	signals)
+  (files (big bigbit)))
 
 
 ; Richard's stuff
 
-(define-structures ((defrecord defrecord-interface))
+(define-structure defrecord defrecord-interface
   (open scheme-level-1 records)
   (files (big defrecord)))
 
-(define-structures ((formats (export format)))
+(define-structure formats (export format)
   (open extended-ports          ;Exports input-port? and output-port?
 	ascii
         scheme-level-2 signals)
   (files (big format)))
 
-(define-structures ((extended-ports extended-ports-interface))
+(define-structure extended-ports extended-ports-interface
   (open scheme-level-2 records defrecord
         architecture
         conditions signals exceptions structure-refs)
@@ -343,25 +360,21 @@
   (files (big xport)
          (big new-ports)))
 
-(define-structures ((destructuring (export (destructure :syntax))))
+(define-structure destructuring (export (destructure :syntax))
   (open scheme-level-2)
   (files (big destructure)))
 
-(define-structures ((general-tables general-tables-interface))
-  (open scheme-level-2 records define-record-types signals structure-refs)
-  (access features) ; string-hash
-  (files (big general-table)))
-
-(define-structures ((arrays arrays-interface))
+(define-structure arrays arrays-interface
   (open scheme-level-2 defrecord signals)
   (files (big array)))
 
-(define-structures ((receiving (export (receive :syntax))))
+(define-structure receiving (export (receive :syntax))
   (open scheme-level-2)
   (files (big receive)))
 
+(define general-tables tables)    ; backward compatibility
 
-(define-structures ((big-scheme big-scheme-interface))
+(define-structure big-scheme big-scheme-interface
   (open extended-ports          ;Exports input-port? and output-port?
         scheme-level-2 formats queues sort defrecord
         pp enumerated
@@ -378,7 +391,7 @@
 
 ; Externals
 
-(define-structures ((externals externals-interface))
+(define-structure externals externals-interface
   (open scheme-level-2 handle exceptions tables
         primitives
         architecture            ;stob
@@ -389,7 +402,7 @@
 
 ; Rudimentary object dump and restore
 
-(define-structures ((dump/restore dump/restore-interface))
+(define-structure dump/restore dump/restore-interface
   (open scheme-level-1
         number-i/o
         tables
@@ -401,13 +414,13 @@
         fluids
         ascii
         bitwise
-        generics                ;disclose
+        methods                 ;disclose
         templates)              ;template-info
   (files (big dump)))
 
 ; Threads
 
-(define-structures ((threads threads-interface))
+(define-structure threads threads-interface
   (open scheme-level-1
         wind                    ; still needed?
         bummed-define-record-types queues fluids
@@ -427,7 +440,7 @@
 
 ; Glue to connect the threads package with command processor.
 
-(define-structures ((more-threads (export threads)))
+(define-structure more-threads (export threads)
   (open scheme threads
         handle conditions interrupts signals
         command-processor
@@ -439,9 +452,9 @@
 
 ; Heap traverser
 
-(define-structures ((traverse
+(define-structure traverse
                   (export traverse-depth-first traverse-breadth-first trail
-                          set-leaf-predicate! usual-leaf-predicate)))
+                          set-leaf-predicate! usual-leaf-predicate)
   (open scheme-level-2
         primitives              ; ?
         queues tables
@@ -453,18 +466,11 @@
 
 ; Structure & Interpretation compatibility
 
-(define-structures ((sicp sicp-interface))
+(define-structure sicp sicp-interface
   (open scheme-level-2 signals tables)
   (files (misc sicp)))
 
-; Unix sockets
-
-(define-structures ((sockets (export socket-client socket-server)))
-  (open scheme-level-2
-        primitives)
-  (files (misc socket)))
-
-(define-structures ((search-trees search-trees-interface))
+(define-structure search-trees search-trees-interface
   (open scheme-level-2 defrecord receiving)
   (optimize auto-integrate)
   (files (big search-tree)))
@@ -476,18 +482,16 @@
 
 ; Stuff to load into initial.image to make scheme48.image.
 
-(define-structures ((usual-features (export )))  ;No exports
+(define-structure usual-features (export )  ;No exports
   (open disclosers
         command-processor
         package-commands-internal
-        build
-        debugging
         debuginfo
-        bignum
-        ratnum
-        inspector
-        disassembler
-        pp
+        bignums ratnums
+	innums				;Silly inexact numbers
+        ;; pp
+	;; These now have command structures:
+        ;;   debugging inspector disassembler build
         ))
 
 ; Temporary compatibility stuff
@@ -509,7 +513,7 @@
             assembling
             general-tables
             bigbit
-            bignum ratnum recnum floatnum
+            bignums ratnums recnums floatnums
             build
             command-processor
             debugging
@@ -518,10 +522,11 @@
             disassembler
             disclosers
             dump/restore
-            extended-number-support
+            extended-numbers
             extended-ports
             externals
             formats defrecord
+	    innums
             inspector
             more-threads
             package-commands-internal

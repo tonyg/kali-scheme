@@ -1,4 +1,4 @@
-; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; Scheme 48's data representations, for writing heap images.
@@ -100,20 +100,20 @@
   (adjoin-bits data tag tag-field-width))
 
 (define (make-immediate type info)
-  (make-descriptor tag/immediate
+  (make-descriptor (enum tag immediate)
 		   (adjoin-bits info type immediate-type-field-width)))
 
-(define vm-true	 (make-immediate imm/true  0))
-(define vm-false (make-immediate imm/false 0))
-(define vm-null	 (make-immediate imm/null  0))
-(define vm-unspecific  (make-immediate imm/unspecific 0))
-(define vm-unbound     (make-immediate imm/undefined 1))
-(define vm-unassigned  (make-immediate imm/undefined 2))
+(define vm-true	 (make-immediate (enum imm true)  0))
+(define vm-false (make-immediate (enum imm false) 0))
+(define vm-null	 (make-immediate (enum imm null)  0))
+(define vm-unspecific  (make-immediate (enum imm unspecific) 0))
+(define vm-unbound     (make-immediate (enum imm undefined) 1))
+(define vm-unassigned  (make-immediate (enum imm undefined) 2))
 
 (define header-type-field-width (- immediate-type-field-width 1))
 
 (define (make-header type length-in-bytes)
-  (make-descriptor tag/header (adjoin-bits length-in-bytes
+  (make-descriptor (enum tag header) (adjoin-bits length-in-bytes
 					   type
 					   (+ 1 header-type-field-width))))
 
@@ -122,7 +122,7 @@
 					     header-type-field-width))))
 
 (define (make-stob-descriptor addr)
-  (make-descriptor tag/stob (a-units->cells addr)))
+  (make-descriptor (enum tag stob) (a-units->cells addr)))
 
 (define (bytes->cells bytes)
   (quotient (+ bytes (- bytes-per-cell 1))
