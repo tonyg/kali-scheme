@@ -6,6 +6,9 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <string.h>
+
+#include <windows.h>
+
 #include "io.h"
 #include "scheme48.h"
 #include "c-mods.h"
