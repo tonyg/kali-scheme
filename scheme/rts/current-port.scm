@@ -65,10 +65,9 @@
 (define (byte-ready? . port-option)
   (real-byte-ready? (input-port-option port-option)))
 
-; #### This hasn't been adapted to multi-byte encodings yet.
 ; CHAR-READY? sucks
 (define (char-ready? . port-option)
-  (real-byte-ready? (input-port-option port-option)))
+  (real-char-ready? (input-port-option port-option)))
 
 (define (output-port-option port-option)
   (cond ((null? port-option) (current-output-port))

@@ -119,26 +119,32 @@
 	       (buffer-filler! port #t)
 	       (lose)))))))
 
+; The MODE argument says whether we're doing a READ, a PEEK, or a CHAR-READY?
+
 (define (make-one-char-input buffer-filler!)
-  (lambda (port read?)
+  (lambda (port mode)
     (let ((decode-char
 	   (text-codec-decode-char-proc (port-text-codec port))))
       (with-new-proposal (lose)
+
 	(let ((index (provisional-port-index port))
 	      (limit (provisional-port-limit port)))
 	  
-	  (define (consume&deliver decode-count ch)
-	    (if read?
+	  (define (consume&deliver decode-count val)
+	    (if (not mode)
 		(provisional-set-port-index! port
 					     (+ index decode-count)))
 	    (if (maybe-commit)
-		ch
+		val
 		(lose)))
 
 	  (cond ((not (open-input-port? port))
 		 (remove-current-proposal!)
 		 (call-error "invalid argument"
-			     (if read? read-byte peek-byte)
+			     (cond
+			      ((not mode) read-char)
+			      ((null? mode) char-ready?)
+			      (else peek-char))
 			     port))
 		((< index limit)
 		 (let ((buffer (port-buffer port)))
@@ -148,10 +154,16 @@
 		     (lambda (ch decode-count)
 		       (cond
 			(ch
-			 (consume&deliver decode-count ch))
+			 (consume&deliver decode-count
+					  (if (null? mode)
+					      #t
+					      ch)))
 			((or (not decode-count) ; decoding error
 			     (provisional-port-pending-eof? port)) ; partial char
-			 (consume&deliver 1 #\?))
+			 (consume&deliver 1
+					  (if (null? mode)
+					      #t
+					      #\?)))
 			;; need at least DECODE-COUNT bytes
 			(else
 			 (if (> decode-count
@@ -168,21 +180,27 @@
 						    (- limit index))
 			       (provisional-set-port-index! port 0)
 			       (provisional-set-port-limit! port (- limit index))))
-			 (buffer-filler! port #t)
-			 (lose)))))))
+			 (if (or (buffer-filler! port (not (null? mode)))
+				 (not (null? mode)))
+			     (lose)
+			     #f)))))))
 		((provisional-port-pending-eof? port)
-		 (if read?
+		 (if (not mode)
 		     (provisional-set-port-pending-eof?! port #f))
-		 (if (maybe-commit)
-		     (eof-object)
-		     (lose)))
+		 (cond
+		  ((not (maybe-commit))
+		   (lose))
+		  ((null? mode) #t)
+		  (else (eof-object))))
 		(else
 		 (if (= index limit)	; we have zilch
 		     (begin
 		       (provisional-set-port-index! port 0)
 		       (provisional-set-port-limit! port 0)))
-		 (buffer-filler! port #t)
-		 (lose))))))))
+		 (if (or (buffer-filler! port (not (null? mode)))
+			 (not (null? mode)))
+		     (lose)
+		     #f))))))))
 
 ;----------------
 ; See if there is a byte available.

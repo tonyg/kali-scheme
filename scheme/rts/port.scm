@@ -7,7 +7,11 @@
 ;
 ; Input ports
 ;  (byte <port> <read?>) -> <byte>
-;  (char <port> <read?>) -> <char>
+;  (char <port> <mode>) -> <char>
+;     <mode> says whether we're doing ...
+;     - #t: a PEEK
+;     - #f: a READ
+;     - (): CHAR-READY? 
 ;  (block <port> <buffer> <start> <count>) -> <byte count>
 ;  (ready? <port>) -> <boolean>
 ;
@@ -27,7 +31,7 @@
   (char	     port-handler-char)
   (block     port-handler-block)
   (ready?    port-handler-ready?)
-  (force     port-handler-force))		; only used for output
+  (force     port-handler-force))	; only used for output
 
 ;----------------
 ; Disclosing ports by calling the disclose handler.
@@ -95,18 +99,30 @@
 
 (define (real-read-char port)
   (if (open-input-port? port)
-      ((port-handler-char (port-handler port)) port #t)
+      ((port-handler-char (port-handler port)) port #f)
       (call-error "invalid argument" read-char port)))
 
 (define (real-peek-char port)
   (if (open-input-port? port)
-      ((port-handler-char (port-handler port)) port #f)
+      ((port-handler-char (port-handler port)) port #t)
       (call-error "invalid argument" peek-char port)))
 
 (define (real-write-char char port)
   (if (open-output-port? port)
       ((port-handler-char (port-handler port)) port char)
       (call-error "invalid argument" write-char port)))
+
+(define (real-char-ready? port)
+  (cond
+   ;; This is an approximation only: since we don't know what
+   ;; character the program wants to write, we don't know if it can be
+   ;; written without blocking.
+   ((open-output-port? port)
+    (real-byte-ready? port))
+   ((open-input-port? port)
+    ((port-handler-char (port-handler port)) port '()))
+   (else
+    (call-error "invalid argument" char-ready? port))))
 
 ; See if there is a character available.  BYTE-READY? itself is defined
 ; in current-ports.scm as it needs CURRENT-INPUT-PORT when called with
