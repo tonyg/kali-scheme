@@ -107,7 +107,9 @@ The message appears immediately, with no delays or errors.
 
 \section{Optimistic concurrency}
 
-%add an overview
+Most of the bindings described in this section are part of the \code{proposals}
+structure---the low-level bindings described at the very end of the
+section are part of the \code{low-proposals} structure.
 
 A \cvar{proposal} is a record of reads from and and writes to locations in
  memory.  Each thread has an associated \textit{current proposal}
@@ -151,7 +153,7 @@ If the current proposal is \code{\#f} they create a new proposal,
 This process repeats, with a new proposal on each iteration, until
  the commit succeeds.
 \code{Call-ensuring-atomicity} returns whatever values are returned by \cvar{thunk}
- on its final invocation, while \code{ensuring-atomicity!} discards any such
+ on its final invocation, while \code{ensure-atomicity!} discards any such
  values and returns nothing.
 
 \code{Ensure-Atomicity} and \code{ensure-atomicity!} are macro versions of
@@ -261,17 +263,27 @@ The current proposal is saved and then restored after \code{thunk} returns.
 
 % example?
 
-The following procedures give access to the low-level proposal mechanism.
+\begin{protos}
+\syntaxproto{with-new-proposal}{ (\cvar{lose}) \cvar{exp} \ldots}{value \ldots}
+\end{protos}
+
+\code{With-new-proposal} saves the current proposal, installs a new
+one, executes the forms in the body, and returns whatever they
+returns.  It also binds \cvar{lose} to a thunk repeating the
+procedure of installing a new procedure and running the body.
+Typically, the body will call \code{maybe-commit} and, if that fails,
+call \cvar{lose} to try again.
+
+The following procedures give access to the low-level proposal
+mechanism.  They are defined in the \code{low-proposals} structure.
 \begin{protos}
 \proto{maybe-commit}{}{boolean}
 \proto{make-proposal}{}{proposal}
 \proto{current-proposal}{}{proposal}
 \protonoresult{set-current-proposal!}{ proposal}
-\proto{with-proposal}{ proposal thunk}{value \ldots}
-\syntaxproto{with-new-proposal}{ (\cvar{lose}) \cvar{exp} \ldots}{value \ldots}
 \end{protos}
 \noindent
-\code{Maybe-commit} verifies that any reads logged in the current are
+\code{Maybe-commit} verifies that any reads logged in the current proposal are
  still valid and, if so, performs any writes that it contains.
 A logged read is valid if, at the time of the commit, the location read contains
  the same value it had at the time of the original read (note that this does
@@ -286,17 +298,6 @@ A logged read is valid if, at the time of the commit, the location read contains
 It is an error to pass to \code{set-current-proposal!} a proposal that
  is already in use.
 
-\code{With-proposal} saves the current proposal, installs \cvar{proposal} as
- the current proposal, and then calls \cvar{thunk}.
-When \cvar{thunk} returns the saved proposal is reinstalled as the current
-proposal
-and the value(s) returned by \cvar{thunk} are returned.
-\code{With-new-proposal} saves the current proposal, installs a new
-one, executes the forms in the body, and returns whatever they
-returns.  It also binds \cvar{lose} to a thunk repeating the
-procedure of installing a new procedure and running the body.
-Typically, the body will call \code{maybe-commit} and, if that fails,
-call \cvar{lose} to try again.
 
 \section{Condition variables}
 % these require proposals
