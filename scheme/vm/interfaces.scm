@@ -543,7 +543,8 @@
 	  current-thread
 	  disable-interrupts!
 	  enable-interrupts!
-	  s48-set-os-signals
+          s48-add-os-signal
+	  s48-os-signal-pending
 
 	  s48-*callback-return-stack-block*
 
@@ -593,7 +594,8 @@
 	  s48-*pending-interrupt?*
           s48-disable-interrupts!
           s48-enable-interrupts!
-	  s48-set-os-signals
+	  s48-add-os-signal
+          s48-os-signal-pending
 	  s48-reset-interrupts!
 	  
           s48-define-exported-binding

@@ -81,7 +81,9 @@
 
   (pending-interrupts-clear!)
   (set! s48-*pending-interrupt?* #f)
-  (set! *os-signal-list* null)
+  (set! *os-signal-ring-start* 0)
+  (set! *os-signal-ring-ready* 0)
+  (set! *os-signal-ring-end* 0)
   (set! *interrupted-template* false)
   (set! s48-*nc-template* false)
   (set! s48-*nc-environment* false)
@@ -116,7 +118,6 @@
     (set! *call-with-values-return-code*
 	  (s48-trace-value *call-with-values-return-code*))
     (set! *interrupted-template*  (s48-trace-value *interrupted-template*))
-    (set! *os-signal-list*        (s48-trace-value *os-signal-list*))
     (set! s48-*nc-template*       (s48-trace-value s48-*nc-template*))
     (set! s48-*nc-environment*    (s48-trace-value s48-*nc-environment*))
 

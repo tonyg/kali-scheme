@@ -122,9 +122,8 @@
 	   (push (enter-fixnum *enabled-interrupts*))
 	   4))
 	((eq? pending-interrupt (enum interrupt os-signal))
-	 (push (vm-car *os-signal-list*))
-	 (set! *os-signal-list* (vm-cdr *os-signal-list*))
-	 (if (not (vm-eq? *os-signal-list* null))
+	 (push (enter-fixnum (os-signal-ring-remove!)))
+	 (if (os-signal-ring-ready?)
 	     (note-interrupt! (enum interrupt os-signal)))
 	 (push (enter-fixnum *enabled-interrupts*))
 	 2)
@@ -132,17 +131,79 @@
 	 (push (enter-fixnum *enabled-interrupts*))
 	 1)))
 
+;;; Dealing with OS signals
+
+(define *os-signal-ring-length* 32)
+(define *os-signal-ring*
+  (let ((v (make-vector *os-signal-ring-length* 0)))
+    (if (null-pointer? v)
+        (error "out of memory, unable to continue"))
+    v))
+
+(define *os-signal-ring-start* 0) ; index of oldest signal
+(define *os-signal-ring-ready* 0) ; index of last signal for which an
+				  ; os-event has already been generated
+(define *os-signal-ring-end* 0) ; index of newest signal
+
+;; ring-like incrementation
+(define-syntax os-signal-ring-inc!
+  (syntax-rules ()
+    ((os-signal-ring-inc! var)
+     (set! var
+           (if (= var
+                  (- *os-signal-ring-length* 1))
+               0
+               (+ var 1))))))
+
+(define (os-signal-ring-ready?)
+  (not (= *os-signal-ring-ready*
+          *os-signal-ring-start*)))
+
+(define (os-signal-ring-add! sig)
+  (os-signal-ring-inc! *os-signal-ring-end*)
+  (if (= *os-signal-ring-start*
+         *os-signal-ring-end*)
+      (error "OS signal ring too small, report to Scheme 48 maintainers"))
+  (vector-set! *os-signal-ring* *os-signal-ring-end* sig))
+
+(define (os-signal-ring-empty?)
+  (= *os-signal-ring-start*
+     *os-signal-ring-end*))
+
+(define (os-signal-ring-remove!)
+  (if (os-signal-ring-empty?)
+      (error "This cannot happen: OS signal ring empty"))
+  (let ((sig (vector-ref *os-signal-ring* *os-signal-ring-start*)))
+    (set! *os-signal-ring-start* 
+          (if (= *os-signal-ring-start*
+                 (- *os-signal-ring-length* 1))
+              0
+              (+ *os-signal-ring-start* 1)))
+    sig))
+
+
 ; Called from outside when an os-signal event is returned.
+(define (s48-add-os-signal sig)
+  (os-signal-ring-add! sig))
 
-(define (s48-set-os-signals signal-list)
-  (set! *os-signal-list* (vm-append! *os-signal-list* signal-list)))
+; Called from outside to check whether an os-event has to be signalled
+(define (s48-os-signal-pending)
+  (if (= *os-signal-ring-ready*
+         *os-signal-ring-end*)
+      #f
+      (begin
+        (os-signal-ring-inc! *os-signal-ring-ready*)
+        #t)))
 
-(define *os-signal-list* null)
+
+  
 
 ; Called from outside to initialize a new process.
 
 (define (s48-reset-interrupts!)
-  (set! *os-signal-list* null)
+  (set! *os-signal-ring-start* 0)
+  (set! *os-signal-ring-ready* 0)
+  (set! *os-signal-ring-end* 0)
   (set! *enabled-interrupts* 0)
   (pending-interrupts-clear!)
   (set! s48-*pending-interrupt?* #f))

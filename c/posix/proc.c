@@ -76,12 +76,6 @@ static s48_value	posix_unnamed_signal_marker_binding = S48_FALSE;
  * Kept in a finite array to avoid consing.
  */
 
-/* Arbitrary size of the queue */
-#define INTERRUPT_QUEUE_LENGTH 32
-
-static int      interrupt_queue [INTERRUPT_QUEUE_LENGTH];
-static int	next_interrupt = 0;
-
 /*
  * Install all exported functions in Scheme48.
  */
@@ -414,53 +408,6 @@ add_dot_slash(char *name)
 #define allow_interrupts()
 
 /*
- * Adds `signum' to the queue of received signals.
- */
-
-static void
-queue_interrupt(int signum)
-{
-  if (next_interrupt == INTERRUPT_QUEUE_LENGTH){
-    perror("Interrupt queue overflow -- report to Scheme 48 maintainers.");
-    exit(-1); 
-  }
-  interrupt_queue[next_interrupt] = signum;
-  next_interrupt++;
-}
-
-/*
- * Returns TRUE if there is a signal to be delivered up to Scheme.
- */
-
-int
-s48_os_signal_pending(void)
-{
-  int i;
-  block_interrupts();
-
-  if (next_interrupt == 0) {
-    allow_interrupts();
-    return 0; }
-  else {
-    s48_value interrupt_list = S48_NULL;
-    S48_DECLARE_GC_PROTECT(1);
-    
-    S48_GC_PROTECT_1(interrupt_list);
-
-    /* turn the queue into a scheme list and preserve the order */
-    for (i = next_interrupt; i > 0 ; i--)
-      interrupt_list = s48_cons (s48_enter_fixnum (interrupt_queue  [i - 1]),
-				 interrupt_list);
-    s48_set_os_signals(interrupt_list);
-    
-    S48_GC_UNPROTECT();
-
-    next_interrupt = 0;
-    allow_interrupts();
-    return 1; }
-}
-
-/*
  * Simple front for kill().  We have to retry if interrupted.
  */
 
@@ -667,7 +614,7 @@ extract_signal(s48_value sch_signal)
 static void
 generic_interrupt_catcher(int signum)
 {
-  queue_interrupt(signum);
+  s48_add_os_signal(signum);
 
   switch (signum) {
   case SIGINT: {
