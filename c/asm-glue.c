@@ -23,6 +23,8 @@ s48_provide_asm_values(s48_value asm_vector)
   extern long s48_unknown_call();
   extern long s48_unknown_return();
   extern long s48_interrupt_handler();
+  extern long s48_exception_handler();
+  extern long s48_restart_vm();
   extern long s48_Sstack_limitS;
 
   /* 0 *val*        */
@@ -35,7 +37,8 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 7, s48_enter_fixnum((long) &s48_unknown_call));
   S48_VECTOR_SET(asm_vector, 8, s48_enter_fixnum((long) &s48_unknown_return));
   S48_VECTOR_SET(asm_vector, 9, s48_enter_fixnum((long) &s48_interrupt_handler));
-
+  S48_VECTOR_SET(asm_vector, 10, s48_enter_fixnum((long) &s48_exception_handler));
+  S48_VECTOR_SET(asm_vector, 11, s48_enter_fixnum((long) &s48_restart_vm));
   return S48_UNSPECIFIC;
 }
 
