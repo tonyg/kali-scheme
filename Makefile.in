@@ -316,16 +316,12 @@ inst-image:
 	rm /tmp/$(IMAGE)
 
 inst-man:
-	if [ -d $(mandir) -a -w $(mandir) ]; then			   \
-		sed 's=LBIN=$(bindir)=g' $(srcdir)/doc/scheme48.man |	   \
-			sed 's=LLIB=$(LIB)=g' |				   \
-			sed 's=LS48=$(RUNNABLE)=g' >$(MANPAGE) &&	   \
-		$(INSTALL_DATA) $(MANPAGE) $(mandir) &&			   \
-		rm $(MANPAGE);						   \
-	else								   \
-		echo "$(mandir) not writable dir, not installing man page" \
-			>&2;						   \
-	fi
+	$(srcdir)/mkinstalldirs $(mandir)
+	sed 's=LBIN=$(bindir)=g' $(srcdir)/doc/scheme48.man |	   \
+		sed 's=LLIB=$(LIB)=g' |				   \
+		sed 's=LS48=$(RUNNABLE)=g' >$(MANPAGE) &&	   \
+	$(INSTALL_DATA) $(MANPAGE) $(mandir) &&			   \
+	rm $(MANPAGE);						   \
 
 inst-inc:
 	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(incdir)
@@ -366,20 +362,11 @@ go:
 
 dirs:
 	for dir in $(libdir) $(bindir) $(incdir); do			 \
-		[ -d $$dir -a -w $$dir ] || {				 \
-			echo "$$dir not a writable directory" >&2;	 \
-			exit 1;						 \
-		};							 \
+		$(srcdir)/mkinstalldirs $$dir || exit 1;	 		 \
 	done
-	{ mkdir -p $(LIB) && [ -w $(LIB) ]; } || {			 \
-		echo "$(LIB) not a writable directory" >&2;		 \
-		exit 1;							 \
-	}
+	$(srcdir)/mkinstalldirs $(LIB)
 	for dir in rts env big sort opt misc link posix cml srfi; do	  \
-		{ mkdir -p $(LIB)/$$dir && [ -w $(LIB)/$$dir ]; } || {	  \
-			echo "$(LIB)/$$dir not a writable directory" >&2; \
-			exit 1;						  \
-		};							  \
+		$(srcdir)/mkinstalldirs $(LIB)/$$dir || exit 1;	 	  \
 	done
 
 configure: configure.in
