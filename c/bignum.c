@@ -43,8 +43,9 @@ MIT in each case. */
 #include "bignum.h"
 #include "bignumint.h"
 #include <limits.h>
-#include "scheme48.h"	// for S48_GC_PROTECT_GLOBAL
+#include "scheme48.h"	/* for S48_GC_PROTECT_GLOBAL */
 #include <stdio.h>
+#include <stdlib.h>	/* abort */
 
 /* Forward references */
 static int bignum_equal_p_unsigned(bignum_type, bignum_type);
@@ -477,7 +478,7 @@ s48_bignum_to_long(bignum_type bignum)
     bignum_digit_type * scan = (start + (BIGNUM_LENGTH (bignum)));
     while (start < scan)
       accumulator = ((accumulator << BIGNUM_DIGIT_LENGTH) + (*--scan));
-    return ((BIGNUM_NEGATIVE_P (bignum)) ? (-accumulator) : accumulator);
+    return ((BIGNUM_NEGATIVE_P (bignum)) ? (-((long)accumulator)) : accumulator);
   }
 }
 
@@ -591,7 +592,7 @@ s48_bignum_fits_in_word_p(bignum_type bignum, long word_length,
   BIGNUM_ASSERT (n_bits > 0);
   {
     bignum_length_type length = (BIGNUM_LENGTH (bignum));
-    unsigned int max_digits = (BIGNUM_BITS_TO_DIGITS (n_bits));
+    bignum_length_type max_digits = (BIGNUM_BITS_TO_DIGITS (n_bits));
     bignum_digit_type msd, max;
     return
       ((length < max_digits) ||
@@ -1797,7 +1798,8 @@ bignum_magnitude_ash(bignum_type arg1, long n)
       *scanr = *scanr & BIGNUM_DIGIT_MASK;
     }
   }
-  else if (n < 0 && (-n >= (BIGNUM_LENGTH (arg1) * BIGNUM_DIGIT_LENGTH)))
+  else if (n < 0
+	   && (-n >= (BIGNUM_LENGTH (arg1) * (bignum_length_type) BIGNUM_DIGIT_LENGTH)))
     result = BIGNUM_ZERO ();
 
   else if (n < 0) {

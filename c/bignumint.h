@@ -94,7 +94,7 @@ extern char *	s48_shorten_bignum(char*, long);
     ((length) | ((negative_p) ? BIGNUM_RADIX : 0))
 
 #define BIGNUM_LENGTH(bignum)						\
-  ((* (BIGNUM_TO_POINTER (bignum))) & BIGNUM_DIGIT_MASK)
+  ((* (BIGNUM_TO_POINTER (bignum))) & ((bignum_length_type) BIGNUM_DIGIT_MASK))
 
 #define BIGNUM_NEGATIVE_P(bignum)					\
   (((* (BIGNUM_TO_POINTER (bignum))) & BIGNUM_RADIX) != 0)
