@@ -24,11 +24,10 @@
 			   (if (null? id-option) #f (car id-option))))
 
 (define (placeholder-value placeholder)
-  (with-new-proposal (lose)
+  (with-new-proposal (dummy)
     (if (eq? (placeholder-real-value placeholder)
 	     null-value)
-	(or (maybe-commit-and-block-on-queue (placeholder-queue placeholder))
-	    lose)))
+	(maybe-commit-and-block-on-queue (placeholder-queue placeholder))))
   (placeholder-real-value placeholder))
 
 (define (placeholder-set! placeholder new-value)
