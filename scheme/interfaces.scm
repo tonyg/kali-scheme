@@ -579,8 +579,8 @@
 	  us-ascii-codec
 	  latin-1-codec
 	  utf-8-codec
-	  utf-16le-codec
-	  utf-16be-codec))
+	  utf-16le-codec utf-16be-codec
+	  utf-32le-codec utf-32be-codec))
 
 (define-interface i/o-internal-interface
   (export make-buffered-input-port  make-unbuffered-input-port
