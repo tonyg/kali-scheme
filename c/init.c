@@ -44,7 +44,6 @@ s48_main(int argc, char *argv[])
   int errors = 0;
   long return_value;
   char *stack;
-  int warn_undefined_imported_bindings_p = 1;
 
 #if defined(STATIC_AREAS)
   extern long static_entry;
@@ -98,10 +97,6 @@ s48_main(int argc, char *argv[])
 	if (argc == 0) { errors++; break; }
         s48_object_file = *argv;
 	break;
-      case 'u':
-        argc--; argv++;
-	warn_undefined_imported_bindings_p = 0;
-	break;
       default:
 	fprintf(stderr, "Invalid argument: %s\n", *argv);
 	errors++;
@@ -116,8 +111,7 @@ s48_main(int argc, char *argv[])
 Options: -h <total heap size in words>\n\
 	 -s <stack buffer size in words>\n\
          -i <image file name>\n\
-         -o <object file name>\n\
-         -u [don't warn on unbound external identifiers]\n",
+         -o <object file name>\n",
 	    me);
     return 1;
   }
@@ -154,9 +148,6 @@ Options: -h <total heap size in words>\n\
   s48_initialize_vm(stack, stack_size);
 
   s48_initialize_external_modules();
-  
-  if (warn_undefined_imported_bindings_p)
-    s48_warn_about_undefined_imported_bindings();
   
   return_value = s48_call_startup_procedure(argv, vm_argc);
 

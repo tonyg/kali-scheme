@@ -145,7 +145,6 @@
 	  s48-resetup-external-exception
 
 	  ; called on startup
-	  s48-warn-about-undefined-imported-bindings
 	  install-shared-bindings!+gc
 	  
 	  ; for writing images
@@ -448,7 +447,6 @@
 	  s48-resetup-external-exception
 
 	  ; called on startup
-	  s48-warn-about-undefined-imported-bindings
 	  install-shared-bindings!+gc
 	  
 	  ; for writing images
@@ -613,9 +611,6 @@
 	  s48-channel-count
 	  s48-imported-bindings
 	  s48-exported-bindings
-
-	  ; called when resuming an image
-	  s48-warn-about-undefined-imported-bindings
 
 	  ; for C code that wants to manipulate channels
 	  s48-close-channel

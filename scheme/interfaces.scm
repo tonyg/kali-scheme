@@ -219,7 +219,8 @@
 	  undefine-imported-binding
 	  lookup-exported-binding
 	  define-exported-binding
-	  undefine-exported-binding))
+	  undefine-exported-binding
+	  find-undefined-imported-bindings))
 
 (define-interface low-proposals-interface
   (export make-proposal

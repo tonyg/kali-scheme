@@ -47,9 +47,6 @@ extern long		s48_channel_count(void);
 extern s48_value	s48_imported_bindings(void);
 extern s48_value	s48_exported_bindings(void);
 
-/* called when resuming an image */
-extern bool		s48_warn_about_undefined_imported_bindings(void);
-
 /* for initializion on SMP machines */
 extern void		s48_initialize_shared_registersB(long, long, long, long);
 

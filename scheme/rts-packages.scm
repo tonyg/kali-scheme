@@ -382,6 +382,8 @@
 	exceptions	 ;initialize-exceptions!
 	interrupts	 ;initialize-interrupts!
 	records-internal ;initialize-records!
+	shared-bindings	 ;find-undefined-imported-bindings
+	debug-messages	 ;warn about undefined bindings 
 	threads-internal ;start threads
 	root-scheduler)  ;start a scheduler
   (files (rts init)))

@@ -169,20 +169,6 @@
 	      (else
 	       (raise-exception heap-overflow 0)))))))
 
-(define s48-warn-about-undefined-imported-bindings
-  (let ((walker (table-walker shared-binding-next)))
-    (lambda ()
-      (let ((out (current-error-port)))
-	(walker (lambda (binding)
-		  (if (undefined? (shared-binding-ref binding))
-		      (let ((name (shared-binding-name binding)))
-			(write-string "undefined imported name " out)
-			(if (vm-string? name)
-			    (write-string (extract-string name) out)
-			    (write-string "<invalid name>" out))
-			(write-char #\newline out))))
-		*imported-bindings*)))))
-
 ;----------------
 ; Four primitives for adding and removing imports and exports.
 

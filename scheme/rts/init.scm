@@ -13,8 +13,17 @@
     (initialize-rts in out error
      (lambda ()
        (initialize-records! records)
+       (warn-about-undefined-imported-bindings)
        (entry-point (vector->list resume-arg))))))
-       
+
+(define (warn-about-undefined-imported-bindings)
+  (let ((undefined-bindings (find-undefined-imported-bindings)))
+    (do ((size (vector-length undefined-bindings))
+	 (i 0 (+ 1 i)))
+	((= i size))
+      (debug-message "undefined imported binding "
+		     (shared-binding-name (vector-ref undefined-bindings i))))))
+
 (define (initialize-rts in out error thunk)
   (initialize-session-data!)
   (initialize-dynamic-state!)
