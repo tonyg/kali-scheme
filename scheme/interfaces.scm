@@ -971,6 +971,7 @@
           cwv-continuation-protocol
           make-dispatch-protocol
 	  make-label
+	  label-reference
 	  note-environment
 	  note-source-code
 	  segment->cv segment->template
