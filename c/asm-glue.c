@@ -42,6 +42,7 @@ s48_provide_asm_values(s48_value asm_vector)
   extern long s48_restart_vm3_pop_0;
   extern long s48_restart_vm3_pop_1;
   extern long s48_restart_vm3_pop_2;
+  extern long s48_restart_vm3_pop_3;
   extern long s48_gcSallocate_for_native_code;
   extern long s48_Sstack_limitS;
   extern long s48_ShpS;
@@ -78,7 +79,8 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 26, s48_enter_fixnum((long) &s48_restart_vm3_pop_0));
   S48_VECTOR_SET(asm_vector, 27, s48_enter_fixnum((long) &s48_restart_vm3_pop_1));
   S48_VECTOR_SET(asm_vector, 28, s48_enter_fixnum((long) &s48_restart_vm3_pop_2));
-  S48_VECTOR_SET(asm_vector, 29, s48_enter_fixnum((long) &s48_gcSallocate_for_native_code));
+  S48_VECTOR_SET(asm_vector, 29, s48_enter_fixnum((long) &s48_restart_vm3_pop_3));
+  S48_VECTOR_SET(asm_vector, 30, s48_enter_fixnum((long) &s48_gcSallocate_for_native_code));
   return S48_UNSPECIFIC;
 }
 
