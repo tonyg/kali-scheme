@@ -48,7 +48,6 @@
   (bitwise-ior protocol 128))
 
 (define (call-native-code proc protocol-skip stack-nargs)
-  (move-args-above-cont! stack-nargs)
   (goto post-native-dispatch (s48-call-native-procedure proc protocol-skip)))
 
 (define s48-*native-protocol*)
