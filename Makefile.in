@@ -489,7 +489,8 @@ PACKAGES=scheme/packages.scm scheme/rts-packages.scm scheme/alt-packages.scm \
 	 build/filenames.scm
 
 $(srcdir)/build/filenames.make: $(PACKAGES)
-	$(MAKE) $(VM) PACKAGES=
+# uncomment this if you activate the line below:
+#	$(MAKE) $(VM) PACKAGES=
 	cd $(srcdir) && \
 	$(RUNNABLE) -a batch <build/filenames.scm
 # or:	./$(VM) -i $(srcdir)/$(INITIAL) -a batch <build/filenames.scm
