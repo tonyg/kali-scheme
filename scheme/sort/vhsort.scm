@@ -5,8 +5,8 @@
 ;;; Olin Shivers 10/98.
 
 ;;; Exports:
-;;; (heap-sort! elt< v [start end]) -> unspecified
-;;; (heap-sort  elt< v [start end]) -> vector
+;;; (vector-heap-sort! elt< v [start end]) -> unspecified
+;;; (vector-heap-sort  elt< v [start end]) -> vector
 
 ;;; Two key facts
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -19,7 +19,7 @@
 ;;;      (You can deduce this from fact #1 above.) 
 ;;;      Any index before FIRST-LEAF is an internal node.
 
-(define (really-heap-sort! elt< v start end)
+(define (really-vector-heap-sort! elt< v start end)
   ;; Vector V contains a heap at indices [START,END). The heap is in heap
   ;; order in the range (I,END) -- i.e., every element in this range is >=
   ;; its children. Bubble HEAP[I] down into the heap to impose heap order on
@@ -64,18 +64,18 @@
 
 ;;; Here are the two exported interfaces.
 
-(define (heap-sort! elt< v . maybe-start+end)
+(define (vector-heap-sort! elt< v . maybe-start+end)
   (call-with-values
    (lambda () (vector-start+end v maybe-start+end))
    (lambda (start end)
-     (really-heap-sort! elt< v start end))))
+     (really-vector-heap-sort! elt< v start end))))
 
-(define (heap-sort elt< v . maybe-start+end)
+(define (vector-heap-sort elt< v . maybe-start+end)
   (call-with-values
    (lambda () (vector-start+end v maybe-start+end))
    (lambda (start end)
      (let ((ans (vector-portion-copy v start end)))
-       (really-heap-sort! elt< ans 0 (- end start))
+       (really-vector-heap-sort! elt< ans 0 (- end start))
        ans))))
 
 ;;; Notes on porting
@@ -84,10 +84,10 @@
 ;;; Bumming the code for speed
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; If you can use a module system to lock up the internal function
-;;; REALLY-HEAP-SORT! so that it can only be called from HEAP-SORT and
-;;; HEAP-SORT!, then you can hack the internal functions to run with no safety
-;;; checks. The safety checks performed by the exported functions HEAP-SORT &
-;;; HEAP-SORT! guarantee that there will be no type errors or array-indexing
+;;; REALLY-VECTOR-HEAP-SORT! so that it can only be called from VECTOR-HEAP-SORT and
+;;; VECTOR-HEAP-SORT!, then you can hack the internal functions to run with no safety
+;;; checks. The safety checks performed by the exported functions VECTOR-HEAP-SORT &
+;;; VECTOR-HEAP-SORT! guarantee that there will be no type errors or array-indexing
 ;;; errors. In addition, with the exception of the two computations of
 ;;; FIRST-LEAF, all arithmetic will be fixnum arithmetic that never overflows
 ;;; into bignums, assuming your Scheme provides that you can't allocate an

@@ -92,38 +92,38 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; heap-sort  < v [start end] -> vector
-;;; heap-sort! < v        -> unspecific
+;;; vector-heap-sort  < v [start end] -> vector
+;;; vector-heap-sort! < v        -> unspecific
 
 (define-interface vector-heap-sort-interface
-  (export (heap-sort (proc ((proc (:value :value) :boolean)
-			    :vector 
-			    &opt :exact-integer :exact-integer)
-			   :vector))
-	  (heap-sort! (proc ((proc (:value :value) :boolean) :vector) :unspecific))))
+  (export (vector-heap-sort (proc ((proc (:value :value) :boolean)
+				   :vector 
+				   &opt :exact-integer :exact-integer)
+				  :vector))
+	  (vector-heap-sort! (proc ((proc (:value :value) :boolean) :vector) :unspecific))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; insert-sort  < v [start end] -> vector
-;;; insert-sort! < v [start end] -> unspecific
+;;; vector-insert-sort  < v [start end] -> vector
+;;; vector-insert-sort! < v [start end] -> unspecific
 ;;;
 ;;; internal:
-;;; %insert-sort! < v start end -> unspecific
+;;; %vector-insert-sort! < v start end -> unspecific
 
 (define-interface vector-insertion-sort-interface
-  (export (insert-sort (proc ((proc (:value :value) :boolean)
-			      :vector 
-			      &opt :exact-integer :exact-integer)
-			     :vector))
-	  (insert-sort! (proc ((proc (:value :value) :boolean)
-			       :vector 
-			       &opt :exact-integer :exact-integer)
-			      :unspecific))))
+  (export (vector-insert-sort (proc ((proc (:value :value) :boolean)
+				     :vector 
+				     &opt :exact-integer :exact-integer)
+				    :vector))
+	  (vector-insert-sort! (proc ((proc (:value :value) :boolean)
+				      :vector 
+				      &opt :exact-integer :exact-integer)
+				     :unspecific))))
 
 (define-interface vector-insertion-sort-internal-interface
-  (export (%insert-sort! (proc ((proc (:value :value) :boolean)
-				:vector 
-				:exact-integer :exact-integer)
-			       :unspecific))))
+  (export (%vector-insert-sort! (proc ((proc (:value :value) :boolean)
+				       :vector 
+				       :exact-integer :exact-integer)
+				      :unspecific))))
 
 ;;; The general sort interface:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

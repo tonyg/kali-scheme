@@ -61,8 +61,8 @@ list-sort!			vector-sort!
 list-stable-sort!		vector-stable-sort!
 list-delete-neighbor-dups!	vector-delete-neighbor-dups!
 
-quick-sort    heap-sort   insert-sort   list-merge-sort   vector-merge-sort
-quick-sort!   heap-sort!  insert-sort!  list-merge-sort!  vector-merge-sort!
+quick-sort    vector-heap-sort   vector-insert-sort   list-merge-sort   vector-merge-sort
+quick-sort!   vector-heap-sort!  vector-insert-sort!  list-merge-sort!  vector-merge-sort!
 quick-sort3!             
 
 vector-binary-search
@@ -698,14 +698,14 @@ vector-merge-sort-lib - vector merge sort
       V2[start2,end2).
 
 vector-heap-sort-lib - vector heap sort
-    heap-sort  < v [start end] -> vector
-    heap-sort! < v [start end] -> unspecified
+    vector-heap-sort  < v [start end] -> vector
+    vector-heap-sort! < v [start end] -> unspecified
 
     These procedures sort their data using heap sort, 
     which is not a stable sorting algorithm.
     
-    HEAP-SORT returns a vector of length END-START. 
-    HEAP-SORT! is in-place, leaving its result in V[start,end).
+    VECTOR-HEAP-SORT returns a vector of length END-START. 
+    VECTOR-HEAP-SORT! is in-place, leaving its result in V[start,end).
 
 vector-quick-sort-lib - vector quick sort
     quick-sort   < v [start end] -> vector
@@ -751,13 +751,13 @@ vector-quick-sort-lib - vector quick sort
     Clients of this function, however, should not count on this.
 
 vector-insert-sort-lib - vector insertion sort
-    insert-sort  < v [start end] -> vector
-    insert-sort! < v [start end] -> unspecified
+    vector-insert-sort  < v [start end] -> vector
+    vector-insert-sort! < v [start end] -> unspecified
     
     These procedures stably sort their data using insertion sort.
     
-    INSERT-SORT returns a vector of length END-START.
-    INSERT-SORT! is in-place, leaving its result in V[start,end).
+    VECTOR-INSERT-SORT returns a vector of length END-START.
+    VECTOR-INSERT-SORT! is in-place, leaving its result in V[start,end).
 
 delndup-lib - list and vector delete neighbor duplicates
     list-delete-neighbor-dups  = lis -> list

@@ -7,7 +7,7 @@
 (define (unstable-sort-test v) ; quick & heap vs simple insert
   (let ((v1 (vector-copy v))
 	(v2 (vector-copy v)))
-    (heap-sort!    < v1)
+    (vector-heap-sort!    < v1)
     (insert-sort!  < v2)
     (and (or (not (equal? v1 v2))
 	     (not (vector-sorted? < v1)))

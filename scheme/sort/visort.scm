@@ -5,26 +5,26 @@
 ;;; Olin Shivers 10/98.
 
 ;;; Exports:
-;;; insert-sort  < v [start end] -> vector
-;;; insert-sort! < v [start end] -> unspecific
+;;; vector-insert-sort  < v [start end] -> vector
+;;; vector-insert-sort! < v [start end] -> unspecific
 ;;;
-;;; %insert-sort! is also called from vqsort.scm's quick-sort function.
+;;; %vector-insert-sort! is also called from vqsort.scm's quick-sort function.
 
-(define (insert-sort elt< v . maybe-start+end)
+(define (vector-insert-sort elt< v . maybe-start+end)
   (call-with-values
    (lambda () (vector-start+end v maybe-start+end))
    (lambda (start end)
     (let ((ans (vector-portion-copy v start end)))
-      (%insert-sort! elt< ans 0 (- end start))
+      (%vector-insert-sort! elt< ans 0 (- end start))
       ans))))
 
-(define (insert-sort! < v . maybe-start+end)
+(define (vector-insert-sort! < v . maybe-start+end)
   (call-with-values
    (lambda () (vector-start+end v maybe-start+end))
    (lambda (start end)
-     (%insert-sort! < v start end))))
+     (%vector-insert-sort! < v start end))))
 
-(define (%insert-sort! elt< v start end)
+(define (%vector-insert-sort! elt< v start end)
   (do ((i (+ 1 start) (+ i 1)))	; Invariant: [start,i) is sorted.
       ((>= i end))
     (let ((val (vector-ref v i)))
@@ -57,17 +57,19 @@
 ;;; This code is tightly bummed as far as I can go in portable Scheme.
 ;;;
 ;;; The code can be converted to use unsafe vector-indexing and
-;;; fixnum-specific arithmetic ops -- the safety checks done on entry to
-;;; INSERT-SORT and INSERT-SORT! are sufficient to guarantee nothing bad will
-;;; happen. However, note that if you alter %INSERT-SORT! to use dangerous
-;;; primitives, you must ensure it is only called from clients that guarantee
-;;; to observe its preconditions. In the SRFI-?? reference implementation,
-;;; %INSERT-SORT! is only called from INSERT-SORT! and the quick-sort code in
-;;; vqsort.scm, and the preconditions are guaranteed for these two clients.
-;;; This should provide *big* speedups. In fact, all the code bumming I've
-;;; done pretty much disappears in the noise unless you have a good compiler
-;;; and also can dump the vector-index checks and generic arithmetic -- so
-;;; I've really just set things up for you to exploit.
+;;; fixnum-specific arithmetic ops -- the safety checks done on entry
+;;; to VECTOR-INSERT-SORT and VECTOR-INSERT-SORT! are sufficient to
+;;; guarantee nothing bad will happen. However, note that if you alter
+;;; %VECTOR-INSERT-SORT! to use dangerous primitives, you must ensure
+;;; it is only called from clients that guarantee to observe its
+;;; preconditions. In the SRFI-?? reference implementation,
+;;; %VECTOR-INSERT-SORT! is only called from VECTOR-INSERT-SORT! and
+;;; the quick-sort code in vqsort.scm, and the preconditions are
+;;; guaranteed for these two clients.  This should provide *big*
+;;; speedups. In fact, all the code bumming I've done pretty much
+;;; disappears in the noise unless you have a good compiler and also
+;;; can dump the vector-index checks and generic arithmetic -- so I've
+;;; really just set things up for you to exploit.
 ;;;
 ;;; If your Scheme has a faster mechanism for handling optional arguments
 ;;; (e.g., Chez), you should definitely port over to it. Note that argument

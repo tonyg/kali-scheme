@@ -10,7 +10,7 @@
 
 (define (list-sort < l)			; Sort lists by converting to
   (let ((v (list->vector l)))		; a vector and sorting that.
-    (heap-sort! < v)
+    (vector-heap-sort! < v)
     (vector->list v)))
 
 (define list-sort! list-merge-sort!)
@@ -18,8 +18,8 @@
 (define list-stable-sort  list-merge-sort)
 (define list-stable-sort! list-merge-sort!)
 
-(define vector-sort  heap-sort)
-(define vector-sort! heap-sort!)
+(define vector-sort  vector-heap-sort)
+(define vector-sort! vector-heap-sort!)
 
 (define vector-stable-sort  vector-merge-sort)
 (define vector-stable-sort! vector-merge-sort!)

@@ -111,7 +111,7 @@
   (begin
     (define (sort-list l obj-<)
       (let ((v (list->vector l)))
-	(heap-sort! obj-< v)
+	(vector-heap-sort! obj-< v)
 	(vector->list v)))
     (define (sort-list! l obj-<)
       (list-merge-sort! obj-< l))))
