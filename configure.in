@@ -149,7 +149,7 @@ dnl POSIX says it's `environ'.
 	     		     AC_MSG_RESULT([using __environ]),
                            dnl Do not have `__environ'
                              AC_MSG_WARN([no environ variable found])
-                             [AC_LIBOBJ([c/fake/environ.o])])
+                             [AC_LIBOBJ([c/fake/environ.o])]))
      AC_MSG_CHECKING([n_name])
      AC_TRY_LINK([#include <nlist.h>],
 		 [struct nlist name_list;
