@@ -77,60 +77,6 @@
 
       lis))
 
-;;; This version tries to share the longest common tail between input & output,
-;;; but it also refuses to push more than 1024 stack frames (which bounds the
-;;; length of the shared suffix, as well). Useful for enormous lists that
-;;; might otherwise blow out your stack. It basically computes 1024-element
-;;; chunks of the answer, and then strings these results together using 
-;;; SET-CDR! to point the last cons cell of each chunk to the first cons cell
-;;; of the following chunk.
-
-(define (list-delete-neighbor-dups = lis)
-  (letrec ((lp (lambda (last-pair xs)
-		 (format #t "lp(last-pair=~a, xs=~a)~%" last-pair xs)
-		 (if (pair? xs)
-		     (let ((x0  (car xs))
-			   (x1+ (cdr xs)))
-		       (receive (chunk last-pair2 xs) (recur xs 2)
-			 (format #t "<-recur: chunk=~a lp=~a xs=~a~%"
-				 chunk last-pair2 xs)
-			 (set-cdr! last-pair chunk)
-			 (lp last-pair2 xs))))))
-
-	   (kill (lambda (xs)
-		   (let ((y (car xs)))
-		     (values y (let lp ((xs (cdr xs)))
-				 (if (pair? xs)
-				     (let ((x0  (car xs))
-					   (x1+ (cdr xs)))
-				       (if (= y x0) (lp x1+) x1+))
-				     '()))))))
-
-	   (recur (lambda (xs n)
-		    (format #t "->recur(xs=~a, n=~a)~%" xs n)
-		    (if (pair? xs)
-			(receive (x0 rest) (kill xs)
-			  (if (pair? rest)
-			      (if (< 1 n)
-				  (receive (c lpr r) (recur rest (- n 1))
-				    (values (cons x0 c) lpr r))
-				  (receive (xn rest) (kill rest)
-				    (let ((lpr (list xn)))
-				      (values (cons x0 lpr) lpr rest))))
-
-			      (values (list x0) '() '())))
-
-			(values '() '() '())))))
-    (if (pair? lis)
-	(let ((x0  (car lis))
-	      (x1+ (cdr lis)))
-	  (receive (chunk last-pair rest) (recur lis 2)
-	    (lp last-pair rest)
-	    chunk))
-	lis)))
-
-
-
 ;;; LIST-DELETE-NEIGHBOR-DUPS!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; This code runs in constant list space, constant stack, and also

@@ -22,7 +22,6 @@
 (define-structure delete-neighbor-duplicates delete-neighbor-duplicates-interface
   (open scheme
 	receiving
-	formats
 	vector-utils)
   (files delndups)
   (optimize auto-integrate))
