@@ -375,10 +375,11 @@
       (let ((win (lambda (skip stack-arg-count)
   		   (if native?
   		       (goto call-native-code skip stack-space)
-  		       (goto run-body code
-			              skip
-				      (closure-template *val*)
-			              stack-space)))))
+		       (let ((template (closure-template *val*)))
+		         (goto run-body (template-code template)
+			       skip
+			       template
+			       stack-space))))))
 	(let ((fixed-match (lambda (wants skip)
 			     (if (= wants total-arg-count)
 				 (begin
@@ -768,7 +769,8 @@
 
 (define (push-list list count)
   (push list)
-  (ensure-stack-space! count)
+  (if (ensure-stack-space! count)	; This needs a better interface.
+      (set-interrupt-flag!))
   (let ((list (pop)))
     (do ((i count (- i 1))
 	 (l list (vm-cdr l)))
