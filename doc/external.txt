@@ -74,7 +74,7 @@ Here is file test.c:
     #include "/usr/local/include/scheme48.h"
     #include <stdio.h>
 
-    scheme_value test ()
+    scheme_value test (argc, argv)
          long argc; scheme_value *argv;
     {
       int i; 

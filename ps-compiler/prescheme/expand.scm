@@ -1,0 +1,58 @@
+; Expanding using the Scheme 48 expander.
+
+(define (scan-and-evaluate scanner)
+  (let ((defines '()))
+    (scanner
+     (lambda (package things)
+       (let ((cenv ((structure-ref packages package->environment) package)))
+	 (for-each (lambda (node)
+		     (cond ((define-node? node)
+			    (set! defines (cons (eval-define (expand node cenv)
+							     cenv)
+						defines)))
+			   ((not (define-syntax-node? node))
+			    (eval-node (expand node cenv)
+				       global-ref global-set! eval-primitive))))
+		   things))))
+    (map (lambda (var)
+	   (let ((value (variable-flag var)))
+	     (set-variable-flag! var #f)
+	     (cons var value)))
+	 defines)))
+
+(define define-node? (node-predicate 'define))
+(define define-syntax-node? (node-predicate 'define-syntax))
+
+(define (eval-define node cenv)
+  (let* ((form (node-form node))
+	 (value (eval-node (caddr form) global-ref global-set! eval-primitive))
+	 (lhs (expand (cadr form) cenv)))
+    (global-set! lhs value)
+    (name->variable-or-value lhs)))
+
+(define (global-ref name)
+  (let ((thing (name->variable-or-value name)))
+    (if (variable? thing)
+	(variable-flag thing)
+	thing)))
+
+(define (global-set! name value)
+  (let ((thing (name->variable-or-value name)))
+    (if (primitive? thing)
+	(bug "trying to set the value of primitive ~S" thing)
+	(set-variable-flag! thing value))))
+
+(define (name->variable-or-value name)
+  (let ((binding (node-ref name 'binding)))
+    (if (binding? binding)
+	(let ((value (binding-place binding)))
+	  (cond ((or (variable? value)
+		     (primitive? value))
+		 value)
+		((and (location? value)
+		      (constant? (contents value)))
+		 (contents value))
+		(else
+		 (bug "global binding is not a variable, primitive or constant ~S" name))))
+	(user-error "unbound variable ~S" (node-form name)))))
+

@@ -1,0 +1,891 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
+
+; Syntactic stuff: transforms and operators.
+
+
+(define usual-operator-type
+  (procedure-type any-arguments-type value-type #f))
+
+; --------------------
+; Operators (= special operators and primitives)
+
+(define-record-type operator :operator
+  (make-operator type nargs uid name)
+  operator?
+  (type operator-type set-operator-type!)
+  (nargs operator-nargs)
+  (uid operator-uid)
+  (name operator-name))
+
+(define-record-discloser :operator
+  (lambda (s)
+    (list 'operator
+	  (operator-name s)
+	  (type->sexp (operator-type s) #t))))
+
+(define (get-operator name . type-option)
+  (let ((type (if (null? type-option) #f (car type-option)))
+	(probe (table-ref operators-table name)))
+    (if (operator? probe)
+	(let ((previous-type (operator-type probe)))
+	  (cond ((not type))
+		((symbol? type)		; 'leaf or 'internal
+		 (if (not (eq? type previous-type))
+		     (warn "operator type inconsistency" name type previous-type)))
+		((subtype? type previous-type)  ;Improvement
+		 (set-operator-type! probe type))
+		((not (subtype? previous-type type))
+		 (warn "operator type inconsistency"
+		       name
+		       (type->sexp previous-type 'foo)
+		       (type->sexp type 'foo))))
+	  probe)
+	(let* ((uid *operator-uid*)
+	       (type (or type usual-operator-type))
+	       (op (make-operator type
+				  (if (and (not (symbol? type))
+					   (fixed-arity-procedure-type? type))
+				      (procedure-type-arity type)
+				      #f)
+				  uid
+				  name)))
+	  (if (>= uid number-of-operators)
+	      (warn "too many operators" (operator-name op) (operator-type op)))
+	  (set! *operator-uid* (+ *operator-uid* 1))
+	  (table-set! operators-table (operator-name op) op)
+	  (vector-set! the-operators uid op)
+	  op))))
+
+(define *operator-uid* 0)
+
+(define operators-table (make-table))
+
+(define number-of-operators 400)  ;Fixed-size limits bad, but speed good
+(define the-operators (make-vector number-of-operators #f))
+
+; --------------------
+; Operator tables (for fast dispatch)
+
+(define (make-operator-table default . mumble-option)
+  (let ((v (make-vector number-of-operators default)))
+    (if (not (null? mumble-option))
+	(define-usual-suspects v (car mumble-option)))
+    v))
+
+(define operator-table-ref vector-ref)
+
+(define (operator-lookup table op)
+  (operator-table-ref table (operator-uid op)))
+
+(define (operator-define! table name proc-or-type . proc-option)
+  (if (null? proc-option)
+      (vector-set! table		;Obsolescent
+		   (operator-uid (if (pair? name)
+				     (get-operator (car name) (cadr name))
+				     (get-operator name)))
+		   proc-or-type)
+      (vector-set! table
+		   (operator-uid (get-operator name proc-or-type))
+		   (car proc-option))))
+
+; --------------------
+; Nodes
+
+; A node is an annotated expression (or definition or other form).
+; The FORM component of a node is an S-expression of the same form as
+; the S-expression representation of the expression.  E.g. for
+; literals, the form is the literal value; for variables the form is
+; the variable name; for IF expressions the form is a 4-element list
+; (ignored test con alt).  Nodes also have a tag identifying what kind
+; of node it is (literal, variable, if, etc.) and a property list.
+
+(define-record-type node :node
+  (really-make-node uid form plist)
+  node?
+  (uid node-operator-id)
+  (form node-form)
+  (plist node-plist set-node-plist!))
+
+(define-record-discloser :node
+  (lambda (n) (list (operator-name (node-operator n)) (node-form n))))
+
+(define (make-node operator form)
+  (really-make-node (operator-uid operator) form '()))
+
+(define (node-ref node key)
+  (let ((probe (assq key (node-plist node))))
+    (if probe (cdr probe) #f)))
+
+(define (node-set! node key value) ;gross
+  (if value
+      (let ((probe (assq key (node-plist node))))
+	(if probe
+	    (set-cdr! probe value)
+	    (set-node-plist! node (cons (cons key value) (node-plist node)))))
+      (let loop ((l (node-plist node)) (prev #f))
+	(cond ((null? l) 'lose)
+	      ((eq? key (caar l))
+	       (if prev
+		   (set-cdr! prev (cdr l))
+		   (set-node-plist! node (cdr l))))
+	      (else (loop (cdr l) l))))))
+
+(define (node-operator node)
+  (vector-ref the-operators (node-operator-id node)))
+
+
+(define (node-predicate name . type-option)
+  (let ((id (operator-uid (apply get-operator name type-option))))
+    (lambda (node)
+      (= (node-operator-id node) id))))
+
+(define (make-similar-node node form)
+  (if (equal? form (node-form node))
+      node
+      (make-node (node-operator node) form)))
+
+; --------------------
+; Generated names
+
+; Generated names make lexically-scoped macros work.  They're the same
+; as what Alan Bawden and Chris Hanson call "aliases".  The parent
+; field is always another name (perhaps generated).  The parent chain
+; provides an access path to the name's binding, should one ever be
+; needed.  That is: If name M is bound to a transform T that generates
+; name G as an alias for name N, then M is (generated-parent-name G),
+; so we can get the binding of G by accessing the binding of N in T's
+; environment of closure, and we get T by looking up M in the
+; environment in which M is *used*.
+
+(define-record-type generated :generated
+  (make-generated symbol token env parent-name)
+  generated?
+  (symbol      generated-symbol)
+  (token       generated-token)
+  (env	       generated-env)
+  (parent-name generated-parent-name))
+
+(define-record-discloser :generated
+  (lambda (name)
+    (list 'generated (generated-symbol name) (generated-uid name))))
+
+(define (generate-name symbol env parent-name)    ;for opt/inline.scm
+  (make-generated symbol (cons #f #f) env parent-name)) ;foo
+
+(define (generated-uid g)
+  (let ((t (generated-token g)))
+    (or (car t)
+	(let ((uid *generated-uid*))
+	  (set! *generated-uid* (+ *generated-uid* 1))
+	  (set-car! t uid)
+	  uid))))
+
+(define *generated-uid* 0)
+
+(define (name->symbol name)
+  (if (symbol? name)
+      name
+      (string->symbol (string-append (symbol->string (generated-symbol name))
+				     "##"
+				     (number->string (generated-uid name))))))
+
+(define (name-hash name)
+  (cond ((symbol? name)
+	 (string-hash (symbol->string name)))
+	((generated? name)
+	 (name-hash (generated-symbol name)))
+	(else (error "invalid name" name))))
+
+(define make-name-table (make-table-maker eq? name-hash))
+
+; Used by QUOTE to turn generated names back into symbols
+
+(define (desyntaxify thing)
+  (cond ((or (boolean? thing) (null? thing) (number? thing)
+	     (symbol? thing) (char? thing))
+	 thing)
+	((string? thing)
+	 (make-immutable! thing))
+	((generated? thing) (desyntaxify (generated-symbol thing)))
+	((pair? thing)
+	 (make-immutable!
+	  (let ((x (desyntaxify (car thing)))
+		(y (desyntaxify (cdr thing))))
+	    (if (and (eq? x (car thing))
+		     (eq? y (cdr thing)))
+		thing
+		(cons x y)))))
+	((vector? thing)
+	 (make-immutable!
+	  (let ((new (make-vector (vector-length thing) #f)))
+	    (let loop ((i 0) (same? #t))
+	      (if (>= i (vector-length thing))
+		  (if same? thing new)
+		  (let ((x (desyntaxify (vector-ref thing i))))
+		    (vector-set! new i x)
+		    (loop (+ i 1)
+			  (and same? (eq? x (vector-ref thing i))))))))))
+	((operator? thing)
+	 (warn "operator in quotation" thing)
+	 (operator-name thing))  ;Foo
+	(else
+	 (warn "invalid datum in quotation" thing)
+	 thing)))
+
+; --------------------
+; Transforms
+
+; A transform represents a source-to-source rewrite rule: either a
+; macro or an in-line procedure.
+
+(define-record-type transform :transform
+  (really-make-transform xformer env type aux-names source id)
+  transform?
+  (xformer   transform-procedure)
+  (env	     transform-env)
+  (type	     transform-type)
+  (aux-names transform-aux-names)
+  (source    transform-source)    ;for reification
+  (id	     transform-id))
+
+(define (make-transform thing env type source id)
+  (let ((type (if (or (pair? type) (symbol? type))
+		  (sexp->type type #t)
+		  type)))
+    (make-immutable!
+     (if (pair? thing)
+	 (really-make-transform (car thing) env type (cdr thing) source id)
+	 (really-make-transform thing env type #f source id)))))
+
+(define-record-discloser :transform
+  (lambda (m) (list 'transform (transform-id m))))
+
+(define (maybe-transform t exp env-of-use)
+  (let* ((token (cons #f #f))
+	 (new-env (bind-aliases token t env-of-use))
+	 (rename (make-name-generator (transform-env t)
+				      token
+				      (node-form (car exp))))
+	 (compare
+	  (lambda (name1 name2)
+	    (or (eqv? name1 name2)
+		(and (name? name1)
+		     (name? name2)
+		     (same-denotation? (lookup new-env name1)
+				       (lookup new-env name2)))))))
+    (values ((transform-procedure t) exp rename compare)
+	    new-env
+	    token)))
+
+(define (bind-aliases token t env-of-use)
+  (let ((env-of-definition (transform-env t)))
+    (if (procedure? env-of-definition)
+	(lambda (name)
+	  (if (and (generated? name)
+		   (eq? (generated-token name) token))
+	      (lookup env-of-definition (generated-symbol name))
+	      (lookup env-of-use name)))
+	env-of-use)))  ;Lose
+
+(define (make-name-generator env token parent-name)
+  (let ((alist '()))			;list of (symbol . generated)
+    (lambda (symbol)
+      (if (symbol? symbol)
+	  (let ((probe (assq symbol alist)))
+	    (if probe
+		(cdr probe)
+		(let ((new-name (make-generated symbol token env parent-name)))
+		  (set! alist (cons (cons symbol new-name)
+				    alist))
+		  new-name)))
+	  (error "non-symbol argument to rename procedure"
+		 symbol parent-name)))))
+
+(define (same-denotation? x y)
+  (or (equal? x y)
+      (and (binding? x)
+	   (binding? y)
+	   (eq? (binding-place x) (binding-place y)))))
+
+
+; --------------------
+; Bindings: the things that are usually returned by LOOKUP.
+
+; Representation is #(type place operator-or-transform-or-#f).
+; For top-level bindings, place is usually a location.
+
+(define binding? vector?)
+(define (binding-type b) (vector-ref b 0))
+(define (binding-place b) (vector-ref b 1))
+(define (binding-static b) (vector-ref b 2))
+
+(define (set-binding-place! b place) (vector-set! b 1 place))
+
+(define (make-binding type place static)
+  (vector type place static))
+
+(define (clobber-binding! b type place static)
+  (vector-set! b 0 type)
+  (if place
+      (set-binding-place! b place))
+  (vector-set! b 2 static))
+
+; Return a binding that's similar to the given one, but has its type
+; replaced with the given type.
+
+(define (impose-type type b integrate?)
+  (if (or (eq? type syntax-type)
+	  (not (binding? b)))
+      b
+      (make-binding (if (eq? type undeclared-type)
+			(let ((type (binding-type b)))
+			  (if (variable-type? type)
+			      (variable-value-type type)
+			      type))
+			type)
+		    (binding-place b)
+		    (if integrate?
+			(binding-static b)
+			#f))))
+
+; Return a binding that's similar to the given one, but has any
+; procedure integration or other unnecesary static information
+; removed.  But don't remove static information for macros (or
+; structures, interfaces, etc.)
+
+(define (forget-integration b)
+  (if (and (binding-static b)
+	   (subtype? (binding-type b) any-values-type))
+      (make-binding (binding-type b)
+		    (binding-place b)
+		    #f)
+      b))
+
+; --------------------
+; Expression classifier.  Returns a node.
+
+(define (classify form env)
+  (cond ((node? form)
+	 (if (and (name-node? form)
+		  (not (node-ref form 'binding)))
+	     (classify-name (node-form form) env)
+	     form))
+	((name? form)
+	 (classify-name form env))
+        ((pair? form)
+	 (let ((op-node (classify (car form) env)))
+	   (if (name-node? op-node)
+	       (let ((probe (node-ref op-node 'binding)))
+		 (if (binding? probe)
+		     (let ((s (binding-static probe)))
+		       (cond ((operator? s)
+			      (classify-operator-form s op-node form env))
+			     ((and (transform? s)
+				   (eq? (binding-type probe) syntax-type))
+			      ;; Non-syntax transforms (i.e. procedure
+			      ;; integrations) get done by MAYBE-TRANSFORM-CALL.
+			      (classify-macro-application
+			               s (cons op-node (cdr form)) env))
+			     (else
+			      (classify-call op-node form env))))
+		     (classify-call op-node form env)))
+	       (classify-call op-node form env))))
+	((literal? form)
+	 (classify-literal form))
+	;; ((qualified? form) ...)
+	(else
+	 (classify (syntax-error "invalid expression" form) env))))
+
+(define call-node? (node-predicate 'call 'internal))
+(define name-node? (node-predicate 'name 'leaf))
+
+(define classify-literal
+  (let ((op (get-operator 'literal 'leaf)))
+    (lambda (exp)
+      (make-node op (make-immutable! exp)))))
+
+(define classify-call
+  (let ((operator/call (get-operator 'call 'internal)))
+    (lambda (proc-node exp env)
+      (if (list? exp)
+	  (make-node operator/call
+		     (if (eq? proc-node (car exp))
+			 exp		;+++
+			 (cons proc-node (cdr exp))))
+	  (classify (syntax-error "invalid expression" exp) env)))))
+
+; An environment is a procedure that takes a name and returns one of
+; the following:
+;
+;  1. A binding record.
+;  2. A node, which is taken to be a substitution for the name.
+;  3. Another name, meaning that the first name is unbound.  The name
+;     returned will be a symbol even if the original name was generated.
+;
+; In case 1, CLASSIFY caches the binding as the node's BINDING property.
+; In case 2, it simply returns the node.
+
+(define (classify-name name env)
+  (let ((binding (lookup env name)))
+    (if (node? binding)
+	binding
+	(let ((node (make-node operator/name name)))
+	  (if (not (unbound? binding))
+	      (node-set! node 'binding binding))
+	  node))))
+
+(define operator/name (get-operator 'name 'leaf))
+
+; Expand a macro or in-line procedure application.
+
+(define (classify-macro-application t form env-of-use)
+  (classify-transform-application
+       t form env-of-use
+       (lambda () 
+	 (classify (syntax-error "use of macro doesn't match definition"
+				 (cons (schemify (car form) env-of-use)
+				       (desyntaxify (cdr form))))
+		   env-of-use))))
+
+
+(define classify-transform-application
+  (let ((operator/with-aliases (get-operator 'with-aliases syntax-type)))
+    (lambda (t form env-of-use lose)
+      (call-with-values (lambda () (maybe-transform t form env-of-use))
+	(lambda (new-form new-env token)
+	  (cond ((eq? new-form form)
+		 (lose))
+		((eq? new-env env-of-use)
+		 (classify new-form new-env))
+		(else
+		 (make-node operator/with-aliases
+			    `(with-aliases ,(car form)
+					   ,token
+					   ,new-form)))))))))
+
+(define (maybe-transform-call proc-node node env)
+  (if (name-node? proc-node)
+      (let ((b (or (node-ref proc-node 'binding)
+		   (lookup env (node-form proc-node)))))
+	(if (binding? b)
+	    (let ((s (binding-static b)))
+	      (cond ((transform? s)
+		     (classify-transform-application s
+						     (node-form node)
+						     env
+						     (lambda () node)))
+		    ;; ((operator? s) (make-node s (node-form node)))
+		    (else node)))
+	    node))
+      node))
+
+
+; --------------------
+; Specialist classifiers for particular operators
+
+(define (classify-operator-form op op-node form env)
+  ((operator-table-ref classifiers (operator-uid op))
+   op op-node form env))
+
+(define classifiers
+  (make-operator-table (lambda (op op-node form env)
+			 (if (let ((nargs (operator-nargs op)))
+			       (or (not nargs)
+				   (and (list? (cdr form))
+					(= nargs (length (cdr form))))))
+			     (make-node op (cons op-node (cdr form)))
+			     (classify-call op-node form env)))))
+
+(define (define-classifier name proc)
+  (operator-define! classifiers name syntax-type proc))
+
+; Remove generated names from quotations.
+
+(define-classifier 'quote
+  (lambda (op op-node exp env)
+    (if (this-long? exp 2)
+	(make-node op (list op-node (desyntaxify (cadr exp))))
+	(classify (syntax-error "invalid expression" exp) env))))
+
+; Convert one-armed IF to two-armed IF.
+
+(define-classifier 'if
+  (lambda (op op-node exp env)
+    (cond ((this-long? exp 3)
+	   (make-node op
+		      (cons op-node
+			    (append (cdr exp) (list (unspecific-node))))))
+	  ((this-long? exp 4)
+	   (make-node op
+		      (cons op-node (cdr exp))))
+	  (else
+	   (classify (syntax-error "invalid expression" exp) env)))))
+
+(define unspecific-node
+  (let ((op (get-operator 'unspecific
+			  (proc () unspecific-type))))
+    (lambda ()
+      (make-node op '(unspecific)))))
+
+; Rewrite (define (name . vars) body ...)
+;  as (define foo (lambda vars body ...)).
+
+(define-classifier 'define
+  (let ((operator/lambda (get-operator 'lambda syntax-type))
+	(operator/unassigned (get-operator 'unassigned 
+					   (proc () value-type)))) ;foo
+    (lambda (op op-node form env)
+      (if (null? (cdr form))
+	  (classify (syntax-error "invalid expression" form) env)
+	  (let ((pat (cadr form)))
+	    (make-node op
+		       (cons op-node
+			     (if (pair? pat)
+				 (list (car pat)
+				       (make-node operator/lambda
+						  `(lambda ,(cdr pat)
+						     ,@(cddr form))))
+				 (list pat
+				       (if (null? (cddr form))
+					   (make-node operator/unassigned
+						      `(unassigned))
+					   (caddr form)))))))))))
+
+;(define (make-define-node op op-node lhs rhs)
+;  (make-node op (list op-node lhs rhs)))
+
+(define define-node? (node-predicate 'define))
+(define define-syntax-node? (node-predicate 'define-syntax syntax-type))
+
+
+; For the module system:
+
+(define-classifier 'structure-ref
+  (lambda (op op-node form env)
+    (let ((struct-node (classify (cadr form) env))
+	  (lose (lambda ()
+		  (classify (syntax-error "invalid structure reference" form)
+			    env))))
+      (if (and (this-long? form 3)
+	       (name? (caddr form))
+	       (name-node? struct-node))
+	  (let ((b (node-ref struct-node 'binding)))
+	    (if (and (binding? b) (binding-static b)) ; (structure? ...)
+		(classify (generate-name (desyntaxify (caddr form))
+					 (binding-static b)
+					 (node-form struct-node))
+			  env)
+		(lose)))
+	  (lose)))))
+
+; Scheme 48 internal special form principally for use by the
+; DEFINE-STRUCTURES macro.
+
+(define-classifier '%file-name%
+  (let ((operator/quote (get-operator 'quote syntax-type)))
+    (lambda (op op-node form env)
+      (make-node operator/quote
+               `',(get-funny env funny-name/source-file-name)))))
+
+(define funny-name/source-file-name
+  (string->symbol ".source-file-name."))
+
+(define (bind-source-file-name filename env)
+  (if filename
+      (bind1 funny-name/source-file-name
+	     (make-binding syntax-type #f filename)
+	     env)
+      env))
+
+; Checking the syntax of others special forms
+
+(define-classifier 'lambda
+  (lambda (op op-node exp env)
+    (if (and (at-least-this-long? exp 3)
+	     (names? (cadr exp)))
+	(make-node op (cons op-node (cdr exp)))
+	(classify (syntax-error "invalid expression" exp) env))))
+
+(define (names? l)
+  (or (null? l)
+      (name? l)
+      (and (pair? l)
+	   (name? (car l))
+	   (names? (cdr l)))))
+
+(define-classifier 'set!
+  (lambda (op op-node exp env)
+    (if (and (this-long? exp 3)
+	     (name? (cadr exp)))
+	(make-node op (cons op-node (cdr exp)))
+	(classify (syntax-error "invalid expression" exp) env))))
+
+(define-classifier 'letrec
+  (lambda (op op-node exp env)
+    (if (and (at-least-this-long? exp 3)
+	     (specs? (cadr exp)))
+	(make-node op (cons op-node (cdr exp)))
+	(classify (syntax-error "invalid expression" exp) env))))
+
+; Syntax checking utilities
+
+(define (this-long? l n)
+  (cond ((null? l)
+	 (= n 0))
+	((pair? l)
+	 (this-long? (cdr l) (- n 1)))
+	(else
+	 #f)))
+
+(define (at-least-this-long? l n)
+  (cond ((null? l)
+	 (<= n 0))
+	((pair? l)
+	 (at-least-this-long? (cdr l) (- n 1)))
+	(else
+	 #f)))
+
+(define (specs? x)
+  (or (null? x)
+      (and (pair? x)
+	   (let ((s (car x)))
+	     (and (pair? s)
+		  (name? (car s))
+		  (pair? (cdr s))
+		  (null? (cddr s))))
+	   (specs? (cdr x)))))
+
+; --------------------
+; Environments
+
+(define (lookup env name)
+  (env name))
+
+(define (bind1 name binding env)
+  (lambda (a-name)
+    (if (eq? a-name name)
+	binding
+	(lookup env a-name))))
+
+; corollary
+
+(define (bind names bindings env)
+  (cond ((null? names) env)
+	(else
+	 (bind1 (car names)
+		(car bindings)
+		(bind (cdr names) (cdr bindings) env)))))
+
+(define (bindrec names env->bindings env)
+  (set! env (bind names
+		  (env->bindings (lambda (a-name) (env a-name)))
+		  env))
+  env)
+
+
+; --------------------
+; Utilities
+
+(define (literal? exp)
+  (or (number? exp) (char? exp) (string? exp) (boolean? exp)))
+
+(define (number-of-required-args formals)
+  (do ((l formals (cdr l))
+       (i 0 (+ i 1)))
+      ((not (pair? l)) i)))
+
+(define (n-ary? formals)
+  (cond ((null? formals) #f)
+	((pair? formals) (n-ary? (cdr formals)))
+	(else #t)))
+
+(define (normalize-formals formals)
+  (cond ((null? formals) '())
+        ((pair? formals)
+	 (cons (car formals) (normalize-formals (cdr formals))))
+        (else (list formals))))
+
+
+(define (syntax? d)
+  (cond ((operator? d)
+	 (eq? (operator-type d) syntax-type))
+	((transform? d)
+	 (eq? (transform-type d) syntax-type))
+	(else #f)))
+
+(define (name? thing)
+  (or (symbol? thing)
+      (generated? thing)))
+
+(define unbound? name?)
+
+
+; --------------------
+; LET-SYNTAX and friends
+
+(define (define-usual-suspects table mumble)
+
+  (operator-define! table 'let-syntax syntax-type
+    (mumble (lambda (node env)
+	      (let* ((form (node-form node))
+		     (specs (cadr form)))
+		(values (cddr form)
+			(bind (map car specs)
+			      (map (lambda (spec)
+				     (make-binding syntax-type
+						   (list 'let-syntax)
+						   (process-syntax (cadr spec)
+								   env
+								   (car spec)
+								   env)))
+				   specs)
+			      env))))))
+
+  (operator-define! table 'letrec-syntax syntax-type
+    (mumble (lambda (node env)
+	      (let* ((form (node-form node))
+		     (specs (cadr form)))
+		(values (cddr form)
+			(bindrec (map car specs)
+				 (lambda (new-env)
+				   (map (lambda (spec)
+					  (make-binding
+					     syntax-type
+					     (list 'letrec-syntax)
+					     (process-syntax (cadr spec)
+							     new-env
+							     (car spec)
+							     new-env)))
+					specs))
+				 env))))))
+
+  (operator-define! table 'with-aliases syntax-type
+    (mumble (lambda (node env)
+	      (let ((form (node-form node)))
+		(values (cdddr form)
+			(bind-aliases (caddr form)
+				      (binding-static
+				           (node-ref (cadr form) 'binding))
+				      env)))))))
+
+(define (process-syntax form env name env-or-whatever)
+  (let ((eval+env (force (reflective-tower env))))
+    (make-transform ((car eval+env) form (cdr eval+env))
+		    env-or-whatever syntax-type form name)))
+
+(define (get-funny env name)
+  (let ((binding (lookup env name)))
+    (if (binding? binding)
+	(binding-static binding)
+	#f)))
+
+; An environment's "reflective tower" is a promise that is expected to
+; deliver, when forced, a pair (eval . env).
+
+(define funny-name/reflective-tower
+  (string->symbol ".reflective-tower."))
+
+(define (reflective-tower env)
+  (or (get-funny env funny-name/reflective-tower)
+      (error "environment has no environment for syntax" env)))
+
+
+; --------------------
+; The horror of internal defines
+
+; The continuation argument to SCAN-BODY takes two arguments: a list
+; of definition nodes, and a list of other things (nodes and
+; expressions).
+
+(define (scan-body forms env cont)
+  (if (or (null? forms)
+	  (null? (cdr forms)))
+      (cont '() forms)			;+++ tiny compiler speedup?
+      (scan-body-forms forms env '()
+		       (lambda (defs exps env)
+			 (cont defs exps)))))
+
+(define (scan-body-forms forms env defs cont)
+  (if (null? forms)
+      (cont defs '() env)
+      (let ((node (classify (car forms) env))
+	    (forms (cdr forms)))
+	(cond ((define-node? node)
+	       (scan-body-forms forms
+				(let ((name (cadr (node-form node))))
+				  (bind1 name
+					 ;; Shadow, and don't cache lookup
+					 (make-node operator/name name)
+					 env))
+				(cons node defs)
+				cont))
+	      ((begin-node? node)
+	       (scan-body-forms (cdr (node-form node))
+				env
+				defs
+				(lambda (new-defs exps env)
+				  (cond ((null? exps)
+					 (scan-body-forms forms
+							  env
+							  new-defs
+							  cont))
+					((eq? new-defs defs)
+					 (cont defs
+					       (append exps forms)
+					       env))
+					(else (body-lossage node env))))))
+	      (else
+	       (cont defs (cons node forms) env))))))
+
+(define (body-lossage node env)
+  (syntax-error "definitions and expressions intermixed"
+		(schemify node env)))
+
+
+(define begin-node? (node-predicate 'begin syntax-type))
+
+; --------------------
+; Variable types
+
+(define (variable-type type)
+  (list 'variable type))
+
+(define (variable-type? type)
+  (and (pair? type) (eq? (car type) 'variable)))
+(define variable-value-type cadr)
+
+; Used in two places:
+; 1. GET-LOCATION checks to see if the context of use (either variable
+;    reference or assignment) is compatible with the declared type.
+; 2. CHECK-STRUCTURE checks to see if the reconstructed type is compatible
+;    with any type declared in the interface.
+
+(define (compatible-types? have-type want-type)
+  (if (variable-type? want-type)
+      (and (variable-type? have-type)
+	   (same-type? (variable-value-type have-type)
+		       (variable-value-type want-type)))
+      (meet? (if (variable-type? have-type)
+		 (variable-value-type have-type)
+		 have-type)
+	     want-type)))
+
+
+; Usual type for Scheme variables.
+
+(define usual-variable-type (variable-type value-type))
+
+
+(define undeclared-type ':undeclared)    ;cf. really-export macro
+
+
+; Associate a reader (parser) with an environment.
+
+(define funny-name/reader (string->symbol ".reader."))
+
+;(define (set-package-reader! p reader)
+;  (package-define-funny! p funny-name/reader reader))
+
+(define (environment-reader env)
+  (or (get-funny env funny-name/reader) read))

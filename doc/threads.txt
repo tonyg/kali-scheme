@@ -1,113 +1,87 @@
 
 			       Threads
 
-
 The following are exported by the THREADS structure.
 
-(WITH-MULTITASKING thunk)
-  Initializes for multitasking, then starts up a thread for the execution
-  of <thunk>.  That thread and all others created will run in the dynamic
-  context of the call to with-multitasking.  The call to with-multitasking
-  finally returns only when the scheduler runs out of things to do.
-
-(SPAWN thunk) => thread
-  Create and schedule a new thread that will execute <thunk>.
-
-(MAKE-LOCK) => lock
-(WITH-LOCK lock thunk) => whatever <thunk> returns
-(OBTAIN-LOCK lock)
-(RELEASE-LOCK lock)
-  Locks are semaphores.
-
-(MAKE-CONDVAR) => condvar
-(CONDVAR-REF condvar) => value of condvar
-(CONDVAR-SET! condvar value)
-  Condition variables.  Attempts to reference a condition variable before
-  it has been set cause the referencing thread to block.  Setting a
-  condition variable to two different values is an error.
+(SPAWN thunk)
+(SPAWN thunk name)
+  Create and schedule a new thread that will execute <thunk>.  The optional
+  name is used when printing the thread.
 
 (RELINQUISH-TIMESLICE)
   Let other threads run for a while.
 
-ONE-SECOND
-  The number of time units in one second.
-
 (SLEEP time)
-  Sleep for <time> time units.
+  Sleep for <time> milliseconds.
 
-(TIME) => integer
-  The current time in time units.
-
-(WITH-INTERRUPTS-INHIBITED thunk) => whatever <thunk> returns
-(WITH-INTERRUPTS-ALLOWED thunk) => whatever <thunk> returns
-  Execute the thunk with or without interrupts.  Interrupts are normally
-  enabled.
-
-(THREAD-READ-CHAR port) => character or EOF
-(THREAD-PEEK-CHAR port) => character or EOF
-(READ-CHAR-WITH-TIMEOUT port time) => character or EOF or 'TIMEOUT
-  Read and peek for characters letting other threads run util a character
-  is available.  READ-CHAR-WITH-TIMEOUT will return the symbol TIMEOUT if
-  <time> time units go by without a character being available.
+(TERMINATE-CURRENT-THREAD)
+  Kill the current thread.
 
 (THREAD? thing)
   #T if thing is a thread, #F otherwise.
 
------
-
-Debugging utilities:
-
-(CURRENT-THREAD)
-(TERMINATE-CURRENT-THREAD)
-(KILL-THREAD thread)
-(START-THREAD thread)
-(STOP-THREAD thread)
-
-
-(INTERRUPT-THREAD thread thunk)
-  Interrupt <thread> and make it execute <thunk> before continuing.
-
-(ACTIVE-THREADS)
-  Returns a list containing all currently active threads.
-
-(KILL-CONDVAR condvar)
-  Kill all threads waiting for <condvar>.
-
+(THREAD-NAME thread)
+(THREAD-UID thread)
+  For printing debugging information.
 
 -----
 
-The following is exported by the MORE-THREADS structure.
+The following are exported by the LOCKS structure.
 
-(START-THREADS)
-  Restart the command processor underneath a (WITH-MULTITASKING ...).
+(MAKE-LOCK) => lock
+(OBTAIN-LOCK lock)
+(RELEASE-LOCK lock)
+  Locks are semaphores.
 
-    > ,open threads more-threads
-    [more-threads ...]
-    > (start-threads)
-    Multitasking started
-    > (define (foo) (sleep one-second) (display "Hi") (newline) (foo))
-    > (define th (spawn foo))
-    > th
-    Hi
-    '#{Thread 1}
-    > (let loop () (loop))
-    Hi
-    Hi
-    Hi
-    Hi
+-----
 
+The following are exported by the PLACEHOLDERS structure.
+
+(MAKE-PLACEHOLDER) => placeholder
+(PLACEHOLDER-VALUE placeholder) => value of placeholder
+(PLACEHOLDER-SET! placeholder value)
+(PLACEHOLDER? thing) => #t or #f
+  Attempts to reference a placeholder before it has been set cause the
+  referencing thread to block.  Setting a placeholder to two different
+  values is an error.  (Previous versions of Scheme 48 called these
+  `condition variables', which turn out to be somewhat different.)
+
+-----
+
+Threads and the command interpreter.
+
+Each level of the command interpreter has its own set of active
+threads.  Moving to a new level, for example when an error occurs,
+halts all threads belonging to the previous level.  Resuming the
+a level causes its associated threads to continue running.
+
+The ,threads command inspects the threads running in the stopped
+command level.
+
+
+    > ,open threads
+    > (define (foo) (sleep 1000) (display "Hi") (newline) (foo))
+    > (spawn foo 'my-thread)
+    > Hi
+    (begin (sleep 10000) (display "Done") (newline))
+    Hi
+    
     Interrupt: keyboard
-    1> 
-    > th
+    1> (sleep 5000)
+    ; note that the Hi thread doesn't run in this command level
+    1> ,proceed 0
     Hi
-    '#{Thread 1}
-    > (kill-thread th)
-    #t
-    > th
-    '#{Thread 1}
-    > 
-
------
-
-Original by RK, 18 Nov 1993.
-Sample transcript added by JAR, 5 Dec 1993.
+    ; but it resumes when we resume this level
+    Hi
+    Done
+    > Hi
+    Hi
+    Hi
+    
+    Interrupt: keyboard
+    1> ,threads
+    '(#{Thread 28 my-thread} #{Thread 27 command-loop})
+    
+     [0] '#{Thread 28 my-thread}
+     [1] '#{Thread 27 command-loop}
+    inspect: 

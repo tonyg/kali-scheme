@@ -133,10 +133,10 @@ Queues
 (MAKE-QUEUE) => <queue>
   Returns a new, empty queue.
 
-(ENQUEUE <queue> <x>) => <undefined>
+(ENQUEUE! <queue> <x>) => <undefined>
   Puts <x> on the queue.
 
-(DEQUEUE <queue>) => <x>
+(DEQUEUE! <queue>) => <x>
   Removes and returns the first element of the queue.
 
 (QUEUE-EMPTY? <queue>) => <boolean>
@@ -160,7 +160,7 @@ Queues
 Little utility procedures
 
 (ATOM? <any>)          => <boolean>
-(ATOM? x) == (NOT (PAIR? x))
+  (ATOM? x) == (NOT (PAIR? x))
 
 (NULL-LIST? <list>)    => <boolean>
   Returns #t for the empty list, #f for a pair, and signals an error
@@ -303,12 +303,6 @@ Printing and related procedures
   specified.  <position> is the starting offset.  <thing> will be
   pretty-printed to the right of this column.
 
------
-
-I couldn't bear to document DEFINE-RECORD-TYPE.
-
-
------
 
 Original by RK, 26 Jan 1993.
 Minor changes by JAR, 5 Dec 1993.

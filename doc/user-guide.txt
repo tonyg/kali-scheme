@@ -126,11 +126,12 @@ Command levels:
   If an errors occurs, you are put in a command loop at the dynamic
   point at which the error occurred.  The prompt will then be "n >"
   where n is the command level nesting depth.
-
- <eof>
-    To pop out one level (running any dynamic-wind "after" thunks),
-    send an end-of-file (usually control-D at a Unix shell or using
-    the Emacs "cmuscheme48" library).
+  
+ <eof> 
+    Pop out one level (running any dynamic-wind "after" thunks), and
+    resumes running all non-broken threads.  EOF after a keyboard
+    interrupt resumes running the interrupted thread.  <eof> is usually
+    control-D at a Unix shell or using the Emacs "cmuscheme48" library.
 
  ,reset                              top level
     Unwind all the way back out to top level.
@@ -147,6 +148,9 @@ Debugging commands:
  ,preview
     Sort of like a backtrace, but because of tail recursion you see
     less than you might in debuggers for some other languages.
+
+ ,threads
+    Invoke the inspector on the threads running on the next level out.
 
  ,proceed <exp> ...
     Proceed after an interrupt or error, delivering the values of <exp>
@@ -244,6 +248,9 @@ Otherwise the argument should be ON or OFF.
     Scheme.  Let me know (jar@ai.mit.edu) if you like it; otherwise it
     might get flushed.
 
+    Each level has its own set of threads, so pushing a new level stops
+    all threads running at the current level.
+    
  ,break-on-warnings [on | off | ?]
     When a warning is produced, enter a new command level, just as
     when an error occurs.
@@ -317,7 +324,7 @@ comes to us courtesy of Olin Shivers, formerly of CMU.  You might want
 to put the following in your emacs init file (.emacs):
 
     (setq scheme-program-name "scheme48")
-    (autoload 'run-scheme  "cmuscheme" "Run an inferior Scheme process." t)
+    (autoload 'run-scheme  "cmuscheme48" "Run an inferior Scheme process." t)
 
 To make the autoload and (require ...) forms work, you will also need
 to put the directory containing cmuscheme and related files in your
@@ -325,7 +332,7 @@ emacs load-path:
 
     (setq load-path (append load-path '("<scheme-48-directory>/emacs")))
 
-For further documentation see emacs/cmuscheme.el and emacs/comint.el.
+For further documentation see emacs/cmuscheme48.el and emacs/comint.el.
 
 -----
 
@@ -491,13 +498,38 @@ bitwise
     Bitwise logical operators.  See doc/big-scheme.txt.
 
 conditions
-    Condition system: DEFINE-CONDITION-PREDICATE and routines for
-    examining condition objects.  (See also handle, signals.)
+    Part of the condition system: DEFINE-CONDITION-PREDICATE and
+    routines for examining condition objects.  (See also handle,
+    signals.)
 
 define-record-types
-    A define-record-type macro, providing more concise use of the
+    A DEFINE-RECORD-TYPE macro, providing a concise front end to the
     record package.  (Richard and Jonathan favor different
-    define-record-type macros; this one is Jonathan's.)
+    record type defining macros; this one is Jonathan's.)
+
+    The general syntax is:
+      (define-record-type <tag> <type-name>
+        (<constructor-name> <field-tag>*)
+	<predicate-name>
+	(<field-tag> <accessor-name> [<modifier-name>])*)
+
+    Example:
+      (define-record-type pare :pare
+        (kons x y)
+	pare?
+	(x kar set-kar!)
+	(y kdr))
+    This defines KONS to be a constructor, KAR and KDR to be
+    accessors, SET-KAR! to be a modifier, and PARE? to be a predicate
+    for a new type of object.  The type itself is named :PARE.
+    PARE is a tag used in printing the new objects.
+    The field tags X and Y are used in the inspector and to match
+    constructor arguments with fields.
+
+    By default, the new objects print as #{Pare}.  The print method
+    can be modified using DEFINE-RECORD-DISCLOSER:
+      (define-record-discloser :pare
+        (lambda (p) `(pare ,(kar p) ,(kdr p))))
 
 defpackage
     The module system: DEFINE-STRUCTURE and DEFINE-INTERFACE.
@@ -505,7 +537,7 @@ defpackage
 defrecord
     A define-record-type macro, providing more concise use of the
     record package.  (Richard and Jonathan favor different
-    define-record-type macros; this one is Richard's.)
+    record type defining macros; this one is Richard's.)
 
 destructuring
     DESTRUCTURE macro.  See doc/big-scheme.txt.
@@ -549,13 +581,23 @@ floatnums
 
 fluids
     Dynamically bound "variables."
-      (MAKE-FLUID top-level-value) => fluid
-      (FLUID fluid) => value
-      (SET-FLUID! fluid value) => unspecific
+      (MAKE-FLUID top-level-value) => a "fluid" object
+      (FLUID fluid) => current value of fluid object
+      (SET-FLUID! fluid value) => unspecific; changes current value of
+        fluid object
       (LET-FLUID fluid value thunk) => whatever thunk returns
+        Within the dynamic extent of execution of (thunk), the fluid
+        object has value as its binding (unless changed by SET-FLUID!
+        or overridden by another LET-FLUID).
+    E.g.
+      (define f (make-fluid 7))
+      (define (baz) (+ (fluid f) 1))
+      (baz)   ;=> 8
+      (let-fluid f 4 (lambda () (+ (baz) 1)))  ;=> 6
 
 formats
     A simple FORMAT procedure, similar to Common Lisp's or T's.
+    See doc/big-scheme.txt for documentation.
 
 general-tables
     An extended version of TABLES; supports tables keyed by strings.
@@ -563,7 +605,7 @@ general-tables
 
 handle
     Part of the condition system.
-      (WITH-HANDLER handler thunk) => whatever thunk returns
+      (WITH-HANDLER handler thunk) => whatever thunk returns.
         handler is a procedure of two arguments.  The first argument
 	is a condition object, and the second is a "punt" procedure.
 	The handler should examine the condition object (using ERROR?,
@@ -612,7 +654,7 @@ random
 
 receiving
     Convenient interface to the call-with-values procedure, like
-    Common Lisp's multiple-value-bind macro.
+    Common Lisp's multiple-value-bind macro.  See doc/big-scheme.txt.
 
 records
     MAKE-RECORD-TYPE and friends.  See the Scheme of Things column in
@@ -645,15 +687,7 @@ sockets
 
 tables
     Hashed association tables.  Keys are compared using EQ?.
-        
-        (MAKE-TABLE [hash-function]) => table
-	  Default hash function accepts symbols and integers.
-        (TABLE-REF table key) => entry
-	(TABLE-SET! table key entry) => unspecific
-	(TABLE? thing) => boolean
-	(TABLE-WALK proc table) => unspecific
-	  Proc should take two arguments, a key and the ocrresponding
-	  entry.
+    See doc/big-scheme.txt.
 
 threads
     Multitasking.  See doc/threads.txt.

@@ -7,16 +7,20 @@ dnl The -cckr (K&R) flag is for the IRIX C compiler.  If this is left
 dnl out, scheme48vm.c breaks because the rather pedantic SGI compiler
 dnl decides that a char is not the same thing as an unsigned char.
 dnl - Bryan O'Sullivan 3/94
+dnl Note, this test didn't work correctly on Sun's which take -cckr as a
+dnl synonym for -c. (HCC)
 define(S48_CFLAG_CKR, [dnl
-echo checking ${CC} for -cckr
-if test ${CC} != gcc; then
-  echo "main(){int i=1;}" > conftest.c
-  if CFLAGS="-cckr ${CFLAGS}" eval $compile
-  then
-    CFLAGS=$CFLAGS
-  fi
-fi
-rm -f conftest*
+	if test "z$GCC" = z; then
+		AC_MSG_CHECKING([-cckr])
+		oldCFLAGS="$CFLAGS"
+		CFLAGS="$CFLAGS -cckr"
+		AC_TRY_RUN([int main() { return 0;}],
+			[AC_MSG_RESULT(yes)],
+			[AC_MSG_RESULT(no)
+				CFLAGS="$oldCFLAGS"],
+			[AC_MSG_RESULT(no)
+				CFLAGS="$oldCFLAGS"])
+	fi
 ])dnl
 dnl
 define(S48_POSIX_LIBC, [dnl
@@ -26,40 +30,98 @@ if test -f /usr/posix/usr/lib/libc.a; then
 fi
 ])dnl
 dnl
-define(S48_CFLAG_O2, [dnl
-if test "z$CFLAGS" = "z"
-  then if test "z$GCC" = "z"
-    then CFLAGS="-O"
-    else CFLAGS="-O2 -g"; fi; fi
+dnl Run AC_PROG_CC, but don't accept it's changes to CFLAGS.
+dnl For some insane reason, it sets CFLAGS to either `-O' or `-g -O' for gcc.
+dnl I don't want the silly -g (because if you are using nlist, you can't strip
+dnl the binary), I want -O2 for gcc and -O for other C compilers.
+define(S48_PROG_CC, [dnl
+	oldCFLAGS="$CFLAGS"
+	AC_PROG_CC
+	if test "z$oldCFLAGS" = z; then
+		if test "z$GCC" = z; then
+			CFLAGS='-O'
+		else
+			CFLAGS='-O2'
+		fi
+	fi
 ])dnl
 dnl
-AC_INIT(scheme48vm.c)
-     AC_CONFIG_HEADER(sysdep.h)
-     AC_PROG_CC
-     S48_CFLAG_CKR
+dnl Linux/ELF systems need the -rdynamic flag when linking so that
+dnl dlsym() can find symbols in the executable.
+dnl Note, on some Sun's, you can link with -rdynamic but the resulting
+dnl a.out always core dumps.
+define(S48_RDYNAMIC, [dnl
+	AC_MSG_CHECKING([link with -rdynamic])
+	AC_TRY_COMPILE([],
+[#if defined(__linux__) && defined(__ELF__)
+	this must not compile
+#endif],
+		[AC_MSG_RESULT(no)],
+		[AC_MSG_RESULT(yes)
+			LDFLAGS="$LDFLAGS -rdynamic"])
+])dnl
+dnl
+define(S48_USCORE, [dnl
+	AC_MSG_CHECKING([underscore before symbols])
+	echo 'main() { return 0; } fnord() {}' >conftest.c
+	if ${CC} ${CFLAGS} ${CPPFLAGS} ${LDFLAGS} conftest.c ${LIBS} &&
+	nm a.out | grep _fnord >/dev/null; then
+		AC_MSG_RESULT([yes])
+		AC_DEFINE(USCORE)
+	else
+		AC_MSG_RESULT([no])
+	fi
+	rm -f conftest.c a.out
+])dnl
+dnl
+AC_INIT(c/scheme48vm.c)
+     AC_CONFIG_HEADER(c/sysdep.h)
+     S48_PROG_CC
      AC_ISC_POSIX
+     dnl set the cross-compile flag before we try anything.
+     AC_TRY_RUN([int main() { return 0;}], [], [], [true])
+     S48_CFLAG_CKR
      AC_PROG_INSTALL
-     AC_HAVE_LIBRARY(m, [LIBS="$LIBS -lm"])
-     AC_HAVE_LIBRARY(dl, [LIBS="$LIBS -ldl"])
-     AC_HAVE_LIBRARY(mld, [LIBS="$LIBS -lmld"])
-     AC_HAVE_LIBRARY(nsl, [LIBS="$LIBS -lnsl"])
-     AC_HAVE_LIBRARY(gen, [LIBS="$LIBS -lgen"])
-     AC_HAVE_LIBRARY(socket, [LIBS="$LIBS -lsocket"])
+     AC_CHECK_LIB(m, main)
+     AC_CHECK_LIB(dl, main)
+     AC_CHECK_LIB(mld, main)
+     AC_CHECK_LIB(nsl, main)
+     AC_CHECK_LIB(gen, main)
+     AC_CHECK_LIB(socket, main)
+     AC_CHECK_LIB(sun, getpwnam)
      dnl Solaris 2.3 seems to need -lelf for nlist().  (tnx Bryan O'Sullivan)
-     AC_HAVE_LIBRARY(elf, [LIBS="$LIBS -lelf"])
+     AC_CHECK_LIB(elf, main)
      S48_POSIX_LIBC
      AC_CONST
      AC_RETSIGTYPE
-     AC_HAVE_HEADERS(libgen.h sys/timeb.h posix/time.h)
-     AC_HAVE_FUNCS(dlopen gettimeofday ftime nlist select setitimer sigaction)
-     AC_HAVE_FUNCS(socket chroot)
-     AC_COMPILE_CHECK([n_name], [#include <nlist.h>], 
-				[struct nlist name_list;
-				 name_list.n_name = "foo";],
-				AC_DEFINE(NLIST_HAS_N_NAME))
-     AC_COMPILE_CHECK([_cnt], [#include <stdio.h>], 
-			      [return stdin->_cnt;],
-			      AC_DEFINE(FILE_HAS__CNT))
-     S48_CFLAG_O2
+     AC_CHECK_HEADERS(libgen.h sys/timeb.h posix/time.h)
+     AC_CHECK_HEADERS(sys/select.h)
+     AC_CHECK_FUNCS(dlopen gettimeofday ftime nlist select setitimer sigaction)
+     AC_CHECK_FUNCS(socket chroot)
+     AC_CHECK_FUNC(strerror, AC_DEFINE(HAVE_STRERROR),
+			      [LIBOBJS="$LIBOBJS c/fake/strerror.o"])
+     AC_MSG_CHECKING([n_name])
+     AC_TRY_LINK([#include <nlist.h>],
+		 [struct nlist name_list;
+		  name_list.n_name = "foo";],
+		 AC_DEFINE(NLIST_HAS_N_NAME)
+		 AC_MSG_RESULT([yes]),
+		 AC_MSG_RESULT([no]))
+     AC_MSG_CHECKING([__NEXT__])
+     AC_TRY_LINK(,[
+#ifdef	__NeXT__
+return 0;
+#else
+fail
+#endif
+],
+		CC="$CC -posix"
+		AC_DEFINE(HAVE_SIGACTION)
+		AC_MSG_RESULT([yes]),
+		AC_MSG_RESULT([no]))
+     S48_USCORE
+     S48_RDYNAMIC
      AC_SUBST(CFLAGS)
+     AC_SUBST(LIBOBJS)
+     AC_SUBST(LDFLAGS)
 AC_OUTPUT(Makefile)

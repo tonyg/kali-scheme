@@ -1,0 +1,582 @@
+-*- Mode: Indented-text; -*-
+
+Recent changes to Scheme 48.
+
+8/23/96	 (version 0.45)
+	 Fixed various problems with thread termination and nested schedulers.
+	 Changed thread-internal interface to make schedulers easier to write.
+	 BITWISE-{AND,IOR,XOR} now take an arbitrary number of arguments.
+	 Output ports have their buffers flushed when Scheme 48 terminates.
+	 In keeping with RnRS, CLOSE-{IN,OUT}PUT-PORT are now idempotent.
+	 MODULO is now handles negative arguments properly.
+
+6/20/96  (version 0.44)
+	 The VM's byte-code interpreter and storage management code are
+	  now compiled to separate C files.
+	 The socket code works again.
+
+5/10/96  (version 0.42-0.43)
+	 Various fixes to the thread and I/O systems.
+	 The Unix interface code is more portable.
+         EOF (control-D) now resumes running all non-broken threads on
+	  resumed command level.  Thus EOF after a keyboard interrupt
+	  (control-C) resumes running the interrupted thread.
+	 
+11/30/95 (version 0.41)
+         The distribution has been reorganized to reduce the number of files
+	  in the top-level directory.
+	 The threads implementation has been replaced with one based on engines
+	  to allow for nested schedulers.
+         Threads are now included in the initial image.
+         The I/O system has been fixed and automatic periodic output buffer
+	  flushing has been reinstalled.
+	 Command levels have been integrated with the threads system to ensure
+          that at most one REPL is active at any time.
+	 CONDVAR has been changed to PLACEHOLDER (condition variables being
+	  something quite different).
+	 ,profile no longer works, it will be fixed in a later version.
+         MIN and MAX now do inexact contagion.
+
+4/13/95  (version 0.40)
+	 Renamed error-output-port to current-error-port.
+	 Reinstated ".gdbinit"...
+	 segment->template now takes parent templates debug data as an
+	   argument.
+	 Automatic periodic output buffer flushing has been
+	   temporarily disabled.  A future version of the I/O system
+	   will fix it.
+	 Fixed expansion of named LET.
+	 The bummed-define-record-types structure is now gone; use
+	   define-record-types instead.
+	 There is somewhat better syntax checking now.
+
+8/12/94  (versions 0.38-0.39)
+         ,profile <command> prints out profiling information
+         An interrupt is raised after ever GC; the default handler checks
+           to see if some reasonable amount of storage was reclaimed.
+         Some of the standard Scheme procedures, including LENGTH, FOR-EACH,
+           VECTOR, and ASSQ, are now significantly faster.
+	 Making, accessing, and setting records is faster.
+         tar file now includes the top-level directory
+         The "scheme-level-2-internal" structure has been renamed to
+           "usual-resumer".
+         ` ( . ' is now illegal (as required by the R4RS grammar).
+	 Made DELAY and FORCE comply with R4RS.
+         The EXPAND optimizer does a topological sort on definitions.
+         (optimize flat-environments) causes the compiler to produce
+           flat (instead of nested) lexical environments.
+         The I/O system has been rewritten to do its own buffering.  There
+           are significant changes to unix.c to support this.  See doc/io.txt.
+         (ERROR-OUTPUT) is now available from the structure i/o.
+	 jar-defrecord has been replaced with a modified bummed-jar-defrecord
+         Files load about 25% faster, for a number of reasons.
+	 Removed the copy of vm/arch.scm from the rts directory.
+	 Threads and sockets work together; SOCKET-ACCEPT no longer blocks.
+         The compiler no longer prints out .'s as it compiles definitions.
+
+7/5/94   (version 0.37)
+         I/O opcodes now raise an interrupt instead of blocking (they still
+           block if no corresponding interrupt handler has been installed).
+         The threads code has been rewritten; threads that block on I/O
+           do not busy wait and THREAD-READ-CHAR and THREAD-PEEK-CHAR have
+           been removed.
+         Attempting to obtain a lock twice or to release an unowned lock
+           now signal errors.
+	 READ-CHAR-WITH-TIMEOUT returns #F if the timeout occurs.
+         The socket structure is back in more-packages.scm.
+         Renamed .gdbinit to gdbinit
+	 tar file now contains a top-level directory
+
+3/22/94  (version 0.36)
+         Removed doc/lsc.ps for copyright reasons.
+         Fixed (* 47123 46039) multiply bug.
+         Modified vm/README to make it easier to run the VM.
+
+3/16/94  (version 0.35)
+	 Fixed (exact->inexact 0.1) -> 0..1. bug.
+         Fixed VM bug that permitted the creation of stored objects with
+	   negative sizes.
+
+3/8/94   (version 0.34)
+	 "make check" target tests out various features.
+	 Fixes for SGI IRIX 4.0.5 and MIPS RISC/OS 4.51, courtesy
+	   Bryan O'Sullivan.
+	 debug/run.scm and the "medium system" work again now.
+	 misc/static.scm should work on the 68000.
+	 Command processor no longer fluid-binds (interaction-environment)
+	   on recursive entry.
+
+2/24/94  (version 0.33)
+	 Fixed bug in VM's interrupt system.
+	 Made non-local srcdir work in Makefile.
+	 Added (load-package 'bigbit) to vm/README.
+
+2/23/94  (version 0.32)
+	 Some incompatible changes to the VM; .image files will have
+	   to be rebuilt.
+	 Improvements to configuration script and to unix.c to support
+	   a wider variety of Unixes.  The system should now work
+	   under any Posix-compliant Unix (except maybe for
+	   char-ready?; see comments in unix.c).
+	 Upped the default heap size from 4 meg (2 per semispace) to 6
+	   meg (3 per semispace).
+	 New command line argument -s <size> for specifying size of
+	   stack buffer.  Default is 2500 (words).
+         $@ -> "$@" in script (thanks to Paul Stodghill for this fix).
+	 Obscure interrupt/exception VM bug fixed.
+	 It is now possible to put an initial heap image into static
+	   memory (effectively allocated by OS process creation).
+	   Immutable initial objects go into static read-only memory,
+	   and mutable initial objects go into static read-write
+	   memory.  Initial objects not copied by the GC.  There is no
+	   documentation yet, but look at the rules for little and
+	   debug/little.o in the Makefile if you're interested.
+
+2/13/94  (version 0.31)
+	 Incompatible changes:
+	   In interfaces, all exported syntactic keywords must be
+	     given type :syntax.  For example,
+	       (define-interface my-macros
+	         (export (my-macro :syntax) ...))
+	   Image entry procedures for the ,build command are now
+	     passed a list of strings, not just a single string, for
+	     the command line arguments following -a.
+	   The names of the macros defined in scheme48.h
+	     (pairp, car, string_length, etc.) are now all upper case.
+	 New "configure" script generates Makefile from Makefile.in
+	   and sysdep.h from sysdep.h.in (thanks to Gnu autoconf).
+	   See INSTALL and doc/install.txt.
+	 Bug fixes:
+           Can now make vectors (strings, etc.) as big as the amount
+             of heap space available (but you're still screwed if you
+             try to make one bigger than 2^23-1 bytes - don't do it).
+	   Non-ANSI-ness fixed in scheme48vm.c (jump out of, then
+	     back into, a block expected block-local variables to be
+	     unchanged).
+	   Fixed big/external.scm (had VECTOR-POSQ instead of ENUM).
+	   In (define-syntax foo bar) you got an error if bar was a
+	     variable reference.
+	   Plugged a storage leak (file-environments table in
+	     env/debug.scm).  Images made with ,build were too large.
+	   Flushed extraneous delay from make-reflective-tower.
+	 Renamed variables in Makefile to resemble Gnu standards.
+	 Fixed definition of LINKER_RUNNABLE in Makefile.
+	 Added doc/call-back.txt.
+	 Fixed define-enumerated documentation (doc/big-scheme.txt).
+	 Environment maps no longer retained for things in initial.image
+	   and scheme48.image.  This makes scheme48.image about 170K
+	   smaller.
+
+2/3/94   (version 0.30)
+	 Faster EXPT.
+	 FLOATNUMS improvement: (inexact->exact <float>) should now
+	   work, e.g. 
+           (inexact->exact (/ 1. 3.)) => 6004799503160661/18014398509481984
+         Reinstated ACCESS-SCHEME-48 for the benefit of PSD (portable
+           scheme debugger) and a certain other software package that
+           shall remain nameless.  It only knows about a small number of
+           procedures, including things like ERROR and FORCE-OUTPUT.
+         Various changes to support the Pre-Scheme compiler, notably
+	   SET-REFLECTIVE-TOWER-MAKER!.
+	 Incompatible change to the ENUMERATED structure: the names
+	   foo/bar no longer become defined.  Write (enum foo bar)
+	   instead.  This will macro expand into the correct small
+	   integer.
+
+1/30/94  (version 0.29)
+	 Fixed ps_run_time() to call sysconf() to find out how many
+	   ticks there are per second.  It used to assume 60.  This
+	   affects the output of the ,time command, so don't try
+	   comparing numbers from this version with numbers from older
+	   versions.
+	 ,time command will now accept a command, e.g.
+	   ,time ,load foo.scm.
+	 It appears that if multiple arguments follow -a on the
+	   argument line, they are concatenated together with spaces
+	   separating them and passed to the startup procedure.  I
+	   don't know how long this has worked.  This will change in
+	   the future so that the startup procedure gets a list of
+	   strings.
+	 Installed what used to be called the GENERAL-TABLES structure
+	   as the TABLES structure used by the system.  This allows
+	   the use of other comparison predicates besides EQ?, and
+	   eliminates some code that had a restrictive copyright
+	   notice.
+         ENUM, NAME->ENUMERAND, and ENUMERAND->NAME are all macros.
+         Enumerated types themselves are now macros as well.
+
+1/23/94  Fixed bad multiplication bug in VM: (* 214760876 10) was
+	   returning 125112.
+	 Moved RECORD-TYPE? and RECORD-TYPE-FIELD-NAMES from the
+	   RECORDS-INTERNAL interface to the RECORDS interface, for
+	   a somewhat closer approximation to MIT Scheme.
+         Various type system improvements.
+	 Still no documentation for the ,exec package, but see
+	   link/load-linker.exec for an example.
+	 New generic function feature, exported by the METHODS
+	   interface (see interfaces.scm), almost like in a certain
+	   dynamic object-oriented language.
+
+1/11/94  (version 0.27)
+	 Change:
+	   The isomorphism used by CHAR->INTEGER and INTEGER->CHAR is
+	     no longer ASCII.  This change was introduced in order to
+	     assist the development of portable programs.  If you need
+	     ASCII encoding, you should open the ASCII structure and
+	     use the procedures CHAR->ASCII and ASCII->CHAR.
+         Features:
+	   The help system is somewhat improved.
+	   New form DEFINE-STRUCTURE defines a single structure.
+	 Incompatible changes to package system:
+	   Renamed DEFINE-PACKAGE to DEFINE-STRUCTURES
+	   Renamed DEFINE-STRUCTURE to DEFINE
+	   Renamed all the base types from FOO to :FOO.  E.g.
+	     :SYNTAX, :VALUE, :PAIR, etc.
+         Other:
+	   Removed socket support due to restrictive copyright on some
+	     of the C code that was in extension.c.
+
+12/21/93 ,take has been flushed in favor of ,exec ,load.  Commands are
+	   now accessed via a distinguished package instead of a table.
+	   Documentation pending.
+         Postscript (.ps) files now included in doc/ subdirectory.  (I
+           thought they had been there all along, but apparently I was
+           wrong.)
+         Enhanced, but still kludgey, floating point support.  Use
+	   ,open floatnum.
+
+12/12/93 (version 0.26)
+	 NetBSD port.
+	 Hacked write-level and write-depth for inspecting circular
+	   structure.
+	 Recursive FORCEs signal errors, e.g.
+	   (force (letrec ((loser (delay (force loser)))) loser))
+
+12/7/93 (version 0.25)
+         Bug fix:
+	   filenames.make can now be remade using initial.image.  This
+	     means that you can snarf a distribution and then edit
+	     USUAL-FEATURES before making scheme48.image.
+
+
+12/6/93  Incompatible changes:
+	   Change of terminology: "signature" --> "interface".
+	     This means that DEFINE-SIGNATURE is now called
+	     DEFINE-INTERFACE, etc.
+           Some structures have been renamed:
+	     condition -> conditions
+	     continuation -> continuations
+	     exception -> exceptions
+	     queue -> queues
+	     port -> ports
+	     record -> records, record-internal -> records-internal
+	     table -> tables
+	     template -> templates
+	   The ,load-into command has been removed.  Use ,in ... ,load
+	     instead (see below), e.g.
+	       ,in mumble ,load myfile.scm
+           The heap size for -h is specified in words, not bytes.  As
+	     before, the size must account for both semispaces; -h 2n
+	     means n words per semispace.  This change was actually
+	     made a while ago, but I was confused as to what it meant.
+         Bug fixes:
+	   #e1.7 reads as 17/10, (exact? 1+1.0i) => #f, and 1.0+i prints.
+         Features:
+	   Things like ((structure-ref scheme if) 1 2 3) work.
+	   The following commands now take arbitrary commands to execute
+	     in the specified package, not just forms:
+	       ,config   ,user   ,for-syntax   ,in <package>
+             For example, you can say
+	       ,in mumble ,trace foo
+             This subsumes the functionality of the ,load-into and
+	     ,load-config commands.
+           Dynamic loading of shared libraries for System V systems
+	     (untested).
+         Documentation:
+	   Somewhat improved.  user-guide.txt now lists most of the
+	   interesting built-in packages.  lsc.ps is a draft of "A
+	   Tractable Scheme Implementation," a paper submitted to Lisp
+	   and Symbolic Computation.  See also doc/big-scheme.txt,
+	   doc/thread.txt, and doc/external.txt.
+
+
+10/30/93 LET-SYNTAX and LETREC-SYNTAX.
+	 Arrays (see big/array.scm).
+	 Lots of internal changes.
+
+7/20/93  Features:
+	   Type system.  See doc/types.txt.
+
+7/4/93   Features:
+           New define-package clause (for-syntax <clause>*).
+	     E.g. (define-package ((my-package ...))
+		    (open ...)
+		    (for-syntax (open scheme my-utilities)
+			        (files more-crud-for-syntax))
+                    ...)
+           A file name to package map is now used by the emacs
+	     interface.  Whenever you load a file, or zap from a file that
+	     hasn't been previously loaded or zapped, the package in
+	     which forms are being evaluated is remembered in a table.
+	     The next time you zap some forms from the same file, they
+	     will be evaluated in that package.
+	     Sometimes you may get an association you don't want.  In that
+	     situation, you can use the ,forget command to delete an
+	     entry in the table.
+           A new ,push command goes to a deeper command level.
+	   Experimental "command preferred" command processor mode: if
+	     you give the command ",form-preferred off", commands will
+	     be "preferred" to forms, meaning that you don't need to
+	     type a comma before giving a command.  To see the value
+	     of a variable FOO you have to say (begin foo).
+           Experimental "no levels" command processor mode: if you
+	     give the command ",levels off", then an error will not
+	     push a new command level.  If you want to ignore an
+	     error, you don't need to take any action - further
+	     evaluations will happen at top level.  If you want to
+	     enter the inspector or get a preview, you can issue these
+	     commands or a ,push command immediately after the error
+	     occurs (more precisely, any time until the focus object
+	     is set by some other command).
+	   All of the mode-control commands (batch, bench,
+	     break-on-warnings, form-preferred, and levels) take
+	     an optional argument.  When no argument is given, they
+	     will toggle the corresponding mode.  With an argument of
+	     ON or OFF, they turn the mode on or off.
+           The ,flush and ,keep commands have been made more flexible
+	     and verbose.
+
+
+6/18/93  Incompatible changes:
+	   The access-scheme48 procedure has gone away.  Use ,open
+	     or the module system instead.
+           The user, configuration, and for-syntax packages no longer
+	     have variables bound to them in the configuration package.
+	     Where previously you said:       Now you should say:
+	      ,in user <form>                  ,user <form>
+	      ,in config <form>                ,config <form>
+	      ,in for-syntax <form>            ,for-syntax <form>
+	      ,load-into config <file>         ,load-config <file>
+	      ,load-into for-syntax <file>     ,for-syntax (load "file")
+
+	 Features:
+           There is an ,expand <form> command for debugging macros.
+	   The ,open  command takes any number of structure names, and opens
+	     them all (like ,new-package).
+	   New procedure DEFINE-INDENTATION exported by the PP structure.
+	     E.g. (define-indentation 'let-fluid 1) is like Gnu emacs's
+	     (put 'let-fluid 'scheme-indent-hook 1).
+           The inspector simplifies generated names in continuation
+	     source code display.  E.g. when formerly it said
+	       "Waiting for (#{Generated lambda} () (x->node (car exps)))"
+	     now it says 
+	       "Waiting for (lambda () (x->node (car exps)))"
+           Macros can signal syntax errors by returning input expression
+	     unchanged.  (Comparison uses EQ?.)
+
+         Documentation:
+	   The doc/ directory contains a draft of a "Scheme 48
+	     Progress Report."
+
+         Cleanup:
+	   Procedure NULL-TERMINATE added to structure EXTERNALS's
+	     signature.
+	   "Vulgar Scheme" renamed to "Big Scheme".
+	   Two new subdirectories, env/ (for programming environment)
+	     and big/ (for Big Scheme), now contain most of what was
+	     in the misc/ directory.
+           Several source files that were in the top level and link/
+	     directories have moved to the env/ and alt/ directories.
+
+
+5/6/93   Bug fixes:
+	   Fixed -h command line switch.  The size was being improperly
+	     divided by 4, so if you asked for an N megabyte heap, you'd
+	     actually only get an N/4 megabyte heap.
+	   Nested backquotes were broken for a while; should be fixed
+	     now.
+
+         Features:
+	   Quoted structure is read-only: e.g. (set-car! '(a b) 3) will
+	     produce an exception.
+	   ,config [<form>] and ,user [<form>] are like ,in <struct> <form>.
+	   Unix socket support; see misc/socket.scm.
+	   Now using gzip instead of compress for distributions.
+	   ,open command offers to load packages.
+	   A .gdbinit file sets a breakpoint at CM's exception raising
+	     code, and defines a handy "preview" command.
+
+1/18/93  Feature:
+           Scheme 48 distributions now have version numbers.  The
+	     version number is printed in the image startup message.
+	     Please include it in bug reports.
+         The module system is now documented.  See doc/module.tex.
+
+12/17/92 Bug fixes:
+           Macro templates of the form (x ... y) are supported.
+	   Macro templates are now less fussy about meta-variable
+	     rank: you can do "(x y) ..." even when the rank of either
+	     x or y (but not both) is too low; the low-ranking text
+	     will be copied as many times as necessary.  (A
+	     meta-variable's "rank" is the number of ...'s it sits
+	     under in the left-hand side of the rewrite rule.)
+	   SYNTAX-RULES is now itself hygienic.  This means you can
+	     have a meta-variable named CAR, for instance.
+
+         New development environment features:
+	   Commands now start with comma (",") instead of colon
+	     (":").  (Easier to type since it's not shifted.)
+	   values, call-with-values, dynamic-wind, eval,
+	     interaction-environment, and scheme-report-environment
+	     added per upcoming Revised^5 Scheme report.  See
+	     doc/meeting.tex.
+	   Modifications to quoted structure will now be detected and
+	     reported as errors.
+	   An interrupt will occur if an insufficient amount of memory
+	     is reclaimed by a garbage collection.
+	   Inspector now accepts arbitrary command processor commands
+	     (with or without leading comma)
+           ,keep command controls retention of debugging information.
+
+	 Features removed:
+	   #\page and #\tab.  These aren't in the Scheme report.
+	     Their absence in Scheme 48 will encourage portability.
+	   access-scheme48 works with fewer names than before.  Use the
+	     package system instead.
+           Complex numbers not in the system, by default.  Get them
+	     back by changing usual-features in more-packages.scm.
+
+	 Features changed:
+	   Many changes to package system.  See doc/module.tex.
+           The :identify-image command is gone.  Instead, supply a
+	     second argument (optional) to the ,dump command.
+	   The inspector's TEM command has been shortened to T.
+
+         Internal changes and features:
+	   Stored objects types are now part of the virtual machine
+	     architecture, i.e. known to the byte-code compiler.
+	   Run-time system is split up into many little modules.
+	   File names are retained in debug database.  (But not used for
+	     anything yet...)
+	   Tweaks to table package reduce standard image size by 50K
+	     and increase compiler speed by 7%.
+	   Immutability bit in object headers.
+	   Weak pointers.
+
+7/18/92  Features removed:
+	   Table package's default hash function no longer supports
+	     string, pairs, or vectors.
+
+7/9/92   Bug fixes:
+	   (- 0 -536870912)
+	   Inspector now uses command i/o ports instead of current ones
+	   Inexact integers print as N. instead of #iN
+	   Throwing back into a call-with-....put-port now produces a
+	     warning instead of an error
+
+	 Feature fixes:
+	   In DEFINE-PACKAGE, OPEN no longer implies ACCESS.
+	   misc/receive.scm renamed to rts/values.scm, made to conform
+	     with Revised^5 Report, and installed internally.
+
+	 Features:
+	   New :load-package command.  Uses file names in (file ...) clause
+	     of a define-package.  These are interpreted relative to the
+	     directory in which the file containing the define-package
+	     was found.
+	   #\tab and #\page now print this way.
+
+
+6/17/92  Bug fixes:
+	   Fixed bug in modulo.
+	   Flushed LAST-PAIR (which disappeared between R^3 and R^4).
+	   DEFINE-SYNTAX and SYNTAX-RULES now exist.
+	   CEILING, FLOOR, and ROUND now exist.
+	   GCD and LCM are now n-ary.
+	   STRING-CI=? and STRING-COPY fixed.
+	   STRING->SYMBOL now copies its argument before handing it to
+	     INTERN.
+	   =, <, etc. now work with more than two arguments.
+	   CHAR-READY? exists.
+	   Calls via APPLY are now tail-recursive.
+	   DISPLAY of vectors and lists works (ugh).
+
+	 Development environment improvements:
+	   Type ? at inspector to get list of inspector commands.
+	   Inspector D command goes to next continuation.
+	   Inspector M command shows more of a long menu.
+	   Inspector TEM command goes to a continuation's or closure's
+	     template.
+	   For closures and continuations, inspector displays local
+	     variables with their names. 
+	   For continuations, inspector displays source code for
+	     expression into which control will return.
+	   Multiple command loop levels.  EOF (control-D) now only pops
+	     out a single level.  :reset pops all the way out.  :level n
+	     goes out to level n.
+	   Can disable benchmark mode.
+	   Procedures made with (let ((f (lambda ...))) ...) now print
+	     with names.
+
+	 Features:
+	   Package system: special forms define-package and package-ref;
+	     command processor commands :set-package, :load-into,
+	     :clear-package, :new-package, :export, :open-package, etc.
+	   In misc directory: threads, queues, extended ports, format, etc.
+
+	 Changes to system environment:
+	   user-initial-environment -> user-package
+	   record-updator -> record-modifier
+	   primitive-throw superseded by with-continuation
+	   ash -> arithmetic-shift
+	   New bootstrap regime.
+	   Support for threads: alarm clock interrupt, etc.
+
+	 Etc.:
+	   Liberal COPYRIGHT file, and a little notice in each source file.
+	   INSTALL and NEWS split off from README.
+	   doc.txt renamed to user-guide.txt.
+	   The Makefile now provides two ways to make "s48" for
+	     installation.  One depends on the exec #! script execution
+	     feature and the other doesn't.
+	   "make" targets for testsys.image and little.image.
+	   Runs Jaffer's test suite and library.
+	   Flushed s48.el.  Use cmuscheme instead.
+
+
+9/5/90   Command processor argument parser revamped.
+	 :load, :trace, and :untrace commands take arbitrary number
+	   of arguments.  Argument to :proceed is optional.
+	 New (but undocumented) :identify-image command.
+	 Better error messages: wrong number of arguments, undefined
+	   variable.
+	 +, *, min, max, apply are now n-ary; -, /, make-string,
+	   make-vector, read-char, peek-char, write-char have
+	   appropriate argument optionality.
+	 Better internal support for macros; not yet ready for release.
+	 Added STRING as per R^3.99RS.
+	 More testing of Scheme version of bytecode interpreter.
+	 Better scoping of ##; files can't see command processor context.
+	 OR and CASE don't cons closures.
+	 VM checks for non-existent heap image file, gives error
+	   message instead of "bus error".
+	 Numerous internal changes in compiler and exception system.
+	 Fixed char<?.
+	 Fixed -.5 bug in string->number.
+
+8/26/90  Tested (link-system) inside of T; seems to work.
+	 Benchmark mode available via :BENCH command.
+	 System is 15K bigger due to new fatter global environment
+	   representations.
+	 Inspector abbreviation improved.
+	 Disassembler now works on continuations, sort of.
+
+7/26/90  ((lambda ...) ...) no longer makes a closure
+	 Features now in default system:
+	    :inspect
+	    :dis[assemble]
+	    Generic arithmetic: bignums, rationals, complexes
+	    rationalize
+	    :time command is more verbose
+	 MOREFILES variable in Makefile for loading extra stuff
+	 Default heap size increased to 2 megabytes per semispace
