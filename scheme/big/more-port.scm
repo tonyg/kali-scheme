@@ -313,81 +313,52 @@
 ;                          [<close-thunk>]])
 
 (define (byte-source->input-port source . more)
-  (make-unbuffered-input-port byte-source-input-port-handler
-			      (make-source-data source
-						(if (null? more)
-						    (lambda () #t)
-						    (car more))
-						(if (or (null? more)
-							(null? (cdr more)))
-						    values
-						    (cadr more))
-						#f)))
-
-; These are a bit of a mess.  We have to keep a one-byte buffer to make
-; peek-byte work.
+  (make-buffered-input-port byte-source-input-port-handler
+			    (make-source-data source
+					      (if (null? more)
+						  (lambda () #t)
+						  (car more))
+					      (if (or (null? more)
+						      (null? (cdr more)))
+						  values
+						  (cadr more)))
+			    (make-byte-vector 128 0)
+			    0
+			    0))
 
 (define-record-type source-data :source-data
-  (make-source-data source ready? close buffer)
+  (make-source-data source ready? close)
   source-data?
   (source source-data-source)
-  (close source-data-close)
   (ready? source-data-ready?)
-  (buffer source-data-buffer set-source-data-buffer!))
+  (close source-data-close))
 
 (define byte-source-input-port-handler
-  (make-port-handler
+  (make-buffered-input-port-handler
    (lambda (proc)
      (list 'byte-source-input-port))
    (lambda (port)
      (make-input-port-closed! port)
      ((source-data-close (port-data port))))
-   (lambda (port read?)
-     (byte-source-read-byte port (port-data port) read?))
-   (lambda (port mode)
-     'lose) ; ####
-   (lambda (port buffer start count wait?)
-     (if (or (= count 0)
-	     (port-pending-eof? port))
-	 0
-	 (byte-source-read-block port (port-data port) buffer start count)))
+   (lambda (port wait?)
+     (let ((buffer (port-buffer port))
+	   (data (port-data port))
+	   (limit (provisional-port-limit port)))
+       (let ((got
+	      (byte-source-read-block port data
+				      buffer
+				      limit
+				      (- (byte-vector-length buffer) limit))))
+	 (if (not (eof-object? got))
+	     (provisional-set-port-limit! port (+ limit got)))
+	 (maybe-commit))))
    (lambda (port)
-     (if (or (port-pending-eof? port)
-	     (source-data-buffer (port-data port)))
+     (if (port-pending-eof? port)
 	 #t
-	 ((source-data-ready? (port-data port)))))
-   #f))				; force
-
-; EOF and peeked bytes are held in separate places so we have to check
-; both.  
-
-(define (byte-source-read-byte port data read?)   
-  (cond ((port-pending-eof? port)
-	 (if read?
-	     (set-port-pending-eof?! port #t))
-	 (eof-object))
-	((source-data-buffer data)
-	 => (lambda (byte)
-	      (if read?
-		  (set-source-data-buffer! data #f))
-	      byte))
-	(else
-	 (let ((byte ((source-data-source data))))
-	   (if (not read?)
-	       (if (eof-object? byte)
-		   (set-port-pending-eof?! port #t)
-		   (set-source-data-buffer! data byte)))
-	   byte))))
-
-; Put any buffered in first and then get the rest from the source.
+	 ((source-data-ready? (port-data port)))))))
 
 (define (byte-source-read-block port data buffer start count)
-  (let loop ((i (if (source-data-buffer data)
-		    (let ((byte (source-data-buffer data)))
-		      (byte-vector-set! buffer start byte)
-		      (set-source-data-buffer! data #f)
-		      1)
-		    0)))
+  (let loop ((i 0))
     (if (= i count)
 	count
 	(let ((next ((source-data-source data))))
@@ -395,7 +366,7 @@
 		 (if (= 0 i)
 		     (eof-object)
 		     (begin
-		       (set-port-pending-eof?! port #t)
+		       (provisional-set-port-pending-eof?! port #t)
 		       i)))
 		(else
 		 (byte-vector-set! buffer (+ start i) next)

@@ -69,7 +69,7 @@
 	finite-types
 	sockets
 	(subset i/o (read-byte))
-	(subset i/o-internal (open-input-port?))
+	(subset i/o-internal (open-input-port? eof-object))
 	sicp)
   (begin
 
@@ -194,6 +194,39 @@
 	(let ((res (list (current-row p1) (current-column p1))))
 	  (close-input-port p1)
 	  (cons (open-input-port? p1) res))))
+
+(let ()
+  (define (list-from-to n)
+    (let loop ((i 0)
+	       (r '()))
+	     
+      (if (>= i n)
+	  (reverse r)
+	  (loop (+ 1 i) (cons (modulo i 256) r)))))
+
+  (define (bytes->byte-source bytes)
+    (lambda ()
+      (if (null? bytes)
+	  (eof-object)
+	  (let ((byte (car bytes)))
+	    (set! bytes (cdr bytes))
+	    byte))))
+
+
+
+  (define (port->byte-list port)
+    (let loop ((r '()))
+      (let ((thing (read-byte port)))
+	(if (eof-object? thing)
+	    (reverse r)
+	    (loop (cons thing r))))))
+
+  (let* ((l (list-from-to 9000))
+	 (byte-source (bytes->byte-source l)))
+    (test "byte-sink input ports"
+	  equal?
+	  l
+	  (port->byte-list (byte-source->input-port byte-source)))))
 
 (test "fancy output ports" equal? '(1 4 "8
    9")
