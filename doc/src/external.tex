@@ -252,7 +252,7 @@ These expand into
 (define temp (lookup-imported-binding \cvar{c-name}))
 (define \cvar{name}
   (lambda (\cvar{formal} \ldots)
-    (external-apply temp \cvar{formal} \ldots)))
+    (call-imported-binding temp \cvar{formal} \ldots)))
 \end{example}
 
 \noindent{}
