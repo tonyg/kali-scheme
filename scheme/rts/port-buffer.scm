@@ -331,6 +331,10 @@
 
 ; Write out anything in the buffer.  When called by the auto-forcing code
 ; this may run across the occasional closed port.
+;
+; This loops by calling LOSE if the buffer-emptier's commit fails (in which
+; case the emptier returns false) or if we are trying to empty the entire
+; buffer (indicated by NECESSARY? being true).
 
 (define (make-forcer buffer-emptier!)
   (lambda (port necessary?)
@@ -343,8 +347,10 @@
 	     (unspecific))
 	    ((< 0 (provisional-port-index port))
 	     (set-port-flushed?! port #t)
-	     (buffer-emptier! port necessary?)
-	     (lose))))))
+	     (if (or (not (buffer-emptier! port necessary?))
+		     necessary?)
+		 (lose)))))))
+
 
 ;----------------
 
