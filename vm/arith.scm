@@ -33,6 +33,7 @@
 	 (c (+ lo-c (ashl mid-c half-word-size))))
     (cond ((or (and (> hi-a 0) (> hi-b 0))
 	       (too-big-for-fixnum? lo-c)
+	       (> 0 lo-c)
 	       (> mid-c max-middle))
 	   (goto fail x y))
 	  (positive-result?

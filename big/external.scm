@@ -124,5 +124,3 @@
      (table-walk (lambda (name external)
 		   (external-lookup external))
 		 *the-external-table*))))
-
-

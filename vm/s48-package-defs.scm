@@ -1,5 +1,6 @@
 
-(define-structures ((pre-scheme pre-scheme-interface))
+(define-structures ((pre-scheme pre-scheme-interface)
+		    (memory-debug (export reinitialize-memory)))
   (open scheme code-vectors bitwise ascii primitives signals)
   (files prescheme ps-memory))
 

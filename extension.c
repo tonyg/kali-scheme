@@ -5,12 +5,6 @@
    optional; nothing in the standard system uses these features.
    If you have ANSI C but not POSIX support, try compiling with -DPOSIX=0.
 
-   If you want to add features, please send mail to
-   scheme-48-request@martigny.ai.mit.edu to obtain a range of unique
-   keys for your own use.  Specify how many cases you will need.  This
-   will ensure that these numbers won't be allocated for some
-   different purpose in a future release of Scheme 48.
-
    fdopen: POSIX.1
    getenv: POSIX.1, ANSI C
    setuid, setgid: POSIX.1

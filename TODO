@@ -112,6 +112,10 @@ VM:
     Make the number predicate instructions return #t when appropriate
       for the built-in number stored object types (bignum, double,
       ratnum).
+    Make the Unix standard error stream available as
+      (error-output-port)
+    FIND-ALL-X-RECORDS that finds all records with a particular value
+      in their first slot.
 
 Documentation:
     Olin's "cig" (C interface generator).

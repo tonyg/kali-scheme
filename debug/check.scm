@@ -39,6 +39,7 @@
 
 (test "* 1" = 6 (* 1 2 3))
 (test "* 2" = (* 214760876 10) 2147608760)
+(test "* 3" = (* 47123 46039) 2169495797)
 (test "apply" equal? '(1 2 3 4) (apply list 1 2 '(3 4)))
 (test "char<->integer" eq? #\a (integer->char (char->integer #\a)))
 (test "lap" equal? #f ((lap #f (false) (return))))

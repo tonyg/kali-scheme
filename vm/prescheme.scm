@@ -40,6 +40,9 @@
 (define (null-port? x)
   #f) ; no null-ports in Scheme
 
+(define (call-external-value proc nargs pointer-to-args)
+  (error "~S" (list 'call-external-value proc nargs pointer-to-args)))
+
 (define-syntax external
   (lambda (exp rename compare)
     (error "(EXTERNAL ...) can only be compiled" exp)))

@@ -2,6 +2,11 @@
 
 Recent changes to Scheme 48.
 
+3/22/94  (version 0.36)
+         Removed doc/lsc.ps for copyright reasons.
+         Fixed (* 47123 46039) multiply bug.
+         Modified vm/README to make it easier to run the VM.
+
 3/16/94  (version 0.35)
 	 Fixed (exact->inexact 0.1) -> 0..1. bug.
          Fixed VM bug that permitted the creation of stored objects with
