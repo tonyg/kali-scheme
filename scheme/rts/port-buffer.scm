@@ -392,7 +392,25 @@
 		       (buffer-emptier! port #t)
 		       (lose))
 		      (else		; encoding error
-		       'lose)))))
+		       ;; We inline this instead of looping or something to avoid
+		       ;; the overhead.  Not that anyone has measured it.
+		       (call-with-values
+			   (lambda ()
+			     (encode-char #\?
+					  (port-buffer port)
+					  index (- limit index)))
+			 (lambda (ok? encode-count)
+			   (cond
+			    (ok?
+			     (provisional-set-port-index! port (+ index encode-count))
+			     (or (maybe-commit)
+				 (lose)))
+			    (encode-count ; need more space
+			     (set-port-flushed?! port #t)
+			     (buffer-emptier! port #t)
+			     (lose))
+			    (else	; encoding error
+			     (remove-current-proposal!))))))))))
 		(else
 		 (set-port-flushed?! port #t)
 		 (buffer-emptier! port #t)
