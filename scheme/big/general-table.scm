@@ -234,7 +234,7 @@
 ; a CASE expression.  Even then, numbers don't really "work," since
 ; they are compared using eq?.
 
-(define (default-table-hash-function obj)
+(define (default-hash-function obj)
   (cond ((symbol? obj) (string-hash (symbol->string obj)))
 	((integer? obj)
 	 (if (< obj 0) (- -1 obj) obj))
@@ -256,7 +256,7 @@
 
 (define make-table
   (let ((make-usual-table (assoc->table-maker default-table-assoc
-					      default-table-hash-function)))
+					      default-hash-function)))
     (lambda hash-function-option
       (if (null? hash-function-option)
 	  (make-usual-table)

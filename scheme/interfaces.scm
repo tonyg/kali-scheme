@@ -767,7 +767,7 @@
 	  make-table-immutable!
 
 	  string-hash
-	  default-table-hash-function))
+	  default-hash-function))
 
 ;----------------
 ; Beginning of compiler interfaces
