@@ -219,7 +219,7 @@ c/fake/strerror.o: c/fake/strerror.h
 $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 		scheme/link-packages.scm scheme/env-packages.scm \
 		scheme/more-packages.scm \
-		$(usual-files) build/initial.debug build/build-usual-image
+		$(usual-files) $(INITIAL) build/build-usual-image
 	build/build-usual-image . "`pwd`/scheme" '$(IMAGE)' './$(VM)' \
 		'$(INITIAL)'
 
