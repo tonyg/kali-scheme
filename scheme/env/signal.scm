@@ -26,8 +26,9 @@
 		    (port (car rev-stuff))
 		    (irritants (reverse (cdr rev-stuff))))
 	       (condition (&message (message (car stuff)))
+			  (&irritants (values (cdr irritants)))
 			  (&i/o-port-error (port port))
-			  (&i/o-read-error)))) ; what about the irritants?
+			  (&i/o-read-error))))
 	    ((sc:vm-exception? simple-condition)
 	     (let ((opcode (sc:vm-exception-opcode simple-condition))
 		   (reason (sc:vm-exception-reason simple-condition))
