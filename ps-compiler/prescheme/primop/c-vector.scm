@@ -210,7 +210,9 @@
   (indent-to port indent)
   (generate-c-memory-ref type pointer port)
   (display " = " port)
+  (format port "(~A) (" type)
   (c-value value port)
+  (writec port #\))
   (writec port #\;))
 
 (define-c-generator char-pointer->string #t

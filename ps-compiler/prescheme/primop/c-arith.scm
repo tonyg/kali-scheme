@@ -81,11 +81,15 @@
 
 (define-c-generator ascii->char #t
   (lambda (call port indent)
-    (c-value (call-arg call 0) port)))
+    (display "((char) " port)
+    (c-value (call-arg call 0) port)
+    (display ")" port)))
     
 (define-c-generator char->ascii #t
   (lambda (call port indent)
-    (c-value (call-arg call 0) port)))
+    (display "((unsigned char) " port)
+    (c-value (call-arg call 0) port)
+    (display ")" port)))
     
 ;(define-c-generator sign-extend #t
 ;  (lambda (call port indent)

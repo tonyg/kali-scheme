@@ -3,6 +3,7 @@
  */
 
 #include "scheme48.h"
+#include "c-mods.h"
 
 /* initializing */
 extern void		s48_init(void);
@@ -19,7 +20,7 @@ extern s48_value	s48_Sextension_valueS;
 
 /* interrupts */
 extern void		s48_note_event(void);
-extern char		s48_Spending_eventsPS;
+extern bool		s48_Spending_eventsPS;
 extern char *		s48_Sstack_limitS;
 extern void		s48_disable_interruptsB(void);
 extern void		s48_enable_interruptsB(void);
@@ -47,7 +48,7 @@ extern s48_value	s48_imported_bindings(void);
 extern s48_value	s48_exported_bindings(void);
 
 /* called when resuming an image */
-extern char		s48_warn_about_undefined_imported_bindings(void);
+extern bool		s48_warn_about_undefined_imported_bindings(void);
 
 /* for initializion on SMP machines */
 extern void		s48_initialize_shared_registersB(long, long, long, long);
@@ -60,9 +61,9 @@ extern s48_value	s48_really_add_channel(s48_value, s48_value, long);
 /* external allocation and GC roots */
 extern s48_value	s48_allocate_stob(long type, long size);
 extern void		s48_push_gc_rootsB(char *, long);
-extern char		s48_pop_gc_rootsB(void);
+extern bool		s48_pop_gc_rootsB(void);
 extern char *		s48_set_gc_roots_baseB(void);
-extern char		s48_release_gc_roots_baseB(char *);
+extern bool		s48_release_gc_roots_baseB(char *);
 extern void		s48_register_gc_rootB(char *marker);
 extern void		s48_reset_external_rootsB();
 
