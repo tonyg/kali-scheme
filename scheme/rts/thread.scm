@@ -457,15 +457,10 @@
 ; Block if the current proposal succeeds.  Returns true if successful and false
 ; if the commit fails.  The cell becomes the thread's cell.  It will be cleared
 ; if the thread is killed.
-; The optional parameter is a thunk that will be called upon a
-; successful commit just before we block.
-; (See MAYBE-COMMIT-AND-BLOCK-ON-QUEUE below.)
 
-(define (maybe-commit-and-block cell . maybe-thunk)
+(define (maybe-commit-and-block cell)
   (disable-interrupts!)
   (cond ((maybe-commit)
-	 (if (pair? maybe-thunk)
-	     ((car maybe-thunk)))
 	 (set-thread-cell! (current-thread) cell)
 	 (suspend-to (thread-scheduler (current-thread))
 		     (list (enum event-type blocked)))
@@ -478,9 +473,8 @@
 
 (define (maybe-commit-and-block-on-queue queue)
   (let ((cell (make-cell (current-thread))))
-    (maybe-commit-and-block cell
-			    (lambda ()
-			      (enqueue! queue cell)))))
+    (enqueue! queue cell)
+    (maybe-commit-and-block cell)))
 
 ; Send the upcall to the current scheduler and check the return value(s)
 ; to see if it was handled properly.

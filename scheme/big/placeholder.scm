@@ -27,7 +27,12 @@
   (with-new-proposal (dummy)
     (if (eq? (placeholder-real-value placeholder)
 	     null-value)
-	(maybe-commit-and-block-on-queue (placeholder-queue placeholder))))
+	;; Kludge alert: The commit may fail, in which case
+	;; (placeholder-queue placeholder) is #f.  Albeit,
+	;; MAYBE-COMMIT-AND-BLOCK-ON-QUEUE *still* needs to have a
+	;; queue as an argument.
+	(maybe-commit-and-block-on-queue (or (placeholder-queue placeholder)
+					     (make-queue)))))
   (placeholder-real-value placeholder))
 
 (define (placeholder-set! placeholder new-value)
