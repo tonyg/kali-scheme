@@ -1,7 +1,15 @@
+;; Rendezvous combinators
+
+;; There's considerable potential for more abstraction in the protocol
+;; for primitive rendezvous. --Mike
+
 (define-record-type prim-rv :prim-rv
   (really-make-prim-rv wrap-proc poll-thunk)
   prim-rv?
   (wrap-proc prim-rv-wrap-proc)
+  ;; This is a thunk which checks whether the rendezvous is currently
+  ;; enabled or not; if it is, the thunk must return an ENABLED
+  ;; record, if it isn't, a BLOCKED record.
   (poll-thunk prim-rv-poll-thunk))
 
 (define (make-prim-rv poll-thunk)
@@ -15,19 +23,23 @@
   ;; supposed to enqueue threads to be woken up upon commit.
   (do-proc enabled-do-proc))
 
-;; PROC is a procedure with two arguments:
-;; a TRANS-ID and a WRAP-PROC.
-
-;; TRANS-ID is the transaction ID of the blocked thread.  WRAP-PROC is
-;; the complete, composed-together chain of WRAP procedures of the
-;; event.
-
-;; The TRANS-ID should be fed, when it's woken up, a pair
-;; consisting of a return value and a wrap-proc procedure.
-
 (define-record-type blocked :blocked
   (make-blocked proc)
   blocked?
+  ;; PROC is a procedure with three arguments:
+  ;; a TRANS-ID, a CLEANUP-PROC, and a WRAP-PROC.
+  
+  ;; TRANS-ID is the transaction ID of the blocked thread.  The
+  ;; TRANS-ID should be fed, when it's woken up, a pair consisting of
+  ;; a return value and a wrap-proc procedure.
+  
+  ;; CLEANUP-PROC is a procedure which takes a thread queue as an
+  ;; argument; it can enqueue thread cells whose threads it wants
+  ;; woken up.  This procedure is called from an operation which
+  ;; enables this rendezvous
+  
+  ;; WRAP-PROC is the complete, composed-together chain of WRAP
+  ;; procedures of the event.
   (proc blocked-proc))
 
 (define-record-type base :base
@@ -130,11 +142,11 @@
 (define (never-rv)
   (really-make-base '()))
 
-(define (guard rv)
-  (make-guard rv))
+(define (guard thunk)
+  (make-guard thunk))
 
-(define (with-nack rv)
-  (make-nack rv))
+(define (with-nack proc)
+  (make-nack proc))
 
 (define (gather-prim-rvs rev-rvs prim-rvs)
   (cond
