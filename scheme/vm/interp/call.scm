@@ -59,17 +59,15 @@
   (set! s48-*native-protocol* protocol))
 
 (define (post-native-dispatch tag)
-  (let loop ((tag tag))
-    (case tag
-      ((0)
-       (goto return-values s48-*native-protocol* null 0))
-      ((1)
-       (goto perform-application s48-*native-protocol*))
-      ;; 2 and 3 are unused
-      ((4)
-       (goto interpret *code-pointer*))
-      (else
-       (error "unexpected native return value" tag)))))
+  (case tag
+    ((0)
+     (goto return-values s48-*native-protocol* null 0))
+    ((1)
+     (goto perform-application s48-*native-protocol*))
+    ((4)
+     (goto interpret *code-pointer*))
+    (else
+     (error "unexpected native return value" tag))))
 
 ;; Not used for now
 (define (push-native-exception-continuation)
