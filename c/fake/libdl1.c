@@ -27,6 +27,7 @@ extern char* s48_object_file;
 static char	self[] = "Scheme 48 executable",
 		*lasterror;
 
+extern char*    s48_object_file;
 
 char	*
 dlerror(void)
