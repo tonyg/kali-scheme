@@ -66,8 +66,8 @@
   (push+integer-literal literal) ; preceded by a push
   (integer-literal+push literal) ; followed by a push
 
-  (global         index index)   ; first is template, second within template
-  (set-global!    index index 1) ; first is template, second within template
+  (global      two-bytes index)   ; first is template, second within template
+  (set-global! two-bytes index 1) ; first is template, second within template
 
   (make-flat-env  env-data)      ; make new environment from env-data
   (make-big-flat-env big-env-data) ; same, but with two-byte size and offsets
