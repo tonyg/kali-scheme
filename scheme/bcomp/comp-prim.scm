@@ -620,9 +620,9 @@
 	  (lambda (frame)
 	    ; stack at start is: template irritants message
 	    (sequentially (nary-lambda-protocol 1 #t #f)
-			  (instruction (enum op stack-ref) 1)       ; irritants
+			  (instruction (enum op stack-ref) 2)       ; irritants
 			  (instruction (enum op push))
-			  (instruction (enum op stack-ref) 3)       ; message
+			  (instruction (enum op stack-ref) 2)       ; message
 			  cons-instruction
 			  (instruction (enum op push))
 			  ; (message . irritants) template irritants message
