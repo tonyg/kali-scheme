@@ -256,7 +256,7 @@
 (define alphabetic   (union lower-case upper-case))
 (define numeric      (range #\0 #\9))
 (define alphanumeric (union alphabetic numeric))
-(define punctuation  (set "!\"#$%&'()*+,-./:;<=>?@ [\\]^_`{|}~"))
+(define punctuation  (set "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"))
 (define blank        (set #\space (ascii->char 9)))	;#\tab
 (define graphic      (union alphanumeric punctuation))
 (define whitespace   (apply set (map ascii->char
