@@ -6,6 +6,30 @@ extern "C"
 {
 #endif
 
+/* 
+ * For building and linking DLLs on Windows, we need to mark functions
+ * the DLL calls in Scheme 48 and vice versa explicitly---and differently
+ * depending on whether we're compiling the DLL or Scheme 48 itself.
+ *
+ * Therefore, on Windows, we assume that __COMPILING_SCHEME48_ITSELF__
+ * is defined when Scheme 48 itself is being compiled, and not when
+ * we're compiling something external against it.
+ */
+
+#ifdef _WIN32
+#  ifdef __COMPILING_SCHEME48_ITSELF__
+#    define S48_EXTERN_ADD_ONS __declspec(dllexport)
+#  else
+#    define S48_EXTERN_ADD_ONS __declspec(dllimport)
+#  endif
+#endif
+
+#ifndef S48_EXTERN_ADD_ONS
+#  define S48_EXTERN_ADD_ONS
+#endif
+
+#define S48_EXTERN extern S48_EXTERN_ADD_ONS
+
 #include "scheme48write-barrier.h"
 
 typedef long	s48_value;
@@ -21,54 +45,54 @@ typedef long	s48_value;
 #define S48_MAX_FIXNUM_VALUE ((1 << 29) - 1)
 #define S48_MIN_FIXNUM_VALUE (-1 << 29)
 
-extern int		s48_stob_has_type(s48_value, int);
-extern long		s48_stob_length(s48_value, int);
-extern long		s48_stob_byte_length(s48_value, int);
-extern s48_value	s48_stob_ref(s48_value, int, long);
-extern void		s48_stob_set(s48_value, int, long, s48_value);
-extern char		s48_stob_byte_ref(s48_value, int, long);
-extern void		s48_stob_byte_set(s48_value, int, long, char);
+S48_EXTERN int		s48_stob_has_type(s48_value, int);
+S48_EXTERN long		s48_stob_length(s48_value, int);
+S48_EXTERN long		s48_stob_byte_length(s48_value, int);
+S48_EXTERN s48_value	s48_stob_ref(s48_value, int, long);
+S48_EXTERN void		s48_stob_set(s48_value, int, long, s48_value);
+S48_EXTERN char		s48_stob_byte_ref(s48_value, int, long);
+S48_EXTERN void		s48_stob_byte_set(s48_value, int, long, char);
 
-extern void		s48_register_gc_rootB(char *);
-extern void		s48_push_gc_rootsB(char *, long);
-extern char		s48_pop_gc_rootsB(void);
-extern char		s48_pop_gc_roots_up_to_markerB(char *);
+S48_EXTERN void		s48_register_gc_rootB(char *);
+S48_EXTERN void		s48_push_gc_rootsB(char *, long);
+S48_EXTERN char		s48_pop_gc_rootsB(void);
+S48_EXTERN char		s48_pop_gc_roots_up_to_markerB(char *);
 
-extern s48_value	s48_enter_char(unsigned char);
-extern unsigned char	s48_extract_char(s48_value);
-extern s48_value	s48_enter_fixnum(long);
-extern long		s48_extract_fixnum(s48_value);
-extern s48_value	s48_enter_integer(long);
-extern long		s48_extract_integer(s48_value);
-extern s48_value	s48_enter_double(double);
-extern double		s48_extract_double(s48_value);
-extern s48_value	s48_cons(s48_value, s48_value);
-extern s48_value	s48_enter_string(char *);
-extern char *		s48_extract_string(s48_value);
-extern s48_value	s48_enter_substring(char *, long);
-extern s48_value	s48_enter_byte_vector(char *, long);
-extern char *		s48_extract_byte_vector(s48_value);
-extern s48_value	s48_make_string(int, char);
-extern s48_value	s48_make_vector(int, s48_value);
-extern s48_value	s48_make_byte_vector(int);
-extern s48_value	s48_make_record(s48_value);
-extern s48_value	s48_make_weak_pointer(s48_value);
-extern void		s48_check_record_type(s48_value, s48_value);
-extern long		s48_length(s48_value);
-extern s48_value	s48_enter_pointer(void *);
-extern s48_value	s48_get_imported_binding(char *);
-extern void		s48_define_exported_binding(char *, s48_value);
+S48_EXTERN s48_value	s48_enter_char(unsigned char);
+S48_EXTERN unsigned char s48_extract_char(s48_value);
+S48_EXTERN s48_value	s48_enter_fixnum(long);
+S48_EXTERN long		s48_extract_fixnum(s48_value);
+S48_EXTERN s48_value	s48_enter_integer(long);
+S48_EXTERN long		s48_extract_integer(s48_value);
+S48_EXTERN s48_value	s48_enter_double(double);
+S48_EXTERN double	s48_extract_double(s48_value);
+S48_EXTERN s48_value	s48_cons(s48_value, s48_value);
+S48_EXTERN s48_value	s48_enter_string(char *);
+S48_EXTERN char *	s48_extract_string(s48_value);
+S48_EXTERN s48_value	s48_enter_substring(char *, long);
+S48_EXTERN s48_value	s48_enter_byte_vector(char *, long);
+S48_EXTERN char *	s48_extract_byte_vector(s48_value);
+S48_EXTERN s48_value	s48_make_string(int, char);
+S48_EXTERN s48_value	s48_make_vector(int, s48_value);
+S48_EXTERN s48_value	s48_make_byte_vector(int);
+S48_EXTERN s48_value	s48_make_record(s48_value);
+S48_EXTERN s48_value	s48_make_weak_pointer(s48_value);
+S48_EXTERN void		s48_check_record_type(s48_value, s48_value);
+S48_EXTERN long		s48_length(s48_value);
+S48_EXTERN s48_value	s48_enter_pointer(void *);
+S48_EXTERN s48_value	s48_get_imported_binding(char *);
+S48_EXTERN void		s48_define_exported_binding(char *, s48_value);
 
-extern s48_value	s48_set_channel_os_index(s48_value, long);
-extern s48_value	s48_add_channel(s48_value, s48_value, long);
-extern void		s48_close_channel(long);
+S48_EXTERN s48_value	s48_set_channel_os_index(s48_value, long);
+S48_EXTERN s48_value	s48_add_channel(s48_value, s48_value, long);
+S48_EXTERN void		s48_close_channel(long);
 
-extern s48_value	s48_call_scheme(s48_value proc, long nargs, ...);
+S48_EXTERN s48_value	s48_call_scheme(s48_value proc, long nargs, ...);
 
 #define S48_EXPORT_FUNCTION(p) (s48_define_exported_binding(#p, s48_enter_pointer(p)))
 
 #define S48_MAKE_VALUE(type) (s48_make_byte_vector(sizeof(type)))
-extern void *		s48_value_pointer(s48_value);
+S48_EXTERN void *	s48_value_pointer(s48_value);
 
 #define S48_EXTRACT_VALUE_POINTER(x, type) ((type *) s48_value_pointer(x))
 #define S48_EXTRACT_VALUE(x, type) (*(S48_EXTRACT_VALUE_POINTER((x), type)))
@@ -181,26 +205,26 @@ extern void *		s48_value_pointer(s48_value);
 
 /* Exceptions */
 
-extern void s48_raise_scheme_exception(long type, long nargs, ...);
-extern void s48_raise_argument_type_error(s48_value value);
-extern void s48_raise_argument_number_error(s48_value value,
-				            s48_value min,
-					    s48_value max);
-extern void s48_raise_range_error(s48_value value,
-			          s48_value min,
-			          s48_value max);
-extern void s48_raise_closed_channel_error();
-extern void s48_raise_os_error(int the_errno);
-extern void s48_raise_string_os_error(char *reason);
-extern void s48_raise_out_of_memory_error();
+S48_EXTERN void s48_raise_scheme_exception(long type, long nargs, ...);
+S48_EXTERN void s48_raise_argument_type_error(s48_value value);
+S48_EXTERN void s48_raise_argument_number_error(s48_value value,
+						s48_value min,
+						s48_value max);
+S48_EXTERN void s48_raise_range_error(s48_value value,
+				      s48_value min,
+				      s48_value max);
+S48_EXTERN void s48_raise_closed_channel_error();
+S48_EXTERN void s48_raise_os_error(int the_errno);
+S48_EXTERN void s48_raise_string_os_error(char *reason);
+S48_EXTERN void s48_raise_out_of_memory_error();
 
 /* Old names retained for compatibility; use the versions with 'ument_'
    after the '_arg'. */
 
-extern void s48_raise_argument_type_error(s48_value value);
-extern void s48_raise_argument_number_error(s48_value value,
-				            s48_value min,
-					    s48_value max);
+S48_EXTERN void s48_raise_argument_type_error(s48_value value);
+S48_EXTERN void s48_raise_argument_number_error(s48_value value,
+						s48_value min,
+						s48_value max);
 
 /* Type checking */
 
@@ -223,7 +247,7 @@ extern void s48_raise_argument_number_error(s48_value value,
 #define S48_EXTRACT_BOOLEAN(v) ((v) != S48_FALSE)
 #define S48_ENTER_BOOLEAN(v) ((v) ? S48_TRUE : S48_FALSE)
 
-extern void s48_check_record_type(s48_value record, s48_value type_binding);
+S48_EXTERN void s48_check_record_type(s48_value record, s48_value type_binding);
 
 #define S48_SHARED_BINDING_CHECK(binding)					\
   do { if (S48_UNSPECIFIC == S48_SHARED_BINDING_REF(binding))		\
