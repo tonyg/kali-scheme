@@ -444,7 +444,7 @@
 
 ; Configuration language
 
-(define-structure srfi-7 (export)	; defines a command
+(define-structure srfi-7 (export program)	; also defines a command
   (open scheme
 
 	; for parsing programs
@@ -459,7 +459,11 @@
 	; for defining the command
 	(subset command-processor		(define-user-command-syntax
 						 user-command-environment))
-	(subset environments			(environment-define!)))
+	(subset environments			(environment-define! environment-ref))
+        
+        ; for opening needed packages during evaluation
+        (subset package-mutation                (package-open!))
+        (subset packages                        (make-modified-structure)))
 
   (begin
     (define available-srfis

@@ -50,12 +50,15 @@
 			   'scheme
 			   `(modify scheme (hide . ,shadowed)))
 		      . ,needed)
-		. ,(map (lambda (source)
-			  (if (eq? (car source)
-				   'code)
-			      (cons 'begin (cdr source))
-			      source))
-			source))))
+		. ,(transform-source source))))
+
+(define (transform-source source)
+  (map (lambda (source)
+         (if (eq? (car source)
+                  'code)
+             (cons 'begin (cdr source))
+             source))
+       source))
 
 ; Returns a list of the names that SRFIS redefine from Scheme.
 
@@ -88,6 +91,37 @@
     (if needed
 	(values needed (reverse source))
 	(values #f #f))))
+
+(define-syntax program
+  (syntax-rules ()
+    ((program clauses ...)
+     (receive (needed source)
+         (parse-program '(program clauses ...) available-srfis)
+       (if needed
+           (let ((shadowed (find-shadowed needed)))
+             (if (not (null? shadowed))
+                 (open-scheme-shadowed! shadowed))
+             (for-each open-structure (if (null? shadowed)
+                                          (cons 'scheme needed)
+                                          needed))
+             (for-each
+              (lambda (exp) (eval exp (interaction-environment)))
+              (transform-source source)))
+           (error "cannot satisfy program's requirements"))))))
+
+(define (open-structure name)
+  (let* ((c (config-package))
+         (struct (environment-ref c name)))
+    (ensure-loaded struct)
+    (package-open! (interaction-environment) (lambda () struct))))
+
+(define (open-scheme-shadowed! shadowed)
+  (let* ((c (config-package)))
+    (package-open! (interaction-environment)
+                   (lambda ()
+                     (make-modified-structure 
+                      (environment-ref c 'scheme)
+                      `((hide ,@shadowed)))))))
 
 ; NEEDED is a list of SRFIs that we already know we need.  AVAILABLE is a list
 ; of other SRFIs that can be used.  This returns new needed and available lists
