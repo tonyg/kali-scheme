@@ -147,6 +147,7 @@ Not all named signals are available from all OS's and
  there may be multiple names for a single OS signal number.
 
 \begin{protos}
+\syntaxproto{signal}{ \cvar{signal-name}{signal}
 \proto{name->signal}{ symbol}{signal or {\tt \#f}}
 \proto{integer->signal}{ integer}{signal}
 \proto{signal?}{ x}{boolean}
@@ -155,6 +156,8 @@ Not all named signals are available from all OS's and
 \proto{signal=?}{ signal0 signal1}{boolean}
 \end{protos}
 \noindent
+The syntax \code{signal} returns a (named) signal associated with
+\cvar{signal-name}.
 \code{Name->signal} returns a (named) signal or \code{\#f} if the
  the signal \cvar{name} is not supported by the operating system.
 The signal returned by \code{integer->signal} is a named signal if
@@ -203,20 +206,20 @@ The following lists the names of the non-POSIX signals that the system is
 \code{trap  } & trace or breakpoint trap \\
 \code{iot   } & IOT trap - a synonym for ABRT \\
 \code{emt   } & \\
-\code{sys   } & bad argument to routine	(SVID) \\
+\code{sys   } & bad argument to routine (SVID) \\
 \code{stkflt} & stack fault on coprocessor \\
-\code{urg   } & urgent condition on socket	(4.2 BSD) \\
-\code{io    } & I/O now possible		(4.2 BSD) \\
-\code{poll  } & A synonym for SIGIO		(System V) \\
+\code{urg   } & urgent condition on socket      (4.2 BSD) \\
+\code{io    } & I/O now possible                (4.2 BSD) \\
+\code{poll  } & A synonym for SIGIO             (System V) \\
 \code{cld   } & A synonym for SIGCHLD \\
-\code{xcpu  } & CPU time limit exceeded	(4.2 BSD) \\
-\code{xfsz  } & File size limit exceeded	(4.2 BSD) \\
-\code{vtalrm} & Virtual alarm clock		(4.2 BSD) \\
+\code{xcpu  } & CPU time limit exceeded (4.2 BSD) \\
+\code{xfsz  } & File size limit exceeded        (4.2 BSD) \\
+\code{vtalrm} & Virtual alarm clock             (4.2 BSD) \\
 \code{prof  } & Profile alarm clock \\
-\code{pwr   } & Power failure			(System V) \\
+\code{pwr   } & Power failure                   (System V) \\
 \code{info  } & A synonym for SIGPWR \\
 \code{lost  } & File lock lost \\
-\code{winch } & Window resize signal		(4.3 BSD, Sun) \\
+\code{winch } & Window resize signal            (4.3 BSD, Sun) \\
 \code{unused} & Unused signal \\
 \W\end{tabular}
 \T\end{longtable}
