@@ -91,6 +91,8 @@
        (goto interpret *code-pointer*))
       ((5)
        (goto do-apply-with-native-cont s48-*native-protocol* (pop)))
+      ((6)
+       (raise-exception trap 0 *val*))
       (else
        (error "unexpected native return value" tag)))))
 
