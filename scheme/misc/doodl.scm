@@ -37,7 +37,7 @@
     ((define-generic-function (setter ?name) ?parameter-list) ;for define-slot
      (define-setter ?name
        (make-generic-function
-	    '(setter ?name)
+	    '(the-setter ?name)
 	    (method-info ?name ("next" next-method . ?parameter-list)
 	      (next-method)))))
     ((define-generic-function ?name ?parameter-list)
@@ -57,10 +57,10 @@
 
 (define-simple-type <generic-function> (<function>) generic-function?)
 
-(define-method &add-method! ((g <generic-function>) foo)
+(really-define-method &add-method! ((g <generic-function>) foo)
   (add-method! (procedure-annotation g) foo))
 
-(define-method &disclose ((g <generic-function>))
+(really-define-method &disclose ((g <generic-function>))
   `(generic-function ,(method-table-id (procedure-annotation g))))
 
 (define method-table-id (record-accessor :method-table 'id))
@@ -96,19 +96,34 @@
 
 (define-simple-type <method> (<function>) method?)
 
-(define-method &disclose ((m <method>))
+(really-define-method &disclose ((m <method>))
   `(method ,(procedure-annotation m)))
+
+(define-syntax define-method
+  (syntax-rules (setter)
+    ((define-method (setter ?id) ?formals ?body ...)
+     (really-define-setter-method ?id ?formals 'bar ?body ...))
+    ((define-method ?id ?formals ?body ...)
+     (really-define-method ?id ?formals 'foo ?body ...))))
+
+(define-syntax really-define-setter-method
+  (lambda (e r c)
+    `(,(r 'really-define-method)
+      ,(string->symbol (string-append (symbol->string (cadr e))
+				      "-"
+				      (symbol->string 'setter)))
+      ,@(cddr e))))
 
 ; --------------------
 ; (SETTER foo)
 
-(define-syntax setter
+(define-syntax the-setter
   (lambda (e r c)
     (string->symbol (string-append (symbol->string (cadr e))
 				   "-"
 				   (symbol->string 'setter)))))
 
-(define-syntax define-setter  ;for define-slot
+(define-syntax define-setter
   (lambda (e r c)
     `(,(r 'define)
       ,(string->symbol (string-append (symbol->string (cadr e))
@@ -119,7 +134,7 @@
 (define-syntax set
   (syntax-rules ()
     ((set (?fun ?arg ...) ?val)
-     ((setter ?fun) ?arg ... ?val))
+     ((the-setter ?fun) ?arg ... ?val))
     ((set ?var ?val)
      (set! ?var ?val))))
 
@@ -147,8 +162,16 @@
 	    (define-generic-function (setter ?slot) (x new-val))
 	    (define-method ?slot ((x <instance>))
 	      (instance-slot-ref x ?slot))
-	    (define-method (setter ?slot) ((x <instance>) new-val)
+	    (define-setter-method ?slot ((x <instance>) new-val)
 	      (instance-slot-set! x ?slot new-val))))))
+
+(define-syntax define-setter-method
+  (lambda (e r c)
+    `(,(r 'define-method)
+      ,(string->symbol (string-append (symbol->string (cadr e))
+				      "-"
+				      (symbol->string 'setter)))
+      ,@(cddr e))))
 
 ; Instances
 
@@ -183,8 +206,8 @@
 (define-record-discloser <class>
   (lambda (c) `(class ,(class-id c))))
 
-(define-method &type-predicate ((c <class>)) (class-predicate c))
-(define-method &type-priority ((c <class>)) (class-priority c))
+(really-define-method &type-predicate ((c <class>)) (class-predicate c))
+(really-define-method &type-priority ((c <class>)) (class-priority c))
 
 (define (make-class supers slots id)
   (letrec ((class

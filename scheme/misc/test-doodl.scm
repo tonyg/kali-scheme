@@ -12,7 +12,7 @@
 
 
 
-(define-generic-function elt ((s <sequence>)))
+(define-generic-function elt (s))
 
 (define-method elt ((x <vector>) y)
   (vector-ref x y))

@@ -65,11 +65,12 @@
 
 (define-structure doodl doodl-interface
   (open scheme
-	methods
+	(modify methods (rename (define-method really-define-method)))
 	meta-methods
 	annotations
 	define-record-types
 	records
+	record-types
 	;; handle	; ignore-errors
 	;; conditions	; error?
 	util 
