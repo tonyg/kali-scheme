@@ -1,4 +1,4 @@
-;;; The SRFI-?? sort package -- sorted predicates
+;;; The sort package -- sorted predicates
 ;;; Olin Shivers 10/98.
 ;;;
 ;;; (list-sorted? < lis) -> boolean

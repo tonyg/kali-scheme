@@ -1,4 +1,4 @@
-;;; The SRFI-32 sort package -- general sort & merge procedures
+;;; The sort package -- general sort & merge procedures
 ;;;
 ;;; Copyright (c) 1998 by Olin Shivers.
 ;;; You may do as you please with this code, as long as you do not delete this

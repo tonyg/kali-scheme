@@ -1,4 +1,4 @@
-;;; The SRFI-32 sort package -- binary search			-*- Scheme -*-
+;;; The sort package -- binary search			-*- Scheme -*-
 ;;; Copyright (c) 1998 by Olin Shivers.
 ;;; This code is in the public domain.
 ;;; Olin Shivers 98/11

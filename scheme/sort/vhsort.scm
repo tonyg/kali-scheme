@@ -1,4 +1,4 @@
-;;; The SRFI-32 sort package -- vector heap sort		-*- Scheme -*-
+;;; The sort package -- vector heap sort		-*- Scheme -*-
 ;;; Copyright (c) 2002 by Olin Shivers.
 ;;; This code is open-source; see the end of the file for porting and
 ;;; more copyright information.

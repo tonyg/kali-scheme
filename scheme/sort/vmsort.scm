@@ -1,4 +1,4 @@
-;;; The SRFI-32 sort package -- stable vector merge & merge sort -*- Scheme -*-
+;;; The sort package -- stable vector merge & merge sort -*- Scheme -*-
 ;;; Copyright (c) 1998 by Olin Shivers.
 ;;; This code is open-source; see the end of the file for porting and
 ;;; more copyright information.
