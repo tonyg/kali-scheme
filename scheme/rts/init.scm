@@ -12,6 +12,7 @@
   (lambda (resume-arg in out error records)
     (initialize-rts in out error
      (lambda ()
+       (run-initialization-thunks)
        (initialize-records! records)
        (if warn-about-undefined-imported-bindings?
 	   (warn-about-undefined-imported-bindings))
@@ -45,6 +46,22 @@
 		  (root-scheduler thunk
 				  200           ; thread quantum, in msec
 				  300)))))))))) ; port-flushing quantum
+
+; This is primarily for LOAD-DYNAMIC-EXTERNALS; we don't want to
+; refer to it directly here, because that would increase the size of
+; the image by 100k.
+
+; Use this with care: no efforts are being made to remove duplicates.
+
+(define *initialization-thunks* '())
+
+(define (add-initialization-thunk! thunk)
+  (set! *initialization-thunks*
+	(cons thunk *initialization-thunks*)))
+
+(define (run-initialization-thunks)
+  (for-each (lambda (thunk) (thunk))
+	    *initialization-thunks*))
 
 ; Add the full/empty buffer handlers.
 

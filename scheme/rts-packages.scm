@@ -374,7 +374,8 @@
   (files (rts condvar)))
 
 (define-structure usual-resumer (export usual-resumer
-					make-usual-resumer)
+					make-usual-resumer
+					add-initialization-thunk!)
   (open scheme-level-1
 	i/o		 ;initialize-i/o, etc.
 	channel-i/o      ;initialize-channel-i/o

@@ -88,15 +88,20 @@
 (define (import-dynamic-externals name)
   (load-dynamic-externals name #t #f #t))
 
-(define-reinitializer dynamic-externals-reinitializer
-  (lambda ()
-    (set! *the-dynamic-externals-table*
-	  (delete (lambda (dynamic-externals)
-		    (not (dynamic-externals-reload-on-resume? dynamic-externals)))
-		  *the-dynamic-externals-table*))
-    (for-each (lambda (dynamic-externals)
-		(reload-dynamic-externals-internal dynamic-externals #f "s48_on_load"))
-	      *the-dynamic-externals-table*)))
+;; We can't do this via a reinitializer, because the reinitializer
+;; will typically call external C code, which is typically in a shared
+;; library.  So we need to load the shared libraries before we run any
+;; reinitializers.
+
+(add-initialization-thunk!
+ (lambda ()
+   (set! *the-dynamic-externals-table*
+	 (delete (lambda (dynamic-externals)
+		   (not (dynamic-externals-reload-on-resume? dynamic-externals)))
+		 *the-dynamic-externals-table*))
+   (for-each (lambda (dynamic-externals)
+	       (reload-dynamic-externals-internal dynamic-externals #f "s48_on_load"))
+	     *the-dynamic-externals-table*)))
 
 ;; note this leaves the shared bindings in place.
 (define (unload-dynamic-externals dynamic-externals)

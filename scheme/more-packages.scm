@@ -268,7 +268,7 @@
   (open scheme-level-2
 	define-record-types
 	shared-objects
-	reinitializers
+	(subset usual-resumer (add-initialization-thunk!))
 	(subset big-util (delq delete any))
 	(subset signals (error)))
   (files (big dynamic-external)))
