@@ -158,6 +158,7 @@
 	  s48-set-gc-roots-base!
 	  s48-release-gc-roots-base!
 	  s48-register-gc-root!
+	  s48-unregister-gc-root!
 	  s48-reset-external-roots!))
 
 (define-interface read-image-interface

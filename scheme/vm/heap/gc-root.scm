@@ -74,8 +74,8 @@
           #f))))
 
 ;----------------
-; This is for permanent roots, such as external global variables.
-; We keep these in a simple list.
+; This is for global roots, such as external global variables.
+; We keep these in a doubly-linked list, so we remove roots as well.
 
 (define *permanent-external-roots* null-address)
 
@@ -83,15 +83,36 @@
   (let ((frame (allocate-memory (cells->bytes 2))))
     (if (null-address? frame)
 	(error "out of memory registering a global root"))
+    ;; NEXT
     (store! frame (address->integer *permanent-external-roots*))
-    (store! (address1+ frame) (address->integer loc-addr))
-    (set! *permanent-external-roots* frame)))
+    ;; PREVIOUS
+    (store! (address1+ frame) (address->integer null-address))
+    ;; PREVIOUS
+    (if (not (null-address? *permanent-external-roots*))
+	(store! (address1+ *permanent-external-roots*)
+		(address->integer frame)))
+    (store! (address+ frame (cells->a-units 2)) (address->integer loc-addr))
+    (set! *permanent-external-roots* frame)
+    frame))
+
+(define (s48-unregister-gc-root! frame)
+  (if (address= frame *permanent-external-roots*)
+      (set! *permanent-external-roots* (permanent-root-next frame))
+      (let ((next (permanent-root-next frame)) ; must exist
+	    (previous (permanent-root-previous frame)))
+	(store! previous (address->integer next))
+	(if (not (null-address? next))
+	    (store! (address1+ next) (address->integer previous)))))
+  (deallocate-memory frame))
 
 (define (permanent-root-pointer address)
-  (fetch-address (address1+ address)))
+  (fetch-address (address+ address (cells->a-units 2))))
 
 (define (permanent-root-next address)
   (fetch-address address))
+
+(define (permanent-root-previous address)
+  (fetch-address (address1+ address)))
 
 ; This is exported and used to (attempt to) recover from user errors.
 

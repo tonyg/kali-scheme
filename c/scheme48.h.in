@@ -53,7 +53,8 @@ S48_EXTERN void		s48_stob_set(s48_value, int, long, s48_value);
 S48_EXTERN char		s48_stob_byte_ref(s48_value, int, long);
 S48_EXTERN void		s48_stob_byte_set(s48_value, int, long, char);
 
-S48_EXTERN void		s48_register_gc_rootB(char *);
+S48_EXTERN char *	s48_register_gc_rootB(char *);
+S48_EXTERN void		s48_unregister_gc_rootB(char *);
 S48_EXTERN void		s48_push_gc_rootsB(char *, long);
 S48_EXTERN char		s48_pop_gc_rootsB(void);
 S48_EXTERN char		s48_pop_gc_roots_up_to_markerB(char *);
@@ -201,7 +202,8 @@ S48_EXTERN void *	s48_value_pointer(s48_value);
        	  s48_raise_scheme_exception( S48_EXCEPTION_GC_PROTECTION_MISMATCH, 0); \
       } while(0)
 
-#define S48_GC_PROTECT_GLOBAL(v) (s48_register_gc_rootB((char *)&(v)))
+#define S48_GC_PROTECT_GLOBAL(v) ((void*)(s48_register_gc_rootB((char *)&(v))))
+#define S48_GC_UNPROTECT_GLOBAL(f) (s48_unregister_gc_rootB((char *)(f)))
 
 /* Exceptions */
 
