@@ -39,6 +39,10 @@
   (lambda (float)
     (floperate op float)))
 
+(define (float2 op)
+  (lambda (a b)
+    (floperate op a b)))
+
 (define (float->float op)
   (lambda (a)
     (let ((res (make-double)))
@@ -109,8 +113,8 @@
 (define float-atan1 (float->float (enum flop atan1)))
 (define float-atan2 (float&float->float (enum flop atan2)))
 
-(define float= (float&float->boolean (enum flop =)))
-(define float< (float&float->boolean (enum flop <)))
+(define float= (float2 (enum flop =)))
+(define float< (float2 (enum flop <)))
 
 (define float-exp (float->float (enum flop exp)))
 (define float-log (float->float (enum flop log)))
@@ -194,14 +198,22 @@
 (define (define-floatnum-method mtable proc)
   (define-method mtable ((m :rational) (n :rational)) (proc m n)))
 
+;; the numerical tower sucks
+(define (define-floatnum-comparison mtable proc float-proc)
+  (define-method mtable ((m :double) (n :double)) (float-proc m n))
+  (define-method mtable ((m :double) (n :rational))
+    (proc (float->exact m) n))
+  (define-method mtable ((m :rational) (n :double))
+    (proc m (float->exact n))))
+
 (define-floatnum-method &+ float+)
 (define-floatnum-method &- float-)
 (define-floatnum-method &* float*)
 (define-floatnum-method &/ float/)
 (define-floatnum-method &quotient float-quotient)
 (define-floatnum-method &remainder float-remainder)
-(define-floatnum-method &= float=)
-(define-floatnum-method &< float<)
+(define-floatnum-comparison &= = float=)
+(define-floatnum-comparison &< < float<)
 (define-floatnum-method &atan2 float-atan2)
 
 (define-method &exp   ((x :rational)) (float-exp   x))
