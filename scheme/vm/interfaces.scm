@@ -561,6 +561,7 @@
 	  
 	  *code-pointer*
 	  *last-code-called*
+	  *native-exception-cont*
 	  *val*
 	  ))
 
@@ -627,6 +628,7 @@
 	  *cont*
 	  *stack*
 	  *last-code-called*
+	  *native-exception-cont*
 	  s48-*stack-limit*
 	  s48-*native-protocol*
 	  s48-set-native-protocol!

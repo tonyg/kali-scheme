@@ -379,30 +379,53 @@
 ; to the next instruction when returning.  The exception is saved in the
 ; continuation for use in debugging.
 
+(define *native-exception-cont* 0)
+
+(define (reset-native-exception-cont!)
+  (set! *native-exception-cont* 0))
+
 (define (push-exception-setup! exception instruction-size)
 ;  (breakpoint "exception continuation")
-  (receive (code pc)
-      (current-code+pc)
-    (push-exception-continuation! (code+pc->code-pointer *exception-return-code*
-							 return-code-pc)
-				  (enter-fixnum pc)
-				  code
-				  (enter-fixnum exception)
-				  (enter-fixnum instruction-size)))
+  (if (= 0 *native-exception-cont*)
+      (receive (code pc)
+	 (current-code+pc)
+	 (push-exception-continuation! (code+pc->code-pointer *exception-return-code*
+							      return-code-pc)
+				       (enter-fixnum pc)
+				       code
+				       (enter-fixnum exception)
+				       (enter-fixnum instruction-size)))
+      (begin
+	(push *native-exception-cont*)
+	(push-exception-continuation! (code+pc->code-pointer *exception-return-code*
+							      return-code-pc)
+				    (enter-fixnum (current-opcode))
+				    *native-exception-cont*
+				    (enter-fixnum exception)
+				    (enter-fixnum 0)) ; used to distinguish bc/nc
+	(reset-native-exception-cont!)))
   (push (enter-fixnum (current-opcode)))
   (push (enter-fixnum exception)))
 
 (define-opcode return-from-exception
-  (receive (pc code exception size)
+  (receive (pc/opcode code exception size/is-native?)
       (pop-exception-data)
-    (let* ((pc (extract-fixnum pc))
-	   (opcode (code-vector-ref code pc)))
-      (cond ((okay-to-proceed? opcode)
-	     (set-code-pointer! code (+ pc (extract-fixnum size)))
-	     (goto interpret *code-pointer*))
-	    (else
-	     (set-code-pointer! code pc)
-	     (raise-exception illegal-exception-return 0 exception))))))
+    (if (= size/is-native? (enter-fixnum 0))
+	(let ((opcode (extract-fixnum pc/opcode)))
+	  (cond ((okay-to-proceed? opcode)
+		 (return-values 0 null 0))
+		(else 
+		 (set-code-pointer! code 0) ; Uahh...
+		 (raise-exception illegal-exception-return 0 exception))))
+	(let* ((pc (extract-fixnum pc/opcode))
+	       (opcode (code-vector-ref code pc))
+	       (size size/is-native?))
+	  (cond ((okay-to-proceed? opcode)
+		 (set-code-pointer! code (+ pc (extract-fixnum size)))
+		 (goto interpret *code-pointer*))
+		(else
+		 (set-code-pointer! code pc)
+		 (raise-exception illegal-exception-return 0 exception)))))))
 
 ; It's okay to proceed if the opcode is a data operation, which are all those
 ; from EQ? on up, or references to globals (where the use can supply a value).
