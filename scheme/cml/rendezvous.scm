@@ -136,7 +136,7 @@
   (make-base
    (lambda ()
      (make-enabled -1
-		   (lambda ()
+		   (lambda (queue)
 		     value)))))
 
 (define never-rv (really-make-base '()))
@@ -361,7 +361,8 @@
 	  (car do-list))))))))
 
 (define (block)
-  (with-new-proposal (lose) (maybe-commit-and-block)))
+  (with-new-proposal (lose)
+    (maybe-commit-and-block (make-cell (current-thread)))))
 
 (define (sync-prim-rvs prim-rvs)
   (cond
