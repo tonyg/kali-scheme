@@ -4,7 +4,7 @@
 
 ; It's a shame the algorithms are implemented multiple times for the
 ; port encodings and this, only in different forms.  But I don't know
-; how to unify the different algorithms.  (Other than via 
+; how to unify the different algorithms.
 
 ; There's also grotesque amounts of code duplication within this file.
 ; Help welcome.
@@ -111,47 +111,6 @@
 ; RAISE-ERROR? is true, we raise an error if the encoding is
 ; incomplete or incorrect.  If it's false, we just return the number
 ; of bytes the decoder would consume.
-
-(define (bytes-char-encoding-length/utf-8 bytes start-index count raise-error?)
-  (let loop ((q 0) (state 0) (mask 0) (scalar-value 0))
-    (if (< q count)
-	(let* ((c (byte-vector-ref bytes (+ start-index q)))
-	       (state (vector-ref *utf-8-state-table*
-				  (+ (arithmetic-shift state 5)	; (* state 32)
-				     (arithmetic-shift c -3)))))
-	  (case state
-	    ((0)
-	     (let ((scalar-value (+ scalar-value
-					    (bitwise-and c #x7f))))
-	       (cond
-		((scalar-value? scalar-value)
-		 (values (scalar-value->char scalar-value)
-			 (+ q 1)))
-		(raise-error?
-		 (call-error "illegal scalar value in UTF-8 encoding"
-			     decode-char/utf-8
-			     bytes start-index scalar-value))
-		(else
-		 1))))
-	    ((1 2 3)
-	     (loop (+ 1 q) state #x3f
-		   (arithmetic-shift (+ scalar-value
-					(bitwise-and c
-						     (if (zero? mask)
-							 (vector-ref *utf-8-masks* state)
-							 mask)))
-				     6)))
-	    ((-2 -1)
-	     (if raise-error?
-		 (call-error "illegal byte in UTF-8 encoding"
-			     decode-char/utf-8
-			     bytes (+ start-index q))
-		 1))))
-	(if raise-error?
-	    1
-	    (call-error "insufficient data for multi-byte UTF-8 char"
-			bytes-char-encoding-length/utf-8
-			bytes start-index count)))))
 
 (define (bytes-char-encoding-length/utf-8 bytes start-index count raise-error?)
   (let loop ((q 0) (state 0))
