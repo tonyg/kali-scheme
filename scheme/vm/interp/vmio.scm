@@ -47,11 +47,11 @@
   (set! *number-of-channels*
 	(max *number-of-channels*
 	     (+ 1
-		(max (input-port->channel (current-input-port))
-		     (max (output-port->channel (current-output-port))
-			  (output-port->channel (current-error-port)))))))
+		(max (current-input-channel)
+		     (max (current-output-channel)
+			  (current-error-channel))))))
   (set! *vm-channels* (make-vector *number-of-channels*
-				   (input-port->channel (current-input-port))))
+				   (current-input-channel)))
   (set! *pending-channels-head* false)
   (set! *pending-channels-tail* false)
   (if (null-pointer? *vm-channels*)
@@ -60,15 +60,15 @@
   (let ((key (ensure-space (* 3 (+ channel-size
 				   (vm-string-size
 				     (string-length "standard output")))))))
-    (values (make-initial-channel (input-port->channel (current-input-port))
+    (values (make-initial-channel (current-input-channel)
 				  input-status
 				  "standard input"
 				  key)
-	    (make-initial-channel (output-port->channel (current-output-port))
+	    (make-initial-channel (current-output-channel)
 				  output-status
 				  "standard output"
 				  key)
-	    (make-initial-channel (output-port->channel (current-error-port))
+	    (make-initial-channel (current-error-channel)
 				  output-status
 				  "standard error"
 				  key))))
