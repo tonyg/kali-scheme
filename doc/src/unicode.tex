@@ -143,6 +143,8 @@ reads text from an input port.  Therefore, each port has an associated
 Note that the interface to the text codec functionality is
 experimental and very likely to change in the future.
 
+\subsection{Text codecs}
+
 The \code{ports} structure defines the following procedures:
 %
 \begin{protos}
@@ -177,6 +179,8 @@ implement the US-ASCII, Latin-1, Unicode UTF-8, Unicode UTF-16
 name.  The names of the above encodings are \verb|"null"|,
 \verb|"US-ASCII"|, \verb|"ISO8859-1"|, \verb|"UTF-8"|,
 \verb|"UTF-16LE"|, and \verb|"UTF-16BE"|, respectively.
+
+\subsection{Creating text codecs}
 
 \begin{protos}
 \proto{make-text-codec}{ strings encode-proc decode-proc}{text-codec}
@@ -230,6 +234,21 @@ that this byte count is only a guess: the system will provide that
 many bytes, but the decoding procedures might still signal an
 incomplete encoding, causing the system to try to obtain more.  All
 accesses to the byte vector should be provisional.
+
+\section{Default encodings}
+
+The default encoding for new ports is UTF-8.  For the default
+\code{current-input-port}, \code{current-output-port}, and
+\code{current-error-port}, Scheme~48 consults the OS for encoding
+information.
+
+For Unix, it consults \code{nl\_langinfo(3)}, which in turn consults
+the \code{LC\_} environment variables.  If the encoding is not defined
+that way, Scheme~48 reverts to US-ASCII.
+
+Under Windows, Scheme~48 uses Unicode I/O (using UTF-16) for the
+default ports connected to the console, and Latin-1 for default ports
+that are not.
 
 %%% Local Variables: 
 %%% mode: latex
