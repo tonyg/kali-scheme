@@ -145,7 +145,26 @@
   char-set?
   (s char-set:s))
 
-(define (%string-copy s) (substring s 0 (string-length s)))
+(define (%byte-vector-copy b)
+  (let* ((size (byte-vector-length b))
+	 (result (make-byte-vector size 0)))
+    (copy-bytes! b 0 result 0 size)
+    result))
+
+(define (byte-vector=? b1 b2)
+  (let ((size-1 (byte-vector-length b1))
+	(size-2 (byte-vector-length b2)))
+    (and (= size-1 size-2)
+	 (let loop ((i 0))
+	   (cond
+	    ((>= i size-1) #t)
+	    ((= (byte-vector-ref b1 i) (byte-vector-ref b2 i))
+	     (loop (+ 1 i)))
+	    (else
+	      #f))))))
+	   
+      
+      
 
 ;;; Parse, type-check & default a final optional BASE-CS parameter from
 ;;; a rest argument. Return a *fresh copy* of the underlying string.
@@ -157,11 +176,11 @@
       (let ((bcs  (car maybe-base))
 	    (tail (cdr maybe-base)))
 	(if (null? tail)
-	    (if (char-set? bcs) (%string-copy (char-set:s bcs))
+	    (if (char-set? bcs) (%byte-vector-copy (char-set:s bcs))
 		(error "BASE-CS parameter not a char-set" proc bcs))
 	    (error "Expected final base char set -- too many parameters"
 		   proc maybe-base)))
-      (make-string 256 (%latin1->char 0))))
+      (make-byte-vector 256 0)))
 
 ;;; If CS is really a char-set, do CHAR-SET:S, otw report an error msg on
 ;;; behalf of our caller, PROC. This procedure exists basically to provide
@@ -178,18 +197,18 @@
 ;;; underlying string representation of char sets. They should be
 ;;; inlined if possible.
 
-(define (si=0? s i) (zero? (%char->latin1 (string-ref s i))))
+(define (si=0? s i) (zero? (byte-vector-ref s i)))
 (define (si=1? s i) (not (si=0? s i)))
-(define c0 (%latin1->char 0))
-(define c1 (%latin1->char 1))
-(define (si s i) (%char->latin1 (string-ref s i)))
-(define (%set0! s i) (string-set! s i c0))
-(define (%set1! s i) (string-set! s i c1))
+(define c0 0)
+(define c1 1)
+(define (si s i) (byte-vector-ref s i))
+(define (%set0! s i) (byte-vector-set! s i c0))
+(define (%set1! s i) (byte-vector-set! s i c1))
 
 ;;; These do various "s[i] := s[i] op val" operations -- see 
 ;;; %CHAR-SET-ALGEBRA. They are used to implement the various
 ;;; set-algebra procedures.
-(define (setv!   s i v) (string-set! s i (%latin1->char v))) ; SET to a Value.
+(define (setv!   s i v) (byte-vector-set! s i v)) ; SET to a Value.
 (define (%not!   s i v) (setv! s i (- 1 v)))
 (define (%and!   s i v) (if (zero? v) (%set0! s i)))
 (define (%or!    s i v) (if (not (zero? v)) (%set1! s i)))
@@ -198,7 +217,7 @@
 
 
 (define (char-set-copy cs)
-  (make-char-set (%string-copy (%char-set:s/check cs char-set-copy))))
+  (make-char-set (%byte-vector-copy (%char-set:s/check cs char-set-copy))))
 
 (define (char-set= . rest)
   (or (null? rest)
@@ -207,7 +226,7 @@
 	     (s1 (%char-set:s/check cs1 char-set=)))
 	(let lp ((rest rest))
 	  (or (not (pair? rest))
-	      (and (string=? s1 (%char-set:s/check (car rest) char-set=))
+	      (and (byte-vector=? s1 (%char-set:s/check (car rest) char-set=))
 		   (lp (cdr rest))))))))
 
 (define (char-set<= . rest)
@@ -283,7 +302,7 @@
 ;;; -- Adjoin & delete
 
 (define (%set-char-set set proc cs chars)
-  (let ((s (%string-copy (%char-set:s/check cs proc))))
+  (let ((s (%byte-vector-copy (%char-set:s/check cs proc))))
     (for-each (lambda (c) (set s (%char->latin1 c)))
 	      chars)
     (make-char-set s)))
@@ -347,7 +366,7 @@
 (define (char-set-map proc cs)
   (check-arg procedure? proc char-set-map)
   (let ((s (%char-set:s/check cs char-set-map))
-	(ans (make-string 256 c0)))
+	(ans (make-byte-vector 256 c0)))
     (let lp ((i 255))
       (cond ((>= i 0)
 	     (if (si=1? s i)
@@ -410,7 +429,7 @@
 	    chars))
 
 (define (char-set . chars)
-  (let ((s (make-string 256 c0)))
+  (let ((s (make-byte-vector 256 c0)))
     (%list->char-set! chars s)
     (make-char-set s)))
 
@@ -539,10 +558,10 @@
 ;;; Apply P to each index and its char code in S: (P I VAL).
 ;;; Used by the set-algebra ops.
 
-(define (%string-iter p s)
-  (let lp ((i (- (string-length s) 1)))
+(define (%byte-vector-iter p s)
+  (let lp ((i (- (byte-vector-length s) 1)))
     (cond ((>= i 0)
-	   (p i (%char->latin1 (string-ref s i)))
+	   (p i (byte-vector-ref s i))
 	   (lp (- i 1))))))
 
 ;;; String S represents some initial char-set. (OP s i val) does some
@@ -565,13 +584,13 @@
 
 (define (char-set-complement cs)
   (let ((s (%char-set:s/check cs char-set-complement))
-	(ans (make-string 256)))
-    (%string-iter (lambda (i v) (%not! ans i v)) s)
+	(ans (make-byte-vector 256 0)))
+    (%byte-vector-iter (lambda (i v) (%not! ans i v)) s)
     (make-char-set ans)))
 
 (define (char-set-complement! cset)
   (let ((s (%char-set:s/check cset char-set-complement!)))
-    (%string-iter (lambda (i v) (%not! s i v)) s))
+    (%byte-vector-iter (lambda (i v) (%not! s i v)) s))
   cset)
 
 
@@ -584,7 +603,7 @@
 
 (define (char-set-union . csets)
   (if (pair? csets)
-      (let ((s (%string-copy (%char-set:s/check (car csets) char-set-union))))
+      (let ((s (%byte-vector-copy (%char-set:s/check (car csets) char-set-union))))
 	(%char-set-algebra s (cdr csets) %or! char-set-union)
 	(make-char-set s))
       (char-set-copy char-set:empty)))
@@ -599,7 +618,7 @@
 
 (define (char-set-intersection . csets)
   (if (pair? csets)
-      (let ((s (%string-copy (%char-set:s/check (car csets) char-set-intersection))))
+      (let ((s (%byte-vector-copy (%char-set:s/check (car csets) char-set-intersection))))
 	(%char-set-algebra s (cdr csets) %and! char-set-intersection)
 	(make-char-set s))
       (char-set-copy char-set:full)))
@@ -614,7 +633,7 @@
 
 (define (char-set-difference cs1 . csets)
   (if (pair? csets)
-      (let ((s (%string-copy (%char-set:s/check cs1 char-set-difference))))
+      (let ((s (%byte-vector-copy (%char-set:s/check cs1 char-set-difference))))
 	(%char-set-algebra s csets %minus! char-set-difference)
 	(make-char-set s))
       (char-set-copy cs1)))
@@ -629,7 +648,7 @@
 
 (define (char-set-xor . csets)
   (if (pair? csets)
-      (let ((s (%string-copy (%char-set:s/check (car csets) char-set-xor))))
+      (let ((s (%byte-vector-copy (%char-set:s/check (car csets) char-set-xor))))
 	(%char-set-algebra s (cdr csets) %xor! char-set-xor)
 	(make-char-set s))
       (char-set-copy char-set:empty)))
@@ -639,7 +658,7 @@
 
 (define (%char-set-diff+intersection! diff int csets proc)
   (for-each (lambda (cs)
-	      (%string-iter (lambda (i v)
+	      (%byte-vector-iter (lambda (i v)
 			      (if (not (zero? v))
 				  (cond ((si=1? diff i)
 					 (%set0! diff i)
@@ -650,7 +669,7 @@
 (define (char-set-diff+intersection! cs1 cs2 . csets)
   (let ((s1 (%char-set:s/check cs1 char-set-diff+intersection!))
 	(s2 (%char-set:s/check cs2 char-set-diff+intersection!)))
-    (%string-iter (lambda (i v) (if (zero? v)
+    (%byte-vector-iter (lambda (i v) (if (zero? v)
 				    (%set0! s2 i)
 				    (if (si=1? s2 i) (%set0! s1 i))))
 		  s1)
@@ -658,8 +677,8 @@
   (values cs1 cs2))
 
 (define (char-set-diff+intersection cs1 . csets)
-  (let ((diff (string-copy (%char-set:s/check cs1 char-set-diff+intersection)))
-	(int  (make-string 256 c0)))
+  (let ((diff (%byte-vector-copy (%char-set:s/check cs1 char-set-diff+intersection)))
+	(int  (make-byte-vector 256 c0)))
     (%char-set-diff+intersection! diff int csets char-set-diff+intersection)
     (values (make-char-set diff) (make-char-set int))))
 

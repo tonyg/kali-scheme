@@ -250,6 +250,7 @@
 (define-structure srfi-14 srfi-14-interface
   (open scheme-level-2
 	bitwise
+	byte-vectors (subset primitives (copy-bytes!))
 	srfi-9
 	(modify ascii (rename (char->ascii %char->latin1)
 			      (ascii->char %latin1->char)))
