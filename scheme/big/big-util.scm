@@ -174,7 +174,7 @@
     (cond ((null? list)
 	   in-list)
 	  ((pred (car list))
-	   (append-reverse! res (cdr list)))
+	   (append-reverse! res (delete pred (cdr list))))
 	  (else
 	   (loop (cdr list) (cons (car list) res))))))
 

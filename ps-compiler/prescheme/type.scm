@@ -239,9 +239,10 @@
 	    (error "unknown type syntax ~S" spec))))
 	((not (symbol? spec))
 	 (error "unknown type syntax ~S" spec))
-	((or (lookup-type spec)
-	     (lookup-record-type spec))
+	((lookup-type spec)
 	 => identity)
+	((lookup-record-type spec)
+	 => make-pointer-type)
 	(else
 	 (error "unknown type name ~S" spec))))
 

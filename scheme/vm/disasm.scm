@@ -91,8 +91,8 @@
 
 (define (arg-spec-size spec)
   (case spec
-    ((nargs byte index stob) 1)
-    ((offset) 2)
+    ((nargs byte small-index stob) 1)
+    ((offset index) 2)
     (else 0)))
 
 (define (print-opcode-arg specs pc code template level write-templates?)
@@ -100,6 +100,9 @@
     ((nargs byte)
      (write (code-vector-ref code pc)))
     ((index)
+     (let ((thing (template-ref template (get-offset pc code))))
+       (write-literal-thing thing level write-templates?)))
+    ((small-index)
      (let ((thing (template-ref template (code-vector-ref code pc))))
        (write-literal-thing thing level write-templates?)))
     ((offset)

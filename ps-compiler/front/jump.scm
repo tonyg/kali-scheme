@@ -161,10 +161,10 @@
 ; there is a continuation some protocol adjustment may be required.
 
 (define (procs->jumps jump-procs vars cont)
-  (if (null? (filter (lambda (n)
-			 (node-equal? cont (call-arg (node-parent n) 0)))
-		       (apply append (map variable-refs vars))))
-      (breakpoint "no calls"))
+;  (if (null? (filter (lambda (n)
+;                         (node-equal? cont (call-arg (node-parent n) 0)))
+;                       (apply append (map variable-refs vars))))
+;      (breakpoint "no calls"))
   (let* ((proc (containing-procedure cont))
 	 (lca (least-common-ancestor
 	       (filter (lambda (n)

@@ -7,7 +7,7 @@ lib=$2
 image=$3
 vm=$4
 initial=$5
-USER="${USER-`logname 2>/dev/null || echo '*GOK*'`}"
+USER=${USER-`logname 2>/dev/null || echo '*GOK*'`}
 
 $vm -i $initial -a batch <<EOF
 ,load $srcdir/scheme/env/init-defpackage.scm

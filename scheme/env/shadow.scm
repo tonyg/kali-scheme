@@ -39,12 +39,17 @@
 	(deal-with-replaced-variable opcode reason loc rest succeed)
 	(apply signal-exception opcode reason loc rest))))
 
+(define byte-limit (expt 2 bits-used-per-byte))
+
 (define (deal-with-replaced-variable opcode reason loc rest succeed)
   (primitive-catch
    (lambda (cont)
      (let* ((tem (continuation-template cont))
-	    (index (code-vector-ref (template-code tem)
-				    (- (continuation-pc cont) 1))))
+	    (index (+ (code-vector-ref (template-code tem)
+				       (- (continuation-pc cont) 1))
+		      (* (code-vector-ref (template-code tem)
+					  (- (continuation-pc cont) 2))
+			 byte-limit))))
        (if (eq? (template-ref tem index) loc)
 	   (let* ((p-uid (do ((env (continuation-env cont)
 				   (vector-ref env 0)))

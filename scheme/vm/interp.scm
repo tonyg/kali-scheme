@@ -120,7 +120,7 @@
   (next-offset))
 
 (define (next-literal)
-  (template-ref *template* (next-byte)))
+  (template-ref *template* (next-offset)))
 
 ; Return the current op-code.  CODE-ARGS is the number of argument bytes that
 ; have been used.
@@ -326,9 +326,15 @@
   (goto interpret))
 
 ; Literals
+; Loaded from *template* into *val*, using either a one-byte or two-byte index.
 
 (define-opcode literal    ;Load a literal into *val*.
   (set! *val* (next-literal))
+  (goto interpret))
+
+(define-opcode small-literal
+  (set! *val* (template-ref *template* (this-byte)))
+  (set! *code-pointer* (addr+ *code-pointer* 2))  ; eat unused byte
   (goto interpret))
 
 ; Local variable access and assignment
@@ -365,13 +371,13 @@
   (let ((location (next-literal)))
     (set! *val* (contents location))
     (if (undefined? *val*)           ;unbound or unassigned
-	(raise-exception undefined-global 1 location)
+	(raise-exception undefined-global 2 location)
 	(goto interpret))))
 
 (define-opcode set-global!
   (let ((location (next-literal)))
     (cond ((vm-eq? (contents location) unbound-marker)
-           (raise-exception undefined-global 1 location *val*))
+           (raise-exception undefined-global 2 location *val*))
           (else
            (set-contents! location *val*)
            (set! *val* unspecific-value)

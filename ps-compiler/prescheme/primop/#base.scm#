@@ -131,7 +131,7 @@
   default-simplifier)
 
 (define-scheme-primop null-pointer #f
-  (lambda (call) type/boolean)
+  (lambda (call) (make-pointer-type (make-uvar 
   default-simplifier)
 
 (define-scheme-primop eq? #f

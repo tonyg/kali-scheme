@@ -98,13 +98,15 @@
 	linking     ; define-prescheme!
 	inference-internal ; check-arg-type
 	type-variables     ; make-arith-op-uvar
+	record-types
 	prescheme ps-memory
 	ps-types external-constants
 	eval-node)  ; closure?  (to keep them from being made immutable)
   (access variable)   ; variable-name
   (files (primop scm-scheme)
 	 (primop scm-arith)
-	 (primop scm-memory)))
+	 (primop scm-memory)
+	 (primop scm-record)))
 
 (define-structures ((eval-node (export eval-node
 				       closure? closure-node closure-env
@@ -184,7 +186,7 @@
 
 (define-structures ((inference inference-interface)
 		    (inference-internal inference-internal-interface))
-  (open big-scheme scheme front variable comp-util
+  (open big-scheme scheme front variable comp-util transitive
 	ps-types type-variables syntactic
 	structure-refs
 	ps-primitives
@@ -268,7 +270,7 @@
 
 (define-structures ((c (export write-c-file hoist-nested-procedures))
 		    (c-internal c-internal-interface))
-  (open scheme big-scheme comp-util node forms
+  (open scheme big-scheme comp-util strongly-connected node forms
 	ps-primops ps-c-primops
 	ps-types type-variables
 	flatten-internal   ; generated-top-variable?

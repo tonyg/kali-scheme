@@ -53,24 +53,27 @@
 
 (define (root-wait add-thread!)
   (let loop ()
-    (with-interrupts-inhibited
-     (lambda ()
-       (let ((forcers? (spawn-output-forcers add-thread! #f)))
-	 (call-with-values
-	  wake-some-threads
-	  (lambda (woke-some? time-until-wakeup)
-	    (cond ((or forcers? woke-some? (event-pending?))
-		   #t)
-		  ((or time-until-wakeup
-		       (waiting-for-i/o?))
-		   (do-some-waiting time-until-wakeup)
-		   (loop))
-		  ((session-data-ref deadlock-handler)
-		   => (lambda (handler)
-			(handler)
-			#t))
-		  (else
-		   #f)))))))))
+    (set-enabled-interrupts! 0)
+    (let ((forcers? (spawn-output-forcers add-thread! #f)))
+      (call-with-values
+       wake-some-threads
+       (lambda (woke-some? time-until-wakeup)
+         (cond ((or forcers? woke-some? (event-pending?))
+                (set-enabled-interrupts! all-interrupts)
+                #t)
+               ((or time-until-wakeup
+                    (waiting-for-i/o?))
+                (do-some-waiting time-until-wakeup)
+                (set-enabled-interrupts! all-interrupts)
+                (loop))
+               ((session-data-ref deadlock-handler)
+                => (lambda (handler)
+                     (handler)
+                     (set-enabled-interrupts! all-interrupts)
+                     #t))
+               (else
+                (set-enabled-interrupts! all-interrupts)
+                #f)))))))
 
 (define one-day-of-milliseconds (* (* 1000 60) (* 60 24)))
 

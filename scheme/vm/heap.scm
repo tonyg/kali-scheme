@@ -380,17 +380,23 @@
 	(read-lost "Heap not big enough to restore this image" port)
 	(receive (okay? string)
 	    (image-read-block port (- *old-hp* *old-begin*))
-	  (cond ((not okay?)
-		 (read-lost string port))
-		((error? (close-input-port port))
-		 (read-lost "Error closing image file" port))
-		(else
-		 (if reverse?
-		     (reverse-byte-order start new-hp))
-		 (if (not (= delta 0))
-		     (relocate-image delta start new-hp))
-		 (set! *hp* new-hp)
-		 (adjust *startup-proc* delta)))))))
+	  (receive (ch eof? status)
+	      (read-char port)
+	    (cond ((not okay?)
+		   (read-lost string port))
+		  ((error? status)
+		   (read-lost "Error reading from image file" port))
+		  ((not eof?)
+		   (read-lost "Image file has extraneous data after image" port))
+		  ((error? (close-input-port port))
+		   (read-lost "Error closing image file" port))
+		  (else
+		   (if reverse?
+		       (reverse-byte-order! start new-hp))
+		   (if (not (= delta 0))
+		       (relocate-image delta start new-hp))
+		   (set! *hp* new-hp)
+		   (adjust *startup-proc* delta))))))))
 
 (define (image-read-block port need)
   (receive (got eof? status)
@@ -400,7 +406,7 @@
 	   (values #f "Error reading from image file"))
 	  (eof?
 	   (values #f "Premature EOF when reading image file"))
-	  ((< got (cells->a-units 1))
+	  ((< got need)
 	   (values #f "Read returned too few bytes"))
 	  (else
 	   (values #t "")))))
@@ -425,15 +431,17 @@
     (store-byte! (addr+ addr 1) (fetch-byte (addr+ addr 2)))
     (store-byte! (addr+ addr 2) x)))
 
-(define (reverse-byte-order start end)
+(define (reverse-byte-order! start end)
   (error-message "Correcting byte order of resumed image.")
   (let loop ((ptr start))
-    (reverse-descriptor-byte-order! ptr)
-    (let ((value (fetch ptr)))
-      (if (addr< ptr end)
-	  (loop (if (b-vector-header? value)
-		    (addr+ (addr1+ ptr) (header-a-units value))
-		    (addr1+ ptr)))))))
+    (if (addr< ptr end)
+	(begin
+	  (reverse-descriptor-byte-order! ptr)
+	  (loop (let ((value (fetch ptr))
+		      (next (addr1+ ptr)))
+		  (if (b-vector-header? value)
+		      (addr+ next (header-a-units value))
+		      next)))))))
 
 (define (adjust descriptor delta)
   (if (stob? descriptor)

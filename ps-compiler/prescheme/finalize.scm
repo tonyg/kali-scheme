@@ -108,39 +108,15 @@
 ;----------------------------------------------------------------
 
 (define (flow-sources-forwards uvars)
-  (for-each (lambda (uvar)
-	      (let ((type (reduce (uvar-sources uvar)
-				  (lambda (relation type)
-				    (let ((other (maybe-follow-uvar
-						  (relation-source relation))))
-				      (cond ((uvar? other)
-					     type)
-					    ((not type)
-					     other)
-					    (else
-					     (type-max type other)))))
-				  (if (uvar-arith-op? uvar)
-				      type/int32 ; minimum arithmetic type
-				      #f))))
-		(set-uvar-temp! uvar (if type (list type) '()))))
-	    uvars)
-  (receive (ref set!)
-      (make-base-type-table)
-    (transitive uvars
-		(lambda (uvar)
-		  (filter-map (lambda (relation)
-				(let ((other (maybe-follow-uvar
-					      (relation-source relation))))
-				  (if (uvar? other)
-				      other
-				      #f)))
-			      (uvar-sources uvar)))
-		#f
-		uvar-temp
-		set-uvar-temp!
-		#f
-		ref
-		set!))
+  (let ((graph (make-graph-from-predecessors
+		  uvars uvar-providers uvar-temp set-uvar-temp!)))
+    (for-each (lambda (uvar)
+		(let ((type (uvar-initial-type uvar)))
+		  (set-uvar-temp! uvar (if type (list type) '()))))
+	      uvars)
+    (receive (ref set!)
+	(make-base-type-table)
+      (transitive-or! graph uvar-temp set-uvar-temp! ref set!)))
   (filter (lambda (uvar)
 	    (let ((types (uvar-temp uvar)))
 	      (cond ((null? types)
@@ -152,39 +128,42 @@
 		     #f))))
 	  uvars))
 
+(define (uvar-providers uvar)    
+  (filter-map (lambda (relation)
+		(let ((other (maybe-follow-uvar
+			      (relation-source relation))))
+		  (if (uvar? other)
+		      other
+		      #f)))
+	      (uvar-sources uvar)))
+
+(define (uvar-initial-type uvar)	      
+  (reduce (uvar-sources uvar)
+	  (lambda (relation type)
+	    (let ((other (maybe-follow-uvar
+			  (relation-source relation))))
+	      (cond ((uvar? other)
+		     type)
+		    ((not type)
+		     other)
+		    (else
+		     (type-max type other)))))
+	  (if (uvar-arith-op? uvar)
+	      type/int32 ; minimum arithmetic type
+	      #f)))
+
 ;----------------------------------------------------------------
 ; Find the smallest type that the uvar's sinks want.
 
 (define (flow-sinks-backwards uvars)
-  (for-each (lambda (uvar)
-	      (set-uvar-binding! uvar (uvar-marker-maker)))
-	    uvars)
-  (for-each (lambda (uvar)
-	      (let loop ((rels (uvar-sinks uvar)) (type #f) (users '()))
-		(if (null? rels)
-		    (begin
-		      (set-uvar-temp! uvar (if type (list type) '()))
-		      (set-uvar-users! uvar users))
-		    (let ((other (relation-sink (car rels))))
-		      (if (and (uvar? other)
-			       (uvar-marker? (uvar-binding other)))
-			  (loop (cdr rels) type (cons other users))
-			  (loop (cdr rels)
-				(type-min type (maybe-follow-uvar other))
-				users))))))
-	    uvars)
-  (receive (ref set!)
-      (make-base-type-table)
-    (transitive uvars
-		uvar-users
-		#f
-		uvar-temp
-		set-uvar-temp!
-		#f
-		ref
-		set!))
+  (initialize-uvar-wants! uvars)
+  (let ((graph (make-graph-from-predecessors
+		  uvars uvar-users uvar-temp set-uvar-temp!)))
+    (receive (ref set!)
+	(make-base-type-table)
+      (transitive-or! graph uvar-wants set-uvar-wants! ref set!)))
   (filter (lambda (uvar)
-	    (let ((types (uvar-temp uvar)))
+	    (let ((types (uvar-wants uvar)))
 	      (cond ((null? types)
 		     (set-uvar-binding! uvar #f)
 		     #t)
@@ -194,9 +173,29 @@
 		     #f))))
 	  uvars))
 
+(define (initialize-uvar-wants! uvars)  
+  (for-each (lambda (uvar)
+	      (set-uvar-binding! uvar (uvar-marker-maker)))
+	    uvars)
+  (for-each (lambda (uvar)
+	      (let loop ((rels (uvar-sinks uvar)) (type #f) (users '()))
+		(if (null? rels)
+		    (begin
+		      (set-uvar-wants! uvar (if type (list type) '()))
+		      (set-uvar-users! uvar users))
+		    (let ((other (relation-sink (car rels))))
+		      (if (and (uvar? other)
+			       (uvar-marker? (uvar-binding other)))
+			  (loop (cdr rels) type (cons other users))
+			  (loop (cdr rels)
+				(type-min type (maybe-follow-uvar other))
+				users))))))
+	    uvars))
+
 (define-subrecord uvar uvar-marker uvar-binding
   ()
-  (users))
+  (users
+   wants))
 
 (define (type-min t1 t2)
   (if (type> t1 t2) t2 t1))

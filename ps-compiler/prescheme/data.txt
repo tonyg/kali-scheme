@@ -1,0 +1,36 @@
+
+(define-data-type list
+  (null? null)
+  (pair?
+   (cons car cdr)
+   (car type car set-car!)
+   (cdr pair cdr set-cdr!)))
+
+=>
+
+(define null 0)
+cons etc. as before
+
+Type as before, except that LIST is defined to be a datatype
+that includes NULL and PAIRs.  NULL and PAIRs are defined to
+be subtypes of LISTs.  How do pairs and null get injected into
+lists?
+
+What about polymorphism?  Ignore it for now.
+
+Note that setters have a problem with destructuring - they don't work.
+
+(if (bar? baz)
+    ...
+    ...)
+
+Need temporary type bindings, a la LET.  Env and type env?
+Have to do shallow binding, the infer code doesn't use environments.
+
+Hacks like
+
+   (if (bar? baz)
+       (error ...))
+   ... baz is not a bar ...
+
+won't work.

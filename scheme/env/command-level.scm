@@ -356,20 +356,26 @@
 	(else
 	 #f)))))
 
-; This is run in an unspecified dynamic environment.  When exiting in batch
-; mode two thunks are needed to get past two different restart points at the
-; top level.
+; There are two dynamic environments that we need to take care of.  First
+; we install the one for spawned threads, to allow REPL-PROC to add whatever
+; it needs.  We then save that one for spawning threads and install the
+; command-levels dyanmic environment before calling REALLY-PUSH-COMMAND-LEVEL.
+;
+; When exiting in batch mode two thunks are needed to get past two different
+; restart points at the top level.
 
 (define (quit-or-push-level why data repl-proc levels)
   (if (batch-mode?)
       ((command-level-throw (last levels)) (lambda () (lambda () 0)))
-      (begin
+      (let ((levels-env (get-dynamic-env)))
 	(set-dynamic-env! (command-level-dynamic-env (car levels)))
 	(repl-proc
 	 why
 	 data
 	 (lambda (thunk)
-	   (really-push-command-level thunk (get-dynamic-env) levels))))))
+	   (let ((spawn-env (get-dynamic-env)))
+	     (set-dynamic-env! levels-env)
+	     (really-push-command-level thunk spawn-env levels)))))))
 
 ; Wait for events if there are blocked threads, otherwise add a new REPL
 ; thread if we aren't on the way out.

@@ -98,6 +98,10 @@
   (lambda (node env)
     (unspecific)))
 
+(define-evaluator 'unassigned
+  (lambda (node env)
+    (unspecific)))
+
 (define-evaluator 'real-external
   (lambda (node env)
     (let* ((exp (node-form node))

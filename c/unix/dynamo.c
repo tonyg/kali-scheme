@@ -54,7 +54,7 @@ static struct	dlob {
  * On success we return TRUE, having set *(long *)svlocp to the location.
  * On failure, we return FALSE.
  */
-scheme_value
+long
 lookup_external_name(long svname, long svlocp)
 {
 	struct dlob	*dp;
@@ -89,10 +89,10 @@ lookup_external_name(long svname, long svlocp)
  * evaluate (lookup-all-externals) in package externals to update any
  * externals the pointed to the old version of the library.
  */
-scheme_value
-s48_dynamic_load(long argc, scheme_value argv[])
+long
+s48_dynamic_load(long argc, long argv[])
 {
-	scheme_value	arg;
+	long	arg;
 
 	if (argc != 1)
 		return (SCHFALSE);

@@ -1,47 +1,93 @@
 #include <stdio.h>
 #include "prescheme.h"
 
-struct stream {
-  FILE * port;
-  long buffer;
-  long size;
-  long loc;
-  long limit;
+struct pair {
+  long car;
+  struct pair *cdr;
 };
+struct pair *cons(unsigned char, struct pair*);
+struct pair *reverseB(struct pair*);
+char memberP(struct pair*, long);
+void init(void);
+struct pair *null;
 
-unsigned char stream_read_char(struct stream *stream_0X)
+struct pair *cons(unsigned char car_0X, struct pair *cdr_1X)
 {
-  long loc_1X;
-  long buffer_2X;
-  long count_3X;
-  unsigned char ch_4X;
-
- {loc_1X = stream_0X->loc;
-  if ((loc_1X < (stream_0X->limit))) {
-    ch_4X = *((unsigned char *) loc_1X);
-    stream_0X->loc = (1 + (stream_0X->loc));
-    return(ch_4X);}
+  struct pair *pair_2X;
+ {pair_2X = (struct pair)malloc(sizeof(struct pair));
+  if ((NULL == pair_2X)) {
+    return pair_2X;}
   else {
-    buffer_2X = stream_0X->buffer;
-    count_3X = fread((void *)buffer_2X, sizeof(char), (stream_0X->size), (stream_0X->port));
-    if ((0 == count_3X)) {
-      return(0);}
-    else {
-      stream_0X->loc = (1 + buffer_2X);
-      stream_0X->limit = (buffer_2X + count_3X);
-      return((*((unsigned char *) buffer_2X)));}}}}
+    pair_2X->car = (((unsigned long) car_0X));
+    pair_2X->cdr = cdr_1X;
+    return pair_2X;}}}
 
-long port_Gstream(FILE * port_5X)
+struct pair *reverseB(struct pair *list_3X)
 {
-  struct stream *stream_6X;
-  long buffer_7X;
+  struct pair *arg0K1;
+  struct pair *arg0K0;
+  struct pair *list_4X;
+  struct pair *prev_5X;
+  struct pair *next_6X;
+ {if ((list_3X == (null))) {
+    return list_3X;}
+  else {
+    if (((list_3X->cdr) == (null))) {
+      return list_3X;}
+    else {
+      arg0K0 = list_3X;
+      arg0K1 = (null);
+      goto L105;}}}
+ L105: {
+  list_4X = arg0K0;
+  prev_5X = arg0K1;
+  next_6X = list_4X->cdr;
+  list_4X->cdr = prev_5X;
+  if ((next_6X == (null))) {
+    return list_4X;}
+  else {
+    arg0K0 = next_6X;
+    arg0K1 = list_4X;
+    goto L105;}}}
 
- {stream_6X = (struct stream*)malloc(sizeof(struct stream));
-  buffer_7X = (long)malloc(1024);
-  stream_6X->port = port_5X;
-  stream_6X->buffer = buffer_7X;
-  stream_6X->size = 1024;
-  stream_6X->loc = buffer_7X;
-  stream_6X->limit = buffer_7X;
-  return(buffer_7X);}}
+char memberP(struct pair *list_7X, long x_8X)
+{
+  struct pair *arg0K0;
+  struct pair *list_9X;
+ {arg0K0 = list_7X;
+  goto L169;}
+ L169: {
+  list_9X = arg0K0;
+  if ((list_9X == (null))) {
+    return 0;}
+  else {
+    if ((x_8X == (list_9X->car))) {
+      return 1;}
+    else {
+      arg0K0 = (list_9X->cdr);
+      goto L169;}}}}
 
+void init(void)
+{
+  struct pair *arg0K0;
+  struct pair *pair_10X;
+  struct pair *cdr_11X;
+  struct pair *v_12X;
+ {cdr_11X = null;
+  pair_10X = (struct pair)malloc(sizeof(struct pair));
+  if ((NULL == pair_10X)) {
+    arg0K0 = pair_10X;
+    goto L199;}
+  else {
+    pair_10X->car = 0;
+    pair_10X->cdr = cdr_11X;
+    arg0K0 = pair_10X;
+    goto L199;}}
+ L199: {
+  v_12X = arg0K0;
+  null = v_12X;
+  return;}}
+void
+main(void)
+{
+}

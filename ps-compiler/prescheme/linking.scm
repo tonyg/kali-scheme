@@ -25,7 +25,7 @@
     (environment-define! config 'prescheme prescheme)
     (environment-define! config 'ps-memory ps-memory)
     (environment-define! config 'ps-receive ps-receive)
-    (environment-define! config 'prescheme-defrecord prescheme-defrecord)
+    (environment-define! config 'ps-record-types ps-record-types)
     (environment-define! config 'structure-refs structure-refs)
     (environment-define! config ':syntax (structure-ref meta-types syntax-type))
     (set-reflective-tower-maker! config (get-reflective-tower-maker old-config))
@@ -113,6 +113,26 @@
   (environment-ref p (string->symbol ".make-reflective-tower.")))
 
 ;----------------------------------------------------------------
+; The following stuff is used to define the DEFINE-RECORD-TYPE macro.
+; We produce a structure that exports EXPAND-DEFINE-RECORD-TYPE.  The
+; base package then includes that structure in its FOR-SYNTAX package.
+
+(define defrecord-for-syntax-package
+  (make-very-simple-package 'defrecord-for-syntax-package '()))
+
+(define defrecord-for-syntax-structure
+  (make-structure defrecord-for-syntax-package
+		  (lambda () (export expand-define-record-type))
+		  'defrecord-for-syntax-structure))
+
+(define (define-for-syntax-value id value)
+  (let ((loc (make-new-location defrecord-for-syntax-package id)))
+    (set-contents! loc value)
+    (package-define! defrecord-for-syntax-package id usual-variable-type loc)))
+
+(define-for-syntax-value 'expand-define-record-type expand-define-record-type)
+
+;----------------------------------------------------------------
 ; BASE-PACKAGE contains all of the primitives, syntax, etc. for Pre-Scheme
 
 (define (prescheme-unbound package name)
@@ -121,7 +141,12 @@
 (define base-package
 ;  (let-fluid (structure-ref packages-internal $get-location) prescheme-unbound
 ;    (lambda () ))
-  (make-very-simple-package 'base-package '()))
+  (make-simple-package '()
+		       eval
+		       (make-env-for-syntax-promise
+			  scheme
+			  defrecord-for-syntax-structure)
+		       'base-package))
 
 ; Add the operators.
 
@@ -180,6 +205,9 @@
 
 (load "prescheme/ps-syntax.scm" base-package)
 
+(eval '(define-syntax define-record-type expand-define-record-type)
+      base-package)
+
 ;----------------------------------------------------------------
 ; Make the Pre-Scheme structure and related structures
 
@@ -202,45 +230,13 @@
 		  (lambda () (get-interface 'ps-receive-interface)) 
 		  'ps-receive))
 
+(define ps-record-types
+  (make-structure base-package
+                  (lambda () (export (define-record-type :syntax)))
+                  'ps-record-types))
+
 ; and a handy environment
 
 (define prescheme-compiler-env
   (package->environment base-package))
-
-;----------------------------------------------------------------
-; The following stuff is used to define the define-record-type macro.
-
-(define defrecord-for-syntax-package
-  (make-very-simple-package 'defrecord-for-syntax-package '()))
-
-(define defrecord-for-syntax-structure
-  (make-structure defrecord-for-syntax-package
-		  (lambda () (export expand-define-record-type))
-		  'defrecord-for-syntax-structure))
-
-(define (define-for-syntax-value id value)
-  (let ((loc (make-new-location defrecord-for-syntax-package id)))
-    (set-contents! loc value)
-    (package-define! defrecord-for-syntax-package id usual-variable-type loc)))
-
-(define-for-syntax-value 'expand-define-record-type expand-define-record-type)
-
-; A package in which to define DEFINE-RECORD-TYPE.  This is separate
-; from BASE-PACKAGE because this package needs to open SCHEME.
-
-(define prescheme-defrecord-package
-  (make-simple-package (list prescheme)
-		       eval
-		       (make-env-for-syntax-promise
-			scheme
-			defrecord-for-syntax-structure)
-		       'prescheme-defrecord-package))
-
-(define prescheme-defrecord
-  (make-structure prescheme-defrecord-package
-		  (lambda () (export (define-record-type :syntax)))
-		  'prescheme-defrecord))
-
-(eval '(define-syntax define-record-type expand-define-record-type)
-      prescheme-defrecord-package)
 

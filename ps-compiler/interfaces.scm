@@ -30,9 +30,6 @@
 
           make-xvector xvector-length xvector-ref xvector-set! xvector->vector
 
-          strongly-connected-components
-	  transitive
-
           (define-subrecord :syntax)
           (define-simple-record-type :syntax)
           (define-local-syntax :syntax)

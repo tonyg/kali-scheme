@@ -47,12 +47,11 @@
   (with-interrupts-inhibited
    (lambda ()
      (let ((queue (lock-queue lock)))
-       (let loop ()
-	 (if (thread-queue-empty? queue)
-	     (begin
-	       (set-lock-owner-uid! lock #f)
-	       #t)
-	     (let ((next (dequeue-thread! queue)))
-	       (set-lock-owner-uid! lock (thread-uid next))
-	       (make-ready next)
-	       #f)))))))
+       (if (thread-queue-empty? queue)
+	   (begin
+	     (set-lock-owner-uid! lock #f)
+	     #t)
+	   (let ((next (dequeue-thread! queue)))
+	     (set-lock-owner-uid! lock (thread-uid next))
+	     (make-ready next)
+	     #f))))))

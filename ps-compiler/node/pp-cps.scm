@@ -62,10 +62,7 @@
   (let* ((port (if (null? port) (current-output-port) (car port)))
 	 (port (if (current-column port)
 		   port
-		   (let ((port (make-tracking-output-port port)))
-		     ((structure-ref i/o-internal periodically-force-output!)
-		        port)
-		     port))))
+		   (make-tracking-output-port port))))
     (set! *rereadable?* #f)
     (cond ((lambda-node? node)
            (pp-cps-lambda node 4 port))
@@ -73,7 +70,8 @@
            (write-non-simple-call node port))
           (else
            (write-node-value node port)))
-    (newline port)))
+    (newline port)
+    ((structure-ref i/o force-output) port)))
 
 (define (rereadable-pp-cps node port)
   (set! *rereadable?* #t)

@@ -85,7 +85,7 @@
 
 (define (cps-sequence nodes values-cps)
   (if (null? nodes)
-      (bug "CPS: empty block"))
+      (bug "CPS: empty sequence"))
   (let loop ((nodes nodes) (first #f) (last #f))
     (if (null? (cdr nodes))
 	(values (car nodes) first last)

@@ -241,14 +241,6 @@
   (lambda (args type)
     (make-primop-call-node (get-prescheme-primop 'null-pointer?) args type)))
 
-(define-complex-primitive (null-pointer) (lambda () #f)
-  (lambda (args node depth return?)
-    (make-pointer-type (make-uvar 'null depth)))
-  (lambda ()
-    (null-pointer))
-  (lambda (args type)
-    (make-primop-call-node (get-prescheme-primop 'null-pointer) args type)))
-
 ;----------------------------------------------------------------
 ; I/O
 

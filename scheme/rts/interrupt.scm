@@ -83,6 +83,14 @@
 
 (define (post-gc-handler spawn-on-root)
   (lambda (finalizer-list enabled-interrupts)
+    (let ((space (memory-status (enum memory-status-option available) 0)))
+      (if (> (session-data-ref required-post-gc-space)
+	     space)
+	  (spawn-on-root
+	   (lambda ()
+	     ((session-data-ref space-shortage-handler)
+	      (session-data-ref required-post-gc-space)
+	      space)))))
     (spawn-on-root
      (lambda ()
        (for-each (lambda (p)
@@ -109,12 +117,3 @@
 				   10)
 			 (car maybe-required-space)))
   (session-data-set! space-shortage-handler handler))
-		     
-(call-after-gc!
- (lambda ()
-   (let ((space (memory-status (enum memory-status-option available) 0)))
-     (if (> (session-data-ref required-post-gc-space)
-	    space)
-	 ((session-data-ref space-shortage-handler)
-	  (session-data-ref required-post-gc-space)
-	  space)))))

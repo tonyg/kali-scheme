@@ -9,7 +9,7 @@ extern long		find_all(unsigned char);
 extern long		find_all_records(long);
 extern long		gc_count(void);
 extern long		heap_size(void);
-extern unsigned char	image_writing_okayP(void);
+extern char		image_writing_okayP(void);
 extern unsigned char	trace_locationsB(long, long);
 extern unsigned char	trace_stob_contentsB(long);
 extern long		trace_value(long);

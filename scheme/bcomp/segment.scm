@@ -53,28 +53,30 @@
   (code-vector-set! (astate-code-vector a) (astate-pc a) byte)
   (set-astate-pc! a (+ (astate-pc a) 1)))
 
-(define (emit-literal! a thing)
-  (emit-byte! a
-	      (let ((probe (position thing (astate-literals a)))
-		    (count (astate-count a)))
-		(if probe
-		    ;; +++  Eliminate duplicate entries.
-		    ;; Not necessary, just a modest space saver [how much?].
-		    ;; Measurably slows down compilation.
-		    ;; when 1 thing, lits = (x), count = 3, probe = 0, want 2
-		    (- (- count probe) 1)
-		    (begin
-		      (if (>= count byte-limit)
-			  (error "compiler bug: too many literals"
-				 thing))
-		      (set-astate-literals! a (cons thing (astate-literals a)))
-		      (set-astate-count! a (+ count 1))
-		      count)))))
+(define (literal->index a thing)
+  (let ((probe (position thing (astate-literals a)))
+	(count (astate-count a)))
+    (if probe
+	;; +++  Eliminate duplicate entries.
+	;; Not necessary, just a modest space saver [how much?].
+	;; Measurably slows down compilation.
+	;; when 1 thing, lits = (x), count = 3, probe = 0, want 2
+	(- (- count probe) 1)
+	(begin
+	  (if (>= count two-byte-limit)
+	      (error "compiler bug: too many literals"
+		     thing))
+	  (set-astate-literals! a (cons thing (astate-literals a)))
+	  (set-astate-count! a (+ count 1))
+	  count))))
 
+(define (emit-literal! a thing)
+  (let ((index (literal->index a thing)))
+    (emit-byte! a (quotient index byte-limit))
+    (emit-byte! a (remainder index byte-limit))))
 
 (define (emit-segment! astate segment)
   ((segment-emitter segment) astate))
-
 
 ; Segment constructors
 
@@ -122,15 +124,24 @@
 ; Literals are obtained from the template.
 
 (define (instruction-with-literal opcode thing)
-  (make-segment 2
+  (make-segment 3
 		(lambda (astate)
-		  (emit-byte! astate opcode)
-		  (emit-literal! astate thing))))
+		  (let ((index (literal->index astate thing)))
+		    (if (and (= opcode (enum op literal))
+                             (< index byte-limit))
+			(begin
+			  (emit-byte! astate (enum op small-literal))
+			  (emit-byte! astate index)
+			  (emit-byte! astate 0))
+			(begin
+			  (emit-byte! astate opcode)
+			  (emit-byte! astate (quotient index byte-limit))
+			  (emit-byte! astate (remainder index byte-limit))))))))
 
 ; So are locations.
 
 (define (instruction-with-location opcode thunk)
-  (make-segment 2
+  (make-segment 3
 		(lambda (astate)
 		  (emit-byte! astate opcode)
 		  ;; But: there really ought to be multiple entries
@@ -142,7 +153,7 @@
 ; (parent's) template.
 
 (define (instruction-with-template opcode segment name)
-  (make-segment 2
+  (make-segment 3
 		(lambda (astate)
 		  (emit-byte! astate opcode)
 		  (emit-literal! astate
@@ -191,7 +202,7 @@
 ; byte.
 
 (define byte-limit (expt 2 bits-used-per-byte))
-
+(define two-byte-limit (expt 2 (* 2 bits-used-per-byte)))
 
 ; Special segments for maintaining debugging information.  Not
 ; essential for proper functioning of compiler.

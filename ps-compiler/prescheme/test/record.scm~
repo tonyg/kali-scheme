@@ -3,15 +3,9 @@
 (define-record-type pair :pair
   (cons car cdr)
   (car int32 car)
-  (cdr pair cdr set-cdr!))
+  (cdr pair  cdr set-cdr!))
 
-(define null (unspecific))
-
-(define (null? x)
-  (eq? x null))
-
-(define (init)
-  (set! null (cons 0 null)))
+(define null? null-pointer?)
 
 (define (member? list x)
   (let loop ((list list))

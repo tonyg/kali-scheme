@@ -86,10 +86,7 @@ when_alarm_interrupt()
   return;
 }
 
-#define TICKS_PER_SECOND 1000	/* clock resolution */
-#define POLLS_PER_SECOND   20   /* how often we poll */
 #define USEC_PER_POLL   (1000000 / POLLS_PER_SECOND)
-#define TICKS_PER_POLL  (TICKS_PER_SECOND / POLLS_PER_SECOND)
 
 /* delta is in ticks, 0 cancels current alarm */
 
@@ -301,10 +298,7 @@ static fdque		ready = {
 static void		findrm(fd_struct *entry, fdque *que);
 static fd_struct	*rmque(fd_struct **link, fdque *que);
 static void		addque(fd_struct *entry, fdque *que);
-static bool		there_are_ready_ports(void);
-static int		next_ready_port(void);
 static fd_struct	*add_fd(int fd, bool is_input);
-static int		queue_ready_ports(bool wait, long seconds, long ticks);
 
 
 /*

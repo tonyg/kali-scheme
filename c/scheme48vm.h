@@ -10,8 +10,8 @@
 
 typedef long	scheme_value;
 
-extern scheme_value	extended_vm(long, scheme_value);
-extern bool		lookup_external_name(long, long);
+extern scheme_value	extended_vm(long, scheme_value),
+			lookup_external_name(long, long);
 
 #include "scheme48heap.h"
 #include "event.h"

@@ -9,4 +9,6 @@
 	r)))
 
 (define (all)
-  (set! *one* (fact (if (> (fact 10) 100) 10 20))))
+  (set! *one* (fact (if (or (> (fact 10) 100)
+			    (char-ready? (current-input-port)))
+			10 20))))

@@ -335,10 +335,6 @@
     (display "NULL == " port)
     (c-value (call-arg call 0) port)))
 
-(define-c-generator null-pointer #t
-  (lambda (call port indent)
-    (display "NULL" port)))
-
 (define-c-generator eq? #t
   (lambda (call port indent)
     (simple-c-primop "==" call port)))

@@ -38,17 +38,16 @@ RESULT = ps_read_integer(PORT,&EOFP,&STATUS);
     STATUS = 0; }					\
 }
 
-extern FILE *ps_open_input_file(unsigned char *, long*);
-extern FILE *ps_open_output_file(unsigned char *, long*);
-extern long ps_close(FILE*);
-extern char ps_read_char(FILE*, char*, long*, char*);
-extern char ps_peek_char(FILE*, char*, long*, char*);
-extern long ps_read_integer(FILE*, char*, long*);
-extern long ps_write_char(char, FILE*);
-extern long ps_write_integer(long, FILE*);
-extern long ps_write_string(unsigned char *, FILE*);
-extern long ps_read_block(FILE*, char*, long, char*, long*);
-extern long ps_write_block(FILE*, char*, long);
+extern FILE *ps_open_input_file(unsigned char *, long *);
+extern FILE *ps_open_output_file(unsigned char *, long *);
+extern long ps_close(FILE *);
+extern char ps_read_char(FILE *, unsigned char *, long *, char);
+extern long ps_read_integer(FILE *, unsigned char *, long *);
+extern long ps_write_char(char, FILE *);
+extern long ps_write_integer(long, FILE *);
+extern long ps_write_string(unsigned char *, FILE *);
+extern long ps_read_block(FILE *, char *, long, unsigned char *, long *);
+extern long ps_write_block(FILE *, char *, long);
 extern unsigned char *ps_error_string(long);
 extern void ps_error(unsigned char *, ...);
 

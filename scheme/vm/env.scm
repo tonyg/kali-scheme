@@ -22,8 +22,10 @@
 ; Making new environments
 
 ; How much heap space we will need.
+
 (define (stack-env-space count)
-  (+ 2 count))
+  (+ (+ count 2)                  ; header & link to superior env
+     maximum-stack-arg-count))    ; pre-checking for pushed arguments
 
 (define (pop-args-into-env count key)
   (check-stack-cons (stack-env-space count) key)

@@ -32,14 +32,21 @@
   (obtain-lock (port-lock port)))
 
 (define (maybe-obtain-port-lock port)
-  (set-port-locked?! port #t)            ; next real use will clear flag
-  (maybe-obtain-lock (port-lock port)))
+  (let ((ints (set-enabled-interrupts! 0)))
+    (set-port-locked?! port #t)
+    (let ((result (if (maybe-obtain-lock (port-lock port))
+		      #t
+		      (begin
+			(set-port-locked?! port #f)
+			#f))))
+      (set-enabled-interrupts! ints)
+      result)))
 
 (define (release-port-lock port)
-  (disable-interrupts!)
-  (if (release-lock (port-lock port))
-      (set-port-locked?! port #f))
-  (enable-interrupts!))
+  (let ((ints (set-enabled-interrupts! 0)))
+    (if (release-lock (port-lock port))
+	(set-port-locked?! port #f))
+    (set-enabled-interrupts! ints)))
 
 ; Set up exception handlers for the three unnecessary I/O primitives,
 ; READ-CHAR, PEEK-CHAR, and WRITE-CHAR.  These do the right thing in

@@ -8,26 +8,27 @@
 
 (set-optimizer! 'auto-integrate
   (lambda (stuff p)
-    ; (set-package-integrate?! p #t) ; this proc is only called when this is #T
-    (newline)
-    (display "Analyzing... ") (force-output (current-output-port))
-    (let* ((names '())
-	   (stuff
-	    (map (lambda (filename+nodes)
-		   (let ((filename (car filename+nodes))
-			 (nodes (cdr filename+nodes)))
-		     (set! names
-			   (append (analyze-forms nodes p) names))
-		     (cons filename nodes)))
-		 stuff)))
-      (cond ((not (null? names))
-	     (newline)
-	     (display "Calls will be compiled in line: ")
-	     (write (reverse names)))
-	    (else
-	     (display "no in-line procedures")))
-      (newline)
-      stuff)))
+    (let ((out (current-noise-port)))
+      ; (set-package-integrate?! p #t) ; this proc is only called when this is #T
+      (newline out)
+      (display "Analyzing... " out) (force-output out)
+      (let* ((names '())
+	     (stuff
+	      (map (lambda (filename+nodes)
+		     (let ((filename (car filename+nodes))
+			   (nodes (cdr filename+nodes)))
+		       (set! names
+			     (append (analyze-forms nodes p) names))
+		       (cons filename nodes)))
+		   stuff)))
+	(cond ((not (null? names))
+	       (newline)
+	       (display "Calls will be compiled in line: " out)
+	       (write (reverse names)))
+	      (else
+	       (display "no in-line procedures" out)))
+	(newline)
+	stuff))))
 
 (define (analyze-forms scanned-nodes p)
   (let ((inlines '()))

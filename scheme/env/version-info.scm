@@ -1,1 +1,1 @@
-(define version-info "0.45")
+(define version-info "0.46")

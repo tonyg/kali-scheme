@@ -71,7 +71,7 @@ ps_read_char(FILE *port, bool *eofp, int *status, bool peekp)
 }
 
 long
-ps_read_integer(FILE *port, bool *eofp, int *status)
+ps_read_integer(FILE *port, bool *eofp, long *status)
 {
   long result;
   int ch;

@@ -1,10 +1,10 @@
 
 ; Sets of integers implemented as integers.
 
-(define (make-empty-integer-set size)
+(define (make-empty-integer-set)
   0)
 
-(define (add-to-integer-set! set integer)
+(define (add-to-integer-set set integer)
   (bitwise-ior set (arithmetic-shift 1 integer)))
 
 (define integer-set-chunk-size 24)
@@ -26,7 +26,9 @@
       ((= 0 set)
        (reverse l))))
 
+(define integer-set-and bitwise-and)
 (define integer-set-ior bitwise-ior)
+(define integer-set-not bitwise-not)
 
 (define (integer-set-subtract set1 set2)
   (bitwise-and set1 (bitwise-not set2)))

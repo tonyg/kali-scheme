@@ -47,7 +47,7 @@
   (open prescheme)
   (files hoist))
 
-(define-structures ((record (export init cons member? reverse!)))
+(define-structures ((record (export cons member? reverse!)))
   (open prescheme ps-record-types)
   (files record))
 

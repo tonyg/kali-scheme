@@ -77,7 +77,7 @@
 			   port)))
 
 (define (generate-c-record-ref record type field port)
-  (let ((field (get-record-type-field (literal-value type)
+  (let ((field (get-record-type-field (get-record-type (literal-value type))
 				      (literal-value field))))
     (c-value record port)
     (display "->" port)

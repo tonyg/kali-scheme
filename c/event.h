@@ -1,13 +1,9 @@
-extern int interrupt_init(void);
-
-extern bool Spending_eventPS;
 enum event_enum { KEYBOARD_INTERRUPT_EVENT, IO_COMPLETION_EVENT, ALARM_EVENT,
 		    ERROR_EVENT, NO_EVENT };
 extern int get_next_event(long *ready_fd, long *status);
 
 extern bool add_pending_fd(int fd, bool is_input);
 extern void remove_fd(int fd);
-extern void remove_pending_fd(int fd);
 extern long schedule_alarm_interrupt(long delta);
 extern long run_time(long *mseconds);
 extern long real_time(long *mseconds);

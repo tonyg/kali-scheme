@@ -2,13 +2,22 @@
 
 Recent changes to Scheme 48.
 
+11/5/96	 (version 0.46)
+	 Fixed a few minor thread problems.
+         opt/analyze.scm now writes to current-noise-port.
+         DELQ and DELETE now delete every instance, as the documentation claims.
+	 There should be no more spurious heap-overflow interrupts.
+	 Fixed bugs that caused the system to die if stdout blocked.
+	 Template offsets have been increased to two bytes.
+	 Disassembly of flat-lambda now works (fix from Michael Sperber).
+
 8/23/96	 (version 0.45)
 	 Fixed various problems with thread termination and nested schedulers.
 	 Changed thread-internal interface to make schedulers easier to write.
 	 BITWISE-{AND,IOR,XOR} now take an arbitrary number of arguments.
 	 Output ports have their buffers flushed when Scheme 48 terminates.
 	 In keeping with RnRS, CLOSE-{IN,OUT}PUT-PORT are now idempotent.
-	 MODULO is now handles negative arguments properly.
+	 MODULO now handles negative arguments properly.
 
 6/20/96  (version 0.44)
 	 The VM's byte-code interpreter and storage management code are

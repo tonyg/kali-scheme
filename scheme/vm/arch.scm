@@ -57,7 +57,8 @@
   (pop-env)		         ; use superior env
   (make-rest-list nargs +)       ; pop all but nargs things off the stack
 			         ; into a list
-  (literal        index)         ; value to *val*
+  (literal        index)         ; value to *val*, two-byte index
+  (small-literal  small-index)   ; value to *val*, one-byte index
   (local          byte byte)     ; back and over
   ((local0 local1 local2)
    byte)		         ; back encoded into op-code for efficiency
@@ -65,7 +66,7 @@
   (global         index)         ; value to *val*
   (set-global!    index 1)
   (closure        index)         ; use environment in *env*
-  (flat-closure   byte var-data index) ; make new environment from var-data
+  (flat-closure   env-data index) ; make new environment from var-data
   (push 1)		         ; push *val* onto stack
   (pop)			         ; pop top of stack into *val*
   (stack-ref      byte)	         ; index'th element of stack into *val*

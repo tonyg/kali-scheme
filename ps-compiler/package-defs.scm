@@ -43,7 +43,7 @@
 
 (define-structure pp-cps (export pp-cps)
   (open scheme big-scheme comp-util node structure-refs)
-  (access i/o-internal)  ; periodically-force-output!
+  (access i/o)  ; force-output
   (files (node pp-cps)))
 
 ; Expander for LET-NODES, a macro for creating interconnected nodes.
@@ -148,26 +148,55 @@
     (define (flow-values . stuff)
       (error "FLOW-VALUES is undefined"))))
 
-; A random collection of utilities.  They are lumped together here out
-; of laziness.
+; A random collection of utilities.
 
 (define-structure comp-util utilities-interface
   (open scheme big-scheme structure-refs)
   (for-syntax (open scheme big-scheme))
   (access primitives features)
-  (files (util syntax)      ; macro for defining subrecords
-	 (util util)        ; random utilities
-	 (util expand-vec)  ; vectors that expand as needed
-	 (util strong)      ; strongly connected components
-	 (util transitive)  ; transitive closure
-	 (util z-set)))     ; integer sets, used by transitive closure
+  (files (util syntax)        ; macro for defining subrecords
+	 (util util)          ; random utilities
+	 (util expand-vec)))  ; vectors that expand as needed
+
+(define-interface transitive-interface
+  (export make-graph-from-predecessors
+	  make-graph-from-successors
+	  transitive-or! transitive-or-with-kill! transitive-or-with-pass!
+	  transitive-and! transitive-and-with-kill! transitive-and-with-pass!))
+
+(define-structure transitive transitive-interface
+  (open scheme big-scheme integer-sets)
+  (optimize auto-integrate)
+  (files (util transitive)))
+
+(define-interface integer-set-interface
+  (export make-empty-integer-set
+	  add-to-integer-set
+	  integer-set-not
+	  integer-set-ior
+	  integer-set-and
+	  integer-set-subtract
+	  integer-set-equal?
+	  map-over-integer-set))
+
+(define-structure integer-sets integer-set-interface
+  (open scheme bitwise bigbit)
+  (optimize auto-integrate)
+  (files (util z-set)))
+
+(define-structure strongly-connected (export strongly-connected-components)
+  (open scheme big-scheme)
+  (optimize auto-integrate)
+  (files (util strong)))
 
 (define-structure dominators (export find-dominators!)
   (open scheme big-scheme comp-util)
+  (optimize auto-integrate)
   (files (util dominators)))
 
 (define-structure ssa (export graph->ssa-graph! find-joins)
   (open scheme big-scheme dominators)
+  (optimize auto-integrate)
   (files (util ssa)))
 
 ; Vectors of bytes, a renaming of Scheme 48's code vectors.
