@@ -372,7 +372,7 @@
        (char-set-contains? char-set:letter+digit #\Z)))
 
 (test "char-set:letter (size)" equal?
-      9188
+      90547
       (char-set-size char-set:letter))
 
 (test "char-set:letter / letter+digit" char-set=

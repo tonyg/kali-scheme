@@ -134,6 +134,82 @@
 			      lowercase-code-point
 			      titlecase-code-point)))))
 
+; for EXPANDED-CODE-POINT-INFO-SOURCE
+(define (code-point-info-with-code-point+name info code-point name)
+  (make-code-point-info code-point
+			name
+			(code-point-info-general-category info)
+			(code-point-info-combining-class info)
+			(code-point-info-bidirectional-category-id info)
+			(code-point-info-decomposition-id info)
+			(code-point-info-decimal-digit-value info)
+			(code-point-info-digit-value info)
+			(code-point-info-numeric-value info)
+			(code-point-info-mirrored? info)
+			(code-point-info-unicode-1.0-name info)
+			(code-point-info-iso-10646-comment info)
+			code-point code-point code-point)) ; kludge
+
+; expand the code-point ranges that look like this:
+; 3400;<CJK Ideograph Extension A, First>;Lo;0;L;;;;;N;;;;;
+; 4DB5;<CJK Ideograph Extension A, Last>;Lo;0;L;;;;;N;;;;;
+
+; returns a thunk that returns the infos from consecutive calls,
+; then #f
+
+(define (expanded-code-point-info-source infos)
+  (let ((first-info #f)
+	(code-point #f)
+	(last-code-point #f)
+	(name-base #f))
+    (lambda ()
+      (let again ()
+	(cond
+	 (first-info
+	  (if (<= code-point last-code-point)
+	      (begin
+		(set! code-point (+ 1 code-point))
+		(code-point-info-with-code-point+name
+		 first-info
+		 (- code-point 1)
+		 name-base)) ; kludge for speed; should be:
+	                     ; (string-append name-base (number->string code-point 16))
+	      (begin
+		(set! first-info #f)
+		(again))))
+	 ((null? infos)
+	  #f)
+	 (else
+	  (let* ((info (car infos))
+		 (name (code-point-info-name info)))
+	    (cond
+	     ((and (string-prefix? "<" name)
+		   (string-suffix? ", First>" name))
+	      (set! first-info info)
+	      (set! code-point (code-point-info-code-point info))
+	      (set! last-code-point (code-point-info-code-point (cadr infos)))
+	      (set! name-base (string-append
+			       (substring name
+					  1 ; (string-length "<")
+					  (- (string-length name)
+					     8 ; (string-length ", First>")
+					     ))
+			       "-<code point>")) ; kludge, see above
+	      (set! infos (cddr infos))
+	      (again))
+	     (else
+	      (set! infos (cdr infos))
+	      info)))))))))
+
+(define (for-each-expanded-code-point-info proc infos)
+  (let ((source (expanded-code-point-info-source infos)))
+    (let loop ()
+      (let ((info (source)))
+	(if info
+	    (begin
+	      (proc info)
+	      (loop)))))))
+	    
 (define (read-line port)
   (let loop ((l '()))
     (let ((c (read-char port)))
@@ -255,27 +331,29 @@
 
 ; assumes INFOS are sorted
 
-(define (make-info-source infos default proc)
-  (let ((last-code-point 0))
+(define (make-consecutive-info-source source default proc)
+  (let ((next-info #f)
+	(last-code-point -1))
     (lambda ()
-      (if (null? infos)
-	  #f
-	  (let* ((info (car infos))
-		 (code-point (code-point-info-code-point info)))
-	    (if (< (+ 1 last-code-point) code-point)
-		(begin
-		  (set! last-code-point (+ 1 last-code-point))
-		  default)
-		(begin
-		  (set! last-code-point code-point)
-		  (set! infos (cdr infos))
-		  ;; scalar values only
-		  (if (eq? (code-point-info-general-category info)
-			   (general-category surrogate))
-		      default
-		      (proc info)))))))))
 
+      (define (upto info)
+	(if (< last-code-point (code-point-info-code-point info))
+	    (begin
+	      (set! next-info info)
+	      default)
+	    (begin
+	      (set! next-info #f)
+	      ;; scalar values only
+	      (if (eq? (code-point-info-general-category info)
+		       (general-category surrogate))
+		  default
+		  (proc info)))))
 
+      (set! last-code-point (+ 1 last-code-point))
+
+      (cond
+       ((or next-info (source)) => upto)
+       (else #f)))))
 
 (define (make-scalar-value-case+general-category-encoding-tables infos block-bits)
 
@@ -291,13 +369,14 @@
       (call-with-values
 	  (lambda ()
 	    (compute-compact-table
-	     (make-info-source infos
-			       0
-			       (lambda (info)
-				 (code-point-info->case+general-category-encoding
-				  info
-				  uppercase-offsets lowercase-offsets titlecase-offsets
-				  uppercase-index-width lowercase-index-width titlecase-index-width)))
+	     (make-consecutive-info-source
+	      (expanded-code-point-info-source infos)
+	      0
+	      (lambda (info)
+		(code-point-info->case+general-category-encoding
+		 info
+		 uppercase-offsets lowercase-offsets titlecase-offsets
+		 uppercase-index-width lowercase-index-width titlecase-index-width)))
 	     block-size))
 	(lambda (indices encodings)
 	  (values indices encodings
@@ -480,7 +559,7 @@
 
 (define (srfi-14-base-char-set-definition name pred infos)
   (let ((accumulator (make-ranges-accumulator pred)))
-    (for-each accumulator infos)
+    (for-each-expanded-code-point-info accumulator infos)
     `(define ,name
        (range-vector->char-set
 	',(ranges->range-vector (accumulator 'ranges))))))
@@ -524,14 +603,13 @@
 	(lowercase-index-width (bits-necessary (vector-length lowercase-offsets)))
 	(titlecase-index-width (bits-necessary (vector-length titlecase-offsets))))
 
-    (for-each
+    (for-each-expanded-code-point-info
      (lambda (info)
        (let* ((code-point (code-point-info-code-point info))
 	      (base-index (vector-ref indices
 				      (arithmetic-shift code-point (- block-bits))))
-	      (encoding
-	       (vector-ref encodings
-			   (+ base-index (bitwise-and code-point lower-mask)))))
+	      (index (+ base-index (bitwise-and code-point lower-mask)))
+	      (encoding (vector-ref encodings index)))
 
 	 (if (not (eq? (code-point-info-general-category info)
 		       (general-category surrogate)))
@@ -539,7 +617,9 @@
 
 	       (if (not (eq? (code-point-info-general-category info)
 			     (code-point-encoding-general-category encoding)))
-		   (error "general category mismatch" (code-point-encoding-general-category encoding)))
+		   (error "general category mismatch"
+			  info
+			  (code-point-encoding-general-category encoding)))
 
 	       (let ((uppercase-code-point
 		      (code-point-encoding-uppercase-code-point
