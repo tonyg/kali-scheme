@@ -66,6 +66,7 @@
 	  (tag :syntax)
 	  fixnum? immediate? header? stob?
 	  tag-field-width
+	  make-tag&immediate-type
 
 	  enter-fixnum extract-fixnum
 	  bits-per-fixnum greatest-fixnum-value
