@@ -34,7 +34,18 @@
 
 (define-syntax define-synchronized-record-type
   (syntax-rules ()
-    ((define-record-type ?id ?type
+    ((define-synchronized-record-type ?id ?type
+       (?constructor ?arg ...)
+       ?pred
+       (?field . ?field-stuff)
+       ...)
+     (define-synchronized-record-type ?id ?type
+       (?constructor ?arg ...)
+       (?field ...)
+       ?pred
+       (?field . ?field-stuff)
+       ...))
+    ((define-synchronized-record-type ?id ?type
        (?constructor ?arg ...)
        (?sync-field ...)
        ?pred
