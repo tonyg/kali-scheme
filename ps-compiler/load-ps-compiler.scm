@@ -23,7 +23,7 @@
 	      (newline)
 	      (display "Copyright (c) 1993-2004 by Richard Kelsey.")
 	      (newline)
-	      (display "Please report bugs to pre-scheme@martigny.ai.mit.edu.")
+	      (display "Please report bugs to pre-scheme@s48.org.")
 	      (newline)
 	      (newline))))
 

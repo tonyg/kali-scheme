@@ -1,6 +1,6 @@
 ; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-Please report bugs to scheme-48-bugs@martigny.ai.mit.edu, and include
+Please report bugs to scheme-48-bugs@s48.org, and include
 the version number in your message.
 
 Installation instructions in file INSTALL.
@@ -11,7 +11,7 @@ Recent changes are listed in file doc/news.txt.
 
 Known bugs and things to do in the future are listed in doc/todo.txt.
 
-Send mail to scheme-48-request@martigny.ai.mit.edu to be put on a
+Send mail to scheme-48-request@s48.org to be put on a
 mailing list for announcements, discussion, bug reports, and bug
 fixes.
 

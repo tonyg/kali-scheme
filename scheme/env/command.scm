@@ -589,12 +589,13 @@
     (if info
         (begin (write-char #\space port)
                (display info port)))
-    (display "." port)
     (newline port)
     (write-line "Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees."
 		port)
-    (write-line "Please report bugs to scheme-48-bugs@martigny.ai.mit.edu."
+    (write-line "Please report bugs to scheme-48-bugs@s48.org."
                 port)
+    (write-line "Get more information at http://www.s48.org/."
+		port)
     (if (not (batch-mode?))
 	(write-line "Type ,? (comma question-mark) for help." port))))
 
