@@ -86,7 +86,6 @@ These are all files not belonging to any package description:
     scripts.scm
     interfaces.scm
 
-    infix/
     debug/
     alt/
 
