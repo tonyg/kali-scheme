@@ -72,8 +72,8 @@
 		(lose)))))))
 		  
 (define (block-on-pipe pipe lose)
-  (or (maybe-commit-and-block-on-queue (pipe-threads pipe))
-      (lose)))
+  (maybe-commit-and-block-on-queue (pipe-threads pipe))
+  (lose))
 
 (define (make-pipe-reader win block)
   (lambda (pipe)
