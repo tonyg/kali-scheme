@@ -121,6 +121,13 @@
   (optimize auto-integrate)
   (files (big encoding)))
 
+(define-structure text-codec-utils text-codec-utils-interface
+  (open scheme-level-2
+	ports
+	i/o
+	text-codecs)
+  (files (big text-codec-util)))
+
 ;----------------
 ; Big Scheme
 

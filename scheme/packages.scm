@@ -479,6 +479,7 @@
 	    reinitializers
 	    spatial
 	    strong
+	    text-codec-utils
 	    traverse
 	    udp-sockets
 	    value-pipes

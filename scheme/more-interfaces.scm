@@ -392,6 +392,10 @@
 	  decode-string/utf-8
 	  utf-8->string))
 
+(define-interface text-codec-utils-interface
+  (export guess-port-text-codec-according-to-bom
+	  set-port-text-codec-according-to-bom!))
+
 ; --------------------
 ; Big Scheme
 

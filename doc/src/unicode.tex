@@ -199,6 +199,31 @@ name.  The names of the above encodings are \verb|"null"|,
 \verb|"UTF-16LE"|, \verb|"UTF-16BE"|, \verb|"UTF-32LE"|, and
 \verb|"UTF-32BE"|, respectively.
 
+\subsection{Text-codec utilities}
+
+The \code{text-codec-utils} structure exports a few utilities for
+dealing with text codecs:
+
+\begin{protos}
+\proto{guess-port-text-codec-according-to-bom}{ port}{text-codec or {\tt \#f}}
+\protonoindex{set-port-text-codec-according-to-bom!}{ port}{boolean}\mainschindex{set-port-text-codec-according-to-bom"!}
+\end{protos}
+%
+These procedures look at the byte-order-mark (also called the
+``BOM'', \code{U+FEFF}) at the
+beginning of a port and guess the appropriate text codec.  This works
+only for UTF-16 (little-endian and big-endian) and UTF-8.
+\code{Guess-port-text-codec-according-to-bom} returns the text codec,
+or \texttt{\#f} if it found no UTF-16 or UTF-8 BOM.  Note that this
+actually reads from the port.  If the guess does not succeed, it is
+probably a good idea to re-open the port.
+\code{Set-port-text-codec-according-to-bom!} calls
+\code{guess-port-text-codec-according-to-bom}, sets the port text
+codec to the result if successful and returns \texttt{\#t}.  If it is
+not successful, it returns \texttt{\#f}.  As with
+\code{guess-port-text-codec-according-to-bom}, this reads from the
+port, whether successful or not.
+
 \subsection{Creating text codecs}
 
 \begin{protos}
