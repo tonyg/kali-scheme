@@ -128,6 +128,10 @@
   (if (not (immutable? thing))
       (stob-header-set! thing (make-header-immutable (stob-header thing)))))
 
+(define (make-mutable! thing)
+  (if (immutable? thing)
+      (stob-header-set! thing (make-header-mutable (stob-header thing)))))
+
 ;----------------
 ; D-vectors (vectors of descriptors)
 

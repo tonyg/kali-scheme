@@ -206,6 +206,11 @@
     (make-immutable! thing)
     (goto return thing)))
 
+(define-primitive make-mutable! (any->)
+  (lambda (thing)
+    (make-mutable! thing)
+    (goto return thing)))
+
 ;----------------
 ; Misc
 

@@ -262,6 +262,10 @@
 (define (make-header-immutable header)
   (bitwise-ior header header-immutable-bit-mask))
 
+;; assumes header is immutable
+(define (make-header-mutable header)
+  (bitwise-xor header header-immutable-bit-mask))
+
 (define (header-type h)
   (assert (header? h))
   (low-bits (descriptor-data h)

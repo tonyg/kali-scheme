@@ -198,7 +198,7 @@
                      
   (location-defined? 1)
   (set-location-defined?! 2)
-  ((immutable? make-immutable!) 1)
+  ((immutable? make-immutable! make-mutable!) 1)
 
   ;; channels (unbuffered, non-blocking I/O)
   (open-channel 3)
@@ -518,7 +518,7 @@
     (cell cell? make-cell
       (cell-ref cell-set!))
     (closure closure? make-closure
-      (closure-template) (closure-env))
+      (closure-template set-closure-template!) (closure-env set-closure-env!))
     (weak-pointer weak-pointer? make-weak-pointer
       (weak-pointer-ref))
     (shared-binding shared-binding? make-shared-binding

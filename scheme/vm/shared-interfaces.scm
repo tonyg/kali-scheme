@@ -94,7 +94,7 @@
 	  header-type-field-width
 	  header-immutable-bit-mask
 	  header-length-in-bytes header-length-in-cells header-length-in-a-units
-	  immutable-header? make-header-immutable
+	  immutable-header? make-header-immutable make-header-mutable
 	  d-vector-header? b-vector-header?
 	  max-stob-contents-size-in-cells
 

@@ -20,7 +20,7 @@
   make-symbol                           		; hidden from RTS
   ()
   (symbol-next set-symbol-next!))       		; hidden from RTS
-(define-shared-primitive-data-type closure #f #t)
+(define-shared-primitive-data-type closure #f #f)
 (define-shared-primitive-data-type location)
 (define-shared-primitive-data-type cell)
 (define-shared-primitive-data-type weak-pointer)
