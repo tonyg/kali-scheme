@@ -384,7 +384,9 @@
 	interrupts		; enable-interrupts! disable-interrupts!
 	channel-ports		; {in|out}put-channel->port
 	channel-i/o		; wait-for-channel
-	condvars)		; for wait-for-channel
+	condvars		; for wait-for-channel
+	string/bytes-types
+	default-string-encodings)
   (files (big socket)))
 
 ; Heap traverser
