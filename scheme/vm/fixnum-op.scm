@@ -106,7 +106,8 @@
     ((define-punter2 opcode)
      (define-primitive opcode (any-> any->) binary-lose))))
 
-(define-punter2 atan)
+(define-punter  atan1)
+(define-punter2 atan2)
 (define-punter2 make-polar)
 (define-punter2 make-rectangular)
 

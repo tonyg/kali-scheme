@@ -77,14 +77,15 @@
 	  (old-size (header-length-in-bytes (stob-header bignum))))
       (if  (> new-size old-size)
 	   (error "shorten bignum" new-size old-size))
-      (if (< new-size old-size)
+      (if (< (+ new-size (cells->bytes stob-overhead))
+	     old-size)
 	  (begin
-	    (stob-header-set! bignum
-			      (make-header (enum stob bignum) new-size))
-	    (stob-header-set! (address->stob-descriptor
-			         (address+ (address-after-header bignum)
-					   (+ stob-overhead
-					      (bytes->a-units new-size))))
-			      (make-header (enum stob bignum)
-					   (- old-size new-size)))))
+            (stob-header-set! bignum
+                              (make-header (enum stob bignum) new-size))
+            (stob-header-set! (address->stob-descriptor
+                                 (address+ (address-at-header bignum)
+                                           (bytes->a-units new-size)))
+                              (make-header (enum stob bignum)
+                                           (- (- old-size new-size)
+					      (cells->bytes stob-overhead))))))
       external-bignum)))

@@ -244,7 +244,7 @@
         escapes                 ;primitive-cwcc
         conditions              ;error?
         handle                  ;with-handler
-        signals                 ;signal, warn
+        signals                 ;signal, warn, call-error
 	loopholes               ;for converting #f to a continuation
 	architecture            ;time-option
 	session-data
@@ -254,7 +254,8 @@
 				 unspecific
 				 time)))
   (optimize auto-integrate)
-  (files (rts thread) (rts sleep)))
+  (files (rts thread)
+	 (rts sleep)))
 
 (define-structure proposals proposals-interface
   (open scheme-level-1 low-proposals

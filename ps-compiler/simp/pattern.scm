@@ -39,21 +39,35 @@
 ; of all of the specifications will be calls to the same primitive.  The
 ; initial CASE is removed from the code returned by MATCH-CALLS.
 
-(define (make-pattern-simplifier specs)
-  (set! *generate-symbol-index* 0)
-  (let* ((initial (generate-symbol 'initial))
-	 (exp (match-calls (map (lambda (spec)
-				  (make-pattern (car spec) (cdr spec)))
-				specs)
-			   initial
-			   #f
-			   (lambda (patterns)
-			     (if (null? patterns)
-				 (error "no patterns matched" specs)
-				 (check-predicates patterns initial))))))
-    `(lambda (,initial)
-       ,(cadar (cddr exp))))) ; strip off initial CASE
+(define (make-pattern-simplifier specs rename compare)
+  (let-fluids $rename rename
+	      $compare compare
+    (lambda ()
+      (set! *generate-symbol-index* 0)
+      (let* ((initial (generate-symbol 'initial))
+	     (exp (match-calls (map (lambda (spec)
+				      (make-pattern (car spec) (cdr spec)))
+				    specs)
+			       initial
+			       #f
+			       (lambda (patterns)
+				 (if (null? patterns)
+				     (error "no patterns matched" specs)
+				     (check-predicates patterns initial))))))
+	`(,(rename 'lambda) (,initial)
+	   ,(cadar (cddr exp))))))) ; strip off initial CASE
 
+; We user fluids to keep from having to pass these everywhere.
+
+(define $rename (make-fluid #f))
+(define $compare (make-fluid #f))
+
+(define (name=? a b)
+  ((fluid $compare) a b))
+
+(define (rename a)		; this is not used
+  ((fluid $rename) a))
+    
 (define-record-type pattern
   (spec        ; the specification this pattern is to match
    (env)       ; an a-list mapping atoms in the pattern to the identifiers
@@ -64,6 +78,10 @@
    build-spec  ; specification for the transformed pattern
    )
   ())
+
+(define-record-discloser type/pattern
+  (lambda (p)
+    (list 'pattern (pattern-spec p))))
 
 ; Returns the pattern for the I'th argument in PATTERN.
 
@@ -117,7 +135,7 @@
 	  (let ((primop (car (pattern-spec (car patterns)))))
 	    (receive (same other)
 		(partition-list (lambda (p)
-				  (eq? primop (car (pattern-spec p))))
+				  (name=? primop (car (pattern-spec p))))
 				(cdr patterns))
 	      (loop other
 		    (cons `(,(if (number? primop) 'else `(,primop))
@@ -131,7 +149,7 @@
 (define (finish-call-match clauses call-var primop-var fail-var)
   (receive (elses other)
       (partition-list (lambda (c)
-			(eq? (car c) 'else))
+			(name=? (car c) 'else))
 		      clauses)
     `(case (primop-id (call-primop ,call-var))
        ,@(reverse other)
@@ -209,9 +227,9 @@
 	   (atom? a2))
 	  ((atom? a2)
 	   #f)
-	  ((eq? (car a1) 'quote)
-	   (eq? (car a2) 'quote))
-	  ((eq? (car a2) 'quote)
+	  ((name=? (car a1) 'quote)
+	   (name=? (car a2) 'quote))
+	  ((name=? (car a2) 'quote)
 	   #f)
 	  (else #t))))
 
@@ -225,7 +243,7 @@
 
 (define (match-call-arg patterns i arg-var fail-var more)
   (let ((arg (pattern-arg (car patterns) i)))
-    (cond ((eq? (car arg) 'quote)
+    (cond ((name=? (car arg) 'quote)
 	   `((literal-node? ,arg-var)
 	     ,(match-literal patterns i arg-var fail-var more)))
 	  (else
@@ -249,7 +267,7 @@
 (define (match-literal patterns i arg-var fail-var more)
   (receive (symbols numbers)
       (partition-list (lambda (p)
-			(symbol? (cadr (pattern-arg p i))))
+			(name? (cadr (pattern-arg p i))))
 		      patterns)
     (extend-pattern-envs symbols i arg-var)
     (if (null? numbers)
@@ -270,6 +288,12 @@
 		      (cons `((,(cadr (pattern-arg (car patterns) i)))
 			      ,(more (cons (car patterns) same)))
 			    clauses))))))))
+
+; Not great, but what to do?  I don't think the real NAME? is available.
+
+(define (name? x)
+  (not (or (pair? x)
+	   (number? x))))
 
 (define (finish-match-literal clauses else arg-var)
   (if (null? clauses)
@@ -331,12 +355,12 @@
 	(pattern (pattern-build-spec pattern))
 	(sym (generate-symbol 'result)))
     (let ((clauses (if (and (pair? pattern)
-			    (neq? (car pattern) 'quote))
+			    (not (name=? (car pattern) 'quote)))
 		       (reverse (build-call sym pattern env))
 		       '()))
 	  (value (cond ((not (pair? pattern))
 			(lookup-pattern pattern env))
-		       ((eq? (car pattern) 'quote)
+		       ((name=? (car pattern) 'quote)
 			`(make-literal-node ,(build-literal (cadr pattern) env)
 					    (node-type ,initial)))
 		       (else
@@ -363,7 +387,7 @@
 		 (loop (cdr arg-patterns)
 		       (cons (lookup-pattern arg env) args)
 		       clauses))
-		((eq? (car arg) 'quote)
+		((name=? (car arg) 'quote)
 		 (loop (cdr arg-patterns)
 		       (cons `'(,(build-literal (cadr arg) env)
 				type/unknown)
@@ -381,7 +405,7 @@
 (define (build-literal spec env)
   (cond ((number? spec)
 	 spec)
-	((symbol? spec)
+	((name? spec)
 	 `(literal-value ,(lookup-literal spec env)))
 	(else
 	 `(,(car spec)

@@ -1,17 +1,40 @@
 ; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Sleeping for N milliseconds.
+;
+; The current thread is the only one every on QUEUE, but we cannot block without
+; being on some queue.
+;
+; CALL-ERROR has to be called from us, not COERCE-TO-... because it is supposed
+; to have our continuation.
 
-(define (sleep n)
-  (let ((queue (make-thread-queue)))  ; only one entry, but it must be a queue
-    (disable-interrupts!)
-    (enqueue-thread! queue (current-thread))
-    (session-data-set! dozers
-		       (insert (cons (+ (real-time) n) queue)
-			       (session-data-ref dozers)
-			       (lambda (frob1 frob2)
-				 (< (car frob1) (car frob2)))))
-    (block)))
+(define (sleep user-n)
+  (let ((n (coerce-to-nonnegative-integer user-n)))
+    (cond ((not n)
+	   (call-error "wrong type argument" sleep user-n))
+	  ((< 0 n)
+	   (let ((queue (make-thread-queue)))
+	     (disable-interrupts!)
+	     (enqueue-thread! queue (current-thread))
+	     (session-data-set! dozers
+				(insert (cons (+ (real-time) n)
+					      queue)
+					(session-data-ref dozers)
+					(lambda (frob1 frob2)
+					  (< (car frob1)
+					     (car frob2)))))
+	     (block))))))
+
+(define (coerce-to-nonnegative-integer n)
+  (if (real? n)
+      (let* ((n (round n))
+	     (n (if (exact? n)
+		    n
+		    (inexact->exact n))))
+	(if (<= 0 n)
+	    n
+	    #f))
+      #f))
 
 (define dozers (make-session-data-slot! '()))
 	  

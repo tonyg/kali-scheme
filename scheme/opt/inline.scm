@@ -88,7 +88,7 @@
 
 (define (unused-name env name)
   (let ((sym (if (generated? name)
-		 (generated-symbol name)
+		 (generated-name name)
 		 name)))
     (do ((i 0 (+ i 1))
 	 (name sym
@@ -219,7 +219,7 @@
 	(let ((parent (recur (qualified-parent-name name))))
 	  (generate-name (qualified-symbol name)
 			 (get-qualified-env (generated-env parent)
-					    (generated-symbol parent))
+					    (generated-name parent))
 			 parent))
 	(rename name))))
 

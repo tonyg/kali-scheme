@@ -111,6 +111,8 @@
 	 type/char)
 	((integer? value)
 	 type/integer)
+	((real? value)
+	 type/float)
 	((string? value)
 	 type/string)
 	(((structure-ref eval-node unspecific?) value)

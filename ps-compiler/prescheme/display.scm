@@ -101,7 +101,8 @@
 (define (name->symbol name)
   (if (symbol? name)
       name
-      (string->symbol (string-append (symbol->string (generated-symbol name))
+      (string->symbol (string-append (symbol->string
+				       (name->symbol (generated-name name)))
 				     "."
 				     (number->string (generated-uid name))))))
 

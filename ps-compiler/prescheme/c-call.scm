@@ -36,6 +36,7 @@
 
 (define (c-literal-value value type port)
   (let ((value (cond ((integer? value) value)
+		     ((real? value) value)
 		     ((eq? value #f) 0)
 		     ((eq? value #t) 1)
 		     ((string? value) value)

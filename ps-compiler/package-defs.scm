@@ -117,7 +117,7 @@
   (begin
     (define-syntax pattern-simplifier
       (lambda (form rename compare)
-	(make-pattern-simplifier (cdr form))))) ; from SIMP-PATTERNS
+	(make-pattern-simplifier (cdr form) rename compare))))
   (files (simp simplify)  ; main entry point and driver
 	 (simp call)))    ; simplifiers for some of the standard primops
 
@@ -140,7 +140,7 @@
 ; transformations.
 
 (define-structure simp-patterns (export make-pattern-simplifier)
-  (open scheme big-scheme defrecord)
+  (open scheme big-scheme defrecord fluids)
   (files (simp pattern)))
 
 ; Replacing cells with values passed as parameters, currently empty

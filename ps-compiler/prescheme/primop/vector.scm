@@ -22,7 +22,9 @@
 
 (define-polymorphic-scheme-primop record-ref read
   (lambda (call)
-    (record-field-type (literal-value (call-arg call 1)))))
+    (record-field-type
+     (get-record-type-field (literal-value (call-arg call 1))
+			    (literal-value (call-arg call 2))))))
 
 (define-nonsimple-scheme-primop record-set! write)
 

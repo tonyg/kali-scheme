@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 21")
+(define architecture-version "Vanilla 22")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -133,7 +133,8 @@
      exp log sin cos tan asin acos sqrt
      angle magnitude)
    1)
-  (atan 2)
+  (atan1 1)
+  (atan2 2)
   ((make-polar make-rectangular) 2)
   (bitwise-not 1)
   (bit-count 1)
@@ -467,8 +468,8 @@
     (port port? make-port
       (port-handler)
       (port-status  set-port-status!)
-      (port-lock    set-port-lock!)
-      (port-locked? set-port-locked?!)
+      (port-lock    set-port-lock!)		; used for buffer timestamps
+      (port-locked? set-port-locked?!)		; no longer used
       (port-data    set-port-data!)
       (port-buffer  set-port-buffer!)
       (port-index   set-port-index!)

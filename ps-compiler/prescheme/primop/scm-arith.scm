@@ -56,7 +56,7 @@
 
 (define-complex-primitive (fl+ . real?) +
   arith-float-op-rule
-  (lambda (x y) (+ x y))
+  (lambda (x y) (fl+ x y))
   (lambda (args type)
     (if (null? args)
 	(make-literal-node 0.0 type/float)
@@ -76,7 +76,7 @@
 
 (define-complex-primitive (fl* . real?) *
   arith-float-op-rule
-  (lambda (x y) (* x y))
+  (lambda (x y) (fl* x y))
   (lambda (args type)
     (if (null? args)
 	(make-literal-node 1.0)
@@ -166,11 +166,11 @@
   float-comparison-rule
   (lambda (x y) (fl< y x)))
 
-(define-semi-primitive (<= real? real?) <=
+(define-semi-primitive (fl<= real? real?) <=
   float-comparison-rule
   (lambda (x y) (not (fl< y x))))
 
-(define-semi-primitive (>= real? real?) >=
+(define-semi-primitive (fl>= real? real?) >=
   float-comparison-rule
   (lambda (x y) (not (fl< x y))))
 

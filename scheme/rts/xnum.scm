@@ -132,15 +132,16 @@
 
 (define-opcode-extension make-rectangular &make-rectangular)
 
-(define-opcode-extension exp  &exp)
-(define-opcode-extension log  &log)
-(define-opcode-extension sin  &sin)
-(define-opcode-extension cos  &cos)
-(define-opcode-extension tan  &tan)
-(define-opcode-extension asin &asin)
-(define-opcode-extension acos &acos)
-(define-opcode-extension atan &atan)
-(define-opcode-extension sqrt &sqrt)
+(define-opcode-extension exp   &exp)
+(define-opcode-extension log   &log)
+(define-opcode-extension sin   &sin)
+(define-opcode-extension cos   &cos)
+(define-opcode-extension tan   &tan)
+(define-opcode-extension asin  &asin)
+(define-opcode-extension acos  &acos)
+(define-opcode-extension atan1 &atan1)
+(define-opcode-extension atan2 &atan2)
+(define-opcode-extension sqrt  &sqrt)
 
 ; >, <=, and >= are all extended using the table for <.
 

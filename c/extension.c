@@ -152,7 +152,7 @@ s48_extended_vm (long key, s48_value value)
 	      str);
     EXT_RETURN(S48_UNSAFE_ENTER_FIXNUM(len));}
 
-    /* exp log sin cos tan asin acos atan sqrt */
+    /* exp log sin cos tan asin acos atan1 atan2 sqrt */
 
   FLOP2(9) {
     get_float_arg(value, 0, x);
@@ -182,24 +182,28 @@ s48_extended_vm (long key, s48_value value)
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, acos(x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP3(16) {			/* atan */
+  FLOP2(16) {			/* atan 1 */
+    get_float_arg(value, 0, x);
+    set_float_arg(value, 1, atan(x));
+    EXT_RETURN(S48_UNSPECIFIC);}
+  FLOP3(17) {			/* atan 2 */
     get_float_arg(value, 0, y);
     get_float_arg(value, 1, x);
     set_float_arg(value, 2, atan2(y, x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP2(17) {
+  FLOP2(18) {
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, sqrt(x));
     EXT_RETURN(S48_UNSPECIFIC);}
 
-  FLOP2(18) {			/* floor */
+  FLOP2(19) {			/* floor */
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, floor(x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  case FLOP+19: {		/* integer? */
+  case FLOP+20: {		/* integer? */
     EXTRACT_FLOAT(value, x);
     EXT_RETURN(S48_ENTER_BOOLEAN(fmod(x, 1.0) == 0.0)); }
-  case FLOP+20: {		/* float->fixnum */
+  case FLOP+21: {		/* float->fixnum */
     EXTRACT_FLOAT(value, x);
     if (x <= (double)GREATEST_FIXNUM_VALUE
 	&& x >= (double)LEAST_FIXNUM_VALUE)
@@ -207,7 +211,7 @@ s48_extended_vm (long key, s48_value value)
       EXT_RETURN(S48_UNSAFE_ENTER_FIXNUM((long)x)); }
     else
       EXT_RETURN(S48_FALSE);}
-  FLOP3(21) {			/* quotient */
+  FLOP3(22) {			/* quotient */
     double z;
     get_float_arg(value, 0, x);
     get_float_arg(value, 1, y);
@@ -216,7 +220,7 @@ s48_extended_vm (long key, s48_value value)
     z = x / y;
     set_float_arg(value, 2, z < 0.0 ? ceil(z) : floor(z));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP3(22) {			/* remainder */
+  FLOP3(23) {			/* remainder */
     get_float_arg(value, 0, x);
     get_float_arg(value, 1, y);
     if (fmod(x, 1.0) != 0.0 || fmod(y, 1.0) != 0.0) EXT_EXCEPTION;

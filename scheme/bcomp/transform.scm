@@ -65,7 +65,7 @@
 
 (define (name->source-name name)
   (if (generated? name)
-      (name->source-name (generated-symbol name))
+      (name->source-name (generated-name name))
       name))
 				       
 ; The env-of-definition for macros defined at top-level is a package,
@@ -79,7 +79,7 @@
 	  (if (and (generated? name)
 		   (eq? (generated-token name)
 			token))
-	      (lookup env-of-definition (generated-symbol name))
+	      (lookup env-of-definition (generated-name name))
 	      (lookup env-of-use name)))
 	env-of-use)))
 

@@ -79,8 +79,6 @@
      ,(proc (inexact-type) exact-type))
     ((exp log sin cos tan asin acos sqrt)
      ,(proc (number-type) number-type))
-    ((atan)
-     ,(proc (number-type number-type) number-type))
     ((floor)
      ,(proc (real-type) integer-type))
     ((real-part imag-part angle magnitude)
@@ -801,6 +799,35 @@
 		empty-segment))))))
   (define-one-or-two '- (enum op -) 0)
   (define-one-or-two '/ (enum op /) 1))
+
+; ATAN also takes one or two arguments, but the meanings are disjoint.
+
+(define-compiler-primitive 'atan
+  (proc (number-type &opt number-type) number-type)
+  (lambda (node level depth cont)
+    (if (node-ref node 'type-error)
+	(compile-unknown-call node level depth cont)
+	(let* ((args (cdr (node-form node)))
+	       (opcode (if (null? (cdr args))
+			   (enum op atan1)
+			   (enum op atan2))))
+	  (sequentially
+	   (push-all-but-last args level depth node)
+	   (deliver-value (instruction opcode) cont)))))
+  (lambda ()
+    (make-dispatch-protocol
+     empty-segment
+     ; One argument
+     (sequentially
+      (instruction (enum op pop))
+      (instruction (enum op atan1))
+      (instruction (enum op return)))
+     ; Two arguments
+     (sequentially
+      (instruction (enum op pop))
+      (instruction (enum op atan2))
+      (instruction (enum op return)))
+     empty-segment)))
 
 ; make-vector and make-string take one or two arguments.
 

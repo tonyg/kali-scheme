@@ -625,7 +625,7 @@
 ; Getting symbols for use as variable names.
 
 (define (name-node->symbol node)
-  (let ((name (node-form node)))
+  (let loop ((name (node-form node)))
     (if (generated? name)
-	(generated-symbol name)
+	(loop (generated-name name))
 	name)))

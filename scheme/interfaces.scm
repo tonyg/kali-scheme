@@ -858,7 +858,7 @@
 	  generate-name		;qualified->name in opt/inline.scm
 	  generated?
 
-	  generated-symbol
+	  generated-name
 	  generated-token
 	  generated-env
 	  generated-parent-name

@@ -27,6 +27,12 @@
 (define-scheme-primop   + #f type/integer (addition-simplifier   +   -   0))
 (define-scheme-primop fl+ #f type/float   (addition-simplifier fl+ fl- 0.0))
 
+; The simplifiers think that the constant folders have the same name as
+; the primops.  It is easier to define these than to change the simplifiers.
+(define fl+ +)
+(define fl- -)
+(define fl* *)
+
 (define-syntax subtraction-simplifier
   (syntax-rules ()
     ((subtraction-simplifier + - zero)
@@ -87,26 +93,26 @@
 
 (define-scheme-primop      * #f type/integer simplify-multiply)
 (define-scheme-primop small* #f type/integer simplify-multiply)
-(define-scheme-primop    fl* #f type/integer simplify-float-multiply)
+(define-scheme-primop    fl* #f type/float   simplify-float-multiply)
 
 (define-syntax quotient-simplifier
   (syntax-rules ()
-    ((subtraction-simplifier zero one op)
+    ((quotient-simplifier id zero one op)
      (lambda (call)
        (simplify-args call 0)
        ((pattern-simplifier
-	 ((quotient x 'zero) '((lambda ()
-				 (error "program divides by zero"))))
-	 ((quotient x 'one) x)
-	 ((quotient 'zero x) 'one)
-	 ((quotient 'a 'b) '(op a b)))
+	 ((id x 'zero) '((lambda ()
+			   (error "program divides by zero"))))
+	 ((id x 'one) x)
+	 ((id 'zero x) 'zero)
+	 ((id 'a 'b) '(op a b)))
 	call)))))
 
 (define-scheme-primop quotient  exception type/integer
-  (quotient-simplifier 1 0 quotient))
+  (quotient-simplifier quotient 1 0 quotient))
 
 (define-scheme-primop fl/       exception type/float
-  (quotient-simplifier 1.0 0.0 /))
+  (quotient-simplifier fl/ 1.0 0.0 /))
 
 (define-scheme-primop remainder exception type/integer)
 

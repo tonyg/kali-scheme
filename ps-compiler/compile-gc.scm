@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey.  See file COPYING.
 
 (config '(load "../scheme/vm/macro-package-defs.scm"))
 (load-package 'vm-architecture)
@@ -43,4 +43,4 @@
 	   "../scheme/vm/scheme48write-image.c"
 	   '(header "#include \"scheme48vm.h\"")
 	   '(header "#include \"scheme48heap.h\"")
-	   '(no-copy (image-gc trace-image-value)))))
+	   '(no-copy (write-image trace-image-value)))))

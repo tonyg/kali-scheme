@@ -2,6 +2,20 @@
 
 Recent changes to Scheme 48.
 
+5/30/01  (version 0.56)
+         Bug fixes:
+	  Fixed problems with s48-shorten-bignum that were causing crashes.
+	  Patched PreScheme compiler so that the VM would compile (how did
+	   this not get noticed earlier?).
+	  Added scheme/posix to the list of directories that get installed.
+          Replaced sa.sa_action = ... with sa.sa_handler = ... in
+	   c/posix/proc.c.
+	  Added one-argument version of ATAN.
+	  Fixed macro-defining-macro bug that showed up in SLIB's FLUID-LET.
+	  SLEEP checks that its argument is a positive real number and
+	   correctly handles rationals and inexacts.
+	  Fixed a few typos in the manual.
+
 5/21/01  (version 0.55)
 	 Additions:
 	  The inspector is more efficient in dealing with large vectors, long

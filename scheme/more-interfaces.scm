@@ -287,7 +287,7 @@
 	  &numerator
 	  &denominator
 	  &exp &log
-	  &sin &cos &tan &asin &acos &atan
+	  &sin &cos &tan &asin &acos &atan1 &atan2
 	  &sqrt
 	  &make-rectangular
 	  &number->string

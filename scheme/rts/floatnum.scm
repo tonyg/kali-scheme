@@ -9,7 +9,7 @@
    fixnum->float
    string->float
    float->string
-   exp log sin cos tan asin acos atan sqrt
+   exp log sin cos tan asin acos atan1 atan2 sqrt
    floor
    integer?
    float->fixnum
@@ -118,7 +118,8 @@
 (define float/ (float&float->float (enum flop /)))
 (define float-quotient (float&float->float (enum flop quotient)))
 (define float-remainder (float&float->float (enum flop remainder)))
-(define float-atan (float&float->float (enum flop atan)))
+(define float-atan1 (float->float (enum flop atan1)))
+(define float-atan2 (float&float->float (enum flop atan2)))
 
 (define float= (float&float->boolean (enum flop =)))
 (define float< (float&float->boolean (enum flop <)))
@@ -142,7 +143,13 @@
   (define tan float-tan)
   (define asin float-asin)
   (define acos float-acos)
-  (define atan float-atan)
+  (define (atan a . maybe-b)
+    (cond ((null? maybe-b)
+	   (float-atan1 a))
+	  ((null? (cdr maybe-b))
+	   (float-atan2 a (car maybe-b)))
+	  (else
+	   (error "too many arguments to ATAN" (cons a maybe-b)))))
   (define sqrt float-sqrt))
 
 (define (float-fraction-length x)
@@ -207,16 +214,16 @@
 (define-floatnum-method &remainder float-remainder)
 (define-floatnum-method &= float=)
 (define-floatnum-method &< float<)
+(define-floatnum-method &atan2 float-atan2)
 
-(define-method &exp ((x :rational)) (float-exp x))
-(define-method &log ((x :rational)) (float-log x))
-(define-method &sqrt ((x :rational)) (float-sqrt x))
-(define-method &sin ((x :rational)) (float-sin x))
-(define-method &cos ((x :rational)) (float-cos x))
-(define-method &tan ((x :rational)) (float-tan x))
-(define-method &acos ((x :rational)) (float-acos x))
-
-(define-floatnum-method &atan float-atan)
+(define-method &exp   ((x :rational)) (float-exp   x))
+(define-method &log   ((x :rational)) (float-log   x))
+(define-method &sqrt  ((x :rational)) (float-sqrt  x))
+(define-method &sin   ((x :rational)) (float-sin   x))
+(define-method &cos   ((x :rational)) (float-cos   x))
+(define-method &tan   ((x :rational)) (float-tan   x))
+(define-method &acos  ((x :rational)) (float-acos  x))
+(define-method &atan1 ((x :rational)) (float-atan1 x))
 
 (define-method &number->string ((n :double) radix)
   (if (= radix 10)

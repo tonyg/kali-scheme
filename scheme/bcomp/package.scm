@@ -326,7 +326,7 @@
 	  ((generated? name)
 	   ; Access path is (generated-parent-name name)
 	   (generic-lookup (generated-env name)
-			   (generated-symbol name)))
+			   (generated-name name)))
 	  (else
 	   (search-opens (package-opens-really package) name integrate?)))))
 

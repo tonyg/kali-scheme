@@ -20,8 +20,8 @@
 
 (define (flonum-comparison proc)
   (lambda (x y)
-    (enter-boolean (proc (extract-double x)
-			 (extract-double y)))))
+    (proc (extract-double x)
+	  (extract-double y))))
 
 (define flonum=  (flonum-comparison fl=))
 (define flonum<  (flonum-comparison fl<))

@@ -19,19 +19,19 @@
 ; environment in which M is *used*.
 
 (define-record-type generated :generated
-  (make-generated symbol token env parent-name)
+  (make-generated name token env parent-name)
   generated?
-  (symbol      generated-symbol)
+  (name        generated-name)
   (token       generated-token)
   (env	       generated-env)
   (parent-name generated-parent-name))
 
 (define-record-discloser :generated
   (lambda (name)
-    (list 'generated (generated-symbol name) (generated-uid name))))
+    (list 'generated (generated-name name) (generated-uid name))))
 
-(define (generate-name symbol env parent-name)    ;for opt/inline.scm
-  (make-generated symbol (cons #f #f) env parent-name))
+(define (generate-name name env parent-name)    ;for opt/inline.scm
+  (make-generated name (cons #f #f) env parent-name))
 
 (define (generated-uid generated-name)
   (let ((token (generated-token generated-name)))
@@ -46,7 +46,8 @@
 (define (name->symbol name)
   (if (symbol? name)
       name
-      (string->symbol (string-append (symbol->string (generated-symbol name))
+      (string->symbol (string-append (symbol->string
+				       (name->symbol (generated-name name)))
 				     "##"
 				     (number->string (generated-uid name))))))
 
@@ -54,7 +55,7 @@
   (cond ((symbol? name)
 	 (string-hash (symbol->string name)))
 	((generated? name)
-	 (name-hash (generated-symbol name)))
+	 (name-hash (generated-name name)))
 	(else
 	 (error "invalid name" name))))
 
@@ -70,7 +71,7 @@
 	((string? thing)
 	 (make-immutable! thing))
 	((generated? thing)
-	 (desyntaxify (generated-symbol thing)))
+	 (desyntaxify (generated-name thing)))
 	((pair? thing)
 	 (make-immutable!
 	  (let ((x (desyntaxify (car thing)))
@@ -123,13 +124,13 @@
   (cond ((not (generated? name))
 	 name)
 	((let ((d0 (lookup env name))
-	       (d1 (lookup env (generated-symbol name))))
+	       (d1 (lookup env (generated-name name))))
 	   (and d0 d1 (same-denotation? d0 d1)))
-	 (generated-symbol name))   ;+++
+	 (generated-name name))   ;+++
 	(else
 	 (make-qualified (qualify-parent (generated-parent-name name)
 					 env)
-			 (generated-symbol name)
+			 (generated-name name)
 			 (generated-uid name)))))
 	 
 ; As an optimization, we elide intermediate steps in the lookup path
@@ -139,6 +140,9 @@
 ;	   record-ref)
 ; is replaced with
 ;     #(>> define-record-type record-ref)
+;
+; I think that this is buggy.  The RECUR calls are using the wrong environment.
+; ENV is not the environment in which the names will be looked up.
 
 (define (qualify-parent name env)
   (let recur ((name name))
@@ -159,7 +163,7 @@
 					  (transform-env s2))))))))
 	      (recur parent) ;+++
 	      (make-qualified (recur parent)
-			      (generated-symbol name)
+			      (generated-name name)
 			      (generated-uid name))))
 	name)))
   
