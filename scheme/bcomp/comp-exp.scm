@@ -198,7 +198,10 @@
 		    (stack-set!-instruction stack-offset)
 		    (error "SET! on a closed-over variable" name)))
 	      (let ((offset (template-offset frame depth))
-		    (index (binding->index frame binding name value-type)))
+		    (index (binding->index frame
+					   binding
+					   name
+					   usual-variable-type)))
 		(instruction (enum op set-global!)
 			     (high-byte offset)
 			     (low-byte offset)
