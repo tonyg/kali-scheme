@@ -74,9 +74,11 @@
 (define (raise-to-integer-power x n)
   (if (= n 0)
       1
-      (let loop ((s x) (i n) (a 1))	;invariant: a * s^i = x^n
-	(let ((a (if (odd? i) (* a s) a))
-	      (i (quotient i 2)))
-	  (if (= i 0)
-	      a
-	      (loop (* s s) i a))))))
+      (if (= x 2)
+          (arithmetic-shift 1 n)
+          (let loop ((s x) (i n) (a 1))	;invariant: a * s^i = x^n
+            (let ((a (if (odd? i) (* a s) a))
+                  (i (quotient i 2)))
+              (if (= i 0)
+                  a
+                  (loop (* s s) i a)))))))

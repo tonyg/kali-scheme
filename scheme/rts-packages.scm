@@ -4,6 +4,7 @@
 (define-structures ((scheme-level-1 scheme-level-1-interface)
 		    (util util-interface))
   (open scheme-level-0 ascii signals
+        bitwise
 	code-quote)			; needed by SYNTAX-RULES
   (usual-transforms case quasiquote syntax-rules)
   (files (rts base)
