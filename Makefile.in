@@ -415,7 +415,8 @@ tags:
 
 # DISTFILES should include all sources.
 DISTFILES = README COPYING INSTALL configure				\
-		acconfig.h configure.in Makefile.in install-sh		\
+		acconfig.h configure.in Makefile.in 			\
+		mkinstalldirs install-sh				\
 		doc/*.ps doc/*.txt doc/html/*.html doc/scheme48.man	\
 		doc/src/*.tex doc/src/*.sty doc/src/*.scm		\
 		emacs/README build/*-version-number build/*.exec	\
