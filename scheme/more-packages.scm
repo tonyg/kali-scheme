@@ -258,6 +258,12 @@
 	external-calls)
   (files (big external)))
 
+(define-structure shared-objects shared-objects-interface
+  (open scheme-level-2
+	define-record-types
+	external-calls)
+  (files (big shared-object)))
+
 (define-structure c-system-function (export have-system? system)
   (open scheme-level-2 external-calls signals)
   (begin

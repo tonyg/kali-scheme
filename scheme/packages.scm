@@ -441,6 +441,7 @@
 	    pp
 	    ;profile
 	    queues
+	    shared-objects
 	    time
 	    random
 	    receiving

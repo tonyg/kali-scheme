@@ -321,6 +321,15 @@
 
 	  call-external))
 
+(define-interface shared-objects-interface
+  (export open-shared-object
+	  close-shared-object
+	  shared-object?
+	  shared-object-address
+	  shared-object-address?
+	  shared-object-address-value
+	  call-shared-object-address))
+
 (define-interface dump/restore-interface
   (export dump
 	  restore

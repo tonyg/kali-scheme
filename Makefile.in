@@ -120,10 +120,13 @@ enough: $(VM) $(LIBSCHEME48) $(IMAGE) script-interpreter go
 # External code to include in the VM
 # After changing any of these you should delete `scheme48vm' and remake it.
 
-EXTERNAL_OBJECTS = $(POSIX_OBJECTS) $(SOCKET_OBJECTS) $(SYSEXITS_OBJECTS) \
-		   $(LOOKUP_OBJECTS) $(ASM_OBJECTS) $(SRFI_OBJECTS)
-EXTERNAL_LD_FLAGS = $(POSIX_LD_FLAGS) $(SOCKET_LD_FLAGS) $(SYSEXITS_LD_FLAGS)
+EXTERNAL_OBJECTS = $(POSIX_OBJECTS) $(SOCKET_OBJECTS) $(DYNLINK_OBJECTS) \
+		   $(SYSEXITS_OBJECTS) $(LOOKUP_OBJECTS) $(ASM_OBJECTS) \
+		   $(SRFI_OBJECTS)
+EXTERNAL_LD_FLAGS = $(POSIX_LD_FLAGS) $(SOCKET_LD_FLAGS) $(DYNLINK_LD_FLAGS) \
+		    $(SYSEXITS_LD_FLAGS)
 EXTERNAL_INITIALIZERS = $(POSIX_INITIALIZERS) $(SOCKET_INITIALIZERS)	\
+			$(DYNLINK_INITIALIZERS)				\
 			$(SYSEXITS_INITIALIZERS)			\
                         $(LOOKUP_INITIALIZERS) $(ASM_INITIALIZERS)	\
 			$(SRFI_INITIALIZERS)
@@ -165,6 +168,17 @@ SOCKET_LD_FLAGS =
 SOCKET_INITIALIZERS = 	s48_init_socket
 
 # End of socket rules
+
+# Dynamic linking rules
+
+c/unix/dynlink.o: c/scheme48.h
+
+DYNLINK_OBJECTS = c/unix/dynlink.o
+# configure adds -ldl or -mld to the regular libraries
+DYNLINK_LD_FLAGS = 
+DYNLINK_INITIALIZERS = 	s48_init_dynlink
+
+# End of dynamic linking rules
 
 # Sysexits (this is for the implementation of SRFI 22)
 
