@@ -384,6 +384,12 @@
 (define (reset-native-exception-cont!)
   (set! *native-exception-cont* 0))
 
+;;; Eventually, the native code wants the VM to detect and handle and
+;;; excpetion In this case, the native code sets
+;;; *native-exception-cont* to the continuation of the exception. If
+;;; this is detected here, push-exception-setup! fills the exception
+;;; data diffently which in turn is recognized by
+;;; return-from-exception where the stored continuation is invoked
 (define (push-exception-setup! exception instruction-size)
 ;  (breakpoint "exception continuation")
   (if (= 0 *native-exception-cont*)
@@ -398,6 +404,8 @@
       (begin
 	(push *native-exception-cont*)
 	(set! *cont* *stack*)
+	(write-string "handling exception for nc " (current-error-port))
+	(write-integer *native-exception-cont* (current-error-port))
 	(push-exception-continuation! (code+pc->code-pointer *exception-return-code*
 							      return-code-pc)
 				    (enter-fixnum (current-opcode))
@@ -414,6 +422,8 @@
     (if (= size/is-native? (enter-fixnum 0))
 	(let ((opcode (extract-fixnum pc/opcode)))
 	  (cond ((okay-to-proceed? opcode)
+		 (write-string "returning to nc " (current-error-port))
+		 (write-integer (fetch *stack*)  (current-error-port))
 		 (return-values 0 null 0))
 		(else 
 		 (set-code-pointer! code 0) ; Uahh...

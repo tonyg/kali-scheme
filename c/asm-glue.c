@@ -33,6 +33,7 @@ s48_provide_asm_values(s48_value asm_vector)
   extern long s48_native_G();
   extern long s48_native_LE();
   extern long s48_native_GE();
+  extern long s48_restart_vm2();
   extern long s48_Sstack_limitS;
   extern long s48_ShpS;
   extern long s48_SlimitS;
@@ -56,6 +57,7 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 17, s48_enter_fixnum((long) &s48_native_G));
   S48_VECTOR_SET(asm_vector, 18, s48_enter_fixnum((long) &s48_native_LE));
   S48_VECTOR_SET(asm_vector, 19, s48_enter_fixnum((long) &s48_native_GE));
+  S48_VECTOR_SET(asm_vector, 20, s48_enter_fixnum((long) &s48_restart_vm2));
   return S48_UNSPECIFIC;
 }
 
@@ -128,4 +130,19 @@ s48_are_integers_or_floanums(s48_value value1, s48_value value2)
   return (((S48_FIXNUM_P (value1) || S48_BIGNUM_P (value1)) && 
 	   (S48_FIXNUM_P (value2) || S48_BIGNUM_P (value2))) ||
 	  ((S48_DOUBLE_P (value1) && S48_DOUBLE_P (value2))));
+}
+
+long ignore_values_native_protocol = 186; 
+long jmp_count = 6; /* just a guess: jmp continue */
+long first_opcode_index = 13; /* from vm/package-defs.scm */
+
+long
+s48_make_native_return_code(char* jmp_to_continue, long frame_size)
+{
+  long return_code, i;
+  return_code = s48_make_blank_return_code(ignore_values_native_protocol, frame_size, jmp_count);
+  for (i=0; i < jmp_count; i++)
+    /* this almost certainly gets endianess wrong: */
+    S48_BYTE_VECTOR_SET(return_code, i + first_opcode_index, jmp_to_continue[i]); 
+  return return_code;
 }
