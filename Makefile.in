@@ -74,7 +74,7 @@ include $(srcdir)/build/filenames.make
 #    This builds the linker on the scheme48vm and scheme48.image
 #    that are in the current directory.
 
-BIG_HEAP = -h 6000000
+BIG_HEAP = -h 8000000
 LINKER_VM = $(RUNNABLE) $(BIG_HEAP)
 LINKER_RUNNABLE = $(LINKER_VM)
 START_LINKER = echo ',batch';					\
