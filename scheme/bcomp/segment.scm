@@ -166,14 +166,12 @@
 		      (emit-byte! astate (low-byte depth)))))))
 
 (define (live-mask offsets depth)
-    (do ((offsets offsets (cdr offsets))
-	 (mask 0
-	       (bitwise-ior mask
-			    (arithmetic-shift 1
-					      (bytes->cells
-					       (car offsets))))))
-	((null? offsets)
-	 mask)))
+  (do ((offsets offsets (cdr offsets))
+       (mask 0
+	     (bitwise-ior mask
+			  (arithmetic-shift 1 (car offsets)))))
+      ((null? offsets)
+       mask)))
 
 (define (bits->bytes n)
   (do ((n n (arithmetic-shift n -8))
