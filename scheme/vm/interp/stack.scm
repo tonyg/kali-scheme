@@ -25,6 +25,7 @@
 ;                     header
 ;  tagged pointer --> pc as a fixnum
 ;		      code vector
+;		      next continuation
 ;                     operand stack
 ;                     ...
 ;                     frame values
