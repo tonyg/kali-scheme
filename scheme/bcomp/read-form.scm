@@ -12,14 +12,19 @@
 
 (define (read-forms pathname package)
   (let* ((filename (namestring pathname #f *scheme-file-type*))
-	 (truename (translate filename)))
-    (call-with-input-file truename
-      (lambda (port)
-	((fluid-cell-ref $note-file-package) filename package)
-	(let ((o-port (current-noise-port)))
-	  (display truename o-port)
-	  (force-output o-port)
-	  (really-read-forms port))))))
+	 (truename (translate filename))
+	 (port #f))
+    (dynamic-wind
+     (lambda ()
+       (set! port (open-input-file truename)))
+     (lambda ()
+       ((fluid-cell-ref $note-file-package) filename package)
+       (let ((o-port (current-noise-port)))
+	 (display truename o-port)
+	 (force-output o-port)
+	 (really-read-forms port)))
+     (lambda ()
+       (close-input-port port)))))
 
 (define (really-read-forms port)	    
   (let loop ((forms '()))
