@@ -9,6 +9,10 @@ runnable=$1
 echo ',batch';
 echo ',open srfi-1 srfi-13 srfi-14';
 echo ',load build/windows-installer.scm';
+# generate enough uuids and quote them
+echo '(define uuids (list ';
+uuidgen -n100 | sed 's/^.*$/"&"/';
+echo '))';
 echo '(define files (list';
 for f in scheme/*.scm \
       scheme/env/*.scm \
@@ -23,7 +27,7 @@ for f in scheme/*.scm \
   echo "\"$f\"";
 done;
 echo '))';
-echo "(write-file-elements-include-file files \"build/scheme48-files.wxi\")"
+echo "(write-file-elements-include-file files uuids \"build/scheme48-files.wxi\")"
 ) > scheme48-files.input
 
 # For some reason, directly piping into $runnable doesn't work under Mike's Cygwin

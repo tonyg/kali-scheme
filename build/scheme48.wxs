@@ -47,7 +47,7 @@
         <Directory Id="Scheme48" Name="Scheme48" LongName="Scheme 48">
           <Directory Id="INSTALLDIR" Name="s48_1-3" LongName="Scheme 48 1.3">
 
-            <Component Id="Main">
+            <Component Id="Main" Guid="47e7eda2-b740-4c68-ba6b-79ab5f02920a">
 
               <File Id="Scheme48VM" Name="S48VM.EXE" LongName="scheme48vm.exe" DiskId="1"
                 src="scheme48vm.exe" Vital="yes" />
@@ -87,7 +87,7 @@
             <?include scheme48-files.wxi ?>
 
             <Directory Id="include" Name="INCLUDE" LongName="include" >
-              <Component Id="include_component" >
+              <Component Id="include_component" Guid="67f000c9-326c-40a7-a228-6f2e37111f77">
                 <File Id="include_scheme48.h"
                       Name="SCHEME48.H" LongName="scheme48.h"
                       src="c/scheme48.h"
@@ -101,7 +101,7 @@
             </Directory>
 
             <Directory Id="build" Name="BUILD" LongName="build" >
-              <Component Id="build_component" >
+              <Component Id="build_component" Guid="09454a52-e0c8-4630-ab19-05ca78900f4b">
 
                 <File Id="build_initial.image" Name="INITIAL.IMA" LongName="initial.image" DiskId="1"
                       src="build/initial.image" Vital="yes" />

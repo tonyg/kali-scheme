@@ -73,14 +73,14 @@
     (cons (reverse (cdr rev-components))
 	  (car rev-components))))
 
-(define (write-file-elements-include-file file-names output-file-name)
+(define (write-file-elements-include-file file-names uuids output-file-name)
   (call-with-output-file output-file-name
     (lambda (port)
       (display "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>" port)
       (newline port)
       (display "<Include>" port)
       (newline port)
-      (write-file-elements file-names port)
+      (write-file-elements file-names uuids port)
       (display "</Include>" port)
       (newline port))))
 
@@ -108,7 +108,7 @@
 
 ; write the WiX file elements for a given list of file names
 
-(define (write-file-elements file-names port)
+(define (write-file-elements file-names uuids port)
   (let* ((split-names (map split-file-name file-names))
 	 (directories (delete-duplicates (map car split-names)))
 	 (alist
@@ -122,9 +122,15 @@
 	       directories))
 	 (tree (tree-ize-directory-alist alist)))
 
-    (write-directory-tree '() tree port)))
+    (write-directory-tree '() tree (make-uuid-source uuids) port)))
 
-(define (write-directory-tree directory alist port)
+(define (make-uuid-source uuids)
+  (lambda ()
+    (let ((uuid (car uuids)))
+      (set! uuids (cdr uuids))
+      uuid)))
+
+(define (write-directory-tree directory alist uuid-source port)
   (if (not (null? directory))
       (begin
 	(display "<Directory Id=\"" port)
@@ -147,6 +153,8 @@
 	  (begin
 	    (display "<Component Id=\"" port)
 	    (display (component-id directory) port)
+	    (display "\" Guid=\"" port)
+	    (display (uuid-source) port)
 	    (display "\">" port)
 	    (newline port)
 	    (let ((used-file-names (list '()))) ; poor man's cell
@@ -159,6 +167,7 @@
       (for-each (lambda (entry)
 		  (write-directory-tree (append directory (list (car entry)))
 					(cdr entry)
+					uuid-source
 					port))
 		directory-entries)))
   (if (not (null? directory))
