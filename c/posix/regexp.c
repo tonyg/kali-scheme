@@ -116,7 +116,7 @@ posix_regexp_match(s48_value sch_regex, s48_value string, s48_value sch_start,
   int flags = S48_EXTRACT_BOOLEAN(bol_p) ? 0 : REG_NOTBOL |
               S48_EXTRACT_BOOLEAN(eol_p) ? 0 : REG_NOTEOL;
 
-  if ((start < 0) || (start >= len))
+  if ((start < 0) || (start > len))
     s48_raise_range_error(sch_start,
 			  s48_enter_fixnum(0),
 			  s48_enter_fixnum(len));
