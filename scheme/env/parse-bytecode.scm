@@ -239,7 +239,9 @@
   (let ((protocol (car p-args)))
     (if (or (= protocol two-byte-nargs+list-protocol)
             (and (= protocol big-stack-protocol)
-                 (n-ary-protocol? (cadr p-args))))
+                 (n-ary-protocol? (cadr p-args)))
+            (= protocol call-with-values-protocol)
+            (= protocol ignore-values-protocol))
         #t
         (if (or (<= protocol maximum-stack-args)
                 (= protocol two-byte-nargs-protocol))
@@ -258,6 +260,10 @@
            (cadr p-args))
 	  ((= protocol big-stack-protocol)
            (protocol-nargs (cadr p-args)))
+          ((= protocol ignore-values-protocol)
+           0)
+          ((= protocol call-with-values-protocol)
+           #f)
 	  (else
 	   (error "unknown protocol in protocol-nargs" p-args)))))
 
