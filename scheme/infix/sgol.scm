@@ -194,18 +194,9 @@
 				    (car port-option))
 				sgol-lexer-table)))
 
-; Read/print loop
-
-(define (rpl)
-  (let ((thing (sgol-read)))
-    (if (not (eq? thing end-of-input-operator))
-	(begin (write thing)
-	       (newline)
-	       (rpl)))))
-
 ; Read/eval/print loop
 
-(define (rpl)
+(define (sgol-repl)
   (let ((thing (sgol-read)))
     (if (not (eq? thing end-of-input-operator))
 	(begin (write thing)

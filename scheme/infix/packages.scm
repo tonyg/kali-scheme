@@ -6,7 +6,7 @@
 				    set-up-usual-tokenization!
 				    set-char-tokenization!
 				    tokenize)
-  (open scheme records signals defpackage ascii)
+  (open scheme signals define-record-types ascii)
   (access primitives)
   (files tokenize))
 
@@ -21,7 +21,7 @@
 				parse-nary parse-infix
 				parse-matchfix end-of-input-operator
 				port->stream)
-  (open scheme records signals tokenizer tables)
+  (open scheme define-record-types signals tokenizer tables)
   (files pratt))
 
 (define-structure sgol (export sgol-read sgol-repl)

@@ -16,33 +16,22 @@
 
 ; Tokenizer tables
 
-(define tokenizer-table-type
-  (make-record-type 'tokenizer-table
-		    '(translation dispatch-vector terminating?-vector)))
+(define-record-type tokenizer-table :tokenizer-table
+  (really-make-tokenizer-table translation dispatch-vector terminating?-vector)
+  tokenizer-table?
+  (translation ttab-translation
+	       set-tokenizer-table-translator!)
+  (dispatch-vector ttab-dispatch-vector)
+  (terminating?-vector ttab-terminating?-vector))
 
-(define make-tokenizer-table
-  (let ()
-    (define make
-      (record-constructor tokenizer-table-type
-			  '(translation dispatch-vector terminating?-vector)))
-    (define (make-tokenizer-table)
-      (make (if (char=? (string-ref (symbol->string 't) 0) #\T)
-		char-upcase
-		char-downcase)
-	    (make-vector 256 (lambda (c port)
-			       (error "illegal character read" c)))
-	    (make-vector 256 #t)))
-    make-tokenizer-table))
-
-(define ttab-translation
-  (record-accessor tokenizer-table-type 'translation))
-(define ttab-dispatch-vector
-  (record-accessor tokenizer-table-type 'dispatch-vector))
-(define ttab-terminating?-vector
-  (record-accessor tokenizer-table-type 'terminating?-vector))
-
-(define set-tokenizer-table-translator!
-  (record-modifier tokenizer-table-type 'translation))
+(define (make-tokenizer-table)
+  (really-make-tokenizer-table
+   (if (char=? (string-ref (symbol->string 't) 0) #\T)
+       char-upcase
+       char-downcase)
+   (make-vector 256 (lambda (c port)
+		      (error "illegal character read" c)))
+   (make-vector 256 #t)))
 
 (define (set-char-tokenization! ttab char reader term?)
   (vector-set! (ttab-dispatch-vector ttab) (char->ascii char) reader)

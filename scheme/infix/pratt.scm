@@ -69,29 +69,21 @@
 
 ; A token is either an operator or atomic (number, identifier, etc.)
 
-(define operator-type
-  (make-record-type 'operator
-		    '(name lbp rbp nud led)))
+(define-record-type operator :operator
+  (really-make-operator name lbp rbp nud led)
+  operator?
+  (name operator-name)
+  (lbp operator-lbp)
+  (rbp operator-rbp)
+  (nud operator-nud)
+  (led operator-led))
 
-(define make-operator
-  (let ()
-    (define make
-      (record-constructor operator-type '(name lbp rbp nud led)))
-    (define (make-operator name lbp rbp nud led)
-      (make name
-	    (or lbp default-lbp)
-	    (or rbp default-rbp)
-	    (or nud default-nud)
-	    (or led default-led)))
-    make-operator))
-
-(define operator? (record-predicate operator-type))
-
-(define operator-name (record-accessor operator-type 'name))
-(define operator-nud (record-accessor operator-type 'nud))
-(define operator-led (record-accessor operator-type 'led))
-(define operator-lbp (record-accessor operator-type 'lbp))
-(define operator-rbp (record-accessor operator-type 'rbp))
+(define (make-operator name lbp rbp nud led)
+  (really-make-operator name
+			(or lbp default-lbp)
+			(or rbp default-rbp)
+			(or nud default-nud)
+			(or led default-led)))
 
 (define (default-nud operator stream)
   (if (eq? (operator-led operator) default-led)
@@ -129,7 +121,7 @@
       (operator-rbp token)
       default-rbp))
 
-(define-record-discloser operator-type
+(define-record-discloser :operator
   (lambda (obj)
     (list 'operator (operator-name obj))))
 
@@ -217,19 +209,17 @@
 
 ; Lexer support:
 
-(define lexer-type
-  (make-record-type 'lexer '(ttab punctab keytab)))
+(define-record-type lexer :lexer
+  (make-lexer ttab punctab keytab)
+  lexer?
+  (ttab lexer-ttab)
+  (punctab lexer-punctab)
+  (keytab lexer-keytab))
 
-(define lexer-ttab    (record-accessor lexer-type 'ttab))
-(define lexer-punctab (record-accessor lexer-type 'punctab))
-(define lexer-keytab  (record-accessor lexer-type 'keytab))
-
-(define make-lexer-table
-  (let ((make (record-constructor lexer-type '(ttab punctab keytab))))
-    (lambda ()
-      (let ((ttab (make-tokenizer-table)))
-	(set-up-usual-tokenization! ttab)
-	(make ttab (make-table) (make-table))))))
+(define (make-lexer-table)
+  (let ((ttab (make-tokenizer-table)))
+    (set-up-usual-tokenization! ttab)
+    (make-lexer ttab (make-table) (make-table))))
 
 (define (lex ltab port)
   (let ((thing (tokenize (lexer-ttab ltab) port)))
