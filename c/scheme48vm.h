@@ -28,8 +28,8 @@ extern void		s48_set_os_signals(s48_value list);
 extern void		s48_reset_interruptsB();
 
 /* imported and exported bindings */	  
-extern void		s48_define_exported_binding(char *, s48_value);
-extern s48_value	s48_get_imported_binding(char *);
+S48_EXTERN void		s48_define_exported_binding(char *, s48_value);
+S48_EXTERN s48_value	s48_get_imported_binding(char *);
 
 /* for raising exceptions in external code */
 extern void		s48_setup_external_exception(s48_value exception,
@@ -54,18 +54,18 @@ extern bool		s48_warn_about_undefined_imported_bindings(void);
 extern void		s48_initialize_shared_registersB(long, long, long, long);
 
 /* manipulating channels */
-extern void		s48_close_channel(long);
-extern s48_value	s48_set_channel_os_index(s48_value, long);
+S48_EXTERN void		s48_close_channel(long);
+S48_EXTERN s48_value	s48_set_channel_os_index(s48_value, long);
 extern s48_value	s48_really_add_channel(s48_value, s48_value, long);
 
 /* external allocation and GC roots */
 extern void		s48_gc_root(void);
 extern s48_value	s48_allocate_stob(long type, long size);
-extern void		s48_push_gc_rootsB(char *, long);
-extern bool		s48_pop_gc_rootsB(void);
+S48_EXTERN void		s48_push_gc_rootsB(char *, long);
+S48_EXTERN bool		s48_pop_gc_rootsB(void);
 extern char *		s48_set_gc_roots_baseB(void);
 extern bool		s48_release_gc_roots_baseB(char *);
-extern void		s48_register_gc_rootB(char *marker);
+S48_EXTERN void		s48_register_gc_rootB(char *marker);
 extern void		s48_reset_external_rootsB(void);
 extern void		s48_post_gc_cleanup(void);
 
