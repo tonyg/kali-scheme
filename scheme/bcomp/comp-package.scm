@@ -67,27 +67,67 @@
 
 ; This adds definitions of all operators to ENV and returns a list of forms
 ; that define the closed-compiled versions of those operators that have such.
+; It also adds a definition of ALL-OPERATORS to a vector of all the primitive
+; operators, mostly for later use by the debugger to identify which primop
+; caused an exception.
 
 (define (define-primitives env)
-  (let ((procs '()))
-    (table-walk (lambda (name op)
-		  (let ((type (operator-type op)))
-		    (if (not (eq? (operator-type op) 'leaf))
-			(environment-define! env name (operator-type op) op))))
-		operators-table)
+  (table-walk (lambda (name op)
+		(let ((type (operator-type op)))
+		  (if (not (eq? (operator-type op) 'leaf))
+		      (environment-define! env name (operator-type op) op))))
+	      operators-table)
+
+  (environment-define! env 'all-operators vector-type)
+  
+  (let ((all-operators-node (expand 'all-operators env))
+	(vector-set!-node (make-node operator/literal (get-primop 'vector-set!)))
+	(procs '())
+	(primop-count
+	 (let ((count 0))
+	   (walk-primops (lambda (name type primop)
+			   (set! count (+ 1 count))))
+	   count))
+	(index 0))
+
+    (define (make-define-primitive-node name env)
+      (make-node operator/define
+		 `(define ,(expand name env)
+		    ,(make-node operator/primitive-procedure
+				`(primitive-procedure ,name)))))
+
+    (define (make-register-primitive name index env)
+      (make-node operator/call
+		 (cons vector-set!-node
+		       (list all-operators-node
+			     (make-node operator/literal index)
+			     (expand name env)))))
+
     (walk-primops (lambda (name type primop)
 		    (environment-define! env name type primop)
 		    (set! procs
-		          (cons (make-define-primitive-node name env)
-		                procs))))
-    procs))
+			  (cons (make-define-primitive-node name env)
+				(cons
+				 (make-register-primitive name index env)
+				 procs)))
+		    (set! index (+ 1 index))))
 
-(define (make-define-primitive-node name env)
-  (make-node operator/define
-	     `(define ,(expand name env)
-		,(make-node operator/primitive-procedure
-			    `(primitive-procedure ,name)))))
+    (set! procs
+	  (cons
+	   (make-node
+	    operator/define
+	    `(define ,all-operators-node
+	       ,(make-node operator/call
+			   (cons (make-node operator/literal 
+					    (get-primop 'make-vector))
+				 (list (make-node operator/literal
+						  primop-count))))))
+	   procs))
+
+    procs))
 
 ;----------------
 (define operator/define	             (get-operator 'define syntax-type))
 (define operator/primitive-procedure (get-operator 'primitive-procedure syntax-type))
+(define operator/call                (get-operator 'call   'internal))
+(define operator/literal             (get-operator 'literal 'leaf))

@@ -49,18 +49,31 @@
 ; have templates.
 
 (define (continuation-template c)
-  (if (and (call-with-values-continuation? c)
-           (closure? (continuation-arg c 0)))
-      (closure-template (continuation-arg c 0))
-      (let loop ((i 0))
-	(if (= i (continuation-length c))
+  (cond
+   ((and (call-with-values-continuation? c)
+	 (closure? (continuation-arg c 0)))
+    (closure-template (continuation-arg c 0)))
+   ((let loop ((i 0))
+      (if (= i (continuation-length c))
+	  #f
+	  (let ((value (continuation-ref c i)))
+	    (if (and (template? value)
+		     (eq? (template-code value)
+			  (continuation-code c)))
+		value
+		(loop (+ i 1)))))))
+   ;; look among the primops for the template this continuation
+   ;; belongs to
+   (else
+    (let ((code (continuation-code c)))
+      (let loop ((i (vector-length all-operators)))
+	(if (zero? i)
 	    #f
-	    (let ((value (continuation-ref c i)))
-	      (if (and (template? value)
-		       (eq? (template-code value)
-			    (continuation-code c)))
-		  value
-		  (loop (+ i 1))))))))
+	    (let* ((primitive-proc (vector-ref all-operators (- i 1)))
+		   (primitive-template (closure-template primitive-proc)))
+	      (if (eq? code (template-code primitive-template))
+		  primitive-template
+		  (loop (- i 1))))))))))
 
 ; Accessing the saved operand stack.
 
@@ -88,4 +101,4 @@
 	(let ((template (continuation-template obj)))
 	  (if template
 	      (template-info template)
-	      #f))))
+	      '?))))
