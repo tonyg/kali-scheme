@@ -22,8 +22,9 @@ s48_provide_asm_values(s48_value asm_vector)
   extern void s48_stack_gc();
   extern long s48_unknown_call();
   extern long s48_unknown_return();
+  extern long s48_unknown_return_values();
+  extern long s48_unknown_apply();
   extern long s48_interrupt_handler();
-  extern long s48_exception_handler();
   extern long s48_restart_vm();
   extern long s48_ensure_space_for_native_code();
   extern long s48_native_add();
@@ -62,8 +63,8 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 6, s48_enter_fixnum((long) &s48_SlimitS));
   S48_VECTOR_SET(asm_vector, 7, s48_enter_fixnum((long) &s48_unknown_call));
   S48_VECTOR_SET(asm_vector, 8, s48_enter_fixnum((long) &s48_unknown_return));
-  S48_VECTOR_SET(asm_vector, 9, s48_enter_fixnum((long) &s48_interrupt_handler));
-  S48_VECTOR_SET(asm_vector, 10, s48_enter_fixnum((long) &s48_exception_handler));
+  S48_VECTOR_SET(asm_vector, 9, s48_enter_fixnum((long) &s48_unknown_return_values));
+  S48_VECTOR_SET(asm_vector, 10, s48_enter_fixnum((long) &s48_interrupt_handler));
   S48_VECTOR_SET(asm_vector, 11, s48_enter_fixnum((long) &s48_restart_vm));
   S48_VECTOR_SET(asm_vector, 12, s48_enter_fixnum((long) &s48_ensure_space_for_native_code));
   S48_VECTOR_SET(asm_vector, 13, s48_enter_fixnum((long) &s48_native_add));
@@ -87,6 +88,8 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 31, s48_enter_fixnum((long) &s48_restart_vm3_pop_2));
   S48_VECTOR_SET(asm_vector, 32, s48_enter_fixnum((long) &s48_restart_vm3_pop_3));
   S48_VECTOR_SET(asm_vector, 33, s48_enter_fixnum((long) &s48_gcSallocate_for_native_code));
+  /* 34 current thread */
+  S48_VECTOR_SET(asm_vector, 35, s48_enter_fixnum((long) &s48_unknown_apply));
   return S48_UNSPECIFIC;
 }
 

@@ -89,6 +89,8 @@
        (goto return-values s48-*native-protocol* null 0))
       ((4)
        (goto interpret *code-pointer*))
+      ((5)
+       (goto do-apply-with-native-cont s48-*native-protocol* (pop)))
       (else
        (error "unexpected native return value" tag)))))
 
@@ -119,6 +121,12 @@
 	(make-continuation-on-stack (address+ *code-pointer*
 					      return-pointer-offset)
 				    stack-arg-count))))
+
+(define (maybe-make-native-continuation stack-arg-count maybe-cont)
+  (if (= maybe-cont 0)
+      (move-args-above-cont! stack-arg-count)
+      (make-continuation-on-stack (integer->address maybe-cont)
+                                  stack-arg-count)))
 
 ; Call a template instead of a procedure.  This is currently used for
 ; stringing together code for top-level forms and doing the same thing for
@@ -169,6 +177,21 @@
 		  length))
 	  (let ((args (pop-args->list*+gc list-args stack-nargs)))
 	    (raise-exception wrong-type-argument -1 *val* args))))))
+
+(define (do-apply-with-native-cont stack-nargs maybe-cont)
+  (let ((list-args (pop)))
+    (receive (okay? length)
+	(okay-argument-list list-args)
+      (if okay?
+	  (begin
+	    (maybe-make-native-continuation stack-nargs maybe-cont)
+	    (goto perform-application-with-rest-list
+		  stack-nargs
+		  list-args
+		  length))
+	  (let ((args (pop-args->list*+gc list-args stack-nargs)))
+	    (raise-exception wrong-type-argument -1 *val* args))))))
+  
 
 ; This is only used for the closed-compiled version of APPLY.
 ;
