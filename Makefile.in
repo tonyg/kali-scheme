@@ -325,6 +325,7 @@ inst-man:
 
 inst-inc:
 	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier.h $(incdir)
 
 inst-misc:
 	for stub in env big sort opt misc link posix cml srfi; do	\
