@@ -354,7 +354,9 @@
   (open scheme-level-2
 	compiler		;define-compilator
 	segments
+	frames
 	architecture
+	bc-generation
 	nodes			;node-form node-ref
 	bindings		;binding? binding-place
         meta-types              ;value-type
