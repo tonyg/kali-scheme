@@ -21,7 +21,7 @@
 	    util
 	    weak
 	    write-images)
-	   structure)))
+	   :structure)))
 
 (define-interface features-structures-interface
   (export ((ascii
@@ -31,7 +31,7 @@
 	    handle
 	    records
 	    signals)
-	   structure)))
+	   :structure)))
 
 (define-interface run-time-internals-interface
   (export ((conditions
@@ -51,12 +51,13 @@
 	    scheme-level-2-internal
 	    structure-refs
 	    vm-exposure
-	    wind)
-	   structure)))
+	    wind
+	    writing)
+	   :structure)))
 
-(define-package ((run-time-structures run-time-structures-interface)
-		 (features-structures features-structures-interface)
-		 (run-time-internals  run-time-internals-interface))
+(define-structures ((run-time-structures run-time-structures-interface)
+		    (features-structures features-structures-interface)
+		    (run-time-internals  run-time-internals-interface))
   (open module-system
 	;; the-interfaces
 	)
@@ -83,12 +84,12 @@
 	    tables
 	    types
 	    usual-macros)
-	   structure)))
+	   :structure)))
 
 (define-module (make-compiler-structures run-time-structures
 					 features-structures)
 
-  (define-package ((compiler-structures compiler-structures-interface))
+  (define-structure compiler-structures compiler-structures-interface
     (open module-system
 	  run-time-structures
 	  features-structures
@@ -98,7 +99,7 @@
 
   compiler-structures)
 
-(define-structure compiler-structures
+(define compiler-structures
   (make-compiler-structures run-time-structures features-structures))
 
 
@@ -115,7 +116,7 @@
 	  ;; for-reification
 	  ))
 
-(define-package ((initial-structures initial-structures-interface))
+(define-structure initial-structures initial-structures-interface
   (open run-time-structures
 	compiler-structures
 	;; the-interfaces
@@ -129,7 +130,7 @@
 				       run-time-structures
 				       compiler-structures)
 
-  (define-package ((linker-structures linker-structures-interface))
+  (define-structure linker-structures linker-structures-interface
     (open module-system
 	  features-structures
 	  run-time-structures
@@ -143,7 +144,7 @@
 
 (define-interface usual-structures-interface
   (export ((?)
-	   structure)))
+	   :structure)))
 
 (define-interface linker-structures-interface
   (export ((analysis
@@ -154,9 +155,9 @@
 	    link-config
 	    loadc
 	    reification)
-	   structure)))
+	   :structure)))
 
-(define-package ((usual-structures usual-structures-interface))
+(define-structure usual-structures usual-structures-interface
   (open module-system
 	run-time-structures
 	compiler-structures
@@ -173,37 +174,37 @@
 
 (define-module (make-alternate-structures features-structures)
 
-  (define-package ((alternate-structures run-time-structures-interface))
+  (define-structure alternate-structures run-time-structures-interface
     (open module-system features-structures)
     (files alt-packages))
 
   alternate-structures)
 
-(define-package ((vanilla-features-structures features-structures-interface))
+(define-structure vanilla-features-structures features-structures-interface
   (open module-system)
   (files (alt packages)))
 
-(define-package ((cheat features-structures-interface))
+(define-structure cheat features-structures-interface
   (open module-system)
-  (begin (define-package ((signals signals-interface)
-			  (handle handle-interface)
-			  (features features-interface)
-			  (records records-interface)
-			  (ascii ascii-interface)
-			  (bitwise bitwise-interface)
-			  (code-vectors code-vectors-interface))
+  (begin (define-structures ((signals signals-interface)
+			     (handle handle-interface)
+			     (features features-interface)
+			     (records records-interface)
+			     (ascii ascii-interface)
+			     (bitwise bitwise-interface)
+			     (code-vectors code-vectors-interface))
 	   ;; Implemented with a manual ,open signals handle ...
 	   )))
 
-(define-structure alt-features-structures cheat);Or vanilla-features-structures
+(define alt-features-structures cheat)  ;Or vanilla-features-structures
 
 
 ; Linker image for bootstrap (link/linker.image).
 
-(define-structure alternate-structures
+(define alternate-structures
   (make-alternate-structures alt-features-structures))
 
-(define-structure linker-structures
+(define linker-structures
   (make-linker-structures alt-features-structures
 			  alternate-structures
 			  (make-compiler-structures alt-features-structures

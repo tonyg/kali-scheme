@@ -56,50 +56,50 @@ expressions are syntactic keywords, definitions, types, and structure
 names.
 
 If a name is bound to a macro or special operator, then an occurrence
-of that name has type SYNTAX.  E.g.
+of that name has type :SYNTAX.  E.g.
 
-    cond : syntax
+    cond : :syntax
 
-Definitions have type DEFINITION.  E.g.
+Definitions have type :DEFINITION.  E.g.
 
-    (begin (define x 1) (define y 2)) : definition
+    (begin (define x 1) (define y 2)) : :definition
 
 Thus type checking subsumes syntax checking.
 
-Types (other than TYPE itself?) have type TYPE.
+Types (other than :TYPE itself?) have type :TYPE.
 
 The type of a structure is its interface.  E.g.
 
-    (define-package ((foo (export a b))) ...)
+    (define-structure foo (export a b) ...)
     foo : (export a b)
 
 Values
 ------
 
-All expressions have type ANY-VALUES.  They may have more specific
+All expressions have type :VALUES.  They may have more specific
 types as well.
 
-If E1 ... En have types T1 ... Tn with Ti <= VALUE, then
+If E1 ... En have types T1 ... Tn with Ti <= :VALUE, then
 the expression (VALUES E1 ... En) has type (SOME-VALUES T1 ... Tn).
 
-If T <= VALUE then (VALUES T) is equivalent to T.
+If T <= :VALUE then (SOME-VALUES T) is equivalent to T.
 
 Procedure types
 ---------------
 
 Procedure types have the form (PROCEDURE T1 T2), where T1 and T2 are
-under ANY-VALUES.  Examples:
+under :VALUES.  Examples:
 
     (lambda (x) (values x 1)) :
-       (procedure (some-values value) (some-values value number))
+       (procedure (some-values :value) (some-values :value :number))
 
-    cons : (procedure (some-values value value) pair)
+    cons : (procedure (some-values :value :value) :pair)
 
 Fixed-arity procedure types (PROCEDURE (SOME-VALUES T1 ... TN) T) are
 so common that the abbreviated syntax (PROC (T1 ... Tn) T) is
 defined to mean the same thing.  E.g.
 
-    cons : (proc (value value) pair)
+    cons : (proc (:value :value) :pair)
 
 E : (PROCEDURE T1 T2) means that in a call to a value of E, if the
 argument sequence has any type other than T1, then the call can be
@@ -112,7 +112,7 @@ will have type T2.
 For example,
 
     (lambda (x) (+ (begin (set! x '(3)) 5) (car x))) :
-       (proc (pair) value),
+       (proc (:pair) :value),
 
 because if the arguments to + are evaluated from right to left, and X
 is not a pair, then there will be a run time type error.
@@ -124,7 +124,7 @@ Variable types
 --------------
 
 Assignable variables have type (VARIABLE T), where T for now will
-always be VALUE.  In (SET! V E), V must have type (VARIABLE T) for
+always be :VALUE.  In (SET! V E), V must have type (VARIABLE T) for
 some T.
 
 Loopholes
@@ -145,42 +145,42 @@ then T1 <= T2.  If it's #T, then T1 and T2 intersect.
 
 The type lattice has no bottom or top elements.
 
-The types SYNTAX, ANY-VALUES, DEFINITION, STRUCTURE, and TYPE are
+The types :SYNTAX, :VALUES, :DEFINITION, :STRUCTURE, and :TYPE are
 incomparable and maximal.
 
 The following are a comprehensive set of subtyping rules for the type
 system as it stands.  Additional rules may be added in the future.
 
-   - (SOME-VALUES T1 ... Tn) <= ANY-VALUES.
+   - (SOME-VALUES T1 ... Tn) <= :VALUES.
 
    - If T1 <= T1', ..., Tn <= Tn' then (SOME-VALUES T1 ... Tn) <=
      (SOME-VALUES T1' ... Tn').
 
    - T <= (SOME-VALUES T).
 
-   - Basic value types, which include NUMBER, CHAR, BOOLEAN, PAIR,
-     STRING, and UNSPECIFIC, are all under VALUE.
+   - Basic value types, which include :NUMBER, :CHAR, :BOOLEAN, :PAIR,
+     :STRING, and :UNSPECIFIC, are all under :VALUE.
 
    - If T1' <= T1 and T2 <= T2', then (PROCEDURE T1 T2) <= (PROCEDURE
      T1' T2').
 
    - (VARIABLE T) <= T.
 
-   - ZERO, the result type of calls to continuations, is under VALUE,
-     but perhaps shouldn't be.  (E.g. maybe it should be just under
-     ANY-VALUES instead.)
+   - :ZERO, the result type of infinite loops and calls to
+     continuations, is under :VALUE, but perhaps shouldn't be.  (E.g.
+     maybe it should be just under :VALUES instead.)
 
-   - (EXPORT (<name> T) ...) is under STRUCTURE.
+   - (EXPORT (<name> T) ...) is under :STRUCTURE.
      [Not yet implemented.]
 
 Type well-formedness
 --------------------
 
-In (SOME-VALUES T1 ... Tn), T1 ... Tn must be under VALUE.
+In (SOME-VALUES T1 ... Tn), T1 ... Tn must be under :VALUE.
 
-In (PROCEDURE T1 T2), T1 and T2 must be under ANY-VALUES.
+In (PROCEDURE T1 T2), T1 and T2 must be under :VALUES.
 
-In (VARIABLE T), T must be under VALUE.
+In (VARIABLE T), T must be under :VALUE.
 
 Module system
 -------------
@@ -194,17 +194,17 @@ Interfaces are types.  The type of a structure is its interface.
 An interface has the basic form (EXPORT (<name> <type>) ...).
 There are two kinds of abbreviations:
   - (EXPORT ... <name> ...) means the same as
-    (EXPORT ... (<name> VALUE) ...)
+    (EXPORT ... (<name> :VALUE) ...)
   - (EXPORT ... ((<name1> <name2> ...) <type>) ...) means the same as
     (EXPORT ... (<name1> <type>) (<name2> <type>) etc. ...)
 
 Distinct interfaces are not comparable.
 
 If a form S has type (EXPORT ... (name T) ...), then the form
-(STRUCTURE-REF S name) has type T.  Note that T needn't be a VALUE
+(STRUCTURE-REF S name) has type T.  Note that T needn't be a :VALUE
 type; e.g.
 
-    (structure-ref scheme cond) : syntax
+    (structure-ref scheme cond) : :syntax
 
 When a package is loaded or otherwise compiled, the type that is
 reconstructed or inherited for each exported name is checked against
@@ -231,7 +231,7 @@ their scope is global.  Packages that open the LOOPHOLES structure
 idea given the way TYPES is currently defined); LOOPHOLE works in
 spite of that.
 
-Figure out whether TYPE : TYPE.
+Figure out whether :TYPE : :TYPE.
 
 
 -----

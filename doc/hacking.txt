@@ -15,9 +15,9 @@ command (MAXI):
   2. Location of (define-module (make-command ...)...):
      MINI: more-packages.scm
      MAXI: comp-packages.scm
-  3. Location of (define-signature command-signature ...):
-     MINI: more-signatures.scm
-     MAXI: signatures.scm
+  3. Location of (define-interface command-interface ...):
+     MINI: more-interfaces.scm
+     MAXI: interfaces.scm
 
 
 
@@ -62,7 +62,7 @@ z>
 
 To get a fresh config package:
 
-,in config (define-package ((config1 (export)))
+,in config (define-structures ((config1 (export)))
 	     (open defpackage built-in-structures more-structures))
 ,config-package-is config1
 
@@ -81,10 +81,10 @@ These are all files not belonging to any package description:
     comp-packages.scm
     flatload.scm
     more-packages.scm
-    more-signatures.scm
+    more-interfaces.scm
     rts-packages.scm
     scripts.scm
-    signatures.scm
+    interfaces.scm
 
     infix/
     debug/
@@ -109,12 +109,12 @@ These are all files not belonging to any package description:
 
 # If initial images starts in mini-command instead of command, the
 # rule for $(IMAGE) becomes something like this:
-#	(echo ,load more-signatures.scm $(S48ROOT)/more-packages.scm; \
+#	(echo ,load more-interfaces.scm $(S48ROOT)/more-packages.scm; \
 #	 echo "(ensure-loaded command)"; \
 #	 echo ",go ((structure-ref command 'command-processor) batch)"; \
 
 
-,in config (define-package ((reification (export reify-structures)))
+,in config (define-structures ((reification (export reify-structures)))
   (open scheme-level-2 table
 	signals			;error
 	packages
@@ -133,7 +133,7 @@ Error: undefined variable
        make-simple-package
        (package debug-config)
 1 debug-config> 
-debug-config> (define-package ((p (export start))) (open initial-system scheme-level-2 packages))
+debug-config> (define-structures ((p (export start))) (open initial-system scheme-level-2 packages))
 debug-config> (define go (in p `(start ,(reify-structures (desirable-packages) (lambda (loc) `',loc)))))
 
 
@@ -192,10 +192,10 @@ comp.scm as follows:
 
 Here's another cool thing.  6/28/93
 
-(define-signature evaluation-signature
+(define-interface evaluation-interface
   (export eval load eval-from-file))
 
-(define-package ((run evaluation-signature))
+(define-structure run evaluation-interface
   (open scheme-level-2 syntactic packages scan
 	environments
 	signals
@@ -233,11 +233,11 @@ cool>
       (for-each-definition (lambda (name static loc)
 			     (show-type name static))
 			   s)
-      (signature-walk (lambda (name type)
+      (interface-walk (lambda (name type)
 			(show-type name
 				   (car (structure-lookup
 					 s name #t))))
-		      (structure-signature s))))
+		      (structure-interface s))))
 
 ; ,open expander syntactic packages reconstruction
 

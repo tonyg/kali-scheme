@@ -23,7 +23,7 @@
 
 ; (primitive-procedure name)  =>  a procedure
 
-(define-compilator '(primitive-procedure syntax)
+(define-compilator (list 'primitive-procedure syntax-type)
   (lambda (node cenv depth cont)
     (let ((name (cadr (node-form node))))
       (deliver-value (instruction-with-template
@@ -137,6 +137,10 @@
 		  segment
 		  (instruction op/return))))
 
+(define (symbol-append . syms)
+  (string->symbol (apply string-append
+			 (map symbol->string syms))))
+
 
 ; Define primitives for record-like stored objects (e.g. pairs).
 
@@ -144,12 +148,13 @@
   (let* ((type-byte (name->enumerand name stob))
 	 (def-prim (lambda (name type op . stuff)
 		     (define-simple-primitive name type
-		       (apply instruction (cons op stuff))))))
+		       (apply instruction (cons op stuff)))))
+	 (type (symbol-append ': name)))
     (def-prim predicate (proc (value-type) boolean-type)
 			op/stored-object-has-type? type-byte)
     (if (not (eq? maker 'make-symbol))  ; Symbols are made using op/intern.
 	(def-prim maker
-	  (procedure-type (nargs->domain (length slots)) name)
+	  (procedure-type (nargs->domain (length slots)) type)
 	  op/make-stored-object
 	  (length slots)
 	  type-byte))
@@ -159,11 +164,11 @@
       (let ((slot (car slots)))
 	(if (car slot)
 	    (def-prim (car slot)
-	      (proc (name) value-type)
+	      (proc (type) value-type)
 	      op/stored-object-ref type-byte i))
 	(if (cadr slot)
 	    (def-prim (cadr slot)
-	      (proc (name value-type) unspecific-type)
+	      (proc (type value-type) unspecific-type)
 	      op/stored-object-set! type-byte i))))))
 
 (define op/stored-object-has-type? (enum op stored-object-has-type?))
@@ -184,28 +189,26 @@
 
 (define (define-vector-primitives name element-type make length ref set!)
   (let* ((type-byte (name->enumerand name stob))
-	 (s-a (lambda syms
-		(string->symbol (apply string-append
-				       (map symbol->string syms)))))
 	 (def-prim (lambda (name type op)
 		     (define-simple-primitive name type
-		       (instruction op type-byte)))))
-    (def-prim (s-a name '?)
+		       (instruction op type-byte))))
+	 (type (symbol-append ': name)))
+    (def-prim (symbol-append name '?)
       (proc (value-type) boolean-type)
       op/stored-object-has-type?)
-    (def-prim (s-a 'make- name)
+    (def-prim (symbol-append 'make- name)
       (if (memq name '(vector string))
-	  (procedure-type any-values-type name)
-	  (proc (number-type value-type) name))
+	  (procedure-type any-values-type type)
+	  (proc (number-type value-type) type))
       make)
-    (def-prim (s-a name '- 'length)
-      (proc (name) number-type)
+    (def-prim (symbol-append name '- 'length)
+      (proc (type) number-type)
       length)
-    (def-prim (s-a name '- 'ref)
-      (proc (name number-type) element-type)
+    (def-prim (symbol-append name '- 'ref)
+      (proc (type number-type) element-type)
       ref)
-    (def-prim (s-a name '- 'set!)
-      (proc (name number-type element-type) 'unspecific)
+    (def-prim (symbol-append name '- 'set!)
+      (proc (type number-type element-type) unspecific-type)
       set!)))
 
 (define op/stored-object-byte-length (enum op stored-object-byte-length))

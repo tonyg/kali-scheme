@@ -177,7 +177,7 @@
           (else (loop (+ i 1))))))
 
 ; Types
-(define value 'value)
-(define syntax 'syntax)
-(define structure 'structure)
+(define :value ':value)
+(define :syntax ':syntax)
+(define :structure ':structure)
 

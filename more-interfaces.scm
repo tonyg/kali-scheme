@@ -6,11 +6,10 @@
 
 ; Command processor
 
-(define-interface command-interface
+(define-interface command-processor-interface
   (export command-processor
 	  $command-levels
-	  $write-length
-	  $write-depth
+	  $write-length $write-depth
 	  abort-to-command-level
 	  add-sentinel!
 	  command-input
@@ -22,12 +21,11 @@
 	  command-continuation
 	  command-output
 	  focus-object
-	  define-command
 	  error-form ;foo
 	  execute-command
 	  evaluate			; ???
 	  evaluate-and-select
-	  exit				;more-threads
+	  exit-command-processor
 	  gobble-line
 	  greet-user
 	  make-user-context
@@ -53,9 +51,86 @@
 	  break-on-warnings?
 	  set-break-on-warnings?!
 	  batch-mode?
-	  set-batch-mode?!))
+	  set-batch-mode?!
+	  help
+	  define-command-syntax
+          define-user-command-syntax
+	  user-command-environment
+	  set-command-structure!        ;startup
+	  command-structure             ;pacman
+          set-user-command-environment! ;pacman
+          read-command-error))          ;inspect
 
+(define-interface basic-commands-interface
+  (export exit
+          go
+	  load
+          help
+          run
+	  ?))
+   
+(define-interface build-commands-interface
+  (export dump
+          build))
+       
+(define-interface inspect-commands-interface
+  (export inspect
+	  debug
+	  where))
+       
+(define-interface disassemble-commands-interface
+  (export dis))
+   
 (define-interface package-commands-interface
+  (export in
+	  new-package
+	  load-package
+	  reload-package
+	  load-config
+	  structure
+	  open
+	  for-syntax
+	  exec
+	  user
+	  user-package-is
+	  config
+	  config-package-is))
+
+(define-interface debug-commands-interface
+  (export translate
+	  preview
+	  proceed
+	  push
+          reset
+	  level
+	  condition
+	  batch
+	  bench
+	  break-on-warnings
+	  form-preferred
+	  levels
+	  flush
+	  keep
+          collect
+	  trace
+	  untrace
+	  time
+          from-file
+	  forget
+	  bound?
+	  expand))
+
+(define-interface usual-commands-interface
+  (compound-interface
+   basic-commands-interface
+   build-commands-interface
+   package-commands-interface
+   debug-commands-interface
+   inspect-commands-interface
+   disassemble-commands-interface
+   ))
+
+(define-interface package-commands-internal-interface
   (export config-package
 	  new-command-processor
 	  get-structure
@@ -95,7 +170,7 @@
   (export link-simple-system
 	  link-reified-system
 	  link-semireified-system
-	  (struct-list syntax)
+	  (struct-list :syntax)
 	  compile-structures))
 
 (define-interface expander-interface
@@ -137,6 +212,8 @@
 	  floor-table
 	  numerator-table
 	  denominator-table
+	  exp-table log-table
+	  sin-table cos-table tan-table asin-table acos-table atan-table
 	  sqrt-table
 	  make-rectangular-table
 	  number->string-table
@@ -147,7 +224,7 @@
 ; Big Scheme
 
 (define-interface defrecord-interface  ;The competition.
-  (export (define-record-type syntax)
+  (export (define-record-type :syntax)
 	  define-record-discloser))
 
 (define-interface externals-interface
@@ -248,8 +325,8 @@
 	      filter filter! filter-map partition-list partition-list!
 	      remove-duplicates delq delq! delete
 	      reverse!
-	      (destructure syntax)
-	      (receive syntax)
+	      (destructure :syntax)
+	      (receive :syntax)
 	      format
 	      sort-list sort-list!
 	      p pretty-print)))
@@ -259,11 +336,11 @@
 
 ; Copied from interfaces.scm.
 (define-interface define-record-types-interface
-  (export (define-record-type syntax)
+  (export (define-record-type :syntax)
 	  define-record-discloser))
 
 (define-interface sicp-interface
-  (export and or (sequence syntax)
+  (export and or (sequence :syntax)
 	  mapcar mapc 1+ -1+ t nil atom? print princ prin1 error
-	  (cons-stream syntax) head tail the-empty-stream empty-stream?
+	  (cons-stream :syntax) head tail the-empty-stream empty-stream?
 	  explode implode get put))

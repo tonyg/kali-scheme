@@ -54,6 +54,29 @@ Load structure externals (y/n)? y
 It have to be (get-external "_s48_dynamic_load") on some versions of
 Unix (like SGI perhaps).
 
+Sample C file:
+
+#include "/sw/scheme48/scheme48.h"
+#include <stdio.h>
+
+scheme_value test (long argc, scheme_value *argv)
+{
+  int i; 
+  for (i = argc-1; i >= 0; i--) {
+    scheme_value arg = argv[i];
+    if (stringp(arg)) {
+      printf ("string: ");
+      fwrite(&string_ref(arg, 0), 1, string_length(arg), stdout);
+      printf ("\n");
+    }
+    else if (FIXNUMP(arg)) {
+      printf("fixnum: %d\n", EXTRACT_FIXNUM(arg));
+    }
+    else
+      printf("?\n");
+  }
+}
+
 -----
 
-[Original by RK, modifications by JAR 6/24/93]
+[Original by RK, modifications by JAR 6/24/93 and 12/21/93]

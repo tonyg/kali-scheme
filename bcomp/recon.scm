@@ -122,14 +122,14 @@
 
 (define-reconstructor 'define syntax-type
   (lambda (node env constrained)
-    'definition))
+    ':definition))
 
 (define-reconstructor 'define-syntax syntax-type
   (lambda (node env constrained)
-    'definition))
+    ':definition))
 
 ; Upward constraint propagation.  This is what lets us conclude, e.g.,
-; that (lambda (x) (car x)) has type (proc (pair) value).
+; that (lambda (x) (car x)) has type (proc (:pair) :value).
 
 (define (constrain-call! node want-type env constrained)
   (if (pair? constrained)  ;+++
@@ -211,9 +211,6 @@
 (define-reconstructor 'apply any-procedure-type
   reconstruct-apply)
 
-(define zero-type 'zero)       ;Hmm.
-(define escape-type 'escape)   ;Hmm.  See whether any errors crop up.
-
 (define-reconstructor 'primitive-catch
 		      (proc ((proc (escape-type) any-values-type))
 			    any-values-type)
@@ -282,9 +279,9 @@
   (cond ((number? x) number-type)
 	((boolean? x) boolean-type)
 	((pair? x) pair-type)
-	((string? x) 'string)
+	((string? x) string-type)
 	((char? x) char-type)
-	((null? x) 'null)
-	((symbol? x) 'symbol)
-	((vector? x) 'vector)
+	((null? x) null-type)
+	((symbol? x) symbol-type)
+	((vector? x) vector-type)
 	(else value-type)))

@@ -15,7 +15,7 @@
 
 \vspace{2ex}
 Jonathan Rees \\
-3 January 1993 (updated 4 December 1993)
+3 January 1993 (updated 11 January 1994)
 \end{center}
 
 \vspace{3ex}
@@ -70,13 +70,13 @@ structure require explicitly qualified references written with the
 
 For example:
 \begin{code}
-    (define-package ((foo (export a c cons)))
+    (define-structure foo (export a c cons)
       (open scheme)
       (begin (define a 1)
 	     (define (b x) (+ a x))
 	     (define (c y) (* (b a) y))))
 \codeskip
-    (define-package ((bar (export d)))
+    (define-structure bar (export d)
       (open scheme foo)
       (begin (define (d w) (+ a (c w)))))
 \end{code}
@@ -94,7 +94,7 @@ from the Scheme structure and then re-exported.
 A module's body, the part following {\tt begin} in the above example,
 is evaluated in an isolated lexical scope completely specified by the
 package definition's {\tt open} and {\tt access} clauses.  In
-particular, the binding of the syntactic operator {\tt define-package}
+particular, the binding of the syntactic operator {\tt define-structure}
 is not visible unless it comes from some opened structure.  Similarly,
 bindings from the {\tt scheme} structure aren't visible unless they
 become so by {\tt scheme} (or an equivalent structure) being opened.
@@ -115,7 +115,9 @@ modules and interfaces.  Its syntax is given in figure~1.
 \begin{tabbing}
    \syn{configuration} \=\goesto{}~\arbno{\syn{definition}} \\
    \syn{definition} \=\goesto{}~
-      \tt(define-package (\arbno{(\syn{name} \syn{interface})})
+      \tt(define-structure \syn{name} \syn{interface}
+          \arbno{\syn{clause}}) \\
+	\>\altz{}~ \tt(define-structures (\arbno{(\syn{name} \syn{interface})})
           \arbno{\syn{clause}}) \\
 	\>\altz{}~ \tt(define-interface \syn{name} \syn{interface}) \\
 	\>\altz{}~ \tt(define-syntax \syn{name} \syn{transformer-spec}) \\
@@ -134,10 +136,10 @@ modules and interfaces.  Its syntax is given in figure~1.
 \end{figure}
 
 
-A {\tt define-package} form introduces bindings of some names to some
-structures.  Each structure is a view on a package which is created
-according to the clauses of the {\tt define-package} form.  Each
-structure has a interface that specifies which bindings in the
+A {\tt define-structure} form introduces a binding of a name to a
+structure.  A structure is a view on an underlying package which is
+created according to the clauses of the {\tt define-structure} form.
+Each structure has an interface that specifies which bindings in the
 structure's underlying package can be seen via that structure in other
 packages.
 
@@ -204,15 +206,15 @@ obtained from a subdirectory.  For example, the namelist {\tt(rts
 record)} specifies the file {\tt record.scm} in the {\tt rts}
 subdirectory.
 
-If the {\tt define-package} form was itself obtained from a file, then
+If the {\tt define-structure} form was itself obtained from a file, then
 file names in {\tt files} clauses are interpreted relative to the
-directory in which the file containing the {\tt define-package} form
+directory in which the file containing the {\tt define-structure} form
 was found.
 
 
 \subsection*{Interfaces}
 
-A interface can be thought of as the type of a structure.  In its
+An interface can be thought of as the type of a structure.  In its
 basic form it is just a list of variable names, written {\tt(export
 \var{name} \etc)}.  However, in place of
 a name one may write {\tt(\var{name} \var{type})}, indicating the type
@@ -224,9 +226,9 @@ introduction, or they may be given names by a {\tt define-interface}
 form, for example
 \begin{code}
     (define-interface foo-interface (export a c cons))
-    (define-package ((foo foo-interface)) \etc)
+    (define-structure foo foo-interface \etc)
 \end{code}
-In principle, interfaces needn't ever be named.  If a interface
+In principle, interfaces needn't ever be named.  If an interface
 had to be given at the point of a structure's use as well as at the
 point of its definition, it would be important to name interfaces in
 order to avoid having to write them out twice, with risk of mismatch
@@ -248,7 +250,7 @@ interface definitions and package definitions are easier to read; the
 long lists of exported bindings just get in the way most of the time.
 \end{enumerate}
 
-The {\tt compound-interface} operator forms a interface that is the
+The {\tt compound-interface} operator forms an interface that is the
 union of two or more component interfaces.  For example,
 \begin{code}
     (define-interface bar-interface
@@ -281,7 +283,7 @@ are shadowed by definitions in the client package.
 
 \subsection*{Higher-order modules}
 
-There are {\tt define-module} and {\tt define-structure} forms for
+There are {\tt define-module} and {\tt define} forms for
 defining modules that are intended to be instantiated multiple times.
 But these are pretty kludgey --- for example, compiled code isn't
 shared between the instantiations --- so I won't describe them yet.
@@ -292,7 +294,7 @@ If you must know, figure it out from the following grammar.
       \tt(d\=\tt{}efine-module (\syn{name} \arbno{(\syn{name} \syn{interface})}) \\
        \>  \>\arbno{\syn{definition}} \\
        \>  \>\syn{name}\tt) \\
-	\>\altz{}~ \tt(define-structure \syn{name}
+	\>\altz{}~ \tt(define \syn{name}
 		        (\syn{name} \arbno{\syn{name}}))
 \end{tabbing}
 
@@ -350,12 +352,12 @@ when these bindings change as a result of edits to the configuration.
 For example, consider the following:
 \begin{code}
     (define-interface foo-interface (export a c))
-    (define-package ((foo foo-interface))
+    (define-structure foo foo-interface
       (open scheme)
       (begin (define a 1)
 	     (define (b x) (+ a x))
 	     (define (c y) (* (b a) y))))
-    (define-package ((bar (export d)))
+    (define-structure bar (export d)
       (open scheme foo)
       (begin (define (d w) (+ (b w) a))))
 \end{code}
@@ -440,7 +442,7 @@ current package followed by a greater-than ({\tt>}).
     structure's underlying package.  For example:
 \begin{code}
     user> ,config
-    config> (define-package ((foo (export a)))
+    config> (define-structure foo (export a)
 	      (open scheme))
     config> ,in foo
     foo> (define a 13)
@@ -450,7 +452,7 @@ current package followed by a greater-than ({\tt>}).
     In this example the command processor starts in a package called
     {\tt user}, but the {\tt ,config} command moves it into the
     configuration package, which has the name {\tt config}.  The {\tt
-    define-package} form binds, in {\tt config}, the name {\tt foo} to
+    define-structure} form binds, in {\tt config}, the name {\tt foo} to
     a structure that exports {\tt a}.  Finally, the command {\tt ,in
     foo} moves the command processor into structure {\tt foo}'s
     underlying package.
@@ -541,7 +543,7 @@ capture common idioms.
     abbreviates the sequence 
 \begin{code}
     > ,in config
-    config> (define-package ((\var{name} (export)))
+    config> (define-structure \var{name} (export)
 	      (open \var{open} \etc{} scheme))
     config> ,in name
     name> 
@@ -567,7 +569,7 @@ features such as {\tt sort}, {\tt random}, and {\tt threads}.
 For example:
 \begin{code}
     > ,new-package foo defpackage built-in-structures more-structures
-    foo> (define-package ((x (export a b)))
+    foo> (define-structure x (export a b)
            (open scheme)
 	   (files x))
     foo> 

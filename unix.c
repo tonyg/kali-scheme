@@ -13,10 +13,36 @@
 #include <string.h>
 #include <pwd.h>
 
+#include <time.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/times.h>
+#ifndef sgi
+#include <sys/timeb.h>
+#endif
+
+#include <signal.h>
+#include <nlist.h>
+
+
+
 #if defined(svr4) || defined(SVR4) || defined (__svr4__) || defined(sun) 
 #define HAS_DLOPEN
-#define HAS_GETTIMEOFDAY
 #endif /*svr4*/
+
+/*
+From: Jim.Rees@umich.edu
+Date: Sun, 26 Dec 93 16:06:08 EST
+
+In unix.c, the gettimeofday code is wrong.  I didn't think sysV had this
+call.  You've only used the Berkeley version for sgi and netbsd machines,
+but in fact all bsd systems have this call (it was invented at Berkeley).
+I suggest the following fix, which will work on both sysV and bsd machines. 
+If you (or your compiler) are squeamish about passing too many parameters in
+to a system call, you might want to do it differently, but in any case you
+should always use gettimeofday on bsd machines.
+ */
+#define HAS_GETTIMEOFDAY
 
 #define USER_NAME_SIZE 256
 
@@ -24,7 +50,7 @@
    Expands initial ~ and ~/ in string `name', leaving the result in `buffer'.
    `buffer_len' is the length of `buffer'.
 
-   Note: strncpy(x, y, n) copies y to x.
+   Note: strncpy(x, y, n) copies from y to x.
 */
 
 char *expand_file_name (name, name_len, buffer, buffer_len)
@@ -110,14 +136,6 @@ main(argc, argv)
 }
 */
 
-#include <time.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/times.h>
-#ifndef sgi
-#include <sys/timeb.h>
-#endif
-
 #define PS_STRING_LENGTH(s)   (strlen(s))
 #define FILENAME_SIZE 256
 #define SPEC_SIZE 16
@@ -143,6 +161,9 @@ long ps_open(filename, spec)
 }
 
 /* For char-ready? */
+/* Under HPUX, select() is declared
+    extern int select(size_t, int *, int *, int *, const struct timeval *);
+   in sys/time.h.  Under SunOS, the int *'s are fd_set *'s. */
 
 int char_ready_p( FILE* stream )
 {
@@ -152,18 +173,26 @@ int char_ready_p( FILE* stream )
   if (feof(stream))
     return EOF;
 
+  /* Grossly unportable examination of stdio buffer internals */
+#if defined(sgi) || defined(HPUX) || defined(sun4) || defined(ultrix)
   if (stream->_cnt)
     return stream->_cnt;
+#endif
 
   FD_ZERO(&readfds);
   FD_SET(fileno(stream), &readfds);
   timerclear(&timeout);
 
-  return select(FD_SETSIZE, &readfds, NULL, NULL, &timeout);
+  return select(FD_SETSIZE,
+#if defined(hpux)
+		(int *)
+#endif
+		&readfds,
+		NULL, NULL, &timeout);
 }
 
 /* Timer functions, for the time instruction */
-/* gettimeofday() versino courtesy Basile Starynkevitch */
+/* gettimeofday() version courtesy Basile Starynkevitch */
 
 #define TICKS_PER_SECOND 1000	/* should agree with ps_real_time() */
 
@@ -174,21 +203,10 @@ long ps_real_time()
   static struct timeval tv_orig;
   static int initp = 0;
   if (!initp) {
-    gettimeofday(&tv_orig);
+    gettimeofday(&tv_orig, NULL);
     initp = 1;
   };
-  gettimeofday(&tv);
-  return ((long)((tv.tv_sec - tv_orig.tv_sec)*TICKS_PER_SECOND
-		 + (tv.tv_usec - tv_orig.tv_usec)/(1000000/TICKS_PER_SECOND)));
-#elif defined(sgi)
-  struct timezone tz;
-  static struct timeval tb_origin;
-  static int initp = 0;
-  if (!initp) {
-    gettimeofday(&tb_origin, &tz);
-    initp = 1;
-  }
-  gettimeofday(&tb, &tz);
+  gettimeofday(&tv, NULL);
   return ((long)((tv.tv_sec - tv_orig.tv_sec)*TICKS_PER_SECOND
 		 + (tv.tv_usec - tv_orig.tv_usec)/(1000000/TICKS_PER_SECOND)));
 #else /*! HAS_GETTIMEOFDAY*/
@@ -227,7 +245,6 @@ void when_alarm_interrupt(sig, code, scp)
   return;
 }
 
-#include <signal.h>
 
 int alarm_handler_set_p = 0;
 
@@ -292,8 +309,6 @@ char
     return(NULL);
   }
 }
-
-#include <nlist.h>
 
 #ifdef NeXT
 #define n_name	n_un.n_name

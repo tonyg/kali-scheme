@@ -2,6 +2,37 @@
 
 Recent changes to Scheme 48.
 
+1/11/94  Incompatible changes to package system:
+	   Renamed DEFINE-PACKAGE to DEFINE-STRUCTURES
+	   Renamed DEFINE-STRUCTURE to DEFINE
+	   Renamed all base types: now :FOO instead of FOO.  E.g.
+	     :SYNTAX, :VALUE, etc.
+	 New form DEFINE-STRUCTURE defines a single structure.
+
+12/21/93 (version 0.27)
+	 ,take has been flushed in favor of ,exec.  Commands are now
+	   accessed via a distinguished package instead of a table.
+	   Documentation pending.
+         Postscript (.ps) files now included in doc/ subdirectory.  (I
+           thought they had been there all along, but apparently I was
+           wrong.)
+         Enhanced, but still kludgey, floating point support.  Use
+	   ,open floatnum.scm.
+
+12/12/93 (version 0.26)
+	 NetBSD port.
+	 Hacked write-level and write-depth for inspecting circular
+	   structure.
+	 Recursive FORCEs signal errors, e.g.
+	   (force (letrec ((loser (delay (force loser)))) loser))
+
+12/7/93 (version 0.25)
+         Bug fix:
+	   filenames.make can now be remade using initial.image.  This
+	     means that you can snarf a distribution and then edit
+	     USUAL-FEATURES before making scheme48.image.
+
+
 12/6/93  Incompatible changes:
 	   Change of terminology: "signature" --> "interface".
 	     This means that DEFINE-SIGNATURE is now called

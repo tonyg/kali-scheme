@@ -34,9 +34,7 @@
 	  (error "attempt to reference syntax as variable" name env)
 	  (let ((loc (binding-place binding)))
 	    (if (location-defined? loc)
-		(if (location-assigned? loc)
-		    (contents loc)
-		    (error "unassigned variable" name env))
+		(contents loc)
 		(error "unbound variable" name env))))
       (error "peculiar binding" name env)))
 

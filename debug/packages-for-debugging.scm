@@ -26,7 +26,7 @@
  (?start go #f)
 "
 
-(define-package ((cont-primitives
+(define-structures ((cont-primitives
 		  (export make-continuation
 			  continuation-length
 			  continuation-ref
@@ -37,7 +37,7 @@
 
 ; cf. definition in alt-packages.scm
 
-(define-package ((primitives primitives-interface)
+(define-structures ((primitives primitives-interface)
 		 (primitives-internal (export maybe-handle-interrupt
 					      raise-exception
 					      get-exception-handler
@@ -60,7 +60,7 @@
 
 (define-structure (make-compiler-base) all-primitives)
 
-(define-package ((all-primitives all-primitives-interface))
+(define-structures ((all-primitives all-primitives-interface))
   (open scheme
 	signals			;error
 	structure-refs
@@ -75,7 +75,7 @@
 
 ; Some system startup stuff, exception handling hooks, etc.
 
-(define-package ((start-debugging
+(define-structures ((start-debugging
 		  (export ?start
 			  ?start-with-exceptions
 			  in
@@ -105,7 +105,7 @@
 ; Configuration package into which you can load rts-packages.scm or
 ; whatever.
 
-(define-package ((debug-config (export )))
+(define-structures ((debug-config (export )))
   (open defpackage start-debugging ensures-loaded syntactic fluids
 	scheme)
   (begin (define (load-configuration filename) ;copied from link/link.scm

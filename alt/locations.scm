@@ -4,20 +4,24 @@
 ; Locations
 
 (define location-rtd
-  (make-record-type 'location '(id contents assigned? defined?)))
+  (make-record-type 'location '(id defined? contents)))
 
 (define make-undefined-location
   (let ((make (record-constructor location-rtd
-				  '(id contents assigned? defined?))))
+				  '(id defined? contents))))
     (lambda (id)
-      (make id '*empty* #f #f))))
+      (make id #f '*empty*))))
 
 (define location? (record-predicate location-rtd))
 (define location-id        (record-accessor location-rtd 'id))
 (define location-defined?  (record-accessor location-rtd 'defined?))
-(define location-assigned? (record-accessor location-rtd 'assigned?))
 (define contents  (record-accessor location-rtd 'contents))
 
-(define set-location-assigned?! (record-modifier location-rtd 'assigned?))
-(define set-location-defined?!  (record-modifier location-rtd 'defined?))
+(define set-defined?! (record-modifier location-rtd 'defined?))
+
+(define (set-location-defined?! loc ?)
+  (set-defined?! loc ?)
+  (if (not ?)
+      (set-contents! loc '*empty*)))
+
 (define set-contents!		(record-modifier location-rtd 'contents))

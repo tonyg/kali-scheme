@@ -134,6 +134,7 @@ Options: -h <total heap size in words>\n\
   scheme48_init();
   Sinitial_heap_sizeS = heap_size;
   signal(SIGINT, when_interrupt);
+  signal(SIGPIPE, SIG_IGN);
 
   return_value = resume((long)image_name, (long)argument);
 

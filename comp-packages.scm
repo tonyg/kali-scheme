@@ -6,25 +6,25 @@
 
 ; Two basic structures needed to support the compiler.
 
-(define-package ((tables tables-interface))
+(define-structure tables tables-interface
   (open scheme-level-1 signals bummed-define-record-types
 	features)			;string-hash
   (files (big table))
   (optimize auto-integrate))
 
-(define-package ((filenames filenames-interface))
+(define-structure filenames filenames-interface
   (open scheme-level-1 signals)
   (files (big filename)))
 
 
 ; Type system
 
-(define-package ((meta-types meta-types-interface))
+(define-structure meta-types meta-types-interface
   (open scheme-level-2 util signals)
   (files (bcomp mtype))
   (optimize auto-integrate))
 
-(define-package ((interfaces interfaces-interface))
+(define-structure interfaces interfaces-interface
   (open scheme-level-2 syntactic meta-types
 	signals bummed-define-record-types tables
 	weak)
@@ -34,8 +34,9 @@
 
 ; Transforms and operators
 
-(define-package ((syntactic (compound-interface syntactic-interface
-						nodes-interface)))
+(define-structure syntactic
+    (compound-interface syntactic-interface
+			nodes-interface)
   (open scheme-level-2 meta-types
 	signals bummed-define-record-types tables fluids
 	features		;make-immutable!
@@ -44,7 +45,7 @@
   (files (bcomp syntax))
   (optimize auto-integrate))
 
-(define-package ((usual-macros usual-macros-interface))
+(define-structure usual-macros usual-macros-interface
   (open scheme-level-2
 	syntactic	;name?, $source-file-name
 	fluids		;used in definition of %file-name%
@@ -52,7 +53,7 @@
   (files (bcomp usual)
 	 (bcomp rules)))
 
-(define-package ((reconstruction (export node-type)))
+(define-structure reconstruction (export node-type)
   (open scheme-level-2
 	syntactic meta-types
 	signals)
@@ -61,15 +62,15 @@
 
 ; Package system
 
-(define-package ((packages packages-interface)
-		 (packages-internal packages-internal-interface))
+(define-structures ((packages packages-interface)
+		    (packages-internal packages-internal-interface))
   (open scheme-level-2 syntactic meta-types interfaces
 	signals bummed-define-record-types tables fluids
 	util features locations weak)
   (files (bcomp package))
   (optimize auto-integrate))
 
-(define-package ((scan scan-interface))
+(define-structure scan scan-interface
   (open scheme-level-2
 	packages syntactic usual-macros meta-types
 	packages-internal
@@ -81,8 +82,8 @@
 
 ; Compiler back end
 
-(define-package ((segments segments-interface)
-		 (debug-data debug-data-interface))
+(define-structures ((segments segments-interface)
+		    (debug-data debug-data-interface))
   (open scheme-level-2 code-vectors templates
 	syntactic
 	architecture
@@ -95,7 +96,7 @@
 
 ; Byte-code compiler
 
-(define-package ((compiler compiler-interface))
+(define-structure compiler compiler-interface
   (open scheme-level-2 syntactic scan meta-types
 	architecture
 	packages
@@ -114,9 +115,9 @@
 	 (bcomp ctop))
   (optimize auto-integrate))
 
-; DEFINE-PACKAGE and friends
+; DEFINE-STRUCTURES and friends
 
-(define-package ((defpackage defpackage-interface))
+(define-structure defpackage defpackage-interface
   (open scheme-level-2
 	packages syntactic usual-macros types
 	interfaces
@@ -127,13 +128,13 @@
   (files (bcomp defpackage)
 	 (bcomp config)))
 
-(define-package ((types types-interface)) ;Typing language
+(define-structure types types-interface  ;Typing language
   (open scheme-level-2 meta-types loopholes)
   (files (bcomp type)))
 
 ; Static linker
 
-(define-package ((inline inline-interface))
+(define-structure inline inline-interface
   (open scheme-level-2
 	syntactic
 	packages

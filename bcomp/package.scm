@@ -55,7 +55,7 @@
 	  (let ((binding (structure-lookup struct name #t)))
 	    (proc name
 		  (if (and (binding? binding)
-			   (eq? want-type 'undeclared))
+			   (eq? want-type undeclared-type))
 		      (let ((type (binding-type binding)))
 			(if (variable-type? type)
 			    (variable-value-type type)

@@ -6,9 +6,9 @@
 
 ; Top elements:
 
-(define syntax-type 'syntax)
+(define syntax-type ':syntax)
 
-(define any-values-type 'any-values)
+(define any-values-type ':values)
 
 
 ; Multiple values
@@ -31,7 +31,7 @@
 
 ; Individual values
 
-(define value-type 'value)
+(define value-type ':value)
 
 (define (check-value-type type)
   (if (not (compatible-types? type value-type))
@@ -39,7 +39,7 @@
 
 ; Bottom value type, sort of:
 
-(define undeclared-type 'undeclared)
+(define undeclared-type ':undeclared)
 
 
 ; Procedure types
@@ -173,11 +173,19 @@
 
 ; Some of the base types
 
-(define boolean-type 'boolean)
-(define char-type 'char)
-(define number-type 'number)
-(define pair-type 'pair)
-(define unspecific-type 'unspecific)
+(define boolean-type ':boolean)
+(define char-type ':char)
+(define number-type ':number)
+(define null-type ':null)
+(define unspecific-type ':unspecific)
+
+(define pair-type ':pair)
+(define string-type ':string)
+(define symbol-type ':symbol)
+(define vector-type ':vector)
+
+(define zero-type ':zero)       ;Hmm.
+(define escape-type ':escape)   ;Hmm.  See whether any errors crop up.
 
 
 ; --------------------

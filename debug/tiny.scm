@@ -3,7 +3,7 @@
 ; Tiny image test system
 
 ;(initialize-defpackage! ?? ??)
-;(define-package ((tiny-system (export start)))
+;(define-structure tiny-system (export start)
 ;  (define-all-operators)
 ;  (files (debug tiny))
 ;  (optimize auto-integrate))

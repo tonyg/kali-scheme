@@ -2,7 +2,7 @@
 
 
 
-; For define-package macro
+; For DEFINE-STRUCTURE macro
 
 (define (make-a-package opens-thunk accesses-thunk for-syntax-thunk
 			dir clauses names)

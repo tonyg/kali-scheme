@@ -1443,6 +1443,11 @@ char Tinterpret()
         arg0K0 = Sbottom_of_stackS;
         goto L27357;}
       else {
+        RSstackS = (-11 + Sbottom_of_stackS);
+          *((long*)((unsigned char*)(-3 + Sbottom_of_stackS))) = cont_201X;
+        arg0K0 = Sbottom_of_stackS;
+        goto L27357;}
+/*
         long v_202X;
         merged_arg0K0 = cont_201X;
         copy_continuation_from_heap_return_tag = 0;
@@ -1451,6 +1456,7 @@ char Tinterpret()
         v_202X = copy_continuation_from_heap_return_value;
         arg0K0 = v_202X;
         goto L27357;}
+*/
      L27357: {
       long v_203X = arg0K0;
       ScontS = v_203X;
@@ -5962,7 +5968,9 @@ char Tinterpret()
     goto copy_continuation_from_heap_return;}}}
  copy_continuation_from_heap_return:
   switch (copy_continuation_from_heap_return_tag) {
+/*
   case 0: goto copy_continuation_from_heap_return_0;
+*/
   case 1: goto copy_continuation_from_heap_return_1;
   case 2: goto copy_continuation_from_heap_return_2;
   case 3: goto copy_continuation_from_heap_return_3;
@@ -6536,7 +6544,8 @@ long resume(char *filename_787X, char *startup_string_788X)
   long arg0K0;
   long z_851X;
   long new_852X;
-  z_851X = *((long*)(((unsigned char*)string_850X) + -4));
+  /* was: z_851X = *((long*)(((unsigned char*)string_850X) + -4)); */
+  z_851X = *((const long*)(string_850X + -4));
   *((long*)((unsigned char*)ShpS)) = (62 + (z_851X << 8));
   ShpS = (4 + ShpS);
   new_852X = 3 + ShpS;

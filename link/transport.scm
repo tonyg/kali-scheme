@@ -161,7 +161,7 @@
 		      #t))  ; *** ?
 
 ; Transporting a location requires some care so as to avoid calling CONTENTS
-; when the location is unbound or unassigned.
+; when the location is unbound.
 
 (define (transport-location loc)
   (let* ((data (allocate-d-vector stob/location 2 #f))
@@ -170,10 +170,7 @@
     (vector-set! vector
 		 location-contents-offset
 		 (if (location-defined? loc)
-		     vm-unassigned
-;                     (if (location-assigned? loc)
-;                         (transport (contents loc))
-;                         vm-unassigned)
+                     (transport (contents loc))
 		     vm-unbound))
     (vector-set! vector
 		 location-id-offset

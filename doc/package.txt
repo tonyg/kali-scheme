@@ -1,3 +1,5 @@
+-- this file is probably obsolete --
+
 The package system interface.  Much too complicated.
 
 Signatures 
@@ -51,7 +53,7 @@ Miscellaneous
 	  noting-undefined-variables	;eval.scm, etc.
 	  package-uid			;eval.scm
 	  set-shadow-action!		;eval.scm
-	  verify-later!			;for the define-package macro
+	  verify-later!			;for the define-structures macro
 	  reset-packages-state!         ;Makefile - for linker
           initialize-reified-package!   ;for reification
 	  transform-for-structure-ref   ;for reification ?

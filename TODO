@@ -1,25 +1,18 @@
 --*- Mode: Indented-text; -*-
 
 Scheme 48: list of bugs and things to do.
-Last update by JAR one 5 December 1993.
-
-The one thing that ought to be done before alpha release:
-    Create a command language module, so that scripts can be written
-      using it.  The module would export a procedure corresponding to
-      each command processor command, together with coercion routines
-      (like GET-PACKAGE) for obtaining argument values.
-    Once that is done, flush the ,take command.
+Last update by JAR on 11 January 1994.
 
 Run-time system bugs:
     Calling primitives with the wrong number of arguments and
       ,bench on can crash the system.  (New bug.)
+    (> 1 2 3) generates a warning at compile time, but shouldn't.
     Compiler needs to treat calls with more than 63 arguments specially.
     MAX and MIN don't do inexact contagion.
     Shadowing is broken for macro-referenced variables:
         (define (foo x) `(a ,x))
 	(define cons list)
 	(foo 1) => (a (1 ()))
-    (> 1 2 3) generates a warning at compile time, but shouldn't.
     If (find-all-symbols) fails due to lack of space, it should GC and
       retry (I think) (bug reported by Basile Starynkevitch, 7-21-93)
 
@@ -40,14 +33,15 @@ Programming environment:
 	> (let loop ((x '())) (loop (cons 3 x)))
 	not enough room in heap for stack
     Put the inspector at its own command level, so that ^D after
-      errors puts you back in the right place.
+      errors puts you back in the inspector.
     The get-cont-from-heap instruction should have an exception
       discloser that indicates the actual error (returning a
       non-fixnum from application top level).
     Separate compilation (compile a module, writing object code to a
-      file).
+      file).  (Rudiments in misc/separate.scm)
     Semicolon comments don't quite work after commands (extra newline
       required).
+    Command (and procedure) to change current directory.
 
 Performance:
     More compact representation for debugging data?
@@ -56,17 +50,19 @@ Performance:
       using stack-ref.  Expected to gain us about 6% in speed.
     Optimize loops somehow (maybe using call-template opcode and/or
       opportunistic compilation).
-    CAML light has good documentation and patches for optimizing the
-      interpreter's switch (*pc++).  (Range check isn't necessary.)
-    Use MIT Scheme bignums, or GNU Multiple Precision Arithmetic
-      Library?  (Torbjorn Granlund <tege@sics.se>)
+    The CAML light implementation has good documentation and patches
+      for optimizing the interpreter's switch (*pc++); perhaps we
+      could lift some of it.  (Range check isn't necessary.)
+    Bignum support in VM: use MIT Scheme bignums or GNU Multiple
+      Precision Arithmetic Library (Torbjorn Granlund <tege@sics.se>).
+    Floating point support in VM.
     Ratnum multiplication and division might be made more efficient by
       taking cross-GCD's.
     Native code compiler...
 
 Big Scheme features:
+    ,more-threads command doesn't get defined (new bug in 0.26).
     Add Olin's "cig" (C interface generator).
-    Floating point.
     How about deleting entries from tables?
     Non-blocking I/O for threads.  I think access to Unix select() might
       be sufficient (with pause() and sleep() as degenerate cases).
@@ -75,6 +71,7 @@ Big Scheme features:
     Add call/gcc (invokes the Gnu C compiler).
     It would be nice if WITH-MULTITASKING returned whatever the thunk
       returned.
+    ,exit following ,start-threads causes a core dump.
 
 Module system bugs:
     ,untrace should undefine as well if the variable wasn't bound
@@ -104,6 +101,10 @@ Module system features:
       segment.scm).
 
 VM:
+    The ATAN byte code should take two operands, not one.
+    Maximum vector length checking is unjustly conservative, with the
+      result that you can't make vectors (and stored objects
+      generally.) larger than 1/4 the size of one semispace.
     Merge in Olin's changes and extensions (command line processing,
       the #! syntax for scripts, external function call, etc.).
     Interrupt while writing out image causes an exit.  [Fixed?]
@@ -115,40 +116,57 @@ VM:
     Get VM interp.scm-without-gc.scm working again.
 
 Documentation:
+    user-guide.txt should point to the existing documentation
+      (big-scheme.txt, threads.txt, external.txt, module.ps, lsc.ps).
     (optimize auto-integrate) and ,load-package analysis.
     How to use the static linker.
+    How scheme48.image gets built.
     Techniques for debugging the runtime system (debug/for-debugging.scm).
     Threads, fluids, records, tables.
     File name translation and the ,translate command.
 
 Cleanup:
+  VM:
+    Fix unix.c and the other .c files to be Posix compliant, to the
+      extent possible.  E.g. use sigaction() instead of signal() and
+      time() instead of ftime().  Default case for every compile-time
+      conditionalization should assume Posix.
+    Write a program that will automagically generate scheme48.h from
+      vm/data.scm and friends.
+    Revert to the old exception system: vector of handlers (not just a
+      single procedure), and each handler gets an exception code.
+    Rename "unassigned" to "uninitialized"?  Or phase it out even.
+  Run-time:
+    Figure out how to make the bummed define-record-type do
+      (loophole ... :foo ...) instead of (loophole ... foo ...).
+    Correct floating point, esp. reading and printing.
     No type reconstructed for CAAAR, etc. (this is because name
       lookups are cached under 'binding property of node but later
       mutated).
+    Parameterize over file name syntax somehow.  Currently
+      big/filename.scm assumes Unix (cf. DIRECTORY-COMPONENT-SEPARATOR,
+      FILE-NAME-PREFERRED-CASE).
     Vector patterns and templates ought to be supported in
       SYNTAX-RULES.
     Interfaces should have types for every exported variable; code in
       cprim.scm shouldn't have to worry about setting up types.
     Make sure that the disassembler and assembler are inverses of one
-      another.  Disassembler should generate S-expression first, and then
-      print it independently.
-    The Makefile ends up doing
-        ... | ./scheme48vm -i ./scheme48.image -i link/linker.image
-      to run the linker.  This seems wrong somehow.
-    debug/mini-package.scm doesn't define INITIALIZE-REIFIED-PACKAGE!.
-      This is why the mini-system (see debug-packages.scm) doesn't work.
+      another.
+    Disassembler should generate S-expression first, and then print
+      it independently.
     Combine condition, signals, and handle into a single structure?
     Figure out a better way to implement ##.
-    Rename "unassigned" to "uninitialized".
-    Write a program that will automagically generate scheme48.h from
-      vm/data.scm and friends.
-    Revert to the old exception system: vector of handlers (not just a
-      single procedure), and each handler gets an exception code.
     Rename DEFINE-PACKAGE to DEFINE-STRUCTURE ?  Boy, that would sure
       confuse Chez Scheme hackers.
     Add ENVIRONMENT-DEFINED? ?
     Make USUAL-TRANSFORM return a transform?
     Add enough to the node signature to make it usable on its own?
+  Etc:
+    The Makefile ends up doing
+        ... | ./scheme48vm -i ./scheme48.image -i link/linker.image
+      to run the linker.  This seems wrong somehow.
+    debug/mini-package.scm doesn't define INITIALIZE-REIFIED-PACKAGE!.
+      This is why the mini-system (see debug-packages.scm) doesn't work.
 
 
 Date: Mon, 14 Jun 93 18:33:30 HKT

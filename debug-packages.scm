@@ -13,39 +13,39 @@
 ; Alternative command processor.  Handy for debugging the bigger one.
 
 (define-module (make-mini-command scheme)
-  (define-package ((mini-command (export command-processor)))
+  (define-structure mini-command (export command-processor)
     (open scheme
-	  signals condition handle
+	  signals conditions handle
 	  display-conditions)
     (files (debug mini-command)))
   mini-command)
 
 ; Miniature EVAL, for debugging runtime system sans package system.
 
-(define-package ((mini-eval evaluation-interface)
-		 (mini-eval-internal
-		  (export set-interaction-environment!
-			  set-scheme-report-environment!))
-		 (mini-environments
-		  (export interaction-environment
-			  scheme-report-environment)))
+(define-structures ((mini-eval evaluation-interface)
+		    (mini-eval-internal
+		     (export set-interaction-environment!
+			     set-scheme-report-environment!))
+		    (mini-environments
+		     (export interaction-environment
+			     scheme-report-environment)))
   (open scheme-level-2
 	signals)		;error
   (files (debug mini-eval)))
 
 (define-module (make-scheme environments evaluation)
-  (define-package ((scheme scheme-interface))
+  (define-structure scheme scheme-interface
     (open scheme-level-2
 	  environments
 	  evaluation))
   scheme)
 
-(define-structure mini-scheme (make-scheme mini-environments mini-eval))
+(define mini-scheme (make-scheme mini-environments mini-eval))
 
 ; Stand-alone system that doesn't contain a byte-code compiler.
 ; This is useful for various testing purposes.
 
-(define-structure little-system (make-mini-command mini-scheme))
+(define little-system (make-mini-command mini-scheme))
 
 (define (link-little-system)
   (link-simple-system '(debug little)
@@ -58,22 +58,22 @@
 ; --------------------
 ; Hack: smallest possible reified system.
 
-(define-package ((mini-packages for-reification-interface))
+(define-structure mini-packages for-reification-interface
   (open scheme-level-2
-	table
+	tables
 	features		;contents
 	signals)		;error
   (files (debug mini-package)))
 
-(define-structure mini-command (make-mini-command mini-scheme))
+(define mini-command (make-mini-command mini-scheme))
 
-(define-package ((mini-system (export start)))
+(define-structure mini-system (export start)
   (open mini-scheme
 	mini-command
 	mini-packages
 	mini-eval-internal
 	signals			;error
-	condition handle	;error? with-handler
+	conditions handle	;error? with-handler
 	scheme-level-2-internal ;usual-resumer
 	)
   (files (debug mini-start)))
@@ -89,22 +89,22 @@
 ; --------------------
 ; S-expression interpreter
 
-(define-package ((run evaluation-interface))
+(define-structure run evaluation-interface
   (open scheme-level-2 syntactic packages scan types
 	environments
 	signals
 	locations
 	features   ;force-output
-	table
+	tables
 	fluids)
   (files (debug run)))
 
 
 ; Hack: an interpreter-based system.
 
-(define-structure medium-scheme (make-scheme environments run))
+(define medium-scheme (make-scheme environments run))
 
-(define-structure medium-system
+(define medium-system
   (make-initial-system medium-scheme
 		       (make-mini-command medium-scheme)))
 

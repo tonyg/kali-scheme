@@ -428,7 +428,7 @@ Library
 A number of useful utilities are either built in to Scheme 48 or can
 be loaded from an external library.  These utilities are not visible
 in the user environment by default, but can be made available with the
-,open command.  For example, to use the tables package, do
+,open command.  For example, to use the tables structure, do
 
     > ,open tables
     > 
@@ -455,7 +455,7 @@ Unfortunately, few of these wonderful things are documented.  They are
 listed, however, in files rts-packages.scm, comp-packages.scm, and
 more-packages.scm in the distribution directory, and the bindings they
 export are listed in interfaces.scm and more-interfaces.scm.  Here is
-a little information on the more generally useful packages.
+a little information on the more generally useful structures.
 
 architecture
     Information about the virtual machine.  E.g.
@@ -492,7 +492,7 @@ define-record-types
     define-record-type macros; this one is Jonathan's.)
 
 defpackage
-    The module system: DEFINE-PACKAGE and DEFINE-INTERFACE.
+    The module system: DEFINE-STRUCTURE and DEFINE-INTERFACE.
 
 defrecord
     A define-record-type macro, providing more concise use of the

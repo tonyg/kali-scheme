@@ -17,11 +17,34 @@
 (define *write-depth* 3)
 (define *write-length* 5)
 
+(define (with-limited-output thunk)
+  (let-fluids $write-depth *write-depth*
+              $write-length *write-length*
+    thunk))
+
 (define (make-inspector-state menu position stack)
   (cons (cons position menu) stack))
 (define $inspector-state (make-fluid (make-inspector-state '() 0 '())))
 
-(define (inspect)
+(define-command-syntax 'inspect "<exp>" "inspector (? for help)"
+  '(&opt form))
+
+(define-command-syntax 'debug "" "inspect the stack" '())
+
+(define (debug)
+  (showing-focus-object
+   (lambda ()
+     (set-focus-object! (command-continuation))))
+  (inspect))
+
+(define (inspect . maybe-exp)
+  (if (not (null? maybe-exp))
+      (with-limited-output
+       (lambda ()
+	 (showing-focus-object
+	  (lambda ()
+	    (evaluate-and-select (car maybe-exp)
+				 (environment-for-commands)))))))
   (let-fluid $inspector-state
       (make-inspector-state (prepare-menu (focus-object)) 0 '())
     (lambda ()
@@ -29,15 +52,17 @@
       (let loop ()
 	(let ((command (read-command-carefully "inspect: "
 					       #f  ;command preferred
-					       (command-input))))
+					       (command-input)
+					       inspector-commands)))
 	  (cond ((eof-object? command)
 		 (newline (command-output))
 		 (unspecific))
+		((not command)   ; read command error
+		 (loop))
 		(else
-		 (let-fluids $write-depth *write-depth*
-			     $write-length *write-length*
-		   (lambda ()
-		     (execute-inspector-command command)))
+		 (with-limited-output
+		  (lambda ()
+		    (execute-inspector-command command)))
 		 (loop))))))))
 
 (define (present-menu)
@@ -50,27 +75,40 @@
   (set-fluid! $inspector-state
 	      (make-inspector-state (prepare-menu thing) 0 stack)))
 
+(define (read-selection-command port)
+  (let ((x (read port)))
+    (if (or (integer? x)
+	    (memq x '(u d t)))
+	x
+	(read-command-error port "invalid selection command" x))))
+
+(define selection-command-syntax (list '&rest read-selection-command))
+
+(define (inspector-commands name)
+  (if (integer? name)
+      selection-command-syntax
+      (case name
+	((? m q) '())               ; no arguments
+	((u d t) selection-command-syntax)
+	(else #f))))
+
 (define (execute-inspector-command command)
   (let ((result-before (focus-object))
 	(state-before (fluid $inspector-state)))
 
     (showing-focus-object
      (lambda ()
-       (let ((name (car command)))
-	 (if (integer? name)
-	     (let ((menu (cdar (fluid $inspector-state))))
-	       (if (and (>= name 0)
-			(< name (length menu)))
-		   (set-focus-object! (menu-ref menu name))
-		   (write-line "Invalid choice." (command-output))))
-	     (case name
-	       ((u) (pop-inspector-stack))
-	       ((m) (inspect-more))
-	       ((d) (inspect-next-continuation))
-	       ((t) (select-template))
-	       ((q) (abort-to-command-level (car (fluid $command-levels))))
-	       ((?) (inspect-help))
-	       (else (execute-command command)))))))
+
+      (let ((name (car command)))
+	(if (integer? name)
+	    (execute-selection-command command)
+	    (case name
+	      ((u d t)
+	       (execute-selection-command command))
+	      ((m) (inspect-more))
+	      ((q) (abort-to-command-level (car (fluid $command-levels))))
+	      ((?) (inspect-help))
+	      (else (execute-command command)))))))
 
     (let ((result-after (focus-object))
 	  (state-after (fluid $inspector-state)))
@@ -84,6 +122,27 @@
 					  (cdr state-before))))
 		 (present-menu))))))
 
+(define (execute-selection-command command)
+  (if (not (null? command))
+      (let ((name (car command)))
+	(if (integer? name)
+	    (let ((menu (cdar (fluid $inspector-state))))
+	      (if (and (>= name 0)
+		       (< name (length menu)))
+		  (move-to-object! (menu-ref menu name))
+		  (write-line "Invalid choice." (command-output))))
+	    (case name
+	      ((u) (pop-inspector-stack))
+	      ((d) (inspect-next-continuation))
+	      ((t) (select-template))
+	      (else (error "bad selection command" name))))
+	(execute-selection-command (cdr command)))))
+
+(define (move-to-object! object)
+  (new-selection object
+		 (cons (focus-object)
+		       (cdr (fluid $inspector-state))))
+  (set-focus-object! object))
 
 (define (pop-inspector-stack)
   (let ((stack (cdr (fluid $inspector-state))))
@@ -94,7 +153,7 @@
 
 (define (inspect-next-continuation)
   (if (continuation? (focus-object))
-      (set-focus-object! (continuation-parent (focus-object)))
+      (move-to-object! (continuation-parent (focus-object)))
       (write-line "Can't go down from a non-continuation." (command-output))))
 
 (define (inspect-more)
@@ -109,18 +168,19 @@
 	(write-line "There is no more." (command-output)))))
 
 (define (select-template)
-  (set-focus-object! (coerce-to-template (focus-object))))
-
+  (move-to-object! (coerce-to-template (focus-object))))
 
 (define (inspect-help)
   (let ((o-port (command-output)))
     (for-each (lambda (s) (display s o-port) (newline o-port))
-	      '("q        quit"
-		"u        up stack (= go to previous object)"
-		"d        down stack"
-		"t        template"
-		"<form>   evaluate a form (## is current object)"
-		"or any command processor command"))))
+	      '("q          quit"
+		"u          up stack (= go to previous object)"
+		"d          down stack"
+		"t          template"
+		"<form>     evaluate a form (## is current object)"
+		"<integer>  menu item"
+		"or any command processor command"
+		"multiple u d t <integer> commands can be put on one line"))))
               
 
 (define (menu-ref menu n)
@@ -266,26 +326,25 @@
   (let ((menu (list-tail menu start))
 	(limit (+ start *menu-limit*)))
     (let loop ((i start) (menu menu))
-      (let-fluids $write-depth *write-depth*
-		  $write-length *write-length*
-	(lambda ()
-	  (cond ((null? menu))
-		((and (>= i limit)
-		      (not (null? (cdr menu))))
-		 (display " [m] more..." port) (newline port))
-		(else
-		 (let ((item (car menu)))
-		   (display " [" port)
-		   (write i port)
-		   (if (car item)
-		       (begin (display ": " port)
-			      (write-carefully (car item) port)))
-		   (display "] " port)
-		   (write-carefully
-		    (value->expression (cadr item))
-		    port)
-		   (newline port)
-		   (loop (+ i 1) (cdr menu))))))))))
+      (with-limited-output
+       (lambda ()
+	 (cond ((null? menu))
+	       ((and (>= i limit)
+		     (not (null? (cdr menu))))
+		(display " [m] more..." port) (newline port))
+	       (else
+		(let ((item (car menu)))
+		  (display " [" port)
+		  (write i port)
+		  (if (car item)
+		      (begin (display ": " port)
+			     (write-carefully (car item) port)))
+		  (display "] " port)
+		  (write-carefully
+		   (value->expression (cadr item))
+		   port)
+		  (newline port)
+		  (loop (+ i 1) (cdr menu))))))))))
 
 (define (display-source-info info)
   (if (pair? info)
@@ -307,25 +366,6 @@
 		(newline o-port))))))
 
 
-(define-command 'inspect "<exp>" "inspector (? for help)"
-  '(&opt form)
-  (lambda (form)
-    (if form
-	(showing-focus-object
-	 (lambda ()
-	   (evaluate-and-select form (environment-for-commands)))))
-    (inspect)))
-
-(define (debug)
-  (showing-focus-object
-   (lambda ()
-     (set-focus-object! (command-continuation))))
-  (inspect))
-
-(define-command 'debug "" "inspect the stack"
-  '() debug)
-
-
 
 
 (define (where-defined thing)
@@ -336,25 +376,24 @@
 	    (loop (debug-data-parent dd)))
 	#f)))
 
-(define-command 'where "<procedure>" "show source file name"
-  '(&opt expression)
-  (lambda (exp)
-    (let ((proc (if exp
-		    (evaluate exp (environment-for-commands))
-		    (focus-object)))
-	  (port (command-output)))
-      (if (procedure? proc)
-	  (let ((probe (where-defined proc)))
-	    (if probe
-		(display probe port)
-		(display "Source file not recorded" port)))
-	  (display "Not a procedure" port))
-      (newline port))))
+(define-command-syntax 'where "<procedure>" "show source file name"
+  '(&opt expression))
+
+(define (where . maybe-exp)
+  (let ((proc (if (null? maybe-exp)
+		  (focus-object)
+		  (evaluate (car maybe-exp) (environment-for-commands))))
+	(port (command-output)))
+    (if (procedure? proc)
+	(let ((probe (where-defined proc)))
+	  (if probe
+	      (display probe port)
+	      (display "Source file not recorded" port)))
+	(display "Not a procedure" port))
+    (newline port)))
 
 
-
-
-(define (coerce-to-template obj)	;utillity for various commands
+(define (coerce-to-template obj)	;utility for various commands
   (cond ((template? obj) obj)
 	((closure? obj) (closure-template obj))
 	((continuation? obj) (continuation-template obj))

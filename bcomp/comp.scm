@@ -70,7 +70,7 @@
 	  (deliver-value (instruction op/false) cont)
 	  (compile-constant obj depth cont)))))
 
-(define-compilator '(quote syntax)
+(define-compilator 'quote
   (lambda (node cenv depth cont)
     (let ((exp (node-form node)))
       cenv				;ignored
@@ -107,7 +107,7 @@
 
 ; Assignment
 
-(define-compilator '(set! syntax)
+(define-compilator (list 'set! syntax-type)
   (lambda (node cenv depth cont)
     (let* ((exp (node-form node))
 	   (lhs-node (classify (cadr exp) cenv))
@@ -128,7 +128,7 @@
 
 ; Conditional
 
-(define-compilator '(if syntax)
+(define-compilator (list 'if syntax-type)
   (lambda (node cenv depth cont)
     (let ((exp (node-form node))
 	  (alt-label (make-label))
@@ -149,7 +149,7 @@
 		     empty-segment)))))
 
 
-(define-compilator '(begin syntax)
+(define-compilator (list 'begin syntax-type)
   (lambda (node cenv depth cont)
     (let ((exp (node-form node)))
       (compile-begin (cdr exp) cenv depth cont))))
@@ -255,7 +255,7 @@
      
 ; OK, now that you've got all that under your belt, here's LAMBDA.
 
-(define-compilator '(lambda syntax)
+(define-compilator (list 'lambda syntax-type)
   (lambda (node cenv depth cont)
     (let ((exp (node-form node))
 	  (name (cont-name cont)))
@@ -305,8 +305,8 @@
 			(return-cont name)))))))
 
 (define compile-letrec
-  (let ((operator/lambda     (get-operator 'lambda 'syntax))
-	(operator/set!	     (get-operator 'set! 'syntax))
+  (let ((operator/lambda     (get-operator 'lambda syntax-type))
+	(operator/set!	     (get-operator 'set!   syntax-type))
 	(operator/unassigned (get-operator 'unassigned)))
     (lambda (node cenv depth cont)
       ;; (if (node-ref node 'pure-letrec) ...)
@@ -327,7 +327,7 @@
 			    specs)
 		       cenv depth cont)))))
 
-(define-compilator '(letrec syntax) compile-letrec)
+(define-compilator (list 'letrec syntax-type) compile-letrec)
 
 ; --------------------
 ; Deal with internal defines (ugh)
@@ -566,6 +566,6 @@
 
 ; Type system loophole
 
-(define-compilator '(loophole syntax)
+(define-compilator (list 'loophole syntax-type)
   (lambda (node cenv depth cont)
     (compile (caddr (node-form node)) cenv depth cont)))

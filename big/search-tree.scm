@@ -18,7 +18,7 @@
 ;          search-tree-min
 ;          walk-search-tree))
 ;
-;(define-package ((search-tree search-tree-signature))
+;(define-structure search-tree search-tree-signature
 ;  (open big-scheme scheme)
 ;  (files (big search-tree)))
 

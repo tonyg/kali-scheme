@@ -366,9 +366,12 @@
     ((delay ?exp) (make-promise (lambda () ?exp)))))
 
 (define (make-promise thunk-then-result)
-  (let ((already-run? #f))
+  (let ((already-run? #f)
+	(started? #f))
     (lambda ()
       (cond ((not already-run?)
+	     (if started? (warn "recursive force" thunk-then-result))
+	     (set! started? #t)
              (set! thunk-then-result (thunk-then-result))
              (set! already-run? #t)))
       thunk-then-result)))

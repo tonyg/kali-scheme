@@ -7,12 +7,13 @@
 ; Needs LET macro.
 
 
-; Characters are represented in ASCII.
+; Characters are not represented in ASCII.  Using a different encoding
+; helps to catch portability problems.
 
-(define char->integer char->ascii)
-(define integer->char ascii->char)
+(define (char->integer c) (+ (char->ascii c) 1000))
+(define (integer->char n) (ascii->char (- n 1000)))
+
 (define ascii-limit 256)		;for reader
-
 (define ascii-whitespaces '(32 10 9 12 13)) ;space linefeed tab page return
 
 
@@ -29,17 +30,17 @@
 (define procedure? closure?)
 
 (define (invoke-closure closure . args)
-  (apply (loophole (procedure any-values any-values)
+  (apply (loophole (procedure :values :values)
 		   closure)
 	 args))
 
 
-; Similarly, there are "true" continuations and there are VM
-; continuations.  True continuations are obtained with PRIMITIVE-CWCC
-; and invoked with WITH-CONTINUATION.  VM continuations are obtained
-; with PRIMITIVE-CATCH and inspected using CONTINUATION-REF and
-; friends.  The dbeugger assumes that a VM continuation can be
-; extracted from a true one using EXTRACT-CONTINUATION.
+; Similarly, there are escapes and there are VM continuations.
+; Escapes are obtained with PRIMITIVE-CWCC and invoked with
+; WITH-CONTINUATION.  VM continuations are obtained with
+; PRIMITIVE-CATCH and inspected using CONTINUATION-REF and friends.
+; (This is not such a hot naming strategy; it would perhaps be better
+; to use the terms "continuation" and "frame".)
 
 ; In a running Scheme 48 system, the two happen to be implemented
 ; using the same data type.  The following is the only part of the
@@ -47,10 +48,10 @@
 
 (define (primitive-cwcc p)
   (primitive-catch (lambda (cont)
-		     (p (loophole escape cont))))) ;?
+		     (p (loophole :escape cont))))) ;?
 
-; (define (??? esc thunk)
-;   (with-continuation (loophole continuation esc) thunk))
+; (define (invoke-continuation cont thunk)
+;   (with-continuation (loophole :escape cont) thunk))
 
 
 ; These two procedures are part of the location abstraction.
@@ -59,9 +60,6 @@
   (let ((loc (make-location #f id)))
     (set-location-defined?! loc #f)
     loc))
-
-(define (location-assigned? loc)
-  (if (eq? (contents loc) (unassigned)) #f #t)) ;NOT is undefined
 
 (define (vector-unassigned? v i)
   (eq? (vector-ref v i) (unassigned)))
@@ -109,10 +107,10 @@
 ; I/O
 
 (define (maybe-open-input-file string)
-  (open-port string 1))
+  (open-port string 1))			;(define for-input 1)
 
 (define (maybe-open-output-file string)
-  (open-port string 2))
+  (open-port string 2))			;(define for-output 2)
 
 (define (open-input-file string)
   (or (maybe-open-input-file string)

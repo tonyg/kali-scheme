@@ -12,8 +12,7 @@
 (define *replaced-locations* '()) ;alist of (old rep ((uid ...) . new))
 
 (define (shadow-location! old p-uids new replacement)
-  (if (and (location-defined? old)
-	   (location-assigned? old))
+  (if (location-defined? old)
       (set-contents! replacement (contents old)))
   (let ((bar (cdr (or (assq old *replaced-locations*)
 		      (let ((foo (list old replacement)))
@@ -70,9 +69,7 @@
   (define-exception-handler op/global
     (deal-with-replaced-variables
        (lambda (loc more-args)
-	 (if (location-assigned? loc)
-	     (contents loc)
-	     (signal-exception op/global (cons loc more-args))))))
+	 (contents loc))))
 
   (define-exception-handler op/set-global!
     (deal-with-replaced-variables

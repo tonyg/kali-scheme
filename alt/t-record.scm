@@ -3,6 +3,7 @@
 
 
 ; This is file t-record.scm.
+; Synchronize any changes with the other *record.scm files.
 
 ;;;; Records
 

@@ -19,7 +19,7 @@
        (?field . ?field-stuff)
        ...)
      (begin (define ?type (make-record-type '?id '(?field ...)))
-	    (define-constructor ?constructor ?id ?type (?arg value) ...)
+	    (define-constructor ?constructor ?id ?type (?arg :value) ...)
 	    (define-accessors ?type ?id (?field . ?field-stuff) ...)))
     ((define-record-type ?id ?type
        (?constructor ?arg ...)
@@ -57,10 +57,10 @@
   (syntax-rules ()
     ((define-accessor ?id ?index ?accessor)
      (define ?accessor
-       (loophole (proc (?id) value)
+       (loophole (proc (?id) :value)
 		 (lambda (r) (record-ref r ?index)))))
     ((define-accessor ?id ?index ?accessor ?modifier)
      (begin (define-accessor ?id ?index ?accessor)
 	    (define ?modifier
-	      (loophole (proc (?id value) unspecific)
+	      (loophole (proc (?id :value) :unspecific)
 			(lambda (r new) (record-set! r ?index new))))))))

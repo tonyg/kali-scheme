@@ -103,13 +103,11 @@
 
 (define environment-for-commands interaction-environment)
 
-
-
 (define (command-processor arg)
   (start-command-processor arg
-                           (make-user-context unspecific)
+			   (make-user-context unspecific)
 			   (interaction-environment)
-                           unspecific))
+			   unspecific))
 
 ; Main entry point.
 
@@ -179,7 +177,7 @@
     (if (null? (cdr levels))
 	(if (or (batch-mode?)
 		(y-or-n? "Exit Scheme 48" #t))
-	    (exit (lambda () 0))
+	    (exit-command-processor (lambda () 0))
 	    (abort-to-command-level (car levels)))
 	(abort-to-command-level (cadr levels)))))
 
@@ -200,7 +198,7 @@
 (define (throw-to-command-level level thunk)
   ((command-level-throw level) thunk))
 
-(define (exit thunk)
+(define (exit-command-processor thunk)
   (throw-to-command-level (top-command-level)
 			  (lambda () thunk)))
 
@@ -216,7 +214,7 @@
 	 (if (batch-mode?)
 	     (begin (display-condition c (command-output))
 		    (let ((status (if (error? c) 1 2)))
-		      (exit (lambda () status))))
+		      (exit-command-processor (lambda () status))))
 	     (deal-with-condition c)))
 	(else				
 	 (next-handler))))
@@ -338,31 +336,61 @@
 
 ; Commands.
 
-(define command-table (make-table))
+(define command-environment
+  (user-context-accessor 'command-environment interaction-environment))
+
+(define *command-structure* (unspecific))
+
+(define (command-structure)
+  *command-structure*)
+
+(define (set-command-structure! structure)  ; called on initial startup
+  (set! *command-structure* structure))
+
 (define command-syntax-table (make-table))
 (define *command-help* '())
 
 (define (get-command-syntax name)
-  (or (table-ref command-syntax-table name)
-      '(&rest form)))			;for inspector commands
+  (or (table-ref (user-command-syntax-table) name)
+      (table-ref command-syntax-table name)))
 
-(define (define-command name help1 help2 arg-descriptions procedure)
-  (table-set! command-table name procedure)
+(define (define-command-syntax name help1 help2 arg-descriptions)
   (table-set! command-syntax-table name arg-descriptions)
   (if help1
-      (set! *command-help*
-	    (insert (list (symbol->string name)
-			  (string-append (symbol->string name) " " help1)
-			  help2)
-		    *command-help*
-		    (lambda (z1 z2)
-		      (string<=? (car z1) (car z2)))))))
+      (set! *command-help* (add-help *command-help* name help1 help2))))
+
+(define (add-help help name help1 help2)  
+  (insert (list (symbol->string name)
+		(string-append (symbol->string name) " " help1)
+		help2)
+	  help
+	  (lambda (z1 z2)
+	    (string<=? (car z1) (car z2)))))
 
 (define (insert x l <)
   (cond ((null? l) (list x))
 	((< x (car l)) (cons x l))
 	(else (cons (car l) (insert x (cdr l) <)))))
 
+(define user-command-syntax-table
+  (user-context-accessor 'user-command-syntax-table (lambda () (make-table))))
+
+(define user-command-environment
+  (user-context-accessor 'user-command-environment interaction-environment))
+
+(define set-user-command-environment!
+  (user-context-modifier 'user-command-environment))
+
+(define user-command-help
+  (user-context-accessor 'user-command-help (lambda () *command-help*)))
+
+(define set-user-command-help!
+  (user-context-modifier 'user-command-help))
+
+(define (define-user-command-syntax name help1 help2 arg-descriptions)
+  (table-set! (user-command-syntax-table) name arg-descriptions)
+  (if help1
+      (set-user-command-help! (add-help (user-command-help) name help1 help2))))
 
 (define make-command cons)	;(name . args) -- called by command reader
 
@@ -370,63 +398,23 @@
   (cond ((eof-object? command)
 	 (newline (command-output))
 	 (pop-command-level))
+	((not command))       ; error while reading
 	(else
-	 (let ((probe (table-ref command-table (car command))))
-	   (if probe
-	       (apply probe (cdr command))
-	       (write-line "Unrecognized command name." (command-output))))
-	 (run-sentinels))))
-
-
-; Particular commands.
-
-(table-set! command-table 'evaluate
-	    (lambda (form)
-	      (evaluate-and-select form (environment-for-commands))))
-
-(table-set! command-table 'read-command-error
-	    (lambda () #f))  ; error has already been reported
-
-; exit
-
-(define-command 'exit "" "leave" '(&opt expression)
-  (lambda (exp-option)
-    (let ((status (if exp-option
-		      (evaluate exp-option (environment-for-commands))
-		      0)))
-      (exit (lambda () status)))))
-
-; go
-
-(define-command 'go "<exp>" "leave via tail recursion"
-  '(expression)
-  (lambda (exp)
-    (let* ((env (environment-for-commands)))
-      (exit (lambda () (evaluate exp env))))))
-
-
-; load
-
-(define-command 'load "<filename> ..."
-  "load Scheme source file(s)"
-  '(&rest filename)
-  (lambda filenames
-    (let ((env (environment-for-commands)))
-      (maybe-noting-undefined-variables env
-        (lambda ()
-	  (for-each (lambda (filename)
-		      (load filename env))
-		    filenames))))))
-
-(define (maybe-noting-undefined-variables env thunk)
-  (if (package? env)
-      (noting-undefined-variables env thunk)
-      (thunk)))
-
+	 (let* ((name (car command))
+		(proc (cond ((not name)
+			     (lambda (exp)
+			       (evaluate-and-select exp
+						    (environment-for-commands))))
+			    ((table-ref (user-command-syntax-table) name)
+			     (environment-ref (user-command-environment) name))
+			    (else
+			     (*structure-ref *command-structure* name)))))
+	   (apply proc (cdr command))
+	   (run-sentinels)))))
 
 ; help
 
-(define (command-help)
+(define (help)
   (let ((o-port (command-output))
 	(widest 28)
 	(f? (form-preferred?)))
@@ -445,7 +433,7 @@
 		(display #\space o-port)
 		(display (caddr z) o-port)
 		(newline o-port))
-	      *command-help*)
+	      (user-command-help))
     (for-each (lambda (s)
                 (write-line s o-port))
               '(
@@ -453,9 +441,6 @@
 "The expression ## evaluates to the last value displayed by the command"
 "processor."
                 ))))
-
-(define-command 'help "" "print this message" '() command-help)
-(define-command '?    "" "same as ,help"      '() command-help)
 
 
 ; Utilities

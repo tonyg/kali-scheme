@@ -17,13 +17,13 @@
 ;   code-vector-...
 ;   location-name
 
-(define-command 'dis "<exp>" "disassemble procedure"
-  '(&opt expression)
-  (lambda (e)
-    (disassemble (if e
-		     (evaluate e (environment-for-commands))
-		     (focus-object)))))
+(define-command-syntax 'dis "<exp>" "disassemble procedure"
+  '(&opt expression))
 
+(define (dis . maybe-exp)
+  (disassemble (if (null? maybe-exp)
+		   (focus-object)
+		   (evaluate (car maybe-exp) (environment-for-commands)))))
 
 (define (disassemble obj)
   (really-disassemble (coerce-to-template obj) 0)

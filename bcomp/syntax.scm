@@ -335,7 +335,7 @@
 (define (impose-type type b integrate?)
   (if (eq? type syntax-type)
       b
-      (really-make-binding (if (eq? type 'undeclared)
+      (really-make-binding (if (eq? type undeclared-type)
 			       (let ((type (binding-type b)))
 				 (if (variable-type? type)
 				     (variable-value-type type)
@@ -633,7 +633,7 @@
 
 (define (define-usual-suspects table mumble)
 
-  (operator-define! table '(let-syntax syntax)
+  (operator-define! table (list 'let-syntax syntax-type)
     (mumble (lambda (node env)
 	      (let* ((form (node-form node))
 		     (specs (cadr form)))
@@ -649,7 +649,7 @@
 				   specs)
 			      env))))))
 
-  (operator-define! table '(letrec-syntax syntax)
+  (operator-define! table (list 'letrec-syntax syntax-type)
     (mumble (lambda (node env)
 	      (let* ((form (node-form node))
 		     (specs (cadr form)))
@@ -779,10 +779,10 @@
   (lambda (node)
     (desyntaxify (node-form node))))
 
-(define-schemifier '(quote syntax)
+(define-schemifier 'quote
   (lambda (node) (list 'quote (cadr (node-form node)))))
 
-(define-schemifier '(letrec syntax)
+(define-schemifier (list 'letrec syntax-type)
   (lambda (node)
     (let ((form (node-form node)))
       `(letrec ,(map (lambda (spec)

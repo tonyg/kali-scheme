@@ -28,7 +28,7 @@ RUNNABLE = scheme48
 
 # Libraries used by the VM:
 #on most systems
-VMLIBS=
+VMLIBS= -lm
 #on SGI
 #VMLIBS = -lmld
 #on SunOS5
@@ -37,6 +37,7 @@ VMLIBS=
 #VMLIBS= -ldl
 
 CC = gcc
+#CFLAGS = -g
 CFLAGS = -O2 -g
 # On an HP "snake," you may instead want:
 #   CC = cc -Aa
@@ -73,9 +74,11 @@ OBJFILES = main.o unix.o dynload.o error.o extension.o scheme48vm.o
 # system.  You can run the linker in a Scheme other than Scheme 48;
 # see e.g. the rule for link/linker-in-lucid, below.
 
-LINKER_RUNNABLE = ./$(VM) -i ./$(IMAGE)
+LINKER_VM = ./$(VM) $(BIG_HEAP)
+LINKER_RUNNABLE = $(LINKER_VM) -i ./$(IMAGE)
 LINKER_IMAGE = link/linker.image
-START_LINKER_RUNNABLE = echo ,batch; echo ,bench on;
+LINKER = $(LINKER_VM) -i $(LINKER_IMAGE)
+START_LINKER = echo ,batch; echo ,bench on;
 
 # or,
 #LINKER_RUNNABLE = $(RUNNABLE)
@@ -132,7 +135,13 @@ filenames.make: packages.scm rts-packages.scm alt-packages.scm \
 	 echo "(write-file-names \"filenames.make\"      \
 		 'initial-files i-f 'usual-files u-f 'linker-files q-f)") \
 	| $(VM) -i initial.image -a batch
+# or:	| $(RUNNABLE) -a batch
+
+# If make barfs on this include line, just comment it out.  It's only
+# really needed if you want to build the linker or rebuild initial.image.
 include filenames.make
+#NetBSD make wants to see this instead:
+#.include "filenames.make"
 
 # The linker is capable of rebuilding an image from sources, even
 # across an incompatible change in VM data representations.
@@ -155,10 +164,10 @@ link/linker.image: $(linker-files)
 
 initial.image: \
     $(LINKER_IMAGE) $(CONFIG_FILES) $(initial-files) initial.scm
-	($(START_LINKER_RUNNABLE)               \
+	($(START_LINKER)               \
 	 echo "(load \"initial.scm\")" ;  \
 	 echo "(link-initial-system)")   \
-	| $(LINKER_RUNNABLE) $(BIG_HEAP) -i $(LINKER_IMAGE)
+	| $(LINKER)
 
 
 # In the following, "make" passes $$USER to the shell as $USER, which
@@ -177,14 +186,16 @@ $(IMAGE): $(VM) more-interfaces.scm more-packages.scm $(usual-files) \
 	        \"=scheme48/\" \"./\")" ;			     \
 	 echo ,load more-interfaces.scm =scheme48/link-packages.scm ; \
 	 echo ,load =scheme48/more-packages.scm ; \
-	 echo "(ensure-loaded package-commands)" ;		     \
-	 echo ",go ((*structure-ref command 'command-processor) \"batch\")" ; \
+	 echo "(ensure-loaded command-processor)" ;		     \
+	 echo "(ensure-loaded usual-commands)" ;		     \
+	 echo "((*structure-ref command-processor 'set-command-structure!) usual-commands)" ; \
+	 echo ",go ((*structure-ref command-processor 'command-processor) \"batch\")" ; \
 	 echo "(ensure-loaded usual-features)" ;		     \
 	 echo ,structure more-structures more-structures-interface ; \
 	 echo ,in debuginfo "(read-debug-info \"initial.debug\")" ;  \
 	 echo ,keep maps source files ;				     \
 	 echo ,translate =scheme48/ $(LIB)/  ;			     \
-	 echo ,build "((*structure-ref package-commands		     \
+	 echo ,build "((*structure-ref package-commands-internal     \
 				       'new-command-processor)	     \
 		       \"(made by $$USER on `date`)\"		     \
 		       built-in-structures more-structures)" $(IMAGE) ) \
@@ -280,7 +291,7 @@ tags:
 # appear to be out of date.
 
 DISTFILES = COPYING README INSTALL NEWS TODO Makefile $(CFILES) \
-	    scheme48.man doc/*.txt doc/*.tex \
+	    scheme48.man doc/*.txt doc/*.tex doc/*.ps \
 	    *.scm filenames.make \
 	    rts/*.scm bcomp/*.scm env/*.scm big/*.scm misc/*.scm \
 	    link/*.scm opt/*.scm vm/*.scm alt/*.scm debug/*.scm infix/*.scm \
@@ -292,7 +303,7 @@ dist: initial.image
 	tar cf - $(DISTFILES) | gzip -c >$(DISTDIR)/$(RUNNABLE)-0-`cat minor-version-number`.tar.gz
 #	$(MAKE) new-version
 
-new-version:
+inc:
 	(cat minor-version-number; echo 1+p) | dc >minor-version-number.tmp
 	mv minor-version-number.tmp minor-version-number
 	echo "(define version-info \"0.`cat minor-version-number`\")" \
@@ -313,16 +324,16 @@ link/linker-in-lucid: link/lucid-script.lisp $(linker-files) \
 # Various things for debugging
 
 debug/medium.image: $(LINKER_IMAGE) $(CONFIG_FILES) $(medium-files)
-	($(START_LINKER_RUNNABLE) \
+	($(START_LINKER)                 \
 	 echo "(load \"initial.scm\")";  \
 	 echo "(load-configuration \"debug-packages.scm\")";  \
-	 echo "(link-medium-system)") \
-	| $(LINKER_RUNNABLE) $(BIG_HEAP) -i $(LINKER_IMAGE)
+	 echo "(link-medium-system)")    \
+	| $(LINKER)
 
 debug/little.image: \
     $(LINKER_IMAGE) $(CONFIG_FILES) debug-packages.scm initial.scm
-	($(START_LINKER_RUNNABLE)               \
-	 echo "(load \"initial.scm\")" ;  \
-	 echo "(load-configuration \"debug-packages.scm\")" ; \
-	 echo "(link-little-system)")   \
-	| time $(LINKER_RUNNABLE) $(BIG_HEAP) -i $(LINKER_IMAGE)
+	($(START_LINKER)                 \
+	 echo "(load \"initial.scm\")";  \
+	 echo "(load-configuration \"debug-packages.scm\")"; \
+	 echo "(link-little-system)")    \
+	| time $(LINKER)

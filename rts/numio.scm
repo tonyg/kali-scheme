@@ -55,8 +55,8 @@
 			    zero
 			    a-minus-10))))
 
-    (define zero (char->integer #\0))
-    (define a-minus-10 (- (char->integer #\a) 10))
+    (define zero (char->ascii #\0))
+    (define a-minus-10 (- (char->ascii #\a) 10))
 
     integer->string))
 

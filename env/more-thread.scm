@@ -14,20 +14,22 @@
 	 (with-keyboard-interrupt-thread (current-thread)
 	   thunk))))))
 
-(define-command 'start-threads "" "initiate multitasking"
-  '()
-  (lambda ()
-    (let ((context (user-context))
-	  (env (environment-for-commands)))
-      (exit (lambda ()
-	      (with-threads
-		(lambda ()
-		  (start-command-processor
-		    #f context
-		    env
-		    (lambda ()
-		      (write-line "Multitasking started"
-				  (command-output)))))))))))
+(define-command-syntax 'start-threads "" "initiate multitasking"
+  '())
+
+(define (start-threads)
+  (let ((context (user-context))
+	(env (environment-for-commands)))
+    (exit-command-processor
+     (lambda ()
+       (with-threads
+	(lambda ()
+	  (start-command-processor
+	   #f context
+	   env
+	   (lambda ()
+	     (write-line "Multitasking started"
+			 (command-output))))))))))
 
 
 

@@ -88,8 +88,17 @@
 (define numerator-table      (make-method-table 'numerator))
 (define denominator-table    (make-method-table 'denominator))
 
-(define sqrt-table           (make-method-table 'sqrt))
 (define make-rectangular-table (make-method-table 'make-rectangular))
+
+(define exp-table (make-method-table 'exp))
+(define log-table (make-method-table 'log))
+(define sin-table (make-method-table 'sin))
+(define cos-table (make-method-table 'cos))
+(define tan-table (make-method-table 'tan))
+(define asin-table (make-method-table 'asin))
+(define acos-table (make-method-table 'acos))
+(define atan-table (make-method-table 'atan))
+(define sqrt-table (make-method-table 'sqrt))
 
 ; Default methods.
 
@@ -175,7 +184,14 @@
 (make-opcode-generic! (enum op numerator) numerator-table)
 (make-opcode-generic! (enum op denominator) denominator-table)
 
-(make-opcode-generic! (enum op sqrt) sqrt-table)
 (make-opcode-generic! (enum op make-rectangular) make-rectangular-table) ;weird
 
-; Unimplemented: cos sin tan acos asin atan exp ...
+(make-opcode-generic! (enum op exp) exp-table)
+(make-opcode-generic! (enum op log) log-table)
+(make-opcode-generic! (enum op sin) sin-table)
+(make-opcode-generic! (enum op cos) cos-table)
+(make-opcode-generic! (enum op tan) tan-table)
+(make-opcode-generic! (enum op asin) asin-table)
+(make-opcode-generic! (enum op acos) acos-table)
+(make-opcode-generic! (enum op atan) atan-table)
+(make-opcode-generic! (enum op sqrt) sqrt-table)

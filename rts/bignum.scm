@@ -15,20 +15,6 @@
 (define bignum-magnitude (extended-number-accessor bignum-type 'magnitude))
 
 
-;(define (integer-sign m)
-;  (if (bignum? m)
-;      (bignum-sign m)
-;      (if (>= m 0) 1 -1)))
-;
-;(define (integer-magnitude m)
-;  (if (bignum? m)
-;      (bignum-magnitude m)
-;      (if (>= m 0)
-;          ...
-;          ...)))
-;
-;(define (integer-exact? m) ...)
-
 (define (integer->bignum m)
   (if (bignum? m)
       m
@@ -182,8 +168,11 @@
 (define (integer->magnitude n)
   (if (= n 0)
       zero-magnitude
-      (adjoin-digit (remainder n radix)
-		    (integer->magnitude (quotient n radix)))))
+      (let ((digit (remainder n radix)))
+	(adjoin-digit (if (exact? digit)
+			  digit
+			  (inexact->exact digit))
+		      (integer->magnitude (quotient n radix))))))
 
 (define (magnitude->integer m)
   (if (zero-magnitude? m)

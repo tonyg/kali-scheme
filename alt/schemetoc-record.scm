@@ -2,11 +2,10 @@
 ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
-; This is file record.scm.
+; This is file schemetoc-record.scm.
+; Synchronize any changes with the other *record.scm files.
 
 ;;;; Records
-
-; This is completely vanilla Scheme code.  Should work anywhere.
 
 (define (make-record-type type-id field-names)
 

@@ -13,7 +13,6 @@
 
 (define (reverse-list->string l n)
   (list->string (reverse l)))
-(define char->ascii char->integer)
 
 ; Tokenizer tables
 
@@ -111,8 +110,9 @@
     (parse-atom (scan-atom c ttab port)))
 
   (for-each (lambda (c)
-	      (set-char-tokenization! ttab c tokenize-whitespace #t))
-	    '(#\space #\newline #\page #\tab))
+	      (set-char-tokenization! ttab (ascii->char c)
+				      tokenize-whitespace #t))
+	    ascii-whitespaces)
 
   (for-each (lambda (c)
 	      (set-char-tokenization! ttab c tokenize-constituent #f))

@@ -112,11 +112,11 @@
 
 ; Special operators
 
-(define-expander '(quote syntax)
+(define-expander (list 'quote syntax-type)
   (lambda (node env)
     (set-expanded node)))
 
-(define-expander '(lambda syntax)
+(define-expander (list 'lambda syntax-type)
   (lambda (node env)
     (set-fluid! $inferior-lambdas? #t)
     (let-fluid $inferior-lambdas? #f
@@ -149,7 +149,7 @@
 	node))))
 
 
-(define-expander '(letrec syntax)
+(define-expander (list 'letrec syntax-type)
   (lambda (node env)
     (set-fluid! $inferior-lambdas? #t)	;foo
     (let* ((exp (node-form node))
@@ -203,7 +203,7 @@
 	    (car nodes)
 	    (set-expanded (make-node op (cons 'begin nodes))))))))
 
-(define-expander '(set! syntax)
+(define-expander (list 'set! syntax-type)
   (lambda (node env)
     (let ((exp (node-form node)))
       (let ((lhs (classify (cadr exp) env))
@@ -222,7 +222,7 @@
   (or (node-ref node 'binding)
       (lookup cenv (node-form node))))
 
-(define-expander '(define syntax)
+(define-expander (list 'define syntax-type)
   (lambda (node env)
     (let ((form (node-form node)))
       (make-expanded node
@@ -230,7 +230,7 @@
 		       (cadr form)
 		       (expand (caddr form) env))))))
 
-(define-expander '(if syntax)
+(define-expander (list 'if syntax-type)
   (lambda (node env)
     (let ((exp (node-form node)))
       (make-expanded node
@@ -239,7 +239,7 @@
 			   (expand (caddr exp) env)
 			   (expand (cadddr exp) env))))))
 
-(define-expander '(primitive-procedure syntax)
+(define-expander (list 'primitive-procedure syntax-type)
   (lambda (node env)
     (set-expanded node)))
 

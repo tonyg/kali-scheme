@@ -1,11 +1,15 @@
 
 /* Big kludge.  This ought to be automagically generated from data.scm. */
+/* Use of case is inconsistent.  Sometimes it's C style, sometimes what the
+   prescheme compiler would generate. */
 
-typedef int scheme_value;
+typedef long scheme_value;	/* better be 32 bits */
 
 #define ENTER_FIXNUM(n)   ((scheme_value)((n) << 2))
 #define EXTRACT_FIXNUM(x) ((long)(x) >> 2)
 #define FIXNUMP(x)	  (((long)(x) & 3L) == 0)
+#define GREATEST_FIXNUM_VALUE ((1 << 29) - 1)
+#define LEAST_FIXNUM_VALUE (-1 << 29)
 
 #define IMM_TAG 1
 #define MISC_IMMEDIATE(n) (scheme_value)(IMM_TAG | (n << 2))
@@ -37,18 +41,29 @@ typedef int scheme_value;
 /* Cf. arch.scm */
 #define STOBTYPE_PAIR 0
 #define STOBTYPE_VECTOR 2
+#define STOBTYPE_PORT 5
 #define STOBTYPE_STRING 15
+#define STOBTYPE_BYTE_VECTOR 16
 #define STOB_OF_TYPE_P(x, type) (STOBP(x) && STOB_TYPE(x) == (type))
 
 #define pairp(x) STOB_OF_TYPE_P((x), STOBTYPE_PAIR)
 #define car(x) STOB_REF(x, 0) /* cf. vm/struct.scm */
 #define cdr(x) STOB_REF(x, 1) /* cf. vm/struct.scm */
+
 #define vectorp(x) STOB_OF_TYPE_P((x), STOBTYPE_VECTOR)
 #define vector_length(x) STOB_LLENGTH(x)
 #define vector_ref(x, i) STOB_REF(x, i)
+
+#define byte_vectorp(x)  STOB_OF_TYPE_P((x), STOBTYPE_BYTE_VECTOR)
 #define byte_vector_length(x)  STOB_BLENGTH(x)
 #define byte_vector_ref(x, i)  (ADDRESS_AFTER_HEADER(x, unsigned char)[i])
+
 #define stringp(x) STOB_OF_TYPE_P((x), STOBTYPE_STRING)
 #define string_length(x)  STOB_BLENGTH(x)
 #define string_ref(x, i)  (ADDRESS_AFTER_HEADER(x, char)[i])
 #define extract_string(x)  ADDRESS_AFTER_HEADER(x, char)
+
+#define portp(x) STOB_OF_TYPE_P((x), STOBTYPE_PORT)
+#define port_index(x) EXTRACT_FIXNUM(STOB_REF(x, 1)) /* 1=in, 2=out */
+#define for_input 1
+#define for_output 2

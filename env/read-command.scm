@@ -4,6 +4,9 @@
 ; Read a command.  No command name completion, yet.
 
 (define (read-command prompt form-preferred? i-port)
+  (really-read-command prompt form-preferred? i-port no-more-commands))
+
+(define (really-read-command prompt form-preferred? i-port more-commands)
   (let ((o-port (command-output)))
     (let prompt-loop ()
       (if (and prompt (not (batch-mode?)))
@@ -23,16 +26,16 @@
 		 (prompt-loop))
                 ((char=? c command-prefix)
                  (read-char i-port)
-                 (read-named-command i-port))
+                 (read-named-command i-port more-commands form-preferred?))
 		((or form-preferred?
 		     (and (not (char-alphabetic? c))
 			  (not (char-numeric? c))
 			  (not (char=? c #\?))))
 		 (read-evaluation-command i-port))
 		(else
-		 (read-named-command i-port))))))))
+		 (read-named-command i-port more-commands form-preferred?))))))))
 
-(define (read-command-carefully prompt form-preferred? i-port)
+(define (read-command-carefully prompt form-preferred? i-port . more-commands)
   (call-with-current-continuation
     (lambda (k)
       (with-handler
@@ -47,16 +50,22 @@
                                (let ((c (read-char port)))
                                  (or (eof-object? c) (char=? c #\newline)))))))
 		  (display-condition c (command-output))
-		  (k (make-command 'read-command-error '())))
+		  (k #f))
 		(punt)))
 	(lambda ()
-	  (read-command prompt form-preferred? i-port))))))
+	  (really-read-command prompt form-preferred? i-port
+			       (if (null? more-commands)
+				   no-more-commands
+				   (car more-commands))))))))
 
 (define (read-evaluation-command i-port)
   (let ((form (read-form i-port)))
     (if (eq? (skip-over horizontal-space? i-port) #\newline)
 	(read-char i-port))
-    (make-command 'evaluate (list form))))
+    (make-command #f (list form))))
+
+(define (no-more-commands name)
+  #f)
 
 ; Read a single form, allowing ## as a way to refer to last command
 ; output.
@@ -68,57 +77,66 @@
 
 ; Read a command line:  <name> <arg> ... <newline>
 
-(define (read-named-command port)
+(define (read-named-command port more-commands form-preferred?)
   (let ((c-name (read port)))
-    (make-command c-name
-		  (read-command-arguments (get-command-syntax c-name)
-					  #f
-					  port))))
+    (let ((syntax (or (more-commands c-name)
+		      (get-command-syntax c-name))))
+      (cond (syntax
+	     (make-command c-name
+			   (read-command-arguments syntax #f port
+						   more-commands
+						   form-preferred?)))
+	    (else
+	     (read-command-arguments '(&rest form) #f port #f #f) ; flush junk
+	     (write-line "Unrecognized command name." (command-output))
+	     #f)))))
 
-(define (read-command-arguments ds opt? port)
-  (let ((c (skip-over horizontal-space? port)))
-    (cond ((and (not (null? ds))
-		(eq? (car ds) '&opt))
-	   (read-command-arguments (cdr ds) #t port))
-	  ((or (eof-object? c)
-	       (char=? c #\newline)
-	       (if (char=? c #\;)    ;Comment
-		   (begin (gobble-line port)
-			  #t)
-		   #f))
-	   (cond ((or (null? ds) (eq? (car ds) '&rest))
-		  (read-char port)
-		  '())
-		 (opt?
-		  (read-char port)
-		  (map (lambda (d) #f) ds))
-		 (else
-		  (read-command-error port "too few command arguments"))))
-	  ((null? ds)
-	   (read-command-error port "too many command arguments"))
-	  ((eq? (car ds) '&rest)
-	   (let ((arg (read-command-argument (cadr ds) port)))
-	     (cons arg (read-command-arguments ds #f port))))
-	  ((eq? (car ds) 'command)     ; must be the last argument
-	   (if (not (null? (cdr ds)))
-	       (error "invalid argument descriptions" ds))
-	   (list (read-command #f (form-preferred?) port)))
-	  (else
-	   (let ((arg (read-command-argument (car ds) port)))
-	     (cons arg (read-command-arguments (cdr ds) opt? port)))))))
+(define (read-command-arguments ds opt? port more-commands form-preferred?)
+  (let recur ((ds ds) (opt? opt?))
+    (let ((c (skip-over horizontal-space? port)))
+      (cond ((and (not (null? ds))
+		  (eq? (car ds) '&opt))
+	     (recur (cdr ds) #t))
+	    ((or (eof-object? c)
+		 (char=? c #\newline)
+		 (if (char=? c #\;)    ;Comment
+			     (begin (gobble-line port)
+				    #t)
+			     #f))
+		 (cond ((or (null? ds)
+			    (eq? (car ds) '&rest)
+			    opt?)
+			(read-char port)
+			'())
+		       (else
+			(read-command-error port "too few command arguments"))))
+	    ((null? ds)
+	     (read-command-error port "too many command arguments"))
+	    ((eq? (car ds) '&rest)
+	     (let ((arg (read-command-argument (cadr ds) port)))
+	       (cons arg (recur ds #f))))
+	    ((eq? (car ds) 'command)	; must be the last argument
+	     (if (not (null? (cdr ds)))
+		 (error "invalid argument descriptions" ds))
+	     (list (really-read-command #f form-preferred? port more-commands)))
+	    (else
+	     (let ((arg (read-command-argument (car ds) port)))
+	       (cons arg (recur (cdr ds) opt?))))))))
 
 (define (read-command-argument d port)
-  (case d
-    ((filename)
-     (read-string port char-whitespace?))
-    ((expression form)
-     (read-form port))
-    ((name)
-     (let ((thing (read port)))
-       (if (symbol? thing)
-	   thing
-	   (read-command-error port "invalid name" thing))))
-    (else (error "invalid argument description" d))))
+  (if (procedure? d)
+      (d port)
+      (case d
+	((filename)
+	 (read-string port char-whitespace?))
+	((expression form)
+	 (read-form port))
+	((name)
+	 (let ((thing (read port)))
+	   (if (symbol? thing)
+	       thing
+	       (read-command-error port "invalid name" thing))))
+	(else (error "invalid argument description" d)))))
 
 (define-condition-type 'read-command-error '(error))
 (define read-command-error? (condition-predicate 'read-command-error))

@@ -120,9 +120,7 @@
 ; Hmm.  It ought to be possible to turn this into an RPC.
 
 (define (copy-shadowed-contents! import loc)
-  (if (and (location-defined? import)
-           (location-assigned? import)
-           (not (location-assigned? loc)))
+  (if (location-defined? import)
       (set-contents! loc (contents import))))
 
 
@@ -159,7 +157,7 @@
 
 ;; Deal with editing operations
 
-(define (really-verify-later! thunk)           ;cf. define-package macro
+(define (really-verify-later! thunk)           ;cf. define-structure macro
   (let ((loser (ignore-errors thunk)))
     (cond ((or (structure? loser)
                (interface? loser))

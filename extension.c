@@ -5,18 +5,28 @@
 
 #include <stdio.h>
 #include <fcntl.h>		/* for O_RDWR */
+#include <string.h>
 #include "scheme48.h"
 
-FILE **port_to_stream(long port)
+/* Things for socket library... */
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/wait.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <signal.h>
+#include <errno.h>
+
+FILE **port_to_stream(scheme_value port)
 {
   int index;
   extern FILE **Sopen_portsS;
 
-  if ((port & 3L) != 3L ||
-      (((*((long *) ((port - 3L) + -4L))) >> 2L) & 31L) != 5L)
+  if (!portp(port))
     return NULL;		/* not a port */
 
-  index = (*((long *) ((port - 3L) + 4L))) >> 2L;
+  index = port_index(port);
   if (index < 0)
     return NULL;		/* port not open */
 
@@ -52,19 +62,8 @@ This software is provided ``as is'' without express or implied warranty.
 */
 
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/wait.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <signal.h>
-#include <stdio.h>
-#include <errno.h>
-
 /* hack by Basile STARYNKEVITCH */
 #if defined(svr4) || defined(__svr4__) || defined(SYSV)
-#include <string.h>
 #define NO_BCOPY
 #endif
 
@@ -174,8 +173,8 @@ int socket_connect(char *hostname, int portnum)
 
 /******************************************/
 
-long
-extended_vm (long key, long value)
+scheme_value
+extended_vm (long key, scheme_value value)
 {
   switch (key) {
   
@@ -210,39 +209,53 @@ extended_vm (long key, long value)
     }
 
   case 24:
+  case 25:
     if (!pairp(value)) return UNDEFINED;
-    { long port = car(value);
+    { scheme_value port = car(value);
       long fd = EXTRACT_FIXNUM(cdr(value));
       FILE **pstream = port_to_stream(port);
       FILE *new_stream;
 
       if (pstream == NULL) return UNDEFINED;
-      new_stream = fdopen(fd, "r");
+      new_stream = fdopen(fd, key == 24 ? "r" : "w");
       if (new_stream == NULL) return UNDEFINED;
       fclose(*pstream);
       *pstream = new_stream;
       return SCHTRUE;
     }
 
-  case 25:			/* Same as above except "w" for "r" */
+  case 97:
+  case 98: {
+#   define POPEN_BUFFER_SIZE 200
     if (!pairp(value)) return UNDEFINED;
-    { long port = car(value);
-      long fd = EXTRACT_FIXNUM(cdr(value));
+    { scheme_value port = car(value);
       FILE **pstream = port_to_stream(port);
+      scheme_value command = cdr(value);
+      char buffer[POPEN_BUFFER_SIZE];
+      long len;
       FILE *new_stream;
+      /* extern FILE *popen(const char *, const char *);  --POSIX stdio.h */
 
       if (pstream == NULL) return UNDEFINED;
-      new_stream = fdopen(fd, "w");
+      if (!stringp(command)) return UNDEFINED;
+
+      len = string_length(command);
+      if (len >= POPEN_BUFFER_SIZE) return UNDEFINED;
+      strncpy(buffer, &string_ref(command, 0), len);
+      buffer[len] = '\0';
+
+      new_stream = popen(buffer, key == 97 ? "r" : "w");
       if (new_stream == NULL) return UNDEFINED;
       fclose(*pstream);
       *pstream = new_stream;
       return SCHTRUE;
     }
+  }
 
   case 99: {
-    long *values = (long *)(value - 3);
-    extern long vm_float_op();
-    return vm_float_op((*values)>>2, values + 1);
+    extern scheme_value vm_float_op(long, scheme_value);
+    if (!vectorp(value)) return UNDEFINED;
+    return vm_float_op(EXTRACT_FIXNUM(vector_ref(value, 0)), value);
   }
 
   default:
@@ -250,68 +263,173 @@ extended_vm (long key, long value)
   }
 }
 
+/* stdlib.h declares atof */
+
 #include <stdlib.h>
-#include <string.h>
 #include <math.h>
 
-#define get_ptr_arg(args,i) (((long) *((args) + (i))) - 3)
-#define get_int_arg(args,i) ((*((args) + (i)))>>2)
+#define get_arg(args,i) vector_ref(args,(i)+1)
+#define get_int_arg(args,i) EXTRACT_FIXNUM(get_arg(args,i))
+#define get_string_arg(args,i) (&string_ref(get_arg(args,i), 0))
 
-long
-vm_float_op( long op, long *args )
+typedef struct {
+  char b[sizeof(double)];
+} unaligned_double;
+
+typedef union {
+  double f;
+  unaligned_double b;
+} float_or_bytes;
+
+#define get_float_arg(args, i, var) \
+  { scheme_value temp_ = get_arg(args,i); \
+    float_or_bytes loser_; \
+    if (!byte_vectorp(temp_)) return UNDEFINED; \
+    loser_.b = *(unaligned_double*)(&byte_vector_ref(temp_, 0)); \
+    (var) = loser_.f; }
+
+#define set_float_arg(args, i, val) \
+  { scheme_value temp_ = get_arg(args,i); \
+    float_or_bytes loser_; \
+    if (!byte_vectorp(temp_)) return UNDEFINED; \
+    loser_.f = (double)(val); \
+    *(unaligned_double*)(&byte_vector_ref(temp_, 0)) = loser_.b; }
+   
+scheme_value
+vm_float_op( long op, scheme_value args )
 {
+  double x, y;
+
   switch (op) {
   case 0: {
-    double *x = (double*)get_ptr_arg(args,0);
-    double *y = (double*)get_ptr_arg(args,1);
-    double *r = (double*)get_ptr_arg(args,2);
-    *r = *x + *y;
+    get_float_arg(args, 0, x);
+    get_float_arg(args, 1, y);
+    set_float_arg(args, 2, x + y);
     return 0;}
   case 1: {
-    double *x = (double*)get_ptr_arg(args,0);
-    double *y = (double*)get_ptr_arg(args,1);
-    double *r = (double*)get_ptr_arg(args,2);
-    *r = *x - *y;
+    get_float_arg(args, 0, x);
+    get_float_arg(args, 1, y);
+    set_float_arg(args, 2, x - y);
     return 0;}
   case 2: {
-    double *x = (double*)get_ptr_arg(args,0);
-    double *y = (double*)get_ptr_arg(args,1);
-    double *r = (double*)get_ptr_arg(args,2);
-    *r = *x * *y;
+    get_float_arg(args, 0, x);
+    get_float_arg(args, 1, y);
+    set_float_arg(args, 2, x * y);
     return 0;}
   case 3: {
-    double *x = (double*)get_ptr_arg(args,0);
-    double *y = (double*)get_ptr_arg(args,1);
-    double *r = (double*)get_ptr_arg(args,2);
-    *r = *x / *y;
+    get_float_arg(args, 0, x);
+    get_float_arg(args, 1, y);
+    if (y == 0) return UNDEFINED;
+    set_float_arg(args, 2, x / y);
     return 0;}
   case 4: {
-    double *x = (double*)get_ptr_arg(args,0);
-    double *y = (double*)get_ptr_arg(args,1);
-    return (*x == *y) ? 0 : 4;}
+    get_float_arg(args, 0, x);
+    get_float_arg(args, 1, y);
+    return (x == y) ? 0 : 4;}
   case 5: {
-    double *x = (double*)get_ptr_arg(args,0);
-    double *y = (double*)get_ptr_arg(args,1);
-    return (*x < *y) ? 0 : 4;}
+    get_float_arg(args, 0, x);
+    get_float_arg(args, 1, y);
+    return (x < y) ? 0 : 4;}
   case 6: {          /* integer -> float */
-    long x =             get_int_arg(args,0);
-    double *r = (double*)get_ptr_arg(args,1);
-    *r = x;
+    scheme_value arg = get_arg(args, 0);
+    if (!FIXNUMP(arg)) return UNDEFINED;
+    set_float_arg(args, 1, EXTRACT_FIXNUM(arg));
     return 0;}
   case 7: {          /* string -> float */
     static char buffer[80];
-    char *str =     (char*)get_ptr_arg(args,0);
-    long len =             get_int_arg(args,1);
-    double *res = (double*)get_ptr_arg(args,2);
-    strncpy(buffer, str, len);
+    long len =	  get_int_arg(args, 1);
+    strncpy(buffer, get_string_arg(args, 0), len);
     buffer[len] = '\0';
-    *res = atof(buffer);
+    set_float_arg(args, 2, atof(buffer));
     return 0;}
-  case 8: {          /* float -> string */
-    double *num = (double*)get_ptr_arg(args,0);
-    char *str =     (char*)get_ptr_arg(args,1);
-    sprintf(str, "%g", *num);
-    *(args + 2) = strlen(str) << 2;
+  case 8: {
+    int len;
+    char *str =   get_string_arg(args,1);
+    get_float_arg(args, 0, x);
+    sprintf(str, "%g", x);
+    len = strlen(str);
+    if (len > string_length(get_arg(args,1))) /* unlikely */
+      fprintf(stderr, "printing float: output too long: %s\n",
+	      str);
+    get_arg(args, 2) = ENTER_FIXNUM(len);
     return 0;}
+
+    /* exp log sin cos tan asin acos atan sqrt */
+
+  case 9: {
+    get_float_arg(args, 0, x);
+    set_float_arg(args, 1, exp(x));
+    return 0;}
+  case 10: {
+    get_float_arg(args, 0, x);
+    set_float_arg(args, 1, log(x));
+    return 0;}
+  case 11: {
+    get_float_arg(args, 0, x);
+    set_float_arg(args, 1, sin(x));
+    return 0;}
+  case 12: {
+    get_float_arg(args, 0, x);
+    set_float_arg(args, 1, cos(x));
+    return 0;}
+  case 13: {
+    get_float_arg(args, 0, x);
+    set_float_arg(args, 1, tan(x));
+    return 0;}
+  case 14: {
+    get_float_arg(args, 0, x);
+    set_float_arg(args, 1, asin(x));
+    return 0;}
+  case 15: {
+    get_float_arg(args, 0, x);
+    set_float_arg(args, 1, acos(x));
+    return 0;}
+  case 16: {
+    get_float_arg(args, 0, y);
+    get_float_arg(args, 1, x);
+    set_float_arg(args, 2, atan2(y, x));
+    return 0;}
+  case 17: {
+    get_float_arg(args, 0, x);
+    set_float_arg(args, 1, sqrt(x));
+    return 0;}
+  case 18: {
+    get_float_arg(args, 0, x);
+    set_float_arg(args, 1, floor(x));
+    return 0;}
+  case 19: {			/* integer? */
+    get_float_arg(args, 0, x);
+    return (fmod(x, 1.0) == 0.0) ? SCHTRUE : SCHFALSE; }
+  case 20: {			/* inexact->exact */
+    get_float_arg(args, 0, x);
+    if (x <= (double)GREATEST_FIXNUM_VALUE
+	&& x >= (double)LEAST_FIXNUM_VALUE)
+      return ENTER_FIXNUM((long)x);
+    else
+      return UNDEFINED;
+  }
+  case 21: {			/* quotient */
+    double z;
+    get_float_arg(args, 0, x);
+    get_float_arg(args, 1, y);
+    if (fmod(x, 1.0) != 0 || fmod(y, 1.0)) return UNDEFINED;
+    if (y == 0) return UNDEFINED;
+    z = x / y;
+    set_float_arg(args, 2, z < 0 ? ceil(z) : floor(z));
+    return 0;}
+  case 22: {			/* remainder */
+    get_float_arg(args, 0, x);
+    get_float_arg(args, 1, y);
+    if (fmod(x, 1.0) != 0 || fmod(y, 1.0)) return UNDEFINED;
+    if (y == 0) return UNDEFINED;
+
+    /* "fmod(double x, double y) returns the floating-point remainder
+       (f) of the division of x by y, where f has the same sign as x,
+       such that x=iy+f for some integer i, and |f| < |y|." */
+
+    set_float_arg(args, 2, fmod(x, y));
+    return 0;}
+  default:
+    return UNDEFINED;
   }
 }

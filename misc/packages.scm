@@ -8,13 +8,17 @@
   (open scheme
 	;; For server
 	closures
-	handle condition
+	handle conditions
 	vm-exposure
 	;; For client
 	compiler
-	command
-	;; For both
-	packages built-in-structures
+	command-processor
+	interfaces
+	;; For both?
+	packages
+	packages-internal  ;package-for-syntax
+	syntactic
+	built-in-structures
 	dump/restore
 	sockets
 	signals features)
@@ -25,7 +29,7 @@
 	packages
 	environments
 	ensures-loaded
-	package-commands
+	package-commands-internal
 	signals)
   (files require))
 

@@ -18,7 +18,6 @@
        (if (and (symbol? den)
 		(let ((loc (package-lookup-location p name #f)))
 		  (and (location-defined? loc)
-		       (location-assigned? loc)
 		       (structure? (contents loc)))))
 	   (proc name (contents loc))))
      p)

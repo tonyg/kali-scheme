@@ -49,7 +49,7 @@
 				      (table-set! table name type))
 				    name)
 			  (table-set! table name type)))
-		    (table-set! table item 'undeclared)))
+		    (table-set! table item undeclared-type)))
 	      (if (vector? items)
 		  (vector->list items)
 		  items))

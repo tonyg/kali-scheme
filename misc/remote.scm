@@ -15,12 +15,21 @@
 ; Server side
 
 (define (note-structure-locations! s)
-  (let ((p (structure-package s)))
-    (for-each-binding (lambda (name type binding)
-			(if (and (pair? binding)
-				 (not (eq? type 'syntax)))
-			    (note-location! (cdr binding))))
-		      s)))
+  (define (recur name env trail)
+    (let ((b (generic-lookup env name)))
+      (if (binding? b)
+	  (begin
+	    (note-location! (binding-place b))
+	    (let ((t (binding-static b)))
+	      (if (and (transform? t) (not (member t trail)))
+		  (let ((trail (cons t trail))
+			(env (transform-env t)))
+		    (for-each (lambda (name)
+				(recur name env trail))
+			      (transform-aux-names (binding-static b))))))))))
+  (for-each-declaration (lambda (name type)
+			  (recur name s '())) 
+			(structure-interface s)))
 
 (note-structure-locations! scheme-level-2)
 

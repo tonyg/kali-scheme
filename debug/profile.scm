@@ -9,7 +9,7 @@
 ; other procedures.    JAR 12/92
 
 '
-(define-package ((profiler (export profile one-second)))
+(define-structure profiler (export profile one-second)
   (open scheme-level-2 handle exception ;interrupts
 	architecture continuation signals condition template
 	table structure-refs debug-data sort

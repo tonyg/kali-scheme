@@ -6,10 +6,10 @@
 (define-interface scheme-level-0-interface
   (export ((if begin lambda letrec quote set!
 	       define define-syntax let-syntax letrec-syntax)
-	   syntax)
+	   :syntax)
 	  
 	  ;; The basic derived expression types.
-	  ((and cond do let let* or) syntax)
+	  ((and cond do let let* or) :syntax)
 
 	  apply
 
@@ -106,7 +106,6 @@
 
 (define-interface locations-interface
   (export location?
-	  location-assigned?
 	  location-defined?
 	  location-id
 	  make-location			;run.scm ? mini-packages.scm ?
@@ -163,7 +162,7 @@
 ; Level 1: The rest of Scheme except for I/O.
 
 (define-interface scheme-level-1-adds-interface
-  (export ((case delay quasiquote syntax-rules) syntax)
+  (export ((case delay quasiquote syntax-rules) :syntax)
 	  <= > >=
 	  abs
 	  append  assoc assq assv
@@ -263,7 +262,7 @@
 	  record-type-field-names))
 
 (define-interface define-record-types-interface
-  (export (define-record-type syntax)
+  (export (define-record-type :syntax)
 	  define-record-discloser))
 
 (define-interface fluids-interface
@@ -282,8 +281,8 @@
 	  fluid-lookup))		;wind.scm
 
 (define-interface enumerated-interface
-  (export (define-enumeration syntax)
-	  (enum syntax)
+  (export (define-enumeration :syntax)
+	  (enum :syntax)
 	  enumerand->name
 	  name->enumerand))
 
@@ -347,7 +346,7 @@
 	  interrupt-before-heap-overflow!
 	  schedule-interrupt
 	  interrupt
-	  (enum syntax)))
+	  (enum :syntax)))
 
 (define-interface writing-interface
   (export write
@@ -465,7 +464,7 @@
 	  procedure-type-argument-types
 	  procedure-type-arity
 	  any-procedure-type
-	  (proc syntax)
+	  (proc :syntax)
 
 	  variable-type
 	  variable-type?
@@ -477,8 +476,16 @@
 	  boolean-type
 	  char-type
 	  number-type
-	  pair-type
+	  null-type
 	  unspecific-type
+
+	  pair-type
+	  string-type
+	  symbol-type
+	  vector-type
+
+	  zero-type
+	  escape-type
 	  usual-variable-type))
 
 (define-interface syntactic-interface
@@ -711,43 +718,52 @@
 	  with-interaction-environment))
 
 (define-interface defpackage-interface
-  (export ((define-package 
-	    define-interface
+  (export ((define			;Formerly define-structure
+	    define-interface		;Formerly define-signature
+	    define-structures		;Formerly define-package
 	    define-structure
 	    define-module
 	    define-syntax
 	    ;; compound-interface
-	    ;; export
+	    export
 	    begin)
-	   syntax)
+	   :syntax)
 	  interface-of
 	  init-defpackage!
 	  set-verify-later!))
 
 (define-interface types-interface
-  (export (syntax type)
-	  (any-values type)
-	  some-values			; (some-values T1 ... Tn)
-	  (value type)
-	  (variable (proc (type) type))         ; (variable T)
-	  (procedure (proc (type type) type))   ; (procedure T1 T2)
-	  (proc syntax)			; (proc (T1 ... Tn) T)
+  (export ((:syntax :values :value) :type)
+	  (some-values (procedure :values :type)) ; (some-values T1 ... Tn)
+	  (variable (proc (:type) :type))         ; (variable T)
+	  (procedure (proc (:type :type) :type))  ; (procedure T1 T2)
+	  (proc :syntax)			  ; (proc (T1 ... Tn) T)
 
-	  ((boolean
-	    number
-	    pair
-	    unspecific
-	    char
-	    structure)		;etc. etc.
-	   type)
+	  ((:boolean
+	    :char
+	    :number
+	    :null
+	    :unspecific
 
-	  type))		;Holy stratification, Batman!
+	    :pair
+	    :string
+	    :symbol
+	    :vector
+	    :procedure
+
+	    :zero
+	    :escape)
+	   :type)
+
+	  (:structure :type)
+
+	  :type))		;Holy stratification, Batman!
 
 
 ; VM architecture
 
 (define-interface architecture-interface
-  (export (enum syntax) ;so you don't have to remember to open enumerated
+  (export (enum :syntax) ;so you don't have to remember to open enumerated
 	  bits-used-per-byte
 	  interrupt
 	  interrupt-count

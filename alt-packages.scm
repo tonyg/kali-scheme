@@ -9,60 +9,60 @@
 ; Run-time structures: (cf. interface definition in packages.scm)
 
 ; Same as in rts-packages.scm:
-(define-package ((architecture architecture-interface))
+(define-structures ((architecture architecture-interface))
   (open scheme-level-1 signals enumerated)
   (files (rts arch)))
 
-(define-package ((define-record-types define-record-types-interface))
+(define-structures ((define-record-types define-record-types-interface))
   (open scheme-level-1 records)
   (files (rts jar-defrecord)))
 (define-structure bummed-define-record-types define-record-types)
 
-(define-package ((closures closures-interface))
+(define-structures ((closures closures-interface))
   (open scheme-level-1 records)
   (files (alt closure)))
 
 ; Same as in rts-packages.scm:
-(define-package ((enumerated enumerated-interface))
+(define-structures ((enumerated enumerated-interface))
   (open scheme-level-1 signals)
   (files (rts enum)
 	 (rts defenum scm)))
 
-(define-package ((fluids fluids-interface))
+(define-structures ((fluids fluids-interface))
   (open scheme-level-1 signals)
   (files (alt fluid)))
 
-(define-package ((locations locations-interface))
+(define-structures ((locations locations-interface))
   (open scheme-level-2 signals)
   (files (alt locations)))
 
-(define-package ((loopholes (export (loophole syntax))))
+(define-structures ((loopholes (export (loophole :syntax))))
   (open scheme-level-2)
   (files (alt loophole)))
 
-(define-package ((source-file-names (export (%file-name% syntax))))
+(define-structures ((source-file-names (export (%file-name% :syntax))))
   (open scheme-level-1 fluids syntactic)
   (files (alt file-name)))  ;tiny file
 
-(define-package ((scheme-level-2 scheme-level-2-interface)
+(define-structures ((scheme-level-2 scheme-level-2-interface)
 		 (scheme-level-1 scheme-level-1-interface))
   (open scheme))
 
-(define-package ((templates templates-interface))
+(define-structures ((templates templates-interface))
   (open scheme-level-1)
   (files (alt template)
 	 (rts template)))
 
-(define-package ((util util-interface))
+(define-structures ((util util-interface))
   (open scheme-level-1)
   (files (rts util)))
 
-(define-package ((weak weak-interface))
+(define-structures ((weak weak-interface))
   (open scheme-level-1 signals)
   (files (alt weak)
 	 (rts population)))
 
-(define-package ((write-images (export write-image)))
+(define-structures ((write-images (export write-image)))
   (open scheme-level-2
 	tables			;Forward reference
 	features bitwise ascii enumerated
@@ -82,7 +82,7 @@
 ; continuations	       - same as run-time's
 ; display-conditions   - same as run-time's
 
-(define-package ((escapes escapes-interface))
+(define-structures ((escapes escapes-interface))
   (open scheme-level-2 define-record-types signals)
   (files (alt escape)))
 
@@ -91,8 +91,8 @@
 ; generics	       - same as run-time's
 ; interrupts	       - no way
 
-(define-package ((low-level low-level-interface)
-		 (silly (export really-string->symbol reverse-list->string)))
+(define-structures ((low-level low-level-interface)
+		    (silly (export really-string->symbol reverse-list->string)))
   (open scheme-level-2 signals escapes)
   (files (alt low)))
 
@@ -103,11 +103,11 @@
 ;  reading wind exception records-internal number-i/o strucure-refs
 ;  fluids-internal ports
 
-(define-package ((alt-primitives primitives-interface)
-		 (primitives-internal (export maybe-handle-interrupt
-					      raise-exception
-					      get-exception-handler
-					      ?start)))
+(define-structures ((alt-primitives primitives-interface)
+		    (primitives-internal (export maybe-handle-interrupt
+						 raise-exception
+						 get-exception-handler
+						 ?start)))
   (open scheme-level-2
 	bitwise records
 	features

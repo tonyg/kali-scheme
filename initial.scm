@@ -5,7 +5,7 @@
 
 (load-configuration "interfaces.scm")
 
-(define-package ((module-system (export ))) ) ;Necessary for flatload.
+(define-structure module-system (export ) (open )) ;Necessary for flatload.
 (load-configuration "packages.scm")
 
 (flatload initial-structures)

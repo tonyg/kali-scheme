@@ -56,7 +56,7 @@
 	       (error "invalid format string" string i)
 	       (loop (+ i 2)
 		     ((vector-ref format-dispatch-vector
-				  (char->integer (string-ref string (+ i 1))))
+				  (char->ascii (string-ref string (+ i 1))))
 		      string
 		      (+ i 2)
 		      args
@@ -65,8 +65,8 @@
 	   (write-char (string-ref string i) out)
 	   (loop (+ i 1) args)))))
 
-; One more than the highest integer that CHAR->INTEGER may return.
-(define number-of-char-codes 256)  ; just a guess
+; One more than the highest integer that CHAR->ASCII may return.
+(define number-of-char-codes ascii-limit)
 
 ; The vector of procedures implementing format directives.
 
@@ -80,12 +80,12 @@
 ; This implements FORMATs case-insensitivity.
 
 (define (define-format-command char proc)
-  (vector-set! format-dispatch-vector (char->integer char) proc)
+  (vector-set! format-dispatch-vector (char->ascii char) proc)
   (if (char-alphabetic? char)
       (vector-set! format-dispatch-vector
-		   (char->integer (if (char-lower-case? char)
-				      (char-upcase char)
-				      (char-downcase char)))
+		   (char->ascii (if (char-lower-case? char)
+				    (char-upcase char)
+				    (char-downcase char)))
 		   proc)))
 
 ; Write a single ~ character.

@@ -1,18 +1,19 @@
 ; Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
-; The DEFINE-PACKAGE and DEFINE-INTERFACE macros.
+; The DEFINE-INTERFACE and DEFINE-STRUCTURE macros.
 
-(define-syntax define-modular
+(define-syntax def
   (syntax-rules ()
-    ((define-modular (?name) ?exp)
-     ;; Redundant work around for bug in Scheme->C
-     (define ?name (begin (verify-later! (lambda () ?name))
-			  ?exp)))
-    ((define-modular (?name ...) ?exp)
+    ;; Redundant work around for bug in Scheme->C
+    ((def (?name) ?exp) (def ?name ?exp))
+    ((def (?name ...) ?exp)
      (begin (verify-later! (lambda () ?name))
 	    ...
-	    (define-values (?name ...) ?exp)))))
+	    (define-values (?name ...) ?exp)))
+    ((def ?name ?exp)
+     (define ?name (begin (verify-later! (lambda () ?name))
+			  ?exp)))))
 
 (define-syntax define-values
   (syntax-rules ()
@@ -38,15 +39,19 @@
     ((define-interface ?name ?int)
      (define ?name
        (begin (verify-later! (lambda () ?name))
-	      (a-interface ?name ?int))))))
+	      (an-interface ?name ?int))))))
 
-(define-syntax a-interface
+(define-syntax export
+  (syntax-rules ()
+    ((export ?spec ...) (an-interface (export ?spec ...)))))
+
+(define-syntax an-interface
   (syntax-rules (export compound-interface)
-    ((a-interface ?name (export ?item ...))
+    ((an-interface ?name (export ?item ...))
      (really-export '?name ?item ...))
-    ((a-interface ?name (compound-interface ?int ...))
-     (make-compound-interface '?name (a-interface #f ?int) ...))
-    ((a-interface ?name ?int)	;name
+    ((an-interface ?name (compound-interface ?int ...))
+     (make-compound-interface '?name (an-interface #f ?int) ...))
+    ((an-interface ?name ?int)	;name
      ?int)))
 
 
@@ -63,7 +68,7 @@
 	    `(,(r 'make-simple-interface)
 	      ,(cadr e)
 	      (,(r 'list) (,(r 'quote) ,(list (reverse plain)
-					      'undeclared))
+					      ':undeclared))
 			  ,@(reverse others)))
 	    (let ((item (car items)))
 	      (if (pair? item)
@@ -84,19 +89,22 @@
 
 (define-syntax define-structure
   (syntax-rules ()
+    ((define-structure ?name ?int ?clause1 ?clause ...)
+     (define-structures ((?name ?int)) ?clause1 ?clause ...))
+    ;; For compatibility (?)
     ((define-structure ?name ?exp)
-     (define-modular (?name) ?exp))))
+     (def ?name ?exp))))
 
 
 ; Packages
 
-(define-syntax define-package
+(define-syntax define-structures
   (syntax-rules (implement export)
-    ((define-package ((?name ?int) ...)
+    ((define-structures ((?name ?int) ...)
        (?keyword ?stuff ...) ...)
-     (define-modular (?name ...)
+     (def (?name ...)
        (let ((p (a-package (?name ...) (?keyword ?stuff ...) ...)))
-	 (values (make-structure p (lambda () (a-interface #f ?int)) '?name)
+	 (values (make-structure p (lambda () (an-interface #f ?int)) '?name)
 		 ...))))))
 
 (define-syntax a-package
@@ -114,7 +122,7 @@
 	  (cond ((null? clauses)
 		 (values opens accesses for-syntaxes (reverse others)))
 		((not (list? (car clauses)))
-		 (display "Ignoring invalid define-package clause")
+		 (display "Ignoring invalid define-structures clause")
 		 (newline)
 		 (write (car clauses)) (newline)
 		 (loop (cdr clauses)
@@ -183,6 +191,4 @@
 (define-syntax define-module
   (syntax-rules ()
     ((define-module (?name . ?args) ?body ...)
-     (define ?name
-       (begin (verify-later! (lambda () ?name))
-	      (lambda ?args ?body ...))))))
+     (def ?name (lambda ?args ?body ...)))))

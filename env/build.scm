@@ -11,25 +11,27 @@
 
 ; dump <filename>
 
-(define-command 'dump "<filename>" "write a heap image"
-  '(filename &opt form)
-  (lambda (filename info)
-    (let ((info (or info "(suspended image)"))
-	  (context (user-context))
-	  (env (environment-for-commands)))
-      (build-image (lambda (arg)
-		     (start-command-processor arg
-					      context
-					      env
-					      (lambda () (greet-user info))))
-		   filename))))
+(define-command-syntax 'dump "<filename>" "write a heap image"
+  '(filename &opt form))
+
+(define (dump filename . maybe-info)
+  (let ((info (if (null? maybe-info) "(suspended image)" (car maybe-info)))
+	(context (user-context))
+	(env (environment-for-commands)))
+    (build-image (lambda (arg)
+		   (start-command-processor arg
+					    context
+					    env
+					    (lambda () (greet-user info))))
+		 filename)))
 
 ; build <exp> <filename>
 
-(define-command 'build "<exp> <filename>" "application builder"
-  '(expression filename)
-  (lambda (exp filename)
-    (build-image (evaluate exp (environment-for-commands)) filename)))
+(define-command-syntax 'build "<exp> <filename>" "application builder"
+  '(expression filename))
+
+(define (build exp filename)
+  (build-image (evaluate exp (environment-for-commands)) filename))
 
 ; build-image
 

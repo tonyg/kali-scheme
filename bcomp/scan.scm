@@ -75,9 +75,9 @@
 ; Process a single top-level form, returning a list of (loc . node)'s.
 
 (define scan-form
-  (let ((begin-node? (node-predicate 'begin 'syntax))
-	(define-node? (node-predicate 'define 'syntax))
-	(define-syntax-node? (node-predicate 'define-syntax 'syntax)))
+  (let ((begin-node? (node-predicate 'begin syntax-type))
+	(define-node? (node-predicate 'define syntax-type))
+	(define-syntax-node? (node-predicate 'define-syntax syntax-type)))
     (lambda (form p env)
       (let ((node (classify form env)))
 	(cond ((begin-node? node)
@@ -187,7 +187,7 @@
 		  ((usual-transforms)
 		   (initialize-usual-transforms! p (cdr clause)))
 		  (else
-		   (error "unrecognized define-package keyword"
+		   (error "unrecognized define-structure keyword"
 			  clause))))
 	      (package-clauses p))
 
@@ -244,7 +244,7 @@
 	      (package-define! p name
 			       (make-transform (usual-transform name)
 					       p
-					       'syntax
+					       syntax-type
 					       `(usual-transform ',name)
 					       name)))
 	    names))
@@ -255,7 +255,8 @@
   (let ((procs '()))
     (table-walk (lambda (name op)
 		  (let ((type (operator-type op)))
-		    (if (not (memq type '(syntax leaf internal)))
+		    (if (not (or (eq? type syntax-type)
+				 (memq type '(leaf internal))))
 			(set! procs (cons name procs)))))
 		operators-table)
     (let ((nodes (scan-forms (map make-define-primitive-node procs)
@@ -268,9 +269,9 @@
 
 
 (define make-define-primitive-node
-  (let ((operator/define (get-operator 'define 'syntax))
+  (let ((operator/define (get-operator 'define syntax-type))
 	(operator/primitive-procedure
-	 (get-operator 'primitive-procedure 'syntax)))
+	 (get-operator 'primitive-procedure syntax-type)))
     (lambda (name)
       (make-node operator/define
 		 `(define ,name

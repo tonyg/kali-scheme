@@ -40,10 +40,10 @@
 (define bits-per-io-byte 8)    ; for writing images
 
 (define (write-page port)
-  (write-char (integer->char 12) port))
+  (write-char (ascii->char 12) port))
 
 (define (write-byte byte port)
-  (write-char (integer->char byte) port))
+  (write-char (ascii->char byte) port))
   
 (define io-byte-mask
   (low-bits -1 bits-per-io-byte))
