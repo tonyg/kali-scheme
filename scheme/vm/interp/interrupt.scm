@@ -34,6 +34,8 @@
 						   return-code-pc))
   (goto find-and-call-interrupt-handler))
 
+; MG: This is an old comment, I don't want to remove it because I
+; don't understand it:
 ; We now have three places interrupts are caught:
 ;  - during a byte-code call
 ;  - during a native-code call
@@ -49,15 +51,15 @@
 ; Ditto, except that we are going to return to the current continuation instead
 ; of continuating with the current template.
 
-(define (push-native-interrupt-continuation)
+(define (push-poll-interrupt-continuation)
   (push-interrupt-state)
-  (push native-interrupt-continuation-descriptors)
+  (push poll-interrupt-continuation-descriptors)
   (push-continuation! (code+pc->code-pointer *interrupt-return-code*
 					     return-code-pc)))
 
 (define interrupt-state-descriptors 2)
 
-(define native-interrupt-continuation-descriptors
+(define poll-interrupt-continuation-descriptors
   (enter-fixnum (+ 1		; this number
 		   interrupt-state-descriptors)))
 
@@ -140,7 +142,7 @@
       (begin
         (push-continuation! (address+ *code-pointer*
 				      (code-offset 0)))
-        (push-native-interrupt-continuation)
+        (push-poll-interrupt-continuation)
         (goto find-and-call-interrupt-handler))
       (goto continue 2)))
 	    
@@ -148,7 +150,7 @@
 
 (define-opcode return-from-interrupt
   (let ((byte? (not (fixnum= (pop)
-			     native-interrupt-continuation-descriptors))))
+			     poll-interrupt-continuation-descriptors))))
     (s48-pop-interrupt-state)
     (cond (byte?
 	   (let ((pc (pop)))
