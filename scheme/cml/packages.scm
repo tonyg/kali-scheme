@@ -1,6 +1,6 @@
 (define-structure trans-ids trans-ids-interface
   (open scheme
-	big-util
+	signals				; error
 	cells
 	threads (subset threads-internal (maybe-commit-and-block))
 	proposals)
@@ -12,13 +12,13 @@
 	define-record-types
 	trans-ids
 	threads
-	threads-internal		; ####can we remove this?
+	(subset threads-internal (maybe-commit-and-make-ready
+				  maybe-commit-and-block))
 	proposals
 	big-util
-	queues
+	cells queues
 	(subset util (unspecific))
-	debug-messages
-	)
+	debug-messages)
   (files rendezvous))
 
 (define-structure rendezvous-channels rendezvous-channels-interface
