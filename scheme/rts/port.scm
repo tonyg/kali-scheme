@@ -112,11 +112,6 @@
 
 (define (real-char-ready? port)
   (cond
-   ;; This is an approximation only: since we don't know what
-   ;; character the program wants to write, we don't know if it can be
-   ;; written without blocking.
-   ((open-output-port? port)
-    (real-byte-ready? port))
    ((open-input-port? port)
     ((port-handler-char (port-handler port)) port '()))
    (else
