@@ -1,7 +1,5 @@
 
 % Still to do:
-%  list utilities
-%  rest of big-util
 %  destructure
 %  format (?)
 
@@ -14,6 +12,133 @@ Use the
 \link*{the module language}
 [the module language (chapter~\Ref)]{module-guide}
  to open the structures described below.
+
+\section{General utilities}
+\label{big-util}
+
+%% These are missing:
+%%        copy-string
+%%        string->immutable-string
+%%        error
+%%        breakpoint
+
+These are in the \code{big-util} structure.
+
+\begin{protos}
+\proto{atom?}{ value}{boolean}
+\end{protos}
+%
+\code{(atom? \var{x})} is the same as \code{(not (pair? \var{x}))}.
+
+\begin{protos}
+\proto{null-list?}{ list}{boolean}
+\end{protos}
+%
+Returns true for the empty list, false for a pair, and signals an
+error otherwise.
+
+\begin{protos}
+\proto{neq?}{ value value}{boolean}
+\end{protos}
+\code{(neq? \var{x} \var{y})} is the same as \code{(not (eq? \var{x}
+\var{y}))}.
+
+\begin{protos}
+\proto{n=}{ number number}{boolean}
+\end{protos}
+\code{(n= \var{x} \var{y})} is the same as \code{(not (= \var{x}
+  \var{y}))}.
+
+\begin{protos}
+\proto{identity}{ value}{value}
+\proto{no-op}{ value}{value}
+\end{protos}
+These both just return their argument.  \code{No-op} is guaranteed not to
+be compiled in-line, \code{identity} may be.
+
+\begin{protos}
+\proto{memq?}{ value list}{boolean}
+\end{protos}
+%
+Returns true if \var{value} is in \var{list}, false otherwise.
+
+\begin{protos}
+\proto{any?}{ predicate list}{boolean}
+\end{protos}
+Returns true if \var{predicate} is true for any element of \var{list}.
+
+\begin{protos}
+\proto{every?}{ predicate list}{boolean}
+\end{protos}
+  Returns true if \var{predicate} is true for every element of \var{list}.
+
+\begin{protos}
+\proto{any}{ predicate list}{value}
+\proto{first}{ predicate list}{value}
+\end{protos}
+\code{Any} returns some element of \var{list} for which \var{predicate} is true, or
+false if there are none.  \code{First} does the same except that it returns
+the first element for which \var{predicate} is true.
+
+\begin{protos}
+\proto{filter}{ predicate list}{list}
+\proto{filter!}{ predicate list}{list}
+\end{protos}
+Returns a list containing all of the elements of \var{list} for which
+\var{predicate} is true.  The order of the elements is preserved.
+\code{Filter!} may reuse the storage of \var{list}.
+
+\begin{protos}
+\proto{filter-map}{ procedure list}{list}
+\end{protos}
+The same as \code{filter} except the returned list contains the results of
+applying \var{procedure} instead of elements of \var{list}.  \code{(filter-map \var{p}
+\var{l})} is the same as \code{(filter identity (map \var{p} \var{l}))}.
+
+\begin{protos}
+\proto{partition-list}{ predicate list}{list list}
+\proto{partition-list!}{ predicate list}{list list}
+\end{protos}
+The first return value contains those elements \var{list} for which
+\var{predicate} is true, the second contains the remaining elements.
+The order of the elements is preserved.  \code{Partition-list!} may
+reuse the storage of the \var{list}.
+
+\begin{protos}
+\proto{remove-duplicates}{ list}{list}
+\end{protos}
+Returns its argument with all duplicate elements removed.  The first
+instance of each element is preserved.
+
+\begin{protos}
+\proto{delq}{ value list}{list}
+\proto{delq!}{ value list}{list}
+\proto{delete}{ predicate list}{list}
+\end{protos}
+All three of these return \var{list} with some elements removed.
+\code{Delq} removes all elements \code{eq?} to \var{value}.  DELQ!
+does the same and may modify the list argument.  \code{Delete} removes
+all elements for which \var{predicate} is true.  Both \code{delq} and
+\code{delete} may reuse some of the storage in the list argument, but
+won't modify it.
+
+\begin{protos}
+\proto{reverse!}{ list}{list}
+\end{protos}
+Destructively reverses \var{list}.
+
+\begin{protos}
+\proto{concatenate-symbol}{ value \ldots}{symbol}
+\end{protos}
+Returns the symbol whose name is produced by concatenating the
+\code{display}ed
+representations of \var{value}~\ldots.
+%
+\begin{alltt}
+(concatenate-symbol 'abc "-" 4) \(\Longrightarrow\) 'abc-4
+\end{alltt}
+
+\section{Pretty-printing}
 
 \section{ASCII character encoding}
 \label{ascii-procedures}
