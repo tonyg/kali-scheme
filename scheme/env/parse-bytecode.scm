@@ -139,10 +139,12 @@
 ;  offsets of vars in level]*
 
 (define-record-type env-data :env-data
-  (make-env-data total-count frame-offsets closure-offsets env-offsets)
+  (make-env-data total-count frame-offsets maybe-template-index closure-offsets
+                 env-offsets)
   env-data?
   (total-count env-data-total-count)
   (frame-offsets env-data-frame-offsets)
+  (maybe-template-index env-data-maybe-template-index)
   (closure-offsets env-data-closure-offsets)
   (env-offsets env-data-env-offsets))
 
@@ -150,37 +152,39 @@
   (let ((start-pc pc)
 	(total-count (fetch code pc))
 	(closure-count (fetch code (+ pc size))))
-    (let* ((closure-offsets (if (< 0 closure-count)
-				(cons (fetch code (+ pc size size))
-				      (get-offsets code (+ pc size size size)
-						   size fetch closure-count))
-				#f))
-	   (pc (if (< 0 closure-count)
-		   (+ pc
-		      (* 2 size)		; counts
-		      size			; template offset
-		      (* closure-count size)); subtemplates
-		   (+ pc (* 2 size))))		; counts
-	   (frame-count (fetch code pc))
-	   (pc (+ pc size)))
-      (let ((frame-offsets (get-offsets code pc size fetch frame-count)))
-	(let ((pc (+ pc (* frame-count size)))
-	      (count (+ closure-count frame-count)))
-	  (let loop ((pc pc) (count count) (rev-env-offsets '()))
-	    (if (= count total-count)
-                (values (- pc start-pc)
-                        (make-env-data total-count frame-offsets closure-offsets
-                                       (reverse rev-env-offsets)))
-		(let* ((env (fetch code pc))
-		       (count-here (fetch code (+ pc size)))
-		       (indexes (get-offsets code 
-					     (+ pc size size) 
-					     size 
-					     fetch
-					     count-here)))
-		  (loop (+ pc (* (+ 2 count-here) size))
-			(+ count count-here)
-			(cons (cons env indexes) rev-env-offsets))))))))))
+    (receive (template-index closure-offsets)
+        (if (< 0 closure-count)
+            (values (fetch code (+ pc size size))
+                    (get-offsets code (+ pc size size size)
+                                 size fetch closure-count))
+            (values #f '()))
+      (let* ((pc (if (< 0 closure-count)
+                     (+ pc
+                        (* 2 size)      ; counts
+                        size            ; template offset
+                        (* closure-count size)) ; subtemplates
+                     (+ pc (* 2 size)))) ; counts
+             (frame-count (fetch code pc))
+             (pc (+ pc size)))
+        (let ((frame-offsets (get-offsets code pc size fetch frame-count)))
+          (let ((pc (+ pc (* frame-count size)))
+                (count (+ closure-count frame-count)))
+            (let loop ((pc pc) (count count) (rev-env-offsets '()))
+              (if (= count total-count)
+                  (values (- pc start-pc)
+                          (make-env-data total-count frame-offsets 
+                                         template-index closure-offsets
+                                         (reverse rev-env-offsets)))
+                  (let* ((env (fetch code pc))
+                         (count-here (fetch code (+ pc size)))
+                         (indexes (get-offsets code 
+                                               (+ pc size size) 
+                                               size 
+                                               fetch
+                                               count-here)))
+                    (loop (+ pc (* (+ 2 count-here) size))
+                          (+ count count-here)
+                          (cons (cons env indexes) rev-env-offsets)))))))))))
 		
 
 (define (get-offsets code pc size fetch count)

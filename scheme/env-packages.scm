@@ -301,7 +301,8 @@
           opcode-table-set!
           protocol-nargs n-ary-protocol?          
           env-data? env-data-total-count env-data-frame-offsets
-          env-data-closure-offsets env-data-env-offsets
+          env-data-maybe-template-index env-data-closure-offsets 
+          env-data-env-offsets
           cont-data? cont-data-length cont-data-mask-bytes cont-data-pc
           cont-data-gc-mask-size cont-data-depth))
           

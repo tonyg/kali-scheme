@@ -165,11 +165,12 @@
     (display #\space)
     (write (env-data-total-count env-data))
     (display #\space)
+    
     (let ((closure-offsets (env-data-closure-offsets env-data)))
-      (if closure-offsets
+      (if (not (null? closure-offsets))
           (begin
-            (write (- (length closure-offsets) 1))
-            (display-flat-env-closures closure-offsets))
+            (write (length closure-offsets))
+            (display-flat-env-closures env-data))
           (write 0)))
 
     (display #\space)
@@ -186,14 +187,14 @@
     (display #\))
     level))
 
-(define (display-flat-env-closures closure-offsets)
+(define (display-flat-env-closures env-data)
   (display " (closures from ")
-  (display (car closure-offsets))
+  (display (env-data-maybe-template-index env-data))
   (display #\:)
   (for-each (lambda (offset)
               (display #\space)
               (display offset))
-            (cdr closure-offsets))
+            (env-data-closure-offsets env-data))
   (display #\)))
 
 (define-disasm make-flat-env disasm-make-flat-env)
