@@ -760,6 +760,7 @@
 	  make-integer-table
 	  make-table-maker
 	  table?
+          table-size
 	  table-ref
 	  table-set!
 	  table-walk
