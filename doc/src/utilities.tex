@@ -140,6 +140,17 @@ representations of \var{value}~\ldots.
 
 \section{Pretty-printing}
 
+These are in the \code{pp} structure.
+
+\begin{protos}
+\protonoresult{p}{ value}
+\protonoresult{p}{ value output-port}
+\protonoresult{pretty-print}{ value output-port position}
+\end{protos}
+Pretty-print \var{value} The current output port is used if no port is
+specified.  \var{Position} is the starting offset.  \var{Value} will be
+pretty-printed to the right of this column.
+
 \section{ASCII character encoding}
 \label{ascii-procedures}
 
