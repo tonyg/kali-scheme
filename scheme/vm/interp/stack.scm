@@ -346,13 +346,13 @@
     (data-init! data exception-cont-instruction-size-index inst-size)
     (push-continuation! code-pointer)))
 
-(define (push-native-exception-continuation! code-pointer pc code exception)
+(define (push-native-exception-continuation! code-pointer opcode cont exception)
   (add-cells-to-stack! exception-continuation-cells)
   (let ((data (address->stob-descriptor *stack*))
 	(size (enter-fixnum (operands-on-stack))))
     (data-init! data exception-cont-size-index             size)
-    (data-init! data exception-cont-pc-index               pc)
-    (data-init! data exception-cont-code-index             code)
+    (data-init! data exception-cont-pc-index               opcode)
+    (data-init! data exception-cont-code-index             cont)
     (data-init! data exception-cont-exception-index        exception)
     (data-init! data exception-cont-instruction-size-index 0) ;empty
     (push-continuation! code-pointer)))
