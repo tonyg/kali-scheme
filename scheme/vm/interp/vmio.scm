@@ -340,7 +340,7 @@
 	(id (channel-id channel)))
     (if (error? status)
 	(channel-close-error status (channel-os-index channel) id))
-    (if (= false (channel-close-silently? channel))
+    (if (false? (channel-close-silently? channel))
 	(notify-channel-closed channel))))
 
 (define (notify-channel-closed channel)
