@@ -551,7 +551,15 @@
 
 (define-structure srfi-31 srfi-31-interface
   (open scheme)
-  (files (srfi srfi-31)))
+  (begin
+    ; Taken directly from the SRFI document.
+    
+    (define-syntax rec
+      (syntax-rules ()
+	((rec (NAME . VARIABLES) . BODY)
+	 (letrec ( (NAME (lambda VARIABLES . BODY)) ) NAME))
+	((rec NAME EXPRESSION)
+	 (letrec ( (NAME EXPRESSION) ) NAME))))))
 
 ;----------------
 ; ... end of package definitions.
