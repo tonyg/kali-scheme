@@ -134,7 +134,7 @@ $(posix_dir)/proc-env.o $(posix_dir)/io.o:	\
 	c/scheme48.h $(posix_dir)/posix.h
 
 $(posix_dir)/proc.o:	\
-	c/scheme48.h $(posix_dir)/posix.h $(posix_dir)/s48_signals.h
+	c/scheme48.h c/event.h $(posix_dir)/posix.h $(posix_dir)/s48_signals.h
 
 $(posix_dir)/dir.o:	\
   c/scheme48.h c/scheme48heap.h c/event.h c/fd-io.h $(posix_dir)/posix.h
