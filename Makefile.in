@@ -63,22 +63,27 @@ include $(srcdir)/build/filenames.make
 # or Pseudoscheme.  (It has also been made to run in Scheme->C.)  It
 # doesn't matter a whole lot which Scheme you use as long as it's not
 # broken or unavailable.  The two best choices are:
-# 1. As below: build the linker on the scheme48vm and scheme48.image
-#    that are in the current directory.
-# 2. LINKER_VM = $(RUNNABLE) $(BIG_HEAP)
-#    LINKER_RUNNABLE = $(RUNNABLE)
+# 1. As below.
 #    These settings requires you to already have a $(RUNNABLE)
 #    command.  This is desirable if you are making changes to the
 #    system that might break scheme48vm and/or scheme48.image.  But it
 #    requires you to have squirreled away a previous working version
 #    of scheme48.
+# 2. LINKER_VM = ./$(VM) $(BIG_HEAP)
+#    LINKER_RUNNABLE = $(LINKER_VM) -i $(IMAGE)
+#    This builds the linker on the scheme48vm and scheme48.image
+#    that are in the current directory.
 
 BIG_HEAP = -h 6000000
-LINKER_VM = ./$(VM) $(BIG_HEAP)
-LINKER_RUNNABLE = $(LINKER_VM) -i $(IMAGE)
-LINKER_IMAGE = build/linker.image
-LINKER = $(LINKER_VM) -i $(LINKER_IMAGE)
-START_LINKER = echo ',batch' && echo ',bench on'
+LINKER_VM = $(RUNNABLE) $(BIG_HEAP)
+LINKER_RUNNABLE = $(LINKER_VM)
+START_LINKER = echo ',batch';					\
+	       echo ',bench on';				\
+	       echo ',open signals handle features';		\
+	       echo ',open bitwise ascii code-vectors';		\
+	       echo ',open cells record-types';			\
+	       echo ',load $(linker-files)';			\
+	       echo ',load scheme/alt/init-defpackage.scm'
 
 # --------------------
 # You shouldn't have to change anything below this point, except for possibly
@@ -391,7 +396,6 @@ check:	$(VM) $(IMAGE) scheme/debug/check.scm
 all: vm linker
 	$(MAKE) image
 vm: $(VM)
-linker: $(LINKER_IMAGE)
 image: $(INITIAL)
 	$(MAKE) $(IMAGE)
 
@@ -494,18 +498,7 @@ build/filenames.make: $(PACKAGES)
 # The linker is capable of rebuilding an image from sources, even
 # across an incompatible change in VM data representations.
 
-build/linker.image: $(linker-files) scheme/alt/init-defpackage.scm
-	(echo ',batch';						\
-		echo ',bench on';				\
-		echo ',open signals handle features';		\
-		echo ',open bitwise ascii code-vectors';	\
-		echo ',open cells record-types';		\
-		echo ',load $(linker-files)';			\
-		echo ',load scheme/alt/init-defpackage.scm';	\
-		echo ',dump build/linker.image'			\
-	) | $(LINKER_RUNNABLE)
-
-# Or, to bootstrap from Lucid Common Lisp: (last tested with
+# Bootstrap from Lucid Common Lisp: (last tested with
 # Pseudoscheme 2.9 and Scheme 48 version 0.19)
 
 PSEUDODIR = ../pseudo
@@ -525,7 +518,8 @@ link/linker-in-lucid: build/lucid-script.lisp $(linker-files) \
 # Scheme, the byte-code compiler, and a minimal command processor, but
 # no debugging environment to speak of.
 
-$(INITIAL): $(LINKER_IMAGE) $(CONFIG_FILES) build/initial.scm $(initial-files)
+$(INITIAL): $(CONFIG_FILES) build/initial.scm $(initial-files)
+	cd $(srcdir) &&							\
 	($(START_LINKER);						\
 		echo '(load-configuration "scheme/interfaces.scm")';	\
 		echo '(load-configuration "scheme/vm/shared-interfaces.scm")'; \
@@ -533,7 +527,7 @@ $(INITIAL): $(LINKER_IMAGE) $(CONFIG_FILES) build/initial.scm $(initial-files)
 		echo '(flatload initial-structures)';			\
 		echo '(load "build/initial.scm")';			\
 		echo '(link-initial-system)'				\
-	) | $(LINKER)
+	) | $(LINKER_RUNNABLE)
 
 # --------------------
 # Various small images for debugging low-level changes
@@ -544,32 +538,37 @@ LOAD_DEBUG = \
 	 echo \(load-configuration \"scheme/packages.scm\"\); \
 	 echo \(flatload debug-structures\)
 
-scheme/debug/tiny.image: $(LINKER_IMAGE) scheme/debug/tiny-packages.scm \
+scheme/debug/tiny.image: scheme/debug/tiny-packages.scm \
 		  scheme/debug/tiny.scm
+	cd $(srcdir) && \
 	($(START_LINKER); \
 	 echo \(load-configuration \"scheme/debug/tiny-packages.scm\"\); \
 	 echo \(link-simple-system \'\(scheme/debug tiny\) \'start tiny-system\)) \
-	| $(LINKER)
+	| $(LINKER_RUNNABLE)
 
-scheme/debug/low-test.image: $(LINKER_IMAGE) scheme/debug/low-test-packages.scm \
+scheme/debug/low-test.image: scheme/debug/low-test-packages.scm \
 		  scheme/debug/low-test.scm
+	cd $(srcdir) && \
 	($(START_LINKER); \
 	 echo \(load-configuration \"scheme/debug/low-test-packages.scm\"\); \
 	 echo \(link-simple-system \'\(scheme/debug low-test\) \'start low-test-system\)) \
-	| $(LINKER)
+	| $(LINKER_RUNNABLE)
 
-scheme/debug/little.image: $(LINKER_IMAGE) $(CONFIG_FILES) scheme/debug-packages.scm
-	($(LOAD_DEBUG); echo \(link-little-system\)) \
-	| time $(LINKER)
+scheme/debug/little.image: $(CONFIG_FILES) scheme/debug-packages.scm
+	cd $(srcdir) &&					\
+	($(LOAD_DEBUG); echo \(link-little-system\))	\
+	| time $(LINKER_RUNNABLE)
 
-scheme/debug/mini.image: $(LINKER_IMAGE) $(CONFIG_FILES)
-	($(LOAD_DEBUG); echo \(link-mini-system\)) \
-	| $(LINKER)
+scheme/debug/mini.image: $(CONFIG_FILES)
+	cd $(srcdir) &&					\
+	($(LOAD_DEBUG); echo \(link-mini-system\))	\
+	| $(LINKER_RUNNABLE)
 
-scheme/debug/medium.image: $(LINKER_IMAGE) $(CONFIG_FILES)
-	($(LOAD_DEBUG); echo \(flatload compiler-structures\); \
+scheme/debug/medium.image: $(CONFIG_FILES)
+	cd $(srcdir) &&						\
+	($(LOAD_DEBUG); echo \(flatload compiler-structures\);	\
 	 echo \(link-medium-system\)) \
-	| $(LINKER)
+	| $(LINKER_RUNNABLE)
 
 # The following have not been updated for the new directory organization
 
