@@ -57,6 +57,13 @@ s48_main(int argc, char *argv[])
   long vm_argc = 0;
   char *me = *argv;		/* Save program name. */
 
+  {
+    /* initialize floating-point printer */
+    extern void s48_free_init(void);
+
+    s48_free_init();
+  }
+
   s48_object_file = NULL;
 
   argv++; argc--;		/* Skip program name. */

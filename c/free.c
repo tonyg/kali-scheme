@@ -1,6 +1,52 @@
 /* Free-format floating point printer */
 
-#include "fp.h"
+/*
+ * All software (c) 1996 Robert G. Burger.
+
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software, to deal in the software without
+ * restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the software.
+
+ * The software is provided "as is," without warranty of any kind,
+ * express or implied, including but not limited to the warranties of
+ * merchantability, fitness for a particular purpose and
+ * noninfringement. In no event shall the author be liable for any
+ * claim, damages or other liability, whether in an action of
+ * contract, tort or otherwise, arising from, out of or in connection
+ * with the software or the use or other dealings in the software.
+ */
+
+#include "sysdep.h"
+
+typedef unsigned long word32_t;
+
+#define UNSIGNED64 unsigned long long
+#define U32 word32_t
+
+/* exponent stored + 1024, hidden bit to left of decimal point */
+#define bias 1023
+#define bitstoright 52
+#define m1mask 0xf
+#define hidden_bit 0x100000
+
+#define sign_mask 0x80000000
+#define exp_mask  0x7ff00000
+#define exp_shift1 20
+#define frac_mask 0xfffff
+
+typedef union { double d; word32_t word[2]; } double_overlay;
+
+#ifdef IEEE_MOST_FIRST
+#define DOUBLE_WORD0(x) ((double_overlay*)&(x))->word[0]
+#define DOUBLE_WORD1(x) ((double_overlay*)&(x))->word[1]
+#else
+#define DOUBLE_WORD0(x) ((double_overlay*)&(x))->word[1]
+#define DOUBLE_WORD1(x) ((double_overlay*)&(x))->word[0]
+#endif
+
+#define float_radix 2.147483648e9
 
 typedef UNSIGNED64 Bigit;
 #define BIGSIZE 24
@@ -17,21 +63,21 @@ Bignum R, S, MP, MM, five[MAX_FIVE];
 Bignum S2, S3, S4, S5, S6, S7, S8, S9;
 int ruf, k, s_n, use_mp, qr_shift, sl, slr;
 
-void mul10 PROTO((Bignum *x));
-void big_short_mul PROTO((Bignum *x, Bigit y, Bignum *z));
-void print_big PROTO((Bignum *x));
-int estimate PROTO((int n));
-void one_shift_left PROTO((int y, Bignum *z));
-void short_shift_left PROTO((Bigit x, int y, Bignum *z));
-void big_shift_left PROTO((Bignum *x, int y, Bignum *z));
-int big_comp PROTO((Bignum *x, Bignum *y));
-int sub_big PROTO((Bignum *x, Bignum *y, Bignum *z));
-void add_big PROTO((Bignum *x, Bignum *y, Bignum *z));
-int add_cmp PROTO((void));
-int qr PROTO((void));
+static void mul10(Bignum *x);
+static void big_short_mul(Bignum *x, Bigit y, Bignum *z);
+static void print_big (Bignum *x);
+static int estimate(int n);
+static void one_shift_left(int y, Bignum *z);
+static void short_shift_left(Bigit x, int y, Bignum *z);
+static void big_shift_left(Bignum *x, int y, Bignum *z);
+static int big_comp(Bignum *x, Bignum *y);
+static int sub_big(Bignum *x, Bignum *y, Bignum *z);
+static void add_big(Bignum *x, Bignum *y, Bignum *z);
+static int add_cmp(void);
+static int qr(void);
 
-int dragon PROTO((char *buf, double v));
-void free_init PROTO((void));
+int s48_dragon(char *buf, double v);
+void s48_free_init(void);
 
 #define ADD(x, y, z, k) {\
    Bigit x_add, z_add;\
@@ -325,17 +371,20 @@ int qr() {
 
 #define OUTDIG(d) { *buf++ = (d) + '0'; *buf = 0; return k; }
 
-int dragon(buf, v) char *buf; double v; {
-   struct dblflt *x;
+int s48_dragon(buf, v) char *buf; double v; {
    int sign, e, f_n, m_n, i, d, tc1, tc2;
+   word32_t word0 = DOUBLE_WORD0(v);
+   word32_t word1 = DOUBLE_WORD1(v);
    Bigit f;
 
    /* decompose float into sign, mantissa & exponent */
-   x = (struct dblflt *)&v;
-   sign = x->s;
-   e = x->e; 
-   f = (Bigit)((U32)x->m1 << 16 | (U32)x->m2) << 32 |
-       ((U32)x->m3 << 16 | (U32)x->m4);
+   sign = ((word0 & sign_mask) != 0);
+   e = (int)(word0 >> exp_shift1 & (exp_mask>>exp_shift1));
+
+   /* #### if ((word0 & exp_mask) == exp_mask) --- infinity or NaN */
+
+   f = (((Bigit)(word0 & frac_mask)) << 32) | word1;
+
    if (e != 0) {
       e = e - bias - bitstoright;
       f |= (Bigit)hidden_bit << 32;
@@ -491,7 +540,7 @@ again:
       }
 }
 
-void free_init() {
+void s48_free_init() {
    int n, i, l;
    Bignum *b;
    Bigit *xp, *zp, k;

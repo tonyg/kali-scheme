@@ -41,6 +41,40 @@ define(S48_RDYNAMIC, [dnl
 			LDFLAGS="$LDFLAGS -rdynamic"])
 ])dnl
 dnl
+define(S48_IEEE_ENDIANNESS, [dnl
+AC_MSG_CHECKING([IEEE floating-point endianness])
+AC_TRY_RUN([#include <stdio.h>
+
+typedef unsigned long word32_t;
+
+typedef union { double d; word32_t word[2]; } double_overlay;
+
+#define DOUBLE_WORD0(x) ((double_overlay*)&(x))->word[0]
+#define DOUBLE_WORD1(x) ((double_overlay*)&(x))->word[1]
+
+
+int
+main(void)
+{
+  double n = 0.3;
+	
+  /* least significant byte first */
+  if ((DOUBLE_WORD0(n) == 0x33333333) && (DOUBLE_WORD1(n) == 0x3fd33333))
+    return 0;
+  /* most significant byte first */
+  else if ((DOUBLE_WORD1(n) == 0x33333333) && (DOUBLE_WORD0(n) == 0x3fd33333))
+    return 1;
+  else {
+    fprintf(stderr, "WARNING: unknown IEEE format; assuming IEEE with least significant byte first\n");
+    return 0;
+  }
+}], ieee_endianness="least first", ieee_endianness="most first", ieee_endianness="least first")
+AC_MSG_RESULT([$ieee_endianness])
+if test "$ieee_endianness" = "most first"; then
+  AC_DEFINE([IEEE_MOST_FIRST], 1, [Define if IEEE doubles are stored with most-significant byte first.])
+fi
+])dnl
+dnl
 define(S48_USCORE, [dnl
 	AC_MSG_CHECKING([underscore before symbols])
 	echo 'main() { return 0; } fnord() {}' >conftest.c
@@ -153,6 +187,7 @@ fail
 		AC_MSG_RESULT([no]))
      S48_USCORE
      S48_RDYNAMIC
+     S48_IEEE_ENDIANNESS
      AC_SUBST(CFLAGS)
      AC_SUBST(LDFLAGS)
 AC_OUTPUT(Makefile)

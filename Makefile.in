@@ -98,7 +98,8 @@ LIBSCHEME48 = c/libscheme48.a
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
 OBJS =	c/scheme48vm.o c/scheme48heap.o \
 	c/scheme48read-image.o c/scheme48write-image.o \
-	c/extension.o c/external.o c/bignum.o c/init.o
+	c/extension.o c/free.o c/double_to_string.o \
+	c/external.o c/bignum.o c/init.o
 
 FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
 		c/fake/sys-select.h
@@ -260,6 +261,7 @@ c/scheme48write-image.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
 			c/scheme48vm-prelude.h c/c-mods.h
 c/bignum.o: c/bignum.h c/bignumint.h c/scheme48.h
 c/extension.o: c/sysdep.h $(FAKEHS) c/scheme48.h c/scheme48vm.h
+c/free.o: c/sysdep.h
 c/external.o: c/sysdep.h $(FAKEHS) c/scheme48.h c/c-mods.h
 c/unix/sysexits.o: c/sysdep.h $(FAKEHS) c/scheme48.h
 c/unix/event.o: c/sysdep.h $(FAKEHS) c/c-mods.h \
