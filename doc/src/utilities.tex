@@ -149,30 +149,6 @@ Pretty-print \var{value} The current output port is used if no port is
 specified.  \var{Position} is the starting offset.  \var{Value} will be
 pretty-printed to the right of this column.
 
-\section{ASCII character encoding}
-\label{ascii-procedures}
-
-These are in the structure \code{ascii}.
-
-\begin{protos}
-\proto{char->ascii}{ char}{integer}
-\proto{ascii->char}{ integer}{char}
-\end{protos}
-\noindent
-These are identical to \code{char->integer} and \code{integer->char} except that
- they use the
-ASCII encoding (appendix~\ref{ascii-chart}).
-
-\begin{protos}
-\constproto{ascii-limit}{integer}
-\constproto{ascii-whitespaces}{list of integers}
-\end{protos}
-\code{Ascii-limit} is one more than the largest value that \code{char->ascii}
- may return.
-\code{Ascii-whitespaces} is a list of the ASCII values of whitespace characters
- (space, horizontal tab, line feed (= newline), vertical tab, form feed, and
- carriage return).
-
 \section{Bitwise integer operations}
 
 These functions use the two's-complement representation for integers.

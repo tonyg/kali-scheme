@@ -1,0 +1,237 @@
+\chapter{Unicode}
+
+Scheme~48 fully supports ISO 10646 (Unicode): Scheme characters
+represent Unicode scalar values, and Scheme strings are arrays of
+scalar values.  More information on Unicode can be found at
+\urlhd{http://www.unicode.org/}{the Unicode web
+  site}{\code{http://www.unicode.org/}}.
+
+\section{Character range}
+
+The R$^5$RS procedures \code{char->integer} and \code{integer->char}
+convert a character to its scalar value and vice versa.  Note that the
+Unicode scalar value range is
+%
+\begin{displaymath}
+\left[0,\#x\mathit{D7FF}\right] \cup \left[\#x\mathit{E000}, \#x\mathit{10FFFF}\right]
+\end{displaymath}
+%
+Scheme~48 signals an error if a program applies \texttt{integer->char}
+to an integer outside of this range.  In particular, this excludes the
+surrogates, which UTF-16 uses to encode scalar values with two 16-bit
+words.  Note also that this representation differs from that of Java,
+which uses UTF-16 code units as the character
+representation---Scheme~48 effectively uses UTF-32, and is thus in
+line with other Scheme implementations and the current Unicode
+proposal for R$^6$RS.
+
+\section{Character classification and case mappings}
+
+The R$^5$RS character predicates---\code{char-whitespace?},
+\code{char-lower-case?}, \code{char-upper-case?},
+\code{char-numeric?}, and \code{char-alphabetic?}---all treat the full
+Unicode range.
+
+\code{Char-upcase} and \code{char-downcase} as well as
+\code{char-ci=?}, \code{char-ci<?}, \code{char-ci<=?},
+\code{char-ci>?}, \code{char-ci>=?}, \code{string-ci=?},
+\code{string-ci<?}, \code{string-ci>?}, \code{string-ci<=?},
+\code{string-ci>=?} all use the standard Unicode case mapping, which
+maps characters to characters individually, and is locale-insensitive.
+
+In addition, Scheme~48 provides the \code{unicode-char-maps} structure
+for more complete access to the Unicode character classification with
+the following procedures and macros:
+%
+\begin{protos}
+\syntaxproto{general-category}{ \cvar{general-category-name}}{general-category}
+\proto{general-category?}{ x}{boolean}
+\proto{general-category-id}{ general-category}{string}
+\proto{char-general-category}{ char}{general-category}
+\end{protos}
+%
+The syntax \code{general-category} returns a Unicode general category
+object associated with \cvar{general-category-name}.  (See
+Figure~\ref{fig:unicode-categories} below.)  \code{General-category?}
+is the predicate for general-category objects.
+\code{General-category-id} returns the Unicode category id as a string
+(also listed in Figure~\ref{fig:unicode-categories}).
+\code{Char-general-category} returns the general category of a character.
+
+\begin{figure}[tb]
+  \centering
+\begin{tabular}{l|l|l}
+  \cvar{general-category-name} & \cvar{primary-category-name} & Unicode category id
+  \\\hline
+   \texttt{uppercase-letter} & \texttt{letter} & \verb|"Lu"| \\
+   \texttt{lowercase-letter} & \texttt{letter} & \verb|"Ll"| \\
+   \texttt{titlecase-letter} & \texttt{letter} & \verb|"Lt"| \\
+   \texttt{modified-letter} & \texttt{letter} & \verb|"Lm"| \\
+   \texttt{other-letter} & \texttt{letter} & \verb|"Lo"| \\[1ex]
+
+   \texttt{non-spacing-mark} & \texttt{mark} & \verb|"Mn"| \\
+   \texttt{combining-spacing-mark} & \texttt{mark} & \verb|"Mc"| \\
+   \texttt{enclosing-mark} & \texttt{mark} & \verb|"Me"| \\[1ex]
+   
+   \texttt{decimal-digit-number} & \texttt{number} & \verb|"Nd"| \\
+   \texttt{letter-number} & \texttt{number} & \verb|"Nl"| \\
+   \texttt{other-number} & \texttt{number} & \verb|"No"| \\[1ex]
+
+   \texttt{opening-punctuation} & \texttt{punctuation} & \verb|"Ps"| \\
+   \texttt{closing-punctuation} & \texttt{punctuation} & \verb|"Pe"| \\
+   \texttt{initial-quote-punctuation} & \texttt{punctuation} & \verb|"Pi"| \\
+   \texttt{final-quote-punctuation} & \texttt{punctuation} & \verb|"Pf"| \\
+   \texttt{dash-punctuation} & \texttt{punctuation} & \verb|"Pd"| \\
+   \texttt{connector-punctuation} & \texttt{punctuation} & \verb|"Pc"| \\
+   \texttt{other-punctuation} & \texttt{punctuation} & \verb|"Po"| \\[1ex]
+   
+   \texttt{currency-symbol} & \texttt{symbol} & \verb|"Sc"| \\
+   \texttt{mathematical-symbol} & \texttt{symbol} & \verb|"Sm"| \\
+   \texttt{modifier-symbol} & \texttt{symbol} & \verb|"Sk"| \\
+   \texttt{other-symbol} & \texttt{symbol} & \verb|"So"| \\[1ex]
+
+   \texttt{space-separator} & \texttt{separator} & \verb|"Zs"| \\
+   \texttt{paragraph-separator} & \texttt{separator} & \verb|"Zp"| \\
+   \texttt{line-separator} & \texttt{separator} & \verb|"Zl"| \\[1ex]
+
+   \texttt{control-character} & \texttt{miscellaneous} & \verb|"Cc"| \\
+   \texttt{formatting-character} & \texttt{miscellaneous} & \verb|"Cf"| \\
+   \texttt{surrogate} & \texttt{miscellaneous} & \verb|"Cs"| \\
+   \texttt{private-use-character} & \texttt{miscellaneous} & \verb|"Co"| \\
+   \texttt{unassigned} & \texttt{miscellaneous} & \verb|"Cn"|
+\end{tabular}
+  
+  \caption{Unicode general categories and primary categories}
+  \label{fig:unicode-categories}
+\end{figure}
+
+\begin{protos}
+\proto{general-category-primary-category}{ general-category}{primary-category}
+\syntaxproto{primary-category}{ \cvar{primary-category-name}}{primary-category}
+\proto{primary-category?}{ x}{boolean}
+\end{protos}
+%
+\code{General-category-primary-category} maps the general category to
+its associated primary category---also listed in
+Figure~\ref{fig:unicode-categories}.  The \code{primary-category}
+syntax returns the primary-category object associated with
+\cvar{primary-category-name}.  \code{Primary-category?} is the
+predicate for primary-category objects.
+
+\begin{protos}
+\proto{char-titlecase?}{ char}{boolean}
+\proto{char-titlecase}{ char}{char}
+\end{protos}
+%
+These two procedures complete the R$^5$RS set of case-mapping:
+\code{Char-titlecase?} tests if a character is in titlecase.
+\code{Char-titlecase} returns the titlecase counterpart of a
+character.
+
+\section{SRFI 14}
+
+The SRFI~14 (``Character Sets'') implementation in the \code{srfi-14}
+structure is fully Unicode-compliant.
+
+\section{I/O}
+
+Ports must encode any text a program writes to an output port to a
+byte sequence, and conversely decode byte sequences when a program
+reads text from an input port.  Therefore, each port has an associated
+\textit{text codec}\mainindex{text codec} that describes how encode and decode text.
+
+Note that the interface to the text codec functionality is
+experimental and very likely to change in the future.
+
+The \code{ports} structure defines the following procedures:
+%
+\begin{protos}
+\proto{port-text-codec}{ port}{text-codec}
+\protonoresultnoindex{set-port-text-codec!}{ port text-codec}\mainschindex{set-port-text-codec"!}
+\end{protos}
+%
+These two procedures retrieve and set the text codec associated with a
+port, respectively.  A program can set text codec of a port at any
+time, even if it has already performed I/O on the port.
+
+The \code{text-codecs} structure defines the following procedures and macros:
+
+\begin{protos}
+\proto{text-codec?}{ x}{boolean}
+\constproto{null-text-codec}{ text-codec}
+\constproto{us-ascii-codec}{ text-codec}
+\constproto{latin-1-codec}{ text-codec}
+\constproto{utf-8-codec}{ text-codec}
+\constproto{utf-16le-codec}{ text-codec}
+\constproto{utf-16be-codec}{ text-codec}
+\proto{find-text-codec}{ string}{text-codec or {\tt \#f}}
+\end{protos}
+%
+\code{Text-codec?} is the predicate for text codecs.
+\code{Null-text-codec} is primarily meant for null ports that never
+yield input and swallow all output.  The following text codecs
+implement the US-ASCII, Latin-1, Unicode UTF-8, Unicode UTF-16
+(little-endian), Unicode UTF-16 (big-endian) encodings, respectively.
+
+\code{Find-text-codec} finds the codec associated with an encoding
+name.  The names of the above encodings are \verb|"null"|,
+\verb|"US-ASCII"|, \verb|"ISO8859-1"|, \verb|"UTF-8"|,
+\verb|"UTF-16LE"|, and \verb|"UTF-16BE"|, respectively.
+
+\begin{protos}
+\proto{make-text-codec}{ strings encode-proc decode-proc}{text-codec}
+\proto{text-codec-names}{ text-codec}{list of strings}
+\proto{text-codec-encode-char-proc}{ text-codec}{ encode-proc}
+\proto{text-codec-decode-char-proc}{ text-codec}{ decode-proc}
+\syntaxprotonoresult{define-text-codec}{ \cvar{id} \cvar{name} \cvar{encode-proc} \cvar{decode-proc}}
+\syntaxprotonoresult{define-text-codec}{ \cvar{id} (\cvar{name} \ldots) \cvar{encode-proc} \cvar{decode-proc}}
+\end{protos}
+%
+\code{Make-text-codec} constructs a text codec from a list of names,
+and an encode and a decode procedure.  (See below on how to construct
+encode and decode procedures.)  \code{Text-codec-names},
+\code{text-codec-encode-char-proc}, and
+\code{text-codec-decode-char-proc} are the accessors for text codec.
+The \code{define-text-codec} is a shorthand for binding a global
+identifier to a text codec.  Its first form is for codecs with only
+one name, the second for codecs with several names.
+
+Encoding and decoding procedures work as follows:
+%
+\begin{protos}
+\protonoindex{\cvar{encode-proc}}{ char buffer start count}{boolean maybe-count}
+\protonoindex{\cvar{decode-proc}}{ buffer start count}{maybe-char count}
+\end{protos}
+%
+An \cvar{encode-proc} consumes a character \var{char} to encode, a
+byte vector \var{buffer} to receive the encoding, an index \var{start}
+into the buffer, and a block size \var{count}.  It is supposed to
+encode the bytes into the block at $\left[\var{start}, \var{start +
+    count}\right)$.  If the encoding is successful, the procedure must
+return \texttt{\#t} and the number of bytes needed by the encoding.
+If the character cannot be encoded at all, the procedure must return
+\texttt{\#f} and \texttt{\#f}.  If the encoding is possible but the
+space is not sufficient, the procedure must return \texttt{\#f} and a
+total number of bytes needed for the encoding.  All
+accesses to the byte vector should be provisional (see
+Section~\ref{sec:optimistic-concurrency}).
+
+A \cvar{decode-proc} consumes a byte vector \var{buffer}, an index
+\var{start} into the buffer, and a block size \var{count}.  It is
+supposed to decode the bytes at indices $\left[\var{start}, \var{start
+    + count}\right)$.  If the decoding is successul, it must return
+the decoded character at the beginning of the block, and the number of
+bytes consumed.  If the block cannot begin with or be a prefix of a
+valid encoding, the procedure must return \texttt{\#f} and
+\texttt{\#f}.  If the block contains a true prefix of a valid
+encoding, the procedure must return \texttt{\#f} and a total count of
+bytes (including the buffer) needed to complete the encoding.  Note
+that this byte count is only a guess: the system will provide that
+many bytes, but the decoding procedures might still signal an
+incomplete encoding, causing the system to try to obtain more.  All
+accesses to the byte vector should be provisional.
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "manual"
+%%% End: 
