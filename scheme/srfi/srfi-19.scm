@@ -1407,4 +1407,3 @@
 	(tm:time-error 'string->date 'bad-date-format-string (list "Incomplete date read. " newdate template-string)))))
 
 (defining "DATE is all done.")
- 
