@@ -16,11 +16,13 @@
 
 (define-record-type dynamic-externals :dynamic-externals
   (make-dynamic-externals shared-object
+			  complete-name?
 			  reload-on-repeat?
 			  reload-on-resume?)
   dynamic-externals?
   (shared-object dynamic-externals-shared-object
 		 set-dynamic-externals-shared-object!)
+  (complete-name? dynamic-externals-complete-name?)
   (reload-on-repeat? dynamic-externals-reload-on-repeat?)
   (reload-on-resume? dynamic-externals-reload-on-resume?))
 
@@ -35,7 +37,8 @@
        *the-dynamic-externals-table*))
 
 ;; returns the DYNAMIC-EXTERNALS object
-(define (load-dynamic-externals name reload-on-repeat? reload-on-resume?)
+(define (load-dynamic-externals name complete-name?
+				reload-on-repeat? reload-on-resume?)
   (cond
    ((find-dynamic-externals name)
     => (lambda (dynamic-externals)
@@ -47,8 +50,9 @@
 	     (reload-dynamic-externals-internal dynamic-externals "s48_on_reload"))
 	 dynamic-externals))
    (else
-    (let* ((shared-object (open-shared-object name))
+    (let* ((shared-object (open-shared-object name complete-name?))
 	   (dynamic-externals (make-dynamic-externals shared-object
+						      complete-name?
 						      reload-on-repeat?
 						      reload-on-resume?)))
       (set! *the-dynamic-externals-table*
@@ -63,7 +67,9 @@
 	 (name (shared-object-name old-shared-object)))
     (if close-first?
 	(close-shared-object old-shared-object))
-    (let ((shared-object (open-shared-object name)))
+    (let ((shared-object
+	   (open-shared-object name
+			       (dynamic-externals-complete-name? dynamic-externals))))
       (set-dynamic-externals-shared-object! dynamic-externals
 					    shared-object)
       (call-shared-object-address
@@ -80,7 +86,7 @@
 
 ;; most common usage, when a Scheme package requires C externals to work
 (define (import-dynamic-externals name)
-  (load-dynamic-externals name #f #t))
+  (load-dynamic-externals name #t #f #t))
 
 (define-reinitializer dynamic-externals-reinitializer
   (lambda ()

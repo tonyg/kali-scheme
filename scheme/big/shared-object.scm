@@ -5,9 +5,12 @@
 ; Dynamically load external object files.
 
 (define-record-type shared-object :shared-object
-  (make-shared-object name c-handle)
+  (make-shared-object name complete-name? c-handle)
   shared-object?
   (name shared-object-name)
+  ;; says whether the OS should add a system-dependent extension
+  ;; (such as .so or .dll) or do some other such transformation
+  (complete-name? shared-object-complete-name?)
   (c-handle shared-object-c-handle
 	    set-shared-object-c-handle!))
 
@@ -26,9 +29,10 @@
 
 (define-record-resumer :shared-object #t)
 
-(define (open-shared-object name)
+(define (open-shared-object name complete-name?)
   (let ((shared-object (make-shared-object name
-					   (external-dlopen name))))
+					   complete-name?
+					   (external-dlopen name complete-name?))))
     (add-finalizer! shared-object close-shared-object)
     shared-object))
 
@@ -71,7 +75,11 @@
 (define (call-shared-object-address s-o-address)
   (external-call-thunk (shared-object-address-value s-o-address)))
 
-(import-lambda-definition external-dlopen (name) "shared_object_dlopen")
-(import-lambda-definition external-dlsym (handle name) "shared_object_dlsym")
-(import-lambda-definition external-dlclose (shared-object) "shared_object_dlclose")
-(import-lambda-definition external-call-thunk (address) "shared_object_call_thunk")
+(import-lambda-definition external-dlopen (name generate-name?)
+			  "shared_object_dlopen")
+(import-lambda-definition external-dlsym (handle name)
+			  "shared_object_dlsym")
+(import-lambda-definition external-dlclose (shared-object)
+			  "shared_object_dlclose")
+(import-lambda-definition external-call-thunk (address)
+			  "shared_object_call_thunk")

@@ -26,17 +26,37 @@
 #endif
 
 static s48_value
-shared_object_dlopen(s48_value name)
+shared_object_dlopen(s48_value name, s48_value complete_name_p)
 {
+  S48_DECLARE_GC_PROTECT(1);
   void *handle;
   s48_value res;
-  
-  handle = dlopen(s48_extract_string(name), DLOPEN_MODE);
+  s48_value full_name;
+
+  S48_GC_PROTECT_1(name);
+
+  if (!S48_EQ(S48_FALSE, complete_name_p))
+    {
+      size_t len = S48_STRING_LENGTH(name);
+      full_name = s48_make_string(len + 3, '\0');
+      memcpy(S48_UNSAFE_EXTRACT_STRING(full_name),
+	     S48_UNSAFE_EXTRACT_STRING(name),
+	     len);
+      memcpy(S48_UNSAFE_EXTRACT_STRING(full_name) + len,
+	     ".so",
+	     3);
+    }
+  else
+    full_name = name;
+
+  handle = dlopen(s48_extract_string(full_name), DLOPEN_MODE);
   if (handle == NULL)
     s48_raise_string_os_error((char *)dlerror());
 
   res = S48_MAKE_VALUE(void *);
   S48_UNSAFE_EXTRACT_VALUE(res, void *) = handle;
+
+  S48_GC_UNPROTECT();
 
   return res;
 }
