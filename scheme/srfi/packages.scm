@@ -92,8 +92,9 @@
   (begin
     (define available-srfis
       '(srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
-	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17 srfi-23 srfi-25
-	srfi-27 srfi-31 srfi-42))
+	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
+	srfi-23 srfi-25 srfi-26 srfi-27 
+	srfi-31 srfi-42))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -269,6 +270,13 @@
 	define-record-types
 	(subset signals (error)))
   (files srfi-25))
+
+(define-interface srfi-26-interface
+  (export ((cut cute) :syntax)))
+
+(define-structure srfi-26 srfi-26-interface
+  (open scheme)
+  (files srfi-26))
 
 (define-interface srfi-27-interface
   (export random-integer
