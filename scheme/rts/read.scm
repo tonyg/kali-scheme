@@ -145,6 +145,19 @@
       (list keyword
             (sub-read-carefully port)))))
 
+; Don't use non-R5RS char literals to avoid bootstrap circularities
+
+(define *nul* (scalar-value->char 0))
+(define *alarm* (scalar-value->char 7))
+(define *backspace* (scalar-value->char 8))
+(define *tab* (scalar-value->char 9))
+(define *linefeed* (scalar-value->char 10))
+(define *vtab* (scalar-value->char 11))
+(define *page* (scalar-value->char 12))
+(define *return* (scalar-value->char 13))
+(define *escape* (scalar-value->char 27))
+(define *rubout* (scalar-value->char 127))
+
 (set-standard-read-macro! #\" #t
   (lambda (c port)
     c ;ignored
@@ -153,19 +166,113 @@
         (cond ((eof-object? c)
                (reading-error port "end of file within a string"))
               ((char=? c #\\)
-               (let ((c (read-char port)))
-		 (cond ((eof-object? c)
-			(reading-error port "end of file within a string"))
-		       ((or (char=? c #\\) (char=? c #\"))
-			(loop (cons c l) (+ i 1)))
-		       (else
-			(reading-error port
-				       "invalid escaped character in string"
-				       c)))))
+	       (loop (cons (decode-escape port) l) (+ i 1)))
               ((char=? c #\")
 	       (reverse-list->string l i))
               (else
 	       (loop (cons c l) (+ i 1))))))))
+
+(define (decode-escape port)
+  (let ((c (read-char port)))
+    (if (eof-object? c)
+	(reading-error port "end of file within a string"))
+    (let ((scalar-value (char->scalar-value c)))
+      (cond
+       ((or (char=? c #\\) (char=? c #\")
+	    (char=? c #\') (char=? c #\newline)) ; proposed for R6RS
+	c)
+       ;; these are all from Matthew Flatt's proposal for R6RS
+       ((char=? c #\a) *alarm*)
+       ((char=? c #\b) *backspace*)
+       ((char=? c #\t) *tab*)
+       ((char=? c #\n) *linefeed*)
+       ((char=? c #\v) *vtab*)
+       ((char=? c #\f) *page*)
+       ((char=? c #\r) *return*)
+       ((char=? c #\e) *escape*)
+       ((char=? c #\x)
+	(let ((digit0 (read-char port))
+	      (digit1 (read-char port)))
+	  (if (or (eof-object? digit0)
+		  (eof-object? digit1))
+	      (reading-error port "end of file within a string"))
+	  (cond
+	   ((string->number (string digit0 digit1) 16)
+	    => scalar-value->char)
+	   (else
+	    (reading-error port
+			   "invalid hexadecimal escape sequence within a string")))))
+
+       ((or (char=? c #\u)
+	    (char=? c #\U))
+	(decode-hex-char-literal c port "string"))
+
+       ((octal-digit? c)
+	(if (octal-digit? (peek-char port))
+	    (let ((digit1 (read-char port)))
+	      (if (octal-digit? (peek-char port))
+		  (let* ((digit2 (read-char port))
+			 (n (string->number (string c digit1 digit2) 8)))
+		    (if (<= n #o377)
+			(scalar-value->char n)
+			(reading-error port
+				       "invalid octal escape sequence within a string (>#o377)")))
+		  (scalar-value->char (string->number (string c digit1) 8))))
+	    (scalar-value->char (- scalar-value 48))))
+       (else
+	(reading-error port
+		       "invalid escaped character in string"
+		       c))))))
+
+(define (octal-digit? c)
+  (and (not (eof-object? c))
+       (let ((scalar-value (char->scalar-value c)))
+	 (and (>= scalar-value 48)	; #\0
+	      (<= scalar-value 55)))))	; #\7
+
+; The \u / \U syntax is shared between character and string literals
+
+(define (decode-hex-char-literal c port desc)
+  (cond
+   ((char=? c #\u)
+    (decode-hex-digits port 4 desc))
+   ((char=? c #\U)
+    (decode-hex-digits port 6 desc))))
+
+(define (decode-hex-digits port max-digit-count desc)
+  (let loop ((rev-digits '()) (count 0))
+
+    (define (return)
+      (scalar-value->char
+       (string->number (list->string (reverse rev-digits)) 16)))
+
+    (if (>= count max-digit-count)
+	(return)
+	(let ((c (peek-char port)))
+	  (cond
+	   ((eof-object? c)
+	    (if (null? rev-digits)
+		(reading-error port
+			       (string-append "end of file within a " desc))
+		(return)))
+	   ((not (char-hex-digit? c))
+	    (if (null? rev-digits)
+		(reading-error port
+			       (string-append "invalid hex digit in a " desc)
+			       c)
+		(return)))
+	   (else
+	    (read-char port)
+	    (loop (cons c rev-digits) (+ 1 count))))))))
+
+(define (char-hex-digit? c)
+  (let ((scalar-value (char->scalar-value c)))
+    (or (and (>= scalar-value 48)	; #\0
+	     (<= scalar-value 57))	; #\9
+	(and (>= scalar-value 65)	; #\A
+	     (<= scalar-value 70))	; #\F
+	(and (>= scalar-value 97)	; #\a
+	     (<= scalar-value 102)))))	; #\f
 
 (set-standard-read-macro! #\; #t
   (lambda (c port)
@@ -203,21 +310,65 @@
 (define-sharp-macro #\t
   (lambda (c port) (read-char port) #t))
 
+; These are from Matthew Flatt's Unicode proposal for R6RS
+; See write.scm.
+
+; Richard will hopefully provide a fancy version of this that provides
+; all the names in the Unicode character database.
+
+(define *char-name-table*
+  (list
+   (cons 'space #\space)
+   (cons 'newline #\newline)
+   (cons 'nul *nul*)
+   (cons 'alarm *alarm*)
+   (cons 'backspace *backspace*)
+   (cons 'tab *tab*)
+   (cons 'linefeed *linefeed*)
+   (cons 'vtab *vtab*)
+   (cons 'page *page*)
+   (cons 'return *return*)
+   (cons 'escape *escape*)
+   (cons 'rubout *rubout*)))
+
 (define-sharp-macro #\\
   (lambda (c port)
     (read-char port)
     (let ((c (peek-char port)))
       (cond ((eof-object? c)
 	     (reading-error port "end of file after #\\"))
+
+	    ((and (or (char=? #\u c) (char=? #\U c)))
+	     (read-char port)
+	     (if (delimiter? (peek-char port))
+		 c
+		 (decode-hex-char-literal c port "char literal")))
+
+	    ((octal-digit? c)
+	     (read-char port)
+	     (if (delimiter? (peek-char port))
+		 c
+		 (let ((digit1 (read-char port))
+		       (digit2 (read-char port)))
+		   (if (or (eof-object? digit1)
+			   (eof-object? digit2))
+		       (reading-error port
+				      "unexpected end of file within a octal char literal"))
+		   (let ((n (string->number (string c digit1 digit2) 8)))
+		     (if (<= n #o377)
+			 (scalar-value->char n)
+			 (reading-error port
+					"invalid octal char literal (>#o377)"))))))
+
 	    ((char-alphabetic? c)
 	     (let ((name (sub-read-carefully port)))
 	       (cond ((= (string-length (symbol->string name)) 1)
 		      c)
-		     ((assq name '((space   #\space)
-				   (newline #\newline)))
-		      => cadr)
+		     ((assq name *char-name-table*)
+		      => cdr)
 		     (else
 		      (reading-error port "unknown #\\ name" name)))))
+
 	    (else
 	     (read-char port)
 	     c)))))
@@ -275,6 +426,13 @@
 	"1+" "-1+"  ;Only for S&ICP support
 	"->"	    ;Only for JAR's thesis
 	))
+
+(define (delimiter? c)
+  (or (char-whitespace? c)
+      (char=? c #\))
+      (char=? c #\()
+      (char=? c #\")
+      (char=? c #\;)))
 
 ;--- This loses because the compiler won't in-line it.
 ; and it's in READ's inner loop.

@@ -165,6 +165,7 @@
 
 (define-structure writing writing-interface
   (open scheme-level-1
+	unicode
 	number-i/o
 	i/o				;output-port-option, write-string
 	methods				;disclose

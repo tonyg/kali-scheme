@@ -40,6 +40,60 @@ The R$^5$RS procedures \code{char->integer} and \code{integer->char}
 are synonyms for \code{char->scalar-value} and
 \code{scalar-value->char}, respectively.
 
+\section{Character and string literals}
+
+\subsection{Character literals}
+
+The following character names are available in addition to what
+R$^5$RS provides:
+%
+\begin{itemize}
+\item \verb|#\nul| (ASCII 0) 
+\item \verb|#\alarm| (ASCII 7) 
+\item \verb|#\backspace| (ASCII 8) 
+\item \verb|#\tab| (ASCII 9) 
+\item \verb|#\vtab| (ASCII 11) 
+\item \verb|#\page| (ASCII 12) 
+\item \verb|#\return| (ASCII 13) 
+\item \verb|#\esc| (ASCII 27) 
+\item \verb|#\rubout| (ASCII 127) 
+\item \verb|#\|\meta{o}\meta{o}\meta{o} where
+\meta{o}\meta{o}\meta{o} is an octal number in the range
+$\left[0,255\right]$, denoting the scalar value of the character
+\item \verb|#\u|\meta{x}\ldots\meta{x} hex, up to four digits,
+  where \meta{x}\ldots\meta{x} denotes the scalar value of the character
+\item \verb|#\U|\meta{x}\ldots\meta{x} hex, up to six digits,
+  where \meta{x}\ldots\meta{x} denotes the scalar value of the character
+\end{itemize}
+
+\subsection{String literals}
+
+The following escape characters in string literals are available in addition to what
+R$^5$RS provides:
+
+\begin{itemize}
+\item \verb|\a|: alarm (ASCII 7) 
+\item \verb|\b|: backspace (ASCII 8) 
+\item \verb|\t|: tab (ASCII 9) 
+\item \verb|\n|: linefeed (ASCII 10) 
+\item \verb|\v|: vertical tab (ASCII 11) 
+\item \verb|\f|: formfeed (ASCII 12) 
+\item \verb|\r|: return (ASCII 13) 
+\item \verb|\e|: escape (ASCII 27) 
+\item \verb|\'|: quote (ASCII 39, same as unquoted) 
+\item \verb|\|\meta{o}, \meta{o}\meta{o}, \meta{o}\meta{o}\meta{o}:
+  octal, where the sequence of \meta{o}s forms an octal number between
+  0 and 255, denoting the scalar value of the character
+\item \verb|\|\meta{newline}: elided (allows a single-line string to
+  span source lines)
+\item \verb|\x|\meta{x}\meta{x} hex, where \meta{x}\meta{x}
+  denotes the scalar value of the character
+\item \verb|\u|\meta{x}\ldots\meta{x} hex, up to four digits,
+  where \meta{x}\ldots\meta{x} denotes the scalar value of the character
+\item \verb|\U|\meta{x}\ldots\meta{x} hex, up to six digits,
+  where \meta{x}\ldots\meta{x} denotes the scalar value of the character
+\end{itemize}
+
 \section{Character classification and case mappings}
 
 The R$^5$RS character predicates---\code{char-whitespace?},
