@@ -46,6 +46,8 @@
 	(subset signals (error)))
   (files srfi-1))
 
+; AND-LET*: an AND with local bindings, a guarded LET* special form
+
 (define-structure srfi-2 (export (and-let* :syntax))
   (open scheme-level-2
 	signals)		; error
@@ -54,9 +56,13 @@
 ; SRFI-3 - withdrawn
 ; SRFI-4 - needs hacks to the reader
 
+; A compatible let form with signatures and rest arguments
+
 (define-structure srfi-5 (export (let :syntax))
   (open (modify scheme-level-2 (rename (let standard-let))))
   (files srfi-5))
+
+; Basic String Ports
 
 (define-structure srfi-6 (export open-input-string
 				 open-output-string
@@ -107,6 +113,7 @@
 
   (files srfi-7))
 
+; receive: Binding to multiple values
 ; Taken directly from the SRFI document (or from `receiving', take your pick).
 
 (define-structure srfi-8 (export (receive :syntax))
@@ -118,6 +125,7 @@
 	 (call-with-values (lambda () expression)
 			   (lambda formals body ...)))))))
 
+; Defining Record Types
 ; SRFI-9 is a slight modification of DEFINE-RECORD-TYPE.
 
 (define-structure srfi-9 (export (define-record-type :syntax))
@@ -131,6 +139,8 @@
 
 ; SRFI-10 - no stand-alone interface.
 
+; Syntax for receiving multiple values
+
 (define-structure srfi-11 (export (let-values :syntax)
 				  (let*-values :syntax))
   (open scheme-level-2)
@@ -139,6 +149,8 @@
 ; SRFI-12 - withdrawn
 
 ; Two more encyclopedias from Olin.
+
+; String Library
 
 (define-interface srfi-13-interface
   (export string-map string-map!
@@ -188,6 +200,8 @@
 	srfi-8 srfi-14
 	(subset signals		(error)))
   (files srfi-13))
+
+; Character-Set Library
 
 (define-interface srfi-14-interface
   (export char-set? char-set=
@@ -242,10 +256,14 @@
 
 ; SRFI-15 - withdrawn
 
+; Syntax for procedures of variable arity
+
 (define-structure srfi-16 (export (case-lambda :syntax))
   (open scheme-level-2
 	(subset signals (error)))
   (files srfi-16))
+
+; Generalized set!
 
 (define-structure srfi-17 (export (set! :syntax) setter)
   (open (modify scheme-level-2 (rename (set! scheme-set!)))
@@ -257,10 +275,14 @@
 ; SRFI-19 - implementation is specific to MzScheme
 ; SRFI-20 - withdrawn
 ; SRFI-21 - no implementation given
-; SRFI-22 - not final yet
+; SRFI-22 - needs internals hacking
+
+; Error reporting mechanism
 
 (define-structure srfi-23 (export error)
   (open (subset signals (error))))
+
+; Multi-dimensional Array Primitives 
 
 (define-interface srfi-25-interface
   (export array? make-array shape array array-rank
@@ -272,12 +294,16 @@
 	(subset signals (error)))
   (files srfi-25))
 
+; Notation for Specializing Parameters without Currying
+
 (define-interface srfi-26-interface
   (export ((cut cute) :syntax)))
 
 (define-structure srfi-26 srfi-26-interface
   (open scheme)
   (files srfi-26))
+
+; Sources of Random Bits
 
 (define-interface srfi-27-interface
   (export random-integer
@@ -302,6 +328,8 @@
    (subset posix-time (current-time time-seconds)))
   (files srfi-27))
 
+; Basic Format Strings
+
 (define-interface srfi-28-interface
   (export format))
 
@@ -311,6 +339,8 @@
 	srfi-6				; string ports
 	)
   (files srfi-28))
+
+; A special form for recursive evaluation
 
 (define-interface srfi-31-interface
   (export (rec :syntax)))
@@ -327,6 +357,8 @@
 	((rec NAME EXPRESSION)
 	 (letrec ( (NAME EXPRESSION) ) NAME))))))
 
+; args-fold: a program argument processor
+
 (define-interface srfi-37-interface
   (export args-fold
 	  option-processor
@@ -337,6 +369,8 @@
 	define-record-types
 	srfi-11)
   (files srfi-37))
+
+; Eager Comprehensions
 
 (define-interface srfi-42-interface
   (export ((do-ec
