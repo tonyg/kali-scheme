@@ -1,6 +1,9 @@
 /*
  * This is a fake version of the dynamic loading library for HP-UX.
  * We implement libdl using their shl_... routines.
+ *
+ * This is not currently used because we have no configuration test for
+ * HP-UX.
  */
 #include "sysdep.h"
 

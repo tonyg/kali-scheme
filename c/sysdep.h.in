@@ -9,6 +9,9 @@
 /* Define as the return type of signal handlers (int or void).  */
 #undef RETSIGTYPE
 
+/* Define if you have the ANSI C header files.  */
+#undef STDC_HEADERS
+
 /*
  * HAVE_SIGACTION is defined iff sigaction() is available.
  */
@@ -40,6 +43,9 @@
  * ENVIRON_NAME is defined to be the name of the environ variable.
  */
 #undef ENVIRON_NAME
+
+/* Define if you have the socklen_t type.  */
+#undef socklen_t
 
 /* Define if you have the chroot function.  */
 #undef HAVE_CHROOT

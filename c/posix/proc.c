@@ -170,7 +170,6 @@ lookup_record(s48_value *the_list_loc, int offset, s48_value key)
 {
   bool		cleanup_p = FALSE;
   s48_value	the_list = *the_list_loc;
-  s48_value	found = S48_FALSE;
 
   /* Clear out initial dropped weaks */
   while (the_list != S48_NULL &&
@@ -184,15 +183,16 @@ lookup_record(s48_value *the_list_loc, int offset, s48_value key)
   if (the_list == S48_NULL)
     return S48_FALSE;			/* Nothing */
 
-  else {
-
+  {
     s48_value first = S48_UNSAFE_WEAK_POINTER_REF(S48_UNSAFE_CAR(the_list));
 
     if (key == S48_UNSAFE_RECORD_REF(first, offset))
-      /* Found it first thing. */
-      found = first;
-    else {
+      /* Found it first thing.  We skip the cleanup, but so what. */
+      return first;
+
+    {
       /* Loop down. */
+      s48_value	found = S48_FALSE;
       s48_value prev = the_list;
       s48_value next = S48_UNSAFE_CDR(prev);
       for(; next != S48_NULL && found == S48_FALSE;

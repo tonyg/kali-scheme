@@ -240,7 +240,7 @@ inst-inc:
 	$(INSTALL_DATA) c/scheme48.h $(incdir)
 
 inst-misc:
-	for stub in env big opt misc link posix; do			\
+	for stub in env big opt misc link posix srfi; do		\
 		for f in scheme/$$stub/*.scm; do			\
 			$(INSTALL_DATA) $$f $(LIB)/$$stub || exit 1;	\
 		done;							\
@@ -278,7 +278,7 @@ dirs:
 		echo "$(LIB) not a writable directory" >&2;		 \
 		exit 1;							 \
 	}
-	for dir in rts env big opt misc link posix; do			  \
+	for dir in rts env big opt misc link posix srfi; do		  \
 		{ mkdir -p $(LIB)/$$dir && [ -w $(LIB)/$$dir ]; } || {	  \
 			echo "$(LIB)/$$dir not a writable directory" >&2; \
 			exit 1;						  \
@@ -376,6 +376,7 @@ inc:
 	f=build/minor-version-number &&					\
 	expr `cat $$f` + 1 >$$f.tmp &&					\
 	mv $$f.tmp $$f &&						\
+	cp $$f doc/src/version-number.tex &&				\
 	echo '(define version-info "0.'`cat $$f`'")'			\
 		>scheme/env/version-info.scm
 

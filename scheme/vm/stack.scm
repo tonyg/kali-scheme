@@ -24,10 +24,10 @@
 (define stack-slack
   (+ default-stack-space
      continuation-stack-size	    ; *bottom-of-stack*
-     (+ continuation-stack-size 13) ; exceptions need at most 14 values
+     (+ continuation-stack-size 16) ; exceptions need at most 16 values
                                     ; (long pole is external exceptions with
-                                    ; exception + procedure-name + 10 irritants +
-                                    ; saved-exception + stack-block)
+                                    ; exception + procedure-name + 12 irritants
+                                    ; + saved-exception + stack-block)
      (+ continuation-stack-size 7)  ; interrupts need at most 7 values
                                     ; (also from examining the code)
      (+ stack-warning-limit 2)))    ; safety

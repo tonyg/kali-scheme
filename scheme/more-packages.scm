@@ -227,6 +227,19 @@
 	external-calls)
   (files (big external)))
 
+(define-structure c-system-function (export have-system? system)
+  (open scheme-level-2 external-calls signals)
+  (begin
+    (import-lambda-definition s48-system (string))
+
+    (define (have-system?)
+      (not (= 0 (s48-system #f))))
+
+    (define (system string)
+      (if (string? string)
+	  (s48-system string)
+	  (call-error "not a string" system string)))))
+    
 ; Rudimentary object dump and restore
 
 (define-structure dump/restore dump/restore-interface
@@ -442,12 +455,16 @@
 
   (begin
     (define available-srfis
-      '(srfi-1 srfi-2 srfi-5 srfi-6 srfi-7))
+      '(srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
+	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17 srfi-23))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
       '((srfi-1 map for-each member assoc)
-	(srfi-5 let))))
+	(srfi-5 let)
+	(srfi-13 string->list string-copy string-fill!)
+	(srfi-17 set!)))
+    )
 
   (files (srfi srfi-7)))
 
@@ -464,7 +481,7 @@
 
 ; SRFI-9 is a slight modification of DEFINE-RECORD-TYPE.
 
-(define-structure srfi-9 (export define-record-type)
+(define-structure srfi-9 (export (define-record-type :syntax))
   (open scheme-level-2 
 	(with-prefix define-record-types sys:))
   (begin
@@ -472,6 +489,56 @@
       (syntax-rules ()
 	((define-record-type type-name . stuff)
 	 (sys:define-record-type type-name type-name . stuff))))))
+
+; SRFI-10 - no stand-alone interface.
+
+(define-structure srfi-11 (export (let-values :syntax)
+				  (let*-values :syntax))
+  (open scheme-level-2)
+  (files (srfi srfi-11)))
+
+; SRFI-12 - withdrawn
+
+; Two more encyclopedias from Olin.
+
+(define-structure srfi-13 srfi-13-interface
+  (open scheme-level-2
+	bitwise
+	srfi-8 srfi-14
+	(subset signals		(error)))
+  (files (srfi srfi-13)))
+
+(define-structure srfi-14 srfi-14-interface
+  (open scheme-level-2
+	bitwise
+	srfi-9
+	(modify ascii (rename (char->ascii %char->latin1)
+			      (ascii->char %latin1->char)))
+	(subset features (make-immutable!))
+	(subset signals (error)))
+  (files (srfi srfi-14)))
+
+; SRFI-15 - withdrawn
+
+(define-structure srfi-16 (export (case-lambda :syntax))
+  (open scheme-level-2
+	(subset signals (error)))
+  (files (srfi srfi-16)))
+
+(define-structure srfi-17 (export (set! :syntax) setter)
+  (open (modify scheme-level-2 (rename (set! scheme-set!)))
+	(subset signals (error))
+	(subset util (unspecific)))
+  (files (srfi srfi-17)))
+
+; SRFI-18 - no implementation given
+; SRFI-19 - implementation is specific to MzScheme
+; SRFI-20 - withdrawn
+; SRFI-21 - no implementation given
+; SRFI-22 - not final yet
+
+(define-structure srfi-23 (export error)
+  (open (subset signals (error))))
 
 ;----------------
 ; ... end of package definitions.
@@ -501,6 +568,7 @@
 	    callback
 	    command-levels
 	    command-processor
+	    c-system-function
 	    debugging
 	    define-record-types
 	    defrecord
@@ -571,6 +639,8 @@
 
 	    ; SRFI packages
 	    srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
+	    srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
+	    srfi-23
 	    )
 	   :structure)
 	  ((define-signature define-package) :syntax)))

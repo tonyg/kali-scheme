@@ -93,7 +93,20 @@ AC_INIT(c/scheme48vm.c)
      AC_CHECK_LIB(elf, main)
      S48_POSIX_LIBC
      AC_CONST
-     AC_CHECK_TYPE(socklen_t, unsigned int)
+     AC_MSG_CHECKING(for socklen_t)
+     AC_TRY_COMPILE([#include <sys/socket.h>
+                     socklen_t x;
+                    ],[],
+		    [AC_MSG_RESULT(yes)],
+		    [AC_TRY_COMPILE([#include <sys/socket.h>
+                                     int accept (int,
+				                 struct sockaddr *,
+						 size_t *);
+                                    ],[],
+		                    [AC_MSG_RESULT(size_t)
+                                     AC_DEFINE(socklen_t,size_t)],
+				    [AC_MSG_RESULT(int)
+                                     AC_DEFINE(socklen_t,int)])])
      AC_RETSIGTYPE
      AC_CHECK_HEADERS(libgen.h sys/timeb.h posix/time.h)
      AC_CHECK_HEADERS(sys/select.h)

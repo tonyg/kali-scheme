@@ -2,68 +2,36 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Wed May 30 12:23:57 2001 -->
+ -- on Emacs 20.4.1, Sun Jul 15 13:05:05 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Available facilities</TITLE>
+<TITLE>Scheme 48 Manual -- Mixing Scheme 48 and C</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_51.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_51.html">Mixing Scheme 48 and C</A> | Next: <A HREF="s48manual_53.html">Shared bindings</A>
-<H2>Available facilities</H2>
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | Previous Chapter: <A HREF="s48manual_35.html">Libraries</A> | Next Chapter: <A HREF="s48manual_65.html">Access to POSIX</A><BR>Previous: <A HREF="s48manual_51.html">SRFIs</A> | Next: <A HREF="s48manual_53.html">Available facilities</A>
+<H1>Mixing Scheme 48 and C <BR><FONT SIZE=+1>Mike Sperber and Richard Kelsey</FONT></H1>
 
-<P>The following facilities are available for interfacing between
- Scheme&nbsp;48 and C:
-<UL><LI>Scheme code can call C functions.
-<LI>The external interface provides full introspection for all
-  Scheme objects.  External code may inspect, modify, and allocate
-  Scheme objects arbitrarily.
-<LI>External code may raise exceptions back to Scheme&nbsp;48 to
-  signal errors.
-<LI>External code may call back into Scheme.  Scheme&nbsp;48
-  correctly unrolls the process stack on non-local exits.
-<LI>External modules may register bindings of names to values with a 
-  central registry accessible from
-  Scheme.  Conversely, Scheme code can register shared
-  bindings for access by C code.
-</UL>
-<H3><A NAME="1">Scheme structures</A></H3>
-<P>The structure <CODE>external-calls</CODE> has 
- most of the Scheme functions described here.
-The others are in 
- <CODE>dynamic-externals</CODE>, which has the functions for dynamic loading and
- name lookup from
 
-the section on <A HREF="s48manual_56.html">Dynamic Loading</A>,
- and <CODE>shared-bindings</CODE>, which has the additional shared-binding functions
- described in
-
-the section on the <A HREF="s48manual_53.html#more-shared-bindings">complete shared-binding interface</A>.
-<H3><A NAME="2">C naming conventions</A></H3>
-<P>The names of all of Scheme&nbsp;48's visible C bindings begin 
- with `<CODE>s48_</CODE>' (for procedures and variables) or 
- `<CODE>S48_</CODE>' (for macros).
-Whenever a C name is derived from a Scheme identifier, we
- replace `<CODE>-</CODE>' with `<CODE>_</CODE>' and convert letters to lowercase
- for procedures and uppercase for macros.
-A final `<CODE>?</CODE>'  converted to `<CODE>_p</CODE>' (`<CODE>_P</CODE>' in C macro names).
-A final `<CODE>!</CODE>' is dropped.
-Thus the C macro for Scheme's <CODE>pair?</CODE> is <CODE>S48_PAIR_P</CODE> and
- the one for <CODE>set-car!</CODE> is <CODE>S48_SET_CAR</CODE>.
-Procedures and macros that do not check the types of their arguments
- have `<CODE>unsafe</CODE>' in their names.
-<P>All of the C functions and macros described have prototypes or definitions
- in the file <CODE>c/scheme48.h</CODE>.
-The C type for Scheme values is defined there to be <CODE>s48_value</CODE>.
-<H3><A NAME="3">Garbage collection</A></H3>
-<P>Scheme&nbsp;48 uses a copying garbage collector.
-The collector must be able to locate all references
- to objects allocated in the Scheme&nbsp;48 heap in order to ensure that
- storage is not reclaimed prematurely and to update references to objects
- moved by the collector.
-The garbage collector may run whenever an object is allocated in the heap.
-C variables whose values are Scheme&nbsp;48 objects and which are live across
- heap allocation calls need to be registered with
- the
-<A HREF="s48manual_60.html">garbage collector</A>.
+<P>This chapter describes an interface for calling C functions
+ from Scheme, calling Scheme functions from C, and allocating
+ storage in the Scheme heap..
+Scheme&nbsp;48 manages stub functions in C that
+ negotiate between the calling conventions of Scheme and C and the
+ memory allocation policies of both worlds.
+No stub generator is available yet, but writing stubs is a straightforward task.
+<MENU>
+<LI><A HREF="s48manual_53.html">Available facilities</A>
+<LI><A HREF="s48manual_54.html">Shared bindings</A>
+<LI><A HREF="s48manual_55.html">Calling C functions from Scheme</A>
+<LI><A HREF="s48manual_56.html">Adding external modules to the <TT>Makefile</TT></A>
+<LI><A HREF="s48manual_57.html">Dynamic loading</A>
+<LI><A HREF="s48manual_58.html">Compatibility</A>
+<LI><A HREF="s48manual_59.html">Accessing Scheme data from C</A>
+<LI><A HREF="s48manual_60.html">Calling Scheme functions from C</A>
+<LI><A HREF="s48manual_61.html">Interacting with the Scheme heap</A>
+<LI><A HREF="s48manual_62.html">Using Scheme records in C code</A>
+<LI><A HREF="s48manual_63.html">Raising exceptions from external code</A>
+<LI><A HREF="s48manual_64.html">Unsafe functions and macros</A>
+</MENU>
 <P>
   
-Previous: <A HREF="s48manual_51.html">Mixing Scheme 48 and C</A> | Next: <A HREF="s48manual_53.html">Shared bindings</A></BODY></HTML>
+Previous: <A HREF="s48manual_51.html">SRFIs</A> | Next: <A HREF="s48manual_53.html">Available facilities</A></BODY></HTML>

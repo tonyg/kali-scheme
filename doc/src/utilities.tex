@@ -366,7 +366,7 @@ These procedures construct the usual record-manipulating procedures.
  \code{define-record-discloser}
  (re-exported by \code{define-record-types} described above)
  and
- \code{define-record-discloser}
+ \code{define-record-resumer}
  (re-exported by
  \link*{\code{external-calls}}
        [\code{external-calls} (section~\Ref{})]
@@ -701,6 +701,28 @@ Using a continuation to throw out of the call to \code{thunk} causes
         (c)
         (reverse path))))
   \evalsto '(a b a b a)
+\end{example}
+
+\section{Shell commands}
+
+Structure \code{c-system-function} provides access to the C \code{system()}
+ function.
+
+\begin{protos}
+\proto{have-system?}{}{boolean}
+\proto{system}{ string}{integer}
+\end{protos}
+\noindent
+\code{Have-system?} returns true if the underlying C implementation
+ has a command processor.
+\code{(System \cvar{string})} passes \cvar{string} to the C
+ \code{system()} function and returns the result.
+
+\begin{example}
+(begin
+  (system "echo foo > test-file")
+  (call-with-input-file "test-file" read))
+\evalsto 'foo
 \end{example}
 
 \section{Sockets}
@@ -1368,8 +1390,20 @@ Scheme~48 includes implementations of the following (final) SRFIs:
 \item SRFI 7 -- Program configuration
 \item SRFI 8 -- \code{receive}
 \item SRFI 9 -- Defining record types
+\item SRFI 11 -- Syntax for receiving multiple values 
+\item SRFI 13 -- String Library
+\item SRFI 14 -- Character-Set Library (see note below)
+\item SRFI 16 -- Syntax for procedures of variable arity
+\item SRFI 17 -- Generalized \code{set!}
+\item SRFI 23 -- Error reporting mechanism
 \end{itemize}
 Documentation on these can be found at the web site mentioned above.
+
+SRFI~14 includes the procedure \code{->char-set} which is not a standard
+ Scheme identifier (in R$^5$RS the only required identifier starting
+ with \code{-} is \code{-} itself).
+In the Scheme~48 version of SRFI~14 we have renamed \code{->char-set}
+ as \code{x->char-set}.
 
 The SRFI bindings can be accessed either by opening the appropriate structure
  (the structure \code{srfi-}\cvar{n} contains SRFI \cvar{n})

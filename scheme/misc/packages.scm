@@ -10,7 +10,7 @@
 (define-structure call-with-mumble-pipes
     (export call-with-input-pipe call-with-output-pipe)
   (open scheme
-	posix-process
+	posix-processes
 	posix-i/o
 	i/o)		; current-error-port
   (files pipe))

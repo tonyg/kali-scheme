@@ -22,8 +22,9 @@
 #define	n_name	n_un.n_name
 #endif
 
+extern char* s48_object_file;
 
-static char	self[] = "I am the wallrus",
+static char	self[] = "Scheme 48 executable",
 		*lasterror;
 
 
@@ -103,5 +104,5 @@ dlsym(void *lib, char *name)
 		lasterror = "Symbol not found";
 		return (NULL);
 	}
-	return (names[0].n_value);
+	return (void *)(names[0].n_value);
 }

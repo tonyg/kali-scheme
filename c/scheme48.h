@@ -252,9 +252,6 @@ extern void s48_check_record_type(s48_value record, s48_value type_binding);
 #define S48_NULL    (S48_MISC_IMMEDIATE(6))
 #define S48_UNRELEASED    (S48_MISC_IMMEDIATE(7))
 
-#define S48_ENTER_BOOLEAN(n) ((n) ? S48_TRUE : S48_FALSE)
-#define S48_EXTRACT_BOOLEAN(x) ((x) != S48_FALSE)
-
 #define S48_UNSAFE_ENTER_CHAR(c) (S48_CHAR | ((c) << 8))
 #define S48_UNSAFE_EXTRACT_CHAR(x) ((x) >> 8)
 #define S48_CHAR_P(x) ((((long) (x)) & 0xff) == S48_CHAR)

@@ -224,45 +224,45 @@
 ; resumer procedure onto a vector at the end.
 
 (define (find-resumer-records)
-  (let ((start-hp *hp*))
-    (store! *hp* 0)			; reserve space for header
-    (if (scan-for-resumer-records)
-	(let ((size (address-difference *hp* (address1+ start-hp))))
-	  (store! start-hp (make-header (enum stob vector) size))
-	  (address->stob-descriptor (address1+ start-hp)))
-	(begin
-	 (set! *hp* start-hp) ; out of space, so undo and give up
-	 false))))
-
-(define (scan-for-resumer-records)
-  (let ((end *hp*))
-    (let loop ((addr *to-begin*))
-      (if (address< addr end)
-	  (let* ((header (fetch addr))
-		 (next (address+ addr
-				 (+ (cells->a-units stob-overhead)
-				    (header-length-in-a-units header)))))
-	    (cond ((not (header? header))
-		   (write-string "new image is not in a consistent state"
-				 (current-error-port))
-		   #f)
-		  ((not (= (header-type header)
-			   (enum stob record)))
-		   (loop next))
-		  (else
-		   (let* ((record (address->stob-descriptor (address1+ addr)))
-			  (type (record-type record)))
-		     (cond ((not (and (record? type)
-				      (stob? (record-type-resumer type))))
-			    (loop next))
-			   ((< (cells->a-units 1)
-			       (address-difference *to-end* *hp*))
-			    (store! *hp* record)
-			    (set! *hp* (address1+ *hp*))
-			    (loop next))
-			   (else
-			    #f))))))
-	  #t))))
+  (let ((start-hp *hp*)
+        (data-start (address1+ *hp*)))	; reserve space for header
+    (set! *hp* data-start)
+    (if (scan-for-resumer-records *to-begin* start-hp)
+ 	(let ((size (address-difference *hp* data-start)))
+ 	  (store! start-hp (make-header (enum stob vector) size))
+ 	  (address->stob-descriptor data-start))
+ 	(begin
+	  (set! *hp* start-hp)		; out of space, so undo and give up
+	  false))))
+ 
+(define (scan-for-resumer-records begin end)
+  (let loop ((addr begin))
+    (if (address< addr end)
+	(let* ((header (fetch addr))
+	       (next (address+ addr
+			       (+ (cells->a-units stob-overhead)
+				  (header-length-in-a-units header)))))
+	  (cond ((not (header? header))
+		 (write-string "new image is not in a consistent state"
+			       (current-error-port))
+		 #f)
+		((not (= (header-type header)
+			 (enum stob record)))
+		 (loop next))
+		(else
+		 (let* ((record (address->stob-descriptor (address1+ addr)))
+			(type (record-type record)))
+		   (cond ((not (and (record? type)
+				    (stob? (record-type-resumer type))))
+			  (loop next))
+			 ((< (cells->a-units 1)
+			     (address-difference *to-end* *hp*))
+			  (store! *hp* record)
+			  (set! *hp* (address1+ *hp*))
+			  (loop next))
+			 (else
+			  #f))))))
+	#t)))
 
 ; A record's type is at offset 0 and a type's resumer is at offset 1.
 

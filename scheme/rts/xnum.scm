@@ -194,9 +194,10 @@
 			   #f)))
       (next-method)))
 
-(define-method &sqrt ((n :integer))
-  (if (>= n 0)
-      (non-negative-integer-sqrt n)	;Dubious
+(define-method &sqrt (n)
+  (if (and (integer? n)
+           (>= n 0))
+      (non-negative-integer-sqrt n)
       (next-method)))
 
 (define (non-negative-integer-sqrt n)
@@ -211,8 +212,9 @@
 		    (loop (quotient (+ m m1) 2)))
 		   ((= n (* m m))
 		    m)
-		   (else
-		    (exact->inexact m))))))))
+		   ((exact? m)
+		    (exact->inexact m))
+		   (else m)))))))
 
 (define-simple-type :exact (:number)
   (lambda (n) (and (number? n) (exact? n))))

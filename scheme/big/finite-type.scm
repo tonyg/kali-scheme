@@ -124,7 +124,7 @@
 	     (let loop ((names ',names) (i 0))
 	       (cond ((null? names)
 		      form1)
-		     ((eq? elt (car names))
+		     ((compare1 elt (car names))
 		      (list (,%code-quote ,%vector-ref) (rename1 ',elts) i))
 		     (else
 		      (loop (cdr names) (+ i 1))))))))))

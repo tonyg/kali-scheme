@@ -2,6 +2,27 @@
 
 Recent changes to Scheme 48.
 
+7/15/01  (version 0.57)
+	 Additions:
+	  Added a SYSTEM procedure that calls the C system() function
+	   (in structure c-system-function).
+	  Added SRFIs 11, 13, 14, 16, 17, and 23.
+         Bug fixes:
+	  Removed duplicate definitions of S48_{ENTER|EXTRACT}_BOOLEAN
+	   from c/scheme48.h.
+	  Fixed a problem in lookup_record() in c/posix/proc.c that was
+	   causing crashes.	 
+	  Added scheme/srfi to the list of directories that get installed.
+	  Zeroed sockaddr structs in c/unix/socket.c.
+	  Added configuration tests for socklen_t.
+	  Marked DEFINE-RECORD-TYPE as syntax in the SRFI-9 interface.
+	  Fixed (another) bug in s48-shorten-bignum.
+	  Fixed off-by-one error that caused one resumer record to be
+	   ignored when writing out images.
+	  Fixed problem with macros expanding into uses of finite types.
+	  Added a handler for the TIME opcode to take care of any arithmetic
+	   overflow.
+
 5/30/01  (version 0.56)
          Bug fixes:
 	  Fixed problems with s48-shorten-bignum that were causing crashes.

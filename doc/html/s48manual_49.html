@@ -2,223 +2,313 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Wed May 30 12:23:56 2001 -->
+ -- on Emacs 20.4.1, Sun Jul 15 13:05:04 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Regular expressions</TITLE>
+<TITLE>Scheme 48 Manual -- Macros for writing loops</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_48.html">Macros for writing loops</A> | Next: <A HREF="s48manual_50.html">SRFIs</A>
-<H2>Regular expressions</H2>
-
-<P>This section describes a functional interface for building regular
- expressions and matching them against strings.
-The matching is done using the POSIX regular expression package.
-Regular expressions are in the structure <CODE>regexps</CODE>.
-<P>A regular expression is either a character set, which matches any character
-in the set, or a composite expression containing one or more subexpressions.
-A regular expression can be matched against a string to determine success
-or failure, and to determine the substrings matched by particular subexpressions.
-<H3><A NAME="1">Character sets</A></H3>
-<P>Character sets may be defined using a list of characters and strings,
-using a range or ranges of characters, or by using set operations on
-existing character sets.
-<UL><LI><CODE>(set<I>&nbsp;character-or-string&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="2">&nbsp;</A>
-<LI><CODE>(range<I>&nbsp;low-char&nbsp;high-char</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="3">&nbsp;</A>
-<LI><CODE>(ranges<I>&nbsp;low-char&nbsp;high-char&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="4">&nbsp;</A>
-<LI><CODE>(ascii-range<I>&nbsp;low-char&nbsp;high-char</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="5">&nbsp;</A>
-<LI><CODE>(ascii-ranges<I>&nbsp;low-char&nbsp;high-char&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="6">&nbsp;</A>
-</UL>
-<CODE>Set</CODE> returns a set that contains the character arguments and the
-characters in any string arguments.  <CODE>Range</CODE> returns a character
-set that contain all characters between <CODE><I>low-char</I></CODE> and <CODE><I>high-char</I></CODE>,
-inclusive.  <CODE>Ranges</CODE> returns a set that contains all characters in
-the given ranges.  <CODE>Range</CODE> and <CODE>ranges</CODE> use the ordering induced by
-<CODE>char-&gt;integer</CODE>.  <CODE>Ascii-range</CODE> and <CODE>ascii-ranges</CODE> use the
- ASCII ordering.
-It is an error for a <CODE><I>high-char</I></CODE> to be less than the preceding
- <CODE><I>low-char</I></CODE> in the appropriate ordering.
-<UL><LI><CODE>(negate<I>&nbsp;char-set</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="7">&nbsp;</A>
-<LI><CODE>(intersection<I>&nbsp;char-set&nbsp;char-set</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="8">&nbsp;</A>
-<LI><CODE>(union<I>&nbsp;char-set&nbsp;char-set</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="9">&nbsp;</A>
-<LI><CODE>(subtract<I>&nbsp;char-set&nbsp;char-set</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="10">&nbsp;</A>
-</UL>
-These perform the indicated operations on character sets.
-<P>The following character sets are predefined:
-<BLOCKQUOTE><CENTER>
-<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
-
-<CODE>lower-case</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">   <CODE>(set "abcdefghijklmnopqrstuvwxyz")</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>upper-case</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">   <CODE>(set "ABCDEFGHIJKLMNOPQRSTUVWXYZ")</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>alphabetic</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">   <CODE>(union lower-case upper-case)</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>numeric</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">      <CODE>(set "0123456789")</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>alphanumeric</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>(union alphabetic numeric)</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>punctuation</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">
- <CODE>(set "</CODE><CODE>!\"#$%&amp;'()*+,-./:;&lt;=&gt;?@[\\]^_`{|}~</CODE><CODE>")</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>graphic</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">      <CODE>(union alphanumeric punctuation)</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>printing</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">     <CODE>(union graphic (set #</CODE><CODE>\</CODE><CODE>space))</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>control</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">      <CODE>(negate printing)</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>blank</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">
-      <CODE>(set #</CODE><CODE>\</CODE><CODE>space (ascii-&gt;char 9))</CODE> ; 9 is tab </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>whitespace</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">
-      <CODE>(union (set #</CODE><CODE>\</CODE><CODE>space) (ascii-range 9 13))</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>hexdigit</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">     <CODE>(set "0123456789abcdefABCDEF")</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-</TD></TR></TABLE>
-
-</CENTER></BLOCKQUOTE>
-The above are taken from the default locale in POSIX.
-The characters in <CODE>whitespace</CODE> are <CODE><I>space</I></CODE>, <CODE><I>tab</I></CODE>,
- <CODE><I>newline</I></CODE> (= <CODE><I>line&nbsp;feed</I></CODE>), <CODE><I>vertical&nbsp;tab</I></CODE>, <CODE><I>form&nbsp;feed</I></CODE>, and
- <CODE><I>carriage&nbsp;return</I></CODE>.
-<H3><A NAME="11">Anchoring</A></H3>
-<UL><LI><CODE>(string-start<I></I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="12">&nbsp;</A>
-<LI><CODE>(string-end<I></I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="13">&nbsp;</A>
-</UL>
-<CODE>String-start</CODE> returns a regular expression that matches the beginning
- of the string being matched against; string-end returns one that matches
- the end.
-<H3><A NAME="14">Composite expressions</A></H3>
-<UL><LI><CODE>(sequence<I>&nbsp;reg-exp&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="15">&nbsp;</A>
-<LI><CODE>(one-of<I>&nbsp;reg-exp&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="16">&nbsp;</A>
-</UL>
-<CODE>Sequence</CODE> matches the concatenation of its arguments, <CODE>one-of</CODE> matches
-any one of its arguments.
-<UL><LI><CODE>(text<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="17">&nbsp;</A>
-</UL>
-<CODE>Text</CODE> returns a regular expression that matches the characters in
- <CODE><I>string</I></CODE>, in order.
-<UL><LI><CODE>(repeat<I>&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="18">&nbsp;</A>
-<LI><CODE>(repeat<I>&nbsp;count&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="19">&nbsp;</A>
-<LI><CODE>(repeat<I>&nbsp;min&nbsp;max&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="20">&nbsp;</A>
-</UL>
-<CODE>Repeat</CODE> returns a regular expression that matches zero or more
-occurences of its <CODE><I>reg-exp</I></CODE> argument.  With no count the result
-will match any number of times (<CODE><I>reg-exp</I></CODE>*).  With a single
-count the returned expression will match
- <CODE><I>reg-exp</I></CODE> exactly that number of times.
-The final case will match from <CODE><I>min</I></CODE> to <CODE><I>max</I></CODE>
- repetitions, inclusive.
-<CODE><I>Max</I></CODE> may be <CODE>#f</CODE>, in which case there
- is no maximum number of matches.
-<CODE><I>Count</I></CODE> and <CODE><I>min</I></CODE> should be exact, non-negative integers;
- <CODE><I>max</I></CODE> should either be an exact non-negative integer or <CODE>#f</CODE>.
-<H3><A NAME="21">Case sensitivity</A></H3>
-<P>Regular expressions are normally case-sensitive.
-<UL><LI><CODE>(ignore-case<I>&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="22">&nbsp;</A>
-<LI><CODE>(use-case<I>&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="23">&nbsp;</A>
-</UL>
-The value returned by
- <CODE>ignore-case</CODE> is identical its argument except that case will be
- ignored when matching.
-The value returned by <CODE>use-case</CODE> is protected
- from future applications of <CODE>ignore-case</CODE>.
-The expressions returned
- by <CODE>use-case</CODE> and <CODE>ignore-case</CODE> are unaffected by later uses of the
- these procedures.
-By way of example, the following matches <CODE>"ab"</CODE> but not <CODE>"aB"</CODE>,
- <CODE>"Ab"</CODE>, or <CODE>"AB"</CODE>.
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_48.html">Sockets</A> | Next: <A HREF="s48manual_50.html">Regular expressions</A>
+<H2>Macros for writing loops</H2>
+<CODE>Iterate</CODE> and <CODE>reduce</CODE> are extensions of named-<CODE>let</CODE> for
+ writing loops that walk down one or more sequences,
+ such as the elements of a list or vector, the
+ characters read from a port, or an arithmetic series.
+Additional sequences can be defined by the user.
+<CODE>Iterate</CODE> and <CODE>reduce</CODE> are in structure <CODE>reduce</CODE>.
+<H3><A NAME="1"><TT>Iterate</TT></A></H3>
+<P>The syntax of <CODE>iterate</CODE> is:
 <BLOCKQUOTE><PRE>
-<CODE>(text "ab")</CODE>
+  (iterate <CODE><I>loop-name</I></CODE>
+           ((<CODE><I>sequence-type</I></CODE> <CODE><I>element-variable</I></CODE> <CODE><I>sequence-data</I></CODE> ...)
+            ...)
+           ((<CODE><I>state-variable</I></CODE> <CODE><I>initial-value</I></CODE>)
+            ...)
+    <CODE><I>body-expression</I></CODE>
+    [<CODE><I>final-expression</I></CODE>])
 </PRE></BLOCKQUOTE>
-while
+<P><CODE>Iterate</CODE> steps the <CODE><I>element-variable</I></CODE>s in parallel through the
+ sequences, while each <CODE><I>state-variable</I></CODE> has the corresponding
+ <CODE><I>initial-value</I></CODE> for the first iteration and have later values
+ supplied by <CODE><I>body-expression</I></CODE>. 
+If any sequence has reached its limit the value of the <CODE>iterate</CODE>
+ expression is
+ the value of <CODE><I>final-expression</I></CODE>, if present, or the current values of
+ the <CODE><I>state-variable</I></CODE>s, returned as multiple values.
+If no sequence has reached
+ its limit, <CODE><I>body-expression</I></CODE> is evaluated and either calls <CODE><I>loop-name</I></CODE> with
+ new values for the <CODE><I>state-variable</I></CODE>s, or returns some other value(s).
+<P>The <CODE><I>loop-name</I></CODE> and the <CODE><I>state-variable</I></CODE>s and <CODE><I>initial-value</I></CODE>s behave
+exactly as in named-<CODE>let</CODE>.  The named-<CODE>let</CODE> expression
 <BLOCKQUOTE><PRE>
-<CODE>(ignore-case (test "ab"))</CODE>
+  (let loop-name ((state-variable initial-value) ...)
+    body ...)
 </PRE></BLOCKQUOTE>
-matches <CODE>"ab"</CODE>, <CODE>"aB"</CODE>,
- <CODE>"Ab"</CODE>, and <CODE>"AB"</CODE> and
+is equivalent to an <CODE>iterate</CODE> expression with no sequences
+ (and with an explicit
+ <CODE>let</CODE> wrapped around the body expressions to take care of any
+ internal <CODE>define</CODE>s):
 <BLOCKQUOTE><PRE>
-(ignore-case (sequence (text "a")
-                       (use-case (text "b"))))
+  (iterate loop-name
+           ()
+           ((state-variable initial-value) ...)
+    (let () body ...))
 </PRE></BLOCKQUOTE>
-matches <CODE>"ab"</CODE> and <CODE>"Ab"</CODE> but not <CODE>"aB"</CODE> or <CODE>"AB"</CODE>.
-<H3><A NAME="24">Submatches and matching</A></H3>
-<P>A subexpression within a larger expression can be marked as a submatch.
-When an expression is matched against a string, the success or failure
-of each submatch within that expression is reported, as well as the
-location of the substring matched be each successful submatch.
-<UL><LI><CODE>(submatch<I>&nbsp;key&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="25">&nbsp;</A>
-<LI><CODE>(no-submatches<I>&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="26">&nbsp;</A>
+<P>The <CODE><I>sequence-type</I></CODE>s are keywords (they are actually macros of a particular
+ form; it is easy to add additional types of sequences).
+Examples are <CODE>list*</CODE> which walks down the elements of a list and
+ <CODE>vector*</CODE> which does the same for vectors.
+For each iteration, each <CODE><I>element-variable</I></CODE> is bound to the next
+ element of the sequence.
+The <CODE><I>sequence-data</I></CODE> gives the actual list or vector or whatever.
+<P>If there is a <CODE><I>final-expression</I></CODE>, it is evaluated when the end of one or more
+ sequences is reached.
+If the <CODE><I>body-expression</I></CODE> does not call <CODE><I>loop-name</I></CODE> the
+ <CODE><I>final-expression</I></CODE> is not evaluated.
+The <CODE><I>state-variable</I></CODE>s are visible in
+ <CODE><I>final-expression</I></CODE> but the <CODE><I>sequence-variable</I></CODE>s are not.  
+<P>The <CODE><I>body-expression</I></CODE> and the <CODE><I>final-expression</I></CODE> are in tail-position within
+ the <CODE>iterate</CODE>.
+Unlike named-<CODE>let</CODE>, the behavior of a non-tail-recursive call to
+ <CODE><I>loop-name</I></CODE> is unspecified (because iterating down a sequence may involve side
+ effects, such as reading characters from a port).
+<H3><A NAME="2"><TT>Reduce</TT></A></H3>
+<P>If an <CODE>iterate</CODE> expression is not meant to terminate before a sequence
+ has reached its end,
+ <CODE><I>body-expression</I></CODE> will always end with a tail call to <CODE><I>loop-name</I></CODE>.
+<CODE>Reduce</CODE> is a macro that makes this common case explicit.
+The syntax of <CODE>reduce</CODE> is
+ the same as that of <CODE>iterate</CODE>, except that there is no <CODE><I>loop-name</I></CODE>.
+The <CODE><I>body-expression</I></CODE> returns new values of the <CODE><I>state-variable</I></CODE>s
+ instead of passing them to <CODE><I>loop-name</I></CODE>.
+Thus <CODE><I>body-expression</I></CODE> must return as many values as there are state
+ variables.
+By special dispensation, if there are
+ no state variables then <CODE><I>body-expression</I></CODE> may return any number of values,
+ all of which are ignored.
+<P>The syntax of <CODE>reduce</CODE> is:
+<BLOCKQUOTE><PRE>
+  (reduce ((<CODE><I>sequence-type</I></CODE> <CODE><I>element-variable</I></CODE> <CODE><I>sequence-data</I></CODE> ...)
+            ...)
+           ((<CODE><I>state-variable</I></CODE> <CODE><I>initial-value</I></CODE>)
+            ...)
+    <CODE><I>body-expression</I></CODE>
+    [<CODE><I>final-expression</I></CODE>])
+</PRE></BLOCKQUOTE>
+<P>The value(s) returned by an instance of <CODE>reduce</CODE> is the value(s) returned
+ by the <CODE><I>final-expression</I></CODE>, if present, or the current value(s) of the state
+variables when the end of one or more sequences is reached.
+<P>A <CODE>reduce</CODE> expression can be rewritten as an equivalent <CODE>iterate</CODE>
+ expression by adding a <CODE><I>loop-var</I></CODE> and a wrapper for the
+ <CODE><I>body-expression</I></CODE> that calls the <CODE><I>loop-var</I></CODE>.
+<BLOCKQUOTE><PRE>
+(iterate loop
+         ((<CODE><I>sequence-type</I></CODE> <CODE><I>element-variable</I></CODE> <CODE><I>sequence-data</I></CODE> ...)
+          ...)
+         ((<CODE><I>state-variable</I></CODE> <CODE><I>initial-value</I></CODE>)
+          ...)
+  (call-with-values (lambda ()
+                      <CODE><I>body-expression</I></CODE>)
+                    loop)
+  [<CODE><I>final-expression</I></CODE>])
+</PRE></BLOCKQUOTE>
+<H3><A NAME="3">Sequence types</A></H3>
+<P>The predefined sequence types are:
+<UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(list* <CODE><I>elt-var</I></CODE> <CODE><I>list</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(vector* <CODE><I>elt-var</I></CODE> <CODE><I>vector</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(string* <CODE><I>elt-var</I></CODE> <CODE><I>string</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(count* <CODE><I>elt-var</I></CODE> <CODE><I>start</I></CODE> [<CODE><I>end</I></CODE> [<CODE><I>step</I></CODE>]])</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(input* <CODE><I>elt-var</I></CODE> <CODE><I>input-port</I></CODE> <CODE><I>read-procedure</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(stream* <CODE><I>elt-var</I></CODE> <CODE><I>procedure</I></CODE> <CODE><I>initial-data</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
 </UL>
-<CODE>Submatch</CODE> returns a regular expression that matches its argument and
- causes the result of matching its argument to be reported by the <CODE>match</CODE>
- procedure.
-<CODE><I>Key</I></CODE> is used to indicate the result of this particular submatch 
- in the alist of successful submatches returned by <CODE>match</CODE>.
- Any value may be used as a <CODE><I>key</I></CODE>.
-<CODE>No-submatches</CODE> returns an expression identical to its
- argument, except that all submatches have been elided.
-<UL><LI><CODE>(any-match?<I>&nbsp;reg-exp&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="27">&nbsp;</A>
-<LI><CODE>(exact-match?<I>&nbsp;reg-exp&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="28">&nbsp;</A>
-<LI><CODE>(match<I>&nbsp;reg-exp&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>match&nbsp;or&nbsp;<TT>&nbsp;#f</TT></I></CODE><A NAME="29">&nbsp;</A>
-<LI><CODE>(match-start<I>&nbsp;match</I>)&nbsp;-&gt;&nbsp;<I>index</I></CODE><A NAME="30">&nbsp;</A>
-<LI><CODE>(match-end<I>&nbsp;match</I>)&nbsp;-&gt;&nbsp;<I>index</I></CODE><A NAME="31">&nbsp;</A>
-<LI><CODE>(match-submatches<I>&nbsp;match</I>)&nbsp;-&gt;&nbsp;<I>alist</I></CODE><A NAME="32">&nbsp;</A>
-</UL>
-<CODE>Any-match?</CODE> returns <CODE>#t</CODE> if <CODE><I>string</I></CODE> matches <CODE><I>reg-exp</I></CODE> or
- contains a substring that does, and <CODE>#f</CODE> otherwise.
-<CODE>Exact-match?</CODE> returns <CODE>#t</CODE> if <CODE><I>string</I></CODE> matches
- <CODE><I>reg-exp</I></CODE> and <CODE>#f</CODE> otherwise.
-<P><CODE>Match</CODE> returns <CODE>#f</CODE> if <CODE><I>reg-exp</I></CODE> does not match <CODE><I>string</I></CODE>
- and a match record if it does match.
-A match record contains three values: the beginning and end of the substring
- that matched
- the pattern and an a-list of submatch keys and corresponding match records
- for any submatches that also matched.
-<CODE>Match-start</CODE> returns the index of
- the first character in the matching substring and <CODE>match-end</CODE> gives index
- of the first character after the matching substring.
-<CODE>Match-submatches</CODE> returns an alist of submatch keys and match records.
-Only the top match record returned by <CODE>match</CODE> has a submatch alist.
-<P>Matching occurs according to POSIX.
-The match returned is the one with the lowest starting index in <CODE><I>string</I></CODE>.
-If there is more than one such match, the longest is returned.
-Within that match the longest possible submatches are returned.
-<P>All three matching procedures cache a compiled version of <CODE><I>reg-exp</I></CODE>.
-Subsequent calls with the same <CODE><I>reg-exp</I></CODE> will be more efficient.
-<P>The C interface to the POSIX regular expression code uses ASCII <CODE>nul</CODE>
- as an end-of-string marker.
-The matching procedures will ignore any characters following an
- embedded ASCII <CODE>nul</CODE>s in <CODE><I>string</I></CODE>.
+<P>For lists, vectors, and strings the element variable is bound to the
+ successive elements of the list or vector, or the characters in the
+ string.
+<P>For <CODE>count*</CODE> the element variable is bound to the elements of the sequence
 <BLOCKQUOTE><PRE>
-(define pattern (text "abc"))
-(any-match? pattern "abc")         <CODE>-&gt;</CODE> #t
-(any-match? pattern "abx")         <CODE>-&gt;</CODE> #f
-(any-match? pattern "xxabcxx")     <CODE>-&gt;</CODE> #t
-
-(exact-match? pattern "abc")       <CODE>-&gt;</CODE> #t
-(exact-match? pattern "abx")       <CODE>-&gt;</CODE> #f
-(exact-match? pattern "xxabcxx")   <CODE>-&gt;</CODE> #f
-
-(match pattern "abc")              <CODE>-&gt;</CODE> (#{match 0 3})
-(match pattern "abx")              <CODE>-&gt;</CODE> #f
-(match pattern "xxabcxx")          <CODE>-&gt;</CODE> (#{match 2 5})
-
-(let ((x (match (sequence (text "ab")
-                          (submatch 'foo (text "cd"))
-                          (text "ef"))
-                "xxxabcdefxx")))
-  (list x (match-submatches x)))
-  <CODE>-&gt;</CODE> (#{match 3 9} ((foo . #{match 5 7}))
-
-(match-submatches
-  (match (sequence
-           (set "a")
-           (one-of (submatch 'foo (text "bc"))
-                   (submatch 'bar (text "BC"))))
-         "xxxaBCd"))
-  <CODE>-&gt;</CODE> ((bar . #{match 4 6}))
+ <CODE><I>start</I></CODE>, <CODE><I>start</I></CODE> + <CODE><I>step</I></CODE>, <CODE><I>start</I></CODE> + 2<CODE><I>step</I></CODE>, ..., <CODE><I>end</I></CODE>
 </PRE></BLOCKQUOTE>
+inclusive of <CODE><I>start</I></CODE> and exclusive of <CODE><I>end</I></CODE>.
+The default <CODE><I>step</I></CODE> is 1.
+The sequence does not terminate if no <CODE><I>end</I></CODE> is given or if there
+ is no <I>N &gt; 0</I> such that <CODE><I>end</I></CODE> = <CODE><I>start</I></CODE> + N<CODE><I>step</I></CODE>
+ (<CODE>=</CODE> is used to test for termination).
+For example, <CODE>(count* i 0 -1)</CODE> doesn't terminate
+ because it begins past the <CODE><I>end</I></CODE> value and <CODE>(count* i 0 1 2)</CODE> doesn't
+ terminate because it skips over the <CODE><I>end</I></CODE> value.
+<P>For <CODE>input*</CODE> the elements are the results of successive applications
+ of <CODE><I>read-procedure</I></CODE> to <CODE><I>input-port</I></CODE>.
+The sequence ends when <CODE><I>read-procedure</I></CODE> returns an end-of-file object.
+<P>For a stream, the <CODE><I>procedure</I></CODE> takes the current data value as an argument
+ and returns two values, the next value of the sequence and a new data value.
+If the new data is <CODE>#f</CODE> then the previous element was the last
+ one.  For example,
+<BLOCKQUOTE><PRE>
+  (list* elt my-list)
+</PRE></BLOCKQUOTE>
+is the same as
+<BLOCKQUOTE><PRE>
+  (stream* elt list-&gt;stream my-list)
+</PRE></BLOCKQUOTE>
+where <CODE>list-&gt;stream</CODE> is
+<BLOCKQUOTE><PRE>
+  (lambda (list)
+    (if (null? list)
+        (values 'ignored #f)
+        (values (car list) (cdr list))))
+</PRE></BLOCKQUOTE>
+<H3><A NAME="4">Synchronous sequences</A></H3>
+<P>When using the sequence types described above, a loop terminates when any of
+its sequences reaches its end.  To help detect bugs it is useful to have
+sequence types that check to see if two or more sequences end on the same
+iteration.  For this purpose there is second set of sequence types called
+synchronous sequences.  These are identical to the ones listed above except
+that they cause an error to be signalled if a loop is terminated by a
+synchronous sequence and some other synchronous sequence did not reach its
+end on the same iteration.
+<P>Sequences are checked for termination in order, from left to right, and
+if a loop is terminated by a non-synchronous sequence no further checking
+is done.
+<P>The synchronous sequences are:
+<UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(list% <CODE><I>elt-var</I></CODE> <CODE><I>list</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(vector% <CODE><I>elt-var</I></CODE> <CODE><I>vector</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(string% <CODE><I>elt-var</I></CODE> <CODE><I>string</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(count% <CODE><I>elt-var</I></CODE> <CODE><I>start</I></CODE> <CODE><I>end</I></CODE> [<CODE><I>step</I></CODE>])</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(input% <CODE><I>elt-var</I></CODE> <CODE><I>input-port</I></CODE> <CODE><I>read-procedure</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(stream% <CODE><I>elt-var</I></CODE> <CODE><I>procedure</I></CODE> <CODE><I>initial-data</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+</UL>
+<P>Note that the synchronous <CODE>count%</CODE> must have an <CODE><I>end</I></CODE>, unlike the
+ nonsynchronous <CODE>count%</CODE>.
+<H3><A NAME="5">Examples</A></H3>
+<P>Gathering the indexes of list elements that answer true to some
+predicate.
+<BLOCKQUOTE><PRE>
+(lambda (my-list predicate)
+  (reduce ((list* elt my-list)
+           (count* i 0))
+          ((hits '()))
+    (if (predicate elt)
+        (cons i hits)
+        hits)
+    (reverse hits))
+</PRE></BLOCKQUOTE>
+<P>Looking for the index of an element of a list.
+<BLOCKQUOTE><PRE>
+(lambda (my-list predicate)
+  (iterate loop
+           ((list* elt my-list)
+            (count* i 0))
+           ()                                ; no state
+    (if (predicate elt)
+        i
+        (loop))))
+</PRE></BLOCKQUOTE>
+<P>Reading one line.
+<BLOCKQUOTE><PRE>
+(define (read-line port)
+  (iterate loop
+           ((input* c port read-char))
+           ((chars '()))
+    (if (char=? c #<CODE>\</CODE>newline)
+        (list-&gt;string (reverse chars))
+        (loop (cons c chars)))
+    (if (null? chars)
+        (eof-object)
+        ; no newline at end of file
+        (list-&gt;string (reverse chars)))))
+</PRE></BLOCKQUOTE>
+<P>Counting the lines in a file.  We can't use <CODE>count*</CODE> because we
+need the value of the count after the loop has finished.
+<BLOCKQUOTE><PRE>
+(define (line-count name)
+  (call-with-input-file name
+    (lambda (in)
+      (reduce ((input* l in read-line))
+              ((i 0))
+        (+ i 1)))))
+</PRE></BLOCKQUOTE>
+<H3><A NAME="6">Defining sequence types</A></H3>
+<P>The sequence types are object-oriented macros similar to enumerations.
+A non-synchronous sequence macro needs to supply three values:
+ <CODE>#f</CODE> to indicate that it isn't synchronous, a list of state variables
+ and their initializers, and the code for one iteration.
+The first
+ two methods are CPS'ed: they take another macro and argument to
+ which to pass their result.
+The <CODE>synchronized?</CODE> method gets no additional arguments.
+The <CODE>state-vars</CODE> method is passed a list of names which
+ will be bound to the arguments to the sequence.
+The final method, for the step, is passed the list of names bound to
+ the arguments and the list of state variables.
+In addition there is
+ a variable to be bound to the next element of the sequence, the
+ body expression for the loop, and an expression for terminating the
+ loop.
+<P>The definition of <CODE>list*</CODE> is
+<BLOCKQUOTE><PRE>
+(define-syntax list*
+  (syntax-rules (synchronized? state-vars step)
+    ((list* synchronized? (next more))
+     (next #f more))
+    ((list* state-vars (start-list) (next more))
+     (next ((list-var start-list)) more))
+    ((list* step (start-list) (list-var)
+            value-var loop-body final-exp)
+     (if (null? list-var)
+         final-exp
+         (let ((value-var (car list-var))
+               (list-var (cdr list-var)))
+           loop-body)))))
+</PRE></BLOCKQUOTE>
+<P>Synchronized sequences are the same, except that they need to
+ provide a termination test to be used when some other synchronized
+ method terminates the loop.
+<BLOCKQUOTE><PRE>
+(define-syntax list%
+  (syntax-rules (sync done)
+    ((list% sync (next more))
+     (next #t more))
+    ((list% done (start-list) (list-var))
+     (null? list-var))
+    ((list% stuff ...)
+     (list* stuff ...))))
+</PRE></BLOCKQUOTE>
+<H3><A NAME="7">Expanded code</A></H3>
+<P>The expansion of 
+<BLOCKQUOTE><PRE>
+  (reduce ((list* x '(1 2 3)))
+          ((r '()))
+    (cons x r))
+</PRE></BLOCKQUOTE>
+is
+<BLOCKQUOTE><PRE>
+  (let ((final (lambda (r) (values r)))
+        (list '(1 2 3))
+        (r '()))
+    (let loop ((list list) (r r))
+      (if (null? list)
+          (final r)
+          (let ((x (car list))
+                (list (cdr list)))
+            (let ((continue (lambda (r)
+                              (loop list r))))
+              (continue (cons x r)))))))
+</PRE></BLOCKQUOTE>
+<P>The only inefficiencies in this code are the <CODE>final</CODE> and <CODE>continue</CODE>
+ procedures, both of which could be substituted in-line.
+The macro expander could do the substitution for <CODE>continue</CODE> when there
+ is no explicit proceed variable, as in this case, but not in general.
 <P>
   
-Previous: <A HREF="s48manual_48.html">Macros for writing loops</A> | Next: <A HREF="s48manual_50.html">SRFIs</A></BODY></HTML>
+Previous: <A HREF="s48manual_48.html">Sockets</A> | Next: <A HREF="s48manual_50.html">Regular expressions</A></BODY></HTML>

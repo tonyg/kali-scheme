@@ -2,36 +2,68 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Wed May 30 12:23:56 2001 -->
+ -- on Emacs 20.4.1, Sun Jul 15 13:05:05 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Mixing Scheme 48 and C</TITLE>
+<TITLE>Scheme 48 Manual -- SRFIs</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | Previous Chapter: <A HREF="s48manual_35.html">Libraries</A> | Next Chapter: <A HREF="s48manual_64.html">Access to POSIX</A><BR>Previous: <A HREF="s48manual_50.html">SRFIs</A> | Next: <A HREF="s48manual_52.html">Available facilities</A>
-<H1>Mixing Scheme 48 and C <BR><FONT SIZE=+1>Mike Sperber and Richard Kelsey</FONT></H1>
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_50.html">Regular expressions</A> | Next: <A HREF="s48manual_52.html">Mixing Scheme 48 and C</A>
+<H2>SRFIs</H2>
+<P>`SRFI' stands for `Scheme Request For Implementation'.
+An SRFI is a description of an extension to standard Scheme.
+Draft and final SRFI documents, a FAQ, and other information about SRFIs
+ can be found at the
+<A HREF="http://srfi.schemers.org">SRFI web site</A>.
+<P>Scheme&nbsp;48 includes implementations of the following (final) SRFIs:
+<UL><LI>SRFI 1 - List Library
+<LI>SRFI 2 - <CODE>and-let*</CODE>
+<LI>SRFI 5 - <CODE>let</CODE> with signatures and rest arguments
+<LI>SRFI 6 - Basic string ports
+<LI>SRFI 7 - Program configuration
+<LI>SRFI 8 - <CODE>receive</CODE>
+<LI>SRFI 9 - Defining record types
+<LI>SRFI 11 - Syntax for receiving multiple values 
+<LI>SRFI 13 - String Library
+<LI>SRFI 14 - Character-Set Library (see note below)
+<LI>SRFI 16 - Syntax for procedures of variable arity
+<LI>SRFI 17 - Generalized <CODE>set!</CODE>
+<LI>SRFI 23 - Error reporting mechanism
+</UL>
+Documentation on these can be found at the web site mentioned above.
+<P>SRFI&nbsp;14 includes the procedure <CODE>-&gt;char-set</CODE> which is not a standard
+ Scheme identifier (in R<I><sup>5</sup></I>RS the only required identifier starting
+ with <CODE>-</CODE> is <CODE>-</CODE> itself).
+In the Scheme&nbsp;48 version of SRFI&nbsp;14 we have renamed <CODE>-&gt;char-set</CODE>
+ as <CODE>x-&gt;char-set</CODE>.
+<P>The SRFI bindings can be accessed either by opening the appropriate structure
+ (the structure <CODE>srfi-</CODE><CODE><I>n</I></CODE> contains SRFI <CODE><I>n</I></CODE>)
+ or by loading structure <CODE>srfi-7</CODE> and then using
+ the <CODE>,load-srfi-7-program</CODE> command to load an SRFI 7-style program.
+The syntax for the command is
+<BLOCKQUOTE><PRE>
+<CODE>,load-srfi-7-program <CODE><I>name</I></CODE> <CODE><I>filename</I></CODE></CODE>
+</PRE></BLOCKQUOTE>
+This creates a new structure and associated package, binds the structure
+ to <CODE><I>name</I></CODE> in the configuration package, and then loads the program
+ found in <CODE><I>filename</I></CODE> into the package.
+<P>As an example, if the file <CODE>test.scm</CODE> contains
+<BLOCKQUOTE><PRE>
+(program (code (define x 10)))
+</PRE></BLOCKQUOTE>
+this program can be loaded as follows:
+<BLOCKQUOTE><PRE>
+&gt; ,load-package srfi-7
+&gt; ,load-srfi-7-program test test.scm
+[test]
+&gt; ,in test
+test&gt; x
+10
+test&gt; 
+</PRE></BLOCKQUOTE>
 
 
-<P>This chapter describes an interface for calling C functions
- from Scheme, calling Scheme functions from C, and allocating
- storage in the Scheme heap..
-Scheme&nbsp;48 manages stub functions in C that
- negotiate between the calling conventions of Scheme and C and the
- memory allocation policies of both worlds.
-No stub generator is available yet, but writing stubs is a straightforward task.
-<MENU>
-<LI><A HREF="s48manual_52.html">Available facilities</A>
-<LI><A HREF="s48manual_53.html">Shared bindings</A>
-<LI><A HREF="s48manual_54.html">Calling C functions from Scheme</A>
-<LI><A HREF="s48manual_55.html">Adding external modules to the <TT>Makefile</TT></A>
-<LI><A HREF="s48manual_56.html">Dynamic loading</A>
-<LI><A HREF="s48manual_57.html">Compatibility</A>
-<LI><A HREF="s48manual_58.html">Accessing Scheme data from C</A>
-<LI><A HREF="s48manual_59.html">Calling Scheme functions from C</A>
-<LI><A HREF="s48manual_60.html">Interacting with the Scheme heap</A>
-<LI><A HREF="s48manual_61.html">Using Scheme records in C code</A>
-<LI><A HREF="s48manual_62.html">Raising exceptions from external code</A>
-<LI><A HREF="s48manual_63.html">Unsafe functions and macros</A>
-</MENU>
+
+
 <P>
   
-Previous: <A HREF="s48manual_50.html">SRFIs</A> | Next: <A HREF="s48manual_52.html">Available facilities</A></BODY></HTML>
+Previous: <A HREF="s48manual_50.html">Regular expressions</A> | Next: <A HREF="s48manual_52.html">Mixing Scheme 48 and C</A></BODY></HTML>

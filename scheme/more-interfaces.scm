@@ -442,7 +442,7 @@
 	  (cons-stream :syntax) head tail the-empty-stream empty-stream?
 	  explode implode get put))
 
-; Olin's encyclopedic list SRFI.
+; Olin's encyclopedic SRFIs.
 
 (define-interface srfi-1-interface
   (export xcons make-list list-tabulate cons* list-copy 
@@ -477,3 +477,86 @@
 	  lset-diff+intersection
 	  lset-union! lset-intersection! lset-difference! lset-xor!
 	  lset-diff+intersection!))
+
+(define-interface srfi-13-interface
+  (export string-map string-map!
+	  string-fold       string-unfold
+	  string-fold-right string-unfold-right 
+	  string-tabulate string-for-each string-for-each-index
+	  string-every string-any
+	  string-hash string-hash-ci
+	  string-compare string-compare-ci
+	  string=    string<    string>    string<=    string>=    string<>
+	  string-ci= string-ci< string-ci> string-ci<= string-ci>= string-ci<> 
+	  string-downcase  string-upcase  string-titlecase  
+	  string-downcase! string-upcase! string-titlecase! 
+	  string-take string-take-right
+	  string-drop string-drop-right
+	  string-pad string-pad-right
+	  string-trim string-trim-right string-trim-both
+	  string-filter string-delete
+	  string-index string-index-right 
+	  string-skip  string-skip-right
+	  string-count
+	  string-prefix-length string-prefix-length-ci
+	  string-suffix-length string-suffix-length-ci
+	  string-prefix? string-prefix-ci?
+	  string-suffix? string-suffix-ci?
+	  string-contains string-contains-ci
+	  string-copy! substring/shared
+	  string-reverse string-reverse! reverse-list->string
+	  string-concatenate
+	  string-concatenate/shared
+	  string-concatenate-reverse
+	  string-append/shared
+	  xsubstring string-xcopy!
+	  string-null?
+	  string-join
+	  string-tokenize
+	  string-replace
+
+	  string->list string-copy string-fill! 
+	  string? make-string string-length string-ref string-set! 
+	  string string-append list->string))
+
+(define-interface srfi-14-interface
+  (export char-set? char-set=
+	  char-set<= char-set-hash char-set-cursor char-set-ref
+	  char-set-cursor-next end-of-char-set? char-set-fold char-set-unfold
+	  char-set-unfold!  char-set-for-each char-set-map char-set-copy
+	  char-set
+
+	  list->char-set  string->char-set 
+	  list->char-set! string->char-set! 
+
+	  char-set-filter  ucs-range->char-set
+
+	  ; the SRFI defines ->CHAR-SET, but that isn't a legal identifier
+	  x->char-set
+	  
+	  char-set-filter! ucs-range->char-set!
+
+	  char-set->list char-set->string
+
+	  char-set-size char-set-count char-set-contains?
+	  char-set-every char-set-any
+
+	  char-set-adjoin  char-set-delete 
+	  char-set-adjoin! char-set-delete!
+ 
+
+	  char-set-complement  char-set-union  char-set-intersection  
+	  char-set-complement! char-set-union! char-set-intersection! 
+
+	  char-set-difference  char-set-xor  char-set-diff+intersection
+	  char-set-difference! char-set-xor! char-set-diff+intersection!
+
+	  char-set:lower-case	char-set:upper-case	char-set:title-case
+	  char-set:letter	char-set:digit		char-set:letter+digit
+	  char-set:graphic	char-set:printing	char-set:whitespace
+	  char-set:iso-control	char-set:punctuation	char-set:symbol
+	  char-set:hex-digit	char-set:blank		char-set:ascii
+	  char-set:empty	char-set:full
+
+	  ))
+

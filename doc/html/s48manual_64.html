@@ -2,66 +2,61 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Wed May 30 12:23:58 2001 -->
+ -- on Emacs 20.4.1, Sun Jul 15 13:05:06 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Access to POSIX</TITLE>
+<TITLE>Scheme 48 Manual -- Unsafe functions and macros</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | Previous Chapter: <A HREF="s48manual_51.html">Mixing Scheme 48 and C</A> | Next Chapter: <A HREF="s48manual_75.html">ASCII character encoding</A><BR>Previous: <A HREF="s48manual_63.html">Unsafe functions and macros</A> | Next: <A HREF="s48manual_65.html">Process primitives</A>
-<H1>Access to POSIX</H1>
-<P>This chapter describes Scheme&nbsp;48's interface to the POSIX C calls
- <A HREF="s48manual_76.html#POSIX">[1]</A>.
-Scheme versions of most of the functions in POSIX are provided.
-Both the interface and implementation are new and are likely to
- change in future releases.
-Section&nbsp;<A HREF="s48manual_74.html">*</A> lists which Scheme functions
- call which C functions.
-<P>Scheme&nbsp;48's POSIX interface will likely change significantly in the
- future.
-The implementation is new and may have significant bugs.
-<P>The POSIX bindings are available in several structures:
-<BLOCKQUOTE><CENTER>
-<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_52.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_63.html">Raising exceptions from external code</A> | Next: <A HREF="s48manual_65.html">Access to POSIX</A>
+<H2>Unsafe functions and macros</H2>
+<P>All of the C procedures and macros described above check that their
+ arguments have the appropriate types and that indexes are in range.
+The following procedures and macros are identical to those described
+ above, except that they do not perform type and range checks.
+They are provided for the purpose of writing more efficient code;
+ their general use is not recommended.
+<UL><LI><CODE>char      S48_UNSAFE_EXTRACT_CHAR(s48_value)</CODE>
+<LI><CODE>char *    S48_UNSAFE_EXTRACT_STRING(s48_value)</CODE>
+<LI><CODE>long      S48_UNSAFE_EXTRACT_INTEGER(s48_value)</CODE>
+<LI><CODE>long      S48_UNSAFE_EXTRACT_DOUBLE(s48_value)</CODE>
+</UL>
+<UL><LI><CODE>long      S48_UNSAFE_EXTRACT_FIXNUM(s48_value)</CODE>
+<LI><CODE>s48_value S48_UNSAFE_ENTER_FIXNUM(long)</CODE>
+</UL>
+<UL><LI><CODE>s48_value S48_UNSAFE_CAR(s48_value)</CODE>
+<LI><CODE>s48_value S48_UNSAFE_CDR(s48_value)</CODE>
+<LI><CODE>void      S48_UNSAFE_SET_CAR(s48_value, s48_value)</CODE>
+<LI><CODE>void      S48_UNSAFE_SET_CDR(s48_value, s48_value)</CODE>
+</UL>
+<UL><LI><CODE>long      S48_UNSAFE_VECTOR_LENGTH(s48_value)</CODE> 
+<LI><CODE>s48_value S48_UNSAFE_VECTOR_REF(s48_value, long)</CODE> 
+<LI><CODE>void      S48_UNSAFE_VECTOR_SET(s48_value, long, s48_value)</CODE> 
+</UL>
+<UL><LI><CODE>long      S48_UNSAFE_STRING_LENGTH(s48_value)</CODE> 
+<LI><CODE>char      S48_UNSAFE_STRING_REF(s48_value, long)</CODE> 
+<LI><CODE>void      S48_UNSAFE_STRING_SET(s48_value, long, char)</CODE> 
+</UL>
+<UL><LI><CODE>s48_value S48_UNSAFE_SYMBOL_TO_STRING(s48_value)</CODE> 
+</UL>
+<UL><LI><CODE>long      S48_UNSAFE_BYTE_VECTOR_LENGTH(s48_value)</CODE> 
+<LI><CODE>char      S48_UNSAFE_BYTE_VECTOR_REF(s48_value, long)</CODE> 
+<LI><CODE>void      S48_UNSAFE_BYTE_VECTOR_SET(s48_value, long, int)</CODE> 
+</UL>
+<UL><LI><CODE>s48_value S48_UNSAFE_SHARED_BINDING_REF(s48_value s_b)</CODE>
+<LI><CODE>int       S48_UNSAFE_SHARED_BINDING_P(x)</CODE>
+<LI><CODE>int       S48_UNSAFE_SHARED_BINDING_IS_IMPORT_P(s48_value s_b)</CODE>
+<LI><CODE>s48_value S48_UNSAFE_SHARED_BINDING_NAME(s48_value s_b)</CODE>
+<LI><CODE>void      S48_UNSAFE_SHARED_BINDING_SET(s48_value s_b, s48_value value)</CODE>
+</UL>
+<UL><LI><CODE>s48_value S48_UNSAFE_RECORD_TYPE(s48_value)</CODE> 
+<LI><CODE>s48_value S48_UNSAFE_RECORD_REF(s48_value, long)</CODE> 
+<LI><CODE>void      S48_UNSAFE_RECORD_SET(s48_value, long, s48_value)</CODE> 
+</UL>
+<UL><LI><CODE>type      S48_UNSAFE_EXTRACT_VALUE(s48_value, type)</CODE>
+<LI><CODE>type *    S48_UNSAFE_EXTRACT_VALUE_POINTER(s48_value, type)</CODE>
+<LI><CODE>void      S48_UNSAFE_SET_VALUE(s48_value, type, value)</CODE>
+</UL>
 
- <CODE>posix-processes</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> fork, exec, and friends </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix-process-data</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> information about processes </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix-files</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> files and directories </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix-i/o</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> operations on ports </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix-time</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> time functions </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix-users</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> users and groups </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix-regexps</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> regular expression matching </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> all of the above
-</TD></TR></TABLE>
-
-</CENTER></BLOCKQUOTE>
-<P>Scheme&nbsp;48's POSIX interface differs from
- Scsh's <A HREF="s48manual_76.html#10">[10]</A><A HREF="s48manual_76.html#11">[11]</A> in several ways.
-The interface here lacks Scsh's high-level constructs and utilities,
- such as the process notation, <CODE>awk</CODE> procedure, and parsing
- utilities.
-Scheme&nbsp;48 uses distinct types for some values that Scsh leaves
- as symbols or unboxed integers; these include file types, file modes,
- and user and group ids.
-Many of the names and other interface details are different, as well.
-<MENU>
-<LI><A HREF="s48manual_65.html">Process primitives</A>
-<LI><A HREF="s48manual_66.html">Signals</A>
-<LI><A HREF="s48manual_67.html">Process environment</A>
-<LI><A HREF="s48manual_68.html">Users and groups</A>
-<LI><A HREF="s48manual_69.html">OS and machine identification</A>
-<LI><A HREF="s48manual_70.html">Files and directories</A>
-<LI><A HREF="s48manual_71.html">Time</A>
-<LI><A HREF="s48manual_72.html">I/O</A>
-<LI><A HREF="s48manual_73.html">Regular expressions</A>
-<LI><A HREF="s48manual_74.html">C to Scheme correspondence</A>
-</MENU>
 <P>
   
-Previous: <A HREF="s48manual_63.html">Unsafe functions and macros</A> | Next: <A HREF="s48manual_65.html">Process primitives</A></BODY></HTML>
+Previous: <A HREF="s48manual_63.html">Raising exceptions from external code</A> | Next: <A HREF="s48manual_65.html">Access to POSIX</A></BODY></HTML>

@@ -2,18 +2,70 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Wed May 30 12:23:57 2001 -->
+ -- on Emacs 20.4.1, Sun Jul 15 13:05:05 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Compatibility</TITLE>
+<TITLE>Scheme 48 Manual -- Dynamic loading</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_51.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_56.html">Dynamic loading</A> | Next: <A HREF="s48manual_58.html">Accessing Scheme data from C</A>
-<H2>Compatibility</H2>
-<P>Scheme&nbsp;48's old <CODE>external-call</CODE> function is still available in the
- structure
- <CODE>externals</CODE>, which now also includes <CODE>external-name</CODE> and
- <CODE>external-value</CODE>.
-The old <CODE>scheme48.h</CODE> file has been renamed <CODE>old-scheme48.h</CODE>.
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_52.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_56.html">Adding external modules to the <TT>Makefile</TT></A> | Next: <A HREF="s48manual_58.html">Compatibility</A>
+<H2>Dynamic loading</H2>
+
+<P>External code can be loaded into a running Scheme&nbsp;48 process
+ and C object-file bindings can be dereferenced at runtime and
+ their values called
+ (although not all versions of Unix support all of this).
+The required Scheme functions are in the structure <CODE>dynamic-externals</CODE>.
+<UL><LI><CODE>(dynamic-load<I>&nbsp;string</I>)</CODE><A NAME="1">&nbsp;</A>
+</UL>
+<CODE>Dynamic-load</CODE> loads the named file into the current
+ process, raising an exception if the file cannot be found or if dynamic
+ loading is not supported by the operating system.
+The file must have been compiled and linked appropriately.
+For Linux, the following commands compile <CODE>foo.c</CODE> into a
+ file <CODE>foo.so</CODE> that can be loaded dynamically.
+<BLOCKQUOTE><PRE>
+% gcc -c -o foo.o foo.c
+% ld -shared -o foo.so foo.o
+</PRE></BLOCKQUOTE>
+<UL><LI><CODE>(get-external<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>external</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(external?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(external-name<I>&nbsp;external</I>)&nbsp;-&gt;&nbsp;<I>string</I></CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(external-value<I>&nbsp;external</I>)&nbsp;-&gt;&nbsp;<I>byte-vector</I></CODE><A NAME="5">&nbsp;</A>
+</UL>
+These functions give access to values bound in the current process, and
+ are used for retrieving values from dynamically-loaded files.
+<CODE>Get-external</CODE> returns an <I>external</I> object that contains the
+ value of <CODE><I>name</I></CODE>, raising an exception if there is no such
+ value in the current process.
+<CODE>External?</CODE> is the predicate for externals, and
+<CODE>external-name</CODE> and <CODE>external-value</CODE> return the name and
+ value of an external.
+The value is returned as byte vector of length four (on 32-bit
+ architectures).
+The value is that which was extant when <CODE>get-external</CODE> was
+ called.
+The following two functions can be used to update the values of
+ externals.
+<UL><LI><CODE>(lookup-external<I>&nbsp;external</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="6">&nbsp;</A>
+<LI><CODE>(lookup-all-externals<I></I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="7">&nbsp;</A>
+</UL>
+<CODE>Lookup-external</CODE> updates the value of <CODE><I>external</I></CODE> by looking up its
+ name in the current process, returning <CODE>#t</CODE> if the name is bound
+ and <CODE>#f</CODE> if it is not.
+<CODE>Lookup-all-externals</CODE> calls <CODE>lookup-external</CODE> on all extant
+ externals, returning <CODE>#f</CODE> any are unbound.
+<UL><LI><CODE>(call-external<I>&nbsp;external&nbsp;arg<I><sub>0</sub></I>&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="8">&nbsp;</A>
+</UL>
+An external whose value is a C procedure can be called using
+ <CODE>call-external</CODE>.
+See
+
+the section on <A HREF="s48manual_55.html">calling C functions from Scheme</A>
+for more information.
+<P>In some versions of Unix retrieving a value from the current
+ process may require a non-trivial amount of computation.
+We recommend that a dynamically-loaded file contain a single initialization
+ procedure that creates shared bindings for the values exported by the file.
 <P>
   
-Previous: <A HREF="s48manual_56.html">Dynamic loading</A> | Next: <A HREF="s48manual_58.html">Accessing Scheme data from C</A></BODY></HTML>
+Previous: <A HREF="s48manual_56.html">Adding external modules to the <TT>Makefile</TT></A> | Next: <A HREF="s48manual_58.html">Compatibility</A></BODY></HTML>

@@ -14,8 +14,8 @@
 \newcommand{\schindex}[1]{\index{#1!tt!aux}}
 \newcommand{\sharpindex}[1]{\index{#1!sharp!aux}}
 
-\newcommand{\codemainindex}[1]{{\mainschindex{#1}\code{#1}}}
-\newcommand{\codeindex}[1]{{\mainschindex{#1}\code{#1}}}
+\newcommand{\codemainindex}[1]{{\mainschindex{{#1}}\code{#1}}}
+\newcommand{\codeindex}[1]{{\schindex{#1}\code{#1}}}
 
 \newenvironment{myindex}
                {\if@twocolumn

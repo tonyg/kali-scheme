@@ -28,12 +28,12 @@
 		 #f)
 	       (lambda ()
 		 (if input?
-		     (remap-file-descriptors (current-input-port)
-					     output-pipe
-					     (current-error-port))
-		     (remap-file-descriptors input-pipe
-					     (current-output-port)
-					     (current-error-port)))
+		     (remap-file-descriptors! (current-input-port)
+					      output-pipe
+					      (current-error-port))
+		     (remap-file-descriptors! input-pipe
+					      (current-output-port)
+					      (current-error-port)))
 		 (exec-file "/bin/sh" "-c" command))
 	       (lambda ()
 		 (exit 1)))))))))

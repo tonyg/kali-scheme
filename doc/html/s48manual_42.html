@@ -2,7 +2,7 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Wed May 30 12:23:55 2001 -->
+ -- on Emacs 20.4.1, Sun Jul 15 13:05:03 2001 -->
 <HEAD>
 <TITLE>Scheme 48 Manual -- Records</TITLE>
 
@@ -69,7 +69,7 @@ The print method can be modified using <CODE>define-record-discloser</CODE>:
 </PRE></BLOCKQUOTE>
 will cause the result of <CODE>(kons 1 2)</CODE> to print as
  <CODE>#{Pare 1 2}</CODE>.
-<P><A HREF="s48manual_60.html#3"><CODE>Define-record-resumer</CODE></A>
+<P><A HREF="s48manual_61.html#3"><CODE>Define-record-resumer</CODE></A>
  can be used to control how records are stored in heap images.
 <H3><A NAME="2">Low-level access to records</A></H3>
 <P>Records are implemented using primitive objects exactly analogous
@@ -122,9 +122,9 @@ These procedures construct the usual record-manipulating procedures.
  <CODE>define-record-discloser</CODE>
  (re-exported by <CODE>define-record-types</CODE> described above)
  and
- <CODE>define-record-discloser</CODE>
+ <CODE>define-record-resumer</CODE>
  (re-exported by
- <A HREF="s48manual_60.html#3"><CODE>external-calls</CODE></A>).
+ <A HREF="s48manual_61.html#3"><CODE>external-calls</CODE></A>).
 <P>The procedures described in this section can be used to define new
  record-type-defining macros.
 <BLOCKQUOTE><PRE>

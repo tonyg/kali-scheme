@@ -145,7 +145,7 @@ The configuration language consists of top-level defining forms for
 \end{figure}
 \label{module-language-figure}
 
-A \codemainindex{define-structure} form introduces a binding of a name to a
+A \codemainindex{{define-structure}} form introduces a binding of a name to a
 structure.  A structure is a view on an underlying package which is
 created according to the clauses of the {\tt define-structure} form.
 Each structure has an interface that specifies which bindings in the
@@ -164,8 +164,8 @@ For building structures that export structures, there is a {\tt defpackage}
 Many other structures, such as record and hash table facilities, are also
  available in the \hack{} implementation.
 
-The \codemainindex{modify}, \codemainindex{subset}, and
- \codemainindex{prefix} forms produce new
+The \codemainindex{{modify}}, \codemainindex{{subset}}, and
+ \codemainindex{{prefix}} forms produce new
  views on existing structures by renaming or hiding exported names.
 \code{Subset} returns a new structure that exports only the listed names
  from its \syn{structure} argument.
@@ -262,7 +262,7 @@ files} list.
 
 
 \section{Interfaces}
-\mainschindex{define-interface}
+\codemainindex{{define-interface}}
 
 An interface can be thought of as the type of a structure.  In its
 basic form it is just a list of variable names, written {\tt(export
@@ -301,7 +301,9 @@ interface definitions and package definitions are easier to read; the
 long lists of exported bindings just get in the way most of the time.
 \end{enumerate}
 
-The \codemainindex{compound-interface} operator forms an interface that is the
+% The double {{ }} around the index entries are there to help
+% Hyperlatex sort the index properly.
+The \codemainindex{{compound-interface}} operator forms an interface that is the
 union of two or more component interfaces.  For example,
 \begin{example}
 (define-interface bar-interface

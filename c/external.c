@@ -69,6 +69,7 @@ static s48_value external_return_value;
 /* Exports to Scheme */
 static s48_value	s48_clear_stack_top(void);
 static s48_value	s48_trampoline(s48_value proc, s48_value nargs);
+static s48_value	s48_system(s48_value string);
 
 /* Imports from Scheme */
 static s48_value 	the_record_type_binding = S48_FALSE;
@@ -97,6 +98,7 @@ s48_initialize_external()
 
   S48_EXPORT_FUNCTION(s48_clear_stack_top);
   S48_EXPORT_FUNCTION(s48_trampoline);
+  S48_EXPORT_FUNCTION(s48_system);
 }
 
 /* The three reasons for an extern-call longjump. */
@@ -293,7 +295,7 @@ s48_call_scheme(s48_value proc, long nargs, ...)
 
   /* It would be nice to push a list of the arguments, but we have no way
      of preserving them across a cons. */
-  if (nargs < 0 || 10 < nargs) {  /* DO NOT INCREASE THIS NUMBER */
+  if (nargs < 0 || 12 < nargs) {  /* DO NOT INCREASE THIS NUMBER */
     s48_value sch_nargs = s48_enter_integer(nargs);  /* `proc' is protected */
     s48_raise_scheme_exception(S48_EXCEPTION_TOO_MANY_ARGUMENTS_IN_CALLBACK,
 			       2, proc, sch_nargs);
@@ -425,6 +427,14 @@ s48_trampoline(s48_value proc, s48_value nargs)
     s48_raise_range_error(nargs, s48_enter_fixnum(0), s48_enter_fixnum(3));
     return S48_UNDEFINED; /* not that we ever get here */
   }
+}
+
+static s48_value
+s48_system(s48_value string)
+{
+  return s48_enter_integer(system((string == S48_FALSE)
+				  ? NULL
+				  : s48_extract_string(string)));
 }
 
 /********************************/

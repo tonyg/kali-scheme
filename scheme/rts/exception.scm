@@ -29,6 +29,15 @@
   (lambda (opcode reason arg)
     (really-signal-condition arg)))
 
+; The time opcode sometimes needs a little help.
+
+(define-exception-handler (enum op time)
+  (lambda (opcode reason option arg0 . maybe-arg1)
+    (if (= reason (enum exception arithmetic-overflow))
+	(+ (* arg0 1000)		; seconds
+	   (car maybe-arg1))		; milliseconds
+	(apply signal-exception opcode reason option arg0 mayge-arg1))))
+
 ; This is for generic arithmetic, mostly
 
 (define (extend-opcode! opcode make-handler)

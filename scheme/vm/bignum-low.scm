@@ -71,21 +71,22 @@
 ; new header at the beginning of the now-unused bytes at the end.
 
 (define (s48-shorten-bignum external-bignum number-of-digits)
-  (let ((bignum (address->stob-descriptor external-bignum)))
-    (let ((new-size (cells->bytes
-		      (bignum-size (+ number-of-digits 1))))
-	  (old-size (header-length-in-bytes (stob-header bignum))))
-      (if  (> new-size old-size)
-	   (error "shorten bignum" new-size old-size))
-      (if (< (+ new-size (cells->bytes stob-overhead))
-	     old-size)
-	  (begin
-            (stob-header-set! bignum
-                              (make-header (enum stob bignum) new-size))
-            (stob-header-set! (address->stob-descriptor
-                                 (address+ (address-at-header bignum)
-                                           (bytes->a-units new-size)))
-                              (make-header (enum stob bignum)
-                                           (- (- old-size new-size)
-					      (cells->bytes stob-overhead))))))
-      external-bignum)))
+  (let* ((bignum (address->stob-descriptor external-bignum))
+	 (new-size (cells->bytes (bignum-digits->size number-of-digits)))
+	 (new-data-size (- new-size stob-overhead-in-bytes))
+	 (old-data-size (header-length-in-bytes (stob-header bignum)))
+	 (waste-size (- old-data-size new-data-size))
+	 (waste-data-size (- waste-size stob-overhead-in-bytes)))
+    (if  (< waste-size 0)
+	 (error "shorten bignum" new-data-size old-data-size))
+    (if (<= stob-overhead-in-bytes waste-size)
+	(begin
+	  (stob-header-set! bignum
+			    (make-header (enum stob bignum) new-data-size))
+	  (stob-header-set! (address->stob-descriptor
+			     (address+ (address-after-header bignum)
+				       (bytes->a-units new-size)))
+			    (make-header (enum stob bignum) waste-data-size))))
+    external-bignum))
+
+(define stob-overhead-in-bytes (cells->bytes stob-overhead))

@@ -5,7 +5,7 @@
  * An interface to Unix sockets.
  */
 
-#define _XOPEN_SOURCE_EXTENDED
+#define _XOPEN_SOURCE_EXTENDED 1		/* AIX wants this to be 1 */
 #include "sysdep.h"
 #include <stdio.h>
 #include <sys/types.h>
@@ -157,6 +157,7 @@ s48_bind(s48_value channel, s48_value port_number)
   else
     port = s48_extract_fixnum(port_number);
 
+  memset(&address, 0, sizeof(address));
   address.sin_family = AF_INET;
   address.sin_addr.s_addr = htonl(INADDR_ANY);
   address.sin_port = htons(port);
@@ -532,6 +533,7 @@ s48_udp_send(s48_value channel,
   
   socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
 
+  memset(&to, 0, sizeof(to));
   to.sin_family = AF_INET;
   to.sin_addr = *(UDP_ADDRESS_PTR(address));
   to.sin_port = htons(UDP_PORT(address));
