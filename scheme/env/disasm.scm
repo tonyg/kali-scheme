@@ -260,10 +260,12 @@
 		      (cons (code-vector-ref code (+ gc-mask-start i)) r))
 		r)))
 	 (gc-mask (bytes->bits gc-mask-bytes)))
+    (write-char #\space)
+    (display (list (get-offset code (- (+ pc size) 2))))
     (let loop ((mask gc-mask) (i 0))
       (if (not (zero? mask))
 	  (begin
-	    (if (bitwise-and mask 1)
+	    (if (odd? mask)
 		(begin
 		  (write-char #\space)
 		  (display i)))
