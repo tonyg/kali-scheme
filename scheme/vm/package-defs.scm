@@ -170,6 +170,7 @@
 	interpreter-internal stack
 	memory data struct
 	gc gc-roots gc-util
+	heap ; S48-GATHER-OBJECTS
 	string-tables
 	external)
   (files (interp external-call)))

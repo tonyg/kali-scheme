@@ -102,6 +102,18 @@
 				(loop (link->value (foo-next entry)))))))
 		      hash-table-slots)))
 
+; Return a procedure that will apply PROC to every element of TABLE
+; until PROC returns #f.
+
+(define (table-while-walker foo-next)
+  (lambda (proc table)
+    (natural-for-each-while (lambda (index)
+			      (let loop ((entry (hash-table-ref table index)))
+				(if (and (not (vm-eq? entry false))
+					 (proc entry))
+				    (loop (link->value (foo-next entry))))))
+			    hash-table-slots)))
+
 ; Copy a table, retaining all entries.
 
 (define (table-tracer foo-next set-foo-next! trace-value)

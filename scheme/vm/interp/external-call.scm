@@ -148,6 +148,27 @@
 ; Print warnings about all imported bindings which the external code
 ; has not yet defined.
 
+(define (shared-binding-undefined? binding)
+  (undefined? (shared-binding-ref binding)))
+
+(define for-each-imported-binding
+  (let ((walker (table-while-walker shared-binding-next)))
+    (lambda (proc)
+      (walker proc *imported-bindings*))))
+	 
+(define-primitive find-undefined-imported-bindings ()
+  (lambda ()
+    (let loop ((first? #t))
+      (let ((vector (s48-gather-objects shared-binding-undefined?
+					for-each-imported-binding)))
+	(cond ((not (false? vector))
+	       (goto return vector))
+	      (first?
+	       (s48-collect)
+	       (loop #f))
+	      (else
+	       (raise-exception heap-overflow 0)))))))
+
 (define s48-warn-about-undefined-imported-bindings
   (let ((walker (table-walker shared-binding-next)))
     (lambda ()

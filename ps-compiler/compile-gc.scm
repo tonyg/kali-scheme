@@ -19,7 +19,10 @@
 	   '(header "#include \"scheme48vm.h\"")
            ;'(copy (heap walk-over-type-in-area))
 	   '(no-copy (gc s48-trace-locations!))
-           '(integrate (real-copy-object s48-trace-locations!)))))
+           '(integrate (real-copy-object
+			s48-trace-locations!
+			gather-objects-into-vector
+			generic-find-all)))))
 
 (in 'prescheme-compiler
     '(run (prescheme-compiler

@@ -28,6 +28,11 @@
       ((= i n))
     (proc i)))
 
+(define (natural-for-each-while proc n)
+  (do ((i 0 (+ i 1)))
+      ((or (= i n)
+	   (not (proc i))))))
+
 ;----------------
 
 (define (error? status)

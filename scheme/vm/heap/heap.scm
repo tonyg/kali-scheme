@@ -155,7 +155,40 @@
       #t))
 
 ;----------------------------------------------------------------
-; Finding things in the heap.
+; Finding and gathering things in the heap.
+
+;; GATHER-THUNK gathers objects, storing them via STORE-NEXT! until
+;; finished (when it returns #t) or heap space runs out (when it
+;; returns #f).  GATHER-OBJECTS-INTO-VECTOR then returns a vector of
+;; the results.
+
+(define (gather-objects-into-vector gather-thunk)
+  (let ((start-hp s48-*hp*))
+    (store-next! 0)			; reserve space for header
+    (cond ((gather-thunk)
+	   (let ((size (address-difference s48-*hp* (address1+ start-hp))))
+	     (store! start-hp (make-header (enum stob vector) size) )
+	     (address->stob-descriptor (address1+ start-hp))))
+	  (else
+	   (set! s48-*hp* start-hp) ; out of space, so undo and give up
+	   false))))
+
+; Gather, for a given iterator procedure FOR-EACH-OBJECT, all objects
+; matching a given predicate PREDICATE into a vector.
+
+(define *collect-predicate*)
+
+(define (s48-gather-objects predicate for-each-object)
+  (set! *collect-predicate* predicate)
+  (gather-objects-into-vector
+   (lambda ()
+     (for-each-object
+      (lambda (obj)
+	(cond ((not (*collect-predicate* obj)) #t)
+	      ((s48-available? (cells->a-units 1))
+	       (store-next! obj)
+	       #t)
+	      (else #f)))))))
 
 (define *finding-type* (enum stob symbol))    ; work around lack of closures
 
@@ -199,16 +232,11 @@
     (lambda (type)
       (set! *finding-type* type)                     ; we don't have closures
       (let ((start-hp s48-*hp*))
-	(store-next! 0)                              ; reserve space for header
-	(cond ((and (proc *newspace-begin* start-hp)
-		    (walk-impure-areas proc)
-		    (walk-pure-areas proc))
-	       (let ((size (address-difference s48-*hp* (address1+ start-hp))))
-		 (store! start-hp (make-header (enum stob vector) size) )
-		 (address->stob-descriptor (address1+ start-hp))))
-	      (else
-	       (set! s48-*hp* start-hp) ; out of space, so undo and give up
-	       false))))))
+	(gather-objects-into-vector
+	 (lambda ()
+	   (and (proc *newspace-begin* start-hp)
+		(walk-impure-areas proc)
+		(walk-pure-areas proc))))))))
 
 ; Find everything with a given type.
 

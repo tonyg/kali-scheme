@@ -4,7 +4,7 @@
   (export adjoin-bits low-bits high-bits unsigned-high-bits
 	  assert
 	  vector+length-fill!
-	  natural-for-each
+	  natural-for-each natural-for-each-while
 
 	  error?
 	  write-error-string write-error-integer write-error-newline
@@ -77,6 +77,8 @@
 (define-interface heap-interface
   (export s48-available
 	  s48-heap-size
+
+	  s48-gather-objects
 
 	  s48-find-all
 	  s48-find-all-records
@@ -202,7 +204,7 @@
 	  table-adder
 	  table-searcher
 	  table-remover
-	  table-walker
+	  table-walker table-while-walker
 	  table-tracer
 	  table-cleaner
 	  table-relocator

@@ -25,6 +25,10 @@
       (external "AVAILABLEp" (=> (integer) boolean))) ; macro
     (define s48-heap-size
       (external "s48_heap_size" (=> () integer)))
+    (define s48-gather-objects
+      (external "s48_gather_objects" (=> ((=> (integer) boolean)
+					  (=> ((=> (integer) boolean)) boolean))
+					 integer)))
     (define s48-find-all
       (external "s48_find_all" (=> (integer) integer)))
     (define s48-find-all-records

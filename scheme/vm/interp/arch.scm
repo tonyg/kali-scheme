@@ -247,6 +247,7 @@
   (call-external-value 1 +)
   (lookup-shared-binding 2)
   (undefine-shared-binding 2)
+  (find-undefined-imported-bindings)
   (time 2)
   (vm-extension 2)		; access to extensions of the virtual machine
   (return-from-callback 2)	; return from an callback
