@@ -442,7 +442,7 @@ s48_get_next_event(long *ready_fd, long *status)
   }
   if (there_are_ready_ports()) {
     *ready_fd = next_ready_port(status);
-    /* fprintf(stderr, "[i/o completion]\n"); */
+    /* fprintf(stderr, "[i/o completion on port %ld]\n", *ready_fd); */
     return (IO_COMPLETION_EVENT);
   }
   if (alarm_time != -1 && s48_current_time >= alarm_time) {
@@ -470,14 +470,18 @@ s48_wait_for_event(long max_wait, bool is_minutes)
 
   s48_stop_alarm_interrupts();
 
-  if (max_wait == -1)
-    max_wait = 0;
-
   if (keyboard_interrupt_count >  0)
     status = NO_ERRORS;
   else {
-    SleepEx(is_minutes ? max_wait * 60 * 1000 :
-	    max_wait * (1000 / TICKS_PER_SECOND),
+    DWORD dwMilliseconds;
+    if (max_wait == -1)
+      dwMilliseconds = INFINITE;
+    else if (is_minutes)
+      dwMilliseconds = max_wait * 60 * 1000;
+    else
+      dwMilliseconds = max_wait * (1000 / TICKS_PER_SECOND);
+
+    SleepEx(dwMilliseconds,
 	    TRUE);
     if (there_are_ready_ports())
       NOTE_EVENT;
