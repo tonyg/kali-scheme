@@ -10,7 +10,7 @@
 
 '
 (define-structure profiler (export profile)
-  (open scheme-level-2 handle exception ;interrupts
+  (open scheme-level-2 handle vm-exception ;interrupts
 	architecture continuation signals condition template
 	table structure-refs debug-data sort
 	clock) ;schedule-interrupt

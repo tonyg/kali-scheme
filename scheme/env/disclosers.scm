@@ -46,8 +46,8 @@
 ;; this overwrites the method defined in rts/continuation.scm
 
 (define-method &disclose ((obj :continuation))
-  (list (if (exception-continuation? obj)
-	    'exception-continuation
+  (list (if (vm-exception-continuation? obj)
+	    'vm-exception-continuation
 	    'continuation)
 	(list 'pc (continuation-pc obj))
 	(let ((tem (continuation-template obj)))
@@ -152,31 +152,31 @@
     (list 'interrupt (enumerand->name (cadr c) interrupt))))
         
 
-; Make prettier error messages for exceptions
+; Make prettier error messages for VM exceptions
 
-(define-condition-discloser exception?
+(define-condition-discloser vm-exception?
   (lambda (c)
-    (let ((opcode (exception-opcode c))
-	  (reason (exception-reason c))
-          (args   (exception-arguments c)))
-      ((vector-ref exception-disclosers opcode)
+    (let ((opcode (vm-exception-opcode c))
+	  (reason (vm-exception-reason c))
+          (args   (vm-exception-arguments c)))
+      ((vector-ref vm-exception-disclosers opcode)
        opcode
        reason
        args))))
 
-(define exception-disclosers
+(define vm-exception-disclosers
   (make-vector op-count
                (lambda (opcode reason args)
                  (list 'error
-                       "exception"
+                       "vm-exception"
 		       reason
                        (let ((name (enumerand->name opcode op)))
                          (if (>= opcode (enum op eq?))
                              (error-form name args)
                              (cons name args)))))))
 
-(define (define-exception-discloser opcode discloser)
-  (vector-set! exception-disclosers opcode discloser))
+(define (define-vm-exception-discloser opcode discloser)
+  (vector-set! vm-exception-disclosers opcode discloser))
 
 (let ((disc (lambda (opcode reason args)
               (let ((loc (car args)))
@@ -190,10 +190,10 @@
                                     (if pack
                                         (list (list 'package pack))
                                         '())))))))))
-  (define-exception-discloser (enum op global) disc)
-  (define-exception-discloser (enum op set-global!) disc))
+  (define-vm-exception-discloser (enum op global) disc)
+  (define-vm-exception-discloser (enum op set-global!) disc))
 
-(define-exception-discloser (enum op unassigned-check)
+(define-vm-exception-discloser (enum op unassigned-check)
   (lambda (opcode reason args)
     (list 'error
 	  "LETREC variable used before its value has been produced")))
@@ -210,9 +210,9 @@
 		      (else
 		       (symbol->string reason)))
 		    (map value->expression (cons (car args) (cadr args)))))))
-  (define-exception-discloser (enum op call) disc)
-  (define-exception-discloser (enum op tail-call) disc)
-  (define-exception-discloser (enum op big-call) disc))
+  (define-vm-exception-discloser (enum op call) disc)
+  (define-vm-exception-discloser (enum op tail-call) disc)
+  (define-vm-exception-discloser (enum op big-call) disc))
 
 (let ((disc (lambda (opcode reason args)
 	      (list 'error
@@ -225,14 +225,14 @@
 		       (string-append "with-continuation: "
 				      (symbol->string reason))))
 		    (value->expression (car args))))))
-  (define-exception-discloser (enum op with-continuation) disc))
+  (define-vm-exception-discloser (enum op with-continuation) disc))
 
 (let ((disc (lambda (opcode reason args)
 	      (list 'error
 		    (symbol->string reason)
 		    (cons 'apply (map value->expression args))))))
-  (define-exception-discloser (enum op apply) disc)
-  (define-exception-discloser (enum op closed-apply) disc))
+  (define-vm-exception-discloser (enum op apply) disc)
+  (define-vm-exception-discloser (enum op closed-apply) disc))
 
 (let ((disc (lambda (opcode reason args)
 	      (let ((proc (car args))
@@ -249,9 +249,9 @@
 		       (list 'error
 			     "returning wrong number of values"
 			     (error-form 'values args))))))))
-  (define-exception-discloser (enum op return) disc)
-  (define-exception-discloser (enum op values) disc)
-  (define-exception-discloser (enum op closed-values) disc))
+  (define-vm-exception-discloser (enum op return) disc)
+  (define-vm-exception-discloser (enum op values) disc)
+  (define-vm-exception-discloser (enum op closed-values) disc))
 
 (let ((disc (lambda (opcode reason args)
               (let ((thing     (car args))
@@ -261,48 +261,48 @@
                 (let ((data (assq (enumerand->name type-byte stob)
                                   stob-data)))
                   (list 'error
-                        "exception"
+                        "vm-exception"
                         (error-form ((if (= opcode
 					    (enum op stored-object-ref))
                                          car
                                          cadr)
                                      (list-ref data (+ offset 3)))
                                     (cons thing rest))))))))
-  (define-exception-discloser (enum op stored-object-ref) disc)
-  (define-exception-discloser (enum op stored-object-set!) disc))
+  (define-vm-exception-discloser (enum op stored-object-ref) disc)
+  (define-vm-exception-discloser (enum op stored-object-set!) disc))
 
 (let ((disc (lambda (opcode reason args)
               (let ((type (enumerand->name (car args) stob)))
                 (list 'error
-                      "exception"
+                      "vm-exception"
                       (error-form (string->symbol
                                    ;; Don't simplify this to "make-"  --JAR
                                    (string-append (symbol->string 'make-)
                                                   (symbol->string type)))
                                   (cdr args)))))))
-  (define-exception-discloser (enum op make-vector-object) disc))
+  (define-vm-exception-discloser (enum op make-vector-object) disc))
 
-(define (vector-exception-discloser suffix)
+(define (vector-vm-exception-discloser suffix)
   (lambda (opcode reason args)
     (let ((type (enumerand->name (cadr args) stob)))
       (list 'error
-            "exception"
+            "vm-exception"
             (error-form (string->symbol
                          (string-append (symbol->string type)
                                         "-"
                                         (symbol->string suffix)))
                         (cons (car args) (cddr args)))))))
 
-(define-exception-discloser (enum op stored-object-length)
-  (vector-exception-discloser 'length))
+(define-vm-exception-discloser (enum op stored-object-length)
+  (vector-vm-exception-discloser 'length))
 
-(define-exception-discloser (enum op stored-object-indexed-ref)
-  (vector-exception-discloser 'ref))
+(define-vm-exception-discloser (enum op stored-object-indexed-ref)
+  (vector-vm-exception-discloser 'ref))
 
-(define-exception-discloser (enum op stored-object-indexed-set!)
-  (vector-exception-discloser 'set!))
+(define-vm-exception-discloser (enum op stored-object-indexed-set!)
+  (vector-vm-exception-discloser 'set!))
 
-;(define-exception-discloser (enum op get-cont-from-heap)
+;(define-vm-exception-discloser (enum op get-cont-from-heap)
 ;  (lambda (opcode reason args)
 ;    (let ((value (car args))
 ;          (continuation (cadr args)))
@@ -314,11 +314,11 @@
 ;                "returning to a non-continuation"
 ;                (value->expression continuation))))))
 
-(define-exception-discloser (enum op ascii->char)
+(define-vm-exception-discloser (enum op ascii->char)
   (lambda (opcode reason args)
     (let ((value (car args)))
       `(error
-	"exception"
+	"vm-exception"
 	"wrong-type-argument"
 	(ascii->char ,(value->expression value))
 	,@(if (integer? value)

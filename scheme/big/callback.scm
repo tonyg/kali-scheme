@@ -184,9 +184,9 @@
 	     (set-stack-block-placeholder! block #f)
 	     (placeholder-set! placeholder #t)
 	     (if exception-args
-		 (apply signal-exception opcode return-value exception-args)
+		 (apply signal-vm-exception opcode return-value exception-args)
 		 return-value))))
-	(apply signal-exception opcode reason args))))
+	(apply signal-vm-exception opcode reason args))))
 
 (define (block-depth block)
   (if block
@@ -194,7 +194,7 @@
       0))
 
 (for-each (lambda (opcode)
-	    (define-exception-handler opcode uncovered-return-handler))
+	    (define-vm-exception-handler opcode uncovered-return-handler))
 	  (list (enum op call-external-value)
 		(enum op return-from-callback)))
 

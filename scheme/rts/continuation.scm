@@ -10,16 +10,16 @@
 (define continuation-cont          (make-ref continuation-cont-index))
 (define real-continuation-code     (make-ref continuation-code-index))
 (define real-continuation-pc       (make-ref continuation-pc-index))
-(define exception-cont-pc          (make-ref exception-cont-pc-index))
-(define exception-cont-code        (make-ref exception-cont-code-index))
+(define vm-exception-cont-pc       (make-ref exception-cont-pc-index))
+(define vm-exception-cont-code     (make-ref exception-cont-code-index))
 
 ; This one is exported
-(define exception-continuation-exception
+(define vm-exception-continuation-exception
   (make-ref exception-cont-exception-index))
 
 ; Exception continuations contain the state of the VM when an exception occured.
 
-(define (exception-continuation? thing)
+(define (vm-exception-continuation? thing)
   (and (continuation? thing)
        (= 13 (real-continuation-pc thing))
        (let ((code (real-continuation-code thing)))
@@ -36,13 +36,13 @@
 			   14))))
 
 (define (continuation-pc c)
-  (if (exception-continuation? c)
-      (exception-cont-pc c)
+  (if (vm-exception-continuation? c)
+      (vm-exception-cont-pc c)
       (real-continuation-pc c)))
 
 (define (continuation-code c)
-  (if (exception-continuation? c)
-      (exception-cont-code c)
+  (if (vm-exception-continuation? c)
+      (vm-exception-cont-code c)
       (real-continuation-code c)))
 
 ; This finds the template if it is in the continuation.  Not all continuations
@@ -79,7 +79,7 @@
 
 (define (continuation-arg c i)
   (continuation-ref c (+ continuation-cells
-			 (if (exception-continuation? c)
+			 (if (vm-exception-continuation? c)
 			     exception-continuation-cells
 			     0)
 			 i)))
@@ -87,15 +87,15 @@
 (define (continuation-arg-count c)
   (- (continuation-length c)
      (+ continuation-cells
-	(if (exception-continuation? c)
+	(if (vm-exception-continuation? c)
 	    exception-continuation-cells
 	    0))))
 
 (define-simple-type :continuation (:value) continuation?)
 
 (define-method &disclose ((obj :continuation))
-  (list (if (exception-continuation? obj)
-	    'exception-continuation
+  (list (if (vm-exception-continuation? obj)
+	    'vm-exception-continuation
 	    'continuation)
 	`(pc ,(continuation-pc obj))
 	(let ((template (continuation-template obj)))

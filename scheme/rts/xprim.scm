@@ -1,6 +1,6 @@
 ; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-; Hairier exceptions & interrupts.
+; Hairier VM exceptions & interrupts.
 ; Enable generic arithmetic, informative error messages, etc.
 
 ; Deal with optional arguments, etc. to primitives.
@@ -15,12 +15,12 @@
 ;        ((< i 0) h))))
 ;(define wna-handlers (make-table closure-hash))
 
-;(define-exception-handler (enum op check-nargs=)
+;(define-vm-exception-handler (enum op check-nargs=)
 ;  (lambda (opcode reason proc args)
 ;    (let ((probe (assq proc *wna-handlers*)))
 ;      (if probe
 ;          ((cdr probe) args)
-;          (signal-exception opcode reason proc args)))))
+;          (signal-vm-exception opcode reason proc args)))))
 
 (define *wna-handlers* '())
 
@@ -30,5 +30,5 @@
 (define op/check-nargs= (enum op protocol)) ; temporary hack
 
 (define (wna-lose proc args)
-  (signal-exception op/check-nargs= #f proc args))  ; lost our reason
+  (signal-vm-exception op/check-nargs= #f proc args))  ; lost our reason
 

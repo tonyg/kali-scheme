@@ -65,4 +65,4 @@
 
 ; Add the full/empty buffer handlers.
 
-(initialize-i/o-handlers! define-exception-handler signal-exception)
+(initialize-i/o-handlers! define-vm-exception-handler signal-vm-exception)

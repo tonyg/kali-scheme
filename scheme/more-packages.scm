@@ -29,10 +29,10 @@
   (open scheme-level-2
         methods meta-methods
         define-record-types
-        exceptions              ; make-opcode-generic!
         primitives
         architecture
         signals
+	(subset vm-exceptions (extend-opcode!))
 	util
         number-i/o)
   (files (rts xnum)))
@@ -239,7 +239,7 @@
   (open scheme-level-2 define-record-types
 	primitives
         architecture
-	exceptions interrupts signals
+	vm-exceptions interrupts signals
 	placeholders
 	shared-bindings
 	byte-vectors

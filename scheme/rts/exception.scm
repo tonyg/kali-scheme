@@ -1,55 +1,11 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
 ; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-
 ;;;; Raising and handling conditions
 
-; An exception is an unusual situation detected by the virtual machine.
 ; A condition is a run-time system structure describing unusual situations,
 ; including exceptions.
 
-; Usual exception handler vector.
-
-(define (define-exception-handler opcode proc)
-  (vector-set! exception-handlers opcode proc))
-
-(define (signal-exception opcode reason . args)
-  (really-signal-condition (make-exception opcode
-					   (if reason
-					       (enumerand->name reason exception)
-					       #f)
-					   args)))
-
-(define exception-handlers
-  (make-vector op-count signal-exception))
-
-; TRAP is the same as SIGNAL-CONDITION.
-
-(define-exception-handler (enum op trap)
-  (lambda (opcode reason arg)
-    (really-signal-condition arg)))
-
-; The time opcode sometimes needs a little help.
-
-(define-exception-handler (enum op time)
-  (lambda (opcode reason option arg0 . maybe-arg1)
-    (if (= reason (enum exception arithmetic-overflow))
-	(+ (* arg0 1000)		; seconds
-	   (car maybe-arg1))		; milliseconds
-	(apply signal-exception opcode reason option arg0 maybe-arg1))))
-
-; This is for generic arithmetic, mostly
-
-(define (extend-opcode! opcode make-handler)
-  (let* ((except (lambda args
-		   (apply signal-exception
-			  opcode
-			  #f   ; lost our reason
-			  args)))
-	 (handler (make-handler except)))
-    (define-exception-handler opcode
-      (lambda (opcode reason . args)
-	(apply handler args)))))
 
 ; Raising and handling conditions.
 ; (fluid $condition-handlers) is a cell containing a list of handler procedures.
@@ -75,7 +31,7 @@
     (lambda (k)
       (fluid-cell-set! $condition-handlers
 		       (list (last-resort-condition-handler k)))
-      (set-exception-handlers! exception-handlers)
+      (initialize-vm-exceptions! really-signal-condition)
       (thunk))))
 
 (define (last-resort-condition-handler halt)
@@ -99,12 +55,12 @@
 ; initial.debug to get some idea of what was going on.
 
 (define (report-utter-lossage condition c)
-  (cond ((exception? condition)
+  (cond ((vm-exception? condition)
 	 (debug-message "VM exception `"
-			(exception-reason condition)
+			(vm-exception-reason condition)
 			"' with no handler in place")
 	 (debug-message "opcode is: "
-			(enumerand->name (exception-opcode condition)
+			(enumerand->name (vm-exception-opcode condition)
 					 op)))
 	(else
 	 (apply debug-message

@@ -432,8 +432,8 @@
 	  same-type?	 &same-type?
 	  add-method!	 &add-method!
 	  set-final-method!
-	  make-method-table         ;rts/exception.scm
-	  method-table-get-perform  ;rts/exception.scm
+	  make-method-table
+	  method-table-get-perform
 	  make-simple-type
 	  ;; Hooks for DOODL or other future extension
 	  :simple-type :method-info :method-table :singleton
@@ -491,11 +491,11 @@
 	  interrupt?
 
 	  ;; Do these belong here?... not really.
-	  exception-arguments
-	  exception-reason
-	  exception-opcode
-	  exception?
-	  make-exception
+	  vm-exception-arguments
+	  vm-exception-reason
+	  vm-exception-opcode
+	  vm-exception?
+	  make-vm-exception
 
 	  i/o-error?
 	  i/o-error-status
@@ -655,11 +655,14 @@
 	  delete-from-queue! on-queue?))
 
 (define-interface exceptions-interface
-  (export define-exception-handler
-	  initialize-exceptions!
-	  extend-opcode!
-	  signal-exception
+  (export initialize-exceptions!
 	  continuation-preview))	;env/debug.scm
+
+(define-interface vm-exceptions-interface
+  (export define-vm-exception-handler
+	  initialize-vm-exceptions!
+	  extend-opcode!
+	  signal-vm-exception))
 
 (define-interface interrupts-interface
   (export initialize-interrupts!	;init.scm
@@ -732,8 +735,8 @@
 	  continuation?
 	  :continuation
 
-	  exception-continuation?
-	  exception-continuation-exception))
+	  vm-exception-continuation?
+	  vm-exception-continuation-exception))
 
 (define-interface templates-interface
   (export make-template

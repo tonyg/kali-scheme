@@ -286,14 +286,14 @@
         tables fluids weak signals)
   (files (env pedit)))
 
-; The following hooks the compiler up with an exception handler for
+; The following hooks the compiler up with a VM exception handler for
 ; unbound variables.
 
 (define-structure shadowing (export shadow-location!)
   (open scheme-level-1
         vm-exposure             ;primitive-catch
         continuations templates locations code-vectors
-        exceptions signals
+        vm-exceptions signals
 	debug-messages
         architecture)   ;(enum op global)
   (files (env shadow)))     ;Exception handler to support package system

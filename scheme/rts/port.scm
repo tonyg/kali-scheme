@@ -42,49 +42,49 @@
   (disclose-port port))
 
 ;----------------
-; Set up exception handlers for the three unnecessary I/O primitives,
+; Set up VM exception handlers for the three unnecessary I/O primitives,
 ; READ-CHAR, PEEK-CHAR, and WRITE-CHAR.  These do the right thing in
 ; the case of unbuffered ports or buffer overflow or underflow.
 ;
 ; This is abstracted to avoid a circular module dependency.
 
-(define (initialize-i/o-handlers! define-exception-handler signal-exception)
-  (define-exception-handler (enum op read-char)
+(define (initialize-i/o-handlers! define-vm-exception-handler signal-exception)
+  (define-vm-exception-handler (enum op read-char)
     (one-arg-proc->handler (lambda (port)
 			     ((port-handler-char (port-handler port))
 			       port
 			       #t))
-			   signal-exception))
+			   signal-vm-exception))
     
-  (define-exception-handler (enum op peek-char)
+  (define-vm-exception-handler (enum op peek-char)
     (one-arg-proc->handler (lambda (port)
 			     ((port-handler-char (port-handler port))
 			       port
 			       #f))
-			   signal-exception))
+			   signal-vm-exception))
   
-  (define-exception-handler (enum op write-char)
+  (define-vm-exception-handler (enum op write-char)
     (two-arg-proc->handler (lambda (char port)
 			     ((port-handler-char (port-handler port))
 			       port
 			       char))
-			   signal-exception)))
+			   signal-vm-exception)))
 
-; Check the exception and then lock the port.
+; Check the VM exception and then lock the port.
 
-(define (one-arg-proc->handler proc signal-exception)
+(define (one-arg-proc->handler proc signal-vm-exception)
   (lambda (opcode reason port)
     (if (= reason (enum exception buffer-full/empty))
 	(proc port)
-	(signal-exception opcode reason port))))
+	(signal-vm-exception opcode reason port))))
 
 ; This could combined with on-arg-... if the port were the first argument.
 
-(define (two-arg-proc->handler proc signal-exception)
+(define (two-arg-proc->handler proc signal-vm-exception)
   (lambda (opcode reason arg port)
     (if (= reason (enum exception buffer-full/empty))
 	(proc arg port)
-	(signal-exception opcode reason arg port))))
+	(signal-vm-exception opcode reason arg port))))
 
 ;----------------
 ; Wrappers for the various port operations.  These check types and arguments

@@ -50,16 +50,16 @@
 (define-condition-type 'read-error '(error))
 (define read-error? (condition-predicate 'read-error))
 
-; Exceptions
+; VM Exceptions
 
-(define-condition-type 'exception '(error))
-(define exception? (condition-predicate 'exception))
-(define exception-opcode cadr)
-(define exception-reason caddr)
-(define exception-arguments cdddr)
+(define-condition-type 'vm-exception '(error))
+(define vm-exception? (condition-predicate 'vm-exception))
+(define vm-exception-opcode cadr)
+(define vm-exception-reason caddr)
+(define vm-exception-arguments cdddr)
 
-(define (make-exception opcode reason args)
-  (make-condition 'exception (cons opcode (cons reason args))))
+(define (make-vm-exception opcode reason args)
+  (make-condition 'vm-exception (cons opcode (cons reason args))))
 
 ; I/O errors
 

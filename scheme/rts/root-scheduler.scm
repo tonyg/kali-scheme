@@ -64,7 +64,7 @@
 (define (cheap-display-condition condition out)
   (display (case (car condition)
 	     ((error) "Error")
-	     ((exception) "Exception")
+	     ((vm-exception) "VM Exception")
 	     ((warning) "Warning")
 	     (else (car condition)))
 	   out)

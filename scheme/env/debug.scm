@@ -87,8 +87,8 @@
 (define (ok-to-proceed? condition)
   (and condition
        (if (error? condition)
-	   (and (exception? condition)
-		(let ((opcode (exception-opcode condition)))
+	   (and (vm-exception? condition)
+		(let ((opcode (vm-exception-opcode condition)))
 		  (or (= opcode (enum op global))
 		      (>= opcode (enum op eq?)))))
 	   #t)))

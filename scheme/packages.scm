@@ -306,6 +306,7 @@
 	    root-scheduler
 	    session-data
 	    threads-internal
+	    vm-exceptions
 	    usual-resumer
 	    ;; silly
 	    ;; structure-refs

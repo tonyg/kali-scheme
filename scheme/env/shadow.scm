@@ -37,7 +37,7 @@
     (if (= reason (enum exception undefined-global))
 	(deal-with-replaced-variable opcode reason loc template index rest
 				     succeed)
-	(apply signal-exception opcode reason loc rest))))
+	(apply signal-vm-exception opcode reason loc rest))))
 
 (define (deal-with-replaced-variable opcode reason loc template index rest
 				     succeed)
@@ -47,21 +47,21 @@
 	 (let* ((p-uid (template-package-id template))
 		(new (maybe-replace-location loc p-uid)))
 	   (if (eq? new loc)
-	       (apply signal-exception opcode reason loc rest)
+	       (apply signal-vm-exception opcode reason loc rest)
 	       (begin (template-set! template index new)
 		      ;(signal 'note "Replaced location" loc new p-uid)
 		      (if (location-defined? new)
 			  (succeed new rest)
-			  (apply signal-exception opcode reason new rest)))))
+			  (apply signal-vm-exception opcode reason new rest)))))
 	 (error "lossage in deal-with-replaced-variables"
 		loc index)))))
 
-(define-exception-handler (enum op global)
+(define-vm-exception-handler (enum op global)
   (deal-with-replaced-variables
    (lambda (loc more-args)
      (contents loc))))
 
-(define-exception-handler (enum op set-global!)
+(define-vm-exception-handler (enum op set-global!)
   (deal-with-replaced-variables
    (lambda (loc more-args)
      (set-contents! loc (car more-args)))))

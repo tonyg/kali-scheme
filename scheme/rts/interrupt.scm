@@ -4,8 +4,8 @@
 ; Interrupts
 
 ; Create and install a vector of interrupt handlers.  We want this to happen
-; as early as possible.  All but the post-gc and keyboard interrupts raise an
-; exception by default.  We exit when a keyboard interrupt occurs. The default
+; as early as possible.  All but the post-gc and keyboard interrupts raise a
+; VM exception by default.  We exit when a keyboard interrupt occurs. The default
 ; post-gc handler is defined below.
 
 (define (initialize-interrupts! spawn-on-root thunk)

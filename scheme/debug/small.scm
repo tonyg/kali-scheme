@@ -84,46 +84,46 @@
   (channel-write-string "
 " channel))
 
-(define (define-exception-handler opcode proc)
-  (vector-set! exception-handlers opcode proc))
+(define (define-vm-exception-handler opcode proc)
+  (vector-set! vm-exception-handlers opcode proc))
 
-(define exception-handlers
+(define vm-exception-handlers
   (make-vector op-count #f))
 
-(define-exception-handler (enum op write-char)
+(define-vm-exception-handler (enum op write-char)
   (lambda (opcode reason char port)
     (cond ((= reason (enum exception buffer-full/empty))
 	   (force-output port)
 	   (message "[overflow]")
 	   (write-char char port))
 	  (else
-	   (apply signal-exception opcode reason args)))))
+	   (apply signal-vm-exception opcode reason args)))))
 
-(define-exception-handler (enum op read-char)
+(define-vm-exception-handler (enum op read-char)
   (lambda (opcode reason port)
     (cond ((= reason (enum exception buffer-full/empty))
 	   (fill-buffer port)
 	   (message "[underflow]")
 	   (read-char port))
 	  (else
-	   (apply signal-exception opcode reason args)))))
+	   (apply signal-vm-exception opcode reason args)))))
 
-(define-exception-handler (enum op peek-char)
+(define-vm-exception-handler (enum op peek-char)
   (lambda (opcode reason port)
     (cond ((= reason (enum exception buffer-full/empty))
 	   (fill-buffer port)
 	   (message "[underflow]")
 	   (peek-char port))
 	  (else
-	   (apply signal-exception opcode reason args)))))
+	   (apply signal-vm-exception opcode reason args)))))
 
-(define-exception-handler (enum op write-block)
+(define-vm-exception-handler (enum op write-block)
   (lambda (opcode reason thing start count port)
     (cond ((= reason (enum exception buffer-full/empty))
 	   (force-output port)
 	   (write-buffer thing start count (port-data port)))
 	  (else
-	   (apply signal-exception opcode reason args)))))
+	   (apply signal-vm-exception opcode reason args)))))
 
 (define (force-output port)
   (write-buffer (port-out-buffer port) 0 (port-out-index port) (port-data port))

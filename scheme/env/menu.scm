@@ -272,10 +272,10 @@
 ; Exception continuations don't have source, so we get the source from
 ; the next continuation if it is from the same procedure invocation.
 
-(define (maybe-display-source thing exception?)
+(define (maybe-display-source thing vm-exception?)
   (cond ((not (continuation? thing))
 	 (values))
-	((exception-continuation? thing)
+	((vm-exception-continuation? thing)
 	 (let ((next (continuation-cont thing)))
 	   (if (not (eq? next (continuation-cont thing)))
 	       (maybe-display-source next #t))))
@@ -285,15 +285,15 @@
 	       (let ((source (assoc (continuation-pc thing)
 				    (debug-data-source dd))))
 		 (if source
-		     (display-source-info (cdr source) exception?))))))))
+		     (display-source-info (cdr source) vm-exception?))))))))
   
 ; Show the source code for a continuation, if we have it.
 
-(define (display-source-info info exception?)
+(define (display-source-info info vm-exception?)
   (let ((o-port (command-output)))
     (if (pair? info)
 	(let ((exp (car info)))
-	  (display (if exception?
+	  (display (if vm-exception?
 		       "Next call is "
 		       "Waiting for ")
 		   o-port)

@@ -90,7 +90,7 @@
 	methods         ; &disclose :input-port :output-port
 	number-i/o      ; number->string for debugging
 	handle		; report-errors-as-warnings
-	exceptions)     ; wrong-number-of-args stuff
+	vm-exceptions)     ; wrong-number-of-args stuff
   (files (rts port)
 	 (rts port-buffer)
 	 (rts current-port))
@@ -239,11 +239,20 @@
     (define useful-bits-per-word 32))
   (files (vm/data data)))
 
+(define-structure vm-exceptions vm-exceptions-interface
+  (open scheme-level-1
+	conditions
+	enumerated
+	architecture
+	(subset primitives (set-exception-handlers! unspecific)))
+  (files (rts vm-exception)))
+
 (define-structures ((exceptions exceptions-interface)
 		    (handle handle-interface))
   (open scheme-level-1
 	signals fluids cells
-	conditions	  ;make-exception, etc.
+	conditions	  ;make-vm-exception, etc.
+	vm-exceptions
 	primitives	  ;set-exception-handlers!, etc.
 	wind		  ;CWCC
 	methods
@@ -259,7 +268,7 @@
 	closures	  ;closure-template
 	number-i/o)       ; number->string, for backtrace
   (files (rts exception)))  ; Needs generic, arch
-
+	
 (define-structure interrupts interrupts-interface
   (open scheme-level-1
 	signals fluids conditions
@@ -384,6 +393,7 @@
 	session-data     ;initialize-session-data!
 	fluids-internal	 ;initialize-dynamic-state!
 	exceptions	 ;initialize-exceptions!
+	vm-exceptions
 	interrupts	 ;initialize-interrupts!
 	records-internal ;initialize-records!
 	shared-bindings	 ;find-undefined-imported-bindings
