@@ -352,6 +352,9 @@
 	  array->vector		; <array>
 	  array))		; <bounds> . <elements>
 
+(define-interface lu-decompositions-interface
+  (export lu-decomposition))
+
 (define-interface mask-types-interface
   (export make-mask-type
 	  mask-type?

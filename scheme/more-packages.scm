@@ -157,6 +157,10 @@
   (open scheme-level-2 define-record-types signals)
   (files (big array)))
 
+(define-structure lu-decompositions lu-decompositions-interface
+  (open scheme receiving arrays floatnums signals)
+  (files (big lu-decomp)))
+
 (define-structure receiving (export (receive :syntax))
   (open scheme-level-2)
   (files (big receive)))

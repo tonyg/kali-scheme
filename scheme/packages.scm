@@ -427,6 +427,7 @@
 	    inspector-internal
 	    list-interfaces
 	    locks
+	    lu-decompositions
 	    masks
 	    mask-types
 	    mvlet
