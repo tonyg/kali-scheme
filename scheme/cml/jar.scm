@@ -65,10 +65,10 @@
      (cond
       ((empty-jar-value? (jar-value jar))
        (make-blocked
-	(lambda (trans-id cleanup-thunk wrap-proc)
+	(lambda (trans-id cleanup-proc wrap-proc)
 	  (clean-and-enqueue! (jar-queue jar)
 			      (make-q-item trans-id
-					   cleanup-thunk
+					   cleanup-proc
 					   wrap-proc)))))
       (else
        (let ((priority (jar-priority jar)))
