@@ -185,15 +185,15 @@
 	   :vector))
 
     ((vector-sort! vector-stable-sort!)
-     (proc ((proc (:value :value) :boolean) :vector) :unspecific)))
+     (proc ((proc (:value :value) :boolean) :vector) :unspecific))
 
-   (list-delete-neighbor-dups
-    (proc ((proc (:value :value) :boolean)
-	   :value)
-	  :value))
-   (vector-delete-neighbor-dups
-    (proc ((proc (:value :value) :boolean)
-	   :vector
-	   &opt
-	   :exact-integer :exact-integer)
-	  :vector))))
+    (list-delete-neighbor-dups
+     (proc ((proc (:value :value) :boolean)
+	    :value)
+	   :value))
+    (vector-delete-neighbor-dups
+     (proc ((proc (:value :value) :boolean)
+	    :vector
+	    &opt
+	    :exact-integer :exact-integer)
+	   :vector)))))
