@@ -54,6 +54,12 @@
       (if (double? x)
 	  (flonum-multiply x y)
 	  (integer-multiply x y)))
+    
+    (define (s48-integer-remainder x y)
+      (integer-remainder x y))
+
+    (define (s48-integer-quotient x y)
+      (integer-quotient x y))
 
     (define-syntax define-integer-or-floanum-comparison
       (syntax-rules ()
