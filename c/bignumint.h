@@ -2,36 +2,39 @@
 
 $Id: bignmint.h,v 1.4 1993/10/27 23:57:07 gjr Exp $
 
-Copyright (c) 1989-1992 Massachusetts Institute of Technology
+Copyright 1989,1992,1993,2004 Massachusetts Institute of Technology
 
-This material was developed by the Scheme project at the Massachusetts
-Institute of Technology, Department of Electrical Engineering and
-Computer Science.  Permission to copy and modify this software, to
-redistribute either the original software or a modified version, and
-to use this software for any purpose is granted, subject to the
-following restrictions and understandings.
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
 
-1. Any copy made of this software must include this copyright notice
-in full.
+   1. Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
 
-2. Users of this software agree to make their best efforts (a) to
-return to the MIT Scheme project any improvements or extensions that
-they make, so that these may be included in future releases; and (b)
-to inform MIT of noteworthy uses of this software.
+   2. Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
 
-3. All materials developed as a consequence of the use of this
-software shall duly acknowledge such use, in accordance with the usual
-standards of acknowledging credit in academic research.
+   3. The name of the author may not be used to endorse or promote
+      products derived from this software without specific prior
+      written permission.
 
-4. MIT has made no warrantee or representation that the operation of
-this software will be error-free, and MIT is under no obligation to
-provide any services, by way of maintenance, update, or otherwise.
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
 
-5. In conjunction with products arising from the use of this material,
-there shall be no use of the name of the Massachusetts Institute of
-Technology nor of any adaptation thereof in any advertising,
-promotional, or sales literature without prior written consent from
-MIT in each case. */
+*/
+
+/* License changed to modified BSD by cph on 2004-11-08.  */
 
 /* Internal Interface to Bignum Code */
 #undef BIGNUM_ZERO_P
