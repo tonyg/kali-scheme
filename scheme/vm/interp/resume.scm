@@ -45,6 +45,8 @@
 (define (s48-restart proc nargs)
   (cond ((closure? proc)
          (set-val! proc)
-	 (perform-application nargs))
+	 (let ((retval (perform-application nargs)))
+	   (remove-current-frame)
+	   retval))
 	(else
 	 (error "s48-restart called with non-procedure" proc))))
