@@ -16,13 +16,12 @@
 	   (let ((cell (make-cell (current-thread))))
 	     (disable-interrupts!)
 	     (set-thread-cell! (current-thread) cell)
-	     (session-data-set! dozers
-				(insert (cons (+ (real-time) n)
-					      cell)
-					(session-data-ref dozers)
-					(lambda (frob1 frob2)
-					  (< (car frob1)
-					     (car frob2)))))
+	     (register-dozer-unsafe! (+ (real-time) n)
+				     (lambda ()
+				       (and (cell-ref cell)
+					    #t))
+				     (lambda ()
+				       (make-ready (cell-ref cell))))
 	     (block))))))
 
 (define (coerce-to-nonnegative-integer n)
@@ -36,8 +35,34 @@
 	    #f))
       #f))
 
+; We insert a pair consisting of a wakeup time and another pair.
+
+; The second pair contains two thunks; the first one checks if the
+; dozer is still alive, the second wakes it up.
+
+(define (register-dozer-unsafe! wakeup-time alive? wakeup!)
+  (session-data-set! dozers
+		     (insert (cons wakeup-time
+				   (cons alive? wakeup!))
+			     (session-data-ref dozers)
+			     (lambda (frob1 frob2)
+			       (< (car frob1)
+				  (car frob2))))))
+
+; Note that, if ALIVE? or WAKEUP! isn't a thunk or doesn't run without
+; problems, there'll be hell to pay upn wakeup.
+
+(define (register-dozer! user-wakeup-time alive? wakeup!)
+  (let ((wakeup-time (coerce-to-nonnegative-integer user-wakeup-time)))
+    (cond ((not wakeup-time)
+	   (call-error "wrong type argument" register-dozer! user-wakeup-time))
+	  (else
+	   (let ((ints (set-enabled-interrupts! 0)))
+	     (register-dozer-unsafe! wakeup-time alive? wakeup!)
+	     (set-enabled-interrupts! ints))))))
+
 (define dozers (make-session-data-slot! '()))
-	  
+
 (define (insert x l <)
   (cond ((null? l)
 	 (list x))
@@ -62,13 +87,14 @@
 		(session-data-set! dozers '())
 		(values woke? #f))
 	      (let* ((next (car to-do))
-		     (thread (cell-ref (cdr next))))
-		(cond ((not thread)
-		       (loop (cdr to-do) woke?))
-		      ((< time (car next))
-		       (session-data-set! dozers to-do)
-		       (values woke? (- (car next) time)))
-		      (else
-		       (make-ready thread)
-		       (loop (cdr to-do) #t)))))))))
+		     (alive? (cadr next)))
+		(cond
+		 ((not (alive?))
+		  (loop (cdr to-do) woke?))
+		 ((< time (car next))
+		  (session-data-set! dozers to-do)
+		  (values woke? (- (car next) time)))
+		 (else
+		  ((cddr next))
+		  (loop (cdr to-do) #t)))))))))
 

@@ -615,6 +615,7 @@
 	  thread-queue-empty?
 	  maybe-dequeue-thread!
 
+	  register-dozer!
 	  wake-some-threads
 
 	  all-threads                   ; for command-levels
