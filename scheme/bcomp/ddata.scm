@@ -38,25 +38,41 @@
 ; Entries in the environment-maps table (one per template) have the form
 ;   #(#(pc-before pc-after #(var ...) offset (env-map ...)) ...)
 ;
-; Cf. procedure (note-environment vars segment) in comp.scm.
+; A PC of #F indicates that the caller wants the environment map for
+; the closure itself, which will be the last thing in the outermost
+; environment map (because that matches where the environment is pushed
+; onto the stack).
+;
+; Cf. procedure (note-environment vars segment) in segment.scm.
 
 (define (debug-data-env-shape dd pc)
-  (if (debug-data? dd)
-      (let loop ((emaps (debug-data-env-maps dd))
-                 (shape '()))
-        (if (null? emaps)
-            shape
-            (let ((pc-before (vector-ref (car emaps) 0))
-                  (pc-after  (vector-ref (car emaps) 1))
-                  (offset    (vector-ref (car emaps) 2))
-		  (vars      (vector-ref (car emaps) 3))
-                  (more-maps (vector-ref (car emaps) 4)))
-              (if (and (>= pc pc-before)
-                       (< pc pc-after))
-                  (loop more-maps
-                        (cons (cons offset
-				    (vector->list vars))
-			      shape))
-                  (loop (cdr emaps) shape)))))
-      '()))
+  (cond ((not (debug-data? dd))
+	 '())
+	(pc
+	 (let loop ((emaps (debug-data-env-maps dd))
+		    (shape '()))
+	   (if (null? emaps)
+	       shape
+	       (let ((pc-before (vector-ref (car emaps) 0))
+		     (pc-after  (vector-ref (car emaps) 1))
+		     (offset    (vector-ref (car emaps) 2))
+		     (vars      (vector-ref (car emaps) 3))
+		     (more-maps (vector-ref (car emaps) 4)))
+		 (if (and (>= pc pc-before)
+			  (< pc pc-after))
+		     (loop more-maps
+			   (cons (cons offset
+				       (vector->list vars))
+				 shape))
+		     (loop (cdr emaps) shape))))))
+	((not (null? (debug-data-env-maps dd)))
+	 (let ((names (vector-ref (car (debug-data-env-maps dd))
+				  3)))
+	   (if (and names
+		    (< 0 (vector-length names))
+		    (pair? (vector-ref names (- (vector-length names) 1))))
+	       (list (vector-ref names (- (vector-length names) 1)))
+	       '())))
+	(else
+	 '())))
 

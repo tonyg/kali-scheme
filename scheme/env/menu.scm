@@ -107,7 +107,7 @@
 		  (closure-env thing)
 		  (debug-data-env-shape (template-debug-data
 					 (closure-template thing))
-					0)))
+					#f)))
 		
 		((continuation? thing)
 		 (prepare-continuation-menu thing))
@@ -155,17 +155,17 @@
     (extend-cont-menu 0 args shape '())))
 
 (define (extend-cont-menu i args shape menu)
-  (cond ((null? args)
-	 menu)
-	((assq i shape)
-	 => (lambda (names)
-	      (extend-cont-menu-with-names (cdr names) i args shape menu)))
-	(else
-	 (extend-cont-menu (+ i 1)
-			   (cdr args)
-			   shape
-			   (cons (list #f (car args))
-				 menu)))))
+  (if (null? args)
+      menu
+      (let ((names (assq i shape)))
+	(if (and names
+		 (not (null? (cdr names))))
+	    (extend-cont-menu-with-names (cdr names) i args shape menu)
+	    (extend-cont-menu (+ i 1)
+			      (cdr args)
+			      shape
+			      (cons (list #f (car args))
+				    menu))))))
 
 (define (extend-cont-menu-with-names names i args shape menu)
   (cond ((null? names)
@@ -229,12 +229,13 @@
 
 (define (rib-values env)
   (let ((z (vector-length env)))
-    (do ((i 1 (+ i 1))
+    (do ((i 0 (+ i 1))
 	 (l '() (cons (if (vector-unassigned? env i)
 			  'unassigned
 			  (vector-ref env i))
 		      l)))
-	((>= i z) l))))
+	((>= i z)
+	 (reverse l)))))
 
 ;----------------
 ; Printing menus.
