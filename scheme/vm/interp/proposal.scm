@@ -397,7 +397,7 @@
 ;----------------
 ; Mostly error-checking as usual.
 
-(define-primitive copy-bytes! (any-> fixnum-> any-> fixnum-> fixnum->)
+(define-primitive copy-bytes! (code-vector-> fixnum-> code-vector-> fixnum-> fixnum->)
   (lambda (from from-index to to-index count)
     (let ((lose (lambda ()
 		  (raise-exception wrong-type-argument 1
@@ -405,8 +405,8 @@
 				   to (enter-fixnum to-index)
 				   (enter-fixnum count))))
 	  (no-log? (= 0 (code-byte 0))))
-      (cond ((not (and (okay-copy-args? from from-index count)
-		       (okay-copy-args? to   to-index   count)
+      (cond ((not (and (okay-copy-code-vector? from from-index count)
+		       (okay-copy-code-vector? to   to-index   count)
 		       (not (immutable? to))
 		       (<= 0 count)))
 	     (lose))
@@ -438,16 +438,10 @@
 	(loop (- left (copy-count copies))
 	      (copy-next copies)))))
 
-; THING must be a code-vector with 0 <= INDEX and
-; (INDEX + COUNT) <= the length of THING.
-
-(define (okay-copy-args? thing index count)
+(define (okay-copy-code-vector? c index count)
   (and (<= 0 index)
-       (cond ((code-vector? thing)
-	      (<= (+ index count)
-		  (code-vector-length thing)))
-	     (else
-	      #f))))
+       (<= (+ index count)
+	   (code-vector-length c))))
 
 ;----------------
 ; Committing a proposal.
