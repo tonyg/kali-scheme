@@ -1,6 +1,11 @@
 /* Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include "scheme48write-barrier.h"
 
 typedef long	s48_value;
@@ -225,3 +230,8 @@ extern void s48_check_record_type(s48_value record, s48_value type_binding);
          s48_raise_scheme_exception(S48_EXCEPTION_UNBOUND_EXTERNAL_NAME, 1,	\
 				    S48_SHARED_BINDING_NAME(binding));	\
   } while(0)
+
+#ifdef __cplusplus
+/* closing brace for extern "C" */
+}
+#endif
