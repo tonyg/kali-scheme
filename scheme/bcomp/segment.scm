@@ -135,21 +135,51 @@
 			 (emit-segment! astate seg1)
 			 (emit-segment! astate seg2)))))) ;tail call
 
-(define continuation-data-size 8)
+(define (continuation-data live-offsets depth)
+  (let* ((gc-mask
+	  (if live-offsets
+	      (let ((provisional 
+		     (bits->bytes (live-mask live-offsets depth))))
+		(if (null? provisional)
+		    '(0)
+		    provisional))
+	      '()))
+	 (gc-mask-size (length gc-mask))
+	 (size (+ 8			;   header (3) 
+					; + offset (2)
+					; + gc-mask size (1)
+					; + depth (2)
+		  gc-mask-size)))
+    (make-segment size
+		  (lambda (astate)
+		    (let ((offset (+ (astate-pc astate) size)))
+		      (emit-byte! astate (enum op cont-data))
+		      (emit-byte! astate (high-byte size))
+		      (emit-byte! astate (low-byte size))
+		      (for-each (lambda (byte)
+				  (emit-byte! astate byte))
+				gc-mask)
+		      (emit-byte! astate (high-byte offset))
+		      (emit-byte! astate (low-byte  offset))
+		      (emit-byte! astate gc-mask-size)
+		      (emit-byte! astate (high-byte depth))
+		      (emit-byte! astate (low-byte depth)))))))
 
-(define (continuation-data depth)
-  (make-segment continuation-data-size
-		(lambda (astate)
-		  (let ((offset (+ (astate-pc astate)
-				   continuation-data-size)))
-		    (emit-byte! astate (enum op cont-data))
-		    (emit-byte! astate 0)    ; high and low bytes of the size
-		    (emit-byte! astate continuation-data-size)
-		    (emit-byte! astate (high-byte offset))
-		    (emit-byte! astate (low-byte  offset))
-		    (emit-byte! astate 0)		; GC mask size
-		    (emit-byte! astate (high-byte depth))
-		    (emit-byte! astate (low-byte depth))))))
+(define (live-mask offsets depth)
+    (do ((offsets offsets (cdr offsets))
+	 (mask 0
+	       (bitwise-ior mask
+			    (arithmetic-shift 1
+					      (bytes->cells
+					       (car offsets))))))
+	((null? offsets)
+	 mask)))
+
+(define (bits->bytes n)
+  (do ((n n (arithmetic-shift n -8))
+       (b '() (cons (bitwise-and n #xFF) b)))
+      ((= 0 n)
+       b)))
 
 ; Labels.  Each label maintains a list of pairs (location . origin).
 ; Location is the index of the first of two bytes that will hold the jump

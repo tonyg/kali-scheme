@@ -13,6 +13,7 @@
 ; scheme/more-interfaces.scm.
 (define ascii      (structure (make-simple-interface 'ascii      '())))
 (define bitwise    (structure (make-simple-interface 'bitwise    '())))
+(define vm-data    (structure (make-simple-interface 'vm-data    '())))
 (define enumerated (structure (make-simple-interface 'enumerated '())))
 (define tables     (structure (make-simple-interface 'tables     '())))
 (define cells      (structure (make-simple-interface 'cells      '())))

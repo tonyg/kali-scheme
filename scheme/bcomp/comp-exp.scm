@@ -444,7 +444,7 @@
     (values (instruction (enum op push-false))
 	    (+ depth 1)
 	    label
-	    (sequentially (continuation-data depth)
+	    (sequentially (continuation-data #f depth)
 			  (attach-label label protocol)))))
 
 (define (fixup-source node destination)

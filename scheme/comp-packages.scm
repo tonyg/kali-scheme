@@ -130,6 +130,7 @@
 (define-structure segments segments-interface
   (open scheme-level-2 util tables signals fluids
 	define-record-types
+	bitwise vm-data
 	code-vectors
 	templates
 	architecture
