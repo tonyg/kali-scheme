@@ -85,6 +85,9 @@
   (files (alt weak)
 	 (rts population)))
 
+(define-structure debug-messages (export debug-message)
+  (open scheme-level-2)
+  (files (alt debug-message)))
 
 ; --------------------
 ; run-time internals (generally speaking, things not needed by the linker)
