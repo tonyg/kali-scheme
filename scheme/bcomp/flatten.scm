@@ -196,8 +196,7 @@
 	    vars)
   (let ((vals (flatten-list vals free))
 	(temps (map (lambda (var)
-		      (make-node operator/name
-				 (generate-name (node-form var) #f #f)))
+		      (make-node operator/name var))
 		    vars))
 	(body (flatten-node body free)))
     (set-difference! free vars)
