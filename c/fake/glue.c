@@ -10,7 +10,7 @@ s48_call_native_procedure(long procedure, long arg_count)
 }
 
 long
-s48_invoke_native_continuation(long code_pointer)
+s48_invoke_native_continuation(long code_pointer, long protocol_skip)
 {
   return 3;	/* indicates failure; see scheme/vm/interp/call.scm */
 }
