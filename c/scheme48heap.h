@@ -16,6 +16,7 @@ extern long	s48_heap_size(void);
 extern long	s48_find_all(long);
 extern long	s48_find_allint(long);
 extern long	s48_find_all_records(long);
+extern long	s48_gather_objects(char(*)(long), char(*)(char(*)(long)));
 
 /* for writing images */
 extern char *	s48_heap_begin(void);	
