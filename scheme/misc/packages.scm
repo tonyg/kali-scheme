@@ -114,3 +114,14 @@
 	  (bind :syntax)
 	  ;; etc. etc.
 	  ))
+
+(define-interface sparse-vectors-interface
+  (export make-sparse-vector
+	  sparse-vector-ref sparse-vector-set!
+	  sparse-vector->list))
+
+(define-structure sparse-vectors sparse-vectors-interface
+  (open scheme
+	bitwise
+	define-record-types)
+  (files hilbert))
