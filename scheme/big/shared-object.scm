@@ -32,7 +32,8 @@
 (define (open-shared-object name complete-name?)
   (let ((shared-object (make-shared-object name
 					   complete-name?
-					   (external-dlopen name complete-name?))))
+					   (external-dlopen (thing->file-name-byte-string name)
+							    complete-name?))))
     (add-finalizer! shared-object close-shared-object)
     shared-object))
 
@@ -42,6 +43,19 @@
 	(begin
 	  (external-dlclose c-handle)
 	  (set-shared-object-c-handle! shared-object #f)))))
+
+(define-string/bytes-type dynamic-external-name :dynamic-external-name
+  dynamic-external-name?
+  
+  string-encoding-length encode-string
+  string-decoding-length decode-string
+
+  thing->dynamic-external-name
+  string->dynamic-external-name
+  byte-vector->dynamic-external-name
+  
+  dynamic-external-name->string
+  dynamic-external-name->byte-vector dynamic-external-name->byte-string)
 
 (define-record-type shared-object-address :shared-object-address
   (make-shared-object-address object
@@ -64,7 +78,8 @@
   (make-shared-object-address shared-object
 			      name
 			      (external-dlsym (shared-object-c-handle shared-object)
-					      name)))
+					      (dynamic-external-name->byte-string
+					       (thing->dynamic-external-name name)))))
 
 ;; This simply calls a C function with no parameters and no return
 ;; value.  It's typically for calling the initialization function; we

@@ -51,8 +51,8 @@
 
 (define (string->float string)
   (let ((res (make-double)))
-    (floperate (enum flop string->float) string res)
-    res))
+    (or (floperate (enum flop string->float) string res)
+	(error "not enough memory for STRING->FLOAT string buffer" string))))
 
 ; Call the VM to get a string
 

@@ -35,6 +35,7 @@
 (define (write-page port)
   (write-char (ascii->char 12) port))
 
+;; this isn't portable at all
 (define (write-byte byte port)
   (write-char (ascii->char byte) port))
   
@@ -60,7 +61,18 @@
 
 (define write-descriptor little-endian-write-descriptor)
 
+;; writing characters as Unicode code points
+(define bits-per-scalar-value-unit
+  (* bits-per-byte bytes-per-scalar-value-unit))
+
+(define (write-scalar-value scalar-value port)
+  (let loop ((i 0))
+    (cond ((< i bits-per-scalar-value-unit)
+           (write-byte (bitwise-and io-byte-mask
+				    (arithmetic-shift scalar-value (- 0 i)))
+		       port)
+           (loop (+ i bits-per-io-byte))))))
+
 (define (boot-write-number n port)
   (display n port)
   (newline port))
-

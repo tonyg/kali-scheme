@@ -5,8 +5,9 @@
 ; A little Scheme reader.
 
 ; Nonstandard things used:
-;  Ascii stuff: char->ascii, ascii->char, ascii-whitespaces, ascii-limit
-;    (for dispatch table; portable definitions in alt/ascii.scm)
+;  ASCII stuff: ascii-whitespaces
+;    (for dispatch table; portable definition in alt/ascii.scm)
+;  Unicode: char->scalar-value, scalar-value->char
 ;  reverse-list->string  -- ok to define as follows:
 ;    (define (reverse-list->string l n)
 ;      (list->string (reverse l)))
@@ -46,24 +47,29 @@
 
 ; Main dispatch
 
-(define (sub-read port)
-  (let ((c (read-char port)))
-    (if (eof-object? c)
-        c
-        ((vector-ref read-dispatch-vector (char->ascii c))
-         c port))))
+(define *dispatch-table-limit* 128)
 
 (define read-dispatch-vector
-  (make-vector ascii-limit
+  (make-vector *dispatch-table-limit*
                (lambda (c port)
                  (reading-error port "illegal character read" c))))
 
 (define read-terminating?-vector
-  (make-vector ascii-limit #t))
+  (make-vector *dispatch-table-limit* #t))
 
 (define (set-standard-syntax! char terminating? reader)
-  (vector-set! read-dispatch-vector     (char->ascii char) reader)
-  (vector-set! read-terminating?-vector (char->ascii char) terminating?))
+  (vector-set! read-dispatch-vector     (char->scalar-value char) reader)
+  (vector-set! read-terminating?-vector (char->scalar-value char) terminating?))
+
+(define (sub-read port)
+  (let ((c (read-char port)))
+    (if (eof-object? c)
+        c
+	(let ((scalar-value (char->scalar-value c)))
+	  (if (< scalar-value *dispatch-table-limit*)
+	      ((vector-ref read-dispatch-vector (char->scalar-value c))
+	       c port)
+	      (sub-read-constituent c port))))))
 
 (let ((sub-read-whitespace
        (lambda (c port)
@@ -73,14 +79,14 @@
               (vector-set! read-dispatch-vector c sub-read-whitespace))
             ascii-whitespaces))
 
-(let ((sub-read-constituent
-       (lambda (c port)
-	 (parse-token (sub-read-token c port) port))))
-  (for-each (lambda (c)
-              (set-standard-syntax! c #f sub-read-constituent))
-            (string->list
-             (string-append "!$%&*+-./0123456789:<=>?@^_~ABCDEFGHIJKLM"
-                            "NOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"))))
+(define (sub-read-constituent c port)
+  (parse-token (sub-read-token c port) port))
+
+(for-each (lambda (c)
+	    (set-standard-syntax! c #f sub-read-constituent))
+	  (string->list
+	   (string-append "!$%&*+-./0123456789:<=>?@^_~ABCDEFGHIJKLM"
+			  "NOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")))
 
 ; Usual read macros
 
@@ -244,7 +250,8 @@
   (let loop ((l (list (preferred-case c))) (n 1))
     (let ((c (peek-char port)))
       (cond ((or (eof-object? c)
-                 (vector-ref read-terminating?-vector (char->ascii c)))
+		  (and (< (char->scalar-value c) *dispatch-table-limit*)
+		       (vector-ref read-terminating?-vector (char->scalar-value c))))
              (reverse-list->string l n))
             (else
 	     (read-char port)
@@ -269,24 +276,27 @@
 	"->"	    ;Only for JAR's thesis
 	))
 
-;--- This loses because the compiler won't in-line it.  Hacked by hand
-; because it is in READ's inner loop.
-;(define preferred-case
-;  (if (char=? (string-ref (symbol->string 't) 0) #\T)
-;      char-upcase
-;      char-downcase))
+;--- This loses because the compiler won't in-line it.
+; and it's in READ's inner loop.
 
-(define p-c-v (make-string ascii-limit #\0))
+(define preferred-case
+  (if (char=? (string-ref (symbol->string 't) 0) #\T)
+      char-upcase
+      char-downcase))
 
-(let ((p-c (if (char=? (string-ref (symbol->string 't) 0) #\T)
-	       char-upcase
-	       char-downcase)))
-  (do ((i 0 (+ i 1)))
-      ((>= i ascii-limit))
-    (string-set! p-c-v i (p-c (ascii->char i)))))
+; For ASCII, we previously had this hand-hacked version,
 
-(define (preferred-case c)
-  (string-ref p-c-v (char->ascii c)))
+; (define p-c-v (make-string ascii-limit #\0))
+; 
+; (let ((p-c (if (char=? (string-ref (symbol->string 't) 0) #\T)
+;                char-upcase
+;                char-downcase)))
+;   (do ((i 0 (+ i 1)))
+;       ((>= i ascii-limit))
+;     (string-set! p-c-v i (p-c (ascii->char i)))))
+; 
+; (define (preferred-case c)
+;   (string-ref p-c-v (char->ascii c)))
 
 ; Reader errors
 

@@ -112,10 +112,12 @@
 	handle
         usual-resumer
         filenames               ; translate
+	file-names
         display-conditions      ; display-condition
         evaluation              ; package-for-load, eval
 	environments		; with-interaction-environment
 	i/o			; current-error-port
+	default-string-encodings
         write-images)
   (files (env build)))
 
@@ -434,3 +436,4 @@
 	exceptions-internal
 	(with-prefix simple-conditions sc:))
   (files (env signal)))
+

@@ -301,7 +301,7 @@
     (let ((id (channel-id channel)))
       (if (fixnum? id)
 	  (write-error-integer (extract-fixnum id))
-	  (write-error-string (extract-string id)))
+	  (write-error-string (extract-low-string id)))
       (write-error-newline))
     (unspecific)))
 

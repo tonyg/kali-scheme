@@ -90,6 +90,28 @@
       (integer-bitwise-ior x y))
     (define (s48-integer-bitwise-xor x y)
       (integer-bitwise-xor x y))
+
+    (define (s48-string-set s i c)
+      (vm-string-set! s i c))
+
+    (define (s48-string-ref s i)
+      (vm-string-ref s i))
+
+    (define (s48-string-length s)
+      (vm-string-length s))
+
+    (define (s48-allocate-string len)
+      (vm-make-string len
+		      (ensure-space (vm-string-size len))))
+
+    (define (s48-enter-string-latin-1 s)
+      (enter-string+gc s))
+
+    (define (s48-copy-string-to-scheme-string-latin-1 string len vm-string)
+      (copy-string-to-vm-string/latin-1! string len vm-string))
+
+    (define (s48-copy-scheme-string-to-string-latin-1 vm-string string)
+      (copy-vm-string-to-string/latin-1! vm-string string))
     ))
 
 ; Byte code architecture.
@@ -466,7 +488,6 @@
 	(store! thing (make-header type length-in-bytes))
 	(address->stob-descriptor (address+ thing
 					    (cells->bytes stob-overhead)))))
-
   ))
 
 ;----------------------------------------------------------------

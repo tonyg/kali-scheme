@@ -12,10 +12,12 @@
 ; The compiled version of the expression is produced when needed.
 
 (define-record-type regexp :regexp
-  (really-make-regexp pattern compiled
+  (really-make-regexp pattern pattern-byte-string
+		      compiled
 		      extended? ignore-case? submatches? newline?)
   regexp?
   (pattern regexp-pattern)                             ; immutable string
+  (pattern-byte-string regexp-pattern-byte-string)
   (compiled real-regexp-compiled set-regexp-compiled!) ; #f or a c-record
   (extended?    regexp-extended?)		       ; four flags
   (ignore-case? regexp-ignore-case?)
@@ -70,7 +72,8 @@
     (if (and (string? pattern)
 	     (pair? options))
 	(let* ((pattern (string->immutable-string pattern))
-	       (regexp (apply really-make-regexp pattern #f options)))
+	       (pattern-byte-string (string->byte-string pattern))
+	       (regexp (apply really-make-regexp pattern pattern-byte-string #f options)))
 	  (add-finalizer! regexp free-compiled-regexp)
 	  regexp)
 	(apply call-error "invalid argument(s)"
@@ -91,7 +94,7 @@
 (define (regexp-compiled regexp)
   (or (real-regexp-compiled regexp)
       (let ((compiled (call-imported-binding posix-compile-regexp
-					     (regexp-pattern regexp)
+					     (regexp-pattern-byte-string regexp)
 					     (regexp-extended? regexp)
 					     (regexp-ignore-case? regexp)
 					     (regexp-submatches? regexp)
@@ -101,7 +104,7 @@
 	      (set-regexp-compiled! regexp compiled)
 	      compiled)
 	    (let ((message (call-imported-binding posix-regexp-error-message
-						  (regexp-pattern regexp)
+						  (regexp-pattern-byte-string regexp)
 						  (regexp-extended? regexp)
 						  (regexp-ignore-case? regexp)
 						  (regexp-submatches? regexp)
@@ -120,7 +123,7 @@
 	   (string? string))
       (call-imported-binding posix-regexp-match
 			     (regexp-compiled regexp)
-			     string
+			     (string->byte-string string)
 			     start
 			     submatches?
 			     starts-line?

@@ -2,12 +2,14 @@
 
 
 (define-structures ((scheme-level-1 scheme-level-1-interface)
-		    (util util-interface))
+		    (util util-interface)
+		    (set-char-map-procedures (export set-char-map-procedures!)))
   (open scheme-level-0 ascii simple-signals
         bitwise
 	code-quote)			; needed by SYNTAX-RULES
   (usual-transforms case quasiquote syntax-rules)
-  (files (rts base)
+  (files (rts charmap)
+	 (rts base)
 	 (rts util)
 	 (rts number)
 	 (rts lize))	  ; Rationalize
@@ -77,13 +79,35 @@
   (files (rts session))
   (optimize auto-integrate))
 
+(define-structure default-string-encodings default-string-encodings-interface
+  (open scheme-level-1
+	byte-vectors
+	unicode)
+  (files (rts default-string-encoding)))
+
+(define-structure string/bytes-types string/bytes-types-interface
+  (open scheme-level-1
+	define-record-types
+	byte-vectors
+	simple-signals
+	(subset primitives (copy-bytes!)))
+  (files (rts string-bytes)))
+
+(define-structure file-names file-names-interface
+  (open scheme-level-1
+	string/bytes-types
+	default-string-encodings)
+  (files (rts file-name)))
+
 (define-structures ((i/o i/o-interface)
+		    (i/o-codecs i/o-codecs-interface)
 		    (i/o-internal i/o-internal-interface))
   (open scheme-level-1 simple-signals fluids
 	architecture
 	primitives
+	ascii unicode
 	ports byte-vectors bitwise
-	define-record-types ascii
+	define-record-types
 	proposals
 	session-data
 	debug-messages	; for error messages
@@ -91,7 +115,8 @@
 	number-i/o      ; number->string for debugging
 	handle		; report-errors-as-warnings
 	vm-exceptions)     ; wrong-number-of-args stuff
-  (files (rts port)
+  (files (rts chario)
+	 (rts port)
 	 (rts port-buffer)
 	 (rts current-port))
   (optimize auto-integrate))
@@ -115,6 +140,7 @@
 	ports
 	i/o i/o-internal
 	channels channel-i/o
+	file-names
 	proposals
 	condvars
 	simple-signals simple-conditions
@@ -145,6 +171,7 @@
 	number-i/o
 	i/o		;input-port-option
 	ascii		;for dispatch table
+	unicode
 	simple-signals	;warn, signal-condition, make-condition
 	simple-conditions	;define-condition-type
 	primitives	;make-immutable!

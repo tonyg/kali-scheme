@@ -21,7 +21,9 @@
 	;; pp
 	;; The following is listed because this structure is used to
 	;; generate a dependency list used by the Makefile...
-	usual-commands))
+	usual-commands
+	unicode-char-maps
+	))
 
 ; Large integers and rational and complex numbers.
 
@@ -71,6 +73,16 @@
   (files (rts floatnum))
   (optimize auto-integrate))
 
+(define-structure unicode-char-maps unicode-char-maps-interface
+  (open scheme
+	set-char-map-procedures
+	unicode
+	finite-types
+	bitwise)
+  (files (env unicode-category)
+	 (env unicode-info)
+	 (env unicode-charmap)))
+
 (define-structure time time-interface
   (open scheme-level-1 primitives architecture enumerated)
   (begin
@@ -96,6 +108,18 @@
 	proposals)
   (optimize auto-integrate)
   (files (big lock)))
+
+;----------------
+; Character sets
+
+(define-structure encodings encodings-interface
+  (open scheme-level-2
+	unicode
+	bitwise byte-vectors
+	(subset signals (call-error))
+	(subset silly (reverse-list->string)))
+  (optimize auto-integrate)
+  (files (big encoding)))
 
 ;----------------
 ; Big Scheme
@@ -132,9 +156,10 @@
 	ports
 	i/o i/o-internal
 	proposals
-	util			; unspecific
+	util				; unspecific
 	signals
-	(subset primitives	(copy-bytes!)))
+	(subset primitives      (copy-bytes! write-byte))
+	encodings)
   (files (big more-port)))
 
 (define-structure destructuring (export (destructure :syntax))
@@ -260,13 +285,15 @@
 	primitives		;find-all-records
 	i/o			;current-error-port
         code-vectors
+	file-names string/bytes-types default-string-encodings
 	external-calls)
   (files (big external)))
 
 (define-structure shared-objects shared-objects-interface
   (open scheme-level-2
 	define-record-types
-	external-calls)
+	external-calls
+	file-names string/bytes-types default-string-encodings)
   (files (big shared-object)))
 
 (define-structure load-dynamic-externals load-dynamic-externals-interface
@@ -279,17 +306,22 @@
   (files (big dynamic-external)))
 
 (define-structure c-system-function (export have-system? system)
-  (open scheme-level-2 external-calls signals)
+  (open scheme-level-2 byte-vectors default-string-encodings external-calls signals)
   (begin
     (import-lambda-definition s48-system (string))
 
     (define (have-system?)
       (not (= 0 (s48-system #f))))
 
-    (define (system string)
-      (if (string? string)
-	  (s48-system string)
-	  (call-error "not a string" system string)))))
+    ;; Kludge
+    (define (system cmd-line)
+      (cond
+       ((byte-vector? cmd-line)
+	(s48-system cmd-line))
+       ((string? cmd-line)
+	(s48-system (string->byte-string cmd-line)))
+       (else
+	(call-error "not a string" system string))))))
     
 ; Rudimentary object dump and restore
 

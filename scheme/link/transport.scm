@@ -51,7 +51,7 @@
           ((vector? thing)
            (transport-vector thing))
           ((string? thing)
-           (allocate-b-vector thing (lambda (x) (+ 1 (string-length x)))))
+	   (transport-string thing))
           (else
            (error "cannot transport object" thing)))))
 
@@ -167,6 +167,13 @@
                  (transport (location-id loc)))
     descriptor))
 
+; The characters on the linker system may not be the same as those of Scheme 48
+
+(define (transport-string string)
+  (allocate-b-vector string
+		     (lambda (x)
+		       (scalar-value-units->bytes (string-length x)))))
+
 ; Symbols have two slots, the string containing the symbol's name and a slot
 ; used in building the symbol table.
 ; Characters in the symbol name are made to be lower case.
@@ -177,7 +184,7 @@
          (vector (cdr data)))
     (vector-set! vector
                  0
-                 (transport (symbol-case-converter (symbol->string symbol))))
+                 (transport-string (symbol-case-converter (symbol->string symbol))))
     (vector-set! vector
                  1
                  (transport #f))
@@ -240,11 +247,12 @@
 
 (define (write-heap-stob thing port)
   (cond ((string? thing)
-         (let ((len (+ 1 (string-length thing))))
+         (let* ((len (string-length thing))
+		(byte-len (scalar-value-units->bytes len)))
            (write-stob (make-header-immutable ; ***
-                        (make-header (enum stob string) len))
-                       thing len nulled-string-ref write-char port)
-           (align-port len port)))
+                        (make-header (enum stob string) byte-len))
+                       thing len string-ref write-char-scalar-value port)
+           (align-port byte-len port)))
         ((code-vector? thing)
          (let ((len (code-vector-length thing)))
            (write-stob (make-header-immutable  ; ***
@@ -258,11 +266,6 @@
         (else
          (error "do not know how to write stob" thing))))
 
-(define (nulled-string-ref string i)
-  (if (= i (string-length string))
-      (ascii->char 0)
-      (string-ref string i)))
-
 ; Write out a transported STOB to PORT.  HEADER is the header, LENGTH is the
 ; number of objects the STOB contains, ACCESSOR and WRITER access the contents
 ; and write them to the heap.
@@ -272,6 +275,10 @@
   (do ((i 0 (+ i 1)))
       ((>= i length))
     (writer (accessor contents i) port)))
+
+(define (write-char-scalar-value char port)
+  (write-scalar-value (char->ascii char) ; ASCII is a subset of Unicode code points
+		    port))
 
 ; Write out zeros to align the port on a four-byte boundary.
 

@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 27")
+(define architecture-version "Vanilla 28")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -167,6 +167,7 @@
   (char? 1)
   ((char=? char<?) 2)
   ((char->ascii ascii->char) 1)
+  ((char->scalar-value scalar-value->char scalar-value?) 1)
   (eof-object? 1)
 
   ;; Data manipulation
@@ -201,7 +202,7 @@
   ((immutable? make-immutable! make-mutable!) 1)
 
   ;; channels (unbuffered, non-blocking I/O)
-  (open-channel 3)
+  (open-channel-low 3)
   (close-channel 1)
   (channel-maybe-read 5)
   (channel-maybe-write 4)
@@ -265,8 +266,8 @@
   ;; ports (buffered I/O) - these are all unnecessary
   ;; byte = 0 -> port is supplied
   ;;      = 1 -> get port from dynamic environment
-  ((read-char peek-char) byte 1 0)
-  (write-char byte 2 1)
+  ((read-byte peek-byte) byte 1 0)
+  (write-byte byte 2 1)
   
   (os-error-message 1)
 
@@ -316,7 +317,7 @@
    illegal-exception-return
    ))
 
-; Used by (READ-CHAR) and (WRITE-CHAR) to get the appropriate ports from
+; Used by (READ-BYTE) and (WRITE-BYTE) to get the appropriate ports from
 ; the fluid environment.
 
 (define-enumeration current-port-marker
@@ -533,6 +534,7 @@
       (shared-binding-ref shared-binding-set!))
     (port port? make-port
       (port-handler)
+      (port-text-codec set-port-text-codec!)
       (port-status  set-port-status!)
       (port-lock    set-port-lock!)		; used for buffer timestamps
       (port-data    set-port-data!)

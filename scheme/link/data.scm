@@ -4,7 +4,7 @@
 ; Scheme 48's data representations, for writing heap images.
 ; Defines things needed by TRANSPORT (which is called by WRITE-IMAGE, which
 ; is called by the static linker).
-; Adapted from vm/util.scm and vm/data.scm.
+; Adapted from vm/util/vm-utilities.scm and vm/data/data.scm.
 
 
 (define (low-bits n k)
@@ -137,3 +137,11 @@
 (define (bytes->a-units byte-count)
   (cells->a-units (bytes->cells byte-count)))
 
+;; Unicode code points
+(define bytes-per-scalar-value-unit 4) ; must be >= 3
+
+(define (bytes->scalar-value-units byte-count)
+  (quotient byte-count bytes-per-scalar-value-unit))
+
+(define (scalar-value-units->bytes units)
+  (* units bytes-per-scalar-value-unit))

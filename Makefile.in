@@ -530,7 +530,7 @@ link/linker-in-lucid: build/lucid-script.lisp $(linker-files) \
 # Scheme, the byte-code compiler, and a minimal command processor, but
 # no debugging environment to speak of.
 
-$(INITIAL): $(CONFIG_FILES) build/initial.scm $(initial-files)
+$(INITIAL): $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files)
 	cd $(srcdir) &&							\
 	($(START_LINKER);						\
 		echo '(load-configuration "scheme/interfaces.scm")';	\
@@ -605,6 +605,24 @@ scheme/debug/mini1.image: $(VM) scheme/debug/mini.image
 			   \"foo\")" \
 	| ./$(VM) -i scheme/debug/mini.image -a batch
 
+
+# --------------------
+# Generate unicode-info.scm from UnicodeData.txt
+# Get UnicodeData.txt from http://www.unicode.org
+
+scheme/env/unicode-info.scm: build/UnicodeData.txt			\
+	scheme/link/unicode-data.scm 					\
+	scheme/env/unicode-category.scm					\
+	scheme/big/compact-table.scm
+	cd $(srcdir) &&							\
+	(echo ',bench';							\
+		echo ',batch';						\
+		echo ',open finite-types destructuring define-record-types bitwise';		\
+		echo ',open (subset srfi-13 (string-index)) (subset srfi-1 (find)) srfi-23';	\
+		echo ',load scheme/big/compact-table.scm scheme/env/unicode-category.scm';	\
+		echo ',load scheme/link/unicode-data.scm';					\
+		echo "(create-unicode-tables \"build/UnicodeData.txt\" \"$@\")"			\
+	) | $(RUNNABLE) -h 6000000
 
 # --------------------
 # Generate scheme48.h from VM sources

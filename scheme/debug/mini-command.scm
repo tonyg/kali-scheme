@@ -37,7 +37,7 @@
 			   (let ((form (read in)))
 			     (go (lambda ()
 				   (eval form (interaction-environment))))))
-			  (else (error "unknown command" (cadr form)))))
+			  (else (error "unknown command" (cadr form) 'go 'load (eq? (cadr form) 'load)))))
 		       (else
 			(call-with-values
 			    (lambda () (eval form (interaction-environment)))

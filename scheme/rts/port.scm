@@ -9,21 +9,21 @@
 ;  (close <port>) -> whatever
 ;
 ; Input ports
-;  (char <port>) -> <char>
-;  (block <port> <buffer> <start> <count>) -> <char count>
-;  (char-ready? <port>) -> <boolean>
+;  (byte <port> <read?> <count>) -> <byte> ...
+;  (block <port> <buffer> <start> <count>) -> <byte count>
+;  (ready? <port>) -> <boolean>
 ;
 ; Output ports
-;  (char <port> <char>) -> whatever
+;  (byte <port> <byte>) -> whatever
 ;  (block <port> <buffer> <start> <count>) -> whatever
 ;  (force-output <port>) -> whatever
 
 (define-record-type port-handler :port-handler
-  (make-port-handler discloser close char block ready? force)
+  (make-port-handler discloser close byte block ready? force)
   port-handler?
   (discloser port-handler-discloser)
   (close     port-handler-close)
-  (char      port-handler-char)
+  (byte      port-handler-byte)
   (block     port-handler-block)
   (ready?    port-handler-ready?)
   (force     port-handler-force))		; only used for output
@@ -43,31 +43,33 @@
 
 ;----------------
 ; Set up VM exception handlers for the three unnecessary I/O primitives,
-; READ-CHAR, PEEK-CHAR, and WRITE-CHAR.  These do the right thing in
+; READ-BYTE, PEEK-BYTE, and WRITE-BYTE.  These do the right thing in
 ; the case of unbuffered ports or buffer overflow or underflow.
 ;
 ; This is abstracted to avoid a circular module dependency.
 
 (define (initialize-i/o-handlers! define-vm-exception-handler signal-exception)
-  (define-vm-exception-handler (enum op read-char)
+  (define-vm-exception-handler (enum op read-byte)
     (one-arg-proc->handler (lambda (port)
-			     ((port-handler-char (port-handler port))
-			       port
-			       #t))
+			     ((port-handler-byte (port-handler port))
+			      port
+			      #t
+			      1))
 			   signal-vm-exception))
     
-  (define-vm-exception-handler (enum op peek-char)
+  (define-vm-exception-handler (enum op peek-byte)
     (one-arg-proc->handler (lambda (port)
-			     ((port-handler-char (port-handler port))
-			       port
-			       #f))
+			     ((port-handler-byte (port-handler port))
+			      port
+			      #f
+			      1))
 			   signal-vm-exception))
   
-  (define-vm-exception-handler (enum op write-char)
-    (two-arg-proc->handler (lambda (char port)
-			     ((port-handler-char (port-handler port))
-			       port
-			       char))
+  (define-vm-exception-handler (enum op write-byte)
+    (two-arg-proc->handler (lambda (byte port)
+			     ((port-handler-byte (port-handler port))
+			      port
+			      byte))
 			   signal-vm-exception)))
 
 ; Check the VM exception and then lock the port.
@@ -90,15 +92,37 @@
 ; Wrappers for the various port operations.  These check types and arguments
 ; and then call the appropriate handler procedure.
 
-; See if there is a character available.  CHAR-READY? itself is defined
+(define (real-read-char port)
+  ((text-codec-input-char-proc (port-text-codec port))
+   port #t))
+
+(define (real-peek-char port)
+  ((text-codec-input-char-proc (port-text-codec port))
+   port #f))
+
+(define (real-write-char char port)
+  ((text-codec-write-char-proc (port-text-codec port))
+   char port))
+
+; See if there is a character available.  BYTE-READY? itself is defined
 ; in current-ports.scm as it needs CURRENT-INPUT-PORT when called with
 ; no arguments.
 
-(define (real-char-ready? port)
+(define (real-byte-ready? port)
   (if (open-input-port? port)
       ((port-handler-ready? (port-handler port))
          port)
-      (call-error "invalid argument" char-ready? port)))
+      (call-error "invalid argument" real-byte-ready? port)))
+
+(define (real-peek-bytes count port)
+  (if (open-input-port? port)
+      ((port-handler-byte (port-handler port)) port #f count)
+      (call-error "invalid argument" real-peek-bytes port)))
+
+(define (real-read-bytes count port)
+  (if (open-input-port? port)
+      ((port-handler-byte (port-handler port)) port #t count)
+      (call-error "invalid argument" real-read-bytes port)))
 
 ; Reading in a block of characters at once.
 
@@ -133,18 +157,13 @@
 	     count))
       (call-error "invalid argument" write-block buffer start count port)))
 
-; WRITE-STRING is a front for WRITE-BLOCK.
-
 (define (write-string string port)
-  (write-block (string->byte-vector string) 0 (string-length string) port))
+  (do ((size (string-length string))
+       (i 0 (+ 1 i)))
+      ((>= i size) (unspecific))
+    (real-write-char (string-ref string i) port)))
 
-(define (string->byte-vector string)
-  (let* ((size (string-length string))
-	 (buffer (make-byte-vector size 0)))
-    (copy-bytes! string 0 buffer 0 size)
-    buffer))
-
-; CHAR-READY? for output ports.
+; BYTE-READY? for output ports.
 
 (define (output-port-ready? port)
   (if (open-output-port? port)
@@ -243,6 +262,7 @@
 (define (make-unbuffered-input-port handler data)
   (if (port-handler? handler)
       (make-port handler
+		 latin-1-codec
 		 (bitwise-ior input-port-mask open-input-port-mask)
 		 #f		; timestamp (not used for unbuffered ports)
 		 data
@@ -280,6 +300,7 @@
 (define (make-unbuffered-output-port handler data)
   (if (port-handler? handler)
       (make-port handler
+		 latin-1-codec
 		 open-output-port-status
 		 #f		; lock     (not used in unbuffered ports)
 		 data
@@ -298,7 +319,7 @@
     (lambda (ignore)			; disclose
       (list 'null-output-port))
     make-output-port-closed!		; close
-    (lambda (port char)			; one-char (we just empty the buffer)
+    (lambda (port byte)			; one-byte (we just empty the buffer)
       (set-port-index! port 0))
     (lambda (port buffer start count)	; write-block
       count)
@@ -307,7 +328,7 @@
     (lambda (port error-if-closed?)	; force-output
       (unspecific))))
 
-; They can all share a buffer.  The buffer is needed because the WRITE-CHAR
+; They can all share a buffer.  The buffer is needed because the WRITE-BYTE
 ; byte code actually wants to put characters somewhere.
 
 (define null-output-buffer
@@ -315,6 +336,7 @@
 
 (define (make-null-output-port)
   (make-port null-output-port-handler
+	     null-text-codec
 	     open-output-port-status
 	     #f		; timestamp
 	     #f		; data

@@ -60,7 +60,7 @@
 ; Data structures
 
 (define-interface vm-data-interface
-  (export bytes-per-cell bits-per-cell addressing-units-per-cell
+  (export bytes-per-cell bits-per-byte bits-per-cell addressing-units-per-cell
 	  bytes->cells
 	  cells->bytes
 	  a-units->cells
@@ -88,7 +88,10 @@
 	  true false eof-object null unspecific-value unreleased-value quiescent
 	  unbound-marker unassigned-marker
 	  vm-boolean? false? enter-boolean extract-boolean
-	  vm-char? enter-char extract-char vm-char=? vm-char<?
+	  bytes-per-scalar-value-unit scalar-value-units->bytes
+	  scalar-value-units->bytes bytes->scalar-value-units
+	  vm-char? vm-char=? vm-char<?
+	  enter-char extract-char scalar-value->char char->scalar-value
 
 	  make-header header-type
 	  header-type-field-width

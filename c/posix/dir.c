@@ -103,7 +103,7 @@ posix_opendir(s48_value svname)
   s48_value	res;
   char		*c_name;
 
-  c_name = s48_extract_string(svname);
+  c_name = s48_extract_byte_vector(svname);
   RETRY_OR_RAISE_NULL(dp, opendir(c_name));
   res = S48_MAKE_VALUE(DIR *);
   S48_UNSAFE_EXTRACT_VALUE(res, DIR *) = dp;
@@ -155,7 +155,7 @@ posix_readdir(s48_value svdir)
     name = dep->d_name;
   } while ((name[0] == '.')
 	   && (name[1] == '\0' || (name[1] == '.' && name[2] == '\0')));
-  return s48_enter_string(name);
+  return s48_enter_byte_string(name);
 }
 
 /* ************************************************************ */
@@ -189,7 +189,7 @@ posix_working_directory(s48_value new_wd)
       RETRY_NULL(status, getcwd(buffer, buffer_size));
 
       if (status == buffer) {
-	s48_value	result = s48_enter_string(buffer);
+	s48_value	result = s48_enter_byte_string(buffer);
 	if (buffer != stack_buffer)
 	  free(buffer);
 	return result;
@@ -209,9 +209,7 @@ posix_working_directory(s48_value new_wd)
   else {
     int		status;
 
-    S48_CHECK_STRING(new_wd);
-    
-    RETRY_OR_RAISE_NEG(status, chdir(S48_UNSAFE_EXTRACT_STRING(new_wd)));
+    RETRY_OR_RAISE_NEG(status, chdir(s48_extract_byte_vector(new_wd)));
     
     return S48_UNSPECIFIC;
   }
@@ -234,10 +232,8 @@ posix_open(s48_value path, s48_value options, s48_value mode)
 
   S48_GC_PROTECT_1(path);
 
-  S48_CHECK_STRING(path);
-  
   c_options = s48_extract_file_options(options);
-  c_path = S48_UNSAFE_EXTRACT_STRING(path);
+  c_path = s48_extract_byte_vector(path);
 
   if (O_WRONLY & c_options)
     c_options |= O_NONBLOCK;
@@ -281,36 +277,36 @@ posix_file_stuff(s48_value op, s48_value arg0, s48_value arg1)
 
     /* link(existing, new) */
   case 1:
-    RETRY_OR_RAISE_NEG(status, link(s48_extract_string(arg0),
-				    s48_extract_string(arg1)));
+    RETRY_OR_RAISE_NEG(status, link(s48_extract_byte_vector(arg0),
+				    s48_extract_byte_vector(arg1)));
     break;
 
     /* mkdir(path, mode) */
   case 2:
-    RETRY_OR_RAISE_NEG(status, mkdir(s48_extract_string(arg0),
+    RETRY_OR_RAISE_NEG(status, mkdir(s48_extract_byte_vector(arg0),
 				     s48_extract_mode(arg1)));
     break;
 
     /* mkfifo(path, mode) */
   case 3:
-    RETRY_OR_RAISE_NEG(status, mkfifo(s48_extract_string(arg0),
+    RETRY_OR_RAISE_NEG(status, mkfifo(s48_extract_byte_vector(arg0),
 				      s48_extract_mode(arg1)));
     break;
 
     /* unlink(char *path) */
   case 4:
-    RETRY_OR_RAISE_NEG(status, unlink(s48_extract_string(arg0)));
+    RETRY_OR_RAISE_NEG(status, unlink(s48_extract_byte_vector(arg0)));
     break;
     
     /* rmdir(char *path) */
   case 5:
-    RETRY_OR_RAISE_NEG(status, rmdir(s48_extract_string(arg0)));
+    RETRY_OR_RAISE_NEG(status, rmdir(s48_extract_byte_vector(arg0)));
     break;
     
     /* rename(char *old, char *new) */
   case 6:
-    RETRY_OR_RAISE_NEG(status, rename(s48_extract_string(arg0),
-				      s48_extract_string(arg1)));
+    RETRY_OR_RAISE_NEG(status, rename(s48_extract_byte_vector(arg0),
+				      s48_extract_byte_vector(arg1)));
     break;
     
     /* access(char *path, int modes) */
@@ -320,7 +316,7 @@ posix_file_stuff(s48_value op, s48_value arg0, s48_value arg1)
                       (002 & modes ? W_OK : 0) |
                       (004 & modes ? X_OK : 0) |
                       (010 & modes ? F_OK : 0);
-    char *path = s48_extract_string(arg0);
+    char *path = s48_extract_byte_vector(arg0);
 
     RETRY_NEG(status, access(path, local_modes));
 
@@ -398,7 +394,7 @@ posix_ctime(s48_value sch_time)
 
   s48_check_record_type(sch_time, posix_time_type_binding);
   time = extract_time(sch_time);
-  return s48_enter_string(ctime(&time));
+  return s48_enter_string_latin_1(ctime(&time));
 }
 
 static s48_value
@@ -509,9 +505,9 @@ posix_file_info(s48_value svname,
 			     &sbuf));
     svname = S48_UNSAFE_CHANNEL_ID(svname); }
   else if (follow_link_p == S48_FALSE)
-    RETRY_OR_RAISE_NEG(status, stat(s48_extract_string(svname), &sbuf));
+    RETRY_OR_RAISE_NEG(status, stat(s48_extract_byte_vector(svname), &sbuf));
   else
-    RETRY_OR_RAISE_NEG(status, lstat(s48_extract_string(svname), &sbuf));
+    RETRY_OR_RAISE_NEG(status, lstat(s48_extract_byte_vector(svname), &sbuf));
 
   info = s48_make_record(posix_file_info_type_binding);
 

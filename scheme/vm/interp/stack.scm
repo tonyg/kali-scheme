@@ -467,12 +467,11 @@
 	       (write-integer (extract-fixnum name) out))
 	      ((and (record? name)
 		    (vm-string? (record-ref name 2)))
-	       (write-string (extract-string (record-ref name 2)) out))
+	       (write-vm-string (record-ref name 2) out))
 	      ((and (record? name)
 		    (vm-symbol? (record-ref name 2)))
-	       (write-string (extract-string
-			      (vm-symbol->string (record-ref name 2)))
-			     out))
+	       (write-vm-string (vm-symbol->string (record-ref name 2))
+				out))
 	      (else
 	       (write-string "?" out))))
       (write-string " ?? " out))

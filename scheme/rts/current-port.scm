@@ -2,7 +2,7 @@
 
 ; Current input, output, error, and noise ports.
 
-; These two ports are needed by the VM for the READ-CHAR and WRITE-CHAR
+; These two ports are needed by the VM for the READ-BYTE and WRITE-BYTE
 ; opcodes.
 (define $current-input-port  (enum current-port-marker current-input-port))
 (define $current-output-port (enum current-port-marker current-output-port))
@@ -47,11 +47,28 @@
 ;----------------
 ; Procedures with default port arguments.
 
+; We probably lose a lot of speed here as compared with the
+; specialized VM instructions.
+
+(define (read-char . port-option)
+  (real-read-char (input-port-option port-option)))
+
+(define (peek-char . port-option)
+  (real-peek-char (input-port-option port-option)))
+
+(define (write-char c . port-option)
+  (real-write-char c (output-port-option port-option)))
+
 (define (newline . port-option)
   (write-char #\newline (output-port-option port-option)))
 
+(define (byte-ready? . port-option)
+  (real-byte-ready? (input-port-option port-option)))
+
+; #### This hasn't been adapted to multi-byte encodings yet.
+; CHAR-READY? sucks
 (define (char-ready? . port-option)
-  (real-char-ready? (input-port-option port-option)))
+  (real-byte-ready? (input-port-option port-option)))
 
 (define (output-port-option port-option)
   (cond ((null? port-option) (current-output-port))

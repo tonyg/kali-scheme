@@ -8,14 +8,43 @@
 (define-primitive char?       (any->) vm-char? return-boolean)
 (define-primitive char=?      (vm-char-> vm-char->) vm-char=? return-boolean)
 (define-primitive char<?      (vm-char-> vm-char->) vm-char<? return-boolean)
-(define-primitive char->ascii (char->) char->ascii return-fixnum)
+
+; should be called CHAR->LATIN1 and LATIN1->CHAR
+; these are transitory, anyway
+(define-primitive char->ascii
+  (char-scalar-value->)
+  (lambda (c)
+    (if (or (> c 255) (< c 0))
+	(raise-exception wrong-type-argument 0 (scalar-value->char c))
+	(goto return-fixnum c))))
 
 (define-primitive ascii->char
   (fixnum->)
   (lambda (x)
     (if (or (> x 255) (< x 0))
         (raise-exception wrong-type-argument 0 (enter-fixnum x))
-	(goto return (enter-char (ascii->char x))))))
+	(goto return (scalar-value->char x)))))
+
+(define-primitive char->scalar-value (char-scalar-value->) (lambda (c) c) return-fixnum)
+
+; Unicode surrogates are not scalar values
+
+(define (scalar-value? x)
+  (and (>= x 0)
+       (or (<= x #xd7ff)
+	   (and (>= x #xe000) (<= x #x10ffff)))))
+
+(define-primitive scalar-value->char
+  (fixnum->)
+  (lambda (x)
+    (if (scalar-value? x)
+	(goto return (scalar-value->char x))
+	(raise-exception wrong-type-argument 0 (enter-fixnum x)))))
+
+(define-primitive scalar-value?
+  (fixnum->)
+  scalar-value?
+  return-boolean)
 
 (define-primitive eof-object?
   (any->)
@@ -121,7 +150,7 @@
 	(goto returner (ref vector index))
 	(raise-exception index-out-of-range 0 vector (enter-fixnum index)))))
 
-(let ((proc (make-byte-ref vm-string-ref vm-string-length return-char)))
+(let ((proc (make-byte-ref vm-string-ref vm-string-length return-scalar-value-char)))
   (define-primitive string-ref (string-> fixnum->) proc))
 
 (let ((proc (make-byte-ref code-vector-ref code-vector-length return-fixnum)))
@@ -139,13 +168,13 @@
 	   (raise-exception index-out-of-range 0
 			    vector (enter-fixnum index) (enter-elt char))))))
 
-(let ((proc (make-byte-setter vm-string-set! vm-string-length enter-char)))
-  (define-primitive string-set! (string-> fixnum-> char->) proc))
+(let ((proc (make-byte-setter vm-string-set! vm-string-length scalar-value->char)))
+  (define-primitive string-set! (string-> fixnum-> char-scalar-value->) proc))
 
 (let ((proc (make-byte-setter code-vector-set! code-vector-length enter-fixnum)))
   (define-primitive byte-vector-set! (code-vector-> fixnum-> fixnum->) proc))
 
-(define (byte-vector-maker size type extra initialize setter enter-elt)
+(define (byte-vector-maker size bytes type initialize setter enter-elt)
   (lambda (len init)
     (let ((size (size len)))
       (if (or (< len 0)
@@ -154,7 +183,7 @@
 			   0
 			   (enter-fixnum len)
 			   (enter-elt init))
-	  (let ((vector (maybe-make-b-vector+gc type (+ len extra))))
+	  (let ((vector (maybe-make-b-vector+gc type (bytes len))))
 	    (if (false? vector)
 		(raise-exception heap-overflow
 				 0
@@ -168,17 +197,17 @@
 		  (goto return vector))))))))
 
 (let ((proc (byte-vector-maker vm-string-size
+			       scalar-value-units->bytes
 			       (enum stob string)
-			       1
 			       (lambda (string length)
-				 (b-vector-set! string length 0))
+				 0)
 			       vm-string-set!
-			       enter-char)))
-  (define-primitive make-string (fixnum-> char->) proc))
+			       scalar-value->char)))
+  (define-primitive make-string (fixnum-> char-scalar-value->) proc))
   
 (let ((proc (byte-vector-maker code-vector-size
+			       (lambda (len) len)
 			       (enum stob byte-vector)
-			       0
 			       (lambda (byte-vector length) 0)
 			       code-vector-set!
 			       enter-fixnum)))
@@ -407,7 +436,7 @@
                (i (- n 1) (- i 1)))
               ((< i 0)
 	       (goto return obj))
-            (vm-string-set! obj i (extract-char (vm-car l))))))))
+            (vm-string-set! obj i (char->scalar-value (vm-car l))))))))
 
 (define-primitive string-hash (string->) vm-string-hash return-fixnum)
 

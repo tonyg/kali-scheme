@@ -123,7 +123,7 @@ s48_socket(s48_value udp_p, s48_value input_p)
     S48_CHANNEL_STATUS_SPECIAL_OUTPUT :
     S48_CHANNEL_STATUS_SPECIAL_INPUT;
 
-  channel = s48_add_channel(mode, s48_enter_string("socket"), fd);
+  channel = s48_add_channel(mode, s48_enter_string_latin_1("socket"), fd);
 
   if (!S48_CHANNEL_P(channel)) {
     ps_close_fd(fd);		/* retries if interrupted */
@@ -252,7 +252,7 @@ s48_accept(s48_value channel, s48_value retry_p)
     RETRY_OR_RAISE_NEG(status, fcntl(connect_fd, F_SETFL, O_NONBLOCK));
 
     input_channel = s48_add_channel(S48_CHANNEL_STATUS_INPUT,
-				    s48_enter_string("socket connection"),
+				    s48_enter_string_latin_1("socket connection"),
 				    connect_fd);
 
     if (!S48_CHANNEL_P(input_channel)) {
@@ -302,7 +302,7 @@ s48_connect(s48_value channel,
   socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
 
   S48_CHECK_STRING(machine);
-  machine_name = S48_UNSAFE_EXTRACT_STRING(machine);
+  machine_name = S48_UNSAFE_EXTRACT_BYTE_VECTOR(machine);
   
   S48_CHECK_FIXNUM(port);
   port_number = S48_UNSAFE_EXTRACT_FIXNUM(port);
@@ -387,7 +387,7 @@ dup_socket_channel(int socket_fd)
   RETRY_OR_RAISE_NEG(output_fd, dup(socket_fd));
 
   output_channel = s48_add_channel(S48_CHANNEL_STATUS_OUTPUT,
-				   s48_enter_string("socket connection"),
+				   s48_enter_string_latin_1("socket connection"),
 				   output_fd);
   
   if (!S48_CHANNEL_P(output_channel)) {
@@ -433,7 +433,7 @@ s48_get_host_name(void)
 
   RETRY_OR_RAISE_NEG(status, gethostname(mbuff, sizeof(mbuff)));
 
-  return s48_enter_string(mbuff);
+  return s48_enter_string_latin_1(mbuff);
 }
 
 /*
@@ -578,7 +578,7 @@ address_connection(struct sockaddr_in *addr)
 static s48_value
 s48_lookup_udp_address(s48_value name, s48_value port)
 {
-  struct hostent *	host = gethostbyname(s48_extract_string(name));
+  struct hostent *	host = gethostbyname(s48_extract_byte_vector(name));
   struct in_addr	address;
   
   if (host == NULL ||
@@ -676,7 +676,7 @@ get_hostname(struct in_addr addr)
   else
     hostname = hostdata->h_name;
   
-  return s48_enter_string(hostname);
+  return s48_enter_string_latin_1(hostname);
 }
 
 /*

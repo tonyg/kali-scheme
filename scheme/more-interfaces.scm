@@ -300,6 +300,19 @@
   (export real-time
 	  run-time))
 
+(define-interface unicode-char-maps-interface
+  (export (primary-category :syntax)
+	  primary-category?
+
+	  (general-category :syntax)
+	  general-category?
+	  general-category-id
+	  general-category-primary-category
+
+	  char-general-category
+	  char-titlecase
+	  char-title-case?))
+
 (define-interface conditions-interface
   (export make-condition-type
 	  condition-type?
@@ -363,6 +376,22 @@
   (export (define-record-type :syntax)
 	  define-record-discloser))
 
+; Character sets
+; --------------------
+
+(define-interface encodings-interface
+  (export char-encoding-length/utf-8
+	  string-encoding-length/utf-8
+	  encode-char/utf-8
+	  encode-string/utf-8
+	  string->utf-8
+
+	  bytes-char-encoding-length/utf-8
+	  bytes-string-length/utf-8
+	  decode-char/utf-8
+	  decode-string/utf-8
+	  utf-8->string))
+
 ; --------------------
 ; Big Scheme
 
@@ -403,12 +432,12 @@
 	  $restore-index))
 
 (define-interface extended-ports-interface
-  (export char-source->input-port
-	  char-sink->output-port
+  (export byte-source->input-port
+	  byte-sink->output-port
 	  make-tracking-input-port make-tracking-output-port
-	  make-string-input-port
-	  make-string-output-port
-	  string-output-port-output
+	  make-byte-vector-input-port make-string-input-port
+	  make-byte-vector-output-port make-string-output-port
+	  byte-vector-output-port-output string-output-port-output
 	  limit-output
 	  current-row current-column fresh-line
 

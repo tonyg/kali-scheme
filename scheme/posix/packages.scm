@@ -66,11 +66,19 @@
 	  user-id->integer integer->user-id
 	  user-id=?
 
+	  user-name?
+	  thing->user-name
+	  user-name->string user-name->byte-vector user-name->byte-string
+
 	  user-info?
 	  user-info-name user-info-id user-info-group
 	  user-info-home-directory user-info-shell
 	  user-id->user-info
 	  name->user-info
+
+	  group-name?
+	  thing->group-name
+	  group-name->string group-name->byte-vector group-name->byte-string
 
 	  group-id?
 	  group-id->integer integer->group-id
@@ -91,7 +99,10 @@
 	signals			;call-error
 	posix-file-options
 	channel-i/o
-	channel-ports)
+	channel-ports
+	file-names
+	string/bytes-types
+	default-string-encodings)
   (for-syntax (open scheme bitwise))
   (files dir))
 
@@ -114,8 +125,14 @@
 	  get-groups
 	  get-login-name
 
-	  lookup-environment-variable
-	  environment-alist
+	  environment-variable?
+	  thing->environment-variable
+	  environment-variable->string
+	  environment-variable->byte-vector
+	  environment-variable->byte-string
+
+	  lookup-environment-variable  lookup-environment-variable->string
+	  environment-alist environment-alist-as-strings
 	  ))
 
 (define-interface posix-platform-names-interface
@@ -125,6 +142,7 @@
 (define-structures ((posix-process-data posix-process-data-interface)
 		    (posix-platform-names posix-platform-names-interface))
   (open scheme define-record-types external-calls
+	default-string-encodings string/bytes-types
 	interrupts
 	posix-processes posix-users posix-time) ; we need these to be loaded
   (files proc-env))
@@ -185,7 +203,9 @@
 	root-scheduler		;scheme-exit-now
 	channel-ports		;force-channel-output-ports!
 	interrupts		;set-interrupt-handler!
-	architecture)		;interrupts enum
+	architecture		;interrupts enum
+	string/bytes-types
+	default-string-encodings)
   (files proc
 	 signal))
 
@@ -242,6 +262,7 @@
 		    (posix-regexps-internal (export make-match)))
   (open scheme define-record-types finite-types external-calls
 	(subset big-util (string->immutable-string))
+	default-string-encodings
 	signals)
   (files regexp))
 

@@ -33,8 +33,31 @@
 ;            or a list of strings of the form "name=value".
 ;   arguments: a list of strings
 
-(import-lambda-definition exec-with-alias (program lookup? environment arguments)
+(import-lambda-definition external-exec-with-alias (program lookup? environment arguments)
 			  "posix_exec")
+
+(define-string/bytes-type exec-arg :exec-arg
+  exec-arg?
+  
+  string-encoding-length encode-string
+  string-decoding-length decode-string
+
+  thing->exec-arg
+  string->exec-arg
+  byte-vector->exec-arg
+  
+  exec-arg->string
+  exec-arg->byte-vector exec-arg->byte-string)
+
+(define (thing->exec-arg-byte-string thing)
+  (exec-arg->byte-string (thing->exec-arg thing)))
+
+(define (exec-with-alias program lookup? environment arguments)
+  (exec-with-alias (thing->exec-arg-byte-string program)
+		   lookup?
+		   (and environment
+			(thing->exec-arg-byte-string environment))
+		   (map exec-arg->byte-string arguments)))
 
 ; Four versions of exec():
 ;  - program looked up, use default environment

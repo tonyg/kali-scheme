@@ -625,9 +625,9 @@
   (n-ary-constructor 'vector vector-type (enum stob vector))
   (n-ary-constructor 'record #f (enum stob record)))
 
-; READ-CHAR, PEEK-CHAR and WRITE-CHAR
+; READ-BYTE, PEEK-BYTE and WRITE-BYTE
 
-(let ((define-char-io
+(let ((define-byte-io
 	(lambda (id opcode type)
 	  (define-compiler-primitive id
 	    type
@@ -651,14 +651,14 @@
 			      (instruction (enum op return)))
 	       empty-segment
 	       empty-segment))))))
-  (define-char-io 'read-char
-    (enum op read-char)
+  (define-byte-io 'read-byte
+    (enum op read-byte)
     (proc (&opt value-type) value-type))
-  (define-char-io 'peek-char
-    (enum op peek-char)
+  (define-byte-io 'peek-byte
+    (enum op peek-byte)
     (proc (&opt value-type) value-type)))
 
-(let ((define-char-io
+(let ((define-byte-io
 	(lambda (id opcode type)
 	  (define-compiler-primitive id
 	    type
@@ -684,9 +684,9 @@
 			      (instruction opcode 0)
 			      (instruction (enum op return)))
                 empty-segment))))))
-  (define-char-io 'write-char
-    (enum op write-char)
-    (proc (char-type &opt value-type) unspecific-type)))
+  (define-byte-io 'write-byte
+    (enum op write-byte)
+    (proc (integer-type &opt value-type) unspecific-type)))
 
 ; Timings in 0.47 to figure out how to handle the optional ports.
 ; 

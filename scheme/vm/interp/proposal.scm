@@ -438,15 +438,12 @@
 	(loop (- left (copy-count copies))
 	      (copy-next copies)))))
 
-; THING must be a string or code-vector with 0 <= INDEX and
+; THING must be a code-vector with 0 <= INDEX and
 ; (INDEX + COUNT) <= the length of THING.
 
 (define (okay-copy-args? thing index count)
   (and (<= 0 index)
-       (cond ((vm-string? thing)
-	      (<= (+ index count)
-		  (vm-string-length thing)))
-	     ((code-vector? thing)
+       (cond ((code-vector? thing)
 	      (<= (+ index count)
 		  (code-vector-length thing)))
 	     (else

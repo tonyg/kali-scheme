@@ -108,22 +108,44 @@
 (define (code-vector-size len)
   (+ stob-overhead (bytes->cells len)))
 
-; Strings are presented as being one character shorter than they really
-; are to hide the null character at the end.
-
 (define (vm-make-string length key)
-  (let ((string (make-b-vector (enum stob string) (+ length 1) key)))
-    (b-vector-set! string length 0)
-    string))
-(define vm-string?       (stob-predicate (enum stob string)))
-(define vm-string-length (lambda (x) (- (b-vector-length x) 1)))
-(define vm-string-ref    (lambda (s i) (ascii->char (b-vector-ref s i))))
-(define vm-string-set!   (lambda (s i c) (b-vector-set! s i (char->ascii c))))
+  (make-b-vector (enum stob string)
+		 (scalar-value-units->bytes length)
+		 key))
+
+(define vm-string? (stob-predicate (enum stob string)))
+
+(define (vm-string-length x)
+  (bytes->scalar-value-units (b-vector-length x)))
+
+; deals in code points, not PreScheme characters
+; #### This should be rewritten as a loop the PreScheme compiler can unroll
+(define (vm-string-ref s i)
+  (let ((base (scalar-value-units->bytes i)))
+    (do ((bits 0 (+ bits bits-per-byte))
+	 (j 0 (+ 1 j))
+	 (scalar-value 0
+		     (adjoin-bits (b-vector-ref s (+ base j))
+				  scalar-value
+				  bits)))
+	((>= j bytes-per-scalar-value-unit)
+	 scalar-value))))
+
+;; #### ditto
+(define (vm-string-set! s i c)
+  (let ((base (scalar-value-units->bytes i)))
+    (do ((bits 0 (+ bits bits-per-byte))
+	 (j 0 (+ 1 j))
+	 (shifted c (unsigned-high-bits shifted bits-per-byte)))
+	((>= j bytes-per-scalar-value-unit))
+      (b-vector-set! s (+ base j)
+		     (low-bits shifted bits-per-byte)))
+    (unspecific)))			; avoid type problem
 
 (define (vm-string-size length)
-  (+ stob-overhead (bytes->cells (+ 1 length))))
+  (+ stob-overhead (bytes->cells (scalar-value-units->bytes length))))
 
-; Two calls for converting external (C) strings to S48 strings.
+; Two calls for converting external (C, Latin-1) strings to S48 strings.
 
 (define (enter-string string key)
   (really-enter-string string (string-length string) key))
@@ -135,14 +157,31 @@
 
 (define (really-enter-string string len key)
   (let ((v (vm-make-string len key)))
-    (do ((i 0 (+ i 1)))
-	((= i len) v)
-      (vm-string-set! v i (string-ref string i)))))
+    (copy-string-to-vm-string/latin-1! string len v)
+    v))
+
+(define (copy-string-to-vm-string/latin-1! string len v)
+  (do ((i 0 (+ i 1)))
+      ((>= i len))
+    (vm-string-set! v i (char->ascii (string-ref string i))))
+  (unspecific))
+
+(define (copy-vm-string-to-string/latin-1! vm-string string)
+  (do ((len (vm-string-length vm-string))
+       (i 0 (+ 1 i)))
+      ((>= i len))
+    ;; #### need to check if we're Latin 1 and otherwise put in a #\? or something
+    (string-set! string i (ascii->char (vm-string-ref vm-string i)))) 
+  (unspecific))
 
 ; This depends on our having 0 bytes at the end of strings.
 
-(define (extract-string string)         ; used by OPEN
-  (fetch-nul-terminated-string (address-after-header string)))
+; We should really be doing the NUL termination here, but
+; DEFINE-CONSING-PRIMITIVE doesn't let us do it easily.
+
+(define (extract-low-string code-vector)         ; used by OPEN
+  (assert (code-vector? code-vector))
+  (fetch-nul-terminated-string (address-after-header code-vector)))
   
 (define (vm-string=? s1 s2)
   (assert (and (vm-string? s1) (vm-string? s2)))
@@ -151,6 +190,13 @@
 	 (memory-equal? (address-after-header s1)
 			(address-after-header s2)
 			len))))
+
+;; This is only a very crude approximation for debugging purposes.
+(define (write-vm-string vm-string out)
+  (do ((size (vm-string-length vm-string))
+       (i 0 (+ 1 i)))
+      ((>= i size) 0)			; make type checker happy
+    (write-char (ascii->char (vm-string-ref vm-string i)) out)))  
 
 ; Number predicates
 
@@ -192,6 +238,6 @@
 (define (vm-string-hash s)
   (let ((n (vm-string-length s)))
     (do ((i 0 (+ i 1))
-         (h 0 (+ h (char->ascii (vm-string-ref s i)))))
+         (h 0 (+ h (vm-string-ref s i))))
         ((>= i n) h))))
 

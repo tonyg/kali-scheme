@@ -169,17 +169,27 @@
 	 (values #t #f)
 	 (values #f #f)))))
 
-; We copy the input string because (a) string-set! exists and (b) buffers have
-; to be byte vectors.
+; We copy the input because it's mutable.
+
+(define (make-byte-vector-input-port bytes)
+  (let* ((size (byte-vector-length bytes))
+	 (buffer (make-byte-vector size 0)))
+    (copy-bytes! bytes 0 buffer 0 size)
+    (make-byte-vector-input-port-internal buffer)))
+
+(define (make-byte-vector-input-port-internal buffer)
+  (make-buffered-input-port string-input-port-handler
+			    #f		; no additional state needed
+			    buffer
+			    0
+			    (byte-vector-length buffer)))
 
 (define (make-string-input-port string)
-  (let ((buffer (make-byte-vector (string-length string) 0)))
-    (copy-bytes! string 0 buffer 0 (string-length string))
-    (make-buffered-input-port string-input-port-handler
-			      #f             ; no additional state needed
-			      buffer
-			      0
-			      (string-length string))))
+  (let* ((string-size (string-length string))
+	 (encoding-size (string-encoding-length/utf-8 string 0 string-size))
+	 (buffer (make-byte-vector encoding-size 0)))
+    (encode-string/utf-8 string 0 string-size buffer 0)
+    (make-byte-vector-input-port-internal buffer)))
 
 ;----------------
 ; String output ports
@@ -190,25 +200,28 @@
 ;
 ; These are thread-safe for no particular reason.
 
-(define (make-string-output-port)
+(define (make-byte-vector-output-port)
   (make-buffered-output-port string-output-port-handler
 			     (list #f)
 			     (make-byte-vector (default-buffer-size) 0)
 			     0
 			     (default-buffer-size)))
 
+(define make-string-output-port make-byte-vector-output-port)
+
 ; Concatenates all of the buffers into single string.
 ; Could use a proposal...
 
-(define (string-output-port-output port)
+(define (byte-vector-output-port-output port)
   (ensure-atomicity
     (check-buffer-timestamp! port)	; makes the proposal check this
     (let* ((full (provisional-cdr (port-data port)))
 	   (last (port-buffer port))
 	   (index (provisional-port-index port))
-	   (out (make-string (apply +
-				    index
-				    (map byte-vector-length full)))))
+	   (out (make-byte-vector (apply +
+					 index
+					 (map byte-vector-length full))
+				  0)))
       (let loop ((full (reverse full)) (i 0))
 	(if (null? full)
 	    (copy-bytes! last 0 out i index)
@@ -217,6 +230,9 @@
 	      (copy-bytes! buffer 0 out i count)
 	      (loop (cdr full) (+ i count)))))
       out)))
+
+(define (string-output-port-output port)
+  (utf-8->string (byte-vector-output-port-output port) #\?))
 
 (define string-output-port-handler
   (make-buffered-output-port-handler
@@ -250,42 +266,38 @@
     (string-output-port-output port)))
 
 ;----------------
-; Output ports from single character consumers
+; Output ports from single byte consumers
 
-(define (char-sink->output-port proc)
-  (make-unbuffered-output-port char-sink-output-port-handler
+(define (byte-sink->output-port proc)
+  (make-unbuffered-output-port byte-sink-output-port-handler
 			       proc))
 
-(define char-sink-output-port-handler
+(define byte-sink-output-port-handler
   (make-port-handler
    (lambda (proc)
-     (list 'char-sink-output-port))
+     (list 'byte-sink-output-port))
    make-output-port-closed!
-   (lambda (port char)
-     ((port-data port) char))
+   (lambda (port byte)
+     ((port-data port) byte))
    (lambda (port buffer start count)
      (let ((proc (port-data port)))
-       (if (string? buffer)
-	   (do ((i 0 (+ i 1)))
-	       ((= i count))
-	     (proc (string-ref buffer (+ start i))))
-	   (do ((i 0 (+ i 1)))
-	       ((= i count))
-	     (proc (ascii->char (byte-vector-ref buffer (+ start i))))))))
+       (do ((i 0 (+ i 1)))
+	   ((= i count))
+	 (proc (byte-vector-ref buffer (+ start i))))))
    (lambda (port)		; ready?
      #t)
    (lambda (port error-if-closed?)		; force output
      (unspecific))))
 
-; Call PROC on a port that will transfer COUNT characters to PORT and
+; Call PROC on a port that will transfer COUNT bytes to PORT and
 ; then quit.
 
 (define (limit-output port count proc)
   (call-with-current-continuation
     (lambda (quit)
-      (proc (char-sink->output-port
-	     (lambda (char)
-	       (write-char char port)
+      (proc (byte-sink->output-port
+	     (lambda (byte)
+	       (write-byte byte port)
 	       (set! count (- count 1))
 	       (if (<= count 0)
 		   (quit #f))))))))
@@ -294,14 +306,14 @@
 (define write-one-line limit-output)
 
 ;----------------
-; Input ports from single character producers
+; Input ports from single byte producers
 ;
-; (char-source->input-port <next-char-thunk>
-;                          [<char-ready?-thunk>
+; (byte-source->input-port <next-byte-thunk>
+;                          [<byte-ready?-thunk>
 ;                          [<close-thunk>]])
 
-(define (char-source->input-port source . more)
-  (make-unbuffered-input-port char-source-input-port-handler
+(define (byte-source->input-port source . more)
+  (make-unbuffered-input-port byte-source-input-port-handler
 			      (make-source-data source
 						(if (null? more)
 						    (lambda () #t)
@@ -312,8 +324,8 @@
 						    (cadr more))
 						#f)))
 
-; These are a bit of a mess.  We have to keep a one-character buffer to make
-; peek-char work.
+; These are a bit of a mess.  We have to keep a one-byte buffer to make
+; peek-byte work.
 
 (define-record-type source-data :source-data
   (make-source-data source ready? close buffer)
@@ -323,20 +335,20 @@
   (ready? source-data-ready?)
   (buffer source-data-buffer set-source-data-buffer!))
 
-(define char-source-input-port-handler
+(define byte-source-input-port-handler
   (make-port-handler
    (lambda (proc)
-     (list 'char-source-input-port))
+     (list 'byte-source-input-port))
    (lambda (port)
      (make-input-port-closed! port)
      ((source-data-close (port-data port))))
    (lambda (port read?)
-     (char-source-read-char port (port-data port) read?))
+     (byte-source-read-byte port (port-data port) read?))
    (lambda (port buffer start count wait?)
      (if (or (= count 0)
 	     (port-pending-eof? port))
 	 0
-	 (char-source-read-block port (port-data port) buffer start count)))
+	 (byte-source-read-block port (port-data port) buffer start count)))
    (lambda (port)
      (if (or (port-pending-eof? port)
 	     (source-data-buffer (port-data port)))
@@ -344,33 +356,33 @@
 	 ((source-data-ready? (port-data port)))))
    #f))				; force
 
-; EOF and peeked characters are held in separate places so we have to check
+; EOF and peeked bytes are held in separate places so we have to check
 ; both.  
 
-(define (char-source-read-char port data read?)   
+(define (byte-source-read-byte port data read?)   
   (cond ((port-pending-eof? port)
 	 (if read?
 	     (set-port-pending-eof?! port #t))
 	 (eof-object))
 	((source-data-buffer data)
-	 => (lambda (char)
+	 => (lambda (byte)
 	      (if read?
 		  (set-source-data-buffer! data #f))
-	      char))
+	      byte))
 	(else
-	 (let ((char ((source-data-source data))))
+	 (let ((byte ((source-data-source data))))
 	   (if (not read?)
-	       (if (eof-object? char)
+	       (if (eof-object? byte)
 		   (set-port-pending-eof?! port #t)
-		   (set-source-data-buffer! data char)))
-	   char))))
+		   (set-source-data-buffer! data byte)))
+	   byte))))
 
 ; Put any buffered in first and then get the rest from the source.
 
-(define (char-source-read-block port data buffer start count)
+(define (byte-source-read-block port data buffer start count)
   (let loop ((i (if (source-data-buffer data)
-		    (let ((char (source-data-buffer data)))
-		      (buffer-set! buffer start char)
+		    (let ((byte (source-data-buffer data)))
+		      (byte-vector-set! buffer start byte)
 		      (set-source-data-buffer! data #f)
 		      1)
 		    0)))
@@ -384,12 +396,8 @@
 		       (set-port-pending-eof?! port #t)
 		       i)))
 		(else
-		 (buffer-set! buffer (+ start i) next)
+		 (byte-vector-set! buffer (+ start i) next)
 		 (loop (+ i 1))))))))
 
-(define (buffer-set! buffer index char)
-  (if (string? buffer)
-      (string-set! buffer index char)
-      (byte-vector-set! buffer index (char->ascii char))))
 
 						

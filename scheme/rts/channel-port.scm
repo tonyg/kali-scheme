@@ -54,12 +54,13 @@
 	  (channel (channel-cell-ref cell)))
       (cond ((not (channel-cell-in-use? cell))
 	     (set-channel-cell-in-use?! cell #t)
-	     (channel-maybe-commit-and-read channel
-					    buffer
-					    0
-					    (byte-vector-length buffer)
-					    condvar
-					    wait?)
+	     (let ((limit (provisional-port-limit port)))
+	       (channel-maybe-commit-and-read channel
+					      buffer
+					      limit
+					      (- (byte-vector-length buffer) limit)
+					      condvar
+					      wait?))
 	     #f)	; caller should retry as results may now be available
 	    ((condvar-has-value? condvar)
 	     (let ((result (condvar-value condvar)))
@@ -74,8 +75,8 @@
 		     (signal-condition result)
 		     #f))
 		(else
-		 (provisional-set-port-index! port 0)
-		 (provisional-set-port-limit! port result)))
+		 (provisional-set-port-limit! port
+					      (+ (provisional-port-limit port) result))))
 	       (maybe-commit)))
 	    (wait?
 	     (maybe-commit-and-wait-for-condvar condvar))
@@ -170,7 +171,7 @@
 	  (else
 	   (maybe-commit)))))
 
-; Try writing the rest of PORT's buffer. SENT characters have already been
+; Try writing the rest of PORT's buffer. SENT bytes have already been
 ; written out.
 
 (define (send-some port sent wait?)
@@ -233,8 +234,9 @@
 
 ; First a generic procedure to do the work.
 
-(define (maybe-open-file filename option close-silently? coercion)
-  (let ((channel (open-channel filename option close-silently?)))
+(define (maybe-open-file file-name option close-silently? coercion)
+  (let ((channel (open-channel (thing->file-name-byte-string file-name)
+			       option close-silently?)))
     (if channel
 	(coercion channel (channel-buffer-size))
 	#f)))
@@ -303,10 +305,10 @@
 ; Unbuffered output ports.
 ; This is used for the initial current-error-port.
 
-(define (one-char-handler port char)
+(define (one-byte-handler port byte)
   (let ((channel (channel-cell-ref (port-data port)))
 	(buffer (make-byte-vector 1 0)))
-    (byte-vector-set! buffer 0 (char->ascii char))
+    (byte-vector-set! buffer 0 byte)
     (let loop ()
       (if (= 0 (channel-write channel buffer 0 1))
 	  (loop)))))
@@ -328,7 +330,7 @@
 			     (channel-cell-ref (port-data port))))
 		     (lambda (port)
 		       (port-channel-closer (port-data port)))
-		     one-char-handler
+		     one-byte-handler
 		     write-block-handler
 		     (lambda (port)			; ready
 		       (channel-ready? (channel-cell-ref (port-data port))))

@@ -169,7 +169,7 @@ posix_pipe()
     		status;
   s48_value	in_channel = S48_FALSE,
             	out_channel = S48_FALSE;
-  s48_value 	id = s48_enter_string("pipe");
+  s48_value 	id = s48_enter_string_latin_1("pipe");
 
   S48_DECLARE_GC_PROTECT(3);
   

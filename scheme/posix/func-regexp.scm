@@ -109,15 +109,18 @@
 (define char-limit 256)		; allow eight-bit characters
 
 ; A vector mapping ASCII values to case-insensitive bitsets.
+; This is a massive kludge, as ASCII really only goes up to 127.
 
 (define no-case-char-masks
   (reduce ((count* i 0 char-limit))
 	  ((masks '()))
     (cons (let ((ch (ascii->char i)))
 	    (bitwise-ior (arithmetic-shift 1 i)
-			 (cond ((char-upper-case? ch)
+			 (cond ((and (< i 128)
+				     (char-upper-case? ch))
 				(char->mask (char-downcase ch)))
-			       ((char-lower-case? ch)
+			       ((and (< i 128)
+				     (char-lower-case? ch))
 				(char->mask (char-upcase ch)))
 			       (else
 				0))))

@@ -120,17 +120,31 @@ s48_extended_vm (long key, s48_value value)
     set_float_arg(value, 1, S48_UNSAFE_EXTRACT_FIXNUM(arg));
     EXT_RETURN(S48_TRUE);}
   FLOP2(7) {			/* string->float */
-    char *str = get_string_arg(value, 0);
-    set_float_arg(value, 1, atof(str));
-    EXT_RETURN(S48_UNSPECIFIC);}
+    static char* buf = NULL;
+    static size_t max_size = 0;
+    size_t len = s48_string_length(get_arg(value, 0));
+    if (len + 1 > max_size)
+      {
+	max_size = ((len > 40) ? (len + 1) : 41);
+	buf = realloc(buf, max_size);
+	if (buf == NULL)
+	  EXT_RETURN(S48_FALSE);
+      }
+    s48_copy_scheme_string_to_string_latin_1(get_arg(value, 0), buf);
+    set_float_arg(value, 1, atof(buf));
+    EXT_RETURN(get_arg(value, 1));
+  }
   FLOP2(8) {			/* float->string */
     extern size_t s48_double_to_string(char *buf, double v);
-    char *str = get_string_arg(value,1);
+    static char buf[40];
+    int i;
     size_t len;
     get_float_arg(value, 0, x);
-    len = s48_double_to_string(str, x);
-    EXT_RETURN(S48_UNSAFE_ENTER_FIXNUM(len));}
-
+    len = s48_double_to_string(buf, x);
+    s48_copy_string_to_scheme_string_latin_1(buf, len, get_arg(value,1));;
+    EXT_RETURN(S48_UNSAFE_ENTER_FIXNUM(len));
+  }
+  
     /* exp log sin cos tan asin acos atan1 atan2 sqrt */
 
   FLOP2(9) {

@@ -13,6 +13,7 @@
 (define-structure posix-test (export)
   (open scheme testing sort threads
 	util		; every
+	file-names
 	posix-files
 	posix-time
 	posix-users
@@ -139,7 +140,7 @@
 (test "set-working-directory!" string=? directory-name
       (begin
 	(set-working-directory! directory-name)
-	(working-directory)))
+	(file-name->string (working-directory))))
 
 (test "i/o-flags" equal? '(#f #f #t #f #f #f #f #t)
       (let* ((out (open-file "file0"
@@ -204,10 +205,10 @@
 		(loop (cons next names))
 		(begin
 		  (close-directory-stream directory)
-		  (sort-list names string<=?)))))))
+		  (sort-list (map file-name->string names) string<=?)))))))
  
 (test "listings1" equal? '("file1" "link-to-file0")
-      (sort-list (list-directory ".") string<=?))
+      (sort-list (map file-name->string (list-directory ".")) string<=?))
 
 (test "unlink" = 1
       (begin
@@ -246,20 +247,20 @@
 			      (group-info-id my-group))
 		  (group-id=? (file-info-group root-info)
 			      (group-info-id my-group))
-		  (user-info-name root-user))))))
+		  (user-name->string (user-info-name root-user)))))))
 
 (test "environment" equal? '(#t #t #f)
       (let ((env (reverse (environment-alist))))
 	(list (if (null? env)
 		  #t
-		  (string=? (cdar env)
-			    (lookup-environment-variable (caar env))))
+		  (string=? (environment-variable->string (cdar env))
+			    (lookup-environment-variable->string (caar env))))
 	      (every (lambda (x)
 		       (and (pair? x)
-			    (string? (car x))
-			    (string? (cdr x))))
+			    (environment-variable? (car x))
+			    (environment-variable? (cdr x))))
 		     env)
-	      (lookup-environment-variable "="))))
+	      (lookup-environment-variable->string "="))))
 
 ; This should be last, because it removes the directory.
 

@@ -26,9 +26,13 @@
   (not (= 0 (bitwise-and (extract-fixnum (port-status port))
 			 (shift-left 1 status)))))
 
+;; Must be a C-level string, as a byte vector
+(define (extract-filename filename)
+  (extract-low-string filename))
+
 ; Check SPEC type and then call OPEN-CHANNEL.
 
-(define-consing-primitive open-channel (any-> fixnum-> any->)
+(define-consing-primitive open-channel-low (any-> fixnum-> any->)
   (lambda (ignore) (+ channel-size error-string-size))
   (lambda (spec mode close-silently? key)
     (let* ((lose (lambda (reason)
@@ -42,7 +46,7 @@
 		  (receive (channel reason)
 		      (make-registered-channel mode spec index close-silently? key)
 		    (cond ((false? channel)
-			   (if (vm-string? spec)
+			   (if (code-vector? spec)
 			       (close-channel-index! index spec mode))
 			   (lose reason))
 			  (else
@@ -53,12 +57,13 @@
 	     (if (<= 0 (extract-fixnum spec))
 		 (win (extract-fixnum spec))
 		 (lose (enum exception wrong-type-argument))))
-	    ((vm-string? spec)
+	    ((code-vector? spec)
 	     (receive (channel status)
-		 (if (or (= mode (enum channel-status-option input))
-			 (= mode (enum channel-status-option special-input)))
-		     (open-input-file-channel (extract-string spec))
-		     (open-output-file-channel (extract-string spec)))
+		 (let ((filename (extract-filename spec)))
+		   (if (or (= mode (enum channel-status-option input))
+			   (= mode (enum channel-status-option special-input)))
+		       (open-input-file-channel filename)
+		       (open-output-file-channel filename)))
 	       (cond ((eq? status (enum errors no-errors))
 		      (win channel))
 		     ((eq? status (enum errors file-not-found))
@@ -208,7 +213,7 @@
 	 (new (vm-make-string len key)))
     (do ((i 0 (+ i 1)))
 	((= i len))
-      (vm-string-set! new i (string-ref string i)))
+      (vm-string-set! new i (char->ascii (string-ref string i))))
     new))
 
 ;----------------------------------------------------------------
@@ -219,7 +224,7 @@
 ; This is a complete hack, also done for speed.  See rts/current-port.scm
 ; for the other end.
 
-(define (read-or-peek-char read?)
+(define (read-or-peek-byte read?)
   (lambda ()
     (let ((port (if (= (code-byte 0) 0)
 		    (val)
@@ -240,19 +245,19 @@
 			 (if read?
 			     (set-port-index! port (enter-fixnum (+ i 1))))
 			 (goto continue-with-value
-			       (enter-char (ascii->char (code-vector-ref b i)))
+			       (enter-fixnum (code-vector-ref b i))
 			       1))))))
 	  (raise-exception wrong-type-argument 1 port)))))
 
-(let ((do-it (read-or-peek-char #t)))
-  (define-primitive read-char () do-it))
+(let ((do-it (read-or-peek-byte #t)))
+  (define-primitive read-byte () do-it))
 
-(let ((do-it (read-or-peek-char #f)))
-  (define-primitive peek-char () do-it))
+(let ((do-it (read-or-peek-byte #f)))
+  (define-primitive peek-byte () do-it))
 
-(define-primitive write-char ()
+(define-primitive write-byte ()
   (lambda ()
-    (receive (char port)
+    (receive (byte port)
 	(if (= (code-byte 0) 0)
 	    (values (pop)
 		    (val))
@@ -260,25 +265,25 @@
 		    (get-current-port (enter-fixnum
 				       (enum current-port-marker
 					     current-output-port)))))
-      (if (and (vm-char? char)
+      (if (and (fixnum? byte)
 	       (port? port)
 	       (port-has-status? port
 				 (enum port-status-options open-for-output)))
 	  (let ((b (port-buffer port)))
 	    (if (false? b)
-		(raise-exception buffer-full/empty 1 char port)
+		(raise-exception buffer-full/empty 1 byte port)
 		(let ((i (extract-fixnum (port-index port))))
 		  (cond ((= i (code-vector-length b))
-			 (raise-exception buffer-full/empty 1 char port))
+			 (raise-exception buffer-full/empty 1 byte port))
 			(else
 			 (set-port-index! port (enter-fixnum (+ i 1)))
 			 (code-vector-set! (port-buffer port)
 					   i
-					   (char->ascii (extract-char char)))
+					   (extract-fixnum byte))
 			 (goto continue-with-value
 			       unspecific-value
 			       1))))))
-	  (raise-exception wrong-type-argument 1 char port)))))
+	  (raise-exception wrong-type-argument 1 byte port)))))
 	  
 ; Do an ASSQ-like walk up the current dynamic environment, looking for
 ; MARKER.
@@ -321,23 +326,23 @@
 	      (loop (vm-cdr stuff)))))
       (newline out)))
   return-unspecific)
-    
+
 (define (message-element thing out)
   (cond ((fixnum? thing)
 	 (write-integer (extract-fixnum thing) out))
 	((vm-char? thing)
 	 (write-string "#\\" out)
-	 (write-char (extract-char thing) out))
+	 (write-char (ascii->char (char->scalar-value thing)) out)) ; ####
 	((typed-record? thing)
 	 (write-string "#{" out)
-	 (write-string (extract-string (record-type-name thing)) out)
+	 (write-vm-string (record-type-name thing) out)
 	 (write-char #\} out))
+	((vm-string? thing)
+	 (write-vm-string thing out))
+	((vm-symbol? thing)
+	 (write-vm-string (vm-symbol->string thing) out))
 	(else
-	 (write-string (cond ((vm-string? thing)
-			      (extract-string thing))
-			     ((vm-symbol? thing)
-			      (extract-string (vm-symbol->string thing)))
-			     ((vm-boolean? thing)
+	 (write-string (cond ((vm-boolean? thing)
 			      (if (extract-boolean thing) "#t" "#f"))
 			     ((vm-eq? thing null)
 			      "()")
@@ -378,7 +383,7 @@
 
 ; Bug: finalizers for things in the image are ignored.
 
-(define-consing-primitive write-image-low (string-> any-> string-> vector->)
+(define-consing-primitive write-image-low (code-vector-> any-> code-vector-> vector->)
   (lambda (ignore) error-string-size)
   (lambda (filename resume-proc comment-string undumpables key)
     (let* ((lose (lambda (reason status)
@@ -392,10 +397,10 @@
 			      (unspecific))) ; avoid type problem
 			(lose reason status))))
       (receive (port status)
-	  (open-output-file (extract-string filename))
+	  (open-output-file (extract-filename filename))
 	(if (error? status)
 	    (lose (enum exception cannot-open-channel) status)
-	    (let ((status (write-string (extract-string comment-string) port)))
+	    (let ((status (write-string (extract-low-string comment-string) port)))
 	      (if (error? status)
 		  (port-lose (enum exception os-error) status port)
 		  (let ((status (s48-write-image resume-proc

@@ -40,6 +40,7 @@
 
 (define (output-channel->port channel)
   (make-port #f
+	     'text-codec
 	     (bitwise-ior (arithmetic-shift 1 (enum port-status-options
 						    output))
 			  (arithmetic-shift 1 (enum port-status-options
@@ -52,6 +53,7 @@
 
 (define (input-channel->port channel)
   (make-port #f
+	     'text-codec
 	     (bitwise-ior (arithmetic-shift 1 (enum port-status-options
 						    input))
 			  (arithmetic-shift 1 (enum port-status-options

@@ -68,7 +68,7 @@ s48_external_lookup(s48_value svname, s48_value svlocp)
 	long	*locp,
 		res;
 
-	name = s48_extract_string(svname);
+	name = s48_extract_byte_vector(svname);
 	locp = S48_EXTRACT_VALUE_POINTER(svlocp, long);
 	res = lookup_external_name(name, locp);
 	return (S48_ENTER_BOOLEAN(res));
@@ -141,7 +141,7 @@ s48_dynamic_load(s48_value filename)
 {
 	S48_CHECK_STRING(filename);
 
-	if (! dynamic_load(S48_UNSAFE_EXTRACT_STRING(filename)))
+	if (! dynamic_load(S48_UNSAFE_EXTRACT_BYTE_VECTOR(filename)))
 	  /* the cast below is to remove the const part of the type */
 	  s48_raise_string_os_error((char *)dlerror());
 

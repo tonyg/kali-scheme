@@ -35,7 +35,6 @@
 	  vector? make-vector vector-length vector-ref vector-set!
 
 	  ;; Unnecessarily primitive
-	  read-char peek-char write-char
 	  string=?
 	  vector
 	  assq
@@ -84,6 +83,8 @@
 	  make-weak-pointer
 	  memory-status			;interrupts
 	  os-error-message
+	  peek-byte
+	  read-byte
 	  record
 	  record-length
 	  record-ref
@@ -107,7 +108,8 @@
 	  vm-extension
 	  wait
 	  weak-pointer-ref
-	  weak-pointer?))
+	  weak-pointer?
+	  write-byte))
 
 (define-interface bitwise-interface
   (export arithmetic-shift
@@ -184,10 +186,33 @@
 
 	  open-channels-list))
 
+(define-interface default-string-encodings-interface
+  (export string-encoding-length encode-string
+	  string-decoding-length decode-string
+
+	  string->byte-string
+	  byte-vector->string
+	  string->byte-vector
+
+	  set-string-encoding-procedures!))
+
+(define-interface string/bytes-types-interface
+  (export (define-string/bytes-type :syntax)))
+
+(define-interface file-names-interface
+  (export file-name?
+	  thing->file-name
+	  string->file-name byte-vector->file-name
+	  file-name->string
+	  file-name->byte-vector
+	  file-name->byte-string
+	  thing->file-name-byte-string))
+
 (define-interface ports-interface
   (export port?
 	  make-port
 	  port-handler
+	  port-text-codec   set-port-text-codec!
 	  port-buffer       
 
 	  port-lock         set-port-lock!
@@ -310,6 +335,11 @@
 	  char->ascii
 	  ascii-limit
 	  ascii-whitespaces))
+
+(define-interface unicode-interface
+  (export scalar-value->char
+	  char->scalar-value
+	  scalar-value?))
 
 ; Level 1: The rest of Scheme except for I/O.
 
@@ -513,7 +543,10 @@
   (export current-input-port current-output-port
 	  close-output-port close-input-port
 
+	  read-byte peek-byte write-byte
+	  read-char peek-char
 	  char-ready?
+	  write-char
 	  read-block write-block
 	  newline
 	  input-port-option		;read.scm
@@ -531,6 +564,11 @@
 	  output-port?
 	  silently
 	  make-null-output-port))
+
+(define-interface i/o-codecs-interface
+  (export null-text-codec
+	  latin-1-codec
+	  utf-8-codec))
 
 (define-interface i/o-internal-interface
   (export make-buffered-input-port  make-unbuffered-input-port
@@ -714,6 +752,7 @@
 	  open-input-file open-output-file
 	  with-input-from-file with-output-to-file
 	  number->string string->number
+	  read-char peek-char write-char
 	  newline display write
 	  read))
 

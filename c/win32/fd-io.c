@@ -1266,7 +1266,7 @@ s48_socket(s48_value udp_p, s48_value input_p)
   stream_descriptor = &(stream_descriptors[fd]);
   stream_descriptor->socket_data.socket = socket;
 
-  channel = s48_add_channel(mode, s48_enter_string("socket"), fd);
+  channel = s48_add_channel(mode, s48_enter_string_latin_1("socket"), fd);
 
   if (!S48_CHANNEL_P(channel))
     {
@@ -1517,7 +1517,7 @@ s48_accept(s48_value channel, s48_value retry_p)
 	raise_windows_error(WSAGetLastError());
 
       input_channel = s48_add_channel(S48_CHANNEL_STATUS_INPUT,
-				      s48_enter_string("socket connection"),
+				      s48_enter_string_latin_1("socket connection"),
 				      accept_socket_fd);
 
       if (!S48_CHANNEL_P(input_channel))
@@ -1755,7 +1755,7 @@ dup_socket_channel(long socket_fd)
   output_stream_descriptor->socket_data.socket = output_socket;
 
   output_channel = s48_add_channel(S48_CHANNEL_STATUS_OUTPUT,
-				   s48_enter_string("socket connection"),
+				   s48_enter_string_latin_1("socket connection"),
 				   output_fd);
   
   if (!S48_CHANNEL_P(output_channel))
@@ -1810,5 +1810,5 @@ s48_get_host_name(void)
   if (gethostname(mbuff, sizeof(mbuff)) == SOCKET_ERROR)
     raise_windows_error(WSAGetLastError());
 
-  return s48_enter_string(mbuff);
+  return s48_enter_string_latin_1(mbuff);
 }

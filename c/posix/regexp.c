@@ -73,12 +73,12 @@ posix_compile_regexp(s48_value pattern,
 
   S48_GC_PROTECT_1(pattern);
 
-  S48_CHECK_STRING(pattern);
+  S48_CHECK_BYTE_VECTOR(pattern);
 
   sch_regex = S48_MAKE_VALUE(regex_t);
 
   status = regcomp(S48_UNSAFE_EXTRACT_VALUE_POINTER(sch_regex, regex_t),
-		   S48_UNSAFE_EXTRACT_STRING(pattern),
+		   S48_UNSAFE_EXTRACT_BYTE_VECTOR(pattern),
 		   flags);
 
   S48_GC_UNPROTECT();
@@ -107,7 +107,7 @@ posix_regexp_match(s48_value sch_regex, s48_value string, s48_value sch_start,
   s48_value result;
 
   int start = s48_extract_fixnum(sch_start);
-  int len = S48_STRING_LENGTH(string);
+  int len = strlen(s48_extract_byte_vector(string));
   /* re_nsub doesn't include the full pattern */
   size_t nmatch = 1 + S48_EXTRACT_VALUE_POINTER(sch_regex, regex_t)->re_nsub;
   regmatch_t *pmatch,
@@ -129,7 +129,7 @@ posix_regexp_match(s48_value sch_regex, s48_value string, s48_value sch_start,
       s48_raise_out_of_memory_error(); }
     
   status = regexec(S48_EXTRACT_VALUE_POINTER(sch_regex, regex_t),
-		   S48_UNSAFE_EXTRACT_STRING(string) + start,
+		   S48_UNSAFE_EXTRACT_BYTE_VECTOR(string) + start,
 		   nmatch, pmatch, flags);
 
   if (status == REG_NOMATCH)
@@ -192,7 +192,7 @@ posix_regexp_error_message(s48_value pattern,
 
   S48_CHECK_STRING(pattern);
 
-  status = regcomp(&compiled_regex, S48_UNSAFE_EXTRACT_STRING(pattern), flags);
+  status = regcomp(&compiled_regex, S48_UNSAFE_EXTRACT_BYTE_VECTOR(pattern), flags);
 
   if (status == 0)
     return S48_FALSE;
@@ -202,10 +202,10 @@ posix_regexp_error_message(s48_value pattern,
     
     buffer_size = regerror(status, &compiled_regex, NULL, 0);
     /* For string lengths C counts the nul, Scheme doesn't. */
-    buffer = s48_make_string(buffer_size - 1, ' ');
+    buffer = s48_make_byte_vector(buffer_size);
     regerror(status,
 	     &compiled_regex,
-	     S48_UNSAFE_EXTRACT_STRING(buffer),
+	     S48_UNSAFE_EXTRACT_BYTE_VECTOR(buffer),
 	     buffer_size);
     
     return buffer; }

@@ -68,6 +68,7 @@
 	masks
 	finite-types
 	sockets
+	(subset i/o (read-byte))
 	(subset i/o-internal (open-input-port?))
 	sicp)
   (begin
@@ -148,10 +149,10 @@
 
 (define (identity x) x)		; handy for preventing inlining
 
-(let ((port (make-port #f -1 0 0 (make-code-vector 1024 25) 0 1023 #f)))
+(let ((port (make-port #f #f -1 0 0 (make-code-vector 1024 25) 0 1023 #f)))
   (set-port-index! port 0)
-  (test "read-char0" = 25 (char->ascii (read-char port)))
-  (test "read-char1" = 25 (char->ascii ((identity read-char) port))))
+  (test "read-char0" = 25 (read-byte port))
+  (test "read-char1" = 25 ((identity read-byte) port)))
 
 (test "apply" equal? '(1 2 3 4) (apply list 1 2 '(3 4)))
 

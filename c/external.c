@@ -460,8 +460,9 @@ s48_system(s48_value string)
 {
   return s48_enter_integer(system((string == S48_FALSE)
 				  ? NULL
-				  : s48_extract_string(string)));
+				  : s48_extract_byte_vector(string)));
 }
+
 
 /********************************/
 /*
@@ -541,13 +542,13 @@ void
 s48_raise_os_error(int the_errno) {
   s48_raise_scheme_exception(S48_EXCEPTION_OS_ERROR, 2,
 			     s48_enter_fixnum(the_errno),
-			     s48_enter_string(strerror(the_errno)));
+			     s48_enter_string_latin_1(strerror(the_errno)));
 }
 
 void
 s48_raise_string_os_error(char *reason) {
   s48_raise_scheme_exception(S48_EXCEPTION_OS_ERROR, 1,
-			     s48_enter_string(reason));
+			     s48_enter_string_latin_1(reason));
 }
 
 void
@@ -765,6 +766,22 @@ s48_extract_char(s48_value a_char)
   
   return S48_UNSAFE_EXTRACT_CHAR(a_char);
 }
+
+s48_value
+s48_enter_scalar_value(long scalar_value)
+{
+  /* #### need range checks */
+  return S48_UNSAFE_ENTER_SCALAR_VALUE(scalar_value);
+}
+
+long
+s48_extract_scalar_value(s48_value a_char)
+{
+  if (! S48_CHAR_P(a_char))
+    s48_raise_argument_type_error(a_char);
+  
+  return S48_UNSAFE_EXTRACT_SCALAR_VALUE(a_char);
+}
   
 /********************************/
 /* Allocation */
@@ -812,33 +829,6 @@ s48_make_weak_pointer(s48_value value)
 }
 
 /*
- * Entering and extracting strings.
- */
-
-s48_value
-s48_enter_substring(char *str, long length)
-{
-  s48_value obj = s48_allocate_stob(S48_STOBTYPE_STRING, length + 1);
-  memcpy(S48_UNSAFE_EXTRACT_STRING(obj), str, length);
-  *(S48_UNSAFE_EXTRACT_STRING(obj) + length) = '\0';
-  return obj;
-}
-
-s48_value
-s48_enter_string(char *str)
-{
-  return s48_enter_substring(str, strlen(str));
-}
-
-char *
-s48_extract_string(s48_value string)
-{
-  S48_CHECK_STRING(string);
-
-  return S48_UNSAFE_EXTRACT_STRING(string);
-}
-
-/*
  * Entering and extracting byte vectors.
  */
 
@@ -846,7 +836,7 @@ s48_value
 s48_enter_byte_vector(char *bytes, long length)
 {
   s48_value obj = s48_allocate_stob(S48_STOBTYPE_BYTE_VECTOR, length);
-  memcpy(S48_UNSAFE_EXTRACT_STRING(obj), bytes, length);
+  memcpy(S48_UNSAFE_EXTRACT_BYTE_VECTOR(obj), bytes, length);
   return obj;
 }
 
@@ -855,7 +845,7 @@ s48_extract_byte_vector(s48_value byte_vector)
 {
   S48_CHECK_VALUE(byte_vector);
 
-  return S48_UNSAFE_EXTRACT_STRING(byte_vector);
+  return S48_UNSAFE_EXTRACT_BYTE_VECTOR(byte_vector);
 }
 
 /*
@@ -863,11 +853,13 @@ s48_extract_byte_vector(s48_value byte_vector)
  */
 
 s48_value
-s48_make_string(int length, char init)
+s48_make_string(int length, long init)
 {
-  s48_value obj = s48_allocate_stob(S48_STOBTYPE_STRING, length+1);
-  memset(S48_UNSAFE_EXTRACT_STRING(obj), init, length);
-  S48_UNSAFE_EXTRACT_STRING(obj)[length] = '\0';
+  int i;
+  s48_value obj = s48_allocate_string(length);
+  /* We should probably offer a VM function for this. */
+  for (i = 0; i < length; ++i)
+    s48_string_set(obj, i, init);
   return obj;
 }
 
@@ -893,6 +885,21 @@ s48_value
 s48_make_byte_vector(int length)
 {
     return s48_allocate_stob(S48_STOBTYPE_BYTE_VECTOR, length);
+}
+
+s48_value
+s48_enter_byte_substring(char *str, long length)
+{
+  s48_value obj = s48_allocate_stob(S48_STOBTYPE_BYTE_VECTOR, length + 1);
+  memcpy(S48_UNSAFE_EXTRACT_BYTE_VECTOR(obj), str, length);
+  *(S48_UNSAFE_EXTRACT_BYTE_VECTOR(obj) + length) = '\0';
+  return obj;
+}
+
+s48_value
+s48_enter_byte_string(char *str)
+{
+  return s48_enter_byte_substring(str, strlen(str));
 }
 
 s48_value

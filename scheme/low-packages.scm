@@ -18,6 +18,7 @@
 		    (vm-exposure vm-exposure-interface)
 		    (all-operators (export all-operators))
 		    (ascii ascii-interface)
+		    (unicode unicode-interface)
 		    (locations locations-interface)
 		    (records records-interface)
 		    (cells cells-interface)

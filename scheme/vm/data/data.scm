@@ -33,8 +33,8 @@
 ;  the VAX or 68000, though, the addressing unit is the byte, of which there
 ;  are 4 to a cell.
 ;
-;  Note: by a "byte" is meant enough bits to store either a character or
-;  a bytecode.  That probably means either 7, 8, or 9 bits.
+;  Note: by a "byte" is meant enough bits to store a bytecode.  That
+;  probably means either 7, 8, or 9 bits.
 ;
 ;  If the addressing unit is smaller than a cell each address will have some
 ;  number of "unused bits" at its low end.  On a byte-addressable machine with
@@ -199,6 +199,14 @@
     (= (tag&immediate-type descriptor)
 	(make-tag&immediate-type type))))
 
+(define bytes-per-scalar-value-unit 4) ; must be >= 3
+
+(define (bytes->scalar-value-units byte-count)
+  (quotient byte-count bytes-per-scalar-value-unit))
+
+(define (scalar-value-units->bytes units)
+  (* units bytes-per-scalar-value-unit))
+
 (define vm-char?   (immediate-predicate (enum imm char)))
 (define undefined? (immediate-predicate (enum imm undefined)))
 
@@ -228,12 +236,21 @@
 
 ; Characters
 
+; old:
 (define (enter-char c)
   (make-immediate (enum imm char) (char->ascii c)))
 
 (define (extract-char d)
   (assert (vm-char? d))
   (ascii->char (immediate-info d)))
+
+; new:
+(define (scalar-value->char c)
+  (make-immediate (enum imm char) c))
+
+(define (char->scalar-value d)
+  (assert (vm-char? d))
+  (immediate-info d))
 
 ; these work given the representations
 (define vm-char=? =)

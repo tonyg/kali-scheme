@@ -31,9 +31,7 @@ static s48_value	posix_getpwuid(s48_value uid),
  * Record types imported from Scheme.
  */
 static s48_value	posix_user_id_type_binding = S48_FALSE,
-			posix_user_info_type_binding = S48_FALSE,
-			posix_group_id_type_binding = S48_FALSE,
-			posix_group_info_type_binding = S48_FALSE;
+			posix_group_id_type_binding = S48_FALSE;
 
 /*
  * Install all exported functions in Scheme48 and import and protect the
@@ -52,12 +50,6 @@ s48_init_posix_user(void)
     
   S48_GC_PROTECT_GLOBAL(posix_group_id_type_binding);
   posix_group_id_type_binding = s48_get_imported_binding("posix-group-id-type");
-    
-  S48_GC_PROTECT_GLOBAL(posix_user_info_type_binding);
-  posix_user_info_type_binding = s48_get_imported_binding("posix-user-info-type");
-    
-  S48_GC_PROTECT_GLOBAL(posix_group_info_type_binding);
-  posix_group_info_type_binding = s48_get_imported_binding("posix-group-info-type");
 }
 
 /* ****************************************************************
@@ -136,10 +128,14 @@ posix_getpwnam(s48_value name)
 {
   struct passwd *data;
   
-  RETRY_OR_RAISE_NULL(data, getpwnam(S48_UNSAFE_EXTRACT_STRING(name)));
+  RETRY_OR_RAISE_NULL(data, getpwnam(S48_UNSAFE_EXTRACT_BYTE_VECTOR(name)));
 
   return enter_user_data(data);
 }
+
+/*
+ * returns a list of components
+ */
 
 static s48_value
 enter_user_data(struct passwd *data)
@@ -150,17 +146,17 @@ enter_user_data(struct passwd *data)
 
   S48_GC_PROTECT_2(sch_data, temp);
 
-  sch_data = s48_make_record(posix_user_info_type_binding);
-  temp = s48_enter_string(data->pw_name);
-  S48_UNSAFE_RECORD_SET(sch_data, 0, temp);
-  temp = s48_enter_uid(data->pw_uid);
-  S48_UNSAFE_RECORD_SET(sch_data, 1, temp);
+  sch_data = S48_NULL;
+  temp = s48_enter_byte_string(data->pw_shell);
+  sch_data = s48_cons(temp, sch_data);
+  temp = s48_enter_byte_string(data->pw_dir);
+  sch_data = s48_cons(temp, sch_data);
   temp = s48_enter_gid(data->pw_gid);
-  S48_UNSAFE_RECORD_SET(sch_data, 2, temp);
-  temp = s48_enter_string(data->pw_dir);
-  S48_UNSAFE_RECORD_SET(sch_data, 3, temp);
-  temp = s48_enter_string(data->pw_shell);
-  S48_UNSAFE_RECORD_SET(sch_data, 4, temp);
+  sch_data = s48_cons(temp, sch_data);
+  temp = s48_enter_uid(data->pw_uid);
+  sch_data = s48_cons(temp, sch_data);
+  temp = s48_enter_byte_string(data->pw_name);
+  sch_data = s48_cons(temp, sch_data);
   
   S48_GC_UNPROTECT();
   
@@ -182,16 +178,16 @@ enter_group_data(struct group *data)
   for(length = 0, names = data->gr_mem; *names != NULL; length++, names++);
   members = s48_make_vector(length, S48_FALSE);
   for(length = 0, names = data->gr_mem; *names != NULL; length++, names++) {
-    temp = s48_enter_string(*names);
+    temp = s48_enter_byte_string(*names);
     S48_UNSAFE_VECTOR_SET(members, length, temp);
   }
 
-  sch_data = s48_make_record(posix_group_info_type_binding);
-  temp = s48_enter_string(data->gr_name);
-  S48_UNSAFE_RECORD_SET(sch_data, 0, temp);
+  sch_data = S48_NULL;
+  sch_data = s48_cons(members, sch_data);
   temp = s48_enter_gid(data->gr_gid);
-  S48_UNSAFE_RECORD_SET(sch_data, 1, temp);
-  S48_UNSAFE_RECORD_SET(sch_data, 2, members);
+  sch_data = s48_cons(temp, sch_data);
+  temp = s48_enter_byte_string(data->gr_name);
+  sch_data = s48_cons(temp, sch_data);
   
   S48_GC_UNPROTECT();
   
@@ -213,7 +209,7 @@ posix_getgrnam(s48_value name)
 {
   struct group *data;
   
-  RETRY_OR_RAISE_NULL(data, getgrnam(S48_UNSAFE_EXTRACT_STRING(name)));
+  RETRY_OR_RAISE_NULL(data, getgrnam(S48_UNSAFE_EXTRACT_BYTE_VECTOR(name)));
 
   return enter_group_data(data);
 }

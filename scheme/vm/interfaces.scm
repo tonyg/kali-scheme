@@ -278,8 +278,11 @@
 
 	  vm-string? vm-string-size vm-make-string vm-string-length
 	  vm-string-ref vm-string-set!
-	  enter-string enter-string+gc extract-string
+	  enter-string enter-string+gc extract-low-string
 	  vm-string=? vm-string-hash
+	  write-vm-string
+	  copy-string-to-vm-string/latin-1!
+	  copy-vm-string-to-string/latin-1!
 
 	  ratnum?
 
@@ -661,4 +664,12 @@
 	  s48-integer-bitwise-and
 	  s48-integer-bitwise-ior
 	  s48-integer-bitwise-xor
+
+	  s48-string-set
+	  s48-string-ref
+	  s48-string-length
+	  s48-allocate-string
+	  s48-enter-string-latin-1
+	  s48-copy-string-to-scheme-string-latin-1
+	  s48-copy-scheme-string-to-string-latin-1
 	  ))

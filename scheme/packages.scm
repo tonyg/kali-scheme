@@ -238,6 +238,7 @@
 	    byte-vectors
 	    cells
 	    code-vectors
+	    default-string-encodings
 	    features
 	    records
 	    simple-signals
@@ -246,6 +247,7 @@
 	    closures
 	    code-quote
 	    escapes
+	    file-names
 	    locations
 	    loopholes
 	    low-level
@@ -256,8 +258,10 @@
 	    shared-bindings
 	    silly
 	    source-file-names
+	    string/bytes-types
 	    structure-refs
 	    debug-messages
+	    unicode
 	    vm-exposure
 	    write-images)
 	   :structure)))
@@ -276,6 +280,7 @@
 	    scheduler
 	    scheme-level-1
 	    scheme-level-2
+	    set-char-map-procedures
 	    templates
 	    threads
 	    util
@@ -421,6 +426,7 @@
 	    disclosers
 	    dump/restore
 	    dynamic-externals
+	    encodings
 	    enum-case
 	    enum-sets
 	    extended-numbers
@@ -455,6 +461,7 @@
 	    search-trees
 	    signals
 	    sockets
+	    unicode-char-maps
 
 	    delete-neighbor-duplicates
 	    binary-searches

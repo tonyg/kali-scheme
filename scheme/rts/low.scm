@@ -83,10 +83,11 @@
 ; STRING-COPY is here because it's needed by STRING->SYMBOL.
 
 (define (string-copy s)
-  (let ((z (string-length s)))
-    (let ((copy (make-string z #\space)))
-      (copy-bytes! s 0 copy 0 z)
-      copy)))
+  (let* ((z (string-length s))
+	 (copy (make-string z #\space)))
+    (do ((i 0 (+ 1 i)))
+	((>= i z) copy)
+      (string-set! copy i (string-ref s i)))))
 
 ; The symbol table
 
@@ -163,14 +164,23 @@
   (message stuff))
 
 ; Checking for undumpable objects when writing images.
+; Also convert file-name to VM format
 
-(define (write-image filename start-procedure message)
+(define (write-image file-name start-procedure message)
   (let ((undumpable (make-vector 1000 #f)))
-    (write-image-low filename start-procedure message undumpable)
+    (write-image-low file-name
+		     start-procedure
+		     message
+		     undumpable)
     (if (vector-ref undumpable 0)
 	(signal 'error
 		"undumpable records written in image"
 		(vector-prefix->list undumpable)))))
+
+; Convert file-name to VM format
+
+(define (open-channel file-name option close-silently?)
+  (open-channel-low file-name option close-silently?))
 
 ; Return a list containing the non-#F values at the beginning of VECTOR.
 

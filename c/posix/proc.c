@@ -315,7 +315,7 @@ posix_exec(s48_value program, s48_value lookup_p,
   char *c_program, *real_c_program;
   int status;
 
-  c_program = s48_extract_string(program);
+  c_program = s48_extract_byte_vector(program);
 
   s48_stop_alarm_interrupts();
 
@@ -368,7 +368,7 @@ enter_string_array(s48_value strings)
     if (! S48_STRING_P(string)) {
       free(result);
       s48_raise_argument_type_error(string); }
-    result[i] = S48_UNSAFE_EXTRACT_STRING(string); }
+    result[i] = S48_UNSAFE_EXTRACT_BYTE_VECTOR(string); }
   result[length] = NULL;
 
   return result;
