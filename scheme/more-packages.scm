@@ -440,6 +440,12 @@
 	define-record-types)
   (files (big hilbert)))
 
+; utilities for dealing with variable argument lists
+
+(define-structure variable-argument-lists variable-argument-lists-interface
+  (open scheme-level-2)
+  (files (big vararg)))
+
 ; record types with a fixed number of instances
 
 (define-structure finite-types (export ((define-finite-type

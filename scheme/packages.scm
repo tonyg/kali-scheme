@@ -481,6 +481,7 @@
 	    traverse
 	    udp-sockets
 	    value-pipes
+	    variable-argument-lists
 
 	    big-scheme
 	    big-util

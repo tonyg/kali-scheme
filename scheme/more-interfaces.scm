@@ -513,6 +513,9 @@
 	  sparse-vector-ref sparse-vector-set!
 	  sparse-vector->list))
 
+(define-interface variable-argument-lists-interface
+  (export (opt-lambda :syntax)))
+
 ; This is getting to be a hodge-podge.
 
 (define-interface big-util-interface       
