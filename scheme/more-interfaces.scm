@@ -420,6 +420,14 @@
   (export (define-record-type :syntax)
 	  define-record-discloser))
 
+(define-interface locks-interface
+  (export lock?
+	  make-lock
+	  obtain-lock
+	  maybe-obtain-lock
+	  release-lock
+	  lock-owner))		;really should be internal
+
 (define-interface value-pipes-interface
   (export make-pipe
 	  empty-pipe?
@@ -446,7 +454,8 @@
 ; Olin's encyclopedic SRFIs.
 
 (define-interface srfi-1-interface
-  (export xcons make-list list-tabulate cons* list-copy 
+  (export map for-each member assoc	; redefined from R5RS
+	  xcons make-list list-tabulate cons* list-copy 
 	  proper-list? circular-list? dotted-list? not-pair? null-list? list=
 	  circular-list length+
 	  iota

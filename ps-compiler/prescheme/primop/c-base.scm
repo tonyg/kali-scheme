@@ -275,10 +275,15 @@
 	    (write-char #\; port)))))
   (indent-to port indent)
   (display "return" port)
-  (if (not (no-value-node? (call-arg call start)))
-      (begin
-	(write-char #\space port)
-	(c-value (call-arg call start) port)))
+  (let ((result (call-arg call start)))
+    (if (and (not (no-value-node? result))
+	     (let ((type (get-variable-type
+			  (reference-variable (call-arg call 0)))))
+	       (and (not (eq? type type/unit))
+		    (not (eq? type type/null)))))
+	(begin
+	  (write-char #\space port)
+	  (c-value result port))))
   (display ";" port)
   (values))
 

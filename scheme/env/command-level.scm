@@ -38,7 +38,7 @@
 				; lazily generated list of this level's threads
 
 (define (make-command-level condition inspecting? dynamic-env levels throw)
-  (let ((level (really-make-command-level (make-thread-queue)
+  (let ((level (really-make-command-level (make-queue)
 					  (make-counter)
 					  dynamic-env
 					  levels
@@ -63,7 +63,7 @@
   (let ((thread (make-thread thunk (command-level-dynamic-env level) id)))
     (set-thread-scheduler! thread (command-thread))
     (set-thread-data! thread level)
-    (enqueue-thread! (command-level-queue level) thread)
+    (enqueue! (command-level-queue level) thread)
     (increment-counter! (command-level-thread-counter level))
     thread))
 
@@ -244,16 +244,10 @@
 
 (define (terminate-level level)
   (let ((threads (command-level-threads level))
-	(queue (command-level-queue level))
 	(*out?* #f))
     (for-each (lambda (thread)
 		(if (thread-continuation thread)
-		    (begin
-                      (remove-thread-from-queue! thread)
-		      (interrupt-thread thread
-					(lambda ignore
-					  (terminate-current-thread)))
-		      (enqueue-thread! queue thread))))
+		    (terminate-level-thread thread level)))
 	      threads)
     (dynamic-wind
      (lambda ()
@@ -266,6 +260,16 @@
        (let ((levels (command-level-levels level)))
 	 (if (not (null? levels))
 	     (reset-command-input! (car levels))))))))
+
+; Put the thread on the runnable queue if it is not already there and then
+; terminate it.  Termination removes the thread from any blocking queues
+; and interrupts with a throw that will run any pending dynamic-winds.
+
+(define (terminate-level-thread thread level)
+  (let ((queue (command-level-queue level)))
+    (if (not (on-queue? queue thread))
+	(enqueue! queue thread))
+    (terminate-thread! thread)))
 
 (define (reset-command-input! level)
   (let ((repl (command-level-repl-thread level)))
@@ -317,8 +321,7 @@
 		  (error "non-command-level thread restarted on a command level"
 			 thread))
 		 ((memq level levels)
-		  (enqueue-thread! (command-level-queue level)
-				   thread))
+		  (enqueue! (command-level-queue level) thread))
 		 (else
 		  (warn "dropping thread from exited command level"
 			thread)))
@@ -461,7 +464,7 @@
     (if repl-thread
 	(begin 
 	  (set-command-level-repl-thread! level #f)
-	  (kill-thread! repl-thread)))))
+	  (terminate-level-thread repl-thread level)))))
 
 (define-upcall (push-command-level-upcall condition inspecting?
 					  thread dynamic-env)
@@ -523,6 +526,6 @@
 	(begin
 	  (if (eq? paused (command-level-repl-thread level))
 	      (spawn-repl-thread! level))
-	  (interrupt-thread paused terminate-current-thread)
+	  (terminate-thread! paused)	; it's already running, so no enqueue
 	  (set-command-level-paused-thread! level #f))
 	(warn "level has no paused thread" level))))

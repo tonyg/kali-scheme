@@ -78,8 +78,8 @@
 		   (loop next frontier)))
 		(else
 		 (loop next frontier))))
-	(set-heap-pointer! frontier)))
-  0)  ; for the type-checker
+	(set-heap-pointer! frontier))))
+;  0)  ; for the type-checker
 
 ; Copy THING if it has not already been copied.
 

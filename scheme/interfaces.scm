@@ -198,14 +198,6 @@
 	  provisional-port-pending-eof?
 	  provisional-set-port-pending-eof?!))
 
-(define-interface locks-interface
-  (export lock?
-	  make-lock
-	  obtain-lock
-	  maybe-obtain-lock
-	  release-lock
-	  lock-owner-uid))    ;really should be internal
-
 (define-interface condvars-interface
   (export make-condvar
 	  maybe-commit-and-wait-for-condvar
@@ -322,7 +314,7 @@
 	  cadaar cadadr caddar cadddr cadar caddr cadr
 	  cdaaar cdaadr cdadar cdaddr cdaar cdadr cdar
 	  cddaar cddadr cdddar cddddr cddar cdddr cddr
-	  char->integer char-alphabetic?
+	  char-alphabetic?
 	  ceiling
 	  char-ci<=? char-ci<? char-ci=? char-ci>=? char-ci>?
 	  char-downcase char-lower-case? char-numeric?
@@ -333,7 +325,6 @@
 	  for-each force
 	  gcd
 	  inexact?
-	  integer->char
 	  lcm length list list->string list->vector
 	  list?				;New in R4RS
 	  list-ref list-tail
@@ -341,14 +332,12 @@
 	  negative? not null?
 	  odd?
 	  positive?
-	  procedure?			;from low-level
 	  rationalize
 	  reverse
 	  round 
-	  string string->list string->symbol
+	  string string->list
 	  string-append
 	  string-ci<=? string-ci<? string-ci=? string-ci>=? string-ci>?
-	  string-copy			;from low-level
 	  string-fill!
 	  string<=? string<? string=? string>=? string>?
 	  substring
@@ -605,12 +594,6 @@
 
 	  current-thread
 
-	  make-thread-queue
-	  thread-queue-empty?
-	  enqueue-thread!
-	  dequeue-thread!
-	  remove-thread-from-queue!
-
 	  event-pending?
 	  get-next-event!
 	  schedule-event
@@ -619,15 +602,18 @@
 	  run
 	  running?
 	  
-	  block
 	  maybe-commit-and-block
-	  make-ready
+	  maybe-commit-and-block-on-queue
 	  maybe-commit-and-make-ready
 	  spawn-on-scheduler spawn-on-root
 	  wait
 	  upcall propogate-upcall
 	  interrupt-thread
 	  kill-thread!
+	  terminate-thread!
+
+	  thread-queue-empty?
+	  maybe-dequeue-thread!
 
 	  wake-some-threads
 
@@ -646,8 +632,9 @@
           decrement-counter!))
 
 (define-interface queues-interface
-  (export make-queue enqueue! dequeue! queue-empty? empty-queue!
-	  queue? queue->list list->queue queue-length delete-from-queue!))
+  (export make-queue enqueue! dequeue! maybe-dequeue! queue-empty? empty-queue!
+	  queue? queue->list list->queue queue-head queue-length
+	  delete-from-queue! on-queue?))
 
 (define-interface exceptions-interface
   (export define-exception-handler

@@ -4,8 +4,8 @@
 #include "scheme48heap.h"
 
 static void relocate_image(long, char *, char *);
-static char relocate_symbol_tableB(long, long);
-static char relocate_binding_tableB(long, long);
+static void relocate_symbol_tableB(long, long);
+static void relocate_binding_tableB(long, long);
 long s48_startup_procedure(void);
 long s48_initial_symbols(void);
 long s48_initial_imported_bindings(void);
@@ -62,7 +62,7 @@ static void relocate_image(long delta_0X, char * start_1X, char * end_2X)
   arg1K0 = (ptr_3X + 4);
   goto L1670;}
 }
-static char relocate_symbol_tableB(long table_6X, long delta_7X)
+static void relocate_symbol_tableB(long table_6X, long delta_7X)
 {
   long arg0K0;
   char * addr_20X;
@@ -90,7 +90,7 @@ static char relocate_symbol_tableB(long table_6X, long delta_7X)
   i_8X = arg0K0;
   temp_9X = 1024 == i_8X;
   if (temp_9X) {
-    return temp_9X;}
+    return;}
   else {
     link_10X = *((long *) ((((char *) (-3 + table_6X))) + (((i_8X)<<2))));
     if ((0 == (3 & link_10X))) {
@@ -148,7 +148,7 @@ static char relocate_symbol_tableB(long table_6X, long delta_7X)
   arg0K0 = next_18X;
   goto L1810;}
 }
-static char relocate_binding_tableB(long table_21X, long delta_22X)
+static void relocate_binding_tableB(long table_21X, long delta_22X)
 {
   long arg0K0;
   char * addr_35X;
@@ -176,7 +176,7 @@ static char relocate_binding_tableB(long table_21X, long delta_22X)
   i_23X = arg0K0;
   temp_24X = 1024 == i_23X;
   if (temp_24X) {
-    return temp_24X;}
+    return;}
   else {
     link_25X = *((long *) ((((char *) (-3 + table_21X))) + (((i_23X)<<2))));
     if ((0 == (3 & link_25X))) {

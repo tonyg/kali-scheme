@@ -29,7 +29,7 @@
 
 ; The Boehm collector also has a link to the next entry in ascending
 ; order.  This is used for sweeping etc..   I don't think we need
-; such.  It would be hard to reconstruct dynamically.  It is easy enough
+; such.  It would not be hard to reconstruct dynamically.  It is easy enough
 ; to find adjacent blocks, which is all I would think matters to us.
 
 (define log-table-size 10)
@@ -46,7 +46,7 @@
     table))
 
 ;----------------------------------------------------------------
-; We can use either s straight vector or a hash table, depending on the
+; We can use either a straight vector or a hash table, depending on the
 ; number of bits in an address.  With a small number of address bits,
 ; such as thirty-two, we can use a vector that maps all of memory directly.
 ; 

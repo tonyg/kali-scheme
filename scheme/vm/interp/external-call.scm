@@ -8,6 +8,11 @@
 ;
 ; The procedure must be an external binding whose value is a pointer-sized
 ; code-vector.  If it is, we actually do the call.
+;
+; The REMOVE-CURRENT-FRAME call pops all of our values off of the stack.
+; In fact we still use them there for a moment (see s48_external_call() in
+; external.c) but all of the values are fetched from the stack before
+; anything new is pushed on.
 
 (define-primitive call-external-value ()
   (lambda ()
@@ -27,19 +32,18 @@
 	    (let ((proc (stack-ref (- nargs 1)))
 		  (name (stack-ref (- nargs 2)))
 		  (args (pointer-to-stack-arguments)))
-	      ; Push a header to keep the arguments from being scanned.
-	      (push (make-header (enum stob vector)
-				 (cells->bytes nargs)))
 	      (if (and (vm-string? name)
 		       (code-vector? proc)
 		       (= (code-vector-length proc)
 			  (cells->bytes 1)))
-		  (let ((result (external-call proc name (- nargs 2) args)))
-		    (cond (*external-exception?*
-			   (set! *external-exception?* #f)
-			   (goto raise *external-exception-nargs*))
-			  (else
-			   (goto continue-with-value result 0))))
+		  (begin
+		    (remove-current-frame)
+		    (let ((result (external-call proc name (- nargs 2) args)))
+		      (cond (*external-exception?*
+			     (set! *external-exception?* #f)
+			     (goto raise *external-exception-nargs*))
+			    (else
+			     (goto continue-with-value result 0)))))
 		  (raise-exception wrong-type-argument 0 proc name))))))))
 
 ;----------------

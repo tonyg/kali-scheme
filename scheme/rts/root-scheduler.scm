@@ -26,14 +26,14 @@
 ; are handled specially.  The only upcall is for aborting execution.
 
 (define (make-root-event-handler thunk quantum abort)
-  (let ((runnable (make-thread-queue))
+  (let ((runnable (make-queue))
 	(thread-count (make-counter))
 	(safe-dynamic-env (with-handler root-handler get-dynamic-env))
 	(thread (make-thread thunk
 			     (get-dynamic-env)
 			     'scheduler-initial-thread)))
     (increment-counter! thread-count)
-    (enqueue-thread! runnable thread)
+    (enqueue! runnable thread)
     (round-robin-event-handler
        runnable quantum safe-dynamic-env thread-count
        (lambda args #f)			; we handle no events

@@ -131,6 +131,8 @@
 	number-i/o
 	i/o				;output-port-option, write-string
 	methods				;disclose
+	(subset i/o-internal	(open-output-port?))
+	(subset signals		(call-error))
 	(subset channels	(channel? channel-id))
 	(subset code-vectors	(code-vector?)))
   (files (rts write)))
@@ -267,7 +269,9 @@
 
 (define-structures ((threads threads-interface)
 		    (threads-internal threads-internal-interface))
-  (open scheme-level-1 enumerated define-record-types queues
+  (open scheme-level-1 enumerated queues cells
+	(subset proposals            (define-synchronized-record-type))
+	define-record-types
 	interrupts
         wind
         fluids
@@ -297,7 +301,7 @@
   (files (rts proposal)))
 
 (define-structure scheduler scheduler-interface
-  (open scheme-level-1 threads threads-internal enumerated enum-case
+  (open scheme-level-1 threads threads-internal enumerated enum-case queues
 	debug-messages
 	signals)       		;error
   (files (rts scheduler)))
@@ -306,7 +310,7 @@
 					 spawn-on-root
 					 scheme-exit-now
 					 call-when-deadlocked!)
-  (open scheme-level-1 threads threads-internal scheduler
+  (open scheme-level-1 threads threads-internal scheduler queues
 	session-data
 	conditions		;warning?, error?
 	writing			;display
@@ -358,17 +362,9 @@
 ;  (files (big linked-queue))
 ;  (optimize auto-integrate))
 
-(define-structure locks locks-interface
-  (open scheme-level-1
-	threads threads-internal
-	interrupts define-record-types
-	proposals)
-  (optimize auto-integrate)
-  (files (rts lock)))
-
 (define-structures ((condvars condvars-interface)
 		    (condvars-internal (export condvar-has-waiters?)))
-  (open scheme-level-1
+  (open scheme-level-1 queues
 	proposals
 	threads threads-internal)
   (optimize auto-integrate)

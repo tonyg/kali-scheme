@@ -5,12 +5,17 @@
 
 (define-structure testing (export (test :syntax) lost?)
   (open scheme signals handle conditions)
+  (open i/o)
   (begin
 
 (define *lost?* #f)
 (define (lost?) *lost?*)
 
 (define (run-test string compare want thunk)
+  (let ((out (current-error-port)))
+    (display "[" out)
+    (display string out)
+    (force-output out)
   (let ((result
 	 (call-with-current-continuation
 	   (lambda (k)
@@ -24,7 +29,8 @@
 	       (display "Wanted ") (write want)
 	       (display ", but got ") (write result) (display ".")
 	       (newline)
-	       (set! *lost?* #t)))))
+	       (set! *lost?* #t))))
+  (display "]" out) (newline out)))
 
 (define-syntax test
   (syntax-rules ()

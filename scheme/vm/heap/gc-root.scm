@@ -65,11 +65,13 @@
     old-base))
 
 (define (s48-release-gc-roots-base! old-base)
-  (let ((okay? (address= *external-root-stack*
-			 *external-root-stack-base*)))
-    (set! *external-root-stack* old-base)
+  (let ((current-base *external-root-stack-base*))
     (set! *external-root-stack-base* old-base)
-    okay?))
+    (if (address= *external-root-stack* current-base)
+        #t
+        (begin
+          (set! *external-root-stack* current-base)
+          #f))))
 
 ;----------------
 ; This is for permanent roots, such as external global variables.

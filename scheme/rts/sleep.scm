@@ -13,12 +13,12 @@
     (cond ((not n)
 	   (call-error "wrong type argument" sleep user-n))
 	  ((< 0 n)
-	   (let ((queue (make-thread-queue)))
+	   (let ((cell (make-cell (current-thread))))
 	     (disable-interrupts!)
-	     (enqueue-thread! queue (current-thread))
+	     (set-thread-cell! (current-thread) cell)
 	     (session-data-set! dozers
 				(insert (cons (+ (real-time) n)
-					      queue)
+					      cell)
 					(session-data-ref dozers)
 					(lambda (frob1 frob2)
 					  (< (car frob1)
@@ -61,12 +61,14 @@
 	      (begin
 		(session-data-set! dozers '())
 		(values woke? #f))
-	      (let ((next (car to-do)))
-		(cond ((thread-queue-empty? (cdr next))
+	      (let* ((next (car to-do))
+		     (thread (cell-ref (cdr next))))
+		(cond ((not thread)
 		       (loop (cdr to-do) woke?))
 		      ((< time (car next))
 		       (session-data-set! dozers to-do)
 		       (values woke? (- (car next) time)))
 		      (else
-		       (make-ready (dequeue-thread! (cdr next)))
+		       (make-ready thread)
 		       (loop (cdr to-do) #t)))))))))
+

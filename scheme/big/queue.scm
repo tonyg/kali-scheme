@@ -16,7 +16,7 @@
   (head tail)		; synchronize on these
   queue?
   (uid queue-uid)
-  (head queue-head set-queue-head!)
+  (head real-queue-head set-queue-head!)
   (tail queue-tail set-queue-tail!))
 
 (define queue-uid (list 0))
@@ -33,12 +33,12 @@
 ; The procedures for manipulating queues.
 
 (define (queue-empty? q)
-  (null? (queue-head q)))
+  (null? (real-queue-head q)))
 
 (define (enqueue! q v)
   (ensure-atomicity!
     (let ((p (cons v '())))
-      (cond ((null? (queue-head q))
+      (cond ((null? (real-queue-head q))
 	     (set-queue-head! q p))
 	    ((null? (queue-tail q))		; someone got in first
 	     (invalidate-current-proposal!))
@@ -46,17 +46,34 @@
 	     (set-cdr! (queue-tail q) p)))
       (set-queue-tail! q p))))
 
-(define (queue-front q)
+(define (queue-head q)
   (ensure-atomicity
     (if (queue-empty? q)
 	(error "queue is empty" q)
-	(car (queue-head q)))))
+	(car (real-queue-head q)))))
 
 (define (dequeue! q)
   (ensure-atomicity
-    (let ((pair (queue-head q)))
+    (let ((pair (real-queue-head q)))
       (cond ((null? pair)	;(queue-empty? q)
 	     (error "empty queue" q))
+	    (else
+	     (let ((value (car pair))
+		   (next  (cdr pair)))
+	       (set-queue-head! q next)
+	       (if (null? next)
+		   (set-queue-tail! q '()))   ; don't retain pointers
+	       value))))))
+
+; Same again, except that we return #F if the queue is empty.
+; This is a simple way of avoiding a race condition if the queue is known
+; not to contain #F.
+
+(define (maybe-dequeue! q)
+  (ensure-atomicity
+    (let ((pair (real-queue-head q)))
+      (cond ((null? pair)	;(queue-empty? q)
+	     #f)
 	    (else
 	     (let ((value (car pair))
 		   (next  (cdr pair)))
@@ -70,8 +87,9 @@
     (set-queue-head! q '())
     (set-queue-tail! q '())))
 
-(define (on-queue? v q)
-  (memq v (queue-head q)))
+(define (on-queue? q v)
+  (ensure-atomicity
+   (memq v (real-queue-head q))))
 
 ; This removes the first occurrence of V from Q.
 
@@ -82,7 +100,7 @@
 
 (define (delete-from-queue-if! q pred)
   (ensure-atomicity
-    (let ((list (queue-head q)))
+    (let ((list (real-queue-head q)))
       (cond ((null? list)
 	     #f)
 	    ((pred (car list))
@@ -108,7 +126,7 @@
 (define (queue->list q)
   (ensure-atomicity
     (map (lambda (x) x)
-	 (queue-head q))))
+	 (real-queue-head q))))
 
 (define (list->queue list)
   (if (null? list)
@@ -124,5 +142,5 @@
 
 (define (queue-length q)
   (ensure-atomicity
-    (length (queue-head q))))
+    (length (real-queue-head q))))
 

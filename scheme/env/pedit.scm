@@ -136,16 +136,21 @@
       (list package)
       (let ((losers '())) ; was (list package) but that disables the
 	                  ; entire procedure
-	(let recur ((package package))
-	  (if (and (not (memq package losers))
-		   (not (table-ref (package-definitions package) name)))
-	      (begin (set! losers (cons package losers))
-		     (walk-population
-		      (lambda (struct)
-			(if (interface-member? (structure-interface struct) name)
-			    (walk-population recur (structure-clients struct))))
-		      (package-clients package)))))
-	losers)))
+	(let recur ((package-or-structure package))
+	  (let ((package (if (package? package-or-structure)
+			     package
+			     (structure-package package-or-structure))))
+	    (if (and (not (memq package losers))
+		     (not (table-ref (package-definitions package) name)))
+		(begin (set! losers (cons package losers))
+		       (walk-population
+			(lambda (struct)
+			  (if (interface-member? (structure-interface struct)
+						 name)
+			      (walk-population recur
+					       (structure-clients struct))))
+			(package-clients package))))))
+        losers)))
 
 (define (set-location-forward! loser new name p)
   (if *debug?*

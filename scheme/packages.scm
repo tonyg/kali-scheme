@@ -267,8 +267,6 @@
 	    enum-case
 	    enumerated
 	    fluids
-	    ;linked-queues
-	    locks
 	    proposals
 	    queues
 	    record-types

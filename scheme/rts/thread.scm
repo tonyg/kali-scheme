@@ -42,7 +42,7 @@
 (define-record-type thread :thread
   (really-make-thread dynamic-env dynamic-point proposal
 		      continuation scheduler
-		      queue arguments
+		      cell arguments
 		      events current-task uid name)
   thread?
 
@@ -53,20 +53,20 @@
   (proposal       thread-proposal)	;Must be third!  (See fluid.scm)
 
   ; The time remaining for a thread to run.
-  (time           thread-time         set-thread-time!)
+  (time           thread-time             set-thread-time!)
 
   ; The saved state of a non-running thread
-  (continuation   thread-continuation set-thread-continuation!)
-  (arguments      thread-arguments    set-thread-arguments!)
+  (continuation   thread-continuation     set-thread-continuation!)
+  (arguments      thread-arguments        set-thread-arguments!)
 
   ; Used by the engine algorithm
-  (scheduler      thread-scheduler    set-thread-scheduler!)
-  (current-task   thread-current-task set-thread-current-task!)
-  (events         thread-events       set-thread-events!)
+  (scheduler      thread-scheduler        set-thread-scheduler!)
+  (current-task   thread-current-task     set-thread-current-task!)
+  (events         thread-events           set-thread-events!)
 
   ; Used by schedulers
-  (data           thread-data         set-thread-data!)
-  (queue          thread-queue        set-thread-queue!)
+  (data           thread-data             set-thread-data!)
+  (cell           thread-cell             set-thread-cell!)
 
   ; For debugging
   (uid            thread-uid)       ; (also used as a cheap weak pointer)
@@ -90,7 +90,7 @@
 				    (thunk->continuation
 				     (thread-top-level thunk))
 				    (current-thread) ; scheduler
-				    #f               ; queue
+				    #f               ; cell
 				    '()              ; arguments
 				    #f               ; events
 				    #f               ; current-task
@@ -178,29 +178,29 @@
 	 proc))))))
       
 ;----------------
-; Enqueueing and dequeuing threads.
+; Removing threads from queues and cells.
+; These are utility procedures for users.  They are not used here.
 
-; Rename the queue operations as thread-specific ones (just for clarity).
+(define (maybe-dequeue-thread! queue)
+  (let loop ()
+    (let ((cell (maybe-dequeue! queue)))
+      (if cell
+	  (or (provisional-cell-ref cell)
+	      (loop))
+	  #f))))
 
-(define make-thread-queue make-queue)
-(define thread-queue-empty? queue-empty?)
+; Look for a non-empty cell.
 
-(define (enqueue-thread! queue thread)
-  (if (thread-queue thread)
-      (error "enqueued thread being added to another queue" thread queue))
-  (set-thread-queue! thread queue)
-  (enqueue! queue thread))
-
-(define (dequeue-thread! queue)
-  (let ((thread (dequeue! queue)))
-    (set-thread-queue! thread #f)
-    thread))
-
-(define (remove-thread-from-queue! thread)
-  (if (thread-queue thread)
-      (begin
-	(delete-from-queue! (thread-queue thread) thread)
-	(set-thread-queue! thread #f))))
+(define (thread-queue-empty? queue)
+  (ensure-atomicity
+   (let loop ()
+     (cond ((queue-empty? queue)
+	    #t)
+	   ((provisional-cell-ref (queue-head queue))
+	    #f)
+	   (else
+	    (dequeue! queue)
+	    (loop))))))
 
 ;----------------
 ; Return values for RUN.
@@ -248,9 +248,9 @@
 	  ((not (eq? (thread-scheduler thread) scheduler))
 	   (enable-interrupts!)
 	   (error "thread run by wrong scheduler" thread scheduler))
-	  ((thread-queue thread)
+	  ((thread-cell thread)
 	   (enable-interrupts!)
-	   (error "thread run while still on a queue" thread))
+	   (error "thread run while still blocked" thread))
 	  ((and (thread-current-task thread)
 		(not (null? (thread-arguments thread))))
 	   (enable-interrupts!)
@@ -454,17 +454,26 @@
   (suspend (enum event-type blocked) '()))
 
 ; Block if the current proposal succeeds.  Returns true if successful and false
-; if the commit fails.
+; if the commit fails.  The cell becomes the thread's cell.  It will be cleared
+; if the thread is killed.
 
-(define (maybe-commit-and-block)
+(define (maybe-commit-and-block cell)
   (disable-interrupts!)
   (cond ((maybe-commit)
+	 (set-thread-cell! (current-thread) cell)
 	 (suspend-to (thread-scheduler (current-thread))
 		     (list (enum event-type blocked)))
 	 #t)
 	(else
 	 (enable-interrupts!)
 	 #f)))
+
+; Utility procedure for the common case of blocking on a queue.
+
+(define (maybe-commit-and-block-on-queue queue)
+  (let ((cell (make-cell (current-thread))))
+    (enqueue! queue cell)
+    (maybe-commit-and-block cell)))
 
 ; Send the upcall to the current scheduler and check the return value(s)
 ; to see if it was handled properly.
@@ -487,6 +496,13 @@
   (interrupt-thread thread
 		    (lambda ignored
 		      (exit (enum event-type killed) '()))))
+
+; Also ends the thread, but lets it run any pending dynamic-winds.
+
+(define (terminate-thread! thread)
+  (let ((interrupts (set-enabled-interrupts! no-interrupts)))
+    (clear-thread-cell! thread)
+    (interrupt-thread thread terminate-current-thread)))
 
 ;----------------
 ; Make THREAD execute PROC the next time it is run.  The thread's own
@@ -622,8 +638,7 @@
 ; Enqueue a RUNNABLE event for THREAD's scheduler.
 
 (define (make-ready thread . args)
-  (if (thread-queue thread)
-      (error "trying to schedule a queued thread" thread))
+  (clear-thread-cell! thread)
   (set-thread-arguments! thread args)
   (if (thread-scheduler thread)
       (schedule-event (thread-scheduler thread)
@@ -631,8 +646,15 @@
 		      thread)
       (error "MAKE-READY thread has no scheduler" thread)))
 
-; Same, except that we only schedule the thread if the current proposal
-; succeeds.
+(define (clear-thread-cell! thread)
+  (let ((cell (thread-cell thread)))
+    (if cell
+	(begin
+	  (set-thread-cell! thread #f)
+	  (cell-set! cell #f)))))
+
+; Same as MAKE-READY, except that we only schedule the thread if the current
+; proposal succeeds.
 
 (define (maybe-commit-and-make-ready thread-or-queue . args)
   (let ((ints (set-enabled-interrupts! 0)))
@@ -651,14 +673,11 @@
 
 (define (make-threads-ready queue)
   (let loop ()
-    (if (thread-queue-empty? queue)
+    (if (queue-empty? queue)
 	(maybe-suspend)
-	(let ((thread (dequeue-thread! queue)))
-	  (if (thread-scheduler thread)
-	      (really-schedule-event (thread-scheduler thread)
-				     (list (enum event-type runnable)
-					   thread))
-	      (error "MAKE-READY thread has no scheduler" thread))
+	(let ((thread (cell-ref (dequeue! queue))))
+	  (if thread
+	      (make-ready thread))
 	  (loop)))))
 
 ;----------------

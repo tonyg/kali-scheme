@@ -20,6 +20,7 @@ static s48_value	posix_compile_regexp(s48_value pattern,
 					     s48_value newline_p),
 			posix_regexp_match(s48_value sch_regex,
 					   s48_value string,
+					   s48_value start,
 					   s48_value submatches_p,
 					   s48_value bol_p,
 					   s48_value eol_p),
@@ -98,13 +99,15 @@ posix_compile_regexp(s48_value pattern,
  * them into Scheme match records.
  */
 static s48_value
-posix_regexp_match(s48_value sch_regex, s48_value string,
+posix_regexp_match(s48_value sch_regex, s48_value string, s48_value sch_start,
 		   s48_value submatches_p,
 		   s48_value bol_p, s48_value eol_p)
 {
   int status;
   s48_value result;
 
+  int start = s48_extract_fixnum(sch_start);
+  int len = S48_STRING_LENGTH(string);
   /* re_nsub doesn't include the full pattern */
   size_t nmatch = 1 + S48_EXTRACT_VALUE_POINTER(sch_regex, regex_t)->re_nsub;
   regmatch_t *pmatch,
@@ -113,7 +116,10 @@ posix_regexp_match(s48_value sch_regex, s48_value string,
   int flags = S48_EXTRACT_BOOLEAN(bol_p) ? 0 : REG_NOTBOL |
               S48_EXTRACT_BOOLEAN(eol_p) ? 0 : REG_NOTEOL;
 
-  S48_CHECK_STRING(string);
+  if ((start < 0) || (start >= len))
+    s48_raise_range_error(sch_start,
+			  s48_enter_fixnum(0),
+			  s48_enter_fixnum(len));
 
   if (nmatch <= 32)
     pmatch = pmatch_buffer;
@@ -123,7 +129,7 @@ posix_regexp_match(s48_value sch_regex, s48_value string,
       s48_raise_out_of_memory_error(); }
     
   status = regexec(S48_EXTRACT_VALUE_POINTER(sch_regex, regex_t),
-		   S48_UNSAFE_EXTRACT_STRING(string),
+		   S48_UNSAFE_EXTRACT_STRING(string) + start,
 		   nmatch, pmatch, flags);
 
   if (status == REG_NOMATCH)
@@ -143,8 +149,12 @@ posix_regexp_match(s48_value sch_regex, s48_value string,
 	match = S48_FALSE;
       else {
 	match = s48_make_record(posix_regexp_match_type_binding);
-	S48_UNSAFE_RECORD_SET(match, 0, s48_enter_fixnum(pmatch[i].rm_so));
-	S48_UNSAFE_RECORD_SET(match, 1, s48_enter_fixnum(pmatch[i].rm_eo));
+	S48_UNSAFE_RECORD_SET(match,
+			      0,
+			      s48_enter_fixnum(pmatch[i].rm_so + start));
+	S48_UNSAFE_RECORD_SET(match,
+			      1,
+			      s48_enter_fixnum(pmatch[i].rm_eo + start));
 	S48_UNSAFE_RECORD_SET(match, 2, S48_FALSE); }  /* submatches */
       matches = s48_cons(match, matches); }
     

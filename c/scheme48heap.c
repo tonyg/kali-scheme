@@ -20,9 +20,9 @@ char s48_check_heap(long);
 long s48_find_all(long);
 long s48_trace_value(long);
 long s48_find_all_records(long);
-long s48_trace_continuation_contentsB(char *, char *, long);
-long s48_trace_locationsB(char *, char *);
-long s48_trace_stob_contentsB(long);
+void s48_trace_continuation_contentsB(char *, char *, long);
+void s48_trace_locationsB(char *, char *);
+void s48_trace_stob_contentsB(long);
 void s48_collect(void);
 void s48_make_availableAgc(long);
 char * s48_allocate_tracedAgc(long);
@@ -745,7 +745,7 @@ long s48_find_all_records(long record_type_86X)
   }}
 
 }
-long s48_trace_continuation_contentsB(char * contents_pointer_107X, char * code_pointer_108X, long mask_size_109X)
+void s48_trace_continuation_contentsB(char * contents_pointer_107X, char * code_pointer_108X, long mask_size_109X)
 {
   char * arg0K0;
   char * arg0K1;
@@ -811,7 +811,7 @@ long s48_trace_continuation_contentsB(char * contents_pointer_107X, char * code_
   arg0K1 = (ptr_114X + 4);
   goto L3227;}
 }
-long s48_trace_locationsB(char * start_120X, char * end_121X)
+void s48_trace_locationsB(char * start_120X, char * end_121X)
 {
   char * arg0K0;
   char * arg0K1;
@@ -873,7 +873,7 @@ long s48_trace_locationsB(char * start_120X, char * end_121X)
                 if ((3 == (3 & descriptor_128X))) {
                   a_129X = ((char *) (-3 + descriptor_128X));
                   if ((a_129X < (Sfrom_beginS))) {
-                    goto L4038;}
+                    goto L4018;}
                   else {
                     if ((a_129X < (Sfrom_endS))) {
                       new_thing_130X = copy_weak_pointer(thing_124X, frontier_123X, &frontier_131X);
@@ -881,11 +881,11 @@ long s48_trace_locationsB(char * start_120X, char * end_121X)
                       arg0K1 = frontier_131X;
                       goto L3435;}
                     else {
-                      goto L4038;}}}
+                      goto L4018;}}}
                 else {
-                  goto L4038;}}
+                  goto L4018;}}
               else {
-                goto L4038;}}}
+                goto L4018;}}}
           else {
             arg0K0 = next_125X;
             arg0K1 = frontier_123X;
@@ -896,7 +896,7 @@ long s48_trace_locationsB(char * start_120X, char * end_121X)
         goto L3400;}}}
   else {
     s48_ShpS = frontier_123X;
-    return 0;}}
+    return;}}
  L3417: {
   if ((10 == (31 & (((thing_124X)>>2))))) {
     size_132X = -4 & (3 + ((long)(((unsigned long)thing_124X)>>8)));
@@ -904,10 +904,10 @@ long s48_trace_locationsB(char * start_120X, char * end_121X)
     code_pointer_133X = (((char *) (-3 + (*((long *) (next_125X + 4)))))) + ((((*((long *) next_125X)))>>2));
     mask_size_134X = *((unsigned char *) (code_pointer_133X + -3));
     if ((0 == mask_size_134X)) {s48_trace_locationsB(next_125X, (next_125X + size_132X));
-      goto L3488;}
+      goto L3486;}
     else {
       data_pointer_135X = next_125X + 12;s48_trace_locationsB(next_125X, data_pointer_135X);s48_trace_continuation_contentsB(data_pointer_135X, code_pointer_133X, mask_size_134X);
-      goto L3488;}}
+      goto L3486;}}
   else {
     arg0K0 = next_125X;
     arg0K1 = frontier_123X;
@@ -919,7 +919,7 @@ long s48_trace_locationsB(char * start_120X, char * end_121X)
   arg0K0 = next_125X;
   arg0K1 = frontier_137X;
   goto L3400;}
- L4038: {
+ L4018: {
   *((long *) frontier_123X) = h_127X;
   data_addr_138X = frontier_123X + 4;
   new_139X = 3 + (((long) data_addr_138X));
@@ -928,18 +928,19 @@ long s48_trace_locationsB(char * start_120X, char * end_121X)
   arg1K0 = new_139X;
   arg0K1 = (data_addr_138X + (-4 & (3 + ((long)(((unsigned long)h_127X)>>8)))));
   goto L3435;}
- L3488: {
+ L3486: {
   arg0K0 = (next_125X + size_132X);
   arg0K1 = (s48_ShpS);
   goto L3400;}
 }
-long s48_trace_stob_contentsB(long stob_140X)
+void s48_trace_stob_contentsB(long stob_140X)
 {
   char * start_142X;
   long h_141X;
  {  h_141X = *((long *) ((((char *) (-3 + stob_140X))) + -4));
   start_142X = ((char *) (-3 + stob_140X));
-  return s48_trace_locationsB(start_142X, (start_142X + (-4 & (3 + ((long)(((unsigned long)h_141X)>>8))))));}
+  s48_trace_locationsB(start_142X, (start_142X + (-4 & (3 + ((long)(((unsigned long)h_141X)>>8))))));
+  return;}
 }
 void s48_collect(void)
 {
@@ -979,29 +980,29 @@ void s48_collect(void)
   s48_ShpS = (Snewspace_beginS);
   Sweak_pointer_hpS = NULL;s48_gc_root();
   arg0K0 = (Snewspace_beginS);
-  goto L3718;}
- L3718: {
+  goto L3698;}
+ L3698: {
   start_147X = arg0K0;
   end_148X = s48_ShpS;s48_trace_locationsB(start_147X, end_148X);
   if (((((((s48_SlimitS) - (s48_ShpS)))>>2)) < 0)) {
     ps_error("GC error: ran out of space in new heap", 0);
-    goto L3678;}
+    goto L3658;}
   else {
     if ((end_148X < (s48_ShpS))) {
       arg0K0 = end_148X;
-      goto L3718;}
+      goto L3698;}
     else {
-      goto L3678;}}}
- L3678: {
+      goto L3658;}}}
+ L3658: {
   if (((Sweak_pointer_hpS) == NULL)) {
-    goto L3680;}
+    goto L3660;}
   else {
     x_149X = Sweak_pointer_limitS;
     end_150X = Sweak_pointer_hpS;
     arg0K0 = (x_149X + -1024);
     arg0K1 = end_150X;
     goto L2008;}}
- L3680: {
+ L3660: {
 s48_post_gc_cleanup();
   Sgc_countS = (1 + (Sgc_countS));
   return;}
@@ -1040,9 +1041,9 @@ s48_post_gc_cleanup();
     if ((next_153X == NULL)) {
       if ((end_150X < (Sweak_pointer_limitS))) {
         *((long *) end_150X) = (74 + ((((-4 & ((Sweak_pointer_limitS) - (end_150X + 4))))<<8)));
-        goto L3680;}
+        goto L3660;}
       else {
-        goto L3680;}}
+        goto L3660;}}
     else {
       arg0K0 = (next_153X + -1024);
       arg0K1 = next_153X;
@@ -1060,10 +1061,10 @@ void s48_make_availableAgc(long len_159X)
   char x_160X;
  {  x_160X = ((s48_ShpS) + (-4 & (3 + len_159X))) < (s48_SlimitS);
   if (x_160X) {
-    goto L3749;}
+    goto L3729;}
   else {s48_collect();
-    goto L3749;}}
- L3749: {
+    goto L3729;}}
+ L3729: {
   if ((((s48_ShpS) + (-4 & (3 + len_159X))) < (s48_SlimitS))) {
     return;}
   else {
@@ -1076,10 +1077,10 @@ char * s48_allocate_tracedAgc(long len_161X)
   char x_162X;
  {  x_162X = ((s48_ShpS) + (-4 & (3 + len_161X))) < (s48_SlimitS);
   if (x_162X) {
-    goto L3823;}
+    goto L3803;}
   else {s48_collect();
-    goto L3823;}}
- L3823: {
+    goto L3803;}}
+ L3803: {
   if ((((s48_ShpS) + (-4 & (3 + len_161X))) < (s48_SlimitS))) {
     new_163X = s48_ShpS;
     s48_ShpS = ((s48_ShpS) + (-4 & (3 + len_161X)));
@@ -1093,10 +1094,10 @@ char * s48_allocate_untracedAgc(long len_164X)
   char x_165X;
  {  x_165X = ((s48_ShpS) + (-4 & (3 + len_164X))) < (s48_SlimitS);
   if (x_165X) {
-    goto L3895;}
+    goto L3875;}
   else {s48_collect();
-    goto L3895;}}
- L3895: {
+    goto L3875;}}
+ L3875: {
   if ((((s48_ShpS) + (-4 & (3 + len_164X))) < (s48_SlimitS))) {
     new_166X = s48_ShpS;
     s48_ShpS = ((s48_ShpS) + (-4 & (3 + len_164X)));
@@ -1120,44 +1121,44 @@ long s48_allocate_stob(long type_167X, long size_168X)
  {  tracedP_169X = type_167X < 17;
   if (tracedP_169X) {
     arg1K0 = (((size_168X)<<2));
-    goto L3921;}
+    goto L3901;}
   else {
     arg1K0 = size_168X;
-    goto L3921;}}
- L3921: {
+    goto L3901;}}
+ L3901: {
   length_in_bytes_170X = arg1K0;
   needed_171X = 4 + length_in_bytes_170X;
   if (tracedP_169X) {
     x_172X = ((s48_ShpS) + (-4 & (3 + needed_171X))) < (s48_SlimitS);
     if (x_172X) {
-      goto L3979;}
+      goto L3959;}
     else {s48_collect();
-      goto L3979;}}
+      goto L3959;}}
   else {
     x_173X = ((s48_ShpS) + (-4 & (3 + needed_171X))) < (s48_SlimitS);
     if (x_173X) {
-      goto L3998;}
+      goto L3978;}
     else {s48_collect();
-      goto L3998;}}}
- L3979: {
+      goto L3978;}}}
+ L3959: {
   if ((((s48_ShpS) + (-4 & (3 + needed_171X))) < (s48_SlimitS))) {
     new_174X = s48_ShpS;
     s48_ShpS = ((s48_ShpS) + (-4 & (3 + needed_171X)));
     arg0K0 = new_174X;
-    goto L3937;}
+    goto L3917;}
   else {
     arg0K0 = NULL;
-    goto L3937;}}
- L3998: {
+    goto L3917;}}
+ L3978: {
   if ((((s48_ShpS) + (-4 & (3 + needed_171X))) < (s48_SlimitS))) {
     new_175X = s48_ShpS;
     s48_ShpS = ((s48_ShpS) + (-4 & (3 + needed_171X)));
     arg0K0 = new_175X;
-    goto L3937;}
+    goto L3917;}
   else {
     arg0K0 = NULL;
-    goto L3937;}}
- L3937: {
+    goto L3917;}}
+ L3917: {
   thing_176X = arg0K0;
   if ((thing_176X == NULL)) {
     ps_error("insufficient heap space for external allocation", 0);

@@ -2,17 +2,15 @@
 ; Locks (= semaphores)
 
 ; Each lock has:
-;   The owning thread's uid, or #f if not locked.  The uid can be used
-;     to aid debugging without introducing the overhead of a weak pointer
-;     to the actual thread (a non-weak pointer would introduce an unfortunate
-;     circularity involving the locks and finalizers of ports).
+;   The owning thread, or #f if not locked.  We use the owning thread instead
+;     of #t as an aid to debugging.
 ;   A queue of waiting threads
 
 (define-synchronized-record-type lock :lock
-  (really-make-lock owner-uid queue uid)
-  (owner-uid)
+  (really-make-lock owner queue uid)
+  (owner)
   lock?
-  (owner-uid lock-owner-uid set-lock-owner-uid!)
+  (owner lock-owner set-lock-owner!)
   (queue lock-queue)
   (uid lock-uid))     ; for debugging
 
@@ -25,18 +23,14 @@
       uid)))
 
 (define (make-lock)
-  (really-make-lock #f
-		    (make-thread-queue)
-		    (next-uid)))
+  (really-make-lock #f (make-queue) (next-uid)))
 
 (define (obtain-lock lock)
   (with-new-proposal (lose)
-    (or (cond ((lock-owner-uid lock)
-	       (enqueue-thread! (lock-queue lock)
-				(current-thread))
-	       (maybe-commit-and-block))
+    (or (cond ((lock-owner lock)
+	       (maybe-commit-and-block-on-queue (lock-queue lock)))
 	      (else
-	       (set-lock-owner-uid! lock (thread-uid (current-thread)))
+	       (set-lock-owner! lock (current-thread))
 	       (maybe-commit)))
 	(lose))))
 
@@ -44,10 +38,10 @@
 
 (define (maybe-obtain-lock lock)
   (with-new-proposal (lose)
-    (cond ((lock-owner-uid lock)	; no need to commit - we have only done
-	   #f)				; a single read
+    (cond ((lock-owner lock)	; no need to commit - we have only done
+	   #f)			; a single read
 	  (else
-	   (set-lock-owner-uid! lock (thread-uid (current-thread)))
+	   (set-lock-owner! lock (current-thread))
 	   (or (maybe-commit)
 	       (lose))))))
 
@@ -55,16 +49,15 @@
 
 (define (release-lock lock)
   (with-new-proposal (lose)
-    (let ((queue (lock-queue lock)))
-      (if (thread-queue-empty? queue)
-	  (begin
-	    (set-lock-owner-uid! lock #f)
-	    (or (maybe-commit)
-		(lose)))
-	  (let ((next (dequeue-thread! queue)))
-	    (set-lock-owner-uid! lock (thread-uid next))
-	    (or (maybe-commit-and-make-ready next)
-		(lose)))))))
+    (let ((next (maybe-dequeue-thread! (lock-queue lock))))
+      (cond (next
+	     (set-lock-owner! lock next)
+	     (or (maybe-commit-and-make-ready next)
+		 (lose)))
+	    (else
+	     (set-lock-owner! lock #f)
+	     (or (maybe-commit)
+		 (lose)))))))
 
 
 

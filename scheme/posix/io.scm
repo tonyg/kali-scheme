@@ -52,26 +52,51 @@
 ;----------------
 ; 6.2 File descriptor manipulation.
 
-; (DUP <channel>)                    -> channel
-; (DUP2 <channel> <file descriptor>) -> channel
-; Both of these change <channel>s file descriptor and return a new channel
-; that uses <channel>'s old file descriptor.  DUP uses the lowest unused
+; (DUP <fd-port>)                    -> fd-port
+; (DUP2 <fd-port> <file descriptor>) -> fd-port
+; (DUP-SWITCHING_MODE <fd-port>)     -> fd-port
+; (CHANNEL-DUP <channel>)                    -> channel
+; (CHANNEL-DUP2 <channel> <file descriptor>) -> channel
+; These change a ports file descriptor and return a new port (or channel)
+; port that uses the old one's file descriptor.  DUP uses the lowest unused
 ; file descriptor, DUP2 uses the one provided.  If any existing channel
 ; uses the file descriptor passed to DUP2, that channel is closed.
+; DUP-SWITCHING-MODE is the same as DUP except that the returned port has
+; the opposite polarity.
 
-(define (dup channel)
+(define (dup port)
+  (let ((channel (maybe-x->channel port)))
+    (if channel
+	((if (input-port? port)
+	     input-channel->port
+	     output-channel->port)
+	 (channel-dup channel))
+	(call-error dup (list port)))))
+
+(define (channel-dup channel)
   (really-dup channel #f))
 
-(define (dup-switching-mode channel)
-  (really-dup channel
-	      (enum-case channel-status-option (channel-status channel)
-		((input)  (enum channel-status-option output))
-		((output) (enum channel-status-option input))
-		(else
-		 (call-error dup-switching-mode channel)))))
+(define (dup-switching-mode port)
+  (let ((channel (maybe-x->channel port)))
+    (if channel
+	(if (input-port? port)
+	    (output-channel->port
+	     (really-dup channel (enum channel-status-option output)))
+	    (input-channel->port
+	     (really-dup channel (enum channel-status-option input))))
+	(call-error dup-switching-mode (list port)))))
+
+(define (dup2 port fd)
+  (let ((channel (maybe-x->channel port)))
+    (if channel
+	((if (input-port? port)
+	     input-channel->port
+	     output-channel->port)
+	 (channel-dup2 channel fd))
+	(call-error dup2 (list port fd)))))
 
 (import-lambda-definition really-dup (channel new-status) "posix_dup")
-(import-lambda-definition dup2 (channel fd) "posix_dup2")
+(import-lambda-definition channel-dup2 (channel fd) "posix_dup2")
 
 ; A higher-level interface for DUP and DUP2.
 ;
@@ -101,7 +126,7 @@
 	 (lambda (targets extras)
 	   (do-dups targets)
 	   (for-each (lambda (pair)
-		       (dup2 (cdr pair) (car pair)))
+		       (channel-dup2 (cdr pair) (car pair)))
 		     extras)
 	   (let ((channels (list->vector channels)))
 	     (for-each (lambda (channel)
@@ -205,7 +230,7 @@
   (let ((have-fd (channel-os-index channel)))
     (cond ((= target-fd have-fd))
 	  ((memq target-fd pending)
-	   (dup channel))
+	   (channel-dup channel))
 	  (else
 	   (let ((occupant (find-occupant target-fd targets)))
 	     (if occupant
@@ -213,7 +238,7 @@
 				(car occupant)
 				targets
 				(cons have-fd pending)))
-	     (dup2 channel target-fd))))))
+	     (channel-dup2 channel target-fd))))))
 
 ; Return the (<wanted-fd> . <channel>) pair from TARGETS where <channel>
 ; currently has FD, if there is such.

@@ -1,6 +1,6 @@
 /* -*-C-*-
 
-$Id: bignum.h,v 1.1.1.1 2001/05/07 06:32:16 sperber Exp $
+$Id: bignum.h,v 9.28 1992/09/18 16:52:34 jinx Exp $
 
 Copyright (c) 1989-1992 Massachusetts Institute of Technology
 

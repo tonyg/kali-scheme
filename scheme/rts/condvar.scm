@@ -10,7 +10,7 @@
 
 (define-synchronized-record-type condvar :condvar
   (really-make-condvar queue has-value? id)
-  (has-value? value)
+  (has-value? value)		; synchronize on these
   condvar?
   (queue condvar-queue)
   (has-value? condvar-has-value? set-condvar-has-value?!)
@@ -24,16 +24,14 @@
 	'(condvar))))
 
 (define (make-condvar . id-option)
-  (really-make-condvar (make-thread-queue)
+  (really-make-condvar (make-queue)
 		       #f
 		       (if (null? id-option)
 			   #f
 			   (car id-option))))
 
 (define (maybe-commit-and-wait-for-condvar condvar)
-  (enqueue-thread! (condvar-queue condvar)
-		   (current-thread))
-  (maybe-commit-and-block))
+  (maybe-commit-and-block-on-queue (condvar-queue condvar)))
 
 (define (maybe-commit-and-set-condvar! condvar value)
   (set-condvar-value! condvar value)

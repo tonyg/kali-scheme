@@ -41,7 +41,7 @@
 		    (command-state command-state-interface))
   (open scheme
 	enumerated enum-case 
-	tables
+	tables queues
 	session-data
 	define-record-types
 	threads threads-internal

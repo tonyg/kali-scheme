@@ -115,18 +115,19 @@
 ; match, we either return #T or a list of match records, depending on the value
 ; of SUBMATCHES?.
 
-(define (regexp-match regexp string submatches? starts-line? ends-line?)
+(define (regexp-match regexp string start submatches? starts-line? ends-line?)
   (if (and (regexp? regexp)
 	   (string? string))
       (call-imported-binding posix-regexp-match
 			     (regexp-compiled regexp)
 			     string
+			     start
 			     submatches?
 			     starts-line?
 			     ends-line?)
       (call-error "invalid argument"
 		  regexp-match
-		  regexp string starts-line? ends-line?)))
+		  regexp string start starts-line? ends-line?)))
   
 ; These are made by the C code.  The SUBMATCHES field is not used by us,
 ; but is used by the functional interface.

@@ -12,8 +12,11 @@
 
 (define (write obj . port-option)
   (let ((port (output-port-option port-option)))
-    (let recur ((obj obj))
-      (recurring-write obj port recur))))
+    (if (and (output-port? port)
+	     (open-output-port? port))
+	(let recur ((obj obj))
+	  (recurring-write obj port recur))
+	(call-error "invalid port argument" write port))))
 
 (define (recurring-write obj port recur)
   (cond ((null? obj) (write-string "()" port))
@@ -147,8 +150,12 @@
 
 (define (display obj . port-option)
   (let ((port (output-port-option port-option)))
-    (let recur ((obj obj))
-      (cond ((string? obj) (write-string obj port))
-	    ((char? obj) (write-char obj port))
-	    (else
-	     (recurring-write obj port recur))))))
+    (if (and (output-port? port)
+	     (open-output-port? port))
+	(let recur ((obj obj))
+	  (cond ((string? obj) (write-string obj port))
+		((char? obj) (write-char obj port))
+		(else
+		 (recurring-write obj port recur))))
+	(call-error "invalid port argument" display port))))
+

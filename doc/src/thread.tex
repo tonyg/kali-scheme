@@ -8,19 +8,25 @@ safety (and the lack thereof)
 \begin{protos}
 \proto{spawn}{ thunk}{thread}
 \proto{spawn}{ thunk name}{thread}
-\proto{thread?}{ thing}{boolean}
-\proto{thread-name}{ thread}{name}
-\proto{thread-uid}{ thread}{integer}
+\end{protos}
+
+\begin{protos}
 \protonoresult{relinquish-timeslice}{}
 \protonoresult{sleep}{ time-in-?}
 \protonoresult{terminate-current-thread}{}
+\end{protos}
+
+\begin{protos}
+\proto{thread?}{ thing}{boolean}
+\proto{thread-name}{ thread}{name}
+\proto{thread-uid}{ thread}{integer}
 \end{protos}
 
 \section{Debugging multithreaded programs}
 
 Debugging multithreaded programs can be difficult.
 
-As described in {section whatever}, when any thread raises an
+As described in {section whatever}, when any thread signals an
  error, Scheme~48 stops running all of the threads at that command level.
 
 The following procedure is useful in debugging multi-threaded programs.
@@ -30,7 +36,7 @@ The following procedure is useful in debugging multi-threaded programs.
 \code{Debug-message} prints the elements to `\code{stderr}', followed by a
  newline.
 The only types of values that \code{debug-message} prints in full are small
- integers (fixnums), strings, characters, symbols, boolean, and the empty list.
+ integers (fixnums), strings, characters, symbols, booleans, and the empty list.
 Values of other types are abbreviated as follows.
 
 \begin{tabular}{ll}
@@ -43,21 +49,13 @@ Values of other types are abbreviated as follows.
 
 The great thing about \code{debug-message} is that it bypasses Scheme~48's
  I/O and thread handling.
-The message appears immediately, with no delays
- or errors.
+The message appears immediately, with no delays or errors.
 
 \code{Debug-message} is exported by the structure \code{debug-messages}.
 
 \section{Mutual exclusion}
 
-locks
-
- make-lock
- lock?
- obtain-lock
- maybe-obtain-lock
- release-lock
-
+\subsection{Locks}
 \begin{protos}
 \proto{make-lock}{ }{lock}
 \proto{lock?}{ thing}{boolean}
@@ -71,15 +69,14 @@ condition variables
 % these require proposals
 
  (make-condvar [id]) -> condvar
-
 % add condvar?
-
- (maybe-commit-and-wait-for-condvar condvar) -> boolean
- (maybe-commit-and-set-condvar! condvar value)
  (condvar-has-value? condvar) -> boolean
  (set-condvar-value! condvar boolean)
  (condvar-value condvar) -> value
  (set-condvar-value! condvar value)
+
+ (maybe-commit-and-wait-for-condvar condvar) -> boolean
+ (maybe-commit-and-set-condvar! condvar value)
 
 placeholders
 
@@ -184,10 +181,10 @@ The value of the counter is kept in a
 \end{example}
 
 Because \code{ensure-atomicity} creates a new proposal only if there is
- no existing proposal in place, multiple atomic actions can be performed
- simultaneously.
-The following procedure increments an arbitrary number of counters at the same
- time.
+ no existing proposal in place, multiple atomic actions can be merged
+ into a single atomic action.
+For example, the following procedure increments an arbitrary number of
+ counters at the same time.
 This works even if the same counter appears multiple times;
  \code{(step-counters! c0 c0)} would add two to the value of counter \code{c0}.
 \begin{example}
@@ -223,7 +220,8 @@ If the optional list of field tags is present then only those fields will
  always install a new proposal before calling \code{thunk}.
 The current proposal is saved and then restored after \code{thunk} returns.
 \code{Atomically} and \code{atomically!} are useful if \code{thunk} contains
- code that should not be combined with any other operation (example?).
+ code that is not to be combined with any other operation.
+% example?
 
 The following procedures give access to the low-level proposal mechanism.
 \begin{protos}

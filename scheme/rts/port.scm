@@ -103,7 +103,8 @@
 ; Reading in a block of characters at once.
 
 (define (read-block buffer start count port . maybe-wait?)
-  (if (and (open-input-port? port)
+  (if (and (port? port)
+	   (open-input-port? port)
 	   (okay-limits? buffer
 			 start
 			 count))
@@ -121,7 +122,8 @@
 ; Write the COUNT bytes beginning at START from BUFFER to PORT.
 
 (define (write-block buffer start count port)
-  (if (and (open-output-port? port)
+  (if (and (port? port)
+	   (open-output-port? port)
 	   (okay-limits? buffer start count))
       (if (< 0 count)
 	  ((port-handler-block (port-handler port))

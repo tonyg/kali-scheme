@@ -74,7 +74,7 @@
        (decrement-counter! thread-count)
        (next-thread))
       ((out-of-time)
-       (enqueue-thread! runnable thread)
+       (enqueue! runnable thread)
        (next-thread))
 
       ;; the thread keeps running
@@ -94,10 +94,10 @@
     (or (event-handler event event-data)
 	(enum-case event-type event
 	  ((runnable)
-	   (enqueue-thread! runnable (car event-data)))
+	   (enqueue! runnable (car event-data)))
 	  ((spawned)
 	   (increment-counter! thread-count)
-	   (enqueue-thread! runnable
+	   (enqueue! runnable
 			    (make-thread (car event-data)
 					 dynamic-env
 					 (cadr event-data))))
@@ -110,7 +110,7 @@
 		  event-handler)))))
 
   (define (next-thread)
-    (if (thread-queue-empty? runnable)
+    (if (queue-empty? runnable)
 	(call-with-values
 	  get-next-event!
 	  (lambda (event . data)
@@ -121,7 +121,7 @@
 		   (next-thread))
 		  (else
 		   (values #f 0)))))
-	(values (dequeue-thread! runnable)
+	(values (dequeue! runnable)
 		quantum)))
 
   thread-event-handler)

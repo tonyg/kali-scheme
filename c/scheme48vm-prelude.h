@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "c-mods.h"
-#include "write-barrier.h"
+#include "scheme48write-barrier.h"
 
 #define SMALL_MULTIPLY(x,y) ((x) * (y))
 

@@ -116,7 +116,7 @@
 	((string? value)
 	 type/string)
 	(((structure-ref eval-node unspecific?) value)
-	 type/null)
+	 type/unit)			; was type/null
 	((input-port? value)
 	 type/input-port)
 	((output-port? value)
@@ -130,7 +130,7 @@
 
 (define-inference-rule 'unspecific
   (lambda (node depth return?)
-    type/null))
+    type/unit))
 
 (define-inference-rule 'lambda
   (lambda (node depth return?)
@@ -284,7 +284,10 @@
 	     true-type)
 	    (else
 	     (unify! true-type false-type node)
-	     true-type)))))
+	     (if (or (eq? true-type type/unit)
+		     (eq? false-type type/unit))
+		 type/unit
+		 true-type))))))
 
 ; Unions haven't been completely implemented yet.
 ;

@@ -81,12 +81,20 @@
       (time (enum time-option run-time) #f))))
 
 (define-structure placeholders placeholder-interface
-  (open scheme-level-1 define-record-types
+  (open scheme-level-1 proposals queues
 	threads threads-internal
 	interrupts
 	signals)
   (files (big placeholder))
   (optimize auto-integrate))
+
+(define-structure locks locks-interface
+  (open scheme-level-1 queues
+	threads threads-internal
+	interrupts
+	proposals)
+  (optimize auto-integrate)
+  (files (big lock)))
 
 ;----------------
 ; Big Scheme
@@ -409,7 +417,7 @@
 ; Olin's list library.
 
 (define-structure srfi-1 srfi-1-interface
-  (open scheme-level-2
+  (open (modify scheme-level-2 (hide map for-each member assoc)) ; redefined
 	receiving
 	(subset signals (error)))
   (files (srfi srfi-1)))
@@ -588,6 +596,7 @@
 	    inspector
 	    inspector-internal
 	    list-interfaces
+	    locks
 	    masks
 	    mask-types
 	    mvlet

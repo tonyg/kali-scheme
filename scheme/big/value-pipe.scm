@@ -13,7 +13,7 @@
 
 (define-synchronized-record-type pipe :pipe
   (really-make-pipe queue threads count max-count id)
-  (count max-count)
+  (count max-count)			; synchronize on these
   pipe?
   (queue     pipe-queue)			; queue of values
   (threads   pipe-threads)			; queue of waiting threads
@@ -42,7 +42,7 @@
 		#f
 		(cadr more))))
     (really-make-pipe (make-queue)
-		      (make-thread-queue)
+		      (make-queue)
 		      0
 		      size
 		      id)))
@@ -72,10 +72,8 @@
 		(lose)))))))
 		  
 (define (block-on-pipe pipe lose)
-  (enqueue-thread! (pipe-threads pipe)
-		   (current-thread))
-  (maybe-commit-and-block)
-  (lose))
+  (or (maybe-commit-and-block-on-queue (pipe-threads pipe))
+      (lose)))
 
 (define (make-pipe-reader win block)
   (lambda (pipe)

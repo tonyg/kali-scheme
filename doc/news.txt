@@ -2,6 +2,35 @@
 
 Recent changes to Scheme 48.
 
+???      (version 1.1)
+         Bug fixes:
+	  SRFI-0 now exports MAP, FOR-EACH, MEMBER, and ASSOC.
+	  Blocking threads are held onto via cells to allow terminated threads
+	   to be summarily removed.  MAYBE-COMMIT-AND-BLOCK is passed this cell
+	   as an argument.  This fixes a race condition in the blocking
+	   mechanism.  Also as a result of this, locks etc. use regular queues
+	   instead of thread-queues.
+	  Package mutation code now knows that structure clients may be either
+	   packages or structures (found and fixed by Martin Gasbichler).
+	  c/write-barrier.h has been renamed c/scheme48write-barrier.h (a
+	   change) and added to the list of include files that are installed
+	   (it is #include'd by scheme48.h which was already being installed).
+	 Changes:
+	  DUP, DUP-SWITCHING-MODE, and DUP2 now takes ports as arguments, as
+	   the manual says, instead of channels.
+	  Added a 'start' index argument to the Posix regular-expression matcher
+	   (this is an incompatible change) (and the documentation needs to be
+	   changed as well).
+	  BLOCK and MAKE-READY are no longer exported by the thread package.
+	   Use the MAYBE-COMMIT-AND-... versions instead.
+	  Placeholders now use the commit mechanism instead of disabling
+	   interrupts.
+	  lock.scm has been moved from rts/ to big/ because the S48 system no
+	   longer uses them.
+	 Additions
+	  Enum-sets (which are in big/enum-set.scm along with their struct).
+	   Plus whatever it was that Mike wanted these for.
+
 10/7/01  (version 1.0)
 	 Bug fixes:
 	  Fixed a problem with the debug data for LETREC environments.
