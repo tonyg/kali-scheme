@@ -50,6 +50,11 @@
 	  (flonum-subtract x y)
 	  (integer-subtract x y)))
 
+    (define (s48-integer-or-floanum-mul x y)
+      (if (double? x)
+	  (flonum-multiply x y)
+	  (integer-multiply x y)))
+
     (define-syntax define-integer-or-floanum-comparison
       (syntax-rules ()
 	((define-integer-or-floanum-comparison 
@@ -189,7 +194,7 @@
     ;; value for VM
     (define return-code-count (make-return-code-count 1))
 
-    ;; Size in bytes of the return code trame
+    ;; Size in bytes of the return code frame
     (define (make-return-code-size return-code-count)
       (code-vector-size return-code-count))
 

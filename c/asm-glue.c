@@ -28,6 +28,7 @@ s48_provide_asm_values(s48_value asm_vector)
   extern long s48_gc_for_native_code();
   extern long s48_native_add();
   extern long s48_native_sub();
+  extern long s48_native_mul();
   extern long s48_native_E();
   extern long s48_native_L();
   extern long s48_native_G();
@@ -42,6 +43,8 @@ s48_provide_asm_values(s48_value asm_vector)
   extern long s48_Sstack_limitS;
   extern long s48_ShpS;
   extern long s48_SlimitS;
+  /* The order of the vector has to match the enumatation asm-external in 
+     s48-compiler/asm-externals.scm */
   /* 0 *val*        */
   /* 1 *cont*       */
   /* 2 *stack*      */
@@ -57,17 +60,18 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 12, s48_enter_fixnum((long) &s48_gc_for_native_code));
   S48_VECTOR_SET(asm_vector, 13, s48_enter_fixnum((long) &s48_native_add));
   S48_VECTOR_SET(asm_vector, 14, s48_enter_fixnum((long) &s48_native_sub));
-  S48_VECTOR_SET(asm_vector, 15, s48_enter_fixnum((long) &s48_native_E));
-  S48_VECTOR_SET(asm_vector, 16, s48_enter_fixnum((long) &s48_native_L));
-  S48_VECTOR_SET(asm_vector, 17, s48_enter_fixnum((long) &s48_native_G));
-  S48_VECTOR_SET(asm_vector, 18, s48_enter_fixnum((long) &s48_native_LE));
-  S48_VECTOR_SET(asm_vector, 19, s48_enter_fixnum((long) &s48_native_GE));
-  S48_VECTOR_SET(asm_vector, 20, s48_enter_fixnum((long) &s48_native_bitwise_not));
-  S48_VECTOR_SET(asm_vector, 21, s48_enter_fixnum((long) &s48_native_bit_count));
-  S48_VECTOR_SET(asm_vector, 22, s48_enter_fixnum((long) &s48_native_bitwise_and));
-  S48_VECTOR_SET(asm_vector, 23, s48_enter_fixnum((long) &s48_native_bitwise_ior));
-  S48_VECTOR_SET(asm_vector, 24, s48_enter_fixnum((long) &s48_native_bitwise_xor));
-  S48_VECTOR_SET(asm_vector, 25, s48_enter_fixnum((long) &s48_restart_vm2));
+  S48_VECTOR_SET(asm_vector, 15, s48_enter_fixnum((long) &s48_native_mul));
+  S48_VECTOR_SET(asm_vector, 16, s48_enter_fixnum((long) &s48_native_E));
+  S48_VECTOR_SET(asm_vector, 17, s48_enter_fixnum((long) &s48_native_L));
+  S48_VECTOR_SET(asm_vector, 18, s48_enter_fixnum((long) &s48_native_G));
+  S48_VECTOR_SET(asm_vector, 19, s48_enter_fixnum((long) &s48_native_LE));
+  S48_VECTOR_SET(asm_vector, 20, s48_enter_fixnum((long) &s48_native_GE));
+  S48_VECTOR_SET(asm_vector, 21, s48_enter_fixnum((long) &s48_native_bitwise_not));
+  S48_VECTOR_SET(asm_vector, 22, s48_enter_fixnum((long) &s48_native_bit_count));
+  S48_VECTOR_SET(asm_vector, 23, s48_enter_fixnum((long) &s48_native_bitwise_and));
+  S48_VECTOR_SET(asm_vector, 24, s48_enter_fixnum((long) &s48_native_bitwise_ior));
+  S48_VECTOR_SET(asm_vector, 25, s48_enter_fixnum((long) &s48_native_bitwise_xor));
+  S48_VECTOR_SET(asm_vector, 26, s48_enter_fixnum((long) &s48_restart_vm2));
   return S48_UNSPECIFIC;
 }
 
@@ -156,7 +160,7 @@ s48_are_integers(s48_value value1, s48_value value2)
 }
 
 long ignore_values_native_protocol = 186; 
-long jmp_count = 6; /* just a guess: jmp continue */
+long jmp_count = 10; /* just a guess: jmp continue */
 long first_opcode_index = 13; /* from vm/package-defs.scm */
 
 long
@@ -165,8 +169,8 @@ s48_make_native_return_code(char* jmp_to_continue, long frame_size)
   long return_code, i;
   return_code = s48_make_blank_return_code(ignore_values_native_protocol, frame_size, jmp_count);
   for (i=0; i < jmp_count; i++)
-    /* this almost certainly gets endianess wrong: */
     S48_BYTE_VECTOR_SET(return_code, i + first_opcode_index, jmp_to_continue[i]); 
+  fprintf (stderr, "Generated return code at %d (%x) from %d with fsize:%d\n", return_code, return_code, (long) jmp_to_continue, frame_size);
   return return_code;
 }
 
