@@ -19,7 +19,8 @@
   (let ((info (if (null? maybe-info) "(suspended image)" (car maybe-info)))
 	(context (user-context))
 	(env (environment-for-commands)))
-    (build-image (lambda (arg)
+    (build-image #f
+		 (lambda (arg)
 		   (with-interaction-environment env
 		     (lambda ()
 		       (restart-command-processor arg
@@ -31,25 +32,26 @@
 
 ; build <exp> <filename>
 
-(define-command-syntax 'build "<exp> <filename>"
-  "build a heap image file with <exp> as entry procedure"
-  '(expression filename))
+(define-command-syntax 'build "<exp> <filename> <option> ..."
+  "build a heap image file with <exp> as entry procedure, <option> can be no-warnings"
+  '(expression filename &rest name))
 
-(define (build exp filename)
-  (build-image (eval exp (environment-for-commands)) filename))
+(define (build exp filename . options)
+  (build-image (not (memq 'no-warnings options))
+	       (eval exp (environment-for-commands))
+	       filename))
 
-; build-image
-
-(define (build-image start filename)
+(define (build-image no-warnings? start filename)
   (let ((filename (translate filename)))
     (write-line (string-append "Writing " filename) (command-output))
     (write-image filename
-		 (stand-alone-resumer start)
+		 (stand-alone-resumer no-warnings? start)
 		 "")
     #t))
 
-(define (stand-alone-resumer start)
-  (usual-resumer  ;sets up exceptions, interrupts, and current input & output
+(define (stand-alone-resumer warnings? start)
+  (make-usual-resumer  ;sets up exceptions, interrupts, and current input & output
+   warnings?
    (lambda (arg)
      (call-with-current-continuation
        (lambda (halt)

@@ -372,7 +372,8 @@
   (optimize auto-integrate)
   (files (rts condvar)))
 
-(define-structure usual-resumer (export usual-resumer)
+(define-structure usual-resumer (export usual-resumer
+					make-usual-resumer)
   (open scheme-level-1
 	i/o		 ;initialize-i/o, etc.
 	channel-i/o      ;initialize-channel-i/o

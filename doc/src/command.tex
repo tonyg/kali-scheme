@@ -475,7 +475,7 @@ The file \code{scheme/vm/load-vm.scm} in the source directory contains an
     should be a string (written with double quotes); this string will
     be part of the greeting message as the image starts up.
 
-\item \code{,build \cvar{exp} \cvar{filename}}\\
+\item \code{,build \cvar{exp} \cvar{filename} [\cvar{option \ldots}]}\\
     Like \code{,dump}, except that the image file contains the value of
     \cvar{exp}, which should be a procedure of one argument, instead of
     the command processor.  When
@@ -486,6 +486,13 @@ The file \code{scheme/vm/load-vm.scm} in the source directory contains an
     processor and debugging system are not included in the image
     (unless you go to some effort to preserve them, such as retaining
     a continuation).
+    
+    If \code{no-warnings} appears as an \cvar{option} after the file
+    name, no warnings about undefined external bindings
+    (see Section~\ref{sec:shared-bindings}) will be printed upon
+    resuming the image.  This is useful when the definitions of
+    external bindings appear in shared objects that are only loaded
+    after the resumption of the image.
 
     Doing \code{,flush} before building an image will reduce the amount
     of debugging information in the image, making for a smaller

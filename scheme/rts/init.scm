@@ -8,13 +8,17 @@
 ; The placement of INITIALIZE-RECORDS! is questionable.  Important parts
 ; of the system are not in place when it is run.
 
-(define (usual-resumer entry-point)
+(define (make-usual-resumer warn-about-undefined-imported-bindings? entry-point)
   (lambda (resume-arg in out error records)
     (initialize-rts in out error
      (lambda ()
        (initialize-records! records)
-       (warn-about-undefined-imported-bindings)
+       (if warn-about-undefined-imported-bindings?
+	   (warn-about-undefined-imported-bindings))
        (entry-point (vector->list resume-arg))))))
+
+(define (usual-resumer entry-point)
+  (make-usual-resumer #t entry-point))
 
 (define (warn-about-undefined-imported-bindings)
   (let ((undefined-bindings (find-undefined-imported-bindings)))
