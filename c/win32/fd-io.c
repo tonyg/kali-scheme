@@ -12,6 +12,7 @@
 #include <errno.h>              /* for errno, (POSIX?/ANSI) */
 #include "scheme48vm.h"
 #include "event.h"
+#include "fd-io.h"
 
 enum stream_descriptor_type {
   STREAM_FILE_REGULAR, /* overlapped I/O works */
@@ -313,6 +314,14 @@ ps_open_fd(char *filename, psbool is_input, long *status)
  * is registered.
  */
 
+/*
+ * This controls the text encoding used.
+ */
+
+static BOOL is_STD_INPUT_console,
+  is_STD_OUTPUT_console,
+  is_STD_ERROR_console;
+
 HANDLE s48_main_thread;
 
 DWORD WINAPI
@@ -321,9 +330,12 @@ reader_thread_proc(LPVOID lpParameter)
   DWORD n_read;
 
   stream_descriptor_t* stream_descriptor = (stream_descriptor_t*)lpParameter;
+  callback_data_t* callback_data = &(stream_descriptor->callback_data);
+  long fd = callback_data->fd;
   file_thread_data_t* thread_data
     = &(stream_descriptor->file_special_data.thread_data);
   DWORD file_type = GetFileType(thread_data->file_handle);
+  BOOL is_console = ((fd == STDIN_FD()) && is_STD_INPUT_console);
 
   while ((!thread_data->eof) && (!thread_data->error))
     {
@@ -337,11 +349,17 @@ reader_thread_proc(LPVOID lpParameter)
 
       /* printf("[reader_thread_proc:want %ld bytes\n", (long) thread_data->requested); */
       
-      if (ReadFile(thread_data->file_handle, thread_data->buffer,
-		   thread_data->requested, &n_read, NULL))
+      if (is_console ?
+	  ReadConsoleW(thread_data->file_handle, thread_data->buffer,
+		       thread_data->requested / 2, &n_read, NULL)
+	  : ReadFile(thread_data->file_handle, thread_data->buffer,
+		     thread_data->requested, &n_read, NULL))
 	{
 	  thread_data->error = PSFALSE;
-	  thread_data->available = n_read;
+	  /*
+	   * Windows reports in terms of characters, not bytes.
+	   */
+	  thread_data->available = (is_console ? (n_read * 2) : n_read);
 	  /* kludge: pressing Ctrl-C looks like EOF on stdin */
 	  if ((n_read == 0)  && (file_type != FILE_TYPE_CHAR))
 	    thread_data->eof = PSTRUE;
@@ -387,8 +405,13 @@ writer_thread_proc(LPVOID lpParameter)
   DWORD n_written;
 
   stream_descriptor_t* stream_descriptor = (stream_descriptor_t*)lpParameter;
+  callback_data_t* callback_data = &(stream_descriptor->callback_data);
+  long fd = callback_data->fd;
   file_thread_data_t* thread_data
     = &(stream_descriptor->file_special_data.thread_data);
+
+  BOOL is_console = (((fd == STDOUT_FD()) && is_STD_OUTPUT_console)
+		     || ((fd == STDERR_FD()) && is_STD_ERROR_console));
 
   while (!thread_data->error)
     {
@@ -402,11 +425,17 @@ writer_thread_proc(LPVOID lpParameter)
 
       /* printf("[writer_thread_proc:want %ld bytes\n", (long) thread_data->requested); */
       
-      if (WriteFile(thread_data->file_handle, thread_data->buffer,
-		    thread_data->requested, &n_written, NULL))
+      if (is_console ?
+	  WriteConsoleW(thread_data->file_handle, thread_data->buffer,
+			thread_data->requested / 2, &n_written, NULL)
+	  : WriteFile(thread_data->file_handle, thread_data->buffer,
+		      thread_data->requested, &n_written, NULL))
 	{
 	  thread_data->error = PSFALSE;
-	  thread_data->available = n_written;
+	  /*
+	   * Windows reports in terms of characters, not bytes.
+	   */
+	  thread_data->available = (is_console ? (n_written * 2) : n_written);
 	}
       else
 	{
@@ -414,7 +443,7 @@ writer_thread_proc(LPVOID lpParameter)
 	  thread_data->error_code = GetLastError();
 	}
       
-      /* printf("[writer_thread_proc:got %ld bytes]\n", (long) n_read); */
+      /* printf("[writer_thread_proc:got %ld bytes]\n", (long) n_written); */
       
 
       /* notify */
@@ -497,7 +526,8 @@ start_reader_slash_writer_thread(HANDLE file_handle,
 
 
 static void
-open_special_fd(HANDLE handle, size_t fd, psbool is_input)
+open_special_fd(HANDLE handle, size_t fd,
+		psbool is_input, BOOL is_redirected)
 {
   stream_descriptor_t* stream_descriptor;
 
@@ -1099,6 +1129,19 @@ ps_io_buffer_size(void)
   return 4096;
 }
 
+char *
+ps_console_encoding(long fd_as_long)
+{
+  if (fd_as_long == STDIN_FD())
+    return is_STD_INPUT_console ? "UTF-16LE" : "ISO8859-1";
+  else if (fd_as_long == STDOUT_FD())
+    return is_STD_OUTPUT_console ? "UTF-16LE" : "ISO8859-1";
+  else if (fd_as_long == STDERR_FD())
+    return is_STD_ERROR_console ? "UTF-16LE" : "ISO8859-1";
+  else
+    return NULL;
+}
+
 long
 ps_abort_fd_op(long fd_as_long)
 {
@@ -1128,6 +1171,10 @@ s48_add_channel(s48_value mode, s48_value id, long fd)
 void
 s48_fd_io_init()
 {
+  DWORD numberOfEventsRead; /* dummy, actually */
+  CONSOLE_CURSOR_INFO consoleCursorInfo; /* dummy, too */
+  HANDLE handle;
+
   initialize_stream_descriptors();
 
   /* Yes, this is the official hoopla to get at an absolute handle for
@@ -1143,9 +1190,23 @@ s48_fd_io_init()
     }
 
   /* these Unix-style indices are hard-wired into the VM */
-  open_special_fd(GetStdHandle(STD_INPUT_HANDLE),  0, PSTRUE);
-  open_special_fd(GetStdHandle(STD_OUTPUT_HANDLE), 1, PSFALSE);
-  open_special_fd(GetStdHandle(STD_ERROR_HANDLE),  2, PSFALSE);
+  handle = GetStdHandle(STD_INPUT_HANDLE);
+  /*
+   * PeekConsoleInput returns non-zero if we're indeed looking at a
+   * console, zero if a handle has been redirected.  We need this info
+   * to decide whether to use the console I/O functions and Unicode.
+   */
+  is_STD_INPUT_console = PeekConsoleInput(handle, NULL, 0, &numberOfEventsRead);
+  open_special_fd(handle, 0, PSTRUE, is_STD_INPUT_console);
+  handle = GetStdHandle(STD_OUTPUT_HANDLE);
+  /*
+   * Similarly for GetConsoleCursorInfo.
+   */
+  is_STD_OUTPUT_console = GetConsoleCursorInfo(handle, &consoleCursorInfo);
+  open_special_fd(handle, 1, PSFALSE, is_STD_OUTPUT_console);
+  handle = GetStdHandle(STD_ERROR_HANDLE);
+  is_STD_ERROR_console = GetConsoleCursorInfo(handle, &consoleCursorInfo);
+  open_special_fd(handle, 2, PSFALSE, is_STD_ERROR_console);
 }
 
 /*
