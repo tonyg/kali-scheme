@@ -335,7 +335,7 @@ The accessor for flag is \code{condvar-has-value?};
 \code{set-condvar-has-value?!} sets it.  Both are provisional
 operations and go through the current proposal.
 \code{Set-condvar-value!} sets the value of the condition variable
-(unprovisionally), and \code{condvar-value} extracts it.
+(provisionally), and \code{condvar-value} extracts it.
 
 \code{Maybe-commit-and-wait-for-condvar} attempts to commit the
 current proposal.  If the commit succeeds, it suspends the current

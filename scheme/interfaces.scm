@@ -203,6 +203,7 @@
 
 (define-interface condvars-interface
   (export make-condvar
+	  condvar?
 	  maybe-commit-and-wait-for-condvar
 	  maybe-commit-and-set-condvar!
 	  condvar-value set-condvar-value!
