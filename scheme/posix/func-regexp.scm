@@ -102,6 +102,10 @@
 (define (char->mask char)
   (arithmetic-shift 1 (char->ascii char)))
 
+(define (char-in-set? char set)
+  (not (zero? (bitwise-and (set-use-case set)
+			   (char->mask char)))))
+
 (define char-limit 256)		; allow eight-bit characters
 
 ; A vector mapping ASCII values to case-insensitive bitsets.
@@ -216,11 +220,17 @@
       #f))
 	       
     
+; The mask with all ones.
+
+(define all-chars (- (arithmetic-shift 1 char-limit) 1))
+
+(define all-chars-except-nul (- all-chars 1))
+
 ; Set operations.
 
 (define (negate set)
-  (make-set (bitwise-not (set-use-case set))
-	    (bitwise-not (set-no-case set))))
+  (make-set (bitwise-xor all-chars-except-nul (set-use-case set))
+	    (bitwise-xor all-chars-except-nul (set-no-case set))))
 
 (define (set-binop op)
   (lambda (set1 set2)
@@ -365,7 +375,7 @@
 		((set? exp)
 		 (loop (cdr exps) res (union exp set)))
 		((one-of? exp)
-		 (loop (append (one-of-exps exp) (cdr exps)) res))
+		 (loop (append (one-of-exps exp) (cdr exps)) res set))
 		(else
 		 (loop (cdr exps) (cons exp res) set)))))))
 
@@ -675,10 +685,6 @@
 			      "]")
 	       (char->posix-string string))))))
 
-; The mask with all ones.
-
-(define all-chars (- (arithmetic-shift 1 char-limit) 1))
-
 ; The general rule does not work for "[-^]" (it would come out as "[^-]").
 
 (define dash-hat (bitwise-ior (char->mask #\-)
@@ -794,6 +800,7 @@
   (if (and (null? (cdr ranges))
 	   (= (caar ranges)
 	      (cdar ranges)))
+      (string (ascii->char (caar ranges)))
       (reduce ((list* range ranges))
 	      ((res '()))
 	(if (char? range)
@@ -840,7 +847,7 @@
 	   (string? string))
       (if (empty-set? exp)
 	  #f
-	  (regexp-match (car (compile-exp exp)) string 0 #f #t #t))
+	  (regexp-match (car (compile-exp exp)) string #f #t #t))
       (call-error "invalid argument" any-match? exp string)))
   
 (define (exact-match? exp string)
@@ -848,7 +855,7 @@
 	   (string? string))
       (if (empty-set? exp)
 	  #f
-	  (let ((matches (regexp-match (car (compile-exp exp)) string 0 #t #t #t)))
+	  (let ((matches (regexp-match (car (compile-exp exp)) string #t #t #t)))
 	    (and matches
 		 (= 0 (match-start (car matches)))
 		 (= (string-length string) (match-end (car matches))))))
@@ -864,7 +871,7 @@
       (let* ((pair (compile-exp exp))
 	     (regexp (car pair))
 	     (match-flags (cdr pair))
-	     (matches (regexp-match regexp string 0 #t #t #t)))
+	     (matches (regexp-match regexp string #t #t #t)))
 	(if matches
 	    (reduce ((list% match (cdr matches))
 		     (list% flag match-flags))

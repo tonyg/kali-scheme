@@ -267,7 +267,18 @@
 	  match?
 	  match-start match-end match-submatches))
 
-(define-structure regexps regexps-interface
+(define-interface regexps-internal-interface
+  (export set? char-in-set? set-string
+	  the-empty-set empty-set?
+	  string-start? string-end?
+	  submatch? submatch-exp submatch-id
+	  sequence? sequence-exps
+	  epsilon epsilon?
+	  one-of? one-of-exps
+	  repeat? repeat-low repeat-high repeat-exp))
+
+(define-structures ((regexps regexps-interface)
+		    (regexps-internal regexps-internal-interface))
   (open scheme define-record-types mvlet ascii signals
 	bitwise bigbit
 	reduce
