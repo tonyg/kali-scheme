@@ -40,6 +40,9 @@ s48_provide_asm_values(s48_value asm_vector)
   extern long s48_native_bitwise_ior;
   extern long s48_native_bitwise_xor;
   extern long s48_restart_vm2();
+  extern long s48_restart_vm3_pop_0;
+  extern long s48_restart_vm3_pop_1;
+  extern long s48_restart_vm3_pop_2;
   extern long s48_Sstack_limitS;
   extern long s48_ShpS;
   extern long s48_SlimitS;
@@ -73,6 +76,9 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 24, s48_enter_fixnum((long) &s48_native_bitwise_ior));
   S48_VECTOR_SET(asm_vector, 25, s48_enter_fixnum((long) &s48_native_bitwise_xor));
   S48_VECTOR_SET(asm_vector, 26, s48_enter_fixnum((long) &s48_restart_vm2));
+  S48_VECTOR_SET(asm_vector, 27, s48_enter_fixnum((long) &s48_restart_vm3_pop_0));
+  S48_VECTOR_SET(asm_vector, 28, s48_enter_fixnum((long) &s48_restart_vm3_pop_1));
+  S48_VECTOR_SET(asm_vector, 29, s48_enter_fixnum((long) &s48_restart_vm3_pop_2));
   return S48_UNSPECIFIC;
 }
 
@@ -160,18 +166,36 @@ s48_are_integers(s48_value value1, s48_value value2)
 	   (S48_FIXNUM_P (value2) || S48_BIGNUM_P (value2))));
 }
 
-long ignore_values_native_protocol = 186; 
-long jmp_count = 10; /* just a guess: jmp continue */
+long ignore_values_native_protocol = 194; /* ignore-values-native-protocol */ 
+long jmp_count = 7; /* movl continue %ebx; jmp *ebx */
 long first_opcode_index = 13; /* from vm/package-defs.scm */
+extern long Snative_exception_contS;
 
-long
-s48_make_native_return_code(char* jmp_to_continue, long frame_size)
+void
+s48_make_native_return_code(int n_stack_args)
 {
-  long return_code, i;
+  long return_code, i,target;
+  char frame_size;
+  extern char* ScontS;
+  extern char* SstackS;
+  target = Snative_exception_contS;
+  frame_size = ScontS - SstackS;
+  frame_size = frame_size >> 2; /* bytes -> cells */
+  frame_size -= n_stack_args;
   return_code = s48_make_blank_return_code(ignore_values_native_protocol, frame_size, jmp_count);
-  for (i=0; i < jmp_count; i++)
-    S48_BYTE_VECTOR_SET(return_code, i + first_opcode_index, jmp_to_continue[i]); 
-  fprintf (stderr, "Generated return code at %d (%x) from %d with fsize:%d\n", return_code, return_code, (long) jmp_to_continue, frame_size);
-  return return_code;
+  S48_BYTE_VECTOR_SET(return_code,first_opcode_index,0xbb); /* movl %ebx */
+  S48_BYTE_VECTOR_SET(return_code,first_opcode_index+1,target & 0xff);
+  S48_BYTE_VECTOR_SET(return_code,first_opcode_index+2,(target >> 8) & 0xff);
+  S48_BYTE_VECTOR_SET(return_code,first_opcode_index+3,(target >> 16) & 0xff);
+  S48_BYTE_VECTOR_SET(return_code,first_opcode_index+4,(target >> 24) & 0xff);
+  S48_BYTE_VECTOR_SET(return_code,first_opcode_index+5,0xff); /* jmp */
+  S48_BYTE_VECTOR_SET(return_code,first_opcode_index+6,0xe3); /* ebx */
+
+
+  Snative_exception_contS = 
+    (return_code - 3) /* remove stob tag */
+    + first_opcode_index 
+    - 2;              /* pointer to protocol instruction */
+  
 }
 
