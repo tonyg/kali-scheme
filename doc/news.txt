@@ -2,6 +2,51 @@
 
 Recent changes to Scheme 48.
 
+12/05/04 (version 1.2)
+         Additions:
+          The LU-DECOMPOSITIONS structure was added for good.
+          The CONDVAR structure now exports CONDVAR?.
+          SRFI 22 ("Running Scheme Scripts on Unix") is fully
+           supported.
+	  An implementation of SRFI 45 was added.
+          Scheme 48 now builds from a directory other than the source
+           directory.  This enables builds for multiple platforms
+           from a single source directory.
+         Changes:
+          Scheme 48 uses floating-point arithmetic by default
+           now---as if FLOATNUMS were loaded in a previous release.  To
+           that end, Scheme 48 now uses Bob Burger's lightning-fast
+           free-format floating-point printer.
+          "make install" now creates the installation directories.
+         Bug fixes:
+          The PreScheme compiler works again for the VM---in
+           1.1, there was a bug in the type inferencer related to
+           exactness.
+          A number of bugs in the REGEXPS structure were fixed
+           (many noted by James B Crigler).
+          The closed compilator for ERROR was buggy
+           (reported by Taylor Campbell).
+          A number of documentation bugs were fixed.
+          The assembler works again, at least rudimentarily.
+          The SPATIAL structure loads and works again.
+          Most of the code in scheme/misc (ANNOTATIONS, DOODL, SICP,
+           INTEGER-LENGTHS) works again.
+	  SPAWN now returns the created thread, and the THREADS
+	   structure exports CURRENT-THREAD.  (As the 1.1 documentation
+	   already claimed.)
+          Floating-point numbers are now printed correctly.  (See
+           above.)
+          "make install" now installs scheme48write-barrier.h.
+          Two subtle GC bugs related to threads were fixed
+           (reported by Jorgen Schaefer).
+	  Some arithmetic bugs were fixed (reported by Aubrey Jaffer).
+          A number of bugs related to the handling of I/O error were
+           fixed.
+	  The debugger now prints more information about the context
+	   of a VM exception.
+          A GC bug related to POSIX signals was fixed.
+          The POSIX-PROCESSES structure now exports SIGNAL? and SIGNAL=?.
+
 05/07/04 (version 1.1)
 	 Additions
 	  Added Enum-sets (which are in big/enum-set.scm along with their struct).
