@@ -1,5 +1,7 @@
 @echo off
 
+set runnable=%~1
+
 call build\filenames.bat
 
 echo ,batch > build\build-initial-image.input
@@ -16,4 +18,4 @@ echo (flatload initial-structures) >> build\build-initial-image.input
 echo (load "build/initial.scm") >> build\build-initial-image.input
 echo (link-initial-system) >> build\build-initial-image.input
 
-scheme48vm -h 6000000 -i scheme48.image < build\build-initial-image.input
+%runnable% -h 6000000 < build\build-initial-image.input
