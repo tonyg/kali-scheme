@@ -19,6 +19,10 @@
   (open scheme primitives interrupts)
   (files engine))
 
+(define-structure integer-lengths (export integer-length)
+  (open scheme)
+  (files ilength))
+
 (define-structure remote (export remote-repl
 				 serve
 				 make-socket)
