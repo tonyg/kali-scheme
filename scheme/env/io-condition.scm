@@ -43,3 +43,11 @@
   (column read-error-column)
   (position read-error-position)
   (span read-error-span))
+
+; Local additions
+
+(define-condition-type &primitive-i/o-error &i/o-error
+  primitive-i/o-error?
+  (status i/o-error-status)
+  (operation i/o-error-operation)
+  (arguments i/o-error-arguments))

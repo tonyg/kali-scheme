@@ -337,8 +337,6 @@
 	  call-error-proc call-error-args
 	  &vm-exception vm-exception?
 	  vm-exception-opcode vm-exception-reason
-	  &primitive-i/o-error primitive-i/o-error?
-	  i/o-error-status i/o-error-operation i/o-error-arguments
 	  &warning warning?
 	  &note note?
 	  &syntax-error syntax-error?
@@ -362,7 +360,10 @@
 	  &i/o-file-already-exists-error i/o-file-already-exists-error?
 	  &i/o-no-such-file-error i/o-no-such-file-error?
 	  &read-error read-error?
-	  read-error-line read-error-column read-error-position read-error-span))
+	  read-error-line read-error-column read-error-position read-error-span
+
+	  &primitive-i/o-error primitive-i/o-error?
+	  i/o-error-status i/o-error-operation i/o-error-arguments))
 
 (define-interface signals-internal-interface
   (export simple-condition->condition

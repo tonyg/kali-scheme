@@ -411,7 +411,8 @@
 
 ; Needs to be here because it's installed by the BUILD package
 
-(define-structure conditions conditions-interface
+(define-structures ((conditions conditions-interface)
+		    (i/o-conditions i/o-conditions-interface))
   (open scheme
 	define-record-types
 	simple-signals
@@ -421,12 +422,8 @@
 	(subset architecture (interrupt))
         enumerated              ; enumerand->name
 	)
-  (files (env condition)))
-
-(define-structure i/o-conditions i/o-conditions-interface
-  (open scheme
-	conditions)
-  (files (env io-condition)))
+  (files (env condition)
+	 (env io-condition)))
 
 (define-structures ((signals (interface-of simple-signals))
 		    (signals-internal signals-internal-interface))
