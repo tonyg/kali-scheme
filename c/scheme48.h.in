@@ -89,7 +89,7 @@ S48_EXTERN void		s48_close_channel(long);
 
 S48_EXTERN s48_value	s48_call_scheme(s48_value proc, long nargs, ...);
 
-#define S48_EXPORT_FUNCTION(p) (s48_define_exported_binding(#p, s48_enter_pointer(p)))
+#define S48_EXPORT_FUNCTION(p) (s48_define_exported_binding(#p, s48_enter_pointer((void*) p)))
 
 #define S48_MAKE_VALUE(type) (s48_make_byte_vector(sizeof(type)))
 S48_EXTERN void *	s48_value_pointer(s48_value);
