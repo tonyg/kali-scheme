@@ -183,27 +183,31 @@
   ;;     PFXLEN2 is a power of 2 <= PFXLEN.
   ;;     Solve RECUR's problem.
   (if (< l r) ; Don't try to sort an empty range.
-      (receive (ignored-len ignored-ansvec ansvec=v0?)
-	  (let recur ((l l) (want (- r l)))
-	    (let ((len (- r l)))
-	      (let lp ((pfxlen (getrun v0 l r)) (pfxlen2 1)
-		       (v v0) (temp temp0)
-		       (v=v0? #t))
-		(if (or (>= pfxlen want) (= pfxlen len))
-		    (values pfxlen v v=v0?)
-		    (let ((pfxlen2 (let lp ((j pfxlen2))
-				     (let ((j*2 (+ j j)))
-				       (if (<= j pfxlen) (lp j*2) j))))
-			  (tail-len (- len pfxlen)))
-		      ;; PFXLEN2 is now the largest power of 2 <= PFXLEN.
-		      ;; (Just think of it as being roughly PFXLEN.)
-		      (receive (nr-len nr-vec nrvec=v0?)
-			  (recur (+ pfxlen l) pfxlen2)
+      (call-with-values
+       (lambda ()
+	 (let recur ((l l) (want (- r l)))
+	   (let ((len (- r l)))
+	     (let lp ((pfxlen (getrun v0 l r)) (pfxlen2 1)
+		      (v v0) (temp temp0)
+		      (v=v0? #t))
+	       (if (or (>= pfxlen want) (= pfxlen len))
+		   (values pfxlen v v=v0?)
+		   (let ((pfxlen2 (let lp ((j pfxlen2))
+				    (let ((j*2 (+ j j)))
+				      (if (<= j pfxlen) (lp j*2) j))))
+			 (tail-len (- len pfxlen)))
+		     ;; PFXLEN2 is now the largest power of 2 <= PFXLEN.
+		     ;; (Just think of it as being roughly PFXLEN.)
+		     (call-with-values
+		      (lambda ()
+			(recur (+ pfxlen l) pfxlen2))
+		      (lambda (nr-len nr-vec nrvec=v0?)
 			(merge temp v nr-vec l pfxlen nr-len
 			       (xor nrvec=v0? v=v0?))
 			(lp (+ pfxlen nr-len) (+ pfxlen2 pfxlen2)
-			    temp v (not v=v0?))))))))
-	(if (not ansvec=v0?) (vector-portion-copy! v0 temp0 l r)))))
+			    temp v (not v=v0?))))))))))
+       (lambda (ignored-len ignored-ansvec ansvec=v0?)
+	 (if (not ansvec=v0?) (vector-portion-copy! v0 temp0 l r))))))
 
 
 ;;; Copyright

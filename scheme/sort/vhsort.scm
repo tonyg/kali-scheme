@@ -29,22 +29,24 @@
 	   (first-leaf (quotient (+ start end) 2)) ; Can fixnum overflow.
 	   (final-k (let lp ((k i))
 		      (if (>= k first-leaf)
-			  k ; Leaf, so done.
+			  k		; Leaf, so done.
 			  (let* ((k*2-start (+ k (- k start))) ; Don't overflow.
 				 (child1 (+ 1 k*2-start))
 				 (child2 (+ 2 k*2-start))
 				 (child1-val (vector-ref v child1)))
-			    (receive (max-child max-child-val)
-				(if (< child2 end)
-				    (let ((child2-val (vector-ref v child2)))
-				      (if (elt< child2-val child1-val)
-					  (values child1 child1-val)
-					  (values child2 child2-val)))
-				    (values child1 child1-val))
-			      (cond ((elt< vi max-child-val)
-				     (vector-set! v k max-child-val)
-				     (lp max-child))
-				    (else k)))))))) ; Done.
+			    (call-with-values
+			     (lambda ()
+			       (if (< child2 end)
+				   (let ((child2-val (vector-ref v child2)))
+				     (if (elt< child2-val child1-val)
+					 (values child1 child1-val)
+					 (values child2 child2-val)))
+				   (values child1 child1-val)))
+			     (lambda (max-child max-child-val)
+			       (cond ((elt< vi max-child-val)
+				      (vector-set! v k max-child-val)
+				      (lp max-child))
+				     (else k))))))))) ; Done.
       (vector-set! v final-k vi)))
 
   ;; Put the unsorted subvector V[start,end) into heap order.

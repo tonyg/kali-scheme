@@ -21,7 +21,6 @@
 
 (define-structure delete-neighbor-duplicates delete-neighbor-duplicates-interface
   (open scheme
-	receiving
 	vector-utils)
   (files delndups)
   (optimize auto-integrate))
@@ -33,14 +32,12 @@
 
 (define-structure list-merge-sort list-merge-sort-interface
   (open scheme
-	receiving
 	(subset signals (error)))
   (files lmsort)
   (optimize auto-integrate))
 
 (define-structure vector-merge-sort vector-merge-sort-interface
   (open scheme
-	receiving
 	vector-utils
 	vector-insertion-sort-internal)
   (files vmsort)
@@ -48,7 +45,6 @@
 
 (define-structure vector-heap-sort vector-heap-sort-interface
   (open scheme
-	receiving
 	vector-utils)
   (files vhsort)
   (optimize auto-integrate))
