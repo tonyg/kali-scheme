@@ -18,7 +18,7 @@
 				    (read in)))))
 	      (newline)
 	      (newline)
-	      (display "Pre-Scheme compiler version 0.")
+	      (display "Pre-Scheme compiler version 1.")
 	      (display minor-number)
 	      (newline)
 	      (display "Copyright (c) 1993-2004 by Richard Kelsey.")
