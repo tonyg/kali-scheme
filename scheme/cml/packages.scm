@@ -62,3 +62,15 @@
 	signals
 	(subset util (unspecific)))
   (files jar))
+
+(define-structure rendezvous-time rendezvous-time-interface
+  (open scheme
+	time
+	(subset threads-internal (register-dozer!))
+	low-proposals proposals
+	(subset threads-internal (maybe-commit-and-make-ready))
+	interrupts
+	queues
+	trans-ids make-rendezvous
+	(subset util (unspecific)))
+  (files time))

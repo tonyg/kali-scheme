@@ -43,3 +43,6 @@
 	  jar-put!
 	  jar-take-rv))
 
+(define-interface rendezvous-time-interface
+  (export at-real-time-rv
+	  after-time-rv))
