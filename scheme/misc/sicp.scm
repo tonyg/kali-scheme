@@ -5,48 +5,6 @@
 
 ; Requires ERROR, MAKE-TABLE, TABLE-REF, and TABLE-SET!.
 
-
-; Incompatible change to the meanings of AND and OR
-
-(define (and . rest)
-  (let loop ((rest rest))
-    (if (null? rest)
-	#t
-	(if (car rest)
-	    (loop (cdr rest))
-	    #f))))
-
-(define (or . rest)
-  (let loop ((rest rest))
-    (if (null? rest)
-	#f
-	(let ((temp (car rest)))
-	  (if temp
-	      temp
-	      (loop (cdr rest)))))))
-
-; Misc. nonsense
-
-(define-syntax sequence
-  (syntax-rules ()
-    ((sequence form ...) (begin form ...))))
-
-(define mapcar map)
-(define mapc for-each)
-
-(define (1+ x) (+ x 1))
-(define (-1+ x) (- x 1))
-
-(define t #t)
-(define nil #f)
-(define (atom? x) (not (pair? x)))
-
-(define (print x)
-  (write x)
-  (newline))
-(define princ display)
-(define prin1 write)
-
 ; Streams
 
 (define-syntax cons-stream
@@ -54,26 +12,10 @@
     ((cons-stream head tail)
      (cons head (delay tail)))))
 
-(define head car)
-(define (tail s) (force (cdr s)))
-(define the-empty-stream '<the-empty-stream>)
-(define (empty-stream? s) (eq? s the-empty-stream))
-
-; EXPLODE and IMPLODE
-
-(define (explode thing)
-  (map (lambda (c) (string->symbol (string c)))
-       (string->list (cond ((symbol? thing)
-			    (symbol->string thing))
-			   ((number? thing)
-			    (number->string thing))
-			   (else
-			    (error "invalid argument to explode" thing))))))
-
-(define (implode l)
-  (string->symbol (list->string (map (lambda (s)
-				       (string-ref (symbol->string s) 0))
-				     l))))
+(define stream-car car)
+(define (stream-cdr s) (force (cdr s)))
+(define the-empty-stream '(list <the-empty-stream>))
+(define (stream-null? s) (eq? s the-empty-stream))
 
 ; GET and PUT
 
@@ -103,10 +45,3 @@
 (define get (car property-module))
 (define put (cdr property-module))
 
-; Need these special forms:
-;   collect make-environment access the-environment
-
-; The following are among the procedures defined in MIT's student
-; system; I don't know how many are actually needed for the book:
-;   ascii char nth nthcdr tyo vector-cons
-;   accumulate filter map-stream append-streams

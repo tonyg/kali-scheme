@@ -116,6 +116,22 @@
 	  ;; etc. etc.
 	  ))
 
+; SICP
+
+(define-interface sicp-interface
+  (export (cons-stream :syntax)
+	  stream-car stream-cdr
+	  the-empty-stream stream-null?
+	  get put
+	  error))
+
+(define-structure sicp sicp-interface
+  (open scheme
+	(subset signals (error))
+	tables)
+  (files sicp))
+	  
+
 (define-interface sparse-vectors-interface
   (export make-sparse-vector
 	  sparse-vector-ref sparse-vector-set!
