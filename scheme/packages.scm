@@ -437,6 +437,7 @@
 	    finite-types
 	    floatnums
 	    formats
+	    i/o-conditions
 	    inspector
 	    inspector-internal
 	    inversion-lists
