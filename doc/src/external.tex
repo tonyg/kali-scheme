@@ -511,7 +511,7 @@ External code that has been called from Scheme can call back to Scheme
  procedures using the following function.
 
 \begin{protos}
-\cproto{scheme\_value s48\_call\_scheme(s48\_value p, long nargs, \ldots)}
+\cproto{s48\_value s48\_call\_scheme(s48\_value p, long nargs, \ldots)}
 \end{protos}
 \noindent{}This calls the Scheme procedure \code{p} on \code{nargs}
  arguments, which are passed as additional arguments to \code{s48\_call\_scheme}.
@@ -697,14 +697,14 @@ External modules can create records and access their slots
  positionally.
 
 \begin{protos}
-\cgcproto{s48\_value S48\_MAKE\_RECORD(s48\_value)}
+\cgcproto{s48\_value s48\_make\_record(s48\_value)}
 \cproto{int \ \ \ \ \ \ S48\_RECORD\_P(s48\_value)} 
 \cproto{s48\_value S48\_RECORD\_TYPE(s48\_value)} 
 \cproto{s48\_value S48\_RECORD\_REF(s48\_value, long)} 
 \cproto{void \ \ \ \ \ S48\_RECORD\_SET(s48\_value, long, s48\_value)} 
 \end{protos}
 %
-The argument to \code{S48\_MAKE\_RECORD} should be a shared binding
+The argument to \code{s48\_make\_record} should be a shared binding
  whose value is a record type.
 In C the fields of Scheme records are only accessible via offsets,
  with the first field having offset zero, the second offset one, and
@@ -727,7 +727,7 @@ For example, given the following record-type definition
 \end{example}
 \code{Thing} records can then be made in C:
 \begin{example}
-static scheme_value
+static s48_value
   thing_record_type_binding = SCHFALSE;
 
 void initialize_things(void)
@@ -737,7 +737,7 @@ void initialize_things(void)
      s48_get_imported_binding("thing-record-type");
 \}
 
-scheme_value make_thing(scheme_value a, scheme_value b)
+s48_value make_thing(s48_value a, s48_value b)
 \{
   s48_value thing;
   s48_DECLARE_GC_PROTECT(2);
@@ -784,7 +784,7 @@ The following procedures are available for raising particular
 Like \code{s48\_raise\_scheme\_exception} these never return.
 
 \begin{protos}
-\cproto{s48\_raise\_argument\_type\_error(scheme\_value)}
+\cproto{s48\_raise\_argument\_type\_error(s48\_value)}
 \cproto{s48\_raise\_argument\_number\_error(int nargs, int min, int max)}
 \cproto{s48\_raise\_range\_error(long value, long min, long max)}
 \cproto{s48\_raise\_closed\_channel\_error()}
