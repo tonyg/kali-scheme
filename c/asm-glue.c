@@ -77,6 +77,7 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 26, s48_enter_fixnum((long) &s48_restart_vm3_pop_0));
   S48_VECTOR_SET(asm_vector, 27, s48_enter_fixnum((long) &s48_restart_vm3_pop_1));
   S48_VECTOR_SET(asm_vector, 28, s48_enter_fixnum((long) &s48_restart_vm3_pop_2));
+  S48_VECTOR_SET(asm_vector, 29, s48_enter_fixnum((long) &s48_gcSallocate_for_native_code);
   return S48_UNSPECIFIC;
 }
 
