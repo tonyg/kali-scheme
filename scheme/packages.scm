@@ -410,6 +410,7 @@
 	    callback
 	    command-levels
 	    command-processor
+	    compact-tables
 	    conditions
 	    c-system-function
 	    debugging

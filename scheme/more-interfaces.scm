@@ -430,6 +430,9 @@
 (define-interface lu-decompositions-interface
   (export lu-decomposition))
 
+(define-interface compact-tables-interface
+  (export compute-compact-table))
+
 (define-interface mask-types-interface
   (export make-mask-type
 	  mask-type?

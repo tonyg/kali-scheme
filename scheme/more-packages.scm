@@ -168,6 +168,10 @@
   (open scheme receiving arrays floatnums signals)
   (files (big lu-decomp)))
 
+(define-structure compact-tables compact-tables-interface
+  (open scheme)
+  (files (big compact-table)))
+
 (define-structure receiving (export (receive :syntax))
   (open scheme-level-2)
   (files (big receive)))
