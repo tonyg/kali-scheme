@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 
 ; Code to find the strongly connected components of a graph.
 ; (TO <vertex>) are the vertices that have an edge to <vertex>.

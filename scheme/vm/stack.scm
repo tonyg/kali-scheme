@@ -11,16 +11,25 @@
 ;   space needed to make a call to an exception plus an interrupts plus some
 ;   slack for safety's sake.
 
-(define stack-slack
-  (cells->a-units
-    (+ default-stack-space
-       (+ continuation-stack-size 7)  ; exceptions need at most 7 values
-                                      ; (from examining the code)
-       (+ continuation-stack-size 7)  ; interrupts need at most 7 values
-                                      ; (also from examining the code)
-       32)))                          ; safety
+; These slots are filled with a funny value so that we can detect overruns.
 
 (define stack-warning-limit 30)
+
+; The supposedly unused space at the end of the stack is marked with this
+; value so that we can detect incursions.
+
+(define stack-marker #xf0f0f0f)
+
+; We need at least this amount of space for the stack.
+
+(define stack-slack
+  (+ default-stack-space
+     continuation-stack-size	    ; *bottom-of-stack*
+     (+ continuation-stack-size 7)  ; exceptions need at most 7 values
+                                    ; (from examining the code)
+     (+ continuation-stack-size 7)  ; interrupts need at most 7 values
+                                    ; (also from examining the code)
+     (+ stack-warning-limit 2)))    ; safety
 
 ; *BOTTOM-OF-STACK* is a continuation that lies a the base of the stack.
 
@@ -46,25 +55,20 @@
 
 (define *bottom-of-stack* (unspecific))
 
-; The supposedly unused space at the end of the stack is marked with this
-; value so that we can detect incursions.
+; Initialize the stack and related registers.  All sizes are in descriptors.
 
-(define stack-marker #xf0f0f0f)
-
-; Initialize the stack and related registers.
-
-(define (initialize-stack start size)
+(define (initialize-stack start have-size)
   (let ((required-size (+ available-stack-space stack-slack)))
     (receive (start size)
-	(if (>= size required-size)
-	    (values start size)
+	(if (>= have-size required-size)
+	    (values start have-size)
 	    (let ((stack (allocate-memory (cells->a-units required-size))))
 	      (if (null-address? stack)
 		  (error "out of memory, unable to continue"))
 	      (values stack required-size)))
       (set! *stack-begin* start)
       (set! *stack-end* (address+ start (cells->a-units size)))
-      (set! *stack-limit* (address+ *stack-begin* stack-slack))
+      (set! *stack-limit* (address+ *stack-begin* (cells->a-units stack-slack)))
       (set! *stack* (the-pointer-before *stack-end*))
       (set! *cont* false)
       (set! *env* quiescent)
@@ -161,8 +165,8 @@
 (define (available-on-stack? space)
   (> (+ (a-units->cells			; space on the stack
 	   (address-difference *stack* *stack-limit*))
-	default-stack-space)            ; allow for *s-l*'s offset
-     (cells->a-units space)))
+	default-stack-space)            ; allow for *stack-limit*'s offset
+     space))
 
 ;----------------
 ; Setting the current continuation.

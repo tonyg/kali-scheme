@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 
 ; The intermediate language (node tree)
 ; The structures VARIABLE and PRIMOP are contained in NODE.  They are used
@@ -6,7 +9,8 @@
 (define-structures ((node     node-interface)
 		    (variable variable-interface)
 		    (primop   primop-interface))
-  (open scheme big-scheme comp-util arch parameters)
+  (open scheme big-scheme comp-util arch parameters
+	defrecord)
   (for-syntax (open scheme big-scheme let-nodes))
   (begin 
     (define-syntax let-nodes
@@ -72,7 +76,8 @@
 (define-structure node-vector (export node->vector
 				      vector->node
 				      vector->leaf-node)
-  (open scheme big-scheme comp-util node parameters)
+  (open scheme big-scheme comp-util node parameters
+	defrecord)
   (files (node vector)))
 
 ; Translating the input forms into simplified node trees
@@ -84,7 +89,8 @@
   (files (front top)))       ; main entry points and debugging utilities
 
 (define-structure cps-util (export cps-call cps-sequence)
-  (open scheme big-scheme comp-util node)
+  (open scheme big-scheme comp-util node
+	define-record-types)
   (files (front cps)))
 
 ; Converting tail-recursive calls to jumps
@@ -92,7 +98,8 @@
 (define-structure jump (export integrate-jump-procs!
 			       find-jump-procs
 			       procs->jumps)
-  (open scheme big-scheme comp-util node parameters ssa)
+  (open scheme big-scheme comp-util node parameters ssa
+	define-record-types)
   (files (front jump)))
 
 ; Program simplification and partial evaluation
@@ -127,7 +134,7 @@
 ; transformations.
 
 (define-structure simp-patterns (export make-pattern-simplifier)
-  (open scheme big-scheme)
+  (open scheme big-scheme defrecord)
   (files (simp pattern)))
 
 ; Replacing cells with values passed as parameters, currently empty
@@ -151,12 +158,20 @@
 ; A random collection of utilities.
 
 (define-structure comp-util utilities-interface
-  (open scheme big-scheme structure-refs)
+  (open scheme big-scheme structure-refs expanding-vectors)
   (for-syntax (open scheme big-scheme))
   (access primitives features)
   (files (util syntax)        ; macro for defining subrecords
-	 (util util)          ; random utilities
-	 (util expand-vec)))  ; vectors that expand as needed
+	 (util util)))        ; random utilities
+
+(define-structure expanding-vectors (export make-xvector
+					    xvector-length
+					    xvector-ref
+					    xvector-set!
+					    xvector-length
+					    xvector->vector)
+  (open scheme define-record-types)
+  (files (util expand-vec)))
 
 (define-interface transitive-interface
   (export make-graph-from-predecessors
@@ -165,7 +180,7 @@
 	  transitive-and! transitive-and-with-kill! transitive-and-with-pass!))
 
 (define-structure transitive transitive-interface
-  (open scheme big-scheme integer-sets)
+  (open scheme big-scheme integer-sets defrecord)
   (optimize auto-integrate)
   (files (util transitive)))
 
@@ -185,17 +200,19 @@
   (files (util z-set)))
 
 (define-structure strongly-connected (export strongly-connected-components)
-  (open scheme big-scheme)
+  (open scheme big-scheme defrecord)
   (optimize auto-integrate)
   (files (util strong)))
 
 (define-structure dominators (export find-dominators!)
-  (open scheme big-scheme comp-util)
+  (open scheme big-scheme comp-util
+	define-record-types)
   (optimize auto-integrate)
   (files (util dominators)))
 
 (define-structure ssa (export graph->ssa-graph! find-joins)
-  (open scheme big-scheme dominators)
+  (open scheme big-scheme dominators
+	define-record-types)
   (optimize auto-integrate)
   (files (util ssa)))
 

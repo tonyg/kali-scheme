@@ -18,7 +18,7 @@
 (define (exit-when-done . exp-option)
   (let ((status (if (null? exp-option)
                     0
-                    (evaluate (car exp-option) (environment-for-commands)))))
+                    (eval (car exp-option) (environment-for-commands)))))
     (terminate-command-processor! status)))
 
 (define-command-syntax 'exit
@@ -29,7 +29,7 @@
 (define (exit . exp-option)
   (let ((status (if (null? exp-option)
                     0
-                    (evaluate (car exp-option) (environment-for-commands)))))
+                    (eval (car exp-option) (environment-for-commands)))))
     (scheme-exit-now status)))
 
 ; go
@@ -39,7 +39,7 @@
 
 (define (go exp)
   (let ((env (environment-for-commands)))
-    (exit-command-processor (lambda () (evaluate exp env)))))
+    (exit-command-processor (lambda () (eval exp env)))))
 
 ; load
 

@@ -9,16 +9,23 @@
 ; a DEFINE-STRUCTURE form is evaluated.
 
 (define-reflective-tower-maker
-  (let ((reflective-tower (*structure-ref syntactic 'reflective-tower))
-	(make-simple-interface (*structure-ref interfaces 'make-simple-interface))
+  (let ((environment-macro-eval
+	  (*structure-ref compiler-envs 'environment-macro-eval))
+	(make-simple-interface
+	  (*structure-ref interfaces 'make-simple-interface))
 	(env (interaction-environment)))
     (lambda (clauses id)
       (if (null? clauses)
 	  ;; (make-reflective-tower eval (list scheme) id)
-	  (reflective-tower (package->environment env))
-	  (delay (let ((p (eval `(a-package ((for-syntax ,id)) ,@clauses)
-				env)))
-		   (ensure-loaded (make-structure p
-						  (lambda () (make-simple-interface #f '()))
-						  'for-syntax))
-		   (cons eval p)))))))
+	  (environment-macro-eval (package->environment env))
+	  (delay
+	    (let ((package (eval `(a-package ,(if id
+						  `(for-syntax ,id)
+						  '(for-syntax))
+					     ,@clauses)
+				 env)))
+	      (ensure-loaded (make-structure package
+					     (lambda ()
+					       (make-simple-interface #f '()))
+					     'for-syntax))
+	      (cons eval package)))))))

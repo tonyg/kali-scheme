@@ -1,3 +1,7 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
+; This file is obsolete and no longer used.
 
 ;----------------------------------------------------------------------------
 ;                           SPECIAL FORMS
@@ -7,73 +11,66 @@
 ;
 ;----------------------------------------------------------------------------
 
-(define-record-type quote-exp
-  (value
-   (type))
-  ())
+(define-record-type quote-exp :quote-exp
+  (make-quote-exp value type)
+  quote-exp?
+  (value quote-exp-value)
+  (type quote-exp-type set-quote-exp-type!))
 
-(define make-quote-exp quote-exp-maker)
+(define-record-type call-exp :call-exp
+  (make-call-exp! proc exits type args source)
+  call-exp?
+  (proc call-exp-proc)
+  (exits call-exp-exits)
+  (type call-exp-type set-call-exp-type!)
+  (args call-exp-args)
+  (source call-exp-source))
 
-(define-record-type call-exp
-  (proc
-   exits
-   (type)
-   args
-   source)
-  ())
+(define-record-type let-exp :let-exp
+  (make-let-exp vars vals body source)
+  let-exp?
+  (vars let-exp-vars)
+  (vals let-exp-vals)
+  (body let-exp-body set-let-exp-body!)
+  (source let-exp-source))
 
-(define make-call-exp call-exp-maker)
+(define-record-type return-exp :return-exp
+  (make-return-exp protocol type args)
+  return-exp?
+  (protocol return-exp-protocol)
+  (type return-exp-type)
+  (args return-exp-args))
 
-(define-record-type let-exp
-  (vars
-   vals
-   (body)
-   source)
-  ())
+(define-record-type block-exp :block-exp
+  (make-block-exp exps)
+  block-exp?
+  (exps block-exp-exps))
 
-(define make-let-exp let-exp-maker)
+(define-record-type lambda-exp :lambda-exp
+  (make-lambda-exp id return-type protocol vars body source)
+  lambda-exp?
+  (id lambda-exp-id)
+  (return-type lambda-exp-return-type set-lambda-exp-return-type!)
+  (protocol lambda-exp-protocol)
+  (vars lambda-exp-vars)
+  (body lambda-exp-body set-lambda-exp-body!)
+  (source lambda-exp-source))
 
-(define-record-type return-exp
-  (protocol
-   type
-   args)
-  ())
-
-(define make-return-exp return-exp-maker)
-
-(define-record-type block-exp
-  (exps)
-  ())
-
-(define make-block-exp block-exp-maker)
-
-(define-record-type lambda-exp
-  (id
-   (return-type)
-   protocol
-   vars
-   (body)
-   source)
-  ())
-
-(define make-lambda-exp lambda-exp-maker)
 (define (make-continuation-exp vars body)
   (make-lambda-exp #f #f #f vars body #f))
 
-(define-record-type letrec-exp
-  (vars
-   vals
-   (body)
-   source)
-  ())
+(define-record-type letrec-exp :letrec-exp
+  (make-letrec-exp vars vals body source)
+  letrec-exp?
+  (vars letrec-exp-vars)
+  (vals letrec-exp-vals)
+  (body letrec-exp-body set-letrec-exp-body!)
+  (source letrec-exp-source))
 
-(define make-letrec-exp letrec-exp-maker)
-
-(define-record-type external-value
-  (type)
-  ())
-
-(define make-external-value external-value-maker)
+(define-record-type external-value :external-value
+  (make-external-value type)
+  external-value?
+  (type external-value-type set-external-value-type!))
 
 ; Creating nodes and CPS converting calls and blocks.
 ;-------------------------------------------------------------------------------

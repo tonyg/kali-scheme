@@ -79,10 +79,7 @@
 	   => (lambda (form)
 		(generate-merged-call call 2 form port indent)))
 	  (else
-	   ;(save-renamed-variables port indent)
-           (generate-c-call call 2 port indent)
-	   ;(restore-renamed-variables port indent)
-	   ))))
+           (generate-c-call call 2 port indent)))))
 
 (define-c-generator tail-call #f
   (lambda (call port indent)
@@ -90,7 +87,6 @@
 	   => (lambda (form)
 		(generate-merged-goto-call call 2 form port indent)))
 	  (else
-	   (save-renamed-variables port indent)
            (generate-c-tail-call call 2 port indent)))))
 
 (define-c-generator unknown-call #f
@@ -99,14 +95,10 @@
 	(user-warning "ignoring GOTO declaration for non-tail-recursive call to"
 		      (variable-name (reference-variable
 				      (call-arg call 1)))))
-    ;(save-renamed-variables port indent)
-    (generate-c-call call 3 port indent)
-    ;(restore-renamed-variables port indent)
-    ))
+    (generate-c-call call 3 port indent)))
 
 (define-c-generator unknown-tail-call #f
   (lambda (call port indent)
-    (save-renamed-variables port indent)
     (generate-c-tail-call call 3 port indent)))
 
 (define (generate-merged-goto-call call start form port indent)
@@ -129,7 +121,6 @@
 					(reference-variable proc))))
 				 call start
 				 port indent)
-    (save-renamed-variables port indent)
     ; T is the marker for the tail-call version of the procedure
     (indent-to port indent)
     (display "return((long)T" port)
@@ -245,7 +236,6 @@
 	   (really-generate-c-return call 1 port indent)))))
 
 (define (generate-return-from-tail-call call port indent)
-  ;(save-renamed-variables port indent)
   (if (not (no-value-node? (call-arg call 1)))
       (c-assignment "TTreturn_value" (call-arg call 1) port indent))
   (indent-to port indent)
@@ -263,7 +253,6 @@
     (format port "goto ~A_return;" name)))
 
 (define (really-generate-c-return call start port indent)
-  (save-renamed-variables port indent)
   (do ((i (+ start 1) (+ i 1)))
       ((= i (call-arg-count call)))
     (let ((arg (call-arg call i)))

@@ -442,7 +442,7 @@
 (define (where . maybe-exp)
   (let ((proc (if (null? maybe-exp)
 		  (focus-object)
-		  (evaluate (car maybe-exp) (environment-for-commands))))
+		  (eval (car maybe-exp) (environment-for-commands))))
 	(port (command-output)))
     (if (procedure? proc)
 	(let ((probe (where-defined proc)))

@@ -6,7 +6,13 @@
 ; Accessing packages
 
 (define (environment-ref package name)
-  (carefully (package-lookup package name) contents package name))
+  (carefully (package-lookup package name)
+	     (lambda (loc)
+	       (if (location-assigned? loc)
+		   (contents loc)
+		   (error "uninitialized variable" name package)))
+	     package
+	     name))
 
 (define (environment-set! package name value)
   (let ((binding (package-lookup package name)))
@@ -19,7 +25,8 @@
 		   package name))))
 
 (define (environment-define! package name value)
-  (set-contents! (package-define! package name usual-variable-type) value))
+  (set-contents! (package-define! package name usual-variable-type #f #f)
+		 value))
 
 (define (*structure-ref struct name)
   (let ((binding (structure-lookup struct name #f)))
@@ -28,20 +35,19 @@
 	(error "structure-ref: name not exported" struct name))))
 
 (define (carefully binding action env name)
-  (if (binding? binding)
-      (if (eq? (binding-type binding) syntax-type)
-	  (error "attempt to reference syntax as variable" name env)
-	  (let ((loc (binding-place binding)))
-	    (if (location? loc)
-		(if (location-defined? loc)
-		    (action loc)
-		    (error "unbound variable" name env))
-		(error "variable has no location" name env))))
-      (if (unbound? binding)
-	  (error "unbound variable" name env)
-	  (error "peculiar binding" binding name env))))
-
-
+  (cond ((not binding)
+	 (error "unbound variable" name env))
+	((not (binding? binding))
+	 (error "peculiar binding" binding name env))
+	((eq? (binding-type binding) syntax-type)
+	 (error "attempt to reference syntax as variable" name env))
+	(else
+	 (let ((loc (binding-place binding)))
+	   (if (location? loc)
+	       (if (location-defined? loc)
+		   (action loc)
+		   (error "unbound variable" name env))
+	       (error "variable has no location" name env))))))
 
 ; Interaction environment
 
@@ -69,13 +75,18 @@
       (error "no such Scheme report environment")))
 
 (define *scheme-report-environment* #f)
+(define *null-environment* #f)
 (define *scheme-report-number* 0)
 
 (define (set-scheme-report-environment! repnum env)
   (set! *scheme-report-number* repnum)
-  (set! *scheme-report-environment* env))
+  (set! *scheme-report-environment* env)
+  (set! *null-environment* env))		; A cheat.
 
-
+(define (null-environment n)
+  (if (= n *scheme-report-number*)
+      *null-environment*
+      (error "no such Scheme report environment")))
 
 ; Make an infinite tower of packages for syntax.
 ; structs should be a non-null list of structures that should be

@@ -3,11 +3,10 @@
 
 ; Byte-code assembler (Richard's version)
 ;
-; This assembler can assemble the output of the disassembler.
+; This assembler can assemble the output of the disassembler (as long as you
+; add the identifier and the list of free names).
 ;
-; (lap <spec> <insts>*)
-; <spec> ::= <identifier> | (<identifier> <arg>*)
-; <arg>  ::= <identifier>
+; (lap <identifier> (<free name> ...) <insts>*)
 ; <inst> ::= (<op-code> . <operands>) |
 ;            <label> |
 ;            (global <identifier>) |
@@ -18,20 +17,27 @@
 ;            (computed-goto <label>* <default-label>)  ; not yet implemented
 ; <operand> ::= <number> | <label> | <stob-name> |
 ;               (lap <spec> <insts>*) ; only where a template is expected
-;              
-; If any <arg>'s are specified, you have to do a MAKE-ENV to get LOCAL and
-; SET-LOCAL! to work properly (the assembler assumes that you are using
-; environments in the same way as the byte-code compiler).
 ;
+; (<free name> ...) is a list of all names used in GLOBAL and SET-GLOBAL!
+; instructions.  These names are required.
+;              
 ; QUOTE is optional for literals, unless the value is itself quoted.
 ;
 ; The assembler uses opcode-arg-specs to check the number and type of arguments
 ; to the opcodes.
 
+; ENV is an a-list mapping names to bindings.
+
 (define-compilator 'lap syntax-type
-  (lambda (node cenv depth cont)
+  (lambda (node level depth cont)
     (let* ((exp (node-form node))
-	   (template (compile-lap (cadr exp) (cddr exp) cenv)))
+	   (bindings (map (lambda (name-node)
+			    (cons (node-form name-node)
+				  (node-ref name-node 'binding)))
+			  (caddr exp)))
+	   (template (compile-lap (cadr exp)
+				  (cdddr exp)
+				  bindings)))
       (fixup-template-refs! template)
       (deliver-value (instruction-with-literal (enum op closure) template)
 		     cont))))
@@ -83,24 +89,22 @@
 
 ;----------------
 
-(define (compile-lap spec insts cenv)
-  (let ((id (if (pair? spec) (car spec) spec))
-	(cenv (if (pair? spec) (bind-vars (cdr spec) cenv) cenv)))
-    (segment->template (really-compile-lap insts cenv) id 0 #f)))
+(define (compile-lap id insts bindings)
+  (segment->template (really-compile-lap insts bindings) id 0 #f))
     
 ; Assemble each instruction, keeping track of which ones use labels.
 ; STUFF is a list of lists of the form (<inst> <offset> . <preceding-insts>)
 ; which indicates that <inst> uses a label, that it begins at <offset>, and is
 ; preceded by <preceding-insts>.
 
-(define (really-compile-lap insts cenv)
+(define (really-compile-lap insts bindings)
   (let loop ((insts insts) (segments '()) (stuff '()) (offset 0) (labels '()))
     (cond ((null? insts)
 	   (fixup-lap-labels segments stuff labels))
 	  ((pair? (car insts))
-	   ;(format #t " ~D: ~S~%" offset (car insts))
 	   (call-with-values
-	    (lambda () (assemble-instruction (car insts) cenv))
+	    (lambda ()
+	      (assemble-instruction (car insts) bindings))
 	    (lambda (segment label-use?)
 	      (let ((new-offset (+ offset (segment-size segment))))
 		(if label-use?
@@ -142,8 +146,8 @@
 ; This returns two values, the assembled instruction and a flag indicating
 ; whether or not the instruction used a label.
 
-(define (assemble-instruction inst cenv)
-  (really-assemble-instruction inst cenv (lambda (label) (values 0 0))))
+(define (assemble-instruction inst bindings)
+  (really-assemble-instruction inst bindings (lambda (label) (values 0 0))))
 
 ; Same as the above, except that labels are resolved and no flag is returned.
 
@@ -171,21 +175,21 @@
 ; Actually do some assembly.  A few opcodes need special handling; most just
 ; use the argument specifications from the architecture.
 
-(define (really-assemble-instruction inst cenv labels)
+(define (really-assemble-instruction inst bindings labels)
   (let ((opname (car inst))
 	(args (cdr inst)))
-    (cond ((assemble-special-op opname args cenv)
+    (cond ((assemble-special-op opname args bindings)
 	   => (lambda (inst)
 		(values inst #f)))
 	  ((name->enumerand opname op)
 	   => (lambda (opcode)
-		(assemble-general-instruction opcode inst cenv labels)))
+		(assemble-general-instruction opcode inst bindings labels)))
 	  (else
 	   (error "unknown LAP instruction" inst)))))
 
 ; The optional ' is optionally stripped off the argument to LITERAL.
 
-(define (assemble-special-op opname args cenv)
+(define (assemble-special-op opname args bindings)
   (case opname
     ((literal small-literal)
      (let* ((arg (car args))
@@ -195,17 +199,17 @@
 		     arg)))
        (instruction-with-literal (enum op literal) arg)))
     ((global)
-     (lap-global #f (car args) cenv))
+     (lap-global #f (car args) bindings))
     ((set-global!)
-     (lap-global #t (car args) cenv))
-    ((local)
-     (if (null? (cdr args))
-	 (lap-local (car args) cenv)
-	 #f))
-    ((set-local!)
-     (if (null? (cdr args))
-	 (lap-set-local! (car args) cenv)
-	 #f))
+     (lap-global #t (car args) bindings))
+;    ((local)
+;     (if (null? (cdr args))
+;         (lap-local (car args) bindings)
+;         #f))
+;    ((set-local!)
+;     (if (null? (cdr args))
+;         (lap-set-local! (car args) bindings)
+;         #f))
     ((protocol)
      (apply instruction
 	    (enum op protocol)
@@ -213,51 +217,63 @@
     (else
      #f)))
 
-; Lookup NAME in CENV to the location.
+; Lookup NAME in BINDINGS to the location.
 
-(define (lap-global assign? name cenv)
-  (let ((binding (lookup cenv name)))
-    (if (and (binding? binding) (not (location? (binding-place binding))))
-	(error "LAP variable is not global" name)
-	(instruction-with-location
-	     (if assign? (enum op set-global!) (enum op global))
-	     (get-location binding
-			   cenv
-			   name
-			   (if assign? usual-variable-type value-type))))))
+(define (lap-global assign? name bindings)
+  (let ((binding (assq bindings name)))
+    (if (not binding)
+	(error "LAP variable is not in free list" name)
+	(let ((binding (cdr binding)))
+	  (cond ((and (binding?  binding)
+		      (pair? (binding-place binding)))
+		 (error "LAP variable is not global" name))
+		(assign?
+		 (instruction-with-location (enum op set-global!)
+					    binding
+					    name
+					    usual-variable-type))
+		(else
+		 (instruction-with-location (enum op global)
+					    binding
+					    name
+					    value-type)))))))
 
-; Lookup NAME in CENV and pick out the appropriate local op.
+; This no longer works and I doubt if anyone uses it.  To fix it the
+; assembler should fix-up BINDINGS to incorporate LEVEL passed to the
+; compilator.
 
-(define (lap-local name cenv)
-  (let ((binding (lookup cenv name)))
-    (if (and (binding? binding)
-	     (pair? (binding-place binding)))
-	(let* ((level+over (binding-place binding))
-	       (back (- (environment-level cenv)
-			(car level+over)))
-	       (over (cdr level+over)))
-	  (case back
-	    ((0) (instruction (enum op local0) over))
-	    ((1) (instruction (enum op local1) over))
-	    ((2) (instruction (enum op local2) over))
-	    (else (instruction (enum op local) back over))))
-	(error "LAP local variable is not locally bound" name))))
-	  
-; Same thing, except that there is only one opcode.
-
-(define (lap-set-local! name cenv)
-  (let ((binding (lookup cenv name)))
-    (if (and (binding? binding)
-	     (pair? (binding-place binding)))
-	(let* ((level+over (binding-place binding))
-	       (back (- (environment-level cenv)
-			(car level+over)))
-	       (over (cdr level+over)))
-	  (instruction (enum op set-local!)
-		       back
-		       (quotient over byte-limit)
-		       (remainder over byte-limit)))
-	(error "LAP local variable is not locally bound" name))))
+;; Lookup NAME in BINDINGS and pick out the appropriate local op.
+;
+;(define (lap-local name bindings)
+;  (let ((binding (lookup bindings name)))
+;    (if (and (binding? binding)
+;             (pair? (binding-place binding)))
+;        (let* ((level+over (binding-place binding))
+;               (back (- (environment-level bindings)
+;                        (car level+over)))
+;               (over (cdr level+over)))
+;          (case back
+;            ((0) (instruction (enum op local0) over))
+;            ((1) (instruction (enum op local1) over))
+;            ((2) (instruction (enum op local2) over))
+;            (else (instruction (enum op local) back over))))
+;        (error "LAP local variable is not locally bound" name))))
+;          
+;; Same thing, except that there is only one opcode.
+;
+;(define (lap-set-local! name bindings)
+;  (let ((binding (lookup bindings name)))
+;    (if (and (binding? binding)
+;             (pair? (binding-place binding)))
+;        (let* ((level+over (binding-place binding))
+;               (back (- (environment-level bindings)
+;                        (car level+over)))
+;               (over (cdr level+over)))
+;          (instruction (enum op set-local!)
+;                       back
+;                       (quotient over byte-limit)
+;                       (remainder over byte-limit)))
+;        (error "LAP local variable is not locally bound" name))))
 
 ; Assembling protocols.
 
@@ -289,7 +305,7 @@
 
 ; This is fairly bogus, because it uses the targets as addresses instead
 ; of treating them as labels.  Fixing this is too much work, seeing as
-; no-one is likely to use it.
+; no one is likely to use it.
 
 (define (parse-nary-dispatch targets)
   (let ((results (vector 0 0 0 0)))
@@ -316,7 +332,7 @@
 ; This returns two values, the assembled instruction and a flag indicating
 ; whether or not the instruction used a label.
 
-(define (assemble-general-instruction opcode inst cenv labels)
+(define (assemble-general-instruction opcode inst bindings labels)
   (let ((specs (vector-ref opcode-arg-specs opcode))
 	(args (cdr inst))
 	(finish (lambda (ops label-use?)
@@ -331,7 +347,7 @@
                      ; care of above (probably should fix arch.scm).
 	     (let ((template (if (null? (cdr args))
 				 (make-template-marker (car args))
-				 (compile-lap (car args) (cdr args) cenv))))
+				 (compile-lap (car args) (cdr args) bindings))))
 	       (values (instruction-with-final-literal opcode
 						       (reverse ops)
 						       template)

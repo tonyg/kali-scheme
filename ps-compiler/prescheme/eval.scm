@@ -2,6 +2,8 @@
 
 ; Evaluator for nodes.
 
+; This doesn't handle n-ary procedures.
+
 ; (NAME-NODE-BINDING name-node) is used as an EQ? key in local environments,
 ; and passed as-is to the global-environment arguments.
 
@@ -12,7 +14,9 @@
 
 (define (eval-node node global-ref global-set! eval-primitive)
   (eval node (make-env '()
-		       (make-eval-data global-ref global-set! eval-primitive))))
+		       (make-eval-data global-ref
+				       global-set!
+				       eval-primitive))))
 
 (define-record-type eval-data :eval-data
   (make-eval-data global-ref global-set! eval-primitive)
@@ -121,7 +125,7 @@
   (let ((node (closure-node closure))
 	(env (real-closure-env closure)))
     (eval (caddr (node-form node))
-	  (extend-env env (node-ref node 'var-nodes) args))))
+	  (extend-env env (cadr (node-form node)) args))))
 
 (define-evaluator 'name
   (lambda (node env)
@@ -135,11 +139,15 @@
 
 (define-evaluator 'call
   (lambda (node env)
-    (eval-call (car (node-form node)) (cdr (node-form node)) env)))
+    (eval-call (car (node-form node))
+	       (cdr (node-form node))
+	       env)))
 
 (define-evaluator 'goto
   (lambda (node env)
-    (eval-call (cadr (node-form node)) (cddr (node-form node)) env)))
+    (eval-call (cadr (node-form node))
+	       (cddr (node-form node))
+	       env)))
 
 (define (eval-call proc args env)
   (let ((proc (eval proc env))
@@ -176,17 +184,10 @@
   (lambda (node env)
     (eval (caddr (node-form node)) env)))
 
-(define-evaluator 'define-syntax
-  (lambda (node env)
-;    (process-define-syntax (node-form node)
-;			   ((eval-data-package (env-eval-data env)))
-;			   env)
-    (unspecific)))
-
 (define-evaluator 'letrec
   (lambda (node env)
     (let ((form (node-form node)))
-      (let ((vars (node-ref node 'var-nodes))
+      (let ((vars (map car (cadr form)))
 	    (vals (map cadr (cadr form)))
 	    (body (caddr form)))
 	(let ((env (extend-env env

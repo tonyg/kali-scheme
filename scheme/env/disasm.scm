@@ -28,7 +28,7 @@
 (define (dis . maybe-exp)
   (disassemble (if (null? maybe-exp)
 		   (focus-object)
-		   (evaluate (car maybe-exp) (environment-for-commands)))))
+		   (eval (car maybe-exp) (environment-for-commands)))))
 
 (define (disassemble obj)
   (really-disassemble (coerce-to-template obj) 0)

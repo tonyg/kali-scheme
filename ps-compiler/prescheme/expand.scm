@@ -1,32 +1,50 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 ; Expanding using the Scheme 48 expander.
 
-(define (scan-and-evaluate scanner)
-  (let ((defines '()))
-    (scanner
-     (lambda (package things)
-       (let ((cenv ((structure-ref packages package->environment) package)))
-	 (for-each (lambda (node)
-		     (cond ((define-node? node)
-			    (set! defines (cons (eval-define (expand node cenv)
-							     cenv)
-						defines)))
-			   ((not (define-syntax-node? node))
-			    (eval-node (expand node cenv)
-				       global-ref global-set! eval-primitive))))
-		   things))))
-    (map (lambda (var)
-	   (let ((value (variable-flag var)))
-	     (set-variable-flag! var #f)
-	     (cons var value)))
-	 defines)))
+(define (scan-packages packages)
+  (let ((definitions
+	  (fold (lambda (package definitions)
+		  (let ((cenv (package->environment package)))
+		    (fold (lambda (form definitions)
+			    (let ((node (expand-form form cenv)))
+			      (cond ((define-node? node)
+				     (cons (eval-define (expand node cenv)
+							cenv)
+					   definitions))
+				    (else
+				     (eval-node (expand node cenv)
+						global-ref
+						global-set!
+						eval-primitive)
+				     definitions))))
+			  (call-with-values
+			   (lambda ()
+			     (package-source package))
+			   (lambda (files.forms usual-transforms primitives?)
+			     (scan-forms (apply append (map cdr files.forms))
+					 cenv)))
+			  definitions)))
+		packages
+		'())))
+    (reverse (map (lambda (var)
+		    (let ((value (variable-flag var)))
+		      (set-variable-flag! var #f)
+		      (cons var value)))
+		  definitions))))
+
+(define package->environment (structure-ref packages package->environment))
 
 (define define-node? (node-predicate 'define))
-(define define-syntax-node? (node-predicate 'define-syntax))
 
 (define (eval-define node cenv)
   (let* ((form (node-form node))
-	 (value (eval-node (caddr form) global-ref global-set! eval-primitive))
-	 (lhs (expand (cadr form) cenv)))
+	 (value (eval-node (caddr form)
+			   global-ref
+			   global-set!
+			   eval-primitive))
+	 (lhs (cadr form)))
     (global-set! lhs value)
     (name->variable-or-value lhs)))
 
@@ -45,9 +63,11 @@
 (define (name->variable-or-value name)
   (let ((binding (node-ref name 'binding)))
     (if (binding? binding)
-	(let ((value (binding-place binding)))
-	  (cond ((or (variable? value)
-		     (primitive? value))
+	(let ((value (binding-place binding))
+	      (static (binding-static binding)))
+	  (cond ((primitive? static)
+		 static)
+		((variable? value)
 		 value)
 		((and (location? value)
 		      (constant? (contents value)))

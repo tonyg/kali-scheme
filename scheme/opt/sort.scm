@@ -17,44 +17,40 @@
 ; use of a variable occurs before its definition.
 ;
 ; COMPLETE? is true if STUFF contains the entire body of a module.
+;
+; This uses the FREE-VARIABLES field set by analyze.scm.
 
-(define (sort-stuff stuff complete?)
+(define (sort-forms nodes complete?)
   (let ((table (make-name-table))
 	(procs '())
 	(literals '())
 	(aliases '())
 	(rest '()))
-    (for-each
-     (lambda (filename+nodes)
-       (let ((filename (car filename+nodes))
-	     (nodes (cdr filename+nodes)))
-	 (for-each (lambda (node)
-		     (let ((form (make-form filename node)))
-		       (if (define-node? node)
-			   (let ((name (cadr (node-form node)))
-				 (value (caddr (node-form node))))
-			     (table-set! table name form)
-			     (cond ((lambda-node? value)
-				    (set! procs (cons form procs)))
-				   ((name-node? value)
-				    (set! aliases (cons form aliases))
-				    (set! rest (cons form rest)))
-				   ((or (quote-node? value)
-					(literal-node? value))
-				    (set! literals (cons form literals)))
-				   (else
-				    (set! rest (cons form rest)))))
-			   (set! rest (cons form rest)))))
-		   nodes)))
-     stuff)
-    (if complete?
-	(for-each (lambda (form)
-		    (maybe-make-aliased form table))
-		  aliases))
-    (rebuild-stuff
+    (for-each (lambda (node)
+		(let ((form (make-form node)))
+		  (if (define-node? node)
+		      (let ((name (node-form (cadr (node-form node))))
+			    (value (caddr (node-form node))))
+			(table-set! table name form)
+			(cond ((lambda-node? value)
+			       (set! procs (cons form procs)))
+			      ((name-node? value)
+			       (set! aliases (cons form aliases))
+			       (set! rest (cons form rest)))
+			      ((or (quote-node? value)
+				   (literal-node? value))
+			       (set! literals (cons form literals)))
+			      (else
+			       (set! rest (cons form rest)))))
+		      (set! rest (cons form rest)))))
+	      (reverse nodes))
+    (for-each (lambda (form)
+		(maybe-make-aliased form table))
+	      aliases)
+    (insert-aliases
      (append literals
 	     (topologically-sort procs table)
-	     (reverse (filter form-unaliased? rest))))))
+	     (filter form-unaliased? rest)))))
 
 (define (stuff-count s)
   (apply + (map (lambda (s) (length (cdr s))) s)))
@@ -67,123 +63,56 @@
 	 (maker (table-ref table (node-form value))))
     (if (and (node-ref value 'binding)
 	     maker
-	     (= 0 (usage-assignment-count (node-ref (form-node maker) 'usage))))
+	     (= 0 (usage-assignment-count
+		    (node-ref (cadr (node-form (form-node maker))) 'usage))))
 	(begin
 	  (set-form-aliases! maker (cons form (form-aliases maker)))
 	  (set-form-unaliased?! form #f)))))
 
-(define (form-name form)
-  (cadr (node-form (form-node form))))
-
 (define (topologically-sort forms table)
-  (for-each (lambda (form)
-	      (set-form-free! form
-			      (free-top-level-variables (form-node form))))
-	    forms)
   (apply append
-	 (reverse
-	  (strongly-connected-components
+	 (strongly-connected-components
 	   forms
 	   (lambda (form)
 	     (filter (lambda (f)
-		       (and f (form-free f)))
+		       (and f
+			    (lambda-node? (caddr (node-form (form-node f))))))
 		     (map (lambda (name)
-			    (table-ref table name))
+			    (table-ref table (node-form name)))
 			  (form-free form))))
 	   form-temp
-	   set-form-temp!))))
+	   set-form-temp!)))
 
 (define-record-type form :form
-  (really-make-form file node aliases free unaliased?)
+  (really-make-form node free aliases unaliased?)
   form?
-  (file form-file)
   (node form-node)
   (aliases form-aliases set-form-aliases!)
   (unaliased? form-unaliased? set-form-unaliased?!)
   (free form-free set-form-free!)
   (temp form-temp set-form-temp!))
 
-(define (make-form file node)
-  (really-make-form file node '() #f #t))
+(define-record-discloser :form
+  (lambda (form)
+    (list 'form
+	  (let ((node (form-node form)))
+	    (if (define-node? node)
+		(node-form (cadr (node-form node)))
+		node)))))
 
-(define make-name-table
-  (make-table-maker eq?
-		    (lambda (name)
-		      (cond ((symbol? name)
-			     (string-hash (symbol->string name)))
-			    ((generated? name)
-			     (generated-uid name))
-			    (else
-			     (error "funny type of name" name))))))
+(define (make-form node)
+  (really-make-form node
+		    (map usage-name-node
+			 (node-ref node 'free-variables))
+		    '()		; aliases
+		    #t))	; unaliased?
 
-; Merge adjacent forms from the same file and take care of aliases.
 ; (DEFINE A ...) is followed by all forms (DEFINE X A).
 
-(define (rebuild-stuff forms)
-  (if (null? forms)
-      '()
-      (let* ((form (car forms))
-	     (forms (append (form-aliases form) (cdr forms))))
-	(let loop ((forms forms)
-		   (file (form-file form))
-		   (same (list (form-node form)))
-		   (res '()))
-	  (if (null? forms)
-	      (reverse (cons (cons file (reverse same)) res))
-	      (let* ((form (car forms))
-		     (forms (append (form-aliases form) (cdr forms))))
-		(if (eq? file (form-file form))
-		    (loop forms file (cons (form-node form) same) res)
-		    (loop forms
-			  (form-file form)
-			  (list (form-node form))
-			  (cons (cons file (reverse same)) res)))))))))
-
-; Also exported for use by others.
-		     
-(define (free-top-level-variables node)
-  (if (define-node? node)
-      (find-free (caddr (node-form node)) '())
-      (find-free node '())))
-
-(define (find-free node vars)
-  (if (name-node? node)    ; singled out because we need the node
-      (let ((var (node-form node)))
-	(if (memq var vars) vars (cons var vars)))
-      ((operator-table-ref find-free-vars (node-operator-id node))
-       (node-form node)
-       vars)))
-
-; Particular operators
-
-(define find-free-vars
-  (make-operator-table (lambda (exp vars)
-			 (reduce find-free vars (cdr exp)))))
-
-(define (define-find-free name proc)
-  (operator-define! find-free-vars name #f proc))
-
-(define-find-free 'literal
-  (lambda (exp vars) vars))
-
-(define-find-free 'quote
-  (lambda (exp vars) vars))
-
-(define-find-free 'lambda
-  (lambda (exp vars)
-    (find-free (caddr exp) vars)))
-
-(define-find-free 'letrec
-  (lambda (exp vars)
-    (reduce (lambda (spec vars)
-	      (find-free (cadr spec) vars))
-	    (find-free (caddr exp) vars)
-	    (cadr exp))))
-
-(define-find-free 'loophole
-  (lambda (exp vars)
-    (find-free (caddr exp) vars)))
-
-(define-find-free 'call
-  (lambda (exp vars)
-    (reduce find-free vars exp)))
+(define (insert-aliases forms)
+  (let loop ((forms forms) (done '()))
+    (if (null? forms)
+	(reverse done)
+	(let ((form (car forms)))
+	  (loop (append (form-aliases form) (cdr forms))
+		(cons (form-node form) done))))))

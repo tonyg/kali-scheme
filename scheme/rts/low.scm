@@ -61,6 +61,15 @@
     (set-location-defined?! loc #f)
     loc))
 
+(define (location-assigned? loc)
+  (and (location-defined? loc)
+       (if (eq? (contents loc)
+		(unassigned))
+	   #f
+	   #t)))
+
+; Used by the inspector.
+
 (define (vector-unassigned? v i)
   (eq? (vector-ref v i) (unassigned)))
 

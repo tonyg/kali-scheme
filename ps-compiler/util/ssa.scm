@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 
 ; Finding where to put phi-functions.
 ;
@@ -18,17 +21,35 @@
 ;   ACM Transactions on Programming Languages and Systems 1991 13(4)
 ;   pages 451-490
 
-(define-record-type node
-  (data                 ; user's stuff
-   use-uid)             ; distinguishes between different invocations
-  (successors           ; parents
-   (predecessors '())   ;   and children in the graph
-   (dominator #f)       ; parent    ;; initialize for goofy dominator code
-   (dominated '())      ;   and children in the dominator tree
-   frontier             ; dominator frontier
-   (seen-mark -1)       ; two markers used in
-   (join-mark -1)       ;  the ssa algorithm
-   ))
+(define-record-type node :node
+  (really-make-node data use-uid predecessors dominator dominated
+		    seen-mark join-mark)
+  node?
+  (data node-data)                ; user's stuff
+  (use-uid node-use-uid)          ; distinguishes between different invocations
+  (successors node-successors     ; parents
+	      set-node-successors!)
+  (predecessors node-predecessors ;  and children in the graph
+		set-node-predecessors!)
+  (dominator node-dominator       ; parent ;; initialize for goofy dominator code
+	     set-node-dominator!)
+  (dominated node-dominated       ;   and children in the dominator tree
+	     set-node-dominated!)
+  (frontier node-frontier         ; dominator frontier
+	    set-node-frontier!)
+  (seen-mark node-seen-mark       ; two markers used in
+	     set-node-seen-mark!)
+  (join-mark node-join-mark       ;  the ssa algorithm
+	     set-node-join-mark!))
+
+(define (make-node data use-uid)
+  (really-make-node data
+		    use-uid
+		    '()       ; predecessors
+		    #f        ; dominator
+		    '()       ; dominated
+		    -1        ; see-mark
+		    -1))      ; join-mark
 
 (define (graph->ssa-graph! root successors temp set-temp!)
   (let ((graph (real-graph->ssa-graph root successors temp set-temp!)))
@@ -52,7 +73,7 @@
 	(if (and (node? node)
 		 (= uid (node-use-uid node)))
 	    node
-	    (let ((node (node-maker data uid)))
+	    (let ((node (make-node data uid)))
 	      (set! nodes (cons node nodes))
 	      (set-temp! data node)
 	      (let ((succs (map recur (successors data))))

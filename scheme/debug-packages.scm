@@ -93,15 +93,15 @@
 
 
 ; --------------------
-; S-expression interpreter
+; S-expression (nodes, really) interpreter
 
 (define-structure run evaluation-interface
-  (open scheme-level-2 syntactic packages scan meta-types
-	environments
+  (open scheme-level-2
+	packages        	;package-uid package->environment link!
+	compiler-envs		;bind-source-filename
+	reading-forms		;read-forms $note-file-package
+	syntactic		;scan-forms expand-forms
 	signals
-	locations
-	features   ;force-output
-	tables
 	fluids)
   (files (debug run)))
 
@@ -131,3 +131,4 @@
 			     '(scheme/debug medium)
 			     `(start ',(map car structs))
 			     medium-system for-reification)))))
+

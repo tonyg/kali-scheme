@@ -4,11 +4,15 @@
 ; Inexact rational arithmetic using hacked-in floating point numbers.
 
 (define-extended-number-type :floatnum (:rational)
-  (make-floatnum datum)
+  (really-make-floatnum datum)
   floatnum?
   (datum floatnum-datum))
 
 (define (make-float-datum) (make-code-vector 8 0))
+
+(define (make-floatnum datum)
+  (loophole :inexact-real
+	    (really-make-floatnum datum)))
 
 (define-enumeration flop
   (+ - * / = <
@@ -66,6 +70,9 @@
     (floperate (enum flop string->float) string res)
     (make-floatnum res)))
 
+; Call the OS to get a string and then add a `.' if necessary (so that
+; it will be inexact).
+
 (define (float->string float)
   (let* ((res (make-string 40 #\space))
 	 (len (floperate (enum flop float->string)
@@ -75,9 +82,12 @@
     (let loop ((i 0))
       (cond ((>= i (string-length str))
 	     (string-append str "."))
-	    ((or (char=? (string-ref str i) #\e)
-		 (char=? (string-ref str i) #\.))
+	    ((char=? (string-ref str i) #\.)
 	     str)
+	    ((char=? (string-ref str i) #\e)
+	     (string-append (substring str 0 i)
+			    "."
+			    (substring str i (string-length str))))
 	    (else
 	     (loop (+ i 1)))))))
 
@@ -113,7 +123,8 @@
       (let ((d (fixnum->float definitely-a-fixnum)))
 	(+ (* definitely-a-fixnum
 	      (float->exact-integer (float-quotient x d)))
-	   (float->fixnum (float-remainder x d))))))
+	   (float->fixnum (loophole :extended-number  ; outsmarted ourselves
+				    (float-remainder x d)))))))
 
 (define definitely-a-fixnum (expt 2 23))    ;Be conservative
 
@@ -234,48 +245,53 @@
       (float->string n)
       (next-method)))
 
-; Oog.
+; Recognizing a floating point number.  This doesn't know about `#'.
 
 (define (float-string? s)
   (let ((len (string-length s)))
     (define (start)
-      (cond ((< len 2)
-	     #f)
-	    ((char-numeric? (string-ref s 0))
-	     (digits 1 #f #f))
-	    ((and (or (char=? (string-ref s 0) #\+)
-		      (char=? (string-ref s 0) #\-))
-		  (char-numeric? (string-ref s 1)))
-	     (digits 2 #f #f))
-	    ((and (char=? (string-ref s 0) #\.)
-		  (char-numeric? (string-ref s 1)))
-	     (digits 2 #t #f))
-	    (else #f)))
-    (define (digits i dot? e?)
-      (cond ((>= i len) dot?)
-	    ((char-numeric? (string-ref s i))
-	     (digits (+ i 1) dot? e?))
-	    ((and (char=? (string-ref s i) #\e)
-		  (not e?))
-	     (exponent (+ i 1)))
-	    ((and (char=? (string-ref s i) #\.)
-		  (not dot?))
-	     (digits (+ i 1) #t #f))
-	    (else #f)))
-    (define (exponent i)
-      (cond ((>= i len) #f)
-	    ((char-numeric? (string-ref s i))
-	     (digits (+ i 1) #t #t))
-	    ((or (char=? (string-ref s i) #\+)
-		 (char=? (string-ref s i) #\-))
-	     (exponent2 (+ i 1)))
-	    (else #f)))
-    (define (exponent2 i)
-      (cond ((>= i len) #f)
-	    ((char-numeric? (string-ref s i))
-	     (digits (+ i 1) #t #t))
-	    (else #f)))
-    
+      (and (< 1 len)
+	   (let ((first (string-ref s 0))
+		 (second (string-ref s 1)))
+	     (if (char-numeric? first)
+		 (digits 1 #f #f)
+		 (case first
+		   ((#\+ #\-)
+		    (and (char-numeric? second)
+			 (digits 2 #f #f)))
+		   ((#\.)
+		    (and (char-numeric? second)
+			 (digits 2 #t #f)))
+		   (else #f))))))
+
+    ; Read digits until the end or an `e' or a `.'.  E-OR-DOT? is true if
+    ; we have seen either, E? is true if we've seen an `e'.
+    (define (digits i e-or-dot? e?)
+      (if (= i len)
+	  e-or-dot?
+	  (let ((next (string-ref s i)))
+	    (if (char-numeric? next)
+		(digits (+ i 1) e-or-dot? e?)
+		(case next
+		  ((#\e #\E)
+		   (and (not e?)
+			(exponent (+ i 1) #f)))
+		  ((#\.)
+		   (and (not e-or-dot?)
+			(digits (+ i 1) #t #f)))
+		  (else #f))))))
+
+    ; Read in an exponent.  If SIGN? is true then we have already got the sign.
+    (define (exponent i sign?)
+      (and (< i len)
+	   (let ((next (string-ref s i)))
+	     (if (char-numeric? next)
+		 (digits (+ i 1) #t #t)
+		 (case next
+		   ((#\+ #\-)
+		    (and (not sign?)
+			 (exponent (+ i 1) #t)))
+		   (else #f))))))
     (start)))
 
 (define-simple-type :float-string (:string) float-string?)

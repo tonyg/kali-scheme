@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 
 ; Syntax used by the compiler
 
@@ -38,13 +41,13 @@
 			       n))))
 		       set-names))))))
 
-(define-syntax define-simple-record-type
-  (lambda (form rename compare)
-    (let ((name (cadr form))
-	  (slots (cddr form)))
-      `(begin (define-record-type ,name ,slots ())
-	      (define ,(concatenate-symbol 'make- name)
-		,(concatenate-symbol name '- 'maker))))))
+;(define-syntax define-simple-record-type
+;  (lambda (form rename compare)
+;    (let ((name (cadr form))
+;          (slots (cddr form)))
+;      `(begin (define-record-type ,name ,slots ())
+;              (define ,(concatenate-symbol 'make- name)
+;                ,(concatenate-symbol name '- 'maker))))))
 
 ; Nothing actually local about it...
 

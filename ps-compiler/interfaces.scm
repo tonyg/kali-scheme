@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 
 (define-interface utilities-interface
   (export bug
@@ -31,7 +34,7 @@
           make-xvector xvector-length xvector-ref xvector-set! xvector->vector
 
           (define-subrecord :syntax)
-          (define-simple-record-type :syntax)
+          ;(define-simple-record-type :syntax)
           (define-local-syntax :syntax)
           ))
 

@@ -11,13 +11,12 @@
 (define (segment->template segment name pc-in-parent parent-data)
   (let* ((cv (make-code-vector (segment-size segment) 0))
 	 (astate (make-astate cv))
-	 (name (if (if (name? name)
-		       (keep-procedure-names?)
-		       (keep-file-names?))  ;string, or pair, or something
-		   name #f))
-	 (debug-data (new-debug-data (if (name? name) (name->symbol name) name)
-				     parent-data
-				     pc-in-parent)))
+	 (name (if (if (string? name)	; only files have strings for names
+		       (keep-file-names?)
+		       (keep-procedure-names?))
+		   name
+		   #f))
+	 (debug-data (new-debug-data name parent-data pc-in-parent)))
     (let-fluid $debug-data debug-data
       (lambda ()
 	(let* ((maps (emit-with-environment-maps! astate segment))
@@ -166,14 +165,11 @@
 
 ; So are locations.
 
-(define (instruction-with-location opcode thunk)
+(define (instruction-with-location opcode binding name want-type)
   (make-segment 3
 		(lambda (astate)
 		  (emit-byte! astate opcode)
-		  ;; But: there really ought to be multiple entries
-		  ;; depending on how the name is qualified.  
-		  (emit-literal! astate (thunk)))))
-
+		  (emit-literal! astate (make-thingie binding name want-type)))))
 
 ; Templates for inferior closures are also obtained from the
 ; (parent's) template.
@@ -281,22 +277,14 @@
 ; Keep track of source code at continuations.
 
 (define (note-source-code info segment)
-  (if (keep-source-code?)
-      (make-segment (segment-size segment)
-		    (lambda (astate)
-		      (emit-segment! astate segment)
-		      (let ((dd (fluid $debug-data)))
-			(set-debug-data-source!
-			 dd
-			 (cons (cons (astate-pc astate)
-				     ;; Abbreviate this somehow?
-				     (if (pair? info)
-					 (cons (car info)
-					       (schemify (cdr info)))
-					 ;; Name might be generated...
-					 info))
-			       (debug-data-source dd))))))
-      segment))
+  (make-segment (segment-size segment)
+		(lambda (astate)
+		  (emit-segment! astate segment)
+		  (let ((dd (fluid $debug-data)))
+		    (set-debug-data-source!
+		     dd
+		     (cons (cons (astate-pc astate) info)
+			   (debug-data-source dd)))))))
 
 ; Keep track of variable names from lexical environments.
 ; Each environment map has the form
@@ -312,8 +300,7 @@
 			(set-fluid! $environment-maps
 				    (cons (vector pc-before
 						  (astate-pc astate)
-						  (list->vector
-						   (map name->symbol vars))
+						  (list->vector vars)
 						  env-maps)
 					  (fluid $environment-maps))))))
       segment))

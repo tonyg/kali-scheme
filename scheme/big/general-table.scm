@@ -3,6 +3,17 @@
 
 
 ; Hash table package that allows for different hash and comparison functions.
+;
+; The fields in a table are:
+;  size - the number of entries
+;  data - an a-list or vector of a-lists
+;  ref  - a procedure: [table index] -> value
+;  set  - a procedure: [table index new-value] -> void
+;
+; In small tables the data is stored in an a-list and no hashing is used.
+; In large tables the data is stored in a vector of a-lists, with hashing
+; used to index into the vector.  When a small table grows large the REF
+; and SET fields are replaced with vector-oriented versions.
 
 (define-record-type table :table
   (really-make-table size data ref set)
@@ -24,6 +35,15 @@
 (define (next-table-size count)		; Figure out next good size for table.
   (+ (* count 3) 1))
 
+; A table-maker is a thunk that returns a new, empty table each time it is
+; called.  There are four functions involved:
+;   assoc : [key alist] -> entry or #f
+;   ref-proc : [table key] -> entry or #f
+;   x->hash-table! : [assoc hash-function] -> void
+;   set!-proc : [table key value] -> void
+; X->HASH-TABLE! replaces the data, ref, and set fields of the table, making
+; it into a hash table.
+
 (define (make-table-maker comparison-function hash-function)
   (let* ((assoc (make-assoc comparison-function))
 	 (ref-proc (make-linear-table-ref assoc))
@@ -32,12 +52,13 @@
     (lambda ()
       (really-make-table 0 null-entry ref-proc set!-proc))))
 
-; Speed & size hack?!  See how well it works out, then revert to
-; a-lists if it doesn't.
+;----------------
+; A-lists.  These are currently actual a-lists, because ASSQ is a VM primitive
+; and thus very fast.
 
 (define null-entry '())  ; #f
 
-(define (new-entry key val others)	;(cons (cons key val) others)
+(define (new-entry key val others)
   ;(vector key val others)
   (cons (cons key val) others))
 
@@ -45,6 +66,19 @@
 (define entry-value cdr)
 (define entry-key car)
 (define set-entry-value! set-cdr!)
+
+; ENTRIES is known to contain ENTRY.
+
+(define (delete-entry! entries entry)
+  (if (eq? entry (car entries))
+      (cdr entries)
+      (begin
+	(let loop ((entries entries))
+	  (if (eq? entry
+		   (cadr entries))
+	      (set-cdr! entries (cddr entries))
+	      (loop (cdr entries))))
+	entries)))
 
 (define (make-assoc pred)
   (if (eq? pred eq?)
@@ -58,6 +92,8 @@
 		(else
 		 (loop (cdr alist))))))))
 
+; Using actual a-lists allows us to use ASSQ instead of the following.
+
 ;(define eq?-assoc
 ;  (lambda (thing alist)
 ;    (let loop ((alist alist))
@@ -68,8 +104,10 @@
 ;            (else
 ;             (loop (vector-ref alist 2)))))))
 
+;----------------
 ; Turn some version of ASSOC into a table reference procedure for a-list
 ; tables.
+
 (define (make-linear-table-ref assoc)
   (lambda (table key)
     (let ((probe (assoc key (table-data table))))
@@ -77,13 +115,18 @@
 
 ; Turn some version of ASSOC and a hash function into a table set! procedure
 ; for a-list tables.  If the table gets too big it is turned into a hash table.
+
 (define (make-linear-table-set! assoc x->hash-table!)
   (lambda (table key value)
     (let* ((data (table-data table))
 	   (probe (assoc key data)))
       (cond (probe
-	     (set-entry-value! probe value))
-	    (else
+	     (if value
+		 (set-entry-value! probe value)
+		 (begin
+		   (set-table-data! table (delete-entry! data probe))
+		   (set-table-size! table (- (table-size table) 1)))))
+	    (value
 	     (set-table-data! table (new-entry key value data))
 	     (let ((size (table-size table)))
 	       (if (< size linear-table-size-limit)
@@ -91,6 +134,7 @@
 		   (x->hash-table! table size))))))))
 
 ; Return a function to transform linear tables into hash tables.
+
 (define (make->hash-table assoc hash-function)
   (let ((hash-table-ref (make-hash-table-ref assoc hash-function))
 	(hash-table-set! (make-hash-table-set! assoc hash-function)))
@@ -118,8 +162,12 @@
 	   (alist (vector-ref data h))
 	   (probe (assoc key alist)))
       (cond (probe
-	     (set-entry-value! probe value))
-	    (else
+	     (if value
+		 (set-entry-value! probe value)
+		 (begin
+		   (vector-set! data h (delete-entry! alist probe))
+		   (set-table-size! table (- (table-size table) 1)))))
+	    (value
 	     (vector-set! data h (new-entry key value alist))
 	     (let ((size (+ (table-size table) 1)))
 	       (if (< size (vector-length data))
@@ -137,17 +185,18 @@
   (let ((set!-proc (table-set!-procedure table)))
     (do ((alist alist (cdr alist)))
 	((null? alist))
-      (let ((value (cdar alist)))
-	(if value (set!-proc table (caar alist) value))))))
+      (set!-proc table (caar alist) (cdar alist)))))
 
-(define (table-expand-table! table size)
+; Reset the size and data of a table.  The size will be incremented as
+; the entries are added back into the table.
+
+(define (table-expand-table! table vector-size)
   (set-table-size! table 0)
-  (set-table-data! table (make-vector size null-entry)))
+  (set-table-data! table (make-vector vector-size null-entry)))
 
 (define (table-walk proc table)
   (really-table-walk (lambda (v)
-		       (let ((value (entry-value v)))
-			 (if value (proc (entry-key v) value))))
+		       (proc (entry-key v) (entry-value v)))
 		     table))
 		       
 (define (really-table-walk proc table)
@@ -207,4 +256,4 @@
 
 (define make-string-table  (make-table-maker string=? string-hash))
 (define make-symbol-table  (make-table-maker eq?      symbol-hash))
-(define make-integer-table (make-table-maker =	      (lambda (x) (abs x))))
+(define make-integer-table (make-table-maker =	      abs))

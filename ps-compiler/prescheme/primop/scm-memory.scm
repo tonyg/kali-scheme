@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 
 (define-primitive allocate-memory ((positive-integer? type/integer)) type/address)
 (define-primitive deallocate-memory ((address? type/address)) type/unit)
@@ -33,8 +36,9 @@
 
 (define-prescheme! 'null-address
   (let ((location (make-undefined-location 'null-address)))
-    (set-contents! location (make-external-value "((char *) -1)" type/address))
-    location))
+    (set-contents! location (make-external-value "NULL" type/address))
+    location)
+  #f)
 
 (define-semi-primitive (null-address? address?) null-address?
   (lambda (args node depth return)

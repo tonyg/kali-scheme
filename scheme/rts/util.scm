@@ -66,3 +66,34 @@
   (cond ((null? l) (list x))
         ((< x (car l)) (cons x l))
         (else (cons (car l) (insert x (cdr l) <)))))
+
+;----------------
+; Variations on a theme.
+;
+; FOLD is a tail-recursive version of REDUCE.
+
+(define (fold folder list accumulator)
+  (do ((list list (cdr list))
+       (accum accumulator (folder (car list) accum)))
+      ((null? list)
+       accum)))
+
+(define (fold->2 folder list acc0 acc1)
+  (let loop ((list list) (acc0 acc0) (acc1 acc1))
+    (if (null? list)
+	(values acc0 acc1)
+	(call-with-values
+	 (lambda ()
+	   (folder (car list) acc0 acc1))
+	 (lambda (acc0 acc1)
+	   (loop (cdr list) acc0 acc1))))))
+
+(define (fold->3 folder list acc0 acc1 acc2)
+  (let loop ((list list) (acc0 acc0) (acc1 acc1) (acc2 acc2))
+    (if (null? list)
+	(values acc0 acc1 acc2)
+	(call-with-values
+	 (lambda ()
+	   (folder (car list) acc0 acc1 acc2))
+	 (lambda (acc0 acc1 acc2)
+	   (loop (cdr list) acc0 acc1 acc2))))))

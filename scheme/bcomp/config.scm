@@ -2,7 +2,6 @@
 ; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
 
 
-
 ; For DEFINE-STRUCTURE macro
 
 (define (make-a-package opens-thunk accesses-thunk tower

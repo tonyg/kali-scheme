@@ -297,6 +297,8 @@
 	(do ((names names (cdr names))
 	     (vals vals (cdr vals)))
 	    ((null? names))
+	  (if (not (lambda-node? (car vals)))
+	      (error "LETREC value is not a LAMBDA: ~S" (schemify node)))
 	  (unify! (infer-type (car vals) depth)
 		  (node-type (car names))
 		  node))

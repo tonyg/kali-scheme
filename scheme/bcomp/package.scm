@@ -6,32 +6,48 @@
 
 ; --------------------
 ; Structures
+;
+; A structure is a map from names to binding records, determined by an
+; interface (a set of names) and a package (a map from names to binding
+; records).
+;
+; The interface is specified as a thunk.  This removes dependencies on the
+; order in which structures are defined.  Also, if the interface is redefined,
+; re-evaluating the thunk produces the new, correct interface (see
+; env/pedit.scm).
+;
+; Clients are packages that import the structure's bindings.
 
 (define-record-type structure :structure
   (really-make-structure package interface-thunk interface clients name)
   structure?
   (interface-thunk structure-interface-thunk)
   (interface structure-interface-really set-structure-interface!)
-  (package   structure-package)    ; allow #f
+  (package   structure-package)
   (clients   structure-clients)
   (name	     structure-name set-structure-name!))
 
 (define-record-discloser :structure
-  (lambda (s) (list 'structure
-		    (package-uid (structure-package s))
-		    (structure-name s))))
+  (lambda (structure)
+    (list 'structure
+	  (package-uid (structure-package structure))
+	  (structure-name structure))))
 
-(define (structure-interface s)
-  (or (structure-interface-really s)
-      (begin (initialize-structure! s)
-	     (structure-interface-really s))))
+; Get the actual interface, calling the thunk if necessary.
 
-(define (initialize-structure! s)
-  (let ((int ((structure-interface-thunk s))))
+(define (structure-interface structure)
+  (or (structure-interface-really structure)
+      (begin (initialize-structure! structure)
+	     (structure-interface-really structure))))
+
+(define (initialize-structure! structure)
+  (let ((int ((structure-interface-thunk structure))))
     (if (interface? int)
-	(begin (set-structure-interface! s int)
-	       (note-reference-to-interface! int s))
-	(call-error "invalid interface" initialize-structure! s))))
+	(begin (set-structure-interface! structure int)
+	       (note-reference-to-interface! int structure))
+	(call-error "invalid interface" initialize-structure! structure))))
+
+; Make a structure over PACKAGE and the interface returned by INT-THUNK.
 
 (define (make-structure package int-thunk . name-option)
   (if (not (package? package))
@@ -48,14 +64,27 @@
     (add-to-population! struct (package-clients package))
     struct))
 
+; STRUCT has name NAME.  NAME can then also be used to refer to STRUCT's
+; package.
+
+(define (note-structure-name! struct name)
+  (if (and name (not (structure-name struct)))
+      (begin (set-structure-name! struct name)
+	     (note-package-name! (structure-package struct) name))))
+
+; A structure is unstable if it's package is.  An unstable package is one
+; where new code may be added, possibly modifying the exported bindings.
+
 (define (structure-unstable? struct)
   (package-unstable? (structure-package struct)))
+
+; Map PROC down the the [name type binding] triples provided by STRUCT.
 
 (define (for-each-export proc struct)
   (let ((int (structure-interface struct)))
     (for-each-declaration
         (lambda (name want-type)
-	  (let ((binding (structure-lookup struct name #t)))
+	  (let ((binding (real-structure-lookup struct name want-type #t)))
 	    (proc name
 		  (if (and (binding? binding)
 			   (eq? want-type undeclared-type))
@@ -67,11 +96,6 @@
 		  binding)))
 	int)))
 
-(define (note-structure-name! struct name)
-  (if (and name (not (structure-name struct)))
-      (begin (set-structure-name! struct name)
-	     (note-package-name! (structure-package struct) name))))
-
 ; --------------------
 ; Packages
 
@@ -79,11 +103,13 @@
   (really-make-package uid
 		       opens-thunk opens accesses-thunk
 		       definitions
+		       undefineds
+		       undefined-but-assigneds
 		       get-location
-		       plist
 		       cached
 		       clients
 		       unstable?
+		       integrate?
 		       file-name clauses loaded?)
   package?
   (uid	           package-uid)
@@ -102,46 +128,79 @@
   ;; For package mutation
   (opens-thunk     package-opens-thunk set-package-opens-thunk!)
   (accesses-thunk  package-accesses-thunk)
-  (plist           package-plist set-package-plist!)
+  (undefineds      package-real-undefineds set-package-undefineds!)
+  (undefined-but-assigneds
+                   package-real-undefined-but-assigneds
+		   set-package-undefined-but-assigneds!)
   (clients         package-clients)
   (cached	   package-cached))
 
 (define-record-discloser :package
-  (lambda (p)
-    (let ((name (package-name p)))
+  (lambda (package)
+    (let ((name (package-name package)))
       (if name
-	  (list 'package (package-uid p) name)
-	  (list 'package (package-uid p))))))
+	  (list 'package (package-uid package) name)
+	  (list 'package (package-uid package))))))
 
 (define (make-package opens-thunk accesses-thunk unstable? tower file clauses
 		      uid name)
-  (let ((p (really-make-package
-	    (if uid
-		(begin (if (>= uid *package-uid*)
-			   (set! *package-uid* (+ uid 1)))
-		       uid)
-		(new-package-uid))
-	    opens-thunk
-	    #f				;opens
-	    accesses-thunk		;thunk returning alist
-	    (make-name-table)		;definitions
-	    (fluid $get-location)	;procedure for making new locations
-	    '()				;property list...
-	    (make-name-table)		;bindings cached in templates
-	    (make-population)		;structures
-	    unstable?			;unstable (suitable for EVAL)?
-	    file			;file containing DEFINE-STRUCTURE form
-	    clauses			;misc. DEFINE-STRUCTURE clauses
-	    #f)))			;loaded?
-    (note-package-name! p name)
-    (set-package->environment! p (really-package->environment p))
-    (if unstable?			;+++
-	(define-funny-names! p tower))
-    p))
+  (let ((new (really-make-package
+	       (if uid
+		   (begin (if (>= uid *package-uid*)
+			      (set! *package-uid* (+ uid 1)))
+			  uid)
+		   (new-package-uid))
+	       opens-thunk
+	       #f			;opens
+	       accesses-thunk		;thunk returning alist
+	       (make-name-table)	;definitions
+	       #f			;undefineds
+	       #f			;undefined-but-assigned
+	       (fluid $get-location)	;procedure for making new locations
+	       (make-name-table)	;bindings cached in templates
+	       (make-population)	;structures
+	       unstable?		;unstable (suitable for EVAL)?
+	       #t			;integrate?
+	       file			;file containing DEFINE-STRUCTURE form
+	       clauses			;misc. DEFINE-STRUCTURE clauses
+	       #f)))			;loaded?
+    (note-package-name! new name)
+    (set-package->environment! new (really-package->environment new tower))
+    new))
 
-(define (really-package->environment p)
-  (lambda (name)
-    (package-lookup p name)))
+; TOWER is a promise that is expected to deliver, when forced, a
+; pair (eval . env).
+
+(define (really-package->environment package tower)
+  (make-compiler-env (lambda (name)
+		       (package-lookup package name))
+		     (lambda (name type . maybe-static)
+		       (package-define! package
+					name
+					type
+					#f
+					(if (null? maybe-static)
+					    #f
+					    (car maybe-static))))
+		     tower
+		     package))	; interim hack
+
+; Two tables that we add lazily.
+
+(define (lazy-table-accessor slot-ref slot-set!)
+  (lambda (package)
+    (or (slot-ref package)
+	(let ((table (make-name-table)))
+	  (slot-set! package table)
+	  table))))
+
+(define package-undefineds
+  (lazy-table-accessor package-real-undefineds
+		       set-package-undefineds!))
+
+(define package-undefined-but-assigneds
+  (lazy-table-accessor package-real-undefined-but-assigneds
+		       set-package-undefined-but-assigneds!))
 
 ; Unique id's
 
@@ -165,16 +224,16 @@
 	(if (not (table-ref package-name-table uid))
 	    (table-set! package-name-table uid name)))))
 
-(define (package-opens p)
-  (initialize-package-if-necessary! p)
-  (package-opens-really p))
+(define (package-opens package)
+  (initialize-package-if-necessary! package)
+  (package-opens-really package))
 
-(define (initialize-package-if-necessary! p)
-  (if (not (package-opens-really p))
-      (initialize-package! p)))
+(define (initialize-package-if-necessary! package)
+  (if (not (package-opens-really package))
+      (initialize-package! package)))
 
-(define (package-accesses p)		;=> alist
-  ((package-accesses-thunk p)))
+(define (package-accesses package)		;=> alist
+  ((package-accesses-thunk package)))
 
 ; --------------------
 ; A simple package has no ACCESSes or other far-out clauses.
@@ -182,161 +241,137 @@
 (define (make-simple-package opens unstable? tower . name-option)
   (if (not (list? opens))
       (error "invalid package opens list" opens))
-  (let ((p (make-package (lambda () opens)
-			 (lambda () '()) ;accesses-thunk
-			 unstable?
-			 tower
-			 ""		;file containing DEFINE-STRUCTURE form
-			 '()		;clauses
-			 #f		;uid
-			 (if (null? name-option)
-			     #f
-			     (car name-option)))))
-    (set-package-loaded?! p #t)
-    p))
+  (let ((package (make-package (lambda () opens)
+			       (lambda () '()) ;accesses-thunk
+			       unstable?
+			       tower
+			       ""	;file containing DEFINE-STRUCTURE form
+			       '()	;clauses
+			       #f	;uid
+			       (if (null? name-option)
+				   #f
+				   (car name-option)))))
+    (set-package-loaded?! package #t)
+    package))
 
 ; --------------------
 ; The definitions table
 
 ; Each entry in the package-definitions table is a binding
-; #(type place static).  "Place" will typically be a location,
-; but it doesn't have to be.
+; #(type place static).
 
-(define (package-definition p name)
-  (initialize-package-if-necessary! p)
-  (let ((probe (table-ref (package-definitions p) name)))
+(define (package-definition package name)
+  (initialize-package-if-necessary! package)
+  (let ((probe (table-ref (package-definitions package) name)))
     (if probe
-	(maybe-fix-place probe)
+	(maybe-fix-place! probe)
 	#f)))
 
-; Disgusting.  Interface predates invention of "binding" records.
-
-(define (package-define! p name type-or-static . place-option)
-  (let ((place (if (null? place-option)
-		   #f
-		   (car place-option))))
-    (cond ((transform? type-or-static)
-	   (really-package-define! p name
-				   (transform-type type-or-static)
-				   place
-				   type-or-static))
-	  ((operator? type-or-static)
-	   (really-package-define! p name
-				   (operator-type type-or-static)
-				   place
-				   type-or-static))
-	  (else
-	   (really-package-define! p name
-				   type-or-static
-				   place
-				   #f)))))
-    
-
-(define (really-package-define! p name type place static)
-  (let ((probe (table-ref (package-definitions p) name)))
+(define (package-define! package name type place static)
+  (let ((probe (table-ref (package-definitions package) name)))
     (if probe
-	(begin (clobber-binding! probe type place static)
-	       (binding-place (maybe-fix-place probe)))
-	(let ((place (or place (get-new-location p name))))
-	  (table-set! (package-definitions p)
+	(begin
+	  (clobber-binding! probe type place static)
+	  (binding-place (maybe-fix-place! probe)))
+	(let ((place (or place (get-new-location package name))))
+	  (table-set! (package-definitions package)
 		      name
 		      (make-binding type place static))
 	  place))))
 
+(define (package-add-static! package name static)
+  (let ((probe (table-ref (package-definitions package) name)))
+    (if probe
+	(clobber-binding! probe
+			  (binding-type probe)
+			  (binding-place probe)
+			  static)
+	(error "internal error: name not bound" package name))))
+
+(define (package-refine-type! package name type)
+  (let ((probe (table-ref (package-definitions package) name)))
+    (if probe
+	(clobber-binding! probe
+			  type
+			  (binding-place probe)
+			  (binding-static probe))
+	(error "internal error: name not bound" package name))))
 
 ; --------------------
 ; Lookup
 
 ; Look up a name in a package.  Returns a binding if bound, or a name if
-; not.  In the unbound case, the name returned is either the original
-; name or, if the name is generated, the name's underlying symbol.
+; not.  In the unbound case we return #f.
 
-(define (package-lookup p name)
-  (really-package-lookup p name (package-integrate? p)))
+(define (package-lookup package name)
+  (really-package-lookup package name (package-integrate? package)))
 
-(define (really-package-lookup p name integrate?)
-  (let ((probe (package-definition p name)))
+(define (really-package-lookup package name integrate?)
+  (let ((probe (package-definition package name)))
     (cond (probe
 	   (if integrate?
 	       probe
 	       (forget-integration probe)))
 	  ((generated? name)
+	   ; Access path is (generated-parent-name name)
 	   (generic-lookup (generated-env name)
 			   (generated-symbol name)))
 	  (else
-	   (let loop ((opens (package-opens-really p)))
-	     (if (null? opens)
-		 name			;Unbound
-		 (or (structure-lookup (car opens) name integrate?)
-		     (loop (cdr opens)))))))))
+	   (search-opens (package-opens-really package) name integrate?)))))
 
-; Get a name's binding in a structure.  If the structure doesn't
-; export the name, this returns #f.  If the structure exports the name
-; but the name isn't bound, it returns the name.
+; Look for NAME in structures OPENS.
+
+(define (search-opens opens name integrate?)
+  (let loop ((opens opens))
+    (if (null? opens)
+	#f
+	(or (structure-lookup (car opens) name integrate?)
+	    (loop (cdr opens))))))
 
 (define (structure-lookup struct name integrate?)
   (let ((type (interface-ref (structure-interface struct) name)))
     (if type
-	(impose-type type
-		     (really-package-lookup (structure-package struct)
-					    name
-					    integrate?)
-		     integrate?)
+	(real-structure-lookup struct name type integrate?)
 	#f)))
+
+(define (real-structure-lookup struct name type integrate?)
+  (impose-type type
+	       (really-package-lookup (structure-package struct)
+				      name
+				      integrate?)
+	       integrate?))
 
 (define (generic-lookup env name)
   (cond ((package? env)
 	 (package-lookup env name))
 	((structure? env)
-	 (or (structure-lookup env name
+	 (or (structure-lookup env
+			       name
 			       (package-integrate? (structure-package env)))
 	     (call-error "not exported" generic-lookup env name)))
-	((procedure? env)
-	 (lookup env name))
+	;((procedure? env)
+	; (lookup env name))
 	(else
 	 (error "invalid environment" env name))))
 
 ; --------------------
 ; Package initialization
 
-(define (initialize-package! p)
-  (let ((opens ((package-opens-thunk p))))
-    (set-package-opens! p opens)
+(define (initialize-package! package)
+  (let ((opens ((package-opens-thunk package))))
+    (set-package-opens! package opens)
     (for-each (lambda (struct)
 		(if (structure-unstable? struct)
-		    (add-to-population! p (structure-clients struct))))
+		    (add-to-population! package (structure-clients struct))))
 	      opens))
   (for-each (lambda (name+struct)
 	      ;; Cf. CLASSIFY method for STRUCTURE-REF
-	      (really-package-define! p
-				      (car name+struct)
-				      structure-type
-				      #f
-				      (cdr name+struct)))
-	    (package-accesses p)))
-
-
-(define (define-funny-names! p tower)
-  (package-define-funny! p funny-name/the-package p)
-  (if tower
-      (package-define-funny! p funny-name/reflective-tower
-			     tower)))
-
-(define (package-define-funny! p name static)
-  (table-set! (package-definitions p)
-	      name
-	      (make-binding syntax-type (cons 'dummy-place name) static)))
-
-
-; The following funny name is bound in every package to the package
-; itself.  This is a special hack used by the byte-code compiler
-; (procedures LOCATION-FOR-UNDEFINED and NOTE-CACHING) so that it can
-; extract the underlying package from any environment.
-
-(define funny-name/the-package (string->symbol ".the-package."))
-
-(define (extract-package-from-environment env)
-  (get-funny env funny-name/the-package))
+	      (package-define! package 
+			       (car name+struct)
+			       structure-type
+			       #f
+			       (cdr name+struct)))
+	    (package-accesses package)))
 
 ; (define (package->environment? env)
 ;   (eq? env (package->environment
@@ -346,25 +381,25 @@
 ; --------------------
 ; For implementation of INTEGRATE-ALL-PRIMITIVES! in scanner, etc.
 
-(define (for-each-definition proc p)
+(define (for-each-definition proc package)
   (table-walk (lambda (name binding)
-		(proc name (maybe-fix-place binding)))
-	      (package-definitions p)))
+		(proc name (maybe-fix-place! binding)))
+	      (package-definitions package)))
 
 ; --------------------
 ; Locations
 
-(define (get-new-location p name)
-  ((package-get-location p) p name))
+(define (get-new-location package name)
+  ((package-get-location package) package name))
 
 ; Default new-location method for new packages
 
-(define (make-new-location p name)
+(define (make-new-location package name)
   (let ((uid *location-uid*))
     (set! *location-uid* (+ *location-uid* 1))
     (table-set! location-info-table uid
 		(make-immutable!
-		 (cons (name->symbol name) (package-uid p))))
+		 (cons (name->symbol name) (package-uid package))))
     (make-undefined-location uid)))
 
 (define $get-location (make-fluid make-new-location))
@@ -379,48 +414,6 @@
   ;; (set! package-name-table (make-table)) ;hmm, not much of a space saver
   )
 
-; --------------------
-; Extra
-
-(define (package-get p ind)
-  (cond ((assq ind (package-plist p)) => cdr)
-	(else #f)))
-
-(define (package-put! p ind val)
-  (cond ((assq ind (package-plist p)) => (lambda (z) (set-cdr! z val)))
-	(else (set-package-plist! p (cons (cons ind val)
-					  (package-plist p))))))
-
-; compiler calls this
-
-(define (package-note-caching p name place)
-  (if (package-unstable? p)		;?????
-      (if (not (table-ref (package-definitions p) name))
-	  (let loop ((opens (package-opens p)))
-	    (if (not (null? opens))
-		(if (interface-ref (structure-interface (car opens))
-				   name)
-		    (begin (table-set! (package-cached p) name place)
-			   (package-note-caching
-			       (structure-package (car opens))
-			       name place))
-		    (loop (cdr opens)))))))
-  place)
-
-; Special kludge for shadowing and package mutation.
-; Ignore this on first reading.  See env/shadow.scm.
-
-(define (maybe-fix-place b)
-  (let ((place (binding-place b)))
-    (if (and (location? place)
-	     (vector? (location-id place)))
-	(set-binding-place! b (follow-forwarding-pointers place))))
-  b)
-
-(define (follow-forwarding-pointers place)
-  (let ((id (location-id place)))
-    (if (vector? id)
-	(follow-forwarding-pointers (vector-ref id 0))
-	place)))
-
 ; (put 'package-define! 'scheme-indent-hook 2)
+
+

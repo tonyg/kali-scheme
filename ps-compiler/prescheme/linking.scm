@@ -12,14 +12,12 @@
 ;   - a ps-receive structure
 ;   - the STRUCTURE-REFS structure
 ; We then return:
-;   1. a function that will scan the definitions of the package to which
-;      the named structure belongs and any packages that it uses (and
-;      the packages they use, and so on)
-;   2. a list of the names exported by the named structure
+;   1. a list of the packages required to implement the named structures
+;   2. a list of the names exported by the named structures
 ;   3. a procedure that for looking up names defined in packages in the
 ;      config package (this is used to map user directives to their targets)
 
-(define (package-specs->scanner+exports struct-names files)
+(define (package-specs->packages+exports struct-names files)
   (let ((config (make-very-simple-package 'config (list defpackage)))
 	(old-config ((structure-ref package-commands-internal config-package))))
     (environment-define! config 'prescheme prescheme)
@@ -29,13 +27,19 @@
     (environment-define! config 'structure-refs structure-refs)
     (environment-define! config ':syntax (structure-ref meta-types syntax-type))
     (set-reflective-tower-maker! config (get-reflective-tower-maker old-config))
-    (let-fluids (structure-ref packages-internal $get-location) get-variable
-		$note-file-package (lambda (filename package) (values))
+    (let-fluids (structure-ref packages-internal $get-location)
+		get-variable
+		(structure-ref reading-forms $note-file-package)
+		(lambda (filename package) (values))
       (lambda () 
 	(for-each (lambda (file)
 		    (load file config))
 		  files)))
-    (values (make-scanner-maker (environment-ref config (car struct-names)))
+    (values (collect-packages (map (lambda (name)
+				     (environment-ref config name))
+				   struct-names)
+			      (lambda (package)
+				#t))
 	    (let ((names '()))
 	      (for-each (lambda (struct-name)
 			  (let ((my-names '()))
@@ -53,8 +57,8 @@
 (define (get-variable package name)
   ;(format #t "Making variable ~S for ~S~%" name package)
   ((structure-ref variable make-global-variable)
-   name
-   (structure-ref ps-types type/unknown)))
+     name
+     (structure-ref ps-types type/unknown)))
 
 ; Return something that will find the binding of ID in the package belonging
 ; to the structure PACKAGE-ID in the CONFIG package.
@@ -73,26 +77,6 @@
 		#f))
 	  #f))))
 	       
-; Return a procedure that will apply its argument to all packages reachable
-; from the structure STRUCT.
-
-(define (make-scanner-maker struct)
-  (lambda (package-action)
-    (let ((loaded '()))
-      (let-fluid $note-file-package (lambda (filename package) (values))
-	(lambda ()
-	  (scan-structures
-	   (list struct)
-	   (lambda (package)
-	     (not (memq package loaded)))
-	   (lambda (stuff package)
-	     ;; stuff = pair (file . (node1 node2 ...))
-	     (for-each (lambda (filename+scanned-forms)
-			 (package-action package
-					 (cdr filename+scanned-forms)))
-		       stuff)
-	     (set! loaded (cons package loaded)))))))))
-
 ;----------------------------------------------------------------
 ; Handy packages and package making stuff.
 
@@ -128,7 +112,11 @@
 (define (define-for-syntax-value id value)
   (let ((loc (make-new-location defrecord-for-syntax-package id)))
     (set-contents! loc value)
-    (package-define! defrecord-for-syntax-package id usual-variable-type loc)))
+    (package-define! defrecord-for-syntax-package
+		     id
+		     (structure-ref meta-types usual-variable-type)
+		     loc
+		     #f)))
 
 (define-for-syntax-value 'expand-define-record-type expand-define-record-type)
 
@@ -154,45 +142,51 @@
   (for-each (lambda (id)
 	      (package-define! base-package
 			       id
-			       (get-operator id syntax-type)
-			       #t))
+			       syntax-type
+			       #f
+			       (get-operator id syntax-type)))
 	    '(if begin lambda letrec quote set!
 		 define define-syntax let-syntax
 		 goto real-external)))  ; special for Prescheme
 
 ; Add the usual macros.
 
-(for-each (lambda (name)
-	    (package-define! base-package
-			     name
-			     (make-transform
-			      (usual-transform name)
-			      base-package
-			      (structure-ref meta-types syntax-type)
-			      `(usual-transform ',name)
-			      name)
-			     #t))
-	  '(and cond do let let* or quasiquote syntax-rules)) ; delay
+(let ((syntax-type (structure-ref meta-types syntax-type)))
+  (for-each (lambda (name)
+	      (package-define! base-package
+			       name
+			       syntax-type
+			       #f
+			       (make-transform
+			         (usual-transform name)
+				 base-package
+				 (structure-ref meta-types syntax-type)
+				 `(usual-transform ',name)
+				 name)))
+	    '(and cond do let let* or quasiquote syntax-rules))) ; delay
 
 ; Plus whatever primitives are wanted.
 
-(define (define-prescheme! name value)
+(define (define-prescheme! name location static)
   (package-define! base-package
 		   name
-		   usual-variable-type
-		   value))
+		   (structure-ref meta-types usual-variable-type)
+		   location
+		   static))
 
 ; Copy over the enumeration macros and the ERRORS enumeration.
 
 (define (import-syntax! package-id name)
-  (let ((config ((structure-ref package-commands-internal config-package))))
+  (let ((config ((structure-ref package-commands-internal config-package)))
+	(syntax-type (structure-ref meta-types syntax-type)))
     (let ((binding (structure-lookup (environment-ref config package-id)
 				     name
 				     #t)))
       (package-define! base-package
 		       name
-		       (binding-static binding)
-		       (binding-place binding)))))
+		       syntax-type
+		       (binding-place binding)
+		       (binding-static binding)))))
 
 (import-syntax! 'enumerated 'define-enumeration)
 (import-syntax! 'enumerated 'enum)

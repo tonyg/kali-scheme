@@ -3,12 +3,11 @@
 
 ; Code generation for primops.
 
-(define-record-type c-primop
-  (
-   simple?
-   generate
-   )
-  ())
+(define-record-type c-primop :c-primop
+  (make-c-primop simple? generate)
+  c-primop?
+  (simple? c-primop-simple?)
+  (generate c-primop-generate))
 
 (define (simple-c-primop? primop)
   (c-primop-simple? (primop-code-data primop)))
@@ -22,7 +21,7 @@
     (destructure (((ignore id simple? generate) exp))
       `(set-primop-code-data!
 	(,(r$ 'get-prescheme-primop) ',id)
-	(,(r$ 'c-primop-maker)
+	(,(r$ 'make-c-primop)
 	 ,simple?
 	 ,generate
 	 )))))

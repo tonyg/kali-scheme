@@ -46,6 +46,8 @@
        (append definitions
 	       (shared-values->definitions shared))))
 
+(define variable-set!? (structure-ref forms variable-set!?))
+
 (define (shared-values->definitions shared)
   (do ((shared shared (cdr shared))
        (defns '() (if (shared-variable (value-shared (car shared)))
@@ -65,14 +67,15 @@
 		    value
 		    (shared-variable shared)))
 	 (clean (clean-value! value)))
-    (make-form var
-	       (if (or (node? clean)
-		       (variable? clean))
-		   clean
-		   (make-literal-node clean))
-	       (if (closure? value)              
-		   (cdr (shared-saved (closure-temp value))) ; free vars
-		   (stored-value-free-vars clean)))))
+    ((structure-ref forms make-form)
+       var
+       (if (or (node? clean)
+	       (variable? clean))
+	   clean
+	   (make-literal-node clean))
+       (if (closure? value)              
+	   (cdr (shared-saved (closure-temp value))) ; free vars
+	   (stored-value-free-vars clean)))))
 
 (define (make-literal-node value)
   (make-node op/literal value))
@@ -336,7 +339,10 @@
 	name-node)))
 
 (define (name-node->variable name-node)
-  (binding-place (node-ref name-node 'binding)))
+  (let ((binding (node-ref name-node 'binding)))
+    (if (primitive? (binding-static binding))
+	(primitive->name-node (binding-static binding))
+	(binding-place binding))))
 
 (define (primitive->name-node primitive)
   (let ((id (primitive-id primitive)))

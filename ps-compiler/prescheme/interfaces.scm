@@ -174,7 +174,8 @@
           ))
 
 (define-interface linking-interface
-  (export package-specs->scanner+exports
+  (export package-specs->packages+exports
+	  package-source
           define-prescheme!
 	  prescheme-compiler-env
           ))
@@ -187,8 +188,6 @@
           *doing-tail-called-procedure?*
           merged-procedure-reference
           goto-protocol?
-          save-renamed-variables
-          restore-renamed-variables
           c-ify
           c-value
           form-value

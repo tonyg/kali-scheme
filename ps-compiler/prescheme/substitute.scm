@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 ; Substituting new variables for old in expressions.
 
 (define *free-exp-vars* #f)
@@ -67,7 +70,7 @@
 
 (define-substitution 'lambda
   (lambda (node)
-    (let* ((new-names (copy-names (node-ref node 'var-nodes)))
+    (let* ((new-names (copy-names (cadr (node-form node))))
 	   (body (substitute-in-exp (caddr (node-form node)))))
       (make-similar-node node
 			 (list (car (node-form node))
@@ -91,13 +94,14 @@
       (cond ((not binding)
 	     (note-name-use! node)
 	     node)
-	    ((primitive? (binding-place binding))
-	     (make-primitive-node (binding-place binding) call?))
+	    ((primitive? (binding-static binding))
+	     (make-primitive-node (binding-static binding) call?))
 	    ((location? (binding-place binding))
 	     (let ((value (contents (binding-place binding))))
 	       (if (constant? value)
 		   (make-literal-node value)
-		   (bug "name ~S has non-constant location ~S" node value))))
+		   (identity
+		   (bug "name ~S has non-constant location ~S" node value)))))
 	    (else
 	     (note-binding-use! binding)
 	     node)))))
@@ -119,7 +123,8 @@
 	   (binding (node-ref name 'binding)))
       (if (not (binding? binding))
 	  (user-error "SET! on local variable ~S" (node-form (cadr exp))))
-      (note-variable-set!! (binding-place binding))
+      ((structure-ref forms note-variable-set!!)
+        (binding-place binding))
       (note-binding-use! binding)
       (make-similar-node node
 			 (list (car exp)
@@ -160,7 +165,7 @@
   (let ((node (name-node-substitute node)))
     (let ((binding (node-ref node 'binding)))
       (and binding
-	   (primitive? (binding-place binding))))))
+	   (primitive? (binding-static binding))))))
 
 (define-substitution 'begin default-substitution)
 (define-substitution 'if    default-substitution)
@@ -178,9 +183,10 @@
 (define-substitution 'letrec
   (lambda (node)
     (let* ((exp (node-form node))
+	   (vars (map car (cadr exp)))
 	   (vals (map cadr (cadr exp))))
       (receive (names datas)
-	  (copy-letrec-names (node-ref node 'var-nodes) vals exp)
+	  (copy-letrec-names vars vals exp)
 	(for-each (lambda (data value)
 		    (expand-letrec-value data value datas exp))
 		  datas
@@ -205,7 +211,8 @@
 (define-record-type letrec-data
   (name      ; the name node for which this data exists
    marker    ; a unique marker for this LETREC
-   cell?     ; variable is SET! or its value is not a (lambda ...)
+   cell?     ; variable is SET! or its value is not a (lambda ...).  This is
+             ; always #F until I can think of a reason to allow otherwise.
    )
   (value     ; the expanded value of this variable
    uses      ; a list of variables that VALUE uses
@@ -215,9 +222,7 @@
 (define (copy-letrec-names names vals marker)
   (let ((names (map (lambda (name value)
 		      (let ((new (make-similar-node name (node-form name)))
-			    (cell? (not (and (lambda-node? value)
-					     (= 0 (usage-assignment-count
-						   (node-ref name 'usage)))))))
+			    (cell? #f)) ; we no longer allow SET! on LETREC vars.
 			(node-set! new 'letrec-data
 				   (letrec-data-maker new marker cell?))
 			(node-set! name 'substitute new)

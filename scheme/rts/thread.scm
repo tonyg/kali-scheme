@@ -242,50 +242,78 @@
 	   (apply values time (dequeue! (thread-events (current-thread)))))
 	  (else
 	   (set-thread-current-task! scheduler thread)
-	   (set-thread-time! thread time)
-	   (let* ((next-thread (get-next-thread thread time))
-		  (return-values (thread-arguments next-thread)))
-	     (set-thread-arguments! next-thread '())
-	     (switch-to-thread next-thread return-values))))))
+	   (find-and-run-next-thread thread time)))))
 
-; Find the thread at the end of the list of running threads, and the least
-; remaining time of any currently running thread.  Starting from the current
-; thread we first go up the THREAD-SCHEDULER pointers looking for the lowest
-; time, and then go down the THREAD-TASK pointers checking times and finding
-; the thread at the bottom.  SCHEDULER and the threads above are debited by
-; the current elapsed time (because they have been running, while NEW-THREAD
-; and below have not).
+; The next thread to run is the scheduler of the highest thread in the chain
+; with no time left or, if there is no such thread, the bottom thread in the
+; chain.  The time limit is the minimum of the remaining times of threads
+; above the thread to be run.
 ;
-; Once we have found the thread at the end of the chain we schedule an
-; interrupt and start running the thread.
+; We first go down from the user-provided thread, looking for a thread with
+; no time left.  We then continue either with that thread's scheduler or with
+; the bottom thread of the chain.
 
 ; This could be modified to add the current time to NEW-THREAD and any threads
 ; below.  Then the old time limit could be reused if none of the new threads
 ; got less time than SCHEDULER and above.  This is slower and simpler.
 
-(define (get-next-thread new-thread time)
+(define (find-and-run-next-thread new-thread time)
+  (set-thread-time! new-thread time) ; in case we don't run it now
   (let loop ((thread new-thread) (time time))
     (let ((next (thread-current-task thread)))
-      (if next
+      (if (and next
+	       (< 0 (thread-time next)))
 	  (loop next (min time (thread-time next)))
-	  (begin
-	    (schedule-interrupt! (debit-up! (current-thread) time))
-	    thread)))))
+	  (debit-thread-times-and-run! thread time)))))
 
-; Debit the times of all threads from THREAD on up, returning the minimum
-; of their remaining times.
+; Debit the times of all threads from the current-thread on up.  If we find a
+; thread with no time left, then that thread's scheduler becomes the potential
+; next thread.
+;
+; Only the root thread can end up with a time-limit of #f, as all other threads
+; have schedulers.
 
-(define (debit-up! thread time-limit)    
+(define (debit-thread-times-and-run! next-to-run time-limit)
   (let ((elapsed (interrupt-timer-time)))
-    (let loop ((thread thread) (time-limit time-limit))
-      (let ((next (thread-scheduler thread)))
-	(if next
-	    (let ((time-left (- (thread-time thread) elapsed)))
-	      (set-thread-time! thread time-left)
-	      (loop next (min time-limit time-left)))
-	    time-limit)))))
+    (let loop ((thread (current-thread))
+	       (time-limit time-limit)
+	       (next-to-run next-to-run))
+      (let ((scheduler (thread-scheduler thread)))
+	(cond (scheduler
+	       (let ((time-left (- (thread-time thread) elapsed)))
+		 (set-thread-time! thread time-left)
+		 (if (<= time-left 0)
+		     (loop scheduler #f scheduler)
+		     (loop scheduler
+			   (if time-limit
+			       (min time-limit time-left)
+			       time-left)
+			   next-to-run))))
+	      (next-to-run
+	       (run-next-thread next-to-run time-limit))
+	      (else
+	       (schedule-interrupt! time-limit)))))))
 
-; Fast, binary version of MIN
+; Debit the times of all running threads and run whomever is next.
+
+(define (handle-timer-interrupt interrupted-template ei)
+  (if (thread-scheduler (current-thread))
+      (debit-thread-times-and-run! #f #f)))
+
+; Run the next thread, first scheduling an interrupt if the thread is not the
+; root thread.  If the next thread has a current task, then the return values
+; are the normal out-of-time values. The bottom thread of the chain gets
+; whatever return values have been stashed earlier.
+
+(define (run-next-thread thread time-limit)
+  (if time-limit (schedule-interrupt! time-limit))
+  (let ((arguments (if (thread-current-task thread)
+		       (list 0 (enum event-type out-of-time))
+		       (thread-arguments thread))))
+    (set-thread-arguments! thread '())
+    (switch-to-thread thread arguments)))
+
+; Fast binary version of MIN
 
 (define (min x y)
   (if (< x y) x y))
@@ -310,41 +338,6 @@
       (set-thread-continuation! thread #f)	; HCC: for GC
       (enable-interrupts!)
       (apply values return-values))))
-
-; Debit the times of all running threads and run whomever is next.
-
-(define (handle-timer-interrupt interrupted-template ei)
-  (if (thread-scheduler (current-thread))
-      (let ((next-to-run (debit-thread-times! (interrupt-timer-time))))
-	(if next-to-run
-	    (begin
-	      (set-thread-current-task! next-to-run #f)
-	      (switch-to-thread next-to-run
-				(list 0 (enum event-type out-of-time))))))))
-
-; Loop up the running threads subtracting the current elapsed time from
-; each one.  Returns the scheduler of highest thread that has run out of
-; time, after arranging for an interrupt for the next time a thread is due
-; to use up its allotment.  The only time there is no new time limit is
-; when the next thread to run is the top thread.
-
-(define (debit-thread-times! amount)
-  (let loop ((thread (current-thread)) (time #f) (next-to-run #f))
-    (let ((scheduler (thread-scheduler thread)))
-      (if scheduler              ; THREAD is not the top thread
-	  (let ((time-left (- (thread-time thread) amount)))
-	    (set-thread-time! thread time-left)
-	    (if (>= 0 time-left)
-		(loop scheduler #f scheduler)
-		(loop scheduler
-		      (if time
-			  (min time time-left)
-			  time-left)
-		      next-to-run)))
-	  (begin
-	    (if time
-		(schedule-interrupt! time))
-	    next-to-run)))))
 
 ;----------------
 ; (SUSPEND <reason> <stuff>) stops the current thread and returns from

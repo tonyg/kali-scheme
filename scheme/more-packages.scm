@@ -40,12 +40,12 @@
 	methods
 	;; environments		; interaction-environment
 	util			; unspecific
-	scan			; $note-undefined
+	undefined		; $note-undefined
 	features		; force-output
 	interrupts		; set-enabled-interrupts!, all-interrupts
 	vm-exposure		; primitive-catch
 	fluids-internal         ; get-dynamic-env, set-dynamic-env!
-	syntactic		; for ## kludge
+	nodes			; for ## kludge
 	signals
 	structure-refs
 	root-scheduler)		; scheme-exit-now
@@ -80,7 +80,7 @@
   (open scheme-level-2
         command-processor
 	command-levels
-        scan                    ; noting-undefined-variables
+        undefined               ; noting-undefined-variables
 	environments		; with-interaction-environment
 	evaluation		; eval, load-into
         ;; packages		; package?
@@ -128,12 +128,12 @@
         command-processor
 	command-levels
 	methods
-        scan                    ; noting-undefined-variables
+        undefined               ; noting-undefined-variables
         packages                ; for creating a user package
         packages-internal       ; set-package-integrate?!, etc.
         package-mutation        ; package-system-sentinel
         environments            ; *structure-ref, etc.
-	syntactic		; reflective-tower
+	compiler-envs		; reflective-tower
         ensures-loaded          ; ensure-loaded
 	interfaces
 	ascii
@@ -173,10 +173,10 @@
   (open scheme-level-2
         tables
         debug-data
-	segments   ; debug-data-table
+	segments		; debug-data-table
         ;; packages
-        packages-internal  ; package-name-table
-        syntactic  ; generated?
+        packages-internal	; package-name-table
+        names			; generated?
 	features
 	weak)
   (files (env debuginfo)))
@@ -199,21 +199,23 @@
         filenames               ; set-translation!
         disclosers              ; template-name, debug-data-names
         packages                ; flush-location-names, package-integrate?
-        packages-internal       ; ?
+        packages-internal       ; [set-]package-integrate?[!], flush-location-names
+	undefined		; noting-undefined-variables
         continuations           ; continuation-template
         architecture            ; op/global, etc.
         interrupts              ; all-interrupts, set-enabled-interrupts!
         vm-exposure             ; fluid-let suppression kludge - fix later
         exceptions              ; continuation-preview
         tables
-        syntactic               ; for ,bound? command
-        scan                    ; $note-file-package
+        nodes		        ; schemify for ,expand command
+        reading-forms           ; $note-file-package
 	debug-data segments     ;  yucko
 	time                    ; real-time
         primitives              ; memory-status
         structure-refs)
   (access primitives            ; want to both use and shadow collect
-          filenames)            ;  and translate
+          filenames             ;  and translate
+	  syntactic)		;  and expand
   (files (env debug)))
 
 ; Inspector
@@ -230,10 +232,11 @@
         closures                ; closure-template
         disclosers              ; template-debug-data, etc.
         debug-data
+	evaluation		; eval
 	segments                ; get-debug-data
         templates
         continuations
-        syntactic               ; desyntaxify
+        names	                ; desyntaxify
         records
 	records-internal
         low-level               ; vector-unassigned?
@@ -246,7 +249,7 @@
   (files (env inspect)))
 
 (define-structure list-interfaces (export list-interface)
-  (open scheme-level-2 interfaces packages meta-types sort syntactic)
+  (open scheme-level-2 interfaces packages meta-types sort bindings)
   (files (env list-interface)))
 
 
@@ -255,10 +258,9 @@
 (define-structure package-mutation package-mutation-interface
   (open scheme-level-2
         shadowing               ; shadow-location!
-        compiler                ; package-undefineds
         packages
         interfaces
-        syntactic
+	bindings
         packages-internal
         defpackage              ; set-verify-later!
         locations
@@ -289,6 +291,7 @@
 	disclosers              ; template-name
         enumerated              ; enumerand->name
         disclosers              ; location-name
+	evaluation		; eval
         templates
         continuations
         locations
@@ -300,22 +303,25 @@
 
 ; Assembler.
 
-(define-structure assembling (export )
-  (open scheme-level-2 compiler segments architecture
-        syntactic               ;lookup
+(define-structure assembling (export)	; No exports, this defines a compilator.
+  (open scheme-level-2
+	compiler		;define-compilator
+	segments
+	architecture
+	nodes			;node-form node-ref
+	bindings		;binding? binding-place
         meta-types              ;value-type
         templates               ; for Richard's version
         signals                 ;error
         enumerated              ;name->enumerand
-        code-vectors
-        locations)              ;location?
+        code-vectors)
   (files (env assem)))
 
 ; Foo
 
 (define-structure assembler (export (lap :syntax))
   (open scheme-level-2)
-  (for-syntax (open scheme-level-2 syntactic meta-types assembling))
+  (for-syntax (open scheme-level-2 nodes meta-types assembling))
   (begin
     (define-syntax lap
       (lambda (e r c)
@@ -382,12 +388,13 @@
   (files (rts recnum)))
 
 (define-structure floatnums
-		  (export exp log sin cos tan asin acos atan sqrt)
+		  (export floatnum? exp log sin cos tan asin acos atan sqrt)
   (open scheme-level-2
         extended-numbers
         code-vectors
         methods signals
 	enumerated
+	loopholes
         primitives)             ;vm-extension
   (files (rts floatnum))
   (optimize auto-integrate))
@@ -408,7 +415,8 @@
 ; Big Scheme
 
 (define-structure random (export make-random)
-  (open scheme-level-2 bitwise)
+  (open scheme-level-2 bitwise
+	signals)		;call-error
   (files (big random)))
 
 (define-structure sort (export sort-list sort-list!)
@@ -467,21 +475,29 @@
 
 (define general-tables tables)    ; backward compatibility
 
-(define-structure big-scheme big-scheme-interface
-  (open scheme-level-2 formats queues sort
-        extended-ports
-	pp enumerated
-        bitwise
-        ascii
-        bigbit
-        general-tables
-	defrecord
-        structure-refs          ; for structure-ref
-        destructuring
-        receiving)
+(define-structure big-util big-util-interface
+  (open scheme-level-2
+	formats
+        structure-refs)         ; for structure-ref
   (access signals               ; for error
           debugging)            ; for breakpoint        
   (files (big big-util)))
+
+(define-structure big-scheme big-scheme-interface
+  (open scheme-level-2
+	formats
+	sort
+        extended-ports
+	pp
+	enumerated
+        bitwise
+        ascii
+        bigbit
+	big-util
+        tables
+	;defrecord
+        destructuring
+        receiving))
 
 ; Externals
 
@@ -595,6 +611,7 @@
 	    command-processor
 	    debugging
 	    define-record-types
+	    defrecord
 	    destructuring
 	    disassembler
 	    disclosers
@@ -627,6 +644,7 @@
 	    traverse
 	    spatial
 	    big-scheme
+	    big-util
 	    ;; From link-packages.scm:
 	    analysis
 	    debuginfo

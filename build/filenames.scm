@@ -15,9 +15,8 @@
 
 ; The following defines are unnecessary; they only serve to suppress
 ; annoying "undefined" warnings for some forward references.
-(define syntactic 0) 
+(define methods 0) 
 (define tables 0) 
-(define define-record-types 0)
 
 (flatload linker-structures)		 
 
@@ -47,3 +46,4 @@
 		  'initial-files i-f
 		  'usual-files u-f
 		  'linker-files q-f)
+

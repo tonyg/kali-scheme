@@ -1,8 +1,11 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 
 (define (prescheme-front-end package-ids spec-files copy no-copy shadow)
-  (receive (scanner exports lookup)
-      (package-specs->scanner+exports package-ids spec-files)
-    (let ((forms (flatten-definitions (scan-and-evaluate scanner))))
+  (receive (packages exports lookup)
+      (package-specs->packages+exports package-ids spec-files)
+    (let ((forms (flatten-definitions (scan-packages packages))))
       (annotate-forms! (car package-ids) lookup exports copy no-copy shadow)
       (receive (forms producer)
 	  (sort-forms forms)
@@ -92,7 +95,7 @@
   (let* ((value (form-value form))
 	 (var (form-var form))
 	 (name (form-name form))
-	 (value-type (cond (((structure-ref syntactic node?) value)
+	 (value-type (cond (((structure-ref nodes node?) value)
 			    (infer-definition-type value (source-proc form)))
 			   ((variable? value)
 			    (get-package-variable-type value))
@@ -127,5 +130,5 @@
 		    (lambda (port)
 		      (format port "~S = ~S"
 			      (form-name form)
-			      ((structure-ref syntactic schemify)
+			      ((structure-ref nodes schemify)
 			         (form-value form)))))))

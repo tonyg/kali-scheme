@@ -227,7 +227,8 @@
                              (eq? 'no (form-integrate f)))
                            (form-providers f))
                    (memq? f (form-providers f))
-		   (scheme-literal-node? (form-value f))))
+		   (and (scheme-node? (form-value f))
+			(scheme-literal-node? (form-value f)))))
              forms)
       (begin (set! *loop-forms* forms)
 	     (let ((f (breakpoint "Break dependency loop: *loop-forms* = ~S" forms)))
@@ -235,7 +236,10 @@
 	       f))))
 
 (define scheme-literal-node? 
-  ((structure-ref syntactic node-predicate) 'literal))
+  ((structure-ref nodes node-predicate) 'literal))
+
+(define scheme-node? 
+  (structure-ref nodes node?))
 
 ;----------------------------------------------------------------
 

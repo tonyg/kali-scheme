@@ -13,8 +13,9 @@
 	segments		;with-fresh-compiler-state
 	packages
 	packages-internal       ;set-package-integrate?!
-	scan
-	syntactic		;name->symbol		
+	names			;name->symbol
+	scan-package		;collect-packages
+	compile-packages	;compile-package
 	reification
 	closures		;make closure to pass to write-image
 	filenames
@@ -28,9 +29,10 @@
 	packages
 	packages-internal ;?
 	usual-macros		;find-free-names-in-syntax-rules
-	syntactic		;name-hash, etc.
-	meta-types			;usual-variable-type
+	names bindings
+	meta-types		;usual-variable-type
 	locations
+	primops
 	tables records
 	signals			;error
 	features		;force-output
@@ -38,32 +40,28 @@
 	inline)			;name->extrinsic
   (files (link reify)))
 
-(define-structure expander expander-interface
-  (open scheme-level-2
-	syntactic packages scan meta-types reconstruction
-	define-record-types
-	util signals tables fluids strong
-	features)  ; string-hash
-  (files (opt expand)
-         (opt sort)
-	 (opt flatten)))
+;(define-structure expander expander-interface
+;  (open scheme-level-2
+;        syntactic packages scan meta-types reconstruction
+;        define-record-types
+;        util signals tables fluids strong
+;        features)  ; string-hash
+;  (files (opt expand)
+;         (opt sort)
+;         (opt flatten)))
 
-(define-structure strong (export strongly-connected-components)
-  (open scheme define-record-types signals)
-  (files (big strong))) ;!
-
-(define-structure analysis (export analyze-forms)
-  (open scheme
-	syntactic packages scan inline meta-types expander
-	packages-internal	;set-package-integrate?!
-	reconstruction
-	signals
-	locations
-	features		;force-output
-	tables
-	fluids
-	util)
-  (files (opt analyze)))
+;(define-structure analysis (export analyze-forms)
+;  (open scheme
+;        syntactic packages scan inline meta-types expander
+;        packages-internal       ;set-package-integrate?!
+;        reconstruction
+;        signals
+;        locations
+;        features                ;force-output
+;        tables
+;        fluids
+;        util)
+;  (files (opt analyze)))
 
 
 ; Database of procedure names 'n' stuff.

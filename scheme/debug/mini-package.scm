@@ -58,9 +58,10 @@
   (cons 'transform-for-structure-ref rest))
 (define (inline-transform . rest)
   (cons 'inline-transform rest))
+(define (primop . rest)
+  (cons 'primop rest))
 
-(define (package-define! p name op) 'lose)
-
+(define (package-define-static! package name op) 'lose)
 
 ; --------------------
 ; ???

@@ -5,21 +5,71 @@
 ; Sorry this is so hairy, but before it was written, type checking 
 ; consumed 15% of compile time.
 
-; f : t1 -> t2 restrictive means:
-;   if x : t1 then (f x) : t2 (possible error!), else (f x) : error.
-; f : t1 -> t2 nonrestrictive means:
-;   There exists an x : t1 such that (f x) : t2.
-
 (define-record-type meta-type :meta-type
   (really-make-type mask more info)
   meta-type?
   (mask type-mask)
   (more type-more)
   (info type-info))
+
+; MASK is a bit set.  The current bits are:
+;
+; Non values:
+;   syntax
+;   other static type
+;   no values - indicates an optional type; the type with only this bit set
+;     is the empty rail type.
+;   two or more - indicates a rail-type with at least two elements
+;     
+; Values:
+;   exact integer
+;   integer
+;   exact rational
+;   rational
+;   exact real
+;   real
+;   exact complex
+;   complex
+;   other exact number
+;   other number
+;   boolean
+;   pair
+;   null
+;   record
+;   procedure
+;   other
+;
+; The MORE field is only used for rail types, which are like ML's tuples.
+; If the TWO-OR-MORE? bit is set, then 
+;  more = (head . tail).
+; Otherwise, more = #f.
+;
+; For procedure types, the PROCEDURE bit is set and the INFO field is a three
+; element list: (domain codomain restrictive?)
+;  If INFO field for the type of F is (t1 t2 #t), then
+;    if x : t1 then (f x) : t2 (possible error!), else (f x) : error.
+;  If INFO field for the type of F is (t1 t2 #f), then
+;    there exists an x : t1 such that (f x) : t2.
+;
+; For types which do not have bits, the OTHER bit is set and the INFO field is
+; a symbol naming some type that doesn't have its own bit in the mask.  The
+; other types defined in this file are:
+;
+;   :char
+;   :unspecific
+;   :string
+;   :symbol
+;   :vector
+;   :escape
+;   :structure
+;
+; More are constructed later by using SEXP->TYPE.
+
 (define-record-discloser :meta-type
   (lambda (t)
     `(type ,(let ((m (type-mask t)))
-	      (or (table-ref mask->name-table m) m))
+	      (or (table-ref mask->name-table m)
+		  m))
 	   ,(let ((more (type-more t)))
 	      (if (and (pair? more) (eq? (cdr more) t))
 		  '*
@@ -63,7 +113,6 @@
   (= (type-mask t) 0))
 
 (set-type-name! bottom-type ':error)
-
 
 (define (new-atomic-type)
   (mask->type (new-type-bit)))
@@ -119,6 +168,9 @@
   (make-type (bitwise-ior (type-mask t) mask/no-values)
 	     #f
 	     (type-info t)))
+
+; A rest type is an infinite rail type with both the no-values and the
+; two-or-more bits set.
 
 (define (make-rest-type t)
   (if (bottom-type? t)
@@ -215,16 +267,15 @@
 		 (not more2)))
 	   (let ((info1 (type-info t1))
 		 (info2 (type-info t2)))
-	     (or (eq? info1 info2)
-		 (and (pair? info1)
+	     (or (eq? info1 info2)		; takes care of OTHER types
+		 (and (pair? info1)		; check for same procedure types
 		      (pair? info2)
-		      (same-type? (car info1) (car info2))    ;Procedure
+		      (same-type? (car info1) (car info2))
 		      (same-type? (cadr info1) (cadr info2))
 		      (eq? (caddr info1) (caddr info2))))))))
 
 (define (subtype? t1 t2)		;*** optimize later
   (same-type? t1 (meet-type t1 t2)))
-
 
 ; (mask->type mask/procedure) represents the TOP of the procedure
 ; subhierarchy.
@@ -247,17 +298,18 @@
 				(or i1 i2)))))
 	      ((> (bitwise-and m mask/procedure) 0)
 	       (meet-procedure m t1 t2))
-	      (else (mask->type m))))))
+	      (else
+	       (mask->type m))))))
 
 (define (other-type-info t)
   (let ((i (type-info t)))
     (if (pair? i) #f i)))
 
-
-(define (p name x) (write `(,name ,x)) (newline) x)
+;(define (p name x) (write `(,name ,x)) (newline) x)
 
 (define (meet-rail t1 t2)
-  (let ((t (meet-type (head-type t1) (head-type t2))))
+  (let ((t (meet-type (head-type t1)
+		      (head-type t2))))
     (if (and (rest-type? t1)
 	     (rest-type? t2))
 	(make-rest-type t)
@@ -307,7 +359,7 @@
 ; (define (foo . x) 3),   (export (foo (proc (value) value)))
 ;  No problem, since the domain of the first contains the domain of the second.
 ;
-; (define (foo x . x) (+ x 3)),   (export (foo (proc (value) value)))
+; (define (foo x . y) (+ x 3)),   (export (foo (proc (value) value)))
 ;  Dubious; the domains intersect but are incomparable.  The meet
 ;  should be (proc (number) number).
 ;
@@ -319,13 +371,13 @@
 ; (define (foo x) (numerator x)),   (export (foo (proc (integer) integer)))
 ;  This should definitely be OK.
 
-
 (define (meet-procedure m t1 t2)
   (let ((dom1 (procedure-type-domain t1))
 	(dom2 (procedure-type-domain t2))
 	(cod1 (procedure-type-codomain t1))
 	(cod2 (procedure-type-codomain t2)))
-    (cond ((or (restrictive? t1) (restrictive? t2))
+    (cond ((or (restrictive? t1)
+	       (restrictive? t2))
 	   (let ((dom (meet-type dom1 dom2))
 		 (cod (meet-type cod1 cod2)))
 	     (if (or (bottom-type? dom)
@@ -337,13 +389,13 @@
 				      dom
 				      cod
 				      #t))))
-	  ((and (subtype? dom2 dom1) (subtype? cod2 cod1))
+	  ((and (subtype? dom2 dom1)
+		(subtype? cod2 cod1))
 	   ;; exists x : dom1 s.t. (f x) : cod1   adds no info
 	   (make-procedure-type m dom2 cod2 #f))
 	  (else
 	   ;; Arbitrary choice.
 	   (make-procedure-type m dom1 cod1 #f)))))
-
 
 ; MEET? is the operation used all the time by the compiler.  We want
 ; getting a yes answer to be as fast as possible.  We could do
@@ -354,21 +406,33 @@
 
 (define (meet? t1 t2)
   (or (eq? t1 t2)
-      (let ((m (bitwise-and (type-mask t1) (type-mask t2))))
+      (let ((m (bitwise-and (type-mask t1)
+			    (type-mask t2))))
 	(cond ((= m mask/two-or-more)
-	       (and (meet? (head-type t1) (head-type t2))
-		    (meet? (tail-type t1) (tail-type t2))))
-	      ((= m 0) #f)
-	      ((eq? (type-info t1) (type-info t2)) #t)
+	       (and (meet? (head-type t1)
+			   (head-type t2))
+		    (meet? (tail-type t1)
+			   (tail-type t2))))
+	      ((= m 0)
+	       #f)
+	      ((eq? (type-info t1)
+		    (type-info t2))
+	       #t)
 	      ((= m mask/other)
-	       (not (and (other-type-info t1) (other-type-info t2))))
-	      ((= m mask/procedure) (meet-procedure? t1 t2))
-	      (else #t)))))
+	       (not (and (other-type-info t1)
+			 (other-type-info t2))))
+	      ((= m mask/procedure)
+	       (meet-procedure? t1 t2))
+	      (else
+	       #t)))))
 
 (define (meet-procedure? t1 t2)
-  (if (or (restrictive? t1) (restrictive? t2))
-      (and (meet? (procedure-type-domain t1) (procedure-type-domain t2))
-	   (meet? (procedure-type-codomain t1) (procedure-type-codomain t2)))
+  (if (or (restrictive? t1)
+	  (restrictive? t2))
+      (and (meet? (procedure-type-domain t1)
+		  (procedure-type-domain t2))
+	   (meet? (procedure-type-codomain t1)
+		  (procedure-type-codomain t2)))
       #t))
 
 
@@ -377,10 +441,12 @@
 (define (join-type t1 t2)
   (if (same-type? t1 t2)
       t1
-      (let ((m (bitwise-ior (type-mask t1) (type-mask t2))))
+      (let ((m (bitwise-ior (type-mask t1)
+			    (type-mask t2))))
 	(if (> (bitwise-and m mask/two-or-more) 0)
 	    (join-rail t1 t2)
-	    (let ((info1 (type-info t1)) (info2 (type-info t2)))
+	    (let ((info1 (type-info t1))
+		  (info2 (type-info t2)))
 	      (cond ((equal? info1 info2)
 		     (make-type m #f (type-info t1)))
 		    ((> (bitwise-and m mask/other) 0)
@@ -415,7 +481,8 @@
 	    (make-procedure-type m
 				 (join-type dom1 dom2) ;Error when outside here
 				 (join-type cod1 cod2)
-				 (and (restrictive? t1) (restrictive? t2))))
+				 (and (restrictive? t1)
+				      (restrictive? t2))))
 	  (make-type m #f (type-info t1)))
       (make-type m #f (type-info t2))))
 
@@ -453,6 +520,8 @@
 (define exact-integer-type (meet-type integer-type exact-type))
 (set-type-name! exact-integer-type ':exact-integer)
 
+(define inexact-real-type (meet-type real-type exact-type))
+(set-type-name! inexact-real-type ':inexact-real)
 
 ; Next, all the others.
 
@@ -555,7 +624,8 @@
 	(else (error "unrecognized type" x))))
 
 (define (sexp->values-type l req? r?)
-  (cond ((null? l) empty-rail-type)
+  (cond ((null? l)
+	 empty-rail-type)
 	((eq? (car l) '&rest)
 	 (make-rest-type (sexp->type (cadr l) r?)))
 	((eq? (car l) '&opt)
@@ -682,10 +752,9 @@
     ((some-values &opt &rest ?t) (make-rest-type ?t))
     ((some-values &opt ?t1 . ?ts)
      (rail-type (make-optional-type ?t1)
-		(some-values &opt . ?ts)))
+                (some-values &opt . ?ts)))
     ((some-values ?t1 . ?ts)
      (rail-type ?t1 (some-values . ?ts)))))
-
 
 (define (procedure-type? t)
   (= (type-mask t) mask/procedure))
@@ -712,3 +781,44 @@
 	  (else
 	   (cons (head-type d)
 		 (recur (tail-type d)))))))
+
+;----------------
+; Odd types - variable types and the undeclared type
+;
+; These were elsewhere (syntax.scm) and should be here.  If I could understand
+; the above code I could make these be `real' types.
+
+(define (variable-type type)
+  (list 'variable type))
+
+(define (variable-type? type)
+  (and (pair? type) (eq? (car type) 'variable)))
+
+(define variable-value-type cadr)
+
+; Usual type for Scheme variables.
+
+(define usual-variable-type (variable-type value-type))
+
+; cf. EXPORT macro
+
+(define undeclared-type ':undeclared)
+
+;----------------
+; Used in two places:
+; 1. GET-LOCATION checks to see if the context of use (either variable
+;    reference or assignment) is compatible with the declared type.
+; 2. CHECK-STRUCTURE checks to see if the reconstructed type is compatible
+;    with any type declared in the interface.
+
+(define (compatible-types? have-type want-type)
+  (if (variable-type? want-type)
+      (and (variable-type? have-type)
+	   (same-type? (variable-value-type have-type)
+		       (variable-value-type want-type)))
+      (meet? (if (variable-type? have-type)
+		 (variable-value-type have-type)
+		 have-type)
+	     want-type)))
+
+

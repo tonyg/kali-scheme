@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 
 ; Data must be done last as it may contain references to the other stuff.
 
@@ -13,6 +16,9 @@
     (for-each (lambda (f)
 		(display-data-form-as-scheme f out))
 	      data)))
+
+(define form-value (structure-ref forms form-value))
+(define form-var   (structure-ref forms form-var))
 
 (define literal-node? (node-predicate 'literal #f))
 
@@ -155,8 +161,10 @@
 		  (cond ((pair? vars)
 			 (cons (schemify (car vars))
 			       (label (cdr vars))))
-			((null? vars) '())
-			(else (schemify vars))))
+			((null? vars)
+			 '())
+			(else
+			 (schemify vars))))
 	 ,@(map schemify (cddr form))))))
 
 (define-schemifier 'goto #f

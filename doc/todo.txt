@@ -1,13 +1,9 @@
 --*- Mode: Indented-text; -*-
 
 Scheme 48: list of bugs and things to do.
-Last update by RAK on 10 Oct 95.
+Last update by RAK on 28 April 1998.
 
 Run-time system bugs:
-    Compiler needs to treat calls with more than 63 arguments specially.
-    Compiler loses if a procedure has more than 254 literals.  This
-      seems to happen a lot with enormous backquote forms, which really
-      do arise in practice (e.g. PSD, Hanson's macro expander, etc.).
     Shadowing can fail sometimes for macro-referenced variables.  E.g.
       the following sequence will lose if entered interactively as
       three separate forms:
@@ -67,7 +63,6 @@ Big Scheme bugs / features:
       The new thread would read characters eagerly, buffering
       everything except control-C's for the thread that is doing the
       real work, and converting control-C's into interrupts.
-    It would be nice if the threads package were re-entrant.
     How about deleting entries from tables?
     RPC.
     Add call/gcc (invokes the Gnu C compiler).

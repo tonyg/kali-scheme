@@ -8,7 +8,7 @@
 
 (define length-procedures
   (do ((i (- stob-count 1) (- i 1))
-       (l '() (cons (eval `(lap *length
+       (l '() (cons (eval `(lap *length ()
                                 (check-nargs= 1)
                                 (pop)
                                 (stored-object-length

@@ -15,7 +15,6 @@
 (define-record-discloser :interface
   (lambda (int) (list 'interface (interface-name int))))
 
-
 (define (interface-ref int name)
   ((ref-method int) name))
 
@@ -33,15 +32,15 @@
 ; make a population.
 
 (define (make-interface ref walk name)
-  (really-make-interface ref walk
+  (really-make-interface ref
+			 walk
 			 (make-population)
 			 name))
-
 
 ; Simple interfaces (export (name type) ...)
 
 (define (make-simple-interface name items)
-  (let ((table (make-name-table)))
+  (let ((table (make-symbol-table)))
     (for-each (lambda (item)
 		(if (pair? item)
 		    (let ((name (car item))

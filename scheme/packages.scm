@@ -239,6 +239,7 @@
 	    signals
 	    channels
 	    closures
+	    code-quote
 	    escapes
 	    locations
 	    loopholes
@@ -303,7 +304,11 @@
 	   :structure)))
   
 (define-interface compiler-structures-interface
-  (export ((compiler
+  (export ((analysis
+	    bindings
+	    compiler
+	    compiler-envs
+	    compile-packages
 	    debug-data
 	    defpackage
 	    filenames
@@ -311,14 +316,22 @@
 	    meta-types
 	    interfaces
 	    module-system
+	    names
+	    nodes
+	    optimizer
 	    packages
 	    packages-internal
+	    primops
+	    reading-forms
 	    reconstruction
-	    scan
 	    segments
+	    scan-package
 	    syntactic
+	    strong
 	    tables
+	    transforms
 	    types
+	    undefined
 	    usual-macros)
 	   :structure)))
 
@@ -346,7 +359,7 @@
 	    link-config
 	    loadc
 	    reification
-	    strong)
+	    usages)
 	   :structure)))
 
 (define debug-structures-interface

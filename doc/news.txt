@@ -2,6 +2,36 @@
 
 Recent changes to Scheme 48.
 
+6/29/98  (version 0.51)
+	 Incompatible changes:
+          BIG-SCHEME no longer exports its version of DEFINE-RECORD-TYPE (but
+	   it is available from the structure DEFRECORD).  I am slowly removing
+           all uses of this version of DEFINE-RECORD-TYPE from the sources.
+	  The version of DEFINE-RECORD-TYPE exported by DEFINE-RECORD-TYPES
+	   checks that every constructor argument corresponds to a field.
+	  Uses of LAP must list their free variables (see env/assem.scm).
+	 Changes:
+	  The functions exported by BIG-SCHEME that were not available elsewhere
+	   are now exported by BIG-UTIL as well.
+          MAKE-RANDOM now checks its argument (but is still a fairly poor
+           source of pseudo-randomness).
+	  SIGPIPE no longer kills the S48 process (this was done earlier but
+	   not listed here).
+	  The macro/module/compiler code has been reorganized.  Hopefully
+	   the only noticable difference is in the babble written when loading
+           files and packages.
+	  Added CODE-QUOTE (in its own structure of the same name) for use
+           in writing hygienic macro-generating macros.  CODE-QUOTE is the
+           same as QUOTE except that it does not strip off any of the macro
+	   system's name annotations.
+	  The FLOATNUMS package now exports FLOATNUM?.
+	 Bug fixes:
+	  Fixed phony stack-overflow bug.
+	  Fixed a bug in thread time-debit mechanism.
+	  Made floating point numbers always print as inexact.
+	  Got rid of bogus type-error warnings when using floatnums.
+	  Fixed declaration of call_startup_procedure in c/main.c.
+
 2/11/98  (version 0.50)
          Fixed bug in closed-compiled version of READ-CHAR.
 	 Fixed negative-key bug in integer tables.

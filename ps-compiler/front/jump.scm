@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 
 ; Code to turn PROC lambdas into JUMP lambdas.
 
@@ -22,16 +25,20 @@
 ;
 ; Need a root node, so make one that points to all procs with unknown calls.
 
-(define-record-type node
-  (proc             ; lambda node (or #f for continuation holders)
-   cont)            ; lambda node (or #f for procs)
-  ((successors '())
-   temp
-   (join? #f)
-   (merged? #f)
-   ))
+(define-record-type node :node
+  (really-make-node proc cont successors join? merged?)
+  node?
+  (proc node-proc)             ; lambda node (or #f for continuation holders)
+  (cont node-cont)             ; lambda node (or #f for procs)
+  (successors node-successors set-node-successors!)
+  (temp node-temp set-node-temp!)
+  (join? node-join? set-node-join?!)
+  (merged? node-merged? set-node-merged?!))
 
-(define-record-discloser type/node
+(define (make-node proc cont)
+  (really-make-node proc cont '() #f #f))
+
+(define-record-discloser :node
   (lambda (node)
     (list 'node (node-proc node) (node-cont node))))
 
@@ -68,11 +75,11 @@
 
 (define (find-jump-procs all-procs proc->uses)
   (for-each (lambda (l)
-	      (set-lambda-block! l (node-maker l #f)))
+	      (set-lambda-block! l (make-node l #f)))
 	    all-procs)
   (receive (known unknown)
       (partition-list calls-known? all-procs)
-    (let ((root (node-maker #f #f))
+    (let ((root (make-node #f #f))
 	  (conts-cell (list '()))
 	  (known-blocks (map lambda-block known))
 	  (procs-cell (list (map lambda-block unknown))))
@@ -126,7 +133,7 @@
   (let ((block (lambda-block proc)))
     (if (node? block)
 	block
-	(let ((new (node-maker proc #f)))
+	(let ((new (make-node proc #f)))
 	  (set-lambda-block! proc new)
 	  (set-car! procs-cell (cons new (car procs-cell)))
 	  new))))
@@ -138,7 +145,7 @@
 	     (and (node-cont node)
 		  (node-equal? cont (node-cont node))))
 	   (node-successors caller))
-      (let ((cont-node (node-maker #f cont)))
+      (let ((cont-node (make-node #f cont)))
 	(set-car! conts-cell (cons cont-node (car conts-cell)))
 	(add-child! caller cont-node)
 	cont-node)))

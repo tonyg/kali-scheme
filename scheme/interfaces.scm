@@ -119,6 +119,7 @@
 (define-interface locations-interface
   (export location?
 	  location-defined?
+	  location-assigned?
 	  location-id
 	  set-location-id!
 	  make-undefined-location
@@ -257,6 +258,7 @@
   (export any
 	  every
 	  filter
+	  fold fold->2 fold->3
 	  last
 	  posq
 	  posv
@@ -583,7 +585,8 @@
 (define-interface scheme-adds-interface
   (export eval load
 	  interaction-environment
-	  scheme-report-environment))
+	  scheme-report-environment
+	  null-environment))
 
 (define-interface scheme-interface
   (compound-interface scheme-adds-interface
@@ -650,6 +653,9 @@
 	  string-hash
 	  default-table-hash-function))
 
+;----------------
+; Beginning of compiler interfaces
+
 (define-interface usual-macros-interface
   (export usual-transform))
 
@@ -687,7 +693,6 @@
 	  procedure-type-arity
 	  any-procedure-type
 	  (proc :syntax)
-	  (some-values :syntax)
 
 	  boolean-type
 	  char-type
@@ -709,76 +714,98 @@
 	  vector-type
 
 	  escape-type
-	  structure-type))
+	  structure-type
 
-(define-interface syntactic-interface
-  (export binding?
-	  binding-place
-	  clobber-binding!
-	  binding-static
-	  binding-type
-	  make-binding
-	  desyntaxify
-	  forget-integration
-	  impose-type
-	  literal?
-	  generate-name         ;qualified->name in opt/inline.scm
-	  generated-env
-	  generated-parent-name
-	  generated-symbol
-	  generated-uid
-	  generated?
-	  get-operator
-	  make-name-table
-	  make-operator-table
-	  make-qualified
-	  make-transform
-	  maybe-transform-call
-	  n-ary?
-	  name->qualified
-	  name->symbol
-	  name?				;assem.scm
-	  normalize-formals
-	  number-of-required-args
-	  operator-name
-	  operator-table-ref
-	  operator-define!
-	  operator-lookup
-	  operator-type
-	  operator-uid
-	  operator?
-	  operators-table		;config.scm
-	  process-syntax
-	  qualified?
-	  qualified-parent-name
-	  qualified-symbol
-	  set-binding-place!
-	  same-denotation?		;for redefinition messages
-	  syntax?
-	  transform-env transform-aux-names ;link/reify.scm
-	  transform-source transform-id   ;link/reify.scm
-	  transform-type
-	  transform?
-	  unbound?
-	  schemify
-	  get-funny
-	  reflective-tower 
-	  funny-name/reflective-tower
-	  ;; Stuff moved from meta-types
+	  ;; Stuff moved back from syntactic - why was it moved there?
 	  variable-type
 	  variable-type?
 	  variable-value-type
 	  usual-variable-type
-	  compatible-types?
 	  undeclared-type
-	  bind-source-file-name
-	  funny-name/reader
-	  environment-reader))
+
+	  compatible-types?))
+
+(define-interface names-interface
+  (export name?
+	  name->symbol
+
+	  make-name-generator
+	  generate-name		;qualified->name in opt/inline.scm
+	  generated?
+
+	  generated-symbol
+	  generated-token
+	  generated-env
+	  generated-parent-name
+	  generated-uid
+
+	  make-name-table
+
+	  qualified?
+	  qualified-parent-name
+	  qualified-symbol
+	  name->qualified
+
+          desyntaxify
+	  ))
+
+(define-interface transforms-interface
+  (export make-transform
+	  maybe-apply-macro-transform
+	  apply-inline-transform
+	  transform?
+	  transform-type
+
+	  transform-env		; These are used to reify transforms.
+	  transform-aux-names
+	  transform-source
+	  transform-id))
+
+(define-interface bindings-interface
+  (export binding?
+	  make-binding
+	  binding-place
+	  set-binding-place!	;for package mutation, used in package.scm
+	  binding-static
+	  binding-type
+	  binding-path
+
+	  add-path
+	  clobber-binding!
+	  maybe-fix-place!
+	  forget-integration
+	  impose-type
+
+	  same-denotation?
+	  ))
+	  
+;----------------
+; Syntactic interfaces
+
+(define-interface compiler-envs-interface
+  (export make-compiler-env	; re-exported by syntactic
+	  lookup
+	  bind1 bind bindrec
+
+	  bind-source-file-name	; re-exported by syntactic
+	  source-file-name
+
+	  environment-macro-eval
+	  environment-define!
+
+	  extract-package-from-environment))	; temporary
+
+(define-interface syntactic-interface
+  (export expand
+	  scan-forms
+	  expand-form
+	  syntax?
+	  make-compiler-env
+	  bind-source-file-name))
 
 (define-interface nodes-interface
-  (export classify
-	  make-node
-	  ;; name-node-binding
+  (export make-node
+
 	  node?
 	  node-operator
 	  node-operator-id
@@ -786,105 +813,26 @@
 	  node-ref
 	  node-set!
 	  node-predicate
+
 	  make-similar-node
-	  define-node?  
-	  define-syntax-node?
-	  scan-body
-	  lookup
-	  bind
-	  bind1))
 
+	  schemify
 
-; Interfaces.
+	  get-operator
+	  make-operator-table
+	  operator-name
+	  operator-nargs
+	  operator-table-ref
+	  operator-define!
+	  operator-lookup
+	  operator-type
+	  operator-uid
+	  operator?
+	  operators-table		;config.scm comp-package.scm
+	  ))
 
-(define-interface interfaces-interface
-  (export make-compound-interface
-	  make-simple-interface
-	  note-reference-to-interface!
-	  interface-ref
-	  interface?
-	  interface-clients
-	  for-each-declaration
-	  note-interface-name!))
-
-
-; Packages.
-
-(define-interface packages-interface
-  (export make-package
-	  make-simple-package		;start.scm
-	  make-structure
-	  package-define!
-	  package-lookup
-	  package?			;command.scm
-	  structure-lookup		;env.scm
-	  generic-lookup		;inline.scm
-	  structure-interface		;config.scm
-	  package->environment
-	  structure?
-	  package-uid			;reifier
-	  make-new-location		;ctop.scm
-	  package-note-caching
-	  structure-package
-	  extract-package-from-environment
-	  package-define-funny!
-	  note-structure-name!
-	  (:package :type)
-	  (:structure :type)))		;for (define-method ...)'s
-
-(define-interface packages-internal-interface
-  (export package-loaded?		;env/load-package.scm
-	  set-package-loaded?!		;env/load-package.scm
-	  package-name
-	  flush-location-names
-	  package-name-table		;debuginfo
-	  location-info-table		;debuginfo, disclosers
-	  package-unstable?		;env/pacman.scm
-	  package-integrate?		;env/debug.scm
-	  package-get
-	  package-put!
-
-	  ;; For scanner
-	  for-each-export
-	  package-accesses
-	  package-clauses
-	  package-file-name
-	  package-opens
-	  set-package-integrate?!
-	  structure-name
-
-	  ;; For package mutation
-	  for-each-definition
-	  set-package-opens!
-	  set-structure-interface!
-	  set-package-opens-thunk!
-	  structure-clients
-	  package-opens-thunk
-	  package-opens-really
-	  structure-interface-really
-	  make-new-location
-	  $get-location
-	  set-package-get-location!
-	  initialize-structure!
-	  initialize-package!
-
-	  extract-package-from-environment ;foo
-	  package-cached
-	  package-definitions
-	  package-clients))
-
-(define-interface scan-interface
-  (export scan-forms
-	  scan-file
-	  scan-structures		;load-package.scm, link/link.scm
-	  scan-package
-	  set-optimizer!
-	  set-standard-optimizers!
-	  $note-file-package
-	  noting-undefined-variables
-	  $note-undefined		;env/command.scm
-	  note-undefined!
-	  check-structure))
+;----------------
+; Compiler interfaces
 
 (define-interface segments-interface
   (export attach-label
@@ -911,25 +859,27 @@
 	  debug-data-table
 	  get-debug-data
 	  with-fresh-compiler-state     ;for linker
+	  keep-source-code?		;for bcomp
 	  ))
 
 (define-interface compiler-interface
-  (export compile-and-run-file		;for LOAD
-	  compile-and-run-forms		;for EVAL
-	  compile-and-run-scanned-forms ;for eval.scm / ensure-loaded
-	  compile-file			;link/link.scm
-	  compile-form			;link/link.scm
-	  compile-scanned-forms		;link/link.scm
-	  make-startup-procedure	;link/link.scm
-	  package-undefineds		; env/pedit.scm
-	  package-undefined-but-assigneds
-	  location-for-reference
+  (export compile-forms
+          make-startup-procedure	;link/link.scm
 	  set-type-check?!		; for timings
 	  define-compilator		;assem.scm
 	  deliver-value			;assem.scm
-	  get-location			;assem.scm
-	  environment-level		;assem.scm
-	  bind-vars			;assem.scm
+	  ))
+
+(define-interface primops-interface
+  (export define-compiler-primitive
+	  primop?
+	  primop-name
+	  primop-type
+	  primop-closed
+	  primop-compilator
+
+	  get-primop
+	  walk-primops			;comp-package.scm
 	  ))
 
 (define-interface debug-data-interface
@@ -944,8 +894,121 @@
 	  set-debug-data-env-maps!
 	  make-debug-data))
 
-(define-interface evaluation-interface
-  (export eval load load-into eval-from-file eval-scanned-forms))
+;----------------
+; Module interfaces
+
+; Interfaces.
+
+(define-interface interfaces-interface
+  (export make-compound-interface
+	  make-simple-interface
+	  note-reference-to-interface!
+	  interface-ref
+	  interface?
+	  interface-clients
+	  for-each-declaration
+	  note-interface-name!))
+
+; Packages.
+
+(define-interface packages-interface
+  (export make-package
+	  make-simple-package		;start.scm
+	  make-structure
+	  package-define!
+	  package-lookup
+	  package?			;command.scm
+	  structure-lookup		;env.scm
+	  generic-lookup		;inline.scm
+	  structure-interface		;config.scm
+	  package->environment
+	  link!
+	  structure?
+	  package-uid			;reifier
+	  make-new-location		;ctop.scm
+	  structure-package
+	  note-structure-name!
+	  (:package :type)
+	  (:structure :type)))		;for (define-method ...)'s
+
+(define-interface packages-internal-interface
+  (export package-loaded?		;env/load-package.scm
+	  set-package-loaded?!		;env/load-package.scm
+	  package-name
+	  flush-location-names
+	  package-name-table		;debuginfo
+	  location-info-table		;debuginfo, disclosers
+	  package-unstable?		;env/pacman.scm
+	  package-integrate?		;env/debug.scm
+	  package-add-static!		;opt/analyze.scm
+	  package-refine-type!		;opt/usage.scm
+	  
+	  ;; For scanner
+	  for-each-export
+	  package-accesses
+	  package-clauses
+	  package-file-name
+	  package-opens
+	  set-package-integrate?!
+	  structure-name
+
+	  ;; For package mutation
+	  for-each-definition
+	  set-package-opens!
+	  set-structure-interface!
+	  set-package-opens-thunk!
+	  structure-clients
+	  package-opens-thunk
+	  package-opens-really
+	  package-undefineds
+	  package-undefined-but-assigneds
+	  package-note-caching!
+	  structure-interface-really
+	  make-new-location
+	  $get-location
+	  set-package-get-location!
+	  initialize-structure!
+	  initialize-package!
+	  location-for-reference
+
+	  package-cached
+	  package-definitions
+	  package-clients))
+
+(define-interface scan-package-interface
+  (export collect-packages
+	  package-source
+	  package-optimizer-names
+	  check-structure))
+
+(define-interface optimizer-interface
+  (export set-optimizer!
+	  get-optimizer
+	  set-standard-optimizers!))
+
+(define-interface undefined-interface
+  (export noting-undefined-variables
+	  $note-undefined		;env/command.scm
+	  ))
+
+;----------------
+; Inlining
+
+(define-interface inline-interface
+  (export make-inline-transform
+	  inline-transform		;bcomp/for-reify.scm
+	  qualified->name))
+
+(define-interface usages-interface
+  (export find-usages
+	  find-node-usages
+	  usage-name-node
+	  usage-reference-count
+	  usage-operator-count
+	  usage-assignment-count))
+
+; End of compiler interfaces
+;----------------
 
 (define-interface environments-interface  ;cheesy
   (export *structure-ref
@@ -955,6 +1018,7 @@
 	  interaction-environment
 	  make-reflective-tower
 	  scheme-report-environment
+	  null-environment
 	  set-interaction-environment!
 	  set-scheme-report-environment!
 	  with-interaction-environment
@@ -984,7 +1048,6 @@
   (export ((:syntax :values :arguments :value) :type)
 	  (procedure (proc (:type :type) :type))  ; (procedure T1 T2)
 	  (proc :syntax)		; (proc (T1 ... Tn) T)
-	  (some-values :syntax)		; (some-values T1 ... Tn)
 	  ((:boolean
 	    :char
 	    :number
@@ -1003,6 +1066,10 @@
 	  (:structure :type)
 	  :type))		;Holy stratification, Batman!
 
+(define-interface evaluation-interface
+  (export eval load load-into eval-from-file
+	  ; eval-scanned-forms
+	  ))
 
 ; VM architecture
 
@@ -1046,13 +1113,6 @@
 	  &disclose-condition      	;env/disclosers.scm
 	  limited-write))
 
-
-(define-interface inline-interface
-  (export inline-transform
-	  ;; name->qualified qualified?
-	  qualified->name
-	  substitute))
-
 ; Bindings needed by the form composed by REIFY-STRUCTURES.
 
 (define-interface for-reification-interface
@@ -1060,12 +1120,14 @@
 	  simple-interface
 	  package
 	  transform
+	  primop
 	  ;; From usual-macros
 	  usual-transform
 	  ;; From inline
 	  inline-transform
 	  ;; From packages
-	  package-define!
+	  package-define-static!
+	  ;; From primops
 	  make-structure
 	  ))
 

@@ -117,6 +117,29 @@
 (test "* 2" = (* 214760876 10) 2147608760)
 (test "* 3" = (* 47123 46039) 2169495797)
 
+(test "internal define" equal? '(20 20 20 20)
+      (list (let ()
+	      (define a 5)
+	      (define b 15)
+	      (+ a b))
+      
+	    (let ((b 10))
+	      (define (a) b)
+	      (define b 20)
+	      (a))
+
+	    (let ((b 10))
+	      (define b 20)
+	      (define (a) b)
+	      (a))
+
+	    (let ((b 10)
+		  (a (lambda () 20))
+		  (define (lambda args 30)))
+	      (define b 40)
+	      (define (a) b)
+	      (a))))
+
 (define (identity x) x)		; handy for preventing inlining
 
 (let ((port (make-port #f -1 0 #f 0 (make-code-vector 1024 25) 0 1023 #f)))
@@ -128,7 +151,7 @@
 
 (test "char<->integer" eq? #\a (integer->char (char->integer #\a)))
 
-(test "lap" equal? #f ((lap #f (protocol 0) (false) (return))))
+(test "lap" equal? #f ((lap #f () (protocol 0) (false) (return))))
 (let ((q (make-queue)))
   (enqueue! q 'a)
   (test "q" eq? 'a (dequeue! q)))

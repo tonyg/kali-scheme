@@ -7,7 +7,7 @@
 ;  (lambda (x y) (cons (car x) (cdr x)))
 
 (define annotate-procedure
-  (lap annotate-procedure
+  (lap annotate-procedure ()
        0 (check-nargs= 2)
        2 (make-env 2)
        4 (local0 2)
@@ -24,7 +24,8 @@
 ;  (lambda (x) (if (< 2 (vector-length x)) (vector-ref x 2) #f))
 
 (define procedure-annotation
-  (lap 0 (check-nargs= 1)
+  (lap procedure-anotation ()
+       0 (check-nargs= 1)
        2 (make-env 1)
        4 (literal '2)
        6 (push)

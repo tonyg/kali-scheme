@@ -20,70 +20,59 @@
 ;
 ;   (define (foo x y) (if (even? x) (car y) (vector-ref y 3)))
 
-
-(define (node-type node env)
-  ;; Ignore env, since we don't ever call CLASSIFY or LOOKUP.
+(define (node-type node)
   (reconstruct node 'fast any-values-type))
 
 (define (reconstruct-type node env)
   (reconstruct node '() any-values-type))
 
 (define (reconstruct node constrained want-type)
-  (cond ((node? node)
-         ((operator-table-ref reconstructors (node-operator-id node))
-          node constrained want-type))
-        ((pair? node) any-values-type)
-        ((name? node) value-type)
-        (else (constant-type node))))
+  ((operator-table-ref reconstructors (node-operator-id node))
+    node
+    constrained
+    want-type))
+
+(define (examine node constrained want-type)
+  (if (pair? constrained)
+      (reconstruct node constrained want-type)
+      want-type))
 
 (define reconstructors
   (make-operator-table (lambda (node constrained want-type)
-                         (reconstruct-call node constrained want-type))))
+                         (reconstruct-call (node-form node)
+					   constrained
+					   want-type))))
 
 (define (define-reconstructor name type proc)
   (operator-define! reconstructors name type proc))
 
-
 (define-reconstructor 'lambda syntax-type
   (lambda (node constrained want-type)
-    (if (eq? constrained 'fast)
-        any-procedure-type
-        (let ((form (node-form node))
-              (var-nodes (node-ref node 'var-nodes))
-              (want-result (careful-codomain want-type)))
-          (let ((formals (cadr form)))
-            (if var-nodes
-                (let* ((alist (map (lambda (node) (cons node value-type))
-                                   var-nodes))
-                       ;; We can't do (append alist constrained) because the
-                       ;; lambda might not be called...
-                       (cod (reconstruct-body (cddr form)
-                                              alist
-                                              want-result)))
-                  (procedure-type (if (n-ary? formals)
-                                      any-values-type ;lose
-                                      (make-some-values-type (map cdr alist)))
-                                  cod
-                                  #t))
-                (procedure-type
-                 (if (n-ary? formals)
-                     any-values-type    ;lose
-                     (make-some-values-type (map (lambda (f) value-type)
-                                                 formals)))
-                 (reconstruct-body (cddr form) constrained want-result)
-                 #t)))))))
+    (reconstruct-lambda node constrained want-type #f)))
+
+(define (reconstruct-lambda node constrained want-type called?)
+  (if (eq? constrained 'fast)
+      any-procedure-type
+      (let* ((form (node-form node))
+	     (want-result (careful-codomain want-type))
+	     (formals (cadr form))
+	     (alist (map (lambda (node) (cons node value-type))
+			 (normalize-formals formals)))
+	     (cod (reconstruct (caddr form)
+			       (if called?
+				   (append alist constrained)
+				   alist)
+			       want-result)))
+	(procedure-type (if (n-ary? formals)
+			    any-values-type ;lose
+			    (make-some-values-type (map cdr alist)))
+			cod
+			#t))))
 
 (define (careful-codomain proc-type)
   (if (procedure-type? proc-type)
       (procedure-type-codomain proc-type)
       any-values-type))
-
-(define (reconstruct-body body constrained want-type)
-  (if (null? (cdr body))
-      (reconstruct (car body) constrained want-type)
-      any-values-type))
-
-(define operator/name (get-operator 'name))
 
 (define-reconstructor 'name 'leaf
   (lambda (node constrained want-type)
@@ -99,38 +88,61 @@
 (define (reconstruct-name node)
   (let ((probe (node-ref node 'binding)))
     (if (binding? probe)
-        (let ((t (binding-type probe)))
-          (cond ((variable-type? t) (variable-value-type t))
-                ((subtype? t value-type) t)
-                (else value-type)))
+        (let ((type (binding-type probe)))
+          (cond ((variable-type? type)
+		 (variable-value-type type))
+                ((subtype? type value-type)
+		 type)
+                (else
+		 value-type)))
         value-type)))
 
-(define (reconstruct-call node constrained want-type)
-  (let* ((form (node-form node))
-         (op-type (reconstruct (car form)
-                               constrained
-                               (procedure-type any-arguments-type
-                                               want-type
-                                               #f)))
-         (args (cdr form))
-         (lose (lambda ()
-                 (for-each (lambda (arg)
-                             (examine arg constrained value-type))
-                           args))))
+(define-reconstructor 'call 'internal
+  (lambda (node constrained want-type)
+    (let ((form (node-form node)))
+      (if (name-node? (car form))
+	  (let ((probe (node-ref node 'binding)))
+	    (cond ((and probe
+			(primop? (binding-static probe))
+			(table-ref primop-reconstructors
+				   (primop-name (binding-static probe))))
+		   => (lambda (recon)
+			(recon (cdr form) constrained want-type)))
+		  (else
+		   (reconstruct-call form constrained want-type))))
+	  (reconstruct-call form constrained want-type)))))
+
+(define (reconstruct-call form constrained want-type)
+  (let* ((want-op-type (procedure-type any-arguments-type
+				       want-type
+				       #f))
+	 (op-type (if (lambda-node? (car form))
+		      (reconstruct-lambda (car form)
+					  constrained
+					  want-op-type
+					  #t)
+		      (reconstruct (car form)
+				   constrained
+				   want-op-type)))
+	 (args (cdr form))
+	 (lose (lambda ()
+		 (for-each (lambda (arg)
+			     (examine arg constrained value-type))
+			   args))))
     (if (procedure-type? op-type)
-        (begin (if (restrictive? op-type)
-                   (let loop ((args args)
-                              (dom (procedure-type-domain op-type)))
-                     (if (not (or (null? args)
-                                  (empty-rail-type? dom)))
-                         (begin (examine (car args)
-                                         constrained
-                                         (head-type dom))
-                                (loop (cdr args) (tail-type dom)))))
-                   (lose))
-               (procedure-type-codomain op-type))
-        (begin (lose)
-               any-values-type))))
+	(begin (if (restrictive? op-type)
+		   (let loop ((args args)
+			      (dom (procedure-type-domain op-type)))
+		     (if (not (or (null? args)
+				  (empty-rail-type? dom)))
+			 (begin (examine (car args)
+					 constrained
+					 (head-type dom))
+				(loop (cdr args) (tail-type dom)))))
+		   (lose))
+	       (procedure-type-codomain op-type))
+	(begin (lose)
+	       any-values-type))))
 
 (define-reconstructor 'literal 'leaf
   (lambda (node constrained want-type)
@@ -139,6 +151,14 @@
 (define-reconstructor 'quote syntax-type
   (lambda (node constrained want-type)
     (constant-type (cadr (node-form node)))))
+
+(define-reconstructor 'unspecific #f
+  (lambda (node constrained wnat-type)
+    unspecific-type))
+
+(define-reconstructor 'unassigned #f
+  (lambda (node constrained wnat-type)
+    unspecific-type))
 
 (define-reconstructor 'if syntax-type
   (lambda (node constrained want-type)
@@ -157,12 +177,11 @@
                         constrained))
           (join-type con-type alt-type))))))
 
-
 (define (fork-constraints constrained)
   (if (pair? constrained)
       (map (lambda (x) (cons (car x) (cdr x)))
            constrained)
-      constrained))
+      constrained))-
 
 (define-reconstructor 'begin syntax-type
   (lambda (node constrained want-type)
@@ -173,11 +192,6 @@
          (reconstruct (car forms) constrained want-type))
       (examine (car forms) constrained any-values-type))))
 
-(define (examine node constrained want-type)
-  (if (pair? constrained)
-      (reconstruct node constrained want-type)
-      want-type))
-
 (define-reconstructor 'set! syntax-type
   (lambda (node constrained want-type)
     (examine (caddr (node-form node)) constrained value-type)
@@ -187,27 +201,22 @@
   (lambda (node constrained want-type)
     (let ((form (node-form node)))
       (if (eq? constrained 'fast)
-          (reconstruct (last form) 'fast want-type)
-          (let ((types (map (lambda (spec)
-                              (reconstruct (cadr spec) constrained value-type))
+          (reconstruct (caddr form) 'fast want-type)
+          (let ((alist (map (lambda (spec)
+			      (cons (car spec)
+				    (reconstruct (cadr spec)
+						 constrained
+						 value-type)))
                             (cadr form))))
-            (reconstruct (last form)
-                         (let ((nodes (node-ref node 'var-nodes)))
-                           (if nodes
-                               (append (map cons nodes types)
-                                       constrained)
-                               constrained))
+            (reconstruct (caddr form)
+			 (append alist constrained)
                          want-type))))))
-
-(define-reconstructor 'primitive-procedure syntax-type
-  (lambda (node constrained want-type)
-    (operator-type (get-operator (cadr (node-form node))))))    ;mumble
 
 (define-reconstructor 'loophole syntax-type
   (lambda (node constrained want-type)
     (let ((args (cdr (node-form node))))
       (examine (cadr args) constrained any-values-type)
-      (sexp->type (schemify (car args)) #t))))  ;Foo
+      (car args))))
 
 (define (node->type node)
   (if (node? node)
@@ -221,159 +230,64 @@
   (lambda (node constrained want-type)
     ':definition))
 
-(define-reconstructor 'define-syntax syntax-type
+(define-reconstructor 'lap syntax-type
   (lambda (node constrained want-type)
-    ':definition))
+    any-procedure-type))
 
-
-(define call-node? (node-predicate 'call))
-(define name-node? (node-predicate 'name))
-(define begin-node? (node-predicate 'begin))
-
-
-
-
+(define name-node? (node-predicate 'name 'leaf))
+(define lambda-node? (node-predicate 'lambda syntax-type))
 
 ; --------------------
-; Primitive procedures:
+; Primops.
+;
+; Most primops just have the types assigned in comp-prim.scm.
 
-(define-reconstructor 'values any-procedure-type
+(define primop-reconstructors (make-symbol-table))
+
+(define (define-primop-reconstructor name proc)
+  (table-set! primop-reconstructors name proc))
+
+(define-reconstructor 'primitive-procedure syntax-type
   (lambda (node constrained want-type)
+    (primop-type (get-primop (cadr (node-form node))))))
+
+(define-primop-reconstructor 'values
+  (lambda (args constrained want-type)
     (make-some-values-type (map (lambda (node)
                                   (meet-type
                                    (reconstruct node constrained value-type)
                                    value-type))
-                                (cdr (node-form node))))))
+				args))))
 
-(define-reconstructor 'call-with-values
-                      (proc ((proc () any-values-type #f)
-                             any-procedure-type)
-                            any-values-type)
-  (lambda (node constrained want-type)
-    (let ((args (cdr (node-form node))))
-      (if (= (length args) 2)
-	  (let ((thunk-type (reconstruct (car args)
-					 constrained
-					 (procedure-type empty-rail-type
-							 any-values-type
-							 #f))))
-	    (careful-codomain
-	     (reconstruct (cadr args)
-			  constrained
-			  (procedure-type (careful-codomain thunk-type)
-					  any-values-type
-					  #f))))
-	  error-type))))
-
-(define (reconstruct-apply node constrained want-type)
-  (let ((args (cdr (node-form node))))
-    (if (not (null? args))
-	(let ((proc-type (reconstruct (car args)
-				      constrained
-				      any-procedure-type)))
-	  (for-each (lambda (arg) (examine arg constrained value-type))
-		    (cdr args))
-	  (careful-codomain proc-type))
+(define-primop-reconstructor 'call-with-values
+  (lambda (args constrained want-type)
+    (if (= (length args) 2)
+	(let ((thunk-type (reconstruct (car args)
+				       constrained
+				       (procedure-type empty-rail-type
+						       any-values-type
+						       #f))))
+	  (careful-codomain
+	   (reconstruct (cadr args)
+			constrained
+			(procedure-type (careful-codomain thunk-type)
+					any-values-type
+					#f))))
 	error-type)))
 
-(define-reconstructor 'apply
-    (proc (any-procedure-type &rest value-type) any-values-type)
-  reconstruct-apply)
+(define (reconstruct-apply args constrained want-type)
+  (if (not (null? args))
+      (let ((proc-type (reconstruct (car args)
+				    constrained
+				    any-procedure-type)))
+	(for-each (lambda (arg) (examine arg constrained value-type))
+		  (cdr args))
+	(careful-codomain proc-type))
+      error-type))
 
-(define-reconstructor 'primitive-catch
-                      (proc ((proc (escape-type) any-values-type #f))
-                            any-values-type)
-  reconstruct-apply)
+(define-primop-reconstructor 'apply reconstruct-apply)
 
-
-; --------------------
-; Types of simple primitives.
-
-(define (declare-operator-type ops type)
-  (if (list? ops)
-      (for-each (lambda (op) (get-operator op type))
-                ops)
-      (get-operator ops type)))
-
-(declare-operator-type 'with-continuation
-                       (proc (escape-type (proc () any-values-type #f))
-                             any-arguments-type))
- 
-(declare-operator-type 'eq?
-                       (proc (value-type value-type) boolean-type))
-
-(declare-operator-type '(number? integer? rational? real? complex?
-                                 char? eof-object? port?)
-                       (proc (value-type) boolean-type))
-
-(declare-operator-type 'exact?
-                       (proc (number-type) boolean-type))
-
-(declare-operator-type 'exact->inexact (proc (exact-type) inexact-type))
-(declare-operator-type 'inexact->exact (proc (inexact-type) exact-type))
-
-(declare-operator-type '(exp log sin cos tan asin acos sqrt)
-                       (proc (number-type) number-type))
-
-(declare-operator-type '(atan)
-                       (proc (number-type number-type) number-type))
-
-(declare-operator-type '(floor)
-                       (proc (real-type) integer-type))
-
-(declare-operator-type '(real-part imag-part angle magnitude)
-                       (proc (complex-type) real-type))
-
-(declare-operator-type '(numerator denominator)
-                       (proc (rational-type) integer-type))
-
-(declare-operator-type '(+ *)
-                       (proc (&rest number-type) number-type))
-
-(declare-operator-type '(- /)
-                       (proc (number-type &opt number-type) number-type))
-
-(declare-operator-type '(= < > <= >=)
-                       (proc (real-type real-type &rest real-type) boolean-type))
-
-(declare-operator-type '(make-polar make-rectangular)
-                       (proc (real-type real-type) complex-type))
-
-(declare-operator-type '(quotient remainder)
-                       (proc (integer-type integer-type) integer-type))
-
-(declare-operator-type '(bitwise-not)
-                       (proc (exact-integer-type) exact-integer-type))
-
-(declare-operator-type '(bitwise-and bitwise-ior bitwise-xor)
-		       (proc (&rest exact-integer-type) exact-integer-type))
-
-(declare-operator-type '(arithmetic-shift)
-                       (proc (exact-integer-type exact-integer-type)
-                             exact-integer-type))
-
-(declare-operator-type '(char=? char<?)
-                       (proc (char-type char-type) boolean-type))
-
-(declare-operator-type 'char->ascii
-                       (proc (char-type) exact-integer-type))
-
-(declare-operator-type 'ascii->char
-                       (proc (exact-integer-type) char-type))
-
-(declare-operator-type 'string=?
-                       (proc (string-type string-type) boolean-type))
-
-(declare-operator-type 'open-channel
-                       ;; Can return #f
-                       (proc (string-type exact-integer-type) value-type))
-
-(declare-operator-type 'cons (proc (value-type value-type) pair-type))
-
-(declare-operator-type 'intern (proc (string-type vector-type) symbol-type))
-
-; Can't do I/O until the meta-types interface exports input-port-type and
-; output-port-type.
+(define-primop-reconstructor 'primitive-catch reconstruct-apply)
 
 (define (constant-type x)
   (cond ((number? x)

@@ -36,7 +36,7 @@
   '(expression filename))
 
 (define (build exp filename)
-  (build-image (evaluate exp (environment-for-commands)) filename))
+  (build-image (eval exp (environment-for-commands)) filename))
 
 ; build-image
 

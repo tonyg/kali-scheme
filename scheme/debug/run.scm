@@ -2,26 +2,48 @@
 ; Copyright (c) 1996 by NEC Research Institute, Inc.    See file COPYING.
 
 
-; A little interpreter.
+; These are the four entry points (cf. rts/eval.scm):
 
-(define (eval form p)
-  (eval-forms (list form) p #f))
+; EVAL
 
-; Programs
+(define (eval form package)
+  (compile-and-run (list form) package #f))
 
-(define (eval-forms forms p file)
-  (eval-nodes (scan-forms forms p file)
-	      (package->environment p)
-	      file))
+; LOAD-INTO - load file into package.
 
-(define (eval-scanned-forms nodes p file)
-  (eval-nodes nodes
-	      (package->environment p)
-	      file))
+(define (load-into filename package)
+  (compile-and-run (read-forms filename package)
+		   package
+		   filename))
 
-(define (eval-nodes nodes env file)
-  (if (not (null? nodes))
-      (run-nodes nodes (bind-source-file-name file env))))
+; Evaluate forms as if they came from the given file.
+
+(define (eval-from-file forms package filename)
+  (if filename
+      ((fluid $note-file-package)
+        filename package))
+  (compile-and-run forms package filename))
+
+; LOAD
+
+(define (load filename . package-option)
+  (let ((package (if (null? package-option)
+		     (interaction-environment)
+		     (car package-option))))
+    (load-into filename package)))
+
+;----------------
+
+(define (compile-and-run forms package maybe-filename)
+  (let* ((env (if maybe-filename
+		  (bind-source-file-name maybe-filename
+					 (package->environment package))
+		  (package->environment package)))
+	 (nodes (map (lambda (form)
+		       (expand-form form env))
+		     (scan-forms forms env))))
+    (if (not (null? nodes))
+	(run-nodes nodes env))))
 
 (define (run-nodes nodes env)
   (do ((nodes nodes (cdr nodes)))
@@ -39,12 +61,12 @@
 	((not (define-syntax-node? node))
 	 (run node env))))
 
-
 ; Main dispatch for a single expression.
 
-(define (run exp env)
-  (let ((node (classify exp env)))
-    ((operator-table-ref interpreters (node-operator-id node)) node env)))
+(define (run node env)
+  ((operator-table-ref interpreters (node-operator-id node))
+     node
+     env))
 
 (define interpreters
   (make-operator-table (lambda (node env)
@@ -130,7 +152,7 @@
 (define-interpreter 'set! syntax-type
   (lambda (node env)
     (let* ((exp (node-form node))
-	   (probe (name-node-binding (classify (cadr exp) env) env)))
+	   (probe (name-node-binding (cadr exp) env)))
       (cond ((and (binding? probe)
 		  (location? (binding-place probe)))
 	     (if (and (location-defined? (binding-place probe))
@@ -248,13 +270,13 @@
 			  (car package-option))))
 
 (define (load-into filename package)
-  (eval-nodes (scan-file filename package)
+  (eval-nodes (read-forms filename package)
 	      (package->environment package)
 	      filename))
 
 
-(define (eval-from-file forms p file)	;Scheme 48 internal thing
-  (eval-forms forms p file))
+(define (eval-from-file forms package file)	;Scheme 48 internal thing
+  (eval-forms forms package file))
 
 
 ; (scan-structures (list s) (lambda (p) #t) (lambda (stuff) #f))

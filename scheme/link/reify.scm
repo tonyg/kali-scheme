@@ -111,6 +111,8 @@
 	((operator? thing)
 	 `(operator ',(operator-name thing)
 		    ',(type->sexp (operator-type thing) #t)))
+	((primop? thing)
+	 `(primop ',(primop-name thing)))
 	;; ((interface? thing) ...)
 	(else (error "don't know how to reify this" thing))))
 
@@ -155,11 +157,11 @@
 ; Add initializers that will create a structure's exported bindings.
 
 (define (process-exports struct p-form)
-  (let* ((p (structure-package struct))
-	 (info (package-info p)))
+  (let* ((package (structure-package struct))
+	 (info (package-info package)))
     (for-each-export (lambda (name want-type binding)
-		       (if (not (process-one-binding name p info p-form))
-			   (warn "undefined export" name p)))
+		       (if (not (process-one-binding name package info p-form))
+			   (warn "undefined export" name package)))
 		     struct)))
 
 
@@ -170,8 +172,8 @@
 		    '(bindings  ;List of (name static-info location)
 		      table)))  ;Caches (assq? name bindings)
 
-(define (package-info p)
-  (table-ref *package-table* p))
+(define (package-info package)
+  (table-ref *package-table* package))
 
 (define make-package-info
   (let ((make (record-constructor package-info-type
@@ -187,11 +189,11 @@
   (record-modifier package-info-type 'bindings))
 
 
-(define (process-one-binding name p info p-form)	; => #t iff bound
+(define (process-one-binding name package info p-form)	; => #t iff bound
   (let ((table (package-info-table info)))
     (if (table-ref table name)
 	#t
-	(let ((binding (package-lookup p name)))
+	(let ((binding (package-lookup package name)))
 	  (table-set! (package-info-table info) name #t)
 	  (if (binding? binding)
 	      (begin (really-process-one-binding name info binding p-form)
@@ -211,24 +213,24 @@
 (define (add-package-define! p-form name s-form)
   (add-initialization!
    (lambda ()
-     `(package-define! ,p-form
-		       ',name
-		       ,s-form))))
+     `(package-define-static! ,p-form
+			      ',name
+			      ,s-form))))
 
-(define (process-transform t)
-  (let ((name (transform-id t))
-	(env (transform-env t)))
+(define (process-transform transform)
+  (let ((name (transform-id transform))
+	(env (transform-env transform)))
     (let ((env-form
 	   (if (package? env)
 	       (reify-package env)
 	       (reify-object env))))
       (process-one-object
-       t
-       (let ((source (transform-source t)))
+       transform
+       (let ((source (transform-source transform)))
 	 (lambda ()
 	   `(transform ,source		;transformer
 		       ,env-form
-		       ',(type->sexp (transform-type t) #t) ;type
+		       ',(type->sexp (transform-type transform) #t) ;type
 		       #f		;',source  -- omitted to save space...
 		       ',name)))
        (if (package? env)
@@ -236,7 +238,7 @@
 	     (let ((info (package-info env)))
 	       (for-each (lambda (name)
 			   (process-one-binding name env info env-form))
-			 (or (transform-aux-names t) ; () must be true
+			 (or (transform-aux-names transform) ; () must be true
 			     (begin
 			       (warn "reified macro's auxiliary bindings are unknown"
 				     name)

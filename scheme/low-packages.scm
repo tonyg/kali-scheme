@@ -21,6 +21,7 @@
 		    (channels channels-interface)
 		    (ports ports-interface)
 		    (signals signals-interface)
+		    (code-quote (export code-quote))
 		    (user-messages (export user-message))
 		    (silly (export reverse-list->string))
 		    (structure-refs (export (structure-ref :syntax))))

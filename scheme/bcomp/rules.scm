@@ -214,11 +214,6 @@
 ;               (char? thing)
 ;               (string? thing)))))
 
-
-
-
-
-
 ; The following is used by Scheme 48's static linker.
 
 (define (find-free-names-in-syntax-rules subkeywords rules)

@@ -388,7 +388,7 @@ $(INITIAL): $(LINKER_IMAGE) $(CONFIG_FILES) build/initial.scm $(initial-files)
 # Various small images for debugging low-level changes
 
 LOAD_DEBUG = \
-	 $(START_LINKER) \
+	 $(START_LINKER); \
 	 echo \(load-configuration \"scheme/interfaces.scm\"\); \
 	 echo \(load-configuration \"scheme/packages.scm\"\); \
 	 echo \(flatload debug-structures\)

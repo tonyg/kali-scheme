@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 ; Convert a byte-code-compiler node into a cps node.
 
 ; Entry point.
@@ -24,7 +27,8 @@
 			value)
 		       ((or (null? value)
 			    (not (null? (cdr value))))
-			(bug "value expression did not return one value ~S" (schemify node)))
+			(bug "value expression did not return one value ~S"
+			     (schemify node)))
 		       (else
 			(car value)))))
       (values value first-call last-lambda))))
@@ -41,8 +45,9 @@
 	    last-lambda)))
 
 (define (real-cps node)
-  ((operator-table-ref cps-converters (node-operator-id node))
-   node))
+  ((operator-table-ref cps-converters
+		       (node-operator-id node))
+     node))
 
 (define cps-converters
   (make-operator-table
@@ -58,13 +63,13 @@
 
 (define (tail-cps node cont-var)
   ((operator-table-ref tail-cps-converters (node-operator-id node))
-   node
-   cont-var))
+     node
+     cont-var))
 
 (define tail-cps-converters
   (make-operator-table
-   (lambda (node cont-var)
-     (error "no tail-cps-converter for node ~S" node))))
+    (lambda (node cont-var)
+      (error "no tail-cps-converter for node ~S" node))))
 
 (define (define-tail-cps-converter name proc)
   (operator-define! tail-cps-converters name #f proc))

@@ -79,7 +79,7 @@
 
 (define (proceed . exps)
   (really-proceed (map (lambda (exp)
-			 (evaluate exp (environment-for-commands)))
+			 (eval exp (environment-for-commands)))
 		       exps)))
 
 ; Scrutinize the condition to ensure that it's safe to return from the
@@ -414,8 +414,8 @@ Kind should be one of: names maps files source tabulate"
 
 (define (time command)
   (let ((thunk (if (eq? (car command) 'run)
-		   (evaluate `(lambda () ,(cadr command))
-			     (environment-for-commands))
+		   (eval `(lambda () ,(cadr command))
+			 (environment-for-commands))
 		   (lambda () (execute-command command))))
 	(port (command-output)))
     (let ((start-run-time (run-time))
@@ -469,28 +469,28 @@ Kind should be one of: names maps files source tabulate"
 		      (display " " port) ;dots follow
 		      probe)
 		    c)))
-	 (in (command-input)))
-    (let ((forms (let recur ()
-		   (let ((command (read-command #f #t in)))
-		     (if (eof-object? command)
-			 '()
-			 (case (car command)
-			   ((end) '())
-			   ((#f run) (cons (cadr command) (recur)))
-			   (else
-			    (error "unusual command in ,from-file ... ,end"
-				   command))))))))
-      (if (package? env)
-	  (with-interaction-environment env
-	    (lambda ()
-	      (noting-undefined-variables env
-		(lambda ()
-		  (eval-from-file forms env (if (null? maybe-filename)
-						#f
-						(car maybe-filename)))))))
-	  (for-each (lambda (form) (eval form env)) ;Foo
-		    env)))))
-
+	 (in (command-input))
+	 (forms (let recur ()
+		  (let ((command (read-command #f #t in)))
+		    (if (eof-object? command)
+			'()
+			(case (car command)
+			  ((end) '())
+			  ((#f run) (cons (cadr command) (recur)))
+			  (else
+			   (error "unusual command in ,from-file ... ,end"
+				  command))))))))
+    (if (package? env)
+	(with-interaction-environment env
+	  (lambda ()
+	    (noting-undefined-variables env
+	      (lambda ()
+		(eval-from-file forms env (if (null? maybe-filename)
+					      #f
+					      (car maybe-filename)))))
+	    (newline (command-output))))
+	(for-each (lambda (form) (eval form env)) ;Foo
+		  env))))
 
 ; Filename -> environment map.
 
@@ -563,7 +563,9 @@ Kind should be one of: names maps files source tabulate"
   '(&opt expression))
 
 (define (expand . maybe-exp)
-  (let ((exp (if (null? maybe-exp) (focus-object) (car maybe-exp)))
+  (let ((exp (if (null? maybe-exp)
+		 (focus-object)
+		 (car maybe-exp)))
 	(env (package->environment (environment-for-commands))))
     (set-focus-object!
-     (schemify (classify exp env) env))))
+     (schemify ((structure-ref syntactic expand) exp env) env))))

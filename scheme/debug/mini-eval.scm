@@ -108,4 +108,7 @@
 (define (scheme-report-environment n)
   *scheme-report-environment*)
 
+(define (null-environment n)
+  *scheme-report-environment*)
+
 (define *scheme-report-environment* #f)

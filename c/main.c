@@ -37,11 +37,10 @@ extern void	s48_heap_init(void);
 extern long	required_init_space(unsigned char **, long);
 extern void	initialize_heap(long, long);
 extern void	initialize_vm(long, long);
-extern long	call_startup_procedure(long, unsigned char **, unsigned char);
+extern long	call_startup_procedure(long, char **, long);
 extern long	check_image_header(unsigned char *);
 extern long	read_image(long);
 extern void	register_static_areas(unsigned char, long *, long *, unsigned char, long *, long *);
-
 
 int
 main(argc, argv)
@@ -165,7 +164,7 @@ Options: -h <total heap size in words>\n\
     fprintf(stderr, "Image file \"%s\" is unusable.\n", image_name);
     return 1; }
 
-  return_value = call_startup_procedure(startup_proc, (unsigned char **)argv, vm_argc);
+  return_value = call_startup_procedure(startup_proc, argv, vm_argc);
 
   if (reloc_file != NULL)
     if (0 != unlink(reloc_file))

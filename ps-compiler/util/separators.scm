@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 
 ; Code to determine the separation vertices of a graph
 
@@ -17,22 +20,31 @@
 	   (for-each (lambda (n) (set-slot! n #f)) nodes)
 	   (values separators components)))))
 
-(define-record-type vertex
-  (data             ; user's data
-   )
-  ((edges '())      ; list of edges from this vertex
-   (dfs-index 0)    ; ordering from depth-first-search
-   level            ; value used in algorithm...
-   parent           ; parent of this node in DFS tree
-   ))
+(define-record-type vertex :vertex
+  (really-make-vertex data edges dfs-index)
+  vertex?
+  (data vertex-data)                  ; user's data
+  (edges vertex-edges                 ; list of edges from this vertex
+	 set-vertex-edges!)    
+  (dfs-index vertex-dfs-index         ; ordering from depth-first-search
+	     set-vertex-dfs-index!)    
+  (level vertex-level                 ; value used in algorithm...
+	 set-vertex-level!)
+  (parent vertex-parent               ; parent of this node in DFS tree
+	  set-vertex-parent!))
 
-(define-record-type edge
-  (from             ; two (unordered) vertices
-   to
-   )
-  ((unused? #t)     ; used to mark edges that have been traversed
-   )
-  )
+(define (make-vertex data)
+  (really-make-vertex data '() 0))
+
+(define-record-type edge :edge
+  (make-edge from to unused?)
+  (from edge-from)             ; two (unordered) vertices
+  (to edge-to)
+  (unused? edge-unused         ; used to mark edges that have been traversed
+	   set-edge-unused!))
+
+(define (make-edge from to)
+  (really-make-edge from to #t))
 
 (define (other-vertex edge v)
   (if (eq? v (edge-from edge))
@@ -45,13 +57,13 @@
 			(or (eq? to (edge-from e))
 			    (eq? to (edge-to e))))
 		      (vertex-edges from))))
-      (let ((e (edge-maker from to)))
+      (let ((e (make-edge from to)))
 	(set-vertex-edges! from (cons e (vertex-edges from)))
 	(set-vertex-edges! to   (cons e (vertex-edges to))))))
 
 (define (make-vertices nodes to slot set-slot!)
   (let ((vertices (map (lambda (n)
-			 (let ((v (vertex-maker n)))
+			 (let ((v (make-vertex n)))
 			   (set-slot! n v)
 			   v))
 		       nodes)))

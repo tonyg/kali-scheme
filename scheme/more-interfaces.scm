@@ -19,7 +19,6 @@
 	  error-form ;foo
 	  execute-command
 	  exit-command-processor
-	  evaluate			; ???
 	  evaluate-and-select
 	  gobble-line
 	  greet-user
@@ -46,7 +45,8 @@
           set-user-command-environment! ;pacman
           read-command-error            ;inspect
 	  &environment-id-string
-	  &evaluate))
+	  ;&evaluate
+	  ))
 
 (define-interface command-levels-interface
   (export start-command-levels
@@ -167,8 +167,9 @@
   (export config-package
 	  new-command-processor
 	  get-structure
-	  get-package
-	  set-package-evaluator!))
+	  ;get-package
+	  ;set-package-evaluator!
+	  ))
 
 (define-interface debuginfo-interface
   (export read-debug-info
@@ -272,12 +273,14 @@
   (export real-time
 	  run-time))
 
-; --------------------
-; Big Scheme
+; Experimental DEFINE-RECORD-TYPE that is now officially a failure.
 
 (define-interface defrecord-interface  ;RK's
   (export (define-record-type :syntax)
 	  define-record-discloser))
+
+; --------------------
+; Big Scheme
 
 (define-interface externals-interface
   (export get-external
@@ -318,29 +321,30 @@
           search-tree-min pop-search-tree-min!
           walk-search-tree))
 
+(define-interface big-util-interface       
+  (export concatenate-symbol
+	  error breakpoint
+	  atom? null-list? neq? n=
+	  identity no-op
+	  memq? first any? any every?
+	  filter filter! filter-map partition-list partition-list!
+	  remove-duplicates delq delq! delete
+	  reverse!))
+
 (define-interface big-scheme-interface
   (compound-interface
       (interface-of ascii)
       (interface-of bitwise)
       (interface-of tables)
       (interface-of enumerated)
-      defrecord-interface
+      ;defrecord-interface
       extended-ports-interface
-      ;queues-interface
-      (interface-of tables)
-      (export concatenate-symbol
-	      error breakpoint
-	      atom? null-list? neq? n=
-	      identity no-op
-	      memq? first any? any every? 
-	      filter filter! filter-map partition-list partition-list!
-	      remove-duplicates delq delq! delete
-	      reverse!
-	      (destructure :syntax)
+      big-util-interface
+      (export (destructure :syntax)
 	      (receive :syntax)
 	      format
-	      sort-list sort-list!
-	      p pretty-print)))
+	      p pretty-print
+	      sort-list sort-list!)))
 
 ; --------------------
 ; Miscellaneous

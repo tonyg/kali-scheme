@@ -186,7 +186,6 @@
     (string-set! string (char->ascii '#\<) '#\L)
     (string-set! string (char->ascii '#\?) '#\P)
     (string-set! string (char->ascii '#\%) '#\Q)
-    ; used for renamed global variables       R
     (string-set! string (char->ascii '#\*) '#\S)
     ; used for tail-recursive procedures      T
     (string-set! string (char->ascii '#\/) '#\U)

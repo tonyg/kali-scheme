@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 
 ; Primitives that directly correspond to primops.
 ;
@@ -40,6 +43,7 @@
 					(else
 					 preds)))))
 	 (define-prescheme! ',id
+	   #f				; location
 	   (make-primitive ',id
 			   ,(r 'predicates)
 			   ,eval
@@ -47,7 +51,6 @@
 			   ,expander
 			   ,expands-in-place?
 			   ,inference-rule))))))
-  
 
 (define-syntax define-complex-primitive
   (lambda (exp r c)

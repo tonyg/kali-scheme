@@ -223,8 +223,9 @@ List utilities
 (DELETE <predicate> <list>) => <list>
   All three of these return <list> with some elements removed.  DELQ
   removes all elements EQ? to <element>.  DELQ! does the same and may
-  reuse the storage of the list argument.  DELETE removes all elements
-  for which <predicate> is true.
+  modify the list argument.  DELETE removes all elements for which
+  <predicate> is true.  Both DELQ and DELETE may reuse some of the
+  storage in the list argument, but won't modify it.
 
 (REVERSE! <list>) => <list>
   Destructively reverses <list>.

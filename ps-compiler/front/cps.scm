@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 ; (cps-call <primop> <exits> <first-arg-index> <args> <cps>) ->
 ;                   <call-node> + <top-call-node> + <bottom-lambda-node>
 ;
@@ -23,14 +26,14 @@
 	    
 ; Record to hold information about arguments to calls.
 
-(define-record-type arg
-  (index          ; The index of this argument in the call.
-   rank           ; The estimated cost of executing this node at run time.
-   value          ; What CPS returned for this argument.
-   first
-   last
-   )
-  ())
+(define-record-type arg :arg
+  (make-arg index rank value first last)
+  arg?
+  (index arg-index)  ; The index of this argument in the call.
+  (rank arg-rank)    ; The estimated cost of executing this node at run time.
+  (value arg-value)  ; What CPS returned for this argument.
+  (first arg-first)
+  (last arg-last))
 
 ; Convert the elements of EXP into nodes (if they aren't already) and put
 ; them into an ARG record.  Returns the list of ARG records sorted
@@ -41,7 +44,7 @@
        (args exp (cdr args))
        (vals '() (cons (receive (value first last)
 			   (cps (car args))
-			 (arg-maker index (node-rank first) value first last))
+			 (make-arg index (node-rank first) value first last))
 		       vals)))
       ((null? args)
        (sort-list vals

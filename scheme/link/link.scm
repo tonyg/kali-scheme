@@ -80,43 +80,47 @@
 	    (templates (compile-structures structs
 					   generator
 					   package->environment))
-	    (p (make-simple-package structs #f #f))
-	    (r (noting-undefined-variables p
-					   (lambda ()
-					     (set-package-get-location! p generator)
-					     (compile-form (make-resumer) p)))))
+	    (package (make-simple-package structs #f #f))
+	    (startup-template (begin
+				(set-package-get-location! package generator)
+				(expand&compile-form (make-resumer) package))))
        (let ((startup (make-closure 
-		       (make-startup-procedure templates r)
+		       (make-startup-procedure templates startup-template)
 		       0)))
 	 (if *debug-linker?* (set! *loser* startup))
 	 (write-image-file startup
 			   (namestring filename #f 'image)))
        (write-debug-info location-info
 			 (namestring filename #f 'debug))))))
+
+
+(define (expand&compile-form form package)
+  (let* ((env (package->environment package))
+	 (template (compile-forms (map (lambda (form)
+					 (expand-form form env))
+				       (scan-forms (list form) env))
+				  #f	;filename
+				  #f)))	;debug data
+    (link! template package #t)
+    template))
+
 (define *loser* #f)
 (define *debug-linker?* #f)
 
-;
-
 (define (compile-structures structs generator package->env)
-  (let ((templates '())
-	(out (current-output-port)))
-    (scan-structures
-	   structs
-	   (lambda (p)
-	     (set-package-get-location! p generator)
-	     #t)
-	   (lambda (stuff p)  ;stuff = pair (file . (node1 node2 ...))
-	     (for-each (lambda (file+forms)
-			 (set! templates
-			       (cons (compile-scanned-forms (cdr file+forms)
-							    p
-							    (car file+forms)
-							    out
-							    (package->env p))
-				     templates)))
-		       stuff)))
-    (reverse templates)))
+  (let ((packages (collect-packages structs (lambda (package) #t)))
+	(out (current-noise-port)))
+    (for-each (lambda (package)
+		(set-package-get-location! package generator))
+	      packages)
+    (map (lambda (package)
+	   (display #\[ out)
+	   (display (package-name package) out)
+	   (let ((template (compile-package package)))
+	     (display #\] out)
+	     (newline out)
+	     template))
+	 packages)))
 
 ; Locations in new image will have their own sequence of unique id's.
 

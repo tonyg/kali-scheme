@@ -33,7 +33,6 @@
     
 
 (define (write-c-main init-name out forms)
-  (set! *current-renamed-variables* #f)
   (set! *doing-tail-called-procedure?* #f)
   (set! *current-merged-procedure* #f)
   (cond ((any? (lambda (f)
@@ -210,7 +209,6 @@
 	(return-type (final-variable-type (car (lambda-variables top))))
 	(all-lambdas (append lambdas (gather-merged-lambdas merged)))
 	(merged-procs (gather-merged-procs merged)))
-    (set! *current-renamed-variables* rename-vars)
     (set! *doing-tail-called-procedure?* tail?)
     (set! *current-merged-procedure* #f)
     (receive (first rest)
@@ -256,12 +254,10 @@
     (for-each (lambda (v)
 		(set-variable-flags! v (delq! 'shadowed (variable-flags v))))
 	      rename-vars)
-    (set! *current-renamed-variables* '())
     (values)))
 
 ; These global variables should be replaced with fluids.
 
-(define *current-renamed-variables* #f)
 (define *doing-tail-called-procedure?* #f)
 (define *current-merged-procedure* #f)
 (define *extra-tail-call-args* '())
@@ -418,23 +414,6 @@
 	      (write-c-identifier (variable-name var) port)
 	      (format port ";~%"))
 	    vars))
-
-(define (save-renamed-variables port indent)
-  (save-or-restore-renamed-variables #t port indent))
-
-(define (restore-renamed-variables port indent)
-  (save-or-restore-renamed-variables #f port indent))
-
-(define (save-or-restore-renamed-variables save? port indent)
-  (for-each (lambda (var)
-	      (indent-to port indent)
-	      (if (not save?) (write-char '#\R port))
-	      (write-c-identifier (variable-name var) port)
-	      (display " = " port)
-	      (if save? (write-char '#\R port))
-	      (write-c-identifier (variable-name var) port)
-	      (format port ";~%"))
-	    *current-renamed-variables*))
 
 (define (write-c-block body port indent)
   (write-c-block-with-args body '() port indent))

@@ -47,9 +47,9 @@
     (set-environment-for-commands! p)))
 
 (define (get-reflective-tower env)    ;Returns promise of (eval . env)
-  (reflective-tower (if (package? env)
-			  (package->environment env)
-			  env)))	;Mumble
+  (environment-macro-eval (if (package? env)
+			      (package->environment env)
+			      env)))	;Mumble
 
 
 ; load-package
@@ -79,7 +79,7 @@
 	 (p (environment-for-commands))
 	 (s (make-structure p
 			    (lambda ()
-			      (evaluate interface-expression c))
+			      (eval interface-expression c))
 			    name)))
     ;; (check-structure s)
     (environment-define! c name s)))
@@ -310,18 +310,20 @@
 (define user-environment
   (user-context-accessor 'user-environment interaction-environment))
 
+; This is only used by misc/remote.scm, which I don't know if anyone uses.
+;
 ; Extract a package-specific evaluator from a package.  Eventually, it
 ; would be nice if load, eval-from-file, eval-scanned-forms, and
 ; perhaps other things were also generic over different kinds of
 ; environments.
-
-(define funny-name/evaluator (string->symbol ".evaluator."))
-
-(define (set-package-evaluator! p evaluator)
-  (package-define-funny! p funny-name/evaluator evaluator))
-
-(define (package-evaluator p)
-  (or (get-funny (package->environment p) funny-name/evaluator) eval))
-
-(define-method &evaluate (form (env :package))
-  ((package-evaluator env) form env))
+;
+;(define funny-name/evaluator (string->symbol ".evaluator."))
+;
+;(define (set-package-evaluator! p evaluator)
+;  (package-define-funny! p funny-name/evaluator evaluator))
+;
+;(define (package-evaluator p)
+;  (or (get-funny (package->environment p) funny-name/evaluator) eval))
+;
+;(define-method &evaluate (form (env :package))
+;  ((package-evaluator env) form env))

@@ -41,11 +41,11 @@
   (let ((scheme (*structure-ref built-in-structures 'scheme))
 	(tower (make-tower built-in-structures 'interaction)))
     (set-interaction-environment!
-     (make-simple-package (list scheme) #t tower 'interaction))
+      (make-simple-package (list scheme) #t tower 'interaction))
 
     (set-scheme-report-environment!
-     5
-     (make-simple-package (list scheme) #t tower 'r5rs))))
+      5
+      (make-simple-package (list scheme) #t tower 'r5rs))))
 
 ; Intended for bootstrapping the command processor.
 

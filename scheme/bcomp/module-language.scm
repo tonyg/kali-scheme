@@ -46,11 +46,6 @@
     ((define-interface ?name ?int)
      (def ?name ?int))))
 
-(define-syntax export
-  (syntax-rules ()
-    ((export ?item ...)
-     (really-export #f ?item ...))))
-
 (define-syntax compound-interface
   (syntax-rules ()
     ((compound-interface ?int ...)
@@ -111,8 +106,6 @@
      (let ((p (a-package #f ?clause ...)))
        (values (make-structure p (lambda () ?int))
 	       ...)))))
-
-
 ; Packages
 
 (define-syntax a-package
@@ -185,12 +178,11 @@
 					  accesses)))
 		       (,(string->symbol ".make-reflective-tower.")
 			(,%quote ,for-syntaxes)
-			(,%quote ,names))
+			(,%quote ,names))		; for discloser
 		       (,%file-name)
 		       (,%quote ,others)
-		       (,%quote ,(cadr form)))))))))
-  (cons lambda list make-a-package quote %file-name%))
-
+		       (,%quote ,names))))))))
+  (cons lambda list make-a-package quote make-reflective-tower %file-name%))
 
 (define-syntax receive
   (syntax-rules ()
@@ -220,7 +212,6 @@
   (lambda (e r c)
     `(,(r 'export) ,(string->symbol ".make-reflective-tower.")))
   (export))
-
 
 ; Modules  = package combinators...
 

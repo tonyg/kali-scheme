@@ -129,17 +129,17 @@
 ; Return a list of all packages that might have cached a particular
 ; inherited binding.
 
-(define (packages-seeing-location p name loc)
-  (let ((losers (list p)))
-    (let recur ((p p))
-      (if (and (not (memq p losers))
-               (not (table-ref (package-definitions p) name)))
-          (begin (set! losers (cons p losers))
+(define (packages-seeing-location package name loc)
+  (let ((losers (list package)))
+    (let recur ((package package))
+      (if (and (not (memq package losers))
+               (not (table-ref (package-definitions package) name)))
+          (begin (set! losers (cons package losers))
                  (walk-population
                    (lambda (struct)
                      (if (interface-ref (structure-interface struct) name)
                          (walk-population recur (structure-clients struct))))
-                   (package-clients p)))))
+                   (package-clients package)))))
     losers))
 
 
@@ -147,7 +147,7 @@
   (if *debug?*
       (begin (write `(forward ,loser ,new)) (newline)))
   (for-each (lambda (q)
-	      (package-note-caching q name new))
+	      (package-note-caching! q name new))
 	    (packages-seeing-location p name loser))
   (shadow-location! loser '() #f new))
 

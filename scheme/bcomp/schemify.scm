@@ -3,99 +3,117 @@
 
 ; schemify
 
+; This is only used for producing error and warning messages.
 
 ; Flush nodes and generated names in favor of something a little more
-; readable.  Eventually, (schemify node) ought to produce an
+; readable.  Eventually, (schemify node env) ought to produce an
 ; s-expression that has the same semantics as node, when node is fully
 ; expanded.
 
-(define (schemify node . env-option)
-  (schemify1 node (if (null? env-option) #f (car env-option))))
-
-(define (schemify1 node env)
+(define (schemify node . maybe-env)
   (if (node? node)
-      (or (node-ref node 'schemify)
-	  (let ((form ((operator-table-ref schemifiers (node-operator-id node))
-		       node env)))
-	    (node-set! node 'schemify form)
-	    form))
-      (schemify-sexp node env)))
+      (schemify-node node
+		     (if (null? maybe-env)
+			 #f
+			 (car maybe-env)))
+      (schemify-sexp node)))
+		     
 
 (define schemifiers
   (make-operator-table (lambda (node env)
 			 (let ((form (node-form node)))
 			   (if (list? form)
-			       (map (lambda (f) (schemify1 f env)) form)
+			       (let ((op (car form)))
+				 (cons (cond ((operator? op)
+					      (operator-name op))
+					     ((node? op)
+					      (schemify-node op env))
+					     (else
+					      (schemify-sexp op)))
+				       (schemify-nodes (cdr form) env)))
 			       form)))))
+
+(define (schemify-node node env)
+  ((operator-table-ref schemifiers
+		       (node-operator-id node))
+     node
+     env))
+
+(define (schemify-nodes nodes env)
+  (map (lambda (node)
+	 (schemify-node node env))
+       nodes))
 
 (define (define-schemifier name type proc)
   (operator-define! schemifiers name type proc))
 
 (define-schemifier 'name 'leaf
   (lambda (node env)
-    (name->qualified (node-form node) env)))
+    (if env
+	(name->qualified (node-form node)
+			 env)
+	(desyntaxify (node-form node)))))
 
 (define-schemifier 'quote syntax-type
   (lambda (node env)
     (let ((form (node-form node)))
-      (list (schemify1 (car form) env) (cadr form)))))
+      `(quote ,(cadr form)))))
 
-; Convert an alias (generated name) to S-expression form ("qualified name").
-;
-; As an optimization, we elide intermediate steps in the lookup path
-; when possible.  E.g.
-;     #(>> #(>> #(>> define-record-type define-accessors)
-;		define-accessor)
-;	   record-ref)
-; is replaced with
-;     #(>> define-record-type record-ref)
+(define-schemifier 'call 'internal
+  (lambda (node env)
+    (map (lambda (node)
+	   (schemify-node node env))
+	 (node-form node))))
 
-(define (name->qualified name env)
-  (if env
-      (if (generated? name)
-	  (if (same-denotation? (lookup env name)
-				(lookup env (generated-symbol name)))
-	      (generated-symbol name)	;+++
-	      (make-qualified
-	       (let recur ((name (generated-parent-name name)))
-		 (if (generated? name)
-		     (let ((parent (generated-parent-name name)))
-		       (if (let ((b1 (lookup env name))
-				 (b2 (lookup env parent)))
-			     (or (same-denotation? b1 b2)
-				 (and (binding? b1)
-				      (binding? b2)
-				      (let ((s1 (binding-static b1))
-					    (s2 (binding-static b2)))
-					(and (transform? s1)
-					     (transform? s2)
-					     (eq? (transform-env s1)
-						  (transform-env s2)))))))
-			   (recur parent) ;+++
-			   (make-qualified (recur parent)
-					   (generated-symbol name))))
-		     name))
-	       (generated-symbol name)))
-	  name)
-      (desyntaxify name)))
+(define-schemifier 'lambda syntax-type
+  (lambda (node env)
+    (let ((form (node-form node)))
+      `(lambda ,(schemify-formals (cadr form) env)
+	 ,(schemify-node (caddr form) env)))))
 
-; lambda, let-syntax, letrec-syntax...
+(define (schemify-formals formals env)
+  (cond ((node? formals)
+	 (schemify-node formals env))
+	((pair? formals)
+	 (cons (schemify-node (car formals) env)
+	       (schemify-formals (cdr formals) env)))
+	(else
+	 (schemify-sexp formals))))  ; anything besides '() ?
+
+; let-syntax, letrec-syntax...
 
 (define-schemifier 'letrec syntax-type
   (lambda (node env)
     (let ((form (node-form node)))
       `(letrec ,(map (lambda (spec)
-		       `(,(car spec) ,(schemify1 (cadr spec) env)))
+		       (schemify-nodes spec env))
 		     (cadr form))
-	 ,@(map (lambda (f) (schemify1 f env))
+	 ,@(map (lambda (f) (schemify-node f env))
 		(cddr form))))))
 
-(define (schemify-sexp thing env)
+(define-schemifier 'loophole syntax-type
+  (lambda (node env)
+    (let ((form (node-form node)))
+      (list 'loophole
+	    (type->sexp (cadr form) #t)
+	    (schemify-node (caddr form) env)))))
+
+(define-schemifier 'lap syntax-type
+  (lambda (node env)
+    (let ((form (node-form node)))
+      `(lap
+	,(cadr form)
+	,(schemify-nodes (caddr form) env)
+	. ,(cdddr form)))))
+
+;----------------
+
+(define (schemify-sexp thing)
   (cond ((name? thing)
-	 (name->qualified thing env))
+	 (desyntaxify thing))
 	((pair? thing)
-	 (let ((x (schemify-sexp (car thing) env))
-	       (y (schemify-sexp (cdr thing) env)))
+	 (let ((x (schemify-sexp (car thing)))
+	       (y (schemify-sexp (cdr thing))))
 	   (if (and (eq? x (car thing))
 		    (eq? y (cdr thing)))
 	       thing			;+++
@@ -105,22 +123,9 @@
 	   (let loop ((i 0) (same? #t))
 	     (if (>= i (vector-length thing))
 		 (if same? thing new)	;+++
-		 (let ((x (schemify-sexp (vector-ref thing i) env)))
+		 (let ((x (schemify-sexp (vector-ref thing i))))
 		   (vector-set! new i x)
 		   (loop (+ i 1)
 			 (and same? (eq? x (vector-ref thing i)))))))))
 	(else thing)))
 
-
-; Qualified names
-
-(define (make-qualified transform-name sym)
-  (vector '>> transform-name sym))
-
-(define (qualified? thing)
-  (and (vector? thing)
-       (= (vector-length thing) 3)
-       (eq? (vector-ref thing 0) '>>)))
-
-(define (qualified-parent-name q) (vector-ref q 1))
-(define (qualified-symbol q) (vector-ref q 2))

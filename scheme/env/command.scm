@@ -166,19 +166,13 @@
 
 (define (evaluate-and-select form env)
   (call-with-values (lambda ()
-                      (evaluate form env))
+                      (eval form env))
     (lambda results
       (if (or (null? results)
               (not (null? (cdr results)))
               (not (eq? (car results) (unspecific))))
           (set-focus-values! results))
       (apply values results))))
-
-; Why is this generic?
-
-(define-generic evaluate &evaluate (form env))
-
-(define-method &evaluate (form env) (eval form env))
 
 ;----------------
 ; Display the focus object if it changes (sort of like emacs's redisplay)
@@ -301,7 +295,7 @@
         ((not command))       ; error while reading
         (else
          (let* ((name (car command))
-		(proc (evaluate name (user-command-environment))))
+		(proc (eval name (user-command-environment))))
 	   (dynamic-wind (lambda () #f)
 			 (lambda ()
 			   (apply proc (cdr command)))

@@ -1,3 +1,6 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 
 ; Vectors of infinite length.  These work as do regular vectors except that
 ; they have no fixed size.  XVECTOR-LENGTH is one more than the highest index
@@ -9,17 +12,26 @@
 ; (XVECTOR-SET! <xvec> <index> <value>)
 ; (XVECTOR->VECTOR <xvec>)
 
-(define-record-type expanding-vector
-  (default)         ; fill value
-  ((length 0)       ; total length of internal vector(s)
-   (contents '#())  ; a: vector of entries, or
-                    ; b: vector of vectors of entries, vector has #f's after
-                    ; the last needed sub-vector, each sub-vector has length
-                    ; XVEC-MAX-CONTENTS-SIZE
-   (max -1)         ; maximum index used in a XVECTOR-SET!
-   ))
+; The actual record fields are:
+;  default  - the fill value
+;  length   - total length of internal vector(s)
+;  contents - either:
+;      a: vector of entries, or
+;      b: vector of vectors of entries, vector has #f's after the last needed
+;         sub-vector, each sub-vector has length XVEC-MAX-CONTENTS-SIZE
+;  max      - maximum index used in a XVECTOR-SET!
 
-(define make-xvector expanding-vector-maker)
+
+(define-record-type expanding-vector :expanding-vector
+  (make-expanding-vector default length contents max)
+  expanding-vector?
+  (default expanding-vector-default)
+  (length expanding-vector-length set-expanding-vector-length!)
+  (contents expanding-vector-contents set-expanding-vector-contents!)
+  (max expanding-vector-max set-expanding-vector-max!))
+
+(define (make-xvector default)
+  (make-expanding-vector default 0 '#() -1))
 
 ; Maximum size of any internal vector
 

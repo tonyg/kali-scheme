@@ -1,48 +1,63 @@
+; Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+; Copyright (c) 1998 by NEC Research Institute, Inc.    See file COPYING.
+
 ;;; Find immediate dominators in a directed graph
 ;;; Mark Reinhold (mbr@research.nj.nec.com)/3 February 1995
-;;; $Id$
+; Debugging code removed and everything reluctantly Scheme-ized by
+; R. Kelsey, St. Valentine's Day, 1995
 
-;;; Debugging code removed and everything reluctantly Scheme-ized by
-;;; R. Kelsey, St. Valentine's Day, 1995
+; This fast dominator code is based upon Lengauer and Tarjan, "A Fast
+; Algorithm for Finding Dominators in a Flowgraph," ACM TOPLAS 1:1, pp.
+; 121--141, July 1979.  It runs in time $O(|E|\log|V|)$, where $|E|$ is the
+; number of edges and $|V|$ is the number of vertices.  A smaller time bound
+; of $O(|E|\alpha(|E|,|V|))$, where $\alpha$ is the inverse of Ackerman's
+; function, can be achieved with more complex versions of the internal link!
+; and eval! procedures.
+;
+; The client provides a rooted, directed graph by passing a root node,
+; successor and predecessor functions, and auxiliary procedures for accessing
+; and setting a slot in each node.  The dominator code creates a shadow of
+; the client's graph using the vertex record type defined below.  To keep
+; things clear, the client's graph is considered to contain "nodes," while
+; the shadow graph contains "vertices."
 
-;;; This fast dominator code is based upon Lengauer and Tarjan, "A Fast
-;;; Algorithm for Finding Dominators in a Flowgraph," ACM TOPLAS 1:1, pp.
-;;; 121--141, July 1979.  It runs in time $O(|E|\log|V|)$, where $|E|$ is the
-;;; number of edges and $|V|$ is the number of vertices.  A smaller time bound
-;;; of $O(|E|\alpha(|E|,|V|))$, where $\alpha$ is the inverse of Ackerman's
-;;; function, can be achieved with more complex versions of the internal link!
-;;; and eval! procedures.
-;;;
-;;; The client provides a rooted, directed graph by passing a root node,
-;;; successor and predecessor functions, and auxiliary procedures for accessing
-;;; and setting a slot in each node.  The dominator code creates a shadow of
-;;; the client's graph using the vertex record type defined below.  To keep
-;;; things clear, the client's graph is considered to contain "nodes," while
-;;; the shadow graph contains "vertices."
+(define-record-type vertex :vertex
+  (really-make-vertex node semi bucket ancestor debug)
+  vertex?
+  (node vertex-node)        ; Corresponding node in client's graph
+  (semi vertex-semi         ; A number for this vertex, w, as follows:
+	set-vertex-semi!)   ;   After w is numbered, but before its semidominator
+			    ;      is computed: w's DFS number
+		            ;   After w's semidominator is computed:
+		            ;      the number of its semidominator
+  (parent vertex-parent     ; Parent of this vertex in DFS spanning tree
+	  set-vertex-parent!)
+  (pred vertex-pred         ; Parents
+	set-vertex-pred!)
+  (label vertex-label       ; Label in spanning forest, initially this vertex
+	 set-vertex-label!)
+  (bucket vertex-bucket     ; List of vertices whose semidominator is this vertex
+	  set-vertex-bucket!)
+  (dom vertex-dom           ; A vertex, as follows:
+       set-vertex-dom!)     ;   After step 3: If the semidominator of this
+    		            ;      vertex, w, is its immediate dominator, then
+		            ;      this slot contains that vertex; otherwise,
+		            ;      this slot is a vertex v whose number is
+		            ;      smaller than w's and whose immediate dominator
+                            ;      is also w's immediate dominator
+		            ;   After step 4: The immediate dominator of this
+                            ;      vertex
+  (ancestor vertex-ancestor ; An ancestor of this vertex in the spanning forest
+	    set-vertex-ancestor!)
+  (debug vertex-debug       ; Debug field ##
+	 set-vertex-debug!))
 
-
-(define-record-type vertex
-  (node		  ; Corresponding node in client's graph
-   (semi)	  ; A number for this vertex, w, as follows:
-		  ;   After w is numbered, but before its semidominator
-		  ;      is computed: w's DFS number
-		  ;   After w's semidominator is computed:
-		  ;      the number of its semidominator
-   )
-  (parent	  ; Parent of this vertex in DFS spanning tree
-   pred		  ; Parents
-   label	  ; Label in spanning forest, initially this vertex
-   (bucket '())	  ; List of vertices whose semidominator is this vertex
-   dom		  ; A vertex, as follows:
-		  ;   After step 3: If the semidominator of this vertex, w,
-		  ;      is its immediate dominator, then this slot contains
-		  ;      that vertex; otherwise, this slot is a vertex v whose
-		  ;      number is smaller than w's and whose immediate
-		  ;      dominator is also w's immediate dominator
-		  ;   After step 4: The immediate dominator of this vertex
-   (ancestor #f)  ; An ancestor of this vertex in the spanning forest
-   (debug #f)     ; Debug field ##
-))
+(define (make-vertex node semi)
+  (really-make-vertex node
+		      semi
+		      '()	; bucket
+		      #f	; ancestor
+		      #f))	; debug
 
 (define (push-vertex-bucket! inf elt)
   (set-vertex-bucket! inf (cons elt (vertex-bucket inf))))
@@ -60,7 +75,7 @@
   (define (dfs root)
     (let ((n 0) (vertices '()))
       (let go ((node root) (parent #f))
-	(let ((v (vertex-maker node n)))
+	(let ((v (make-vertex node n)))
 	  (set-slot! node v)
 	  (set! n (+ n 1))
 	  (set-vertex-parent! v parent)
@@ -159,7 +174,7 @@
   (define (dfs root)
     (let ((n 0) (vertices '()))
       (let go ((node root) (parent #f))
-	(let ((v (vertex-maker node n)))
+	(let ((v (make-vertex node n)))
 	  (set-slot! node v)
 	  (set! n (+ n 1))
 	  (set! vertices (cons v vertices))

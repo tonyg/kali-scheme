@@ -87,7 +87,9 @@ The fields of a port are:
  PORT-STATUS: a bit set represented as a fixnum.
   Indices into this bit set are from the PORT-STATUS-OPTIONS
   enumeration in arch.scm.  The current bits are: input, output,
-  open-for-input, open-for-output.
+  open-for-input, open-for-output (the last two are for things like
+  sockets, on which you need to block but which do not support
+  normal reading or writing).
 
  PORT-HANDLER: a record containing three procedures.  These handle
   printing the port, closing the port, and filling (for input ports)

@@ -3,7 +3,9 @@
 
 
 ; Random number generator, extracted from T sources.  Original
-; probably by Richard Kelsey,
+; probably by Richard Kelsey.
+
+; Tests have shown that this is not particularly random.
 
 (define half-log 14)
 (define full-log (* half-log 2))
@@ -15,17 +17,22 @@
 
 ; (MAKE-RANDOM <seed>) takes an integer seed and returns a procedure of no
 ; arguments that returns a new pseudo-random number each time it is called.
+; <Seed> should be between 0 and 2**28 - 1 (exclusive).
 
 (define (make-random seed)
-  (make-random-vector seed
-    (lambda (vec a b)
-      (lambda ()
-        (set! a (randomize a random-1 random-2))
-        (set! b (randomize b random-2 random-1))
-        (let* ((index (arithmetic-shift a (- index-log full-log)))
-               (c (vector-ref vec index)))
-          (vector-set! vec index b)
-          c)))))
+  (if (and (integer? seed)
+	   (< 0 seed)
+	   (<= seed full-mask))
+      (make-random-vector seed
+        (lambda (vec a b)
+	  (lambda ()
+	    (set! a (randomize a random-1 random-2))
+	    (set! b (randomize b random-2 random-1))
+	    (let* ((index (arithmetic-shift a (- index-log full-log)))
+		   (c (vector-ref vec index)))
+	      (vector-set! vec index b)
+	      c))))
+      (call-error "invalid argument" make-random seed)))
 
 (define (randomize x mult ad)
   (bitwise-and (+ (low-bits-of-product x mult) ad)
