@@ -76,7 +76,7 @@ terminates.  \code{Kill-thread!} causes the thread associated with
 
 Debugging multithreaded programs can be difficult.
 
-As described \link*{here}[in section~\Ref]{cells}, when any thread signals an
+As described \link*{here}[in section~\Ref]{command-threads}, when any thread signals an
  error, Scheme~48 stops running all of the threads at that command level.
  
  The following procedure (exported by the structure
@@ -263,7 +263,7 @@ The current proposal is saved and then restored after \code{thunk} returns.
 
 The following procedures give access to the low-level proposal mechanism.
 \begin{protos}
-\proto{maybe-commit}{ proposal}{boolean}
+\proto{maybe-commit}{}{boolean}
 \proto{make-proposal}{}{proposal}
 \proto{current-proposal}{}{proposal}
 \protonoresult{set-current-proposal!}{ proposal}
@@ -271,8 +271,8 @@ The following procedures give access to the low-level proposal mechanism.
 \syntaxproto{with-new-proposal}{ (\cvar{lose}) \cvar{exp} \ldots}{value \ldots}
 \end{protos}
 \noindent
-\code{Maybe-commit} verifies that any reads logged in \cvar{proposal} are
- still valid and, if so, performs any writes that \cvar{proposal} contains.
+\code{Maybe-commit} verifies that any reads logged in the current are
+ still valid and, if so, performs any writes that it contains.
 A logged read is valid if, at the time of the commit, the location read contains
  the same value it had at the time of the original read (note that this does
  not mean that no change occured, simply that the value now is the same as
