@@ -10,7 +10,7 @@
 (define (make-mini-command scheme)
   (define-structure mini-command (export command-processor)
     (open scheme
-	  signals conditions handle
+	  simple-signals simple-conditions handle
 	  display-conditions
 	  i/o)   ; current-error-port
     (files (debug mini-command)))
@@ -25,7 +25,7 @@
 			     set-interaction-environment!
 			     set-scheme-report-environment!)))
   (open scheme-level-2
-	signals)		;error
+	simple-signals)		;error
   (files (debug mini-eval)))
 
 (define (make-scheme environments evaluation) ;cf. initial-packages.scm
@@ -65,7 +65,7 @@
   (open scheme-level-2
 	features		;contents
 	locations
-	signals)		;error
+	simple-signals)		;error
   (files (debug mini-package)))
 
 (define-structure mini-system (export start)
@@ -75,8 +75,8 @@
 	mini-packages
 	mini-environments		;set-interaction-environment!
         usual-resumer
-	conditions handle		;error? with-handler
-	signals)			;error
+	simple-conditions handle	;error? with-handler
+	simple-signals)			;error
   (files (debug mini-start)))
 
 (define (link-mini-system)
@@ -100,7 +100,7 @@
 	compiler-envs		;bind-source-filename
 	reading-forms		;read-forms $note-file-package
 	syntactic		;scan-forms expand-forms
-	signals
+	simple-signals
 	fluids)
   (files (debug run)))
 

@@ -3,7 +3,7 @@
 
 (define-structures ((scheme-level-1 scheme-level-1-interface)
 		    (util util-interface))
-  (open scheme-level-0 ascii signals
+  (open scheme-level-0 ascii simple-signals
         bitwise
 	code-quote)			; needed by SYNTAX-RULES
   (usual-transforms case quasiquote syntax-rules)
@@ -18,7 +18,7 @@
 
 (define-structures ((record-types record-types-interface)
 		    (records-internal records-internal-interface))
-  (open scheme-level-1 records signals
+  (open scheme-level-1 records simple-signals
 	primitives)
   (files (rts record))
   (optimize auto-integrate))
@@ -46,12 +46,12 @@
 	define-record-types
 	records record-types records-internal
 	bitwise util primitives
-	signals)
+	simple-signals)
   (files (rts method))
   (optimize auto-integrate))
 
 (define-structure number-i/o number-i/o-interface
-  (open scheme-level-1 methods signals ascii)
+  (open scheme-level-1 methods simple-signals ascii)
   (files (rts numio)))
 
 (define-structures ((fluids fluids-interface)
@@ -61,7 +61,7 @@
   (optimize auto-integrate))
 
 (define-structure wind wind-interface
-  (open scheme-level-1 signals define-record-types
+  (open scheme-level-1 simple-signals define-record-types
 	fluids fluids-internal
 	low-proposals
 	escapes)
@@ -79,7 +79,7 @@
 
 (define-structures ((i/o i/o-interface)
 		    (i/o-internal i/o-internal-interface))
-  (open scheme-level-1 signals fluids
+  (open scheme-level-1 simple-signals fluids
 	architecture
 	primitives
 	ports byte-vectors bitwise
@@ -100,7 +100,7 @@
   (open scheme-level-1 byte-vectors cells
 	channels
 	i/o i/o-internal
-	conditions
+	simple-conditions
 	(subset threads-internal (maybe-commit-no-interrupts))
 	proposals
 	condvars condvars-internal
@@ -117,17 +117,17 @@
 	channels channel-i/o
 	proposals
 	condvars
-	signals conditions
+	simple-signals simple-conditions
 	architecture		; channel-opening options
 	debug-messages		; for error messages
 	(subset util		(unspecific))
 	(subset primitives	(add-finalizer!)))
   (files (rts channel-port)))
 
-(define-structure conditions conditions-interface
-  (open scheme-level-1 signals
+(define-structure simple-conditions simple-conditions-interface
+  (open scheme-level-1 simple-signals
 	(subset primitives (os-error-message)))
-  (files (rts condition)))
+  (files (rts simple-condition)))
 
 (define-structure writing writing-interface
   (open scheme-level-1
@@ -135,7 +135,7 @@
 	i/o				;output-port-option, write-string
 	methods				;disclose
 	(subset i/o-internal	(open-output-port?))
-	(subset signals		(call-error))
+	(subset simple-signals	(call-error))
 	(subset channels	(channel? channel-id))
 	(subset code-vectors	(code-vector?)))
   (files (rts write)))
@@ -145,8 +145,8 @@
 	number-i/o
 	i/o		;input-port-option
 	ascii		;for dispatch table
-	signals		;warn, signal-condition, make-condition
-	conditions	;define-condition-type
+	simple-signals	;warn, signal-condition, make-condition
+	simple-conditions	;define-condition-type
 	primitives	;make-immutable!
 	silly)		;reverse-list->string
   (files (rts read))
@@ -203,17 +203,17 @@
 		 (shared-binding-name obj)))))
 
 (define-structure enumerated enumerated-interface
-  (open scheme-level-1 signals)
+  (open scheme-level-1 simple-signals)
   (files (rts defenum scm)))
 
 (define-structure architecture vm-architecture-interface
-  (open scheme-level-1 signals enumerated)
+  (open scheme-level-1 simple-signals enumerated)
   (files (vm/interp arch)))
 
 (define-structure vm-data vm-data-interface
   (open scheme-level-1 enumerated bitwise ascii
         architecture
-        (subset signals (error)))
+        (subset simple-signals (error)))
   (begin
     ; Scheme/Pre-Scheme differences
     (define (arithmetic-shift-right n k)
@@ -241,7 +241,7 @@
 
 (define-structure vm-exceptions vm-exceptions-interface
   (open scheme-level-1
-	conditions
+	simple-conditions
 	enumerated
 	architecture
 	(subset primitives (set-exception-handlers! unspecific)))
@@ -251,8 +251,8 @@
 		    (exceptions-internal exceptions-internal-interface)
 		    (handle handle-interface))
   (open scheme-level-1
-	signals fluids cells
-	conditions	  ;make-vm-exception, etc.
+	simple-signals fluids cells
+	simple-conditions
 	vm-exceptions
 	primitives	  ;set-exception-handlers!, etc.
 	wind		  ;CWCC
@@ -272,7 +272,7 @@
 	
 (define-structure interrupts interrupts-interface
   (open scheme-level-1
-	signals fluids conditions
+	simple-signals fluids simple-conditions
 	bitwise
 	escapes
 	session-data
@@ -292,9 +292,9 @@
 	fluids-internal         ;get-dynamic-env
 	proposals		;maybe-commit
         escapes                 ;primitive-cwcc
-        conditions              ;error?
+        simple-conditions              ;error?
         handle                  ;with-handler
-        signals                 ;signal, warn, call-error
+        simple-signals          ;signal, warn, call-error
 	loopholes               ;for converting #f to a continuation
 	architecture            ;time-option
 	session-data
@@ -317,7 +317,7 @@
 (define-structure scheduler scheduler-interface
   (open scheme-level-1 threads threads-internal enumerated enum-case queues
 	debug-messages
-	signals)       		;error
+	simple-signals)       		;error
   (files (rts scheduler)))
 
 (define-structure root-scheduler (export root-scheduler
@@ -326,11 +326,11 @@
 					 call-when-deadlocked!)
   (open scheme-level-1 threads threads-internal scheduler queues
 	session-data
-	conditions		;warning?, error?
+	simple-conditions	;warning?, error?
 	writing			;display
 	debug-messages		;for debugging
 	(subset i/o		(current-error-port newline))
-	(subset signals		(error))
+	(subset simple-signals	(error))
 	(subset handle		(with-handler))
 	(subset i/o-internal	(output-port-forcers output-forcer-id))
 	(subset fluids-internal (get-dynamic-env))
@@ -363,7 +363,7 @@
 	 (unspecific))))))
 
 (define-structure queues queues-interface
-  (open scheme-level-1 proposals signals)
+  (open scheme-level-1 proposals simple-signals)
   (files (big queue))
   (optimize auto-integrate))
 
@@ -372,7 +372,7 @@
 ;                                 queues-interface
 ;                                 (export delete-queue-entry!
 ;                                         queue-head))
-;  (open scheme-level-1 define-record-types signals primitives)
+;  (open scheme-level-1 define-record-types simple-signals primitives)
 ;  (files (big linked-queue))
 ;  (optimize auto-integrate))
 
@@ -406,7 +406,7 @@
 ; Weak pointers & populations
 
 (define-structure weak weak-interface
-  (open scheme-level-1 signals
+  (open scheme-level-1 simple-signals
 	primitives)	;Open primitives instead of loading (alt weak)
   (files ;;(alt weak)   ;Only needed if VM's weak pointers are buggy
 	 (rts population)))
@@ -417,5 +417,5 @@
   (open scheme-level-2
 	writing
 	methods
-	handle)			;ignore-errors
+	handle)	;ignore-errors
   (files (env dispcond)))

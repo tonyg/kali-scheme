@@ -31,7 +31,7 @@
         define-record-types
         primitives
         architecture
-        signals
+        simple-signals
 	(subset vm-exceptions (extend-opcode!))
 	util
         number-i/o)
@@ -40,21 +40,21 @@
 (define-structure innums (export )    ;inexact numbers
   (open scheme-level-2
         extended-numbers
-        methods signals
+        methods simple-signals
         number-i/o)             ;string->integer
   (files (rts innum)))
 
 (define-structure ratnums (export )    ;No exports
   (open scheme-level-2
         extended-numbers
-        methods signals
+        methods simple-signals
         number-i/o)             ;string->integer
   (files (rts ratnum)))
 
 (define-structure recnums (export )    ;No exports
   (open scheme-level-2
         extended-numbers
-        methods signals
+        methods simple-signals
         number-i/o)             ;really-number->string
   (files (rts recnum)))
 
@@ -63,7 +63,7 @@
   (open scheme-level-2
         extended-numbers
         code-vectors
-        methods signals
+        methods simple-signals
 	enumerated
 	loopholes
 	more-types		;:double
@@ -85,7 +85,7 @@
 	(subset util (unspecific))
 	threads threads-internal
 	interrupts
-	signals)
+	simple-signals)
   (files (big placeholder))
   (optimize auto-integrate))
 
@@ -203,8 +203,9 @@
   (open scheme-level-2
 	formats
 	features		; immutable? make-immutable!
-	(modify signals		(rename (error rts-error))
-		                (expose error))
+	(modify signals
+		(rename (error rts-error))
+		(expose error))
 	(modify debugging	(rename (breakpoint rts-breakpoint))
 		                (expose breakpoint))
 	(subset primitives	(copy-bytes!)))
@@ -251,7 +252,7 @@
 
 (define-structure dynamic-externals dynamic-externals-interface
   (open scheme-level-2 define-record-types tables
-        signals                 ;warn
+        signals          	;warn
 	primitives		;find-all-records
 	i/o			;current-error-port
         code-vectors
@@ -293,7 +294,7 @@
         number-i/o
         tables
         records record-types
-        signals                 ;error
+        signals          	;error
         locations               ;make-undefined-location
         closures
         code-vectors            ;code vectors

@@ -223,7 +223,8 @@
 	  template-id
 	  template-name
 	  template-names
-	  debug-data-names))
+	  debug-data-names
+	  disclose-vm-condition))
 
 (define-interface package-mutation-interface
   (export package-system-sentinel	;env/command.scm
@@ -298,6 +299,63 @@
 (define-interface time-interface
   (export real-time
 	  run-time))
+
+(define-interface conditions-interface
+  (export make-condition-type
+	  condition-type?
+	  make-condition
+	  condition?
+	  condition-has-type?
+	  condition-ref
+	  make-compound-condition
+	  extract-condition
+
+	  (define-condition-type :syntax)
+	  (condition :syntax)
+
+	  &condition
+	  &message message-condition? condition-message
+	  &serious serious-condition?
+	  &error error?
+	  &bug bug?
+	  &irritants irritants?
+	  condition-irritants
+	  &call-error call-error?
+	  call-error-proc call-error-args
+	  &vm-exception vm-exception?
+	  vm-exception-opcode vm-exception-reason
+	  &primitive-i/o-error primitive-i/o-error?
+	  i/o-error-status i/o-error-operation i/o-error-arguments
+	  &warning warning?
+	  &note note?
+	  &syntax-error syntax-error?
+	  &interrupt interrupt?
+	  interrupt-type
+	  &simple-condition simple-condition?
+	  simple-condition-type simple-condition-stuff))
+
+(define-interface i/o-conditions-interface
+  (export &i/o-error i/o-error?
+	  &i/o-port-error i/o-port-error?
+	  i/o-error-port
+	  &i/o-read-error i/o-read-error?
+	  &i/o-write-error i/o-write-error?
+	  &i/o-closed-error i/o-closed-error?
+	  &i/o-filename-error i/o-filename-error?
+	  i/o-error-filename
+	  &i/o-malformed-filename-error i/o-malformed-filename-error?
+	  &i/o-file-protection-error i/o-file-protection-error?
+	  &i/o-file-is-read-only-error i/o-file-is-read-only-error?
+	  &i/o-file-already-exists-error i/o-file-already-exists-error?
+	  &i/o-no-such-file-error i/o-no-such-file-error?
+	  &read-error read-error?
+	  read-error-line read-error-column read-error-position read-error-span))
+
+(define-interface signals-internal-interface
+  (export simple-condition->condition
+	  condition->simple-condition
+	  coerce-to-condition
+	  coerce-to-simple-condition))
 
 ; Experimental DEFINE-RECORD-TYPE that is now officially a failure.
 

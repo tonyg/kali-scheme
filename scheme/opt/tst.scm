@@ -10,7 +10,7 @@
 		    (scheme-level-1-internal scheme-level-1-internal-interface)
 		    (bitwise bitwise-interface)
 		    (util util-interface)
-		    (signals signals-interface)
+		    (simple-signals signals-interface)
 		    (features features-interface)
 		    (ascii ascii-interface)
 		    (structure-refs (export structure-ref)))

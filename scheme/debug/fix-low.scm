@@ -6,7 +6,7 @@
   (open ))
 
 (define ascii (structure-ref built-in-structures ascii))
-(define signals (structure-ref built-in-structures signals))
+(define simple-signals (structure-ref built-in-structures simple-signals))
 (define loopholes (structure-ref built-in-structures loopholes))
 (define escapes (structure-ref built-in-structures escapes))
 (define vm-exposure (structure-ref built-in-structures vm-exposure))

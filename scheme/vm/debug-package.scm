@@ -8,7 +8,7 @@
         enumerated              ; enumerand->name
         vm-architecture
 	bitwise                 ; arithmetic-shift
-	signals)                ; error
+	signals)         	; error
   (files (util disasm)))
 
 ; Independent byte-code compiler for testing (from Michael Sperber).
@@ -19,7 +19,7 @@
 	usual-macros		; for dealing with (usual-transforms ...)
 	meta-types
 	packages-internal
-	signals fluids tables util
+	simple-signals fluids tables util
 	features		;force-output current-noise-port
 	filenames)		;translate
   (files (bcomp scan)
@@ -29,7 +29,7 @@
   (open scheme-level-2
 	syntactic packages scan-test meta-types reconstruction
 	define-record-types
-	util signals tables fluids strong
+	util simple-signals tables fluids strong
 	features)  ; string-hash
   (files (opt expand)
          (opt sort)
@@ -44,7 +44,7 @@
 	locations		;make-undefined-location
 	architecture
 	enumerated		;enumerand->name
-	signals tables util fluids 
+	simple-signals tables util fluids 
 	features)		;force-output
   (files (bcomp comp)
 	 (bcomp cprim)
@@ -66,7 +66,7 @@
 	vm-exposure			;invoke-closure
 	scan				;noting-undefined-variables
 	i/o				;current-noise-port
-	signals fluids)
+	simple-signals fluids)
   (files (rts eval))
   (begin
     (define test-eval eval)

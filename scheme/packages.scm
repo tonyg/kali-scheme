@@ -41,10 +41,10 @@
 			     (features features-interface)
 			     (records records-interface)
 			     (record-types record-types-interface)
-			     (signals signals-interface))
+			     (simple-signals signals-interface))
 	   ;; Assumes use of FLATLOAD.  The implementations of these
 	   ;; structures will become available via some miracle, e.g.
-	   ;; a command ",open signals ... code-vectors" or an
+	   ;; a command ",open simple-signals ... code-vectors" or an
 	   ;; explicit LOAD of something.  Cf. the rule for
 	   ;; link/linker.image in the Makefile.
 	   )))
@@ -228,7 +228,7 @@
 	    code-vectors
 	    features
 	    records
-	    signals)
+	    simple-signals)
 	   :structure)))
 
 (define-interface low-structures-interface
@@ -240,7 +240,7 @@
 	    code-vectors
 	    features
 	    records
-	    signals
+	    simple-signals
 	    cells
 	    channels
 	    closures
@@ -285,11 +285,12 @@
 
 (define-interface run-time-internals-structures-interface
   (export ((channel-ports
-	    conditions
+	    simple-conditions
 	    continuations
 	    display-conditions
 	    ;; escapes
 	    exceptions
+	    exceptions-internal
 	    fluids-internal
 	    handle
 	    i/o
@@ -409,6 +410,7 @@
 	    callback
 	    command-levels
 	    command-processor
+	    conditions
 	    c-system-function
 	    debugging
 	    define-record-types
@@ -450,6 +452,7 @@
 	    receiving
 	    reduce
 	    search-trees
+	    signals
 	    sockets
 
 	    delete-neighbor-duplicates

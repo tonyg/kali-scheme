@@ -62,20 +62,23 @@
 	   (next-handler)))))
 
 (define (cheap-display-condition condition out)
-  (display (case (car condition)
-	     ((error) "Error")
-	     ((vm-exception) "VM Exception")
-	     ((warning) "Warning")
-	     (else (car condition)))
-	   out)
-  (display ": " out)
-  (display (cadr condition) out)
-  (newline out)
-  (for-each (lambda (irritant)
-	      (display "    " out)
-	      (display irritant out)
-	      (newline out))
-	    (cddr condition)))
+  (call-with-values
+      (lambda () (decode-condition condition))
+    (lambda (type stuff)
+      (display (case type
+		 ((error) "Error")
+		 ((vm-exception) "VM Exception")
+		 ((warning) "Warning")
+		 (else type))
+	       out)
+      (display ": " out)
+      (display (car stuff) out)
+      (newline out)
+      (for-each (lambda (irritant)
+		  (display "    " out)
+		  (display irritant out)
+		  (newline out))
+		(cdr stuff)))))
 	 
 ; Upcall token
 

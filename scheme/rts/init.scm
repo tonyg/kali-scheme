@@ -8,9 +8,11 @@
 ; The placement of INITIALIZE-RECORDS! is questionable.  Important parts
 ; of the system are not in place when it is run.
 
-(define (make-usual-resumer warn-about-undefined-imported-bindings? entry-point)
+(define (make-usual-resumer warn-about-undefined-imported-bindings? signal-condition-proc
+			    entry-point)
   (lambda (resume-arg in out error records)
-    (initialize-rts in out error
+    (initialize-rts signal-condition-proc
+		    in out error
      (lambda ()
        (run-initialization-thunks)
        (initialize-records! records)
@@ -19,7 +21,7 @@
        (entry-point (vector->list resume-arg))))))
 
 (define (usual-resumer entry-point)
-  (make-usual-resumer #t entry-point))
+  (make-usual-resumer #t really-signal-condition entry-point))
 
 (define (warn-about-undefined-imported-bindings)
   (let ((undefined-bindings (find-undefined-imported-bindings)))
@@ -29,9 +31,10 @@
       (debug-message "undefined imported binding "
 		     (shared-binding-name (vector-ref undefined-bindings i))))))
 
-(define (initialize-rts in out error thunk)
+(define (initialize-rts signal-condition-proc in out error thunk)
   (initialize-session-data!)
   (initialize-dynamic-state!)
+  (initialize-vm-exceptions! signal-condition-proc)
   (initialize-exceptions!
     (lambda ()
       (initialize-interrupts!

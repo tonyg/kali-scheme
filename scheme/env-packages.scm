@@ -9,7 +9,7 @@
 		    (command (export command-processor)))
   (open scheme ;;-level-2     ; eval, interaction-environment
 	tables fluids cells
-	conditions
+	conditions i/o-conditions
 	handle
 	command-levels
 	command-state
@@ -26,6 +26,7 @@
 	fluids-internal         ; get-dynamic-env, set-dynamic-env!
 	nodes			; for ## kludge
 	signals
+	signals-internal	; coerce-to-condition, coerce-to-simple-condition
 	debug-messages		; for debugging
 
 	(subset evaluation (load-script-into))
@@ -56,6 +57,7 @@
 	weak
 	debug-messages		; for debugging
 	signals			; error
+	signals-internal	; coerce-to-condition, coerce-to-simple-condition
 	i/o			; current-error-port
 	util                    ; unspecific
 	channel-i/o             ; steal-channel-port
@@ -64,7 +66,8 @@
 	environments		; with-interaction-environment,
 				;   interaction-environment
 	root-scheduler          ; call-when-deadlocked!
-	conditions)              ; define-condition-type
+	conditions)
+
   (files (env user)
 	 (env command-level)))
 
@@ -103,15 +106,17 @@
 	command-levels
 	command-state
 	menus			; write-line
-        conditions handle
+        conditions
+	signals
+	signals-internal	; coerce-to-condition, coerce-to-simple-condition
+	handle
         usual-resumer
         filenames               ; translate
         display-conditions      ; display-condition
         evaluation              ; package-for-load, eval
 	environments		; with-interaction-environment
 	i/o			; current-error-port
-        write-images
-        signals)
+        write-images)
   (files (env build)))
 
 ; Package commands.
@@ -149,7 +154,7 @@
   (open scheme-level-1
         methods more-types
         tables
-        conditions
+        simple-conditions
         display-conditions
         locations
         code-vectors
@@ -192,11 +197,12 @@
         fluids
         tables
 	weak
-        signals                 ; make-condition
+        signals
+	signals-internal	; coerce-to-condition
         util                    ; filter
         evaluation              ; eval-from-file, eval
         environments            ; environment-define! (for ,trace)
-        conditions              ; define-condition-type
+        conditions
         (subset filenames       (set-translation!))
         disclosers              ; template-name, debug-data-names
         packages                ; flush-location-names, package-integrate?
@@ -226,7 +232,7 @@
 	fluids
         display-conditions      ; limited-write
         util                    ; sublist
-        signals                 ; error
+        signals          	; error
 	handle			; ignore-errors
 	conditions		; error?
 	
@@ -366,7 +372,7 @@
 	bindings		;binding? binding-place
         meta-types              ;value-type
         templates               ; for Richard's version
-        signals                 ;error
+        signals          	;error
         enumerated              ;name->enumerand
         code-vectors)
   (files (env assem)))
@@ -401,3 +407,27 @@
 ;        escapes)       ; primitive-cwcc
 ;  (files (env profile)))
 
+; Needs to be here because it's installed by the BUILD package
+
+(define-structure conditions conditions-interface
+  (open scheme
+	define-record-types
+	simple-signals ; ####
+	methods
+	display-conditions
+	disclosers)
+  (files (env condition)))
+
+(define-structure i/o-conditions i/o-conditions-interface
+  (open scheme
+	conditions)
+  (files (env io-condition)))
+
+(define-structures ((signals (interface-of simple-signals))
+		    (signals-internal signals-internal-interface))
+  (open scheme debug-messages
+	disclosers
+	conditions i/o-conditions
+	exceptions-internal
+	(with-prefix simple-conditions sc:))
+  (files (env signal)))

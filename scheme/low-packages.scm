@@ -25,7 +25,7 @@
 		    (ports ports-interface)
 		    (shared-bindings shared-bindings-interface)
 		    (low-proposals low-proposals-interface)
-		    (signals signals-interface)
+		    (simple-signals signals-interface)
 		    (debug-messages (export debug-message))
 		    (silly (export reverse-list->string))
 		    (code-quote (export (code-quote :syntax)))
@@ -33,6 +33,6 @@
   (define-all-operators)		; Primitive Scheme, in the LSC paper
   (usual-transforms and cond do let let* or)
   (files (rts low)
-	 (rts signal))
+	 (rts simple-signal))
   (optimize auto-integrate))
 

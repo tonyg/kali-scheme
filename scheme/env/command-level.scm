@@ -204,17 +204,18 @@
 ; go to the 
 
 (define (command-levels-condition-handler c next-handler)
-  (cond ((or (warning? c)
-	     (note? c))
-	 (force-output (current-output-port))   ; keep synchronous
-	 (display-condition c (current-error-port))
-	 (unspecific))				; proceed
-        ((error? c)
-	 (force-output (current-output-port))	; keep synchronous
-	 (display-condition c (current-error-port))
-	 (scheme-exit-now 1))
-        (else                           
-         (next-handler))))
+  (let ((c (coerce-to-condition c)))
+    (cond ((or (warning? c)
+	       (note? c))
+	   (force-output (current-output-port))	; keep synchronous
+	   (display-condition c (current-error-port))
+	   (unspecific))		; proceed
+	  ((or (error? c) (bug? c))
+	   (force-output (current-output-port))	; keep synchronous
+	   (display-condition c (current-error-port))
+	   (scheme-exit-now 1))
+	  (else
+	   (next-handler)))))
 
 ;----------------------------------------------------------------
 ; Grab the current continuation, then make a command level and run it.
@@ -298,11 +299,14 @@
     (if repl
 	(interrupt-thread repl
 			  (lambda return-values
-			    (signal 'reset-command-input)
+			    (signal the-reset-command-input-condition)
 			    (apply values return-values))))))
 
-(define-condition-type 'reset-command-input '())
-(define reset-command-input? (condition-predicate 'reset-command-input))
+(define-condition-type &reset-command-input &condition
+  reset-command-input?)
+
+(define the-reset-command-input-condition
+  (condition (&reset-command-input)))
 
 ; Make sure the input and output ports are available and then run the threads
 ; on LEVEL's queue.
@@ -403,7 +407,8 @@
   (lambda (thread token args)
     (if (upcall? token)
 	(apply (upcall-procedure token) args)
-	(propogate-upcall thread token args))))
+	(begin
+	  (propogate-upcall thread token args)))))
 
 (define-record-type upcall :upcall
   (make-upcall procedure id)

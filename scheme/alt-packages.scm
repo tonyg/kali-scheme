@@ -9,13 +9,13 @@
   (open scheme))
 
 (define-structure escapes escapes-interface ;cf. alt/low-packages.scm
-  (open scheme-level-2 define-record-types signals)
+  (open scheme-level-2 define-record-types simple-signals)
   (files (alt escape)))
 
 (define-structures ((low-level low-level-interface)
 		    (source-file-names (export (%file-name% :syntax)))
 		    (structure-refs (export (structure-ref :syntax))))
-  (open scheme-level-2 signals)
+  (open scheme-level-2 simple-signals)
   (files (alt low)))
 
 (define-structure closures closures-interface
@@ -41,7 +41,7 @@
 	architecture
 	templates
 	closures
-	signals)
+	simple-signals)
   (files (link data)
 	 (link transport)
 	 (link write-image)))
@@ -51,7 +51,7 @@
 
 ; Same as in rts-packages.scm:
 (define-structure architecture vm-architecture-interface
-  (open scheme-level-1 signals enumerated)
+  (open scheme-level-1 simple-signals enumerated)
   (files (vm/interp arch)))
 
 (define-structure define-record-types define-record-types-interface
@@ -60,11 +60,11 @@
 
 ; Same as in rts-packages.scm:
 (define-structure enumerated enumerated-interface
-  (open scheme-level-1 signals)
+  (open scheme-level-1 simple-signals)
   (files (rts defenum scm)))
 
 (define-structure fluids fluids-interface
-  (open scheme-level-1 signals)
+  (open scheme-level-1 simple-signals)
   (files (alt fluid)))
 
 (define-structures ((scheme-level-2 scheme-level-2-interface)
@@ -81,7 +81,7 @@
   (files (rts util)))
 
 (define-structure weak weak-interface
-  (open scheme-level-1 signals)
+  (open scheme-level-1 simple-signals)
   (files (alt weak)
 	 (rts population)))
 
@@ -90,7 +90,7 @@
 ; run-time internals (generally speaking, things not needed by the linker)
 
 ; * = mentioned in more-packages.scm
-;   conditions
+;   simple-conditions
 ;   continuations
 ;   display-conditions
 ; * exceptions

@@ -46,9 +46,10 @@
         (lambda (c punt)
 	  (cond ((batch-mode?)
 		 (punt))
-		((or (read-error? c)
-		     (read-command-error? c))
-		 (let ((port (last (condition-stuff c))))
+		((and (i/o-port-error? c)
+		      (or (i/o-read-error? c)
+			  (read-command-error? c)))
+		 (let ((port (last (i/o-error-port c))))
 		   (if (eq? port i-port)
 		       (eat-until-newline i-port))
 		   (display-condition c (command-output))
@@ -166,12 +167,18 @@
 	(read port)
 	(read-string port char-whitespace?))))
 
-(define-condition-type 'read-command-error '(error))
-(define read-command-error? (condition-predicate 'read-command-error))
+
+(define-condition-type &read-command-error &error
+  read-command-error?)
 
 (define (read-command-error port message . rest)
-  (apply signal 'read-command-error message (append rest (list port))))
-
+  (signal-condition (condition (&read-command-error)
+			       (&irritants
+				(values rest))
+			       (&i/o-port-error
+				(port port))
+			       (&message
+				(message message)))))
 
 ; Utilities.
 

@@ -11,7 +11,7 @@
 	packages bindings meta-types 
 	fluids cells
 	locations	; contents location-assigned?
-	signals)	; error
+	simple-signals)	; error
   (files (rts env)))
 
 ; EVAL and LOAD
@@ -27,7 +27,7 @@
 	closures		;make-closure
 	vm-exposure		;invoke-closure
 	features		;current-noise-port force-output
-	signals fluids)
+	simple-signals fluids)
   (files (rts eval)))
 
 ; Scheme = scheme-level-2 plus EVAL and friends
@@ -45,7 +45,7 @@
 (define-module (make-mini-command scheme) ;copied from debug-packages.scm
   (define-structure mini-command (export command-processor)
     (open scheme
-	  signals conditions handle
+	  simple-signals simple-conditions handle
 	  display-conditions
 	  i/o)                 ;current-error-port
     (files (debug mini-command)))
@@ -63,8 +63,8 @@
 	  packages		;make-simple-package
 	  environments		;with-interaction-environment, etc.
 	  usual-resumer
-	  conditions handle	;error? with-handler
-	  signals)		;error
+	  simple-conditions handle	;error? with-handler
+	  simple-signals)	;error
     (files (env start)))
 
   initial-system)
@@ -92,7 +92,7 @@
 (define-structure for-reification for-reification-interface
   (open scheme-level-1
 	packages packages-internal
-	signals
+	simple-signals
 	meta-types			;sexp->type structure-type
 	interfaces			;make-simple-interface
 	bindings

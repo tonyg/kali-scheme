@@ -138,24 +138,29 @@
 ; warnings on the command level thread to avoid circularity problems.
 
 (define (command-loop-condition-handler c next-handler)
-  (cond ((or (warning? c)
-	     (note? c))
-         (if (break-on-warnings?)
-             (deal-with-condition c)
-             (begin (force-output (current-output-port)) ; keep synchronous
-	            (display-condition c (current-error-port))
-                    (unspecific))))     ;proceed
-        ((or (error? c) (interrupt? c))
-         (if (batch-mode?)
-             (begin (force-output (current-output-port)) ; keep synchronous
-	            (display-condition c (current-error-port))
-                    (let ((status (if (error? c) 1 2)))
-                      (scheme-exit-now status)))
-             (deal-with-condition c)))
-	((reset-command-input? c)
-	 (unspecific))			;proceed
-        (else                           
-         (next-handler))))
+  (let ((c (coerce-to-condition c)))
+    (cond ((or (warning? c)
+	       (note? c))
+	   (if (break-on-warnings?)
+	       (deal-with-condition c)
+	       (begin (force-output (current-output-port)) ; keep synchronous
+		      (display-condition c (current-error-port))
+		      (unspecific))))	;proceed
+	  ((or (error? c) (bug? c) (interrupt? c))
+	   (if (batch-mode?)
+	       (begin (force-output (current-output-port)) ; keep synchronous
+		      (display-condition c (current-error-port))
+		      (let ((status
+			     (cond
+			      ((error? c) 1)
+			      ((bug? c) 3) ; historical, probably nonsense
+			      (else 2))))
+			(scheme-exit-now status)))
+	       (deal-with-condition c)))
+	  ((reset-command-input? c)
+	   (unspecific))		;proceed
+	  (else                           
+	   (next-handler)))))
 
 ; Stop the current level either by pushing a new one or restarting it.
 ; If we restart the current level we save it as the focus object to give
@@ -238,11 +243,12 @@
    (lambda (k)
      (with-handler
       (lambda (c punt)
-	(if (error? c)
-	    (begin
-	      (display-condition c (current-error-port))
-	      (k (EX_SOFTWARE)))
-	    (punt)))
+	(let ((c (coerce-to-condition c)))
+	  (if (or (error? c) (bug? c))
+	      (begin
+		(display-condition c (current-error-port))
+		(k (EX_SOFTWARE)))
+	      (punt))))
       (lambda ()
 	(thunk)
 	0)))))

@@ -483,10 +483,11 @@
 (define-interface handle-interface
   (export ignore-errors report-errors-as-warnings with-handler))
 
-(define-interface conditions-interface
+(define-interface simple-conditions-interface
   (export define-condition-type
 	  condition-predicate
-	  condition-stuff condition-type
+	  decode-condition condition-stuff condition-type
+	  define-condition-decoder
 	  error? warning? note? syntax-error? call-error? read-error?
 	  interrupt?
 
@@ -660,7 +661,8 @@
 	  (guard :syntax)))
 
 (define-interface exceptions-internal-interface
-  (export initialize-exceptions!))
+  (export initialize-exceptions!
+	  really-signal-condition))
 
 (define-interface vm-exceptions-interface
   (export define-vm-exception-handler

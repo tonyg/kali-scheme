@@ -94,10 +94,11 @@
 	   #t)))
 
 (define (breakpoint . rest)
-  (command-loop (make-condition 'breakpoint rest)))
+  (command-loop (condition (&breakpoint)
+			   (&irritants (values rest)))))
 
-(define-condition-type 'breakpoint '())
-(define breakpoint? (condition-predicate 'breakpoint))
+(define-condition-type &breakpoint &condition
+  breakpoint?)
 
 ; push
 
@@ -616,13 +617,18 @@ Kind should be one of: names maps files source tabulate"
 
 ; Temporary hack until we get default values for unhandled upcalls.
 
+; This gets called during the building of, say scheme48.image, while
+; there's still the REALLY-SIGNAL-CONDITION from EXCEPTIONS
+; installed---so we make sure we get the right ones.
+
 (define (maybe-user-context)
   (call-with-current-continuation
     (lambda (exit)
       (with-handler (lambda (condition punt)
-		      (if (error? condition)
-			  (exit #f)
-			  (punt)))
+		      (let ((condition (coerce-to-condition condition)))
+			(if (error? condition)
+			    (exit #f)
+			    (punt))))
 		    user-context))))
 
 (define (get-file-environment filename)

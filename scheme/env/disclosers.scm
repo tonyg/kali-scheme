@@ -136,6 +136,8 @@
   (set! *condition-disclosers*
         (cons (cons pred proc) *condition-disclosers*)))
 
+; Simple conditions
+
 (define-method &disclose-condition ((c :pair))
   (let loop ((l *condition-disclosers*))
     (if (null? l)
@@ -156,13 +158,9 @@
 
 (define-condition-discloser vm-exception?
   (lambda (c)
-    (let ((opcode (vm-exception-opcode c))
-	  (reason (vm-exception-reason c))
-          (args   (vm-exception-arguments c)))
-      ((vector-ref vm-exception-disclosers opcode)
-       opcode
-       reason
-       args))))
+    (disclose-vm-condition (vm-exception-opcode c)
+			   (vm-exception-reason c)
+			   (vm-exception-arguments c))))
 
 (define vm-exception-disclosers
   (make-vector op-count
@@ -177,6 +175,12 @@
 
 (define (define-vm-exception-discloser opcode discloser)
   (vector-set! vm-exception-disclosers opcode discloser))
+
+(define (disclose-vm-condition opcode reason args)
+  ((vector-ref vm-exception-disclosers opcode)
+   opcode
+   reason
+   args))
 
 (let ((disc (lambda (opcode reason args)
               (let ((loc (car args)))

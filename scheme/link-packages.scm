@@ -20,7 +20,7 @@
 	filenames
 	debug-data		;with-fresh-compiler-state
 	locations
-	tables fluids signals util)
+	tables fluids simple-signals util)
   (files (link link)))
 
 (define-structure reification (export reify-structures)
@@ -33,7 +33,7 @@
 	locations
 	primops
 	tables records
-	signals			;error
+	simple-signals		;error
 	features		;force-output
 	util			;filter
 	inline)			;name->extrinsic
@@ -81,6 +81,6 @@
 	loadc
 	flatloading
 	interfaces
-	signals)    ;warn
+	simple-signals)    ;warn
   ;; (files (alt init-defpackage.scm))  -- or (env ...), depending
   )

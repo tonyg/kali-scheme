@@ -13,8 +13,13 @@
 ; of the call to signal-condition.
 
 (define (really-signal-condition condition)
-  (let loop ((hs (fluid-cell-ref $exception-handlers)))
-    ((car hs) condition (lambda () (loop (cdr hs))))))
+  (let loop ((hs (fluid-cell-ref $exception-handlers))
+	     (condition condition))
+    ((car hs) condition
+     (lambda maybe-condition
+       (if (null? maybe-condition)
+	   (loop (cdr hs) condition)
+	   (loop (cdr hs) (car maybe-condition)))))))
 
 (define (with-handler h thunk)
   (let-fluid $exception-handlers
@@ -29,7 +34,6 @@
     (lambda (k)
       (fluid-cell-set! $exception-handlers
 		       (list (last-resort-exception-handler k)))
-      (initialize-vm-exceptions! really-signal-condition)
       (thunk))))
 
 (define (last-resort-exception-handler halt)
@@ -73,12 +77,6 @@
 				   " <- ")
 		    " <- "))
 	      (continuation-preview c))))
-
-; ERROR is a compiler primitive, but if it weren't, it could be
-; defined as follows:
-
-;(define (error message . irritants)
-;  (signal-condition (make-condition 'error (cons message irritants))))
 
 ; Run THUNK, returning either the value returned by THUNK or any error
 ; that occurs.
@@ -126,12 +124,15 @@
 
 ;; no tail recursive call to the handler here
 (define (raise obj)
-  (let loop ((handlers (fluid-cell-ref $exception-handlers)))
+  (let loop ((handlers (fluid-cell-ref $exception-handlers))
+	     (obj obj))
     (let-fluid $exception-handlers (make-cell (cdr handlers))
       (lambda ()
         ((car handlers) obj
-	 (lambda ()
-	   (loop (cdr handlers))))
+	 (lambda maybe-obj
+	   (if (null? maybe-obj)
+	       (loop (cdr handlers) obj)
+	       (loop (cdr handlers) (car maybe-obj)))))
 	(error "exception handler returned" (car handlers) obj)))))
 
 (define-syntax guard

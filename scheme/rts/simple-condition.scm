@@ -1,12 +1,18 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
 ; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-
-; This is file condition.scm.
-
 ;;;; Condition hierarchy
 
-; General design copied from gnu emacs.
+; General design copied from GNU Emacs
+
+;; This is the low-level condition representation for use by the
+;; run-time system; it uses lists whose first symbol represents the
+;; condition type.
+
+;; Systems built on top of this one may choose a different
+;; representation.  If they do, they need to provide a condition
+;; decoder for use by the RTS to do some basic processing---mainly
+;; distinguishing errors from the rest.
 
 (define *condition-types* '())
 
@@ -23,22 +29,47 @@
 				     supertypes)))
 	      *condition-types*)))
 
+;; alist of (predicate . decode)
+;; Each decoder procedure should return a pair (type . stuff)
+(define *condition-decoder-alist* '())
+
+(define (decode-condition condition)
+  (let loop ((alist *condition-decoder-alist*))
+    (cond
+     ((null? alist)
+      (if (pair? condition)
+	  (values (car condition) (cdr condition))
+	  (values #f #f)))
+     (((caar alist) condition)
+      ((cdar alist) condition))
+     (else
+      (loop (cdr alist))))))
+
+(define (define-condition-decoder predicate decoder)
+  (set! *condition-decoder-alist*
+	(cons (cons predicate decoder)
+	      *condition-decoder-alist*)))
+
+(define (condition-type condition)
+  (call-with-values
+      (lambda () (decode-condition condition))
+    (lambda (type stuff)
+      type)))
+
+(define (condition-stuff condition)
+  (call-with-values
+      (lambda () (decode-condition condition))
+    (lambda (type stuff)
+      stuff)))
+
 (define (condition-predicate name)
   (lambda (c)
-    (and (pair? c)
-	 (let ((probe (condition-supertypes (car c))))
-	   (if probe
-	       (if (memq name probe) #t #f)
-	       #f)))))
-
-(define (condition? x)
-  (and (pair? x)
-       (list? x)
-       (condition-supertypes (car x))))
-(define condition-type car)
-(define condition-stuff cdr)
-
-
+    (let ((type (condition-type c)))
+      (and type
+	   (let ((probe (condition-supertypes type)))
+	     (if probe
+		 (if (memq name probe) #t #f)
+		 #f))))))
 ; Errors
 
 (define-condition-type 'error '())

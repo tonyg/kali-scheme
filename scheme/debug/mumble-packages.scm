@@ -9,7 +9,7 @@
 ; We redefine these two so as not to compromise the security of the
 ; built-in exception and interrupt systems:
 ;   primitives
-;   signals
+;   simple-signals
 
 
 ; Suppose you have just done "make image" to build the scheme48 heap image.
