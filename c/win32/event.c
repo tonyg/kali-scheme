@@ -514,13 +514,3 @@ s48_sysdep_init(void)
   }
 }
 
-/* kludge */
-
-void
-s48_initialize_external_modules()
-{
-  extern void s48_init_socket(void);
-  extern void s48_init_dynlink(void);
-  s48_init_socket();
-  s48_init_dynlink();
-}
