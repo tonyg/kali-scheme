@@ -76,6 +76,8 @@
      (goto return-values s48-*native-protocol* null 0))
     ((1)
      (goto perform-application s48-*native-protocol*))
+    ((2)
+     (goto return-values s48-*native-protocol* null 0))
     ((4)
      (goto interpret *code-pointer*))
     (else
