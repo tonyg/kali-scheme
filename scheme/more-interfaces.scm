@@ -518,6 +518,7 @@
 	  string-concatenate
 	  string-concatenate/shared
 	  string-concatenate-reverse
+	  string-concatenate-reverse/shared
 	  string-append/shared
 	  xsubstring string-xcopy!
 	  string-null?
