@@ -142,6 +142,7 @@ typedef s48_value (*proc_11_t)(s48_value, s48_value, s48_value, s48_value,
 typedef s48_value (*proc_12_t)(s48_value, s48_value, s48_value, s48_value,
 			       s48_value, s48_value, s48_value, s48_value,
 			       s48_value, s48_value, s48_value, s48_value);
+typedef s48_value (*proc_n_t)(int, s48_value []);
 
 s48_value
 s48_external_call(s48_value sch_proc, s48_value proc_name,
@@ -223,8 +224,8 @@ s48_external_call(s48_value sch_proc, s48_value proc_name,
 						argv[3], argv[2], argv[1], argv[0]);
       break;
     default:
-      fprintf(stderr, "external-apply called with too many arguments");
-      exit(-1); }
+      external_return_value = ((proc_n_t)proc)((int)nargs, (s48_value *)argv);
+    }
 
     /* Raise an exception if the user neglected to pop off some gc roots. */
     
