@@ -655,7 +655,10 @@
 	  delete-from-queue! on-queue?))
 
 (define-interface exceptions-interface
-  (export initialize-exceptions!
+  (export with-exception-handler
+	  raise
+	  (guard :syntax)
+	  initialize-exceptions!
 	  continuation-preview))	;env/debug.scm
 
 (define-interface vm-exceptions-interface

@@ -1,40 +1,38 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
 ; Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-;;;; Raising and handling conditions
+;;;; Raising and handling of exceptions
 
-; A condition is a run-time system structure describing unusual situations,
-; including exceptions.
-
+; A condition is a run-time system structure describing an unusual situation.
 
 ; Raising and handling conditions.
-; (fluid $condition-handlers) is a cell containing a list of handler procedures.
+; (fluid $exception-handlers) is a cell containing a list of handler procedures.
 ; Each handler takes two arguments: the condition to be handled, and
 ; a thunk that can be called if the handler decides to decline handling
 ; the condition.  The continuation to a call to a handler is that
 ; of the call to signal-condition.
 
 (define (really-signal-condition condition)
-  (let loop ((hs (fluid-cell-ref $condition-handlers)))
+  (let loop ((hs (fluid-cell-ref $exception-handlers)))
     ((car hs) condition (lambda () (loop (cdr hs))))))
 
 (define (with-handler h thunk)
-  (let-fluid $condition-handlers
-      (make-cell (cons h (fluid-cell-ref $condition-handlers)))
+  (let-fluid $exception-handlers
+      (make-cell (cons h (fluid-cell-ref $exception-handlers)))
     thunk))
 
-(define $condition-handlers
+(define $exception-handlers
   (make-fluid (make-cell #f)))
 
 (define (initialize-exceptions! thunk)
   (call-with-current-continuation
     (lambda (k)
-      (fluid-cell-set! $condition-handlers
-		       (list (last-resort-condition-handler k)))
+      (fluid-cell-set! $exception-handlers
+		       (list (last-resort-exception-handler k)))
       (initialize-vm-exceptions! really-signal-condition)
       (thunk))))
 
-(define (last-resort-condition-handler halt)
+(define (last-resort-exception-handler halt)
   (let ((interrupt/keyboard (enum interrupt keyboard))
 	(losing? #f))
     (lambda (condition punt)
@@ -127,3 +125,73 @@
   (list 'location (location-id obj)))
 
 ; (put 'with-handler 'scheme-indent-hook 1)
+
+;; SRFI 34
+
+(define (with-exception-handler handler thunk)
+  (with-handler
+   (lambda (condition punt)
+     (handler condition))
+   thunk))
+
+;; no tail recursive call to the handler here
+(define (raise obj)
+  (let loop ((handlers (fluid-cell-ref $exception-handlers)))
+    (let-fluid $exception-handlers (make-cell (cdr handlers))
+      (lambda ()
+        ((car handlers) obj
+	 (lambda ()
+	   (loop (cdr handlers))))
+	(error "exception handler returned" (car handlers) obj)))))
+
+(define-syntax guard
+  (syntax-rules ()
+    ((guard (var clause ...) e1 e2 ...)
+     ((call-with-current-continuation
+       (lambda (guard-k)
+         (with-exception-handler
+          (lambda (condition)
+            ((call-with-current-continuation
+               (lambda (handler-k)
+                 (guard-k
+                  (lambda ()
+                    (let ((var condition))      ; clauses may SET! var
+                      (guard-aux (handler-k (lambda ()
+                                              (raise condition)))
+                                 clause ...))))))))
+          (lambda ()
+            (call-with-values
+             (lambda () e1 e2 ...)
+             (lambda args
+               (guard-k (lambda ()
+                          (apply values args)))))))))))))
+
+(define-syntax guard-aux
+  (syntax-rules (else =>)
+    ((guard-aux reraise (else result1 result2 ...))
+     (begin result1 result2 ...))
+    ((guard-aux reraise (test => result))
+     (let ((temp test))
+       (if temp 
+           (result temp)
+           reraise)))
+    ((guard-aux reraise (test => result) clause1 clause2 ...)
+     (let ((temp test))
+       (if temp
+           (result temp)
+           (guard-aux reraise clause1 clause2 ...))))
+    ((guard-aux reraise (test))
+     test)
+    ((guard-aux reraise (test) clause1 clause2 ...)
+     (let ((temp test))
+       (if temp
+           temp
+           (guard-aux reraise clause1 clause2 ...))))
+    ((guard-aux reraise (test result1 result2 ...))
+     (if test
+         (begin result1 result2 ...)
+         reraise))
+    ((guard-aux reraise (test result1 result2 ...) clause1 clause2 ...)
+     (if test
+         (begin result1 result2 ...)
+         (guard-aux reraise clause1 clause2 ...)))))
