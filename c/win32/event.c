@@ -448,7 +448,7 @@ s48_get_next_event(long *ready_fd, long *status)
   }
   if (there_are_ready_ports()) {
     *ready_fd = next_ready_port(status);
-    /* fprintf(stderr, "[i/o completion on port %ld]\n", *ready_fd); */
+    /* fprintf(stderr, "[i/o completion on port %ld, status %ld]\n", *ready_fd, *status); */
     return (IO_COMPLETION_EVENT);
   }
   if (alarm_time != -1 && s48_current_time >= alarm_time) {

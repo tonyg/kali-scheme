@@ -24,6 +24,7 @@ typedef struct
   HANDLE thread_handle; /* parameter */
   HANDLE file_handle; /* parameter */
   HANDLE check_semaphore; /* parameter */
+  HANDLE abort_semaphore; /* parameter */
 
   /* for successive calls in the main thread;
      only set and read from there */
@@ -332,14 +333,10 @@ reader_thread_proc(LPVOID lpParameter)
 	  thread_data->error_code = GetLastError();
 	}
 
-      /* printf("reader_thread_proc:got %ld bytes]\n", (long) n_read); */
+      /* printf("[reader_thread_proc:got %ld bytes]\n", (long) n_read); */
       
-
       /* notify */
-      /* printf("QueueUserAPC(%p, %p, %ld", thread_data->callback,
-	 thread_data->callback_thread,
-	 (DWORD) thread_data); */
-      if (!QueueUserAPC(thread_data->callback,
+       if (!QueueUserAPC(thread_data->callback,
 			thread_data->callback_thread,
 			(DWORD) stream_descriptor))
 
@@ -349,10 +346,16 @@ reader_thread_proc(LPVOID lpParameter)
 	}
     }
 
-  /* printf("reader_thread_proc]\n"); */
-
   /* clean up */
-  CloseHandle(thread_data->check_semaphore);
+  if (CloseHandle(thread_data->check_semaphore))
+    thread_data->error = PSFALSE;
+  else
+    {
+      thread_data->error = PSTRUE;
+      thread_data->error_code = GetLastError();
+    }
+  /* notify */
+  ReleaseSemaphore(thread_data->abort_semaphore, 1, NULL);
   ExitThread(0);
   return 0;
 }
@@ -392,13 +395,10 @@ writer_thread_proc(LPVOID lpParameter)
 	  thread_data->error_code = GetLastError();
 	}
       
-      /* printf("writer_thread_proc:got %ld bytes]\n", (long) n_read); */
+      /* printf("[writer_thread_proc:got %ld bytes]\n", (long) n_read); */
       
 
       /* notify */
-      /* printf("QueueUserAPC(%p, %p, %ld", thread_data->callback,
-	 thread_data->callback_thread,
-	 (DWORD) thread_data); */
       if (!QueueUserAPC(thread_data->callback,
 			thread_data->callback_thread,
 			(DWORD) stream_descriptor))
@@ -409,10 +409,16 @@ writer_thread_proc(LPVOID lpParameter)
 	}
     }
 
-  /* printf("writer_thread_proc]\n"); */
-
   /* clean up */
-  CloseHandle(thread_data->check_semaphore);
+  if (CloseHandle(thread_data->check_semaphore))
+      thread_data->error = PSFALSE;
+  else
+    {
+      thread_data->error = PSTRUE;
+      thread_data->error_code = GetLastError();
+    }
+  /* notify */
+  ReleaseSemaphore(thread_data->abort_semaphore, 1, NULL);
   ExitThread(0);
   return 0;
 }
@@ -452,6 +458,7 @@ start_reader_slash_writer_thread(HANDLE file_handle,
   
   thread_data->file_handle = file_handle;
   thread_data->check_semaphore = create_mutex_semaphore();
+  thread_data->abort_semaphore = create_mutex_semaphore();
 
   thread_data->checking = PSFALSE;
   
@@ -501,6 +508,7 @@ int
 ps_close_fd(long fd)
 {
   stream_descriptor_t* stream_descriptor = &(stream_descriptors[fd]);
+  int status;
 
   switch (stream_descriptor->type)
     {
@@ -509,37 +517,37 @@ ps_close_fd(long fd)
 	HANDLE handle = stream_descriptor->file_regular_data.handle;
 	
 	if (CloseHandle(handle))
-	  {
-	    deallocate_fd(fd); // ####might want to do this in other branch as well
-	    return NO_ERRORS;
-	  }
+	  status = NO_ERRORS;
 	else
-	  return (int) GetLastError();
+	  status = (int) GetLastError();
+	break;
       }
     case STREAM_FILE_SPECIAL:
       {
 	file_thread_data_t* thread_data =
 	  &(stream_descriptor->file_special_data.thread_data);
 
-	/* at some point, we might wait for a success notification */
 	thread_data->abort = TRUE;
 	ReleaseSemaphore(thread_data->check_semaphore, 1, NULL);
-	return NO_ERRORS;
+	/* wait for completion */
+	WaitForSingleObject(thread_data->abort_semaphore, INFINITE);
+
+	status = thread_data->error ? thread_data->error_code : NO_ERRORS;
+	break;
       }
     case STREAM_SOCKET:
       {
 	SOCKET socket = stream_descriptor->socket_data.socket;
 	
 	if (closesocket(socket) == 0)
-	  {
-	    deallocate_fd(fd);
-	    return NO_ERRORS;
-	  }
+	  status = NO_ERRORS;
 	else
-	  return (int) WSAGetLastError();
+	  status = (int) WSAGetLastError();
+	break;
       }
     }
-  return -1; /* shouldn't happen */
+  deallocate_fd(fd);
+  return status;
 }
 
 extern psbool s48_is_pending(long);
@@ -590,7 +598,7 @@ read_done(DWORD dwErr,
 	}
       }
 
-      // ### need to do offset_high as well
+      /* ### need to do offset_high as well */
       stream_descriptor->callback_data.current_size = bytes_read;
       stream_descriptor->callback_data.current = 
 	stream_descriptor->callback_data.buffer;
@@ -616,7 +624,7 @@ read_callback(DWORD dwParam)
   file_thread_data_t* thread_data
     = &(stream_descriptor->file_special_data.thread_data);
 
-  read_done(thread_data->error ? thread_data->error_code : 0,
+  read_done(thread_data->error ? thread_data->error_code : NO_ERRORS,
 	    (size_t)thread_data->available,
 	    stream_descriptor);
 }
@@ -628,36 +636,52 @@ recv_completed(DWORD dwErr, DWORD cbBytesRead, LPOVERLAPPED lpOverLap, DWORD dwF
   read_completed(dwErr, cbBytesRead, lpOverLap);
 }
 
-psbool ps_check_fd(long fd, psbool is_read, long *status)
+psbool
+ps_check_fd(long fd, psbool is_read, long *status)
 {
+  /*
+   * ####This implementation is almost certainly almost complete bogus;
+   * The only hope is for STREAM_FILE_SPECIAL.
+   */
+     
   stream_descriptor_t* stream_descriptor = &(stream_descriptors[fd]);
 
-  *status = NO_ERRORS; /* #### overly optimistic #### */
+  *status = NO_ERRORS;
 
   switch (stream_descriptor->type) {
   case STREAM_FILE_REGULAR:
     {
       HANDLE handle = stream_descriptor->file_regular_data.handle;
+      DWORD wait_status;
 
       if (stream_descriptor->callback_data.current_size > 0)
 	return is_read;
 
       /* #### this probably doesn't really work */
-      return (WaitForSingleObject(handle, 0) == WAIT_OBJECT_0) ? PSTRUE : PSFALSE;
+      wait_status = WaitForSingleObject(handle, 0);
+      if (wait_status == WAIT_FAILED) {
+	*status = (int) GetLastError();
+	return PSFALSE;
+      } else
+	return (wait_status == WAIT_OBJECT_0) ? PSTRUE : PSFALSE;
     }
   case STREAM_FILE_SPECIAL:
     {
       /* approximations only */
-      file_thread_data_t* thread_data;
+      file_thread_data_t* thread_data = &(stream_descriptor->file_special_data.thread_data);
 
+      if (thread_data->error)
+	{
+	  *status = thread_data->error_code;
+	  return PSFALSE;
+	}
+	
       if (!is_read)
 	return stream_descriptor->callback_data.current_size == 0;
 	
       if (is_read && (stream_descriptor->callback_data.current_size > 0))
 	return TRUE;
       /* we only signal that writing is enabled if the buffer's empty */
-
-      thread_data = &(stream_descriptor->file_special_data.thread_data);
 
       if (!thread_data->checking)
 	/* get the reader thread started */
@@ -689,6 +713,7 @@ psbool ps_check_fd(long fd, psbool is_read, long *status)
       callback_data->overlap.OffsetHigh = 0;
       callback_data->overlap.hEvent = NULL; /* this is hopefully invalid */
 
+      /* ####the MS docs say this only works for non-overlapped socket. */
       flags = MSG_PEEK;
 
       return (WSARecv(socket,
@@ -731,10 +756,7 @@ ps_read_fd(long fd, char *buffer, long max, psbool waitp,
   *pending = PSFALSE;
   *status = NO_ERRORS;
 
-  // ### waitp */
-
   /* there's still stuff in the buffer */
-  /* ### need to do other stuff than just files */
   if (callback_data->current_size > 0)
     {
       /* we want more than what's in the buffer */
@@ -761,35 +783,27 @@ ps_read_fd(long fd, char *buffer, long max, psbool waitp,
     case STREAM_FILE_REGULAR:
       {
 	HANDLE handle = stream_descriptor->file_regular_data.handle;
-
-	if (!s48_add_pending_fd(fd, TRUE))
-	  {
-	    *status = 4712; //#### out of memory, need symbolic constant
-	    return 0;
-	  }
 	
 	/* There's nothing in the buffer---need to do an actual read. */
 	maybe_grow_callback_data_buffer(callback_data, (size_t)max);
-
+	
 	callback_data->overlap.Offset = stream_descriptor->file_regular_data.current_offset;
 	callback_data->overlap.OffsetHigh = stream_descriptor->file_regular_data.current_offset_high;
-
-	if (waitp ? ReadFileEx(handle,
-			       (LPVOID)callback_data->buffer,
-			       (DWORD)max,
-			       (LPOVERLAPPED)callback_data,
-			       read_completed)
-	    /* ####this is probably wrong; should just do ReadFileEx always */
-	    : ReadFile(handle,
+	
+	if (ReadFileEx(handle,
 		       (LPVOID)callback_data->buffer,
 		       (DWORD)max,
-		       NULL, /* wouldn't work under 95/98/ME */
-		       (LPOVERLAPPED)callback_data))
-	    
+		       (LPOVERLAPPED)callback_data,
+		       read_completed))
 	  {
-	    // success
+	    /* success */
 	    if (waitp)
-	      *pending = TRUE;
+	      {
+		if (!s48_add_pending_fd(fd, TRUE))
+		  *status = ERROR_OUTOFMEMORY;
+		else
+		  *pending = PSTRUE;
+	      }
 	    return 0;
 	  }
 	else
@@ -798,13 +812,12 @@ ps_read_fd(long fd, char *buffer, long max, psbool waitp,
 	    
 	    if (last_error == ERROR_HANDLE_EOF)
 	      {
-		*eofp = TRUE;
+		*eofp = PSTRUE;
 		return 0;
-		
 	      }
 	    
 	    /* failure */
-	    *status = last_error;
+	    *status = (int) last_error;
 	    return 0;
 	  }
       }
@@ -812,24 +825,23 @@ ps_read_fd(long fd, char *buffer, long max, psbool waitp,
       {
 	file_thread_data_t* thread_data =
 	  &(stream_descriptor->file_special_data.thread_data);
-
+	
 	if (thread_data->eof)
 	  {
-	    *eofp = TRUE;
-	    return 0;
-	  }
-
-	if (!s48_add_pending_fd(fd, TRUE))
-	  {
-	    *status = 4712; //#### out of memory, need symbolic constant
+	    *eofp = PSTRUE;
 	    return 0;
 	  }
 	
 	/* There's nothing in the buffer---need to do an actual read. */
 	maybe_grow_callback_data_buffer(callback_data, (size_t)max);
-
+	
 	if (waitp)
 	  {
+	    if (!s48_add_pending_fd(fd, TRUE))
+	      {
+		*status = ERROR_OUTOFMEMORY;
+		return 0;
+	      }
 	    thread_data->buffer = callback_data->buffer;
 	    thread_data->requested = max;
 	    thread_data->callback_thread = s48_main_thread;
@@ -847,12 +859,6 @@ ps_read_fd(long fd, char *buffer, long max, psbool waitp,
 	int wsa_status;
 	int block;
 
-	if (!s48_add_pending_fd(fd, TRUE))
-	  {
-	    *status = 4712; //#### out of memory, need symbolic constant
-	    return 0;
-	  }
-	
 	/* There's nothing in the buffer---need to do an actual read. */
 	maybe_grow_callback_data_buffer(callback_data, (size_t)max);
 
@@ -882,7 +888,12 @@ ps_read_fd(long fd, char *buffer, long max, psbool waitp,
 	    || (WSAGetLastError() == WSA_IO_PENDING))
 	  {
 	    if (waitp)
-	      *pending = TRUE;
+	      {
+		if (!s48_add_pending_fd(fd, TRUE))
+		  *status = ERROR_OUTOFMEMORY;
+		else
+		  *pending = TRUE;
+	      }
 	    return 0;
 	  }
 	else
@@ -912,7 +923,7 @@ write_done(DWORD dwErr,
       case STREAM_FILE_REGULAR:
 	{
 	  stream_descriptor->file_regular_data.current_offset += bytes_written;
-	  // ### need to do offset_high as well
+	  /* ### need to do offset_high as well */
 	  break;
 	}
       }
@@ -978,12 +989,11 @@ ps_write_fd(long fd, char *buffer, long max, psbool *pending, long *status)
 	  {
 	    if (!s48_add_pending_fd(fd, PSFALSE))
 	      {
-		*status = 4711; //#### out of memory, need symbolic constant
+		*status = ERROR_OUTOFMEMORY;
 		return 0;
 	      }
 	    *pending = TRUE;
 	    *status = NO_ERRORS;
-	    // ####should check GetLastError anyway according to MS docs
 	  }
 	else
 	  {
@@ -1003,7 +1013,7 @@ ps_write_fd(long fd, char *buffer, long max, psbool *pending, long *status)
 	ReleaseSemaphore(thread_data->check_semaphore, 1, NULL);
 	if (!s48_add_pending_fd(fd, PSFALSE))
 	  {
-	    *status = 4711; //#### out of memory, need symbolic constant
+	    *status = ERROR_OUTOFMEMORY;
 	    return 0;
 	  }
 	*pending = TRUE;
@@ -1038,7 +1048,7 @@ ps_write_fd(long fd, char *buffer, long max, psbool *pending, long *status)
 	    /* success */
 	    if (!s48_add_pending_fd(fd, PSFALSE))
 	      {
-		*status = 4711; //#### out of memory, need symbolic constant
+		*status = ERROR_OUTOFMEMORY;
 		return 0;
 	      }
 	    *pending = TRUE;
