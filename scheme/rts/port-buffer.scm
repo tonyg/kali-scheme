@@ -4,7 +4,7 @@
   (if (and (okay-buffer? buffer index limit)
 	   (port-handler? handler))
       (make-port handler
-		 latin-1-codec
+		 utf-8-codec
 		 (bitwise-ior input-port-mask open-input-port-mask)
 		 #f		; timestamp (was lock)
 		 data
@@ -20,7 +20,7 @@
 	   (> limit 0)
 	   (port-handler? handler))
       (make-port handler
-		 latin-1-codec
+		 utf-8-codec
 		 open-output-port-status
 		 #f		; timestamp (was lock)
 		 data
