@@ -93,7 +93,7 @@
     (define available-srfis
       '(srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
 	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17 srfi-23
-	srfi-31))
+	srfi-27 srfi-31))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -259,6 +259,29 @@
 
 (define-structure srfi-23 (export error)
   (open (subset signals (error))))
+
+(define-interface srfi-27-interface
+  (export random-integer
+          random-real
+          default-random-source
+          make-random-source
+          random-source?
+          random-source-state-ref
+          random-source-state-set!
+          random-source-randomize!
+          random-source-pseudo-randomize!
+          random-source-make-integers
+          random-source-make-reals))
+
+(define-structure srfi-27 srfi-27-interface
+  (open
+   scheme-level-1
+   floatnums
+   external-calls
+   (subset srfi-9 (define-record-type)) 
+   (subset srfi-23 (error))
+   (subset posix-time (current-time time-seconds)))
+  (files srfi-27))
 
 (define-interface srfi-31-interface
   (export (rec :syntax)))

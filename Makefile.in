@@ -113,10 +113,11 @@ enough: $(VM) $(IMAGE) go
 # After changing any of these you should delete `scheme48vm' and remake it.
 
 EXTERNAL_OBJECTS = $(POSIX_OBJECTS) $(SOCKET_OBJECTS) $(LOOKUP_OBJECTS)	\
-		   $(ASM_OBJECTS)
+		   $(ASM_OBJECTS) $(SRFI_OBJECTS)
 EXTERNAL_LD_FLAGS = $(POSIX_LD_FLAGS) $(SOCKET_LD_FLAGS)
 EXTERNAL_INITIALIZERS = $(POSIX_INITIALIZERS) $(SOCKET_INITIALIZERS)	\
-                        $(LOOKUP_INITIALIZERS) $(ASM_INITIALIZERS)
+                        $(LOOKUP_INITIALIZERS) $(ASM_INITIALIZERS)	\
+			$(SRFI_INITIALIZERS)
 
 # Rules for any external code.
 
@@ -173,6 +174,14 @@ ASM_INITIALIZERS =
 #ASM_INITIALIZERS =	s48_init_asm_glue
 
 # End of native-code glue rules
+
+# SRFI rules
+
+SRFI_OBJECTS = #c/srfi-27.c
+SRFI_INITIALIZERS = #s48_init_srfi_27
+
+# End of SRFI rules
+
 # End of external rules
 # --------------------
 
