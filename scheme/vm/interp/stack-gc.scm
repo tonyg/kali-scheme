@@ -253,7 +253,8 @@
 					; -1 -2        frame size
 (define gc-mask-size-offset -3)		; -3           gc mask size
 					; -4 -5        offset
-(define gc-mask-offset      -6)         ; -6 ...       mask
+                                        ; -6 -7        template
+(define gc-mask-offset      -8)         ; -8 ...       mask
 
 (define (check-continuation-contents contents-pointer code-pointer mask-size)
   (let ((mask-pointer (address+ code-pointer (+ gc-mask-offset 1))))

@@ -227,13 +227,13 @@
 				       return-code-pc)
   (open prescheme vm-architecture struct)
   (begin
-    (define return-code-pc 11)
+    (define return-code-pc 13)
 
     ;; Number of entries of the code vector
-    (define blank-return-code-count 13)
+    (define blank-return-code-count 15)
     (define (make-return-code-count opcode-count)
       (+ blank-return-code-count opcode-count))
-    (define first-opcode-index 13)
+    (define first-opcode-index 15)
 
     ;; value for VM
     (define return-code-count (make-return-code-count 1))
@@ -246,12 +246,12 @@
     (define return-code-size (make-return-code-size return-code-count))
     
     ;; procedure for VM
-    (define (make-return-code protocol opcode frame-size key)
-      (let ((blank-return-code (make-blank-return-code protocol frame-size 1 key)))
+    (define (make-return-code protocol template opcode frame-size key)
+      (let ((blank-return-code (make-blank-return-code protocol template frame-size 1 key)))
 	(code-vector-set! blank-return-code first-opcode-index opcode)
 	blank-return-code))
 
-    (define (make-blank-return-code protocol frame-size opcode-count key)
+    (define (make-blank-return-code protocol template frame-size opcode-count key)
       (let ((code (make-code-vector (make-return-code-count opcode-count) key)))
 	; A whole lot of stuff to make the GC and disassembler happy.
 	(code-vector-set! code 0 (enum op protocol))
@@ -260,18 +260,21 @@
 	(code-vector-set! code 3 (enum op cont-data))	;    - etc.
 	(code-vector-set! code 4 0)             ; high byte of size  
 	(code-vector-set! code 5 8)		; low byte of size
-                                                ; no mask 
-	(code-vector-set! code 6 0)		; high byte of offset
-	(code-vector-set! code 7 return-code-pc); low byte of offset
-	(code-vector-set! code 8 0)		; GC mask size
-	(code-vector-set! code 9 (high-byte frame-size))
-	(code-vector-set! code 10 (low-byte frame-size))
-	(code-vector-set! code 11 (enum op protocol))
-	(code-vector-set! code 12 protocol)
+                                                ; no mask
+        (code-vector-set! code 6 (high-byte template))
+        (code-vector-set! code 7 (low-byte template))
+	(code-vector-set! code 8 0)		; high byte of offset
+	(code-vector-set! code 9 return-code-pc); low byte of offset
+	(code-vector-set! code 10 0)		; GC mask size
+	(code-vector-set! code 11 (high-byte frame-size))
+	(code-vector-set! code 12 (low-byte frame-size))
+	(code-vector-set! code 13 (enum op protocol))
+	(code-vector-set! code 14 protocol)
 	code))
 
-    (define (s48-make-blank-return-code protocol frame-size opcode-count)
-      (make-blank-return-code protocol 
+    (define (s48-make-blank-return-code protocol template frame-size opcode-count)
+      (make-blank-return-code protocol
+                              template
 			      frame-size 
 			      opcode-count
 			      (ensure-space (make-return-code-size 

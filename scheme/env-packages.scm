@@ -313,7 +313,7 @@
           env-data-maybe-template-index env-data-closure-offsets 
           env-data-env-offsets
           cont-data? cont-data-length cont-data-mask-bytes cont-data-pc
-          cont-data-gc-mask-size cont-data-depth))
+          cont-data-template cont-data-gc-mask-size cont-data-depth))
           
 (define-structure parse-bytecode parse-bytecode-interface
   (open scheme

@@ -394,10 +394,11 @@
      (else (error "unknown arg spec: " (car specs))))))
 
 (define-record-type cont-data :cont-data
-  (make-cont-data length mask-bytes pc gc-mask-size depth)
+  (make-cont-data length mask-bytes template pc gc-mask-size depth)
   cont-data?
   (length cont-data-length)
   (mask-bytes cont-data-mask-bytes)
+  (template cont-data-template)
   (pc cont-data-pc)
   (gc-mask-size cont-data-gc-mask-size)
   (depth cont-data-depth))
@@ -408,6 +409,7 @@
 	 (gc-mask-size (code-vector-ref code (- end-pc 3)))
 	 (depth (get-offset code (- end-pc 2)))
 	 (offset (get-offset code (- end-pc 5)))
+         (template (get-offset code (- end-pc 7)))
 	 (mask-bytes
 	  (let lp ((the-pc (+ pc 3)))
 	    (if (> the-pc (+ pc 2 gc-mask-size))
@@ -416,6 +418,7 @@
 		      (lp (+ the-pc 1)))))))
     (make-cont-data len
                     mask-bytes
+                    template
                     (pc->label offset attribution)
                     gc-mask-size
                     depth)))

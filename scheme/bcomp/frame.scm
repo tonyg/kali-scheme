@@ -67,8 +67,10 @@
 ; Offsets for the template and environment.
 
 (define (template-offset frame depth)
-  (index->offset (frame-template-index frame)
-		 depth))
+  (if (frame-template-index frame)
+      (index->offset (frame-template-index frame)
+                     depth)
+      #f))
 
 (define (environment-offset frame depth)
   (index->offset (frame-env-index frame)

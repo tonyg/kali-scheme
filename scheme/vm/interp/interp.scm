@@ -261,31 +261,37 @@
   (let ((key (ensure-space (* 6 return-code-size))))
     (set! *interrupted-byte-call-return-code*
 	  (make-return-code ignore-values-protocol
+                            #xffff              ; dummy template offset
 			    (enum op resume-interrupted-call-to-byte-code)
 			    #xFFFF		; escape value
 			    key))
     (set! *interrupted-native-call-return-code*
 	  (make-return-code ignore-values-protocol
+                            #xffff              ; dummy template offset
 			    (enum op resume-interrupted-call-to-native-code)
 			    #xFFFF		; escape value
 			    key))
     (set! *poll-interrupt-return-code*
 	  (make-return-code ignore-values-protocol
+                            #xffff              ; dummy template offset
 			    (enum op return-from-poll-interrupt)
 			    #xFFFF		; escape value
 			    key))
     (set! *exception-return-code*
 	  (make-return-code 1	; want exactly one return value
+                            #xffff              ; dummy template offset
 			    (enum op return-from-exception)
 			    #xFFFF		; escape value
 			    key))
     (set! *native-exception-return-code*
 	  (make-return-code 1	; want exactly one return value
+                            #xffff              ; dummy template offset
 			    (enum op return-from-native-exception)
 			    #xFFFF		; escape value
 			    key))
     (set! *call-with-values-return-code*
 	  (make-return-code call-with-values-protocol
+                            #xffff              ; dummy template offset
 			    0			; opcode is not used
 			    1
 			    key))))

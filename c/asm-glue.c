@@ -188,7 +188,7 @@ s48_integer_divide_help(s48_value value1, s48_value value2)
 
 long ignore_values_native_protocol = 194; /* ignore-values-native-protocol */ 
 long jmp_count = 7; /* movl continue %ebx; jmp *ebx */
-long first_opcode_index = 13; /* from vm/package-defs.scm */
+long first_opcode_index = 15; /* from vm/package-defs.scm */
 extern long Snative_exception_contS;
 
 void
@@ -202,7 +202,7 @@ s48_make_native_return_code(int n_stack_args)
   frame_size = ScontS - SstackS;
   frame_size = frame_size >> 2; /* bytes -> cells */
   frame_size -= n_stack_args;
-  return_code = s48_make_blank_return_code(ignore_values_native_protocol, frame_size, jmp_count);
+  return_code = s48_make_blank_return_code(ignore_values_native_protocol, 0xffff, frame_size, jmp_count);
   S48_BYTE_VECTOR_SET(return_code,first_opcode_index,0xbb); /* movl %ebx */
   S48_BYTE_VECTOR_SET(return_code,first_opcode_index+1,target & 0xff);
   S48_BYTE_VECTOR_SET(return_code,first_opcode_index+2,(target >> 8) & 0xff);

@@ -140,7 +140,7 @@
 			 (emit-segment! astate seg1)
 			 (emit-segment! astate seg2)))))) ;tail call
 
-(define (continuation-data live-offsets depth)
+(define (continuation-data live-offsets depth template)
   (let* ((gc-mask
 	  (if live-offsets
 	      (let ((provisional 
@@ -150,20 +150,25 @@
 		    provisional))
 	      '()))
 	 (gc-mask-size (length gc-mask))
-	 (size (+ 8			;   header (3) 
+	 (size (+ 10			;   header (3)
+                                        ;   gc-mask (see below)
+                                        ; + template (2) 
 					; + offset (2)
 					; + gc-mask size (1)
 					; + depth (2)
 		  gc-mask-size)))
     (make-segment size
 		  (lambda (astate)
-		    (let ((offset (+ (astate-pc astate) size)))
+		    (let ((offset (+ (astate-pc astate) size))
+                          (template (or template #xffff)))
 		      (emit-byte! astate (enum op cont-data))
 		      (emit-byte! astate (high-byte size))
 		      (emit-byte! astate (low-byte size))
 		      (for-each (lambda (byte)
 				  (emit-byte! astate byte))
 				gc-mask)
+                      (emit-byte! astate (high-byte template))
+                      (emit-byte! astate (low-byte template))
 		      (emit-byte! astate (high-byte offset))
 		      (emit-byte! astate (low-byte  offset))
 		      (emit-byte! astate gc-mask-size)

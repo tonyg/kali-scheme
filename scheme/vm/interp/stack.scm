@@ -103,6 +103,7 @@
 	(store! a stack-marker))
       (let* ((key (ensure-space return-code-size))
 	     (code (make-return-code bottom-of-stack-protocol
+                                     #xffff     ; dummy template offset
 				     0		; opcode (never executed)
 				     0		; size
 				     key)))

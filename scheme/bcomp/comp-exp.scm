@@ -451,7 +451,7 @@
     (values (instruction (enum op push-false))
 	    (+ depth 1)
 	    label
-	    (sequentially (continuation-data #f depth)
+	    (sequentially (continuation-data #f depth (template-offset frame depth))
 			  (attach-label label protocol)))))
 
 (define (fixup-source node destination)
