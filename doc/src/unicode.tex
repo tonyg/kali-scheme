@@ -181,6 +181,8 @@ The \code{text-codecs} structure defines the following procedures and macros:
 \constproto{utf-8-codec}{ text-codec}
 \constproto{utf-16le-codec}{ text-codec}
 \constproto{utf-16be-codec}{ text-codec}
+\constproto{utf-32le-codec}{ text-codec}
+\constproto{utf-32be-codec}{ text-codec}
 \proto{find-text-codec}{ string}{text-codec or {\tt \#f}}
 \end{protos}
 %
@@ -188,12 +190,14 @@ The \code{text-codecs} structure defines the following procedures and macros:
 \code{Null-text-codec} is primarily meant for null ports that never
 yield input and swallow all output.  The following text codecs
 implement the US-ASCII, Latin-1, Unicode UTF-8, Unicode UTF-16
-(little-endian), Unicode UTF-16 (big-endian) encodings, respectively.
+(little-endian), Unicode UTF-16 (big-endian), Unicode UTF-32
+(little-endian), Unicode UTF-32 (big-endian) encodings, respectively.
 
 \code{Find-text-codec} finds the codec associated with an encoding
 name.  The names of the above encodings are \verb|"null"|,
 \verb|"US-ASCII"|, \verb|"ISO8859-1"|, \verb|"UTF-8"|,
-\verb|"UTF-16LE"|, and \verb|"UTF-16BE"|, respectively.
+\verb|"UTF-16LE"|, \verb|"UTF-16BE"|, \verb|"UTF-32LE"|, and
+\verb|"UTF-32BE"|, respectively.
 
 \subsection{Creating text codecs}
 
