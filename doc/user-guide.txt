@@ -1,0 +1,512 @@
+
+
+    A line may take us hours, yet if it does not seem a moment's thought
+    All our stitching and unstitching has been as nought.
+
+    						Yeats
+    						Adam's Curse
+
+
+
+A user's guide to Scheme 48.
+
+-----
+
+Introduction
+
+Scheme 48 is an implementation of the Scheme programming language as
+described in the Revised^4 Report on the Algorithmic Language Scheme.
+It is based on a compiler and interpreter for a virtual Scheme
+machine.  The name derives from our desire to have an implementation
+that is simple and lucid enough that it looks as if it were written in
+just 48 hours.  We don't claim to have reached that stage yet; much
+more simplification is necessary.
+
+Scheme 48 tries to be faithful to the upcoming Revised^5 Scheme Report,
+providing neither more nor less in the initial user environment.
+(This is not to say that more isn't available in other environments;
+see below.)  Support for numbers is weak: bignums are slow and
+floating point is nonexistent.  DEFINE-SYNTAX and SYNTAX-RULES are
+supported, but not the rest of the Revised^4 Scheme macro proposal.
+
+The Revised^5 Report hasn't been published yet, but it will be very
+similar to the Revised^4 Report.  For a list of differences, see
+doc/meeting.tex.
+
+This is what might be called an alpha release.  Please report bugs,
+especially in the VM, especially core dumps, to
+scheme48-bugs@altdorf.ai.mit.edu.  Include the version number x.yy
+from the "Welcome to Scheme 48 x.yy" greeting message in your bug
+report.  It is a goal of this project to produce a bullet-proof
+system; we want no bugs and, especially, no crashes.  (There are a few
+known bugs, listed in the TODO file that comes with the distribution.)
+
+-----
+
+Command line arguments
+
+A few command line arguments are processed by the virtual machine as
+it starts up.
+
+    s48 [-i image] [-h heapsize] [-o filename] [-a argument]
+
+-i image
+    specifies a heap image file to resume (heap images are created by
+    the ,dump and ,build commands).  This defaults to a heap image
+    that runs a Scheme command processor.
+
+-h heapsize
+    specifies how much space should be reserved for allocation.
+    Heapsize is in bytes, and covers both semispaces for the copying
+    GC.  Cons cells are currently 12 bytes, so if you want to make
+    sure you can allocate a million cons cells, you should specify -h
+    24000000 (actually more than this, to account for the initial heap
+    image and breathing room).
+
+-o filename
+    This specifies an executable file in which foreign identifiers can be
+    looked up for the foreign function interface.  Filename should be the
+    file that contains the scheme48vm executable image.  See
+    doc/external.txt.
+
+-a argument ...
+    is only useful with images built using ,build.  The arguments are
+    concatenated, with spaces to separate them, and then passed as a
+    single string to the procedure specified in the ,build command.
+    E.g.
+
+        > ,build (lambda (a) (display a) (newline)) foo.image
+	> ,exit
+	% scheme48vm -i foo.image -a mumble foo
+	mumble foo
+	% 
+
+The usual definition of the "s48" or "scheme48" command is actually a
+shell script that starts up the virtual machine with a -i argument
+specifying the development environment heap image, and a -o argument
+specifying the location of the virtual machine.
+
+-----
+
+Command processor
+
+When you invoke the default heap image, a command processor starts
+running.  At the > prompt, you can type either a Scheme form
+(expression or definition), or a command beginning with a comma.  The
+commands are described here.
+
+Logistical commands:
+
+ ,load <filename> ...                load Scheme source file(s)
+    Easier to type than (load "filename") because you don't have to
+    shift to type the parentheses or quote marks.  Also, it works in
+    any package, not just those packages in which LOAD is defined.
+
+ ,exit [<exp>]			     leave
+    Exit back out to shell (or executive or whatever invoked Scheme 48
+    in the first place).  <exp> should evaluate to an integer.  The
+    integer is returned to the calling program.  (On Unix, 0 means
+    success, 1 means failure.)
+
+Command levels:
+
+    If an errors occurs, you are put in a command loop at the dynamic
+    point at which the error occurred.  The prompt will then be "n >"
+    where n is the command level nesting depth.
+
+ <eof>
+    To pop out one level (running any dynamic-wind "after" thunks),
+    send an end-of-file (control-D at a Unix shell or using the Emacs
+    "cmuscheme48" interface).
+
+ ,reset                              top level
+    Unwind all the way back out to top level.
+
+ ,level <number>                     go to command level
+    Unwind out to a given level.  ,level 0 is the same as ,reset.
+
+
+Debugging commands:
+
+ ,preview
+    Sort of like a backtrace, but because of tail recursion you see
+    less than you might in debuggers for some other languages.
+
+ ,proceed <exp> ...
+    Proceed after an interrupt or error, delivering the values of <exp>
+    ... to the continuation.
+
+ ,trace <name> ...
+    Start tracing calls to the named procedure or procedures.
+    With no arguments, displays all procedures currently traced.
+    This affects the binding of <name>, not the behavior of the
+    procedure that's it's current value.  The effect is similar to
+	(define <name> (make-traced <name>))
+    where make-traced is a procedure-returning procedure.
+
+ ,untrace <name> ...
+    Stop tracing calls to the named procedure or procedures.
+    With no argument, stop tracing all calls to all procedures.
+
+ ,undefined
+    List all the variables that have been mentioned but are not defined.
+
+ ,condition
+    The ,condition command selects and displays the condition object
+    describing the error or interrupt that initiated the current
+    command level.  This is particularly useful in conjunction with
+    the inspector.  E.g. if a procedure is passed the wrong number of
+    arguments, do ,condition followed by ,inspect ## to inspect the
+    procedure and its arguments.
+
+ ,bound? <name>
+    Display the binding of <name>, if there is one.
+ 
+ ,expand <form>
+    Show macro expansion of <form>, if any.
+
+
+Building images:
+
+ ,dump <filename> [<identification>]
+
+    This writes out the current heap.  When the new image is resumed,
+    it starts in the command processor.  If present, <identification>
+    should be a string (written with double quotes); this string will
+    be part of the greeting message as the image starts up.
+
+ ,build <exp> <filename>
+    <exp> should evaluate to a procedure of one argument.  When
+    <filename> is resumed, that procedure will be invoked on the
+    VM's -a argument, which is passed as a string.  <exp> should
+    return an integer (as for ,exit).  The command processor and
+    debugging system is not included in the image.
+
+
+Resource query and control:
+
+ ,time <exp>
+    Measure execution time.
+
+ ,collect
+    Invoke the garbage collector.  Ordinarily this happens
+    automatically, but the command tells how much space is available
+    before and after the collection.
+
+ ,keep <kind>
+ ,flush <kind>
+    These control the amount of debugging information retained after
+    compiling procedures.  This information can consume a fair amount
+    of space.  <kind> is one of the following:
+     . maps - environment maps (local variable names, for inspector)
+     . source - source code for continuations (displayed by inspector)
+     . names - procedure names (as displayed by WRITE and in error
+       messages)
+     . files  - source file names
+    These commands refer to future compilations only, not to procedures
+    that already exist.  To have any effect, they must be done before
+    programs are loaded.
+
+ ,flush
+    The flush command with no argument deletes the database of names
+    of initial procedures.  Doing ",flush" before a ,build will make
+    the resulting image significantly smaller (by about 140K bytes),
+    but will compromise the information content of many error
+    messages.
+
+
+Command files:
+
+ ,take <filename>
+    Read commands and forms from the specified file as if they were
+    typed at the command processor.
+    *** The way this command works is likely to change in the near
+    future. ***
+
+
+Quite obscure:
+
+ ,go <exp>
+    This is like ,exit <exp> except that the evaluation of <exp>
+    is tail-recursive with respect to the command processor.  This
+    means that the command processor itself can probably be GC'ed,
+    should a garbage collection occur in the execution of <exp>.
+    Any errors will be treated as in batch mode.
+
+ ,from-file <filename> <form> ... ,end
+    This is used by the cmuscheme48 Emacs interface.
+
+
+Other commands are (or should be) described in the package system
+document.
+
+-----
+
+Editing
+
+We recommend running Scheme 48 under Gnu Emacs using the cmuscheme48
+command package.  This is in the Scheme48 distribution's emacs/
+subdirectory.  It is a variant of the "cmuscheme" interface, which
+comes to us courtesy of Olin Shivers, formerly of CMU.  You might want
+to put the following in your emacs init file (.emacs):
+
+    (setq scheme-program-name "s48")  ;or whatever scheme48 is installed as
+    (autoload 'run-scheme  "cmuscheme" "Run an inferior Scheme process." t)
+
+To make the autoload and (require ...) forms work, you will also need
+to put the directory containing cmuscheme and related files in your
+emacs load-path:
+
+    (setq load-path (append load-path '("<scheme48-directory>/emacs")))
+
+And, you will probably want to byte-compile the .el files to get .elc
+files.  Use M-x byte-compile-file to do this.
+
+For further documentation see cmuscheme.el and comint.el.
+
+-----
+
+Benchmark mode
+
+If you want to run benchmarks, or just generally have your code run
+faster than it normally would, enter "benchmark mode" before loading
+anything.  Otherwise calls to primitives (like + and cons) and in-line
+procedures (like not and cadr) won't be open-coded, and programs will
+run more slowly.  Enter benchmark mode by issuing the ,bench command
+to the command processor.
+
+The system doesn't start in benchmark mode by default because the
+Scheme report permits redefinitions of built-in procedures.  In
+benchmark mode, such redefinitions don't work according to the report,
+because previously compiled calls may have in-lined the old
+definition, leaving no opportunity to call the new definition.
+
+",bench" toggles benchmark mode.  ",bench on" and ",bench off" turn it
+on or off.
+
+-----
+
+Batch mode
+
+In "batch mode," any error or interrupt that comes up will cause
+Scheme 48 to exit immediately with a non-zero exit status.  Also, the
+command processor doesn't print its > prompts.  The ,batch command
+toggles between batch and interactive modes.
+
+-----
+
+Inspector
+
+There is a low-tech inspector available via the ,inspect and ,debug
+commands.  The ,inspect command starts an inspector command loop.
+There is a focus object (the same as the command processor's ##), for
+which a menu of selectable components is displayed.  To inspect a
+particular component, just type the corresponding number in the menu.
+For example:
+
+	,inspect '(a (b c) d)
+	(a (b c) d)
+
+	[0] a
+	[1] (b c)
+	[2] d
+	inspect: 1
+	(b c)
+
+	[0] b
+	[1] c
+	inspect: 
+
+When a new object is selected, the previous one is pushed onto a
+stack.  You can pop the stack, reverting to the previous object, with
+the U command.
+
+Other inspector commands:
+	u	pop object stack
+	d	down stack (current object must be a continuation)
+	m	print more of a long menu
+	(...)   evaluate a form and select result
+	t	select a closure or continuation's template
+	q       quit
+
+## is always the object currently being inspected.  After a Q command,
+or an error in the inspector, ## is the last object that was being
+inspected.
+
+The inspector also accepts arbitrary command processor commands, e.g.
+the ,dis command (see below).  The leading comma is optional.
+
+After an error occurs, ,debug invokes the inspector on the
+continuation at the point of the error.  The U and D (up and down)
+commands then make the inspector look like a conventional stack
+debugger, with continuations playing the role of stack frames.  D goes
+to older or deeper continuations (frames), and U goes back up to more
+recent ones.
+
+Templates are the static components of procedures; these are found
+inside of procedures and continuations, and contain the quoted
+constants and top-level variables referred to by byte-compiled code.
+
+-----
+
+Disassembler
+
+The ,dis command disassembles procedures.
+
+	> ,dis cons
+	cons
+	  0 (check-nargs= 2)
+	  2 (pop)
+	  3 (make-stored-object 2 pair)
+	  6 (return)
+	> 
+
+The command argument is optional; if unsupplied it defaults to the
+current focus object (##).
+
+The disassembler can also be invoked on continuations and templates.
+
+-----
+
+Module system
+
+For information on the module (package) system, see doc/module.tex.
+
+-----
+
+Built-in packages
+
+A number of useful utilities are built in to Scheme 48.  These are not
+visible in the user environment by default, but can be made available
+with the ,open command.  For example, to use the table package, do
+
+	> ,open table
+
+Unfortunately, few of these wonderful things are documented.  They are
+listed, however, in files rts-packages.scm and comp-packages.scm in
+the distribution directory, and the bindings they export are listed in
+signatures.scm.  Here's a synopsis of the more generally useful
+packages, just to pique your interest.
+
+	bitwise		Bitwise logical operators
+	util		REDUCE, FILTER, and other useful things
+	signals		ERROR and related procedures
+	record		DEFINE-RECORD-TYPE and friends
+	fluids		Dynamic variables
+	enumerated	Enumerated types
+	condition	Condition system: define-condition-predicate, etc.
+	handle		Condition system: with-handler
+	interrupts	Interrupt system
+	weak		Weak pointers
+	table		Association tables (with hashing)
+	filenames	Basic file name parsing and synthesis
+	display-conditions  Condition system: displaying conditions
+
+See also the package system documentation, doc/module.tex.
+
+-----
+
+Library
+
+A number of useful external libraries are known to the system.  These
+can be loaded using the ,load-package command, and accessed either by
+transferring the command loop to a package that "opens" the desired
+packages, or by using the ,open command.  E.g., to use the PP and
+RANDOM packages, do
+
+	> ,load-package pp
+	> ,load-package random
+	> ,new-package my-package pp random
+
+or
+
+	> ,load-package pp
+	> ,open pp
+	> ,load-package random
+	> ,open random
+
+The files more-packages.scm and more-signatures.scm in the
+distribution specify the source files and interfaces for these
+packages, and their sources are generally in the misc/ and big/
+subdirectories.  Look at the source files for documentation (if any).
+
+The message "Note: optional optimizer not invoked" is innocuous.  Feel
+free to ignore it.
+
+pp
+    A pretty-printer.  (p <exp>) will pretty-print the result of <exp>,
+    which must be an S-expression.  (Source code for procedures is not
+    retained or reconstructed.)  You can also do (p <exp> <port>) to
+    print to a specific port.
+
+    The procedure pretty-print takes three arguments: the object to be
+    printed, a port to write to, and the current horizontal cursor
+    position.  If you've just done a newline, then pass in zero for
+    the position argument.
+
+    The algorithm is very peculiar, and sometimes buggy.
+
+random
+    Random number generator.
+
+        > (define random (make-random <seed>))
+	> (random)  =>  a pseudo-random number between 0 and 2^28
+
+sort
+    Online merge sort (see comment at top of file big/sort.scm)
+
+        (sort-list <list> <pred>)
+	(sort-list! <list> <pred>)
+
+sicp
+    Compatibility package for the Scheme dialect used in the book
+    "Structure and Interpretation of Computer Programs."
+
+queues
+    FIFO queues.
+
+defrecord
+    A define-record-type macro, providing more concise use of the
+    record package.  (Richard and I use different define-record-type
+    macros; this one is Richard's.)
+
+formats
+    A simple FORMAT procedure, similar to Common Lisp's or T's.
+
+receive
+    Convenient interface to the call-with-values procedure, like
+    Common Lisp's multiple-value-bind macro.
+
+bigbit
+    Extensions to the bitwise logical operators (exported by
+    the primitives package) so that they operate on bignums.
+    The operators themselves are exported by the BITWISE package, so
+    to use these you should do
+
+	,load-package bigbit
+	,new-package my-package bitwise ...
+
+extended-ports
+    Ports for reading from and writing to strings, and related things.
+    Documentation pending.
+
+threads
+    Multitasking.
+
+more-threads
+    Interface between multitasking and the command processor.  Try
+    this:
+	,load-package more-threads
+	,open threads
+	,start-threads
+	(spawn (lambda () (display "Hello ")))
+
+
+... and others.
+
+
+-----
+
+Acknowledgment
+
+Thanks to Deborah Tatar for providing the Yeats quotation.

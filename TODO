@@ -1,0 +1,206 @@
+-*- Mode: Indented-text; -*-
+
+Scheme 48: list of things to do.  JAR 16 June 1993.
+
+The one thing that ought to be done before alpha release:
+    Create a command language module, so that scripts can be written
+      using it.  The module would export a procedure corresponding to
+      each command processor command, together with coercion routines
+      (like GET-PACKAGE) for obtaining argument values.
+    Once that is done, flush the ,take command.
+
+Run-time system bugs:
+    Compiler needs to treat calls with more than 63 arguments specially.
+    #e1.7 should be exact.
+    MAX and MIN don't do inexact contagion.
+    Shadowing is broken for macro-referenced variables:
+        (define (foo x) `(a ,x))
+	(define cons list)
+	(foo 1) => (a (1 ()))
+
+Revised^5 Scheme compliance:
+    Implement let-syntax and letrec-syntax.
+    Vector patterns and templates ought to be supported in
+      SYNTAX-RULES.
+
+Programming environment:
+    Help system:
+      - Implement hierarchical help, a la gdb.
+      - Fuller on-line documentation, a la gdb.
+      - ,from-file command shouldn't be listed.
+    Error recovery.  Can do better than ,proceed.  LOAD should set up
+      restart continuations.
+    Better error checking for macro & special form syntax (CLASSIFY ?).
+    LET continuation "pessimization" to retain the environment longer.
+    Make sure that the disassembler and assembler are inverses of one
+      another.  Disassembler should generate S-expression first, and then
+      print it independently.
+    Have the disassembler display local variable names.
+    This ought to be recoverable, but isn't always:
+	> (let loop ((x '())) (loop (cons 3 x)))
+	not enough room in heap for stack
+    Put the inspector at its own command level?
+    The get-cont-from-heap instruction should have an exception
+      discloser that indicates the actual error (returning a
+      non-fixnum from application top level).
+    Separate compilation (compile a module, writing object code to a
+      file).
+    Semicolon comments don't quite work after commands (extra newline
+      required).
+
+Performance:
+    (signature-items sig) should be implemented as a vector or something,
+      not as a list.  There should be a procedure
+      (signature-for-each proc sig) to map over a signature; proc
+      would take two arguments, name and type.
+    More compact representation for debugging data?
+    Leaf procedure compilation (RK's rts/no-leaf-env.scm): if no
+      continuations or lambdas, skip the make-env and access locals
+      using stack-ref.  Expacted to gain us about 6% in speed.
+    Optimize loops somehow (maybe using call-template opcode and/or
+      opportunistic compilation).
+    CAML light has good documentation and patches for optimizing the
+      interpreter's switch (*pc++).  (Range check isn't necessary.)
+    Ratnum multiplication and division might be made more efficient by
+      taking cross-GCD's.
+    Use MIT Scheme bignums, or GNU Multiple Precision Arithmetic
+      Library?  (Torbjorn Granlund <tege@sics.se>)
+    Native code compiler...
+
+Big Scheme features:
+    Floating point.
+    How about deleting entries from tables?
+    Non-blocking I/O for threads.  I think access to Unix select() might
+      be sufficient (with pause() and sleep() as degenerate cases).
+    RPC.
+    Arrays.
+    Add call/gcc (invokes the Gnu C compiler).
+
+Module system bugs:
+    The following goes into an infinite loop:
+	> ,config
+	config> ,open table
+	config> table
+    ,untrace should undefine as well if the variable wasn't bound
+      before.
+
+Module system features:
+    Add an ,undefine command.  Useful to undo shadowing, flush a
+      structure, etc.
+    Better error message when you do (structure-ref foo ...) where foo
+      isn't an accessed structure.
+    Check for name conflicts between opened structures.
+    Check for cycles in structure inheritance.
+    Similarly for ,load-package and ,reload-package.
+    An ,access command, similar to ,open.
+    There should be a define-package clause (for-syntax <clause>*).
+      E.g. (for-syntax (open scheme my-utilities)
+		       (files more-crud)).
+    Make structure-ref work with syntax and packages.  E.g.
+      ((structure-ref scheme cond) ...)
+    Deal with package system state better (for linker).  Maybe each
+      package should point to a data structure containing
+      *location-uid*, location-name-table, *package-uid*,
+      package-name-table, and perhaps the compiler-state as well (see
+      segment.scm).
+    Implement signature subtraction as a way of dealing with such
+      conflicts.
+
+VM:
+    Merge in Olin's changes and extensions (command line processing,
+      the #! syntax for scripts, external function call, etc.).
+    Interrupt while writing out image causes an exit.  [Fixed?]
+    A jump-back instruction.  Might be easier to use than call-template.
+    Scrutinize all VM fatal errors to see if any can be recovered
+      from.  E.g. "out of ports" shouldn't cause a VM halt, it should
+      just cause open-port to return #f or an error code.
+    Get VM debugging environment (load-debug in vm/load.scm) working.
+    Get VM interp.scm-without-gc.scm working again.
+
+Documentation:
+    How to use the static linker.
+    Techniques for debugging the runtime system (debug/for-debugging.scm).
+    Threads, fluids, records, tables.
+
+Cleanup:
+    The Makefile ends up doing
+        ... | ./scheme48vm -i ./scheme48.image -i link/linker.image
+      to run the linker.  This seems wrong somehow.
+    Rename table -> tables, port -> ports, continuations, conditions,
+      exception, records, templates, etc.
+    debug/mini-package.scm doesn't define INITIALIZE-REIFIED-PACKAGE!.
+      This is why the mini-system (see debug-packages.scm) doesn't work.
+    The package reification stuff is way too complicated, and it's
+      buggy besides -- the (set! i (+ i 1)) can happen too early,
+      producing package initializations in the wrong order.
+    Rename "Scheme48" to "Scheme 48", "PreScheme" to "Pre-Scheme".
+    The order of arguments to the MAKE-STRUCTURE procedure should be
+      changed to (make-structure package signature [name-option]).
+    Combine condition, signals, and handle into a single structure?
+    Package code is pretty ugly.  Figure out how to simplify it.
+    Write a simpler implementation of the package system, one that
+      doesn't handle signature and open-list mutations.
+    package.scm shouldn't be calling contents, set-contents!,
+      location-assigned?.  Sanitize this somehow.
+    Figure out a better way to implement ##.
+    Rename "unassigned" to "uninitialized".
+    Write a program that will automagically generate scheme48.h from
+      vm/data.scm and friends.
+    Revert to the old exception system: vector of handlers (not just a
+      single procedure), and each handler gets an exception code.
+    Rename DEFINE-PACKAGE to DEFINE-STRUCTURE ?  Boy, that would sure
+      confuse Chez Scheme hackers.
+
+
+Date: Mon, 14 Jun 93 18:33:30 HKT
+From: shivers@csd.hku.hk
+To: kelsey@flora.ccs.neu.edu
+Cc: jar@cs.cornell.edu
+Subject: Scheme 48
+
+...
+All true.  My major motivation was portability. I also found the module system
+to be a big win. Other things that influenced me were (1) elegance and
+modularity -- I felt I could comprehend and mung the system as needed (2)
+reasonable efficiency and small size and (3) real, full R4RS+ support (most
+small systems do it partly).
+
+Actually, I wouldn't say the programming environment is particularly
+exceptional, unless you count the module system.
+
+A small thing lacking in other Schemes that really reduced my debug times: the
+loader would complain about undefined free var refs in my code. This
+frequently picked out variable spelling errors, inconsistent name linkages,
+and forgotten procedure defs. Not a big thing, but really effective.
+
+Another win was simply having the implementors around for detailed
+explanations and support.
+
+Problems I had with S48: 
+- Inability to mess with the VM, as it is written in a language that can
+  be compiled by only 1 person in the world.
+
+- The foreign-function support was quite limited, and the foreign-data support
+  was basically non-existent. Exporting gc'd data to C, gc'ing data allocated
+  in C, hooks into the GC, importing C data into Scheme -- no support.  Elk
+  handles this better, as that is critical to the type of applications at
+  which elk is targeted.
+
+  I fixed some of this myself -- helped by your general, portable low-level ff
+  interface, which was well-designed in terms of those goals -- but I couldn't
+  do much about foreign-data support.
+
+- No support currently for linking static heap data into a text-pages
+  area to reduce gc copying and shrink the dynamic heap.
+
+- The module system was frequently frustrating. The non-uniform , command 
+  language, bugs, the restrictions of living with a module system,
+  being blocked from accessing primitives whose bindings had been
+  gc'd away at link time, and awkwardnesses in the user interface really
+  slowed me down.
+
+  The module system was also a great help; these are simply the problems
+  of life with an experimental system, as opposed to a polished final
+  product.
+
+[But] all in all, S48 was the best choice I could have made.  

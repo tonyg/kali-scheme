@@ -1,0 +1,58 @@
+
+[Original by RK, modifications by JAR 6/24/93]
+
+   From: jar@cs.cornell.edu (Jonathan Rees)
+   Date: Fri, 18 Dec 92 12:46:41 -0500
+
+   Oh, and one other thing... I have no idea how to use the external
+   call stuff, can you give me a hint or two?
+   TNX
+
+(GET-EXTERNAL string)
+Returns an external pointer to the given name.  A null will be added to the
+end of the name if there isn't already one.
+
+(LOOKUP-ALL-EXTERNALS)
+Looks up all externals in the currently job.  Ideally this should be called
+automatically on startup.
+
+(EXTERNAL-CALL external arg1 arg2 ...)
+Calls the external value, passing it the number of arguments (as a long),
+and a pointer to a C array containing the rest of the arguments (also
+a long).  Don't mess with the array, it is really the Scheme48 argument
+stack.  The arguments are probably in reverse order, I can't remember.
+
+The file dynload.c contains the function s48_dynamic_load which can
+be called using EXTERNAL-CALL.  To make it work you need to do the
+following:
+
+ 1) Link the VM using -N (at least on my DECstation).
+
+ 2) Use the -o flag to pass the name of the executable to the VM.
+    [This is done automatically by the "scheme48" shell script created
+    by "make install".]
+
+ 3) Use -G 0 when compiling the code to be dynamically linked.
+
+If dynamic loading doesn't work you can always link the external stuff
+in with the VM.  The dynamic loading code has problems.  I am not much
+of a Unix hacker.
+
+
+; Transcript:
+
+% scheme48vm -i scheme48.image -o ~/bin/scheme48vm
+
+Welcome to Scheme 48 0.20 (made by jar on Wed Jun 23 11:39:53 EDT 1993).
+Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.
+Please report bugs to scheme48-bugs@altdorf.ai.mit.edu.
+Type ,? (comma question-mark) for help.
+> ,open externals
+Load structure externals (y/n)? y
+[externals
+/sw/scheme48/big/external.scm ...............
+]
+> (define dynamic-load (get-external "s48_dynamic_load"))
+> (external-call dynamic-load (null-terminate "test.o"))
+#t
+> 

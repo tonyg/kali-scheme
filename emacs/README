@@ -1,0 +1,47 @@
+Date: Thu, 9 Jul 92 13:26:05 HKT
+From: shivers@csd.hku.hk (Olin G. Shivers)
+To: jar@cs.cornell.edu
+In-Reply-To: Jonathan Rees's message of Wed, 8 Jul 92 22:15:22 -0400 <9207090215.AA00991@sindri.cs.cornell.edu>
+Subject: cmulisp
+
+It's also in Ozan's repository, but I don't know how up-to-date it is.
+It's always useful to list his repository as a possible location, tho.
+	-Olin
+
+/afs/cs.cmu.edu/user/shivers/lib/Readme:
+This directory contains the following subdirectories:
+    emacs   Gnu emacs packages.
+    papers  My papers, in .dvi and postscript form.
+    tex     LaTeX packages.
+All of these files can be anonymously ftp'd.
+    -Olin
+     July 3, 1991
+
+===============================================================================
+Directions for anonymous ftp:
+1. ftp to any CMU machine with access to the /afs network file system.
+   Almost any machine will do; some possibilities are:
+    	cs.cmu.edu  	    128.2.222.173
+    	a.gp.cs.cmu.edu	    128.2.242.7
+    	f.gp.cs.cmu.edu	    128.2.250.164
+    	h.gp.cs.cmu.edu	    128.2.254.156
+    	k.gp.cs.cmu.edu	    128.2.254.137
+
+2. login as anonymous
+   You are supposed to provide username@host as the password. The CMU
+   ftp demon actually checks to ensure there's an "@" in the password.
+   So you can't just say "foo"; you have to say "foo@bar".
+
+3. cd /afs/cs.cmu.edu/user/shivers/lib
+   CMU ftp restricts the directories you can access anonymously,
+   so you must cd straight to the .../lib directory or its descendants.
+4. If you are transfering .dvi or other binary files, set the file transfer
+   mode to raw binary with one of the following commands:
+        type image
+    	type binary
+    	image
+    	binary
+   If you don't do this, the files may be garbled.
+5. Use dir or ls to list the directory.
+6. Transfer the files you want.
+
