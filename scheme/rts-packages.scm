@@ -173,7 +173,8 @@
 (define-structure continuations continuations-interface
   (open scheme-level-1 primitives
 	architecture code-vectors
-	templates closures methods)
+	templates closures all-operators
+	methods)
   (files (rts continuation))
   (optimize auto-integrate))
 
