@@ -65,22 +65,7 @@
        (goto return-values s48-*native-protocol* null 0))
       ((1)
        (goto perform-application s48-*native-protocol*))
-      ((2)
-       (cond ((pending-interrupt?)
-	      (push-native-interrupt-continuation)
-	      (goto find-and-call-interrupt-handler))
-	     (else
-	      (loop (s48-invoke-native-continuation
-		     (+ (address->integer (pop-continuation-from-stack))
-			2))))))
-      ((3)
-       ;;; just a prototype
-       (push-native-interrupt-continuation)
-       (let ((nargs (pop)))
-	 (write-string "exception with " (current-error-port))
-	 (write-integer nargs (current-error-port))
-	 (write-string " arguments" (current-error-port))
-	 (goto raise nargs)))
+      ;; 2 and 3 are unused
       ((4)
        (goto interpret *code-pointer*))
       (else
