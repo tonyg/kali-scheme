@@ -332,6 +332,7 @@
 	  push-continuation!
 	  push-adlib-continuation!
 	  push-exception-continuation!
+	  push-native-exception-continuation!
 	  pop-continuation-from-stack
 	  pop-exception-data
 

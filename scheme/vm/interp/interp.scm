@@ -37,6 +37,7 @@
 
 (define *interrupt-return-code*)	; used to return from interrupts
 (define *exception-return-code*)	; used to mark exception continuations
+(define *native-exception-return-code*)	; used to mark native exception continuations
 (define *call-with-values-return-code*)	; for call-with-values opcode
 
 ; These are referred to from other modules.
@@ -95,6 +96,7 @@
     (set! *current-thread*        (s48-trace-value *current-thread*))
     (set! *interrupt-return-code* (s48-trace-value *interrupt-return-code*))
     (set! *exception-return-code* (s48-trace-value *exception-return-code*))
+    (set! *native-exception-return-code* (s48-trace-value *native-exception-return-code*))
     (set! *call-with-values-return-code*
 	  (s48-trace-value *call-with-values-return-code*))
     (set! *interrupted-template*  (s48-trace-value *interrupted-template*))
@@ -238,7 +240,7 @@
 ; is in the continuation just below the saved registers.
 
 (define (initialize-interpreter+gc)          ;Used only at startup
-  (let ((key (ensure-space (* 3 return-code-size))))
+  (let ((key (ensure-space (* 4 return-code-size))))
     (set! *interrupt-return-code*
 	  (make-return-code ignore-values-protocol
 			    (enum op return-from-interrupt)
@@ -247,6 +249,11 @@
     (set! *exception-return-code*
 	  (make-return-code 1	; want exactly one return value
 			    (enum op return-from-exception)
+			    #xFFFF		; escape value
+			    key))
+    (set! *native-exception-return-code*
+	  (make-return-code 1	; want exactly one return value
+			    (enum op return-from-native-exception)
 			    #xFFFF		; escape value
 			    key))
     (set! *call-with-values-return-code*
@@ -386,9 +393,10 @@
 ;;; Eventually, the native code wants the VM to detect and handle and
 ;;; excpetion In this case, the native code sets
 ;;; *native-exception-cont* to the continuation of the exception. If
-;;; this is detected here, push-exception-setup! fills the exception
-;;; data diffently which in turn is recognized by
-;;; return-from-exception where the stored continuation is invoked
+;;; this is detected here, push-native-exception-setup! fills the
+;;; exception data diffently and installs return-from-native-exception
+;;; as opcode
+
 (define (push-exception-setup! exception instruction-size)
 ;  (breakpoint "exception continuation")
   (if (= 0 *native-exception-cont*)
@@ -405,37 +413,38 @@
 	(set! *cont* *stack*)
 	(write-string "handling exception for nc " (current-error-port))
 	(write-integer *native-exception-cont* (current-error-port))
-	(push-exception-continuation! (code+pc->code-pointer *exception-return-code*
-							      return-code-pc)
-				    (enter-fixnum (current-opcode))
-				    *native-exception-cont*
-				    (enter-fixnum exception)
-				    (enter-fixnum 0)) ; used to distinguish bc/nc
+	(push-native-exception-continuation! (code+pc->code-pointer *native-exception-return-code*
+								    return-code-pc)
+					     (enter-fixnum (current-opcode))
+					     *native-exception-cont*
+					     (enter-fixnum exception))
 	(reset-native-exception-cont!)))
   (push (enter-fixnum (current-opcode)))
   (push (enter-fixnum exception)))
 
 (define-opcode return-from-exception
-  (receive (pc/opcode code exception size/is-native?)
+  (receive (pc code exception size)
       (pop-exception-data)
-    (if (= size/is-native? (enter-fixnum 0))
-	(let ((opcode (extract-fixnum pc/opcode)))
-	  (cond ((okay-to-proceed? opcode)
-		 (write-string "returning to nc " (current-error-port))
-		 (write-integer (fetch *stack*)  (current-error-port))
-		 (return-values 0 null 0))
-		(else 
-		 (set-code-pointer! code 0) ; Uahh...
-		 (raise-exception illegal-exception-return 0 exception))))
-	(let* ((pc (extract-fixnum pc/opcode))
-	       (opcode (code-vector-ref code pc))
-	       (size size/is-native?))
-	  (cond ((okay-to-proceed? opcode)
-		 (set-code-pointer! code (+ pc (extract-fixnum size)))
-		 (goto interpret *code-pointer*))
-		(else
-		 (set-code-pointer! code pc)
-		 (raise-exception illegal-exception-return 0 exception)))))))
+    (let* ((pc (extract-fixnum pc))
+	   (opcode (code-vector-ref code pc)))
+      (cond ((okay-to-proceed? opcode)
+	     (set-code-pointer! code (+ pc (extract-fixnum size)))
+	     (goto interpret *code-pointer*))
+	    (else
+	     (set-code-pointer! code pc)
+	     (raise-exception illegal-exception-return 0 exception))))))
+
+(define-opcode return-from-native-exception
+  (receive (opcode code exception ignore)
+      (pop-exception-data)
+    (let ((opcode (extract-fixnum opcode)))
+      (cond ((okay-to-proceed? opcode)
+	     (write-string "returning to nc " (current-error-port))
+	     (write-integer (fetch *stack*)  (current-error-port))
+	     (return-values 0 null 0))
+	    (else 
+	     (set-code-pointer! code 0) ; Uahh...
+	     (raise-exception illegal-exception-return 0 exception))))))
 
 ; It's okay to proceed if the opcode is a data operation, which are all those
 ; from EQ? on up, or references to globals (where the use can supply a value).

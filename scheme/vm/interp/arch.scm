@@ -230,6 +230,7 @@
   (set-session-data! 1)
   (set-exception-handlers! 1)
   (return-from-exception 1)
+  (return-from-native-exception 1)
   (set-interrupt-handlers! 1)
   (set-enabled-interrupts! 1)
   (return-from-interrupt)

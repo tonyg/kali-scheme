@@ -89,7 +89,7 @@
 
 ;; Not used for now
 (define (push-native-exception-continuation)
- (push-continuation! (code+pc->code-pointer *exception-return-code*
+ (push-continuation! (code+pc->code-pointer *native-exception-return-code*
 					     return-code-pc)))
 
 ;----------------------------------------------------------------
