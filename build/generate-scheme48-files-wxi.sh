@@ -23,7 +23,7 @@ for f in scheme/*.scm \
       scheme/rts/*.scm \
       scheme/sort/*.scm \
       scheme/posix/*.scm \
-      doc/*.ps doc/*.pdf doc/*.txt doc/html/*.html; do
+      doc/*.ps doc/*.pdf doc/*.txt doc/html/*; do
   echo "\"$f\"";
 done;
 echo '))';
