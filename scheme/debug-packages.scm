@@ -131,7 +131,10 @@
 			     `(start ',(map car structs))
 			     medium-system for-reification)))))
 
-(define-structure test-bignum (export test-all)
+;;; load this into a Scheme implementation you trust, call TEST-ALL
+;;; and (print-results "t1"). Repeate the same for the untrusted
+;;; Scheme with a different filename and compare the files using diff.
+(define-structure test-bignum (export test-all print-results)
   (open scheme
 	i/o
 	bitwise
