@@ -995,7 +995,7 @@ The regular expression is not compiled until it matched against a string,
 This is a predicate for regular expressions.
 
 \begin{protos}
-\protonoresult{regexp-match}{ regexp string submatches? starts-line? ends-line?}
+\protonoresult{regexp-match}{ regexp string start submatches? starts-line? ends-line?}
 \protoresult{boolean or list of matches}
 \proto{match?}{ x}{boolean}
 \proto{match-start}{ match}{integer}
@@ -1003,7 +1003,7 @@ This is a predicate for regular expressions.
 \end{protos}
 \noindent
 \code{Regexp-match} matches the regular expression against the characters
- in \cvar{string}.
+ in \cvar{string}, starting at position \cvar{start}.
 If the string does not match the regular expression, \code{regexp-match}
  returns \code{\#f}.
 If the string does match, then a list of match records is returned
