@@ -397,6 +397,7 @@
 				       (enter-fixnum instruction-size)))
       (begin
 	(push *native-exception-cont*)
+	(set! *cont* *stack*)
 	(push-exception-continuation! (code+pc->code-pointer *exception-return-code*
 							      return-code-pc)
 				    (enter-fixnum (current-opcode))
