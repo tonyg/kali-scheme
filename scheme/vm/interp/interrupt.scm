@@ -81,16 +81,17 @@
   (set-current-proposal! (pop)))
 
 (define (find-and-call-interrupt-handler)
-  (let* ((pending-interrupt (get-highest-priority-interrupt!))
-	 (arg-count (push-interrupt-args pending-interrupt))
-	 (handlers (shared-ref *interrupt-handlers*)))
-    (if (not (vm-vector? handlers))
-	(error "interrupt handler is not a vector"))
-    (set! *val* (vm-vector-ref handlers pending-interrupt))
-    (if (not (closure? *val*))
-	(error "interrupt handler is not a closure" pending-interrupt))
-    (set-enabled-interrupts! 0)
-    (goto call-interrupt-handler arg-count pending-interrupt)))
+  (let ((pending-interrupt (get-highest-priority-interrupt!))
+	(handlers (shared-ref *interrupt-handlers*)))
+    (receive (arg-count pending-interrupt)
+	(push-interrupt-args pending-interrupt)
+      (if (not (vm-vector? handlers))
+	  (error "interrupt handler is not a vector"))
+      (set! *val* (vm-vector-ref handlers pending-interrupt))
+      (if (not (closure? *val*))
+	  (error "interrupt handler is not a closure" pending-interrupt))
+      (set-enabled-interrupts! 0)
+      (goto call-interrupt-handler arg-count pending-interrupt))))
 
 ; Push the correct arguments for each type of interrupt.
 ;
@@ -98,36 +99,42 @@
 ;  for use by code profilers.
 ; For gc interrupts we push the list of things to be finalized.
 ; For i/o-completion we push the channel and its status.
+; For i/o-error we push the channel and the error code.
 
 (define (push-interrupt-args pending-interrupt)
   (cond ((eq? pending-interrupt (enum interrupt alarm))
 	 (push *interrupted-template*)
 	 (set! *interrupted-template* false)
 	 (push (enter-fixnum *enabled-interrupts*))
-	 2)
+	 (values 2 (enum interrupt alarm)))
 	((eq? pending-interrupt (enum interrupt post-gc))
 	 (push *finalize-these*)
 	 (set! *finalize-these* null)
 	 (push (enter-fixnum *enabled-interrupts*))
-	 2)
-	((eq? pending-interrupt (enum interrupt i/o-completion))
+	 (values 2 (enum interrupt post-gc)))
+	((or (eq? pending-interrupt (enum interrupt i/o-completion))
+	     (eq? pending-interrupt (enum interrupt i/o-error)))
+	 ;; we don't know which one it is for each individual channel
 	 (let ((channel (dequeue-channel!)))
 	   (if (not (channel-queue-empty?))
 	       (note-interrupt! (enum interrupt i/o-completion)))
 	   (push channel)
 	   (push (channel-os-status channel))
 	   (push (enter-fixnum *enabled-interrupts*))
-	   3))
+	   (values 3
+		   (if (vm-eq? (channel-error? channel) false)
+		       (enum interrupt i/o-completion)
+		       (enum interrupt i/o-error)))))
 	((eq? pending-interrupt (enum interrupt os-signal))
 	 (push (vm-car *os-signal-list*))
 	 (set! *os-signal-list* (vm-cdr *os-signal-list*))
 	 (if (not (vm-eq? *os-signal-list* null))
 	     (note-interrupt! (enum interrupt os-signal)))
 	 (push (enter-fixnum *enabled-interrupts*))
-	 2)
+	 (values 2 (enum interrupt os-signal)))
 	(else
 	 (push (enter-fixnum *enabled-interrupts*))
-	 1)))
+	 (values 1 pending-interrupt))))
 
 ; Called from outside when an os-signal event is returned.
 
@@ -307,8 +314,11 @@
 	((eq? event (enum events keyboard-interrupt-event))
 	 (interrupt-bit (enum interrupt keyboard)))
 	((eq? event (enum events io-completion-event))
-	 (enqueue-channel! channel status)
+	 (enqueue-channel! channel status false)
 	 (interrupt-bit (enum interrupt i/o-completion)))
+	((eq? event (enum events io-error-event))
+	 (enqueue-channel! channel status true)
+	 (interrupt-bit (enum interrupt i/o-error)))
 	((eq? event (enum events os-signal-event))
 	 (interrupt-bit (enum interrupt os-signal)))
 	((eq? event (enum events no-event))

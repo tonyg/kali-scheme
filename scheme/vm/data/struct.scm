@@ -38,7 +38,10 @@
    (channel-close-silently? set-channel-close-silently?!))
   ;; none of these are visible to the RTS
   (channel-next      set-channel-next!)
-  (channel-os-status set-channel-os-status!))
+  ;; this is either the number of bytes transferred or the error code ...
+  (channel-os-status set-channel-os-status!)
+  ;; ... depending on the value of this
+  (channel-error?    set-channel-error?!))
 
 ; Vectors and so on
 

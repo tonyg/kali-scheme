@@ -234,6 +234,7 @@
 	  channel-close-silently? set-channel-close-silently?!
 	  channel-next            set-channel-next!
 	  channel-os-status       set-channel-os-status!
+	  channel-error?          set-channel-error?!
 	  
 	  port? port-size make-port
 	  port-handler

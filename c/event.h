@@ -1,5 +1,6 @@
-enum event_enum { KEYBOARD_INTERRUPT_EVENT, IO_COMPLETION_EVENT, ALARM_EVENT,
-		    OS_SIGNAL_EVENT, ERROR_EVENT, NO_EVENT };
+/* must be synchronized with EVENTS enumeration in ps-channel.scm */
+enum event_enum { KEYBOARD_INTERRUPT_EVENT, IO_COMPLETION_EVENT, IO_ERROR_EVENT,
+		  ALARM_EVENT, OS_SIGNAL_EVENT, ERROR_EVENT, NO_EVENT };
 
 extern psbool s48_add_pending_fd(int fd, psbool is_input);
 extern psbool s48_remove_fd(int fd);

@@ -80,6 +80,7 @@
 				  false    ; close-silently?
 				  false    ; next
 				  false    ; os-status
+				  false    ; error?
 				  key)))
     (vector-set! *vm-channels* channel vm-channel)
     vm-channel))
@@ -101,6 +102,7 @@
 				      close-silently?
 				      false   ; next
 				      false   ; os-status
+				      false   ; error?
 				      key)))
 	   (vector-set! *vm-channels* os-index channel)
 	   (values channel
@@ -132,7 +134,7 @@
 	 (let ((old-index (extract-fixnum (channel-os-index channel))))
 	   (if (vm-eq? (channel-os-status channel)
 		       true)
-	       (enqueue-channel! old-index (channel-abort old-index)))
+	       (enqueue-channel! old-index (channel-abort old-index) false))
 	   (vector-set! *vm-channels* old-index false)
 	   (vector-set! *vm-channels* os-index channel)
 	   (set-channel-os-index! channel (enter-fixnum os-index))
@@ -168,7 +170,7 @@
   (let ((os-index (extract-fixnum (channel-os-index channel))))
     (if (vm-eq? (channel-os-status channel)
 		true)
-	(enqueue-channel! os-index (channel-abort os-index)))
+	(enqueue-channel! os-index (channel-abort os-index) false))
     (let ((status (if (or (= input-status (channel-status channel))
 			  (= special-input-status (channel-status channel)))
 		      (close-input-channel os-index)
@@ -248,9 +250,10 @@
 (define (channel-queue-empty?)
   (false? *pending-channels-head*))
 
-(define (enqueue-channel! index status)
+(define (enqueue-channel! index status error?)
   (let ((channel (os-index->channel index)))
     (set-channel-os-status! channel (enter-fixnum status))
+    (set-channel-error?! channel error?)
     (cond ((or (not (false? (channel-next channel))) ; already queued (how?)
 	       (eq? channel *pending-channels-head*) ; first and only
 	       (eq? channel *pending-channels-tail*)); last (i.e. no next)

@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 24")
+(define architecture-version "Vanilla 25")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -276,6 +276,7 @@
    keyboard
    post-gc         ; handler is passed a list of finalizers
    i/o-completion  ; handler is passed channel and status
+   i/o-error       ; handler is passed channel and error code
    os-signal
    ))
 

@@ -68,7 +68,8 @@
 ; PENDING? - true if the operation cannot complete immediately
 ; STATUS - from an enumeration defined as part of Pre-Scheme
 ;
-; Pending i/o operations produce i/o-completion events when they're done.
+; Pending i/o operations produce i/o-completion or i/o-error events
+; when they're done.
 
 (define channel-read-block
   (external "ps_read_fd"
@@ -86,9 +87,12 @@
 
 ; The different kinds of events
 
+; The C code in event.h knows these, and there's a copy in s48-channel.scm.
+
 (define-external-enumeration events
   (keyboard-interrupt-event     ; user interrupt
    io-completion-event          ; a pending i/o operation completed
+   io-error-event               ; an i/o error occurred on a specific channel
    alarm-event                  ; scheduled interrupt
    os-signal-event		; some OS signal of no interest to the VM occured
    error-event                  ; OS error occurred
@@ -105,9 +109,9 @@
 (define pending-event?
   (external "pending_eventp" (=> () boolean)))
 
-; Returns the next event.  The second return value is the FD for i/o-completion
-; events and the third is the status for i/o-completion and error events.
-; (currently this is always zero for i/o-completions).
+; Returns the next event.  The second return value is the FD for
+; i/o-completion or i/o error events and the third is the status for
+; i/o-completion and error events.
 
 (define get-next-event
   (external "s48_get_next_event" (=> () integer integer integer)))

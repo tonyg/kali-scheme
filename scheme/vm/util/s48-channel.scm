@@ -131,6 +131,7 @@
 (define-enumeration events
   (keyboard-interrupt-event
    io-completion-event
+   io-error-event
    alarm-event
    os-signal-event
    error-event
