@@ -74,6 +74,11 @@ define(S48_USCORE, [dnl
 	rm -f conftest.c a.out
 ])dnl
 dnl
+define(S48_CREATE_BUILD_DIRS, [dnl
+        mkdir -p c/unix &&
+        mkdir -p c/posix &&
+        mkdir -p c/fake
+])dnl
 AC_INIT(c/scheme48vm.c)
      AC_CONFIG_HEADER(c/sysdep.h)
      S48_PROG_CC
@@ -167,4 +172,5 @@ fail
      AC_SUBST(CFLAGS)
      AC_SUBST(LIBOBJS)
      AC_SUBST(LDFLAGS)
+     S48_CREATE_BUILD_DIRS
 AC_OUTPUT(Makefile)

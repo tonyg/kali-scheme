@@ -37,7 +37,7 @@ mandir = $(prefix)/man/man$(manext)
 #   LDFLAGS = -N
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(DEFS) -I$(srcdir)/c $(CFLAGS) -o $@ $<
+	$(CC) -c $(CPPFLAGS) $(DEFS) -I ./c -I$(srcdir)/c $(CFLAGS) -o $@ $<
 
 # You might want to change RUNNABLE to "s48"
 RUNNABLE = scheme48
@@ -87,7 +87,7 @@ START_LINKER = echo ',batch' && echo ',bench on'
 # Targets:
 
 IMAGE = scheme48.image
-INITIAL = build/initial.image
+INITIAL = $(srcdir)/build/initial.image
 VM = scheme48vm
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
 OBJS =	c/scheme48vm.o c/scheme48heap.o \
@@ -178,7 +178,7 @@ ASM_INITIALIZERS =
 
 $(VM): c/main.o $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
 	rm -f /tmp/s48_external_$$$$.c &&				\
-	build/build-external-modules /tmp/s48_external_$$$$.c		\
+	$(srcdir)/build/build-external-modules /tmp/s48_external_$$$$.c	\
 		$(EXTERNAL_INITIALIZERS) &&				\
 	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/main.o $(OBJS) $(UNIX_OBJS)	\
 		/tmp/s48_external_$$$$.c				\
@@ -189,7 +189,7 @@ $(VM): c/main.o $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
 c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
 	$(CC) -c $(CFLAGS) -o $@ \
 		-DDEFAULT_IMAGE_NAME=\"$(LIB)/$(IMAGE)\" \
-		$(CPPFLAGS) $(DEFS) c/main.c
+		$(CPPFLAGS) $(DEFS) $(srcdir)/c/main.c
 
 c/scheme48vm.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
 			c/scheme48image.h c/event.h \
@@ -219,8 +219,8 @@ c/fake/strerror.o: c/fake/strerror.h
 $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 		scheme/link-packages.scm scheme/env-packages.scm \
 		scheme/more-packages.scm \
-		$(usual-files) $(INITIAL) build/build-usual-image
-	build/build-usual-image . "`pwd`/scheme" '$(IMAGE)' './$(VM)' \
+		$(usual-files) build/initial.debug build/build-usual-image
+	$(srcdir)/build/build-usual-image $(srcdir) "$(srcdir)/scheme" '$(IMAGE)' './$(VM)' \
 		'$(INITIAL)'
 
 ### Fake targets:  all clean install man dist
@@ -232,14 +232,14 @@ inst-vm:
 
 inst-image:
 	rm -f '/tmp/$(IMAGE)' &&					\
-	build/build-usual-image . '$(LIB)' '/tmp/$(IMAGE)' './$(VM)'	\
-		'$(INITIAL)' &&						\
+	$(srcdir)/build/build-usual-image $(srcdir) '$(LIB)'            \
+	         '/tmp/$(IMAGE)' './$(VM)' '$(INITIAL)' &&		\
 	$(INSTALL_DATA) /tmp/$(IMAGE) $(LIB) &&				\
 	rm /tmp/$(IMAGE)
 
 inst-man:
 	if [ -d $(mandir) -a -w $(mandir) ]; then			   \
-		sed 's=LBIN=$(bindir)=g' doc/scheme48.man |		   \
+		sed 's=LBIN=$(bindir)=g' $(srcdir)/doc/scheme48.man |	   \
 			sed 's=LLIB=$(LIB)=g' |				   \
 			sed 's=LS48=$(RUNNABLE)=g' >$(MANPAGE) &&	   \
 		$(INSTALL_DATA) $(MANPAGE) $(mandir) &&			   \
@@ -250,15 +250,16 @@ inst-man:
 	fi
 
 inst-inc:
-	$(INSTALL_DATA) c/scheme48.h $(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(incdir)
 
 inst-misc:
 	for stub in env big opt misc link posix srfi; do		\
-		for f in scheme/$$stub/*.scm; do			\
+		for f in $(srcdir)/scheme/$$stub/*.scm; do		\
 			$(INSTALL_DATA) $$f $(LIB)/$$stub || exit 1;	\
 		done;							\
 	done &&								\
-	for f in scheme/rts/*num.scm scheme/rts/jar-defrecord.scm; do	\
+	for f in $(srcdir)/scheme/rts/*num.scm 				\
+		 $(srcdir)/scheme/rts/jar-defrecord.scm; do		\
 		$(INSTALL_DATA) $$f $(LIB)/rts || exit 1;		\
 	done
 
@@ -361,7 +362,7 @@ DISTFILES = README COPYING INSTALL configure				\
 		ps-compiler/prescheme/test/*.scm			\
 		c/sysdep.h.in
 
-distname = $(RUNNABLE)-1.`cat build/minor-version-number`
+distname = $(RUNNABLE)-1.`cat $(srcdir)/build/minor-version-number`
 
 dist: build/initial.image
 	distname=$(distname) &&						\
@@ -512,7 +513,7 @@ scheme/debug/medium.image: $(LINKER_IMAGE) $(CONFIG_FILES)
 # The following have not been updated for the new directory organization
 
 c/smain.o: c/main.c
-	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) -DSTATIC_AREAS -o $@ c/main.c
+	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) -DSTATIC_AREAS -o $@ $(srcdir)/c/main.c
 
 mini: mini-heap.o smain.o
 	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/smain.o mini-heap.o $(OBJS) $(LIBS)
