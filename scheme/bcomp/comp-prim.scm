@@ -89,9 +89,9 @@
     (exact?
      ,(proc (number-type) boolean-type))
     (exact->inexact
-     ,(proc (exact-type) inexact-type))
+     ,(proc (number-type) inexact-type))
     (inexact->exact
-     ,(proc (inexact-type) exact-type))
+     ,(proc (number-type) exact-type))
     ((exp log sin cos tan asin acos sqrt)
      ,(proc (number-type) number-type))
     ((floor)

@@ -219,9 +219,12 @@
 (define-simple-type :exact (:number)
   (lambda (n) (and (number? n) (exact? n))))
 
+(define-method &inexact->exact ((n :exact)) n)
+
 (define-simple-type :inexact (:number)
   (lambda (n) (and (number? n) (inexact? n))))
 
+(define-method &exact->inexact ((n :inexact)) n)
 
 ; Whattakludge.
 
