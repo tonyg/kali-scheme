@@ -28,7 +28,7 @@ s48_double_to_string(char *buf, double v)
   if ((exponent <= -4) || (exponent > (digit_count + 7)))
     /* print with explicit exponent */
     {
-      int decimal_point = exponent - 1; /* that's the digit below */
+      int decimal_point = exponent;
       *buf++ = *digits++;
       if (*digits)
 	{
