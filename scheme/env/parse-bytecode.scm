@@ -223,7 +223,7 @@
         ((= protocol call-with-values-protocol)
          (let ((offset (get-offset code (+ pc 1))))
            (values 3 (list protocol 
-                           (pc->label (+ offset pc)
+                           (pc->label (- (+ offset pc) 1)
                                       attribution)
                            (zero? offset)))))
         ((= protocol args+nargs-protocol)
