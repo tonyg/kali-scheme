@@ -26,14 +26,15 @@ s48_provide_asm_values(s48_value asm_vector)
   extern long s48_exception_handler();
   extern long s48_restart_vm();
   extern long s48_Sstack_limitS;
-
+  extern long s48_ShpS;
+  extern long s48_SlimitS;
   /* 0 *val*        */
   /* 1 *cont*       */
   /* 2 *stack*      */
   S48_VECTOR_SET(asm_vector, 3, s48_enter_fixnum((long) &s48_Sstack_limitS));
   S48_VECTOR_SET(asm_vector, 4, s48_enter_fixnum((long) &s48_stack_gc));
-  /* 5 *hp*         */
-  /* 6 *heap-limit* */
+  S48_VECTOR_SET(asm_vector, 5, s48_enter_fixnum((long) &s48_ShpS));
+  S48_VECTOR_SET(asm_vector, 6, s48_enter_fixnum((long) &s48_SlimitS));
   S48_VECTOR_SET(asm_vector, 7, s48_enter_fixnum((long) &s48_unknown_call));
   S48_VECTOR_SET(asm_vector, 8, s48_enter_fixnum((long) &s48_unknown_return));
   S48_VECTOR_SET(asm_vector, 9, s48_enter_fixnum((long) &s48_interrupt_handler));
