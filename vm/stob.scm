@@ -91,14 +91,15 @@
 
 ; Various utilities
 
-(define (copy-stob stob key)
-  (assert (stob? stob))
-  (let ((new (make-stob (header-type (stob-header stob))
-			(header-length-in-bytes (stob-header stob))
+(define (copy-stob old-stob key)
+  (assert (stob? old-stob))
+  (let ((new (make-stob (enum stob code-vector)
+			(header-length-in-bytes (stob-header old-stob))
 			key)))
-    (copy-cells! (address-after-header stob)
+    (stob-header-set! new (stob-header old-stob))
+    (copy-cells! (address-after-header old-stob)
 		 (address-after-header new)
-		 (bytes->cells (stob-length-in-bytes stob)))
+		 (bytes->cells (stob-length-in-bytes old-stob)))
     new))
 
 (define (copy-cells! from to count)

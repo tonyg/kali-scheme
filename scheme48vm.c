@@ -1,7 +1,3 @@
-/* PS_SMALL_MULTIPLY
-   immutable closures
-   immutable continuations */
-
 #include <stdio.h>
 #include "prescheme.h"
 long goto_arg1K0;
@@ -9,7 +5,7 @@ long goto_arg1K4;
 long goto_arg1K3;
 long goto_arg1K2;
 long goto_arg1K1;
-char goto_arg0K0;
+unsigned char goto_arg0K0;
 long Sminimum_recovered_spaceS;
 long Sinterrupt_templateS;
 long Spending_interruptsS;
@@ -37,8 +33,8 @@ long Sweak_pointer_hpS;
 long Ssaved_limitS;
 long Ssaved_hpS;
 long Sgc_countS;
-char Simpure_area_countS;
-char Spure_area_countS;
+unsigned char Simpure_area_countS;
+unsigned char Spure_area_countS;
 long *Simpure_sizesS;
 long *Spure_sizesS;
 long *Simpure_areasS;
@@ -52,120 +48,114 @@ long ShpS;
 FILE * Scurrent_output_portS;
 FILE * Scurrent_input_portS;
 
-unsigned char hoistD0(long start_0X, long end_1X, long x_2X)
+unsigned char hoistD0(long start_0X, long end_1X, long type_2X)
+{
+  extern FILE * Scurrent_output_portS;
+  extern long SlimitS;
+  extern long ShpS;
+  long arg1K0;
+  long addr_3X;
+  long d_4X;
+
+ {arg1K0 = start_0X;
+  goto L10137;}
+ L10137: {
+  addr_3X = arg1K0;
+  if ((addr_3X < end_1X)) {
+    d_4X = *((long *) addr_3X);
+    if ((2 == (3 & d_4X))) {
+      if ((type_2X == (31 & (((d_4X)>>2))))) {
+        if (((16 + (ShpS)) < (SlimitS))) {
+          *((long *) (ShpS)) = (7 + addr_3X);
+          ShpS = (4 + (ShpS));
+          arg1K0 = (4 + (addr_3X + (-4 & (3 + ((long)(((unsigned long)d_4X)>>8))))));
+          goto L10137;}
+        else {
+          return(0);}}
+      else {
+        arg1K0 = (4 + (addr_3X + (-4 & (3 + ((long)(((unsigned long)d_4X)>>8))))));
+        goto L10137;}}
+    else {
+      fputs("heap is in an inconsistent state.", (Scurrent_output_portS));
+      return(0);}}
+  else {
+    return(1);}}}
+
+unsigned char hoistD1(long start_5X, long end_6X, long x_7X)
 {
   extern FILE * Scurrent_output_portS;
   extern long SlimitS;
   extern long ShpS;
   long arg1K1;
   long arg1K0;
-  long i_3X;
-  long h_4X;
-  long bucket_5X;
-  long index_6X;
-  unsigned char v_7X;
-  long b_8X;
-  long new_9X;
-  long addr_10X;
-  unsigned char v_11X;
-  long d_12X;
-  long obj_13X;
-  long v_14X;
-  long s_15X;
-  long v_16X;
+  long i_8X;
+  long h_9X;
+  long bucket_10X;
+  long index_11X;
+  long b_12X;
+  long new_13X;
+  long addr_14X;
+  long d_15X;
+  long obj_16X;
+  long v_17X;
+  long s_18X;
+  long n_19X;
 
- {arg1K0 = start_0X;
-  goto L17452;}
- L13710: {
-  i_3X = arg1K0;
-  h_4X = arg1K1;
-  if ((i_3X < (-1 + v_16X))) {
-    v_7X = ((long)(*((unsigned char*)((-3 + s_15X) + i_3X))));
-    arg1K0 = (1 + i_3X);
-    arg1K1 = (h_4X + ((long)(v_7X)));
-    goto L13710;}
+ {arg1K0 = start_5X;
+  goto L17309;}
+ L13654: {
+  i_8X = arg1K0;
+  h_9X = arg1K1;
+  if ((i_8X < n_19X)) {
+    arg1K0 = (1 + i_8X);
+    arg1K1 = (h_9X + ((long)((((long)(*((unsigned char *) ((-3 + s_18X) + i_8X))))))));
+    goto L13654;}
   else {
-    index_6X = h_4X & (-1 + v_14X);
-    bucket_5X = *((long*)((-3 + x_2X) + (((index_6X)<<2))));
-    arg1K0 = bucket_5X;
-    goto L13608;}}
- L13608: {
-  b_8X = arg1K0;
-  if ((25 == b_8X)) {
-    *((long*)ShpS) = 2050;
-    ShpS = (4 + ShpS);
-    new_9X = 3 + ShpS;
-    ShpS = (8 + ShpS);
-    *((long*)(-4 + ShpS)) = 0;
-    *((long*)(-3 + new_9X)) = obj_13X;
-    *((long*)(1 + new_9X)) = bucket_5X;
-    *((long*)((-3 + x_2X) + (((index_6X)<<2)))) = new_9X;
-    arg1K0 = (4 + (addr_10X + (-4 & (3 + ((long)(((unsigned long)d_12X)>>8))))));
-    goto L17452;}
+    index_11X = h_9X & (-1 + v_17X);
+    bucket_10X = *((long *) ((-3 + x_7X) + (((index_11X)<<2))));
+    arg1K0 = bucket_10X;
+    goto L13552;}}
+ L13552: {
+  b_12X = arg1K0;
+  if ((25 == b_12X)) {
+    *((long *) (ShpS)) = 2050;
+    ShpS = (4 + (ShpS));
+    new_13X = 3 + (ShpS);
+    ShpS = (8 + (ShpS));
+    *((long *) (-4 + (ShpS))) = 0;
+    *((long *) (-3 + new_13X)) = obj_16X;
+    *((long *) (1 + new_13X)) = bucket_10X;
+    *((long *) ((-3 + x_7X) + (((index_11X)<<2)))) = new_13X;
+    arg1K0 = (4 + (addr_14X + (-4 & (3 + ((long)(((unsigned long)d_15X)>>8))))));
+    goto L17309;}
   else {
-    if ((obj_13X == (*((long*)(-3 + b_8X))))) {
-      arg1K0 = (4 + (addr_10X + (-4 & (3 + ((long)(((unsigned long)d_12X)>>8))))));
-      goto L17452;}
+    if ((obj_16X == (*((long *) (-3 + b_12X))))) {
+      arg1K0 = (4 + (addr_14X + (-4 & (3 + ((long)(((unsigned long)d_15X)>>8))))));
+      goto L17309;}
     else {
-      arg1K0 = (*((long*)(1 + b_8X)));
-      goto L13608;}}}
- L17452: {
-  addr_10X = arg1K0;
-  if ((addr_10X < end_1X)) {
-    d_12X = *((long*)addr_10X);
-    if ((2 == (3 & d_12X))) {
-      if ((1 == (31 & (((d_12X)>>2))))) {
-        v_11X = (12 + ShpS) < SlimitS;
-        if (v_11X) {
-          obj_13X = 7 + addr_10X;
-          v_14X = (((3 + ((long)(((unsigned long)(*((long*)(-7 + x_2X))))>>8))))>>2);
-          s_15X = *((long*)(-3 + obj_13X));
-          v_16X = (long)(((unsigned long)(*((long*)(-7 + s_15X))))>>8);
+      arg1K0 = (*((long *) (1 + b_12X)));
+      goto L13552;}}}
+ L17309: {
+  addr_14X = arg1K0;
+  if ((addr_14X < end_6X)) {
+    d_15X = *((long *) addr_14X);
+    if ((2 == (3 & d_15X))) {
+      if ((1 == (31 & (((d_15X)>>2))))) {
+        if (((12 + (ShpS)) < (SlimitS))) {
+          obj_16X = 7 + addr_14X;
+          v_17X = (((3 + ((long)(((unsigned long)(*((long *) (-7 + x_7X))))>>8))))>>2);
+          s_18X = *((long *) (-3 + obj_16X));
+          n_19X = -1 + ((long)(((unsigned long)(*((long *) (-7 + s_18X))))>>8));
           arg1K0 = 0;
           arg1K1 = 0;
-          goto L13710;}
+          goto L13654;}
         else {
           return(0);}}
       else {
-        arg1K0 = (4 + (addr_10X + (-4 & (3 + ((long)(((unsigned long)d_12X)>>8))))));
-        goto L17452;}}
+        arg1K0 = (4 + (addr_14X + (-4 & (3 + ((long)(((unsigned long)d_15X)>>8))))));
+        goto L17309;}}
     else {
-      fputs("heap is in an inconsistent state.", Scurrent_output_portS);
-      return(0);}}
-  else {
-    return(1);}}}
-
-unsigned char hoistD1(long start_17X, long end_18X, long type_19X)
-{
-  extern FILE * Scurrent_output_portS;
-  extern long SlimitS;
-  extern long ShpS;
-  long arg1K0;
-  long addr_20X;
-  unsigned char v_21X;
-  long d_22X;
-
- {arg1K0 = start_17X;
-  goto L10236;}
- L10236: {
-  addr_20X = arg1K0;
-  if ((addr_20X < end_18X)) {
-    d_22X = *((long*)addr_20X);
-    if ((2 == (3 & d_22X))) {
-      if ((type_19X == (31 & (((d_22X)>>2))))) {
-        v_21X = (16 + ShpS) < SlimitS;
-        if (v_21X) {
-          *((long*)ShpS) = (7 + addr_20X);
-          ShpS = (4 + ShpS);
-          arg1K0 = (4 + (addr_20X + (-4 & (3 + ((long)(((unsigned long)d_22X)>>8))))));
-          goto L10236;}
-        else {
-          return(0);}}
-      else {
-        arg1K0 = (4 + (addr_20X + (-4 & (3 + ((long)(((unsigned long)d_22X)>>8))))));
-        goto L10236;}}
-    else {
-      fputs("heap is in an inconsistent state.", Scurrent_output_portS);
+      fputs("heap is in an inconsistent state.", (Scurrent_output_portS));
       return(0);}}
   else {
     return(1);}}}
@@ -188,14 +178,14 @@ long Tinterpret()
   extern long Sdynamic_stateS;
   extern long *Simpure_sizesS;
   extern long *Simpure_areasS;
-  extern unsigned char hoistD1(long, long, long);
+  extern unsigned char hoistD0(long, long, long);
   extern long *Spure_sizesS;
   extern long *Spure_areasS;
-  extern unsigned char hoistD0(long, long, long);
+  extern unsigned char hoistD1(long, long, long);
   extern long Sgc_countS;
   extern long Sminimum_recovered_spaceS;
-  extern char Spure_area_countS;
-  extern char Simpure_area_countS;
+  extern unsigned char Spure_area_countS;
+  extern unsigned char Simpure_area_countS;
   extern long Sweak_pointer_hpS;
   extern void do_gc();
   extern long Snewspace_endS;
@@ -226,13 +216,13 @@ long Tinterpret()
   unsigned char arg3K3;
   unsigned char arg3K0;
   FILE * arg2K0;
-  char arg0K0;
+  unsigned char arg0K0;
   long arg1K2;
   long arg1K1;
   long arg1K0;
-  char merged_arg0K0;
-  char merged_arg0K1;
-  char merged_arg0K3;
+  unsigned char merged_arg0K0;
+  unsigned char merged_arg0K1;
+  unsigned char merged_arg0K3;
   FILE * merged_arg2K1;
   long merged_arg1K4;
   long merged_arg1K3;
@@ -250,7 +240,8 @@ long Tinterpret()
   unsigned char stob_equalP_return_value;
   int write_number_return_tag;
   int close_port_return_tag;
-  int close_port_noisily_return_tag;
+  int close_untraced_portsB_return_tag;
+  unsigned char close_untraced_portsB_return_value;
   int copy_object_return_tag;
   long copy_object_return_value;
   int copy_next_return_tag;
@@ -270,1103 +261,921 @@ long Tinterpret()
   int preserve_continuation_return_tag;
   long preserve_continuation_return_value;
   int copy_stack_into_heap_return_tag;
-  unsigned char b_23X;
+  unsigned char b_20X;
+  unsigned char b_21X;
+  long space_22X;
+  long v_23X;
   unsigned char b_24X;
-  unsigned char okayP_25X;
-  unsigned char v_26X;
-  long space_27X;
-  long v_28X;
-  unsigned char b_29X;
-  long env_30X;
+  long env_25X;
+  unsigned char b_26X;
+  long location_27X;
+  unsigned char b_28X;
+  long location_29X;
+  unsigned char b_30X;
   unsigned char b_31X;
-  long location_32X;
-  unsigned char b_33X;
-  long location_34X;
-  unsigned char b_35X;
-  unsigned char b_36X;
-  unsigned char okayP_37X;
-  unsigned char v_38X;
-  long space_39X;
-  long v_40X;
+  long space_32X;
+  long v_33X;
+  long cont_34X;
+  long list_35X;
+  long proc_36X;
+  long v_37X;
+  long cont_38X;
+  long pc_39X;
+  long tem_40X;
   long cont_41X;
-  long list_42X;
-  long proc_43X;
-  long v_44X;
-  long cont_45X;
-  long pc_46X;
-  long tem_47X;
-  long cont_48X;
-  long tem_49X;
-  unsigned char b_50X;
-  long tem_51X;
-  unsigned char b_52X;
-  unsigned char b_53X;
-  unsigned char b_54X;
-  unsigned char b_55X;
-  unsigned char b_56X;
-  long val_57X;
-  long v_58X;
-  long v_59X;
-  long v_60X;
-  long v_61X;
-  long v_62X;
-  long z_63X;
-  long x_64X;
+  long tem_42X;
+  unsigned char b_43X;
+  long tem_44X;
+  unsigned char b_45X;
+  unsigned char b_46X;
+  unsigned char b_47X;
+  unsigned char b_48X;
+  unsigned char b_49X;
+  long val_50X;
+  long z_51X;
+  long x_52X;
+  long arg2_53X;
+  long arg2_54X;
+  long arg2_55X;
+  long x_56X;
+  long arg2_57X;
+  long arg2_58X;
+  long arg2_59X;
+  long x_60X;
+  long arg2_61X;
+  long arg2_62X;
+  long arg2_63X;
+  long arg2_64X;
   long arg2_65X;
-  long b_66X;
-  long a_67X;
-  long x_68X;
-  long arg2_69X;
-  unsigned char v_70X;
-  long b_71X;
-  long a_72X;
+  long arg2_66X;
+  long x_67X;
+  long result_68X;
+  long x_69X;
+  long value_70X;
+  long count_71X;
+  long x_72X;
   long x_73X;
-  long arg2_74X;
+  unsigned char b_74X;
   long x_75X;
-  long arg2_76X;
-  long x_77X;
-  long arg2_78X;
-  unsigned char v_79X;
-  long b_80X;
-  long a_81X;
-  long x_82X;
-  long arg2_83X;
-  long x_84X;
-  unsigned char v_85X;
-  long arg2_86X;
-  unsigned char v_87X;
-  long arg2_88X;
-  unsigned char v_89X;
-  long arg2_90X;
-  long x_91X;
-  long result_92X;
-  long x_93X;
-  long value_94X;
-  long count_95X;
-  long x_96X;
+  long space_76X;
+  unsigned char b_77X;
+  unsigned char b_78X;
+  long x_79X;
+  long arg2_80X;
+  long temp_81X;
+  long size_82X;
+  unsigned char b_83X;
+  long len_84X;
+  long x_85X;
+  long len_86X;
+  unsigned char b_87X;
+  long index_88X;
+  long len_89X;
+  unsigned char b_90X;
+  long index_91X;
+  long x_92X;
+  long size_93X;
+  long len_94X;
+  long init_95X;
+  long obj_96X;
   long arg2_97X;
-  long x_98X;
-  long x_99X;
-  long arg2_100X;
-  long x_101X;
-  long arg2_102X;
+  long arg3_98X;
+  long arg2_99X;
+  long obj_100X;
+  long arg2_101X;
+  long descriptor_102X;
   long x_103X;
-  long v_104X;
+  long obj_104X;
   long x_105X;
-  unsigned char b_106X;
-  long x_107X;
-  unsigned char b_108X;
-  unsigned char b_109X;
-  long x_110X;
-  long v_111X;
+  long p_106X;
+  unsigned char Kchar_107X;
+  long c_108X;
+  long x_109X;
+  unsigned char b_110X;
+  long p_111X;
   long arg2_112X;
-  long v_113X;
-  unsigned char v_114X;
-  long arg2_115X;
-  long v_116X;
-  long arg3_117X;
-  long arg2_118X;
-  unsigned char v_119X;
-  long x_120X;
-  long obj_121X;
-  unsigned char v_122X;
-  long arg2_123X;
-  unsigned char v_124X;
-  long v_125X;
-  unsigned char okayP_126X;
+  long p_113X;
+  long a_114X;
+  long old_115X;
+  long arg2_116X;
+  unsigned char v_117X;
+  long start_hp_118X;
+  long x_119X;
+  long obj_120X;
+  unsigned char v_121X;
+  long start_hp_122X;
+  long type_123X;
+  long obj_124X;
+  long obj_125X;
+  long tem_126X;
   unsigned char v_127X;
-  long size_128X;
-  long len_129X;
-  unsigned char init_130X;
-  long arg2_131X;
-  long v_132X;
-  long v_133X;
-  long index_134X;
-  long v_135X;
-  long v_136X;
-  long index_137X;
-  unsigned char Kchar_138X;
-  long arg3_139X;
-  long arg2_140X;
-  unsigned char x_141X;
-  long v_142X;
-  long x_143X;
-  long arg2_144X;
-  long x_145X;
-  long obj_146X;
-  unsigned char x_147X;
+  long name_128X;
+  long value_129X;
+  long x_130X;
+  long obj_131X;
+  long n_132X;
+  long n_133X;
+  long arg2_134X;
+  long return_value_135X;
+  long key_136X;
+  long x_137X;
+  long n_138X;
+  long x_139X;
+  long obj_140X;
+  unsigned char b_141X;
+  long space_142X;
+  long arg2_143X;
+  long obj_144X;
+  unsigned char x_145X;
+  long arg2_146X;
+  long arg2_147X;
   long x_148X;
-  unsigned char x_149X;
-  long x_150X;
-  unsigned char Kchar_151X;
-  long c_152X;
-  long x_153X;
-  long v_154X;
-  FILE * v_155X;
-  unsigned char v_156X;
-  long p_157X;
-  long x_158X;
-  long x_159X;
-  long v_160X;
-  unsigned char v_161X;
-  long p_162X;
-  unsigned char v_163X;
-  long p_164X;
-  long arg2_165X;
-  FILE * port_166X;
-  long v_167X;
-  long v_168X;
-  long e_169X;
-  long b_170X;
+  long key_149X;
+  long n_150X;
+  long proc_151X;
+  long p_152X;
+  long n_153X;
+  long temp_154X;
+  long *areas_155X;
+  long *sizes_156X;
+  unsigned char count_157X;
+  long *areas_158X;
+  long *sizes_159X;
+  unsigned char count_160X;
+  long x_161X;
+  long key_162X;
+  long arg2_163X;
+  long arg3_164X;
+  long obj_165X;
+  long x_166X;
+  unsigned char *spec_167X;
+  FILE * port_168X;
+  long b_169X;
+  long e_170X;
   long v_171X;
-  FILE * port_172X;
-  unsigned char *spec_173X;
-  long x_174X;
-  long obj_175X;
-  long arg3_176X;
-  long arg2_177X;
-  long n_178X;
-  long n_179X;
-  long key_180X;
-  long x_181X;
-  char count_182X;
-  long *sizes_183X;
-  long *areas_184X;
-  long v_185X;
-  char count_186X;
-  long *sizes_187X;
-  long *areas_188X;
-  long v_189X;
-  long v_190X;
-  long temp_191X;
-  long n_192X;
-  long p_193X;
-  long v_194X;
-  long v_195X;
-  long v_196X;
-  long proc_197X;
-  long index_198X;
-  long n_199X;
-  long key_200X;
-  long x_201X;
-  long arg2_202X;
-  long arg2_203X;
-  unsigned char x_204X;
-  long obj_205X;
-  long arg2_206X;
-  long v_207X;
-  unsigned char okayP_208X;
-  unsigned char v_209X;
-  long space_210X;
+  long arg2_172X;
+  long p_173X;
+  long p_174X;
+  long x_175X;
+  long x_176X;
+  long p_177X;
+  FILE * v_178X;
+  long x_179X;
+  long c_180X;
+  unsigned char Kchar_181X;
+  long x_182X;
+  long x_183X;
+  long obj_184X;
+  long x_185X;
+  long arg2_186X;
+  long x_187X;
+  long arg2_188X;
+  long arg3_189X;
+  unsigned char Kchar_190X;
+  long index_191X;
+  long len_192X;
+  long index_193X;
+  long len_194X;
+  long arg2_195X;
+  unsigned char init_196X;
+  long len_197X;
+  long size_198X;
+  long value_199X;
+  long index_200X;
+  long len_201X;
+  long index_202X;
+  long len_203X;
+  long arg2_204X;
+  long arg2_205X;
+  long arg3_206X;
+  long arg2_207X;
+  long arg2_208X;
+  long x_209X;
+  unsigned char b_210X;
   unsigned char b_211X;
-  unsigned char v_212X;
-  unsigned char okayP_213X;
-  long obj_214X;
-  long x_215X;
-  long v_216X;
-  long v_217X;
-  long v_218X;
+  long x_212X;
+  unsigned char b_213X;
+  long x_214X;
+  long arg2_215X;
+  long x_216X;
+  long arg2_217X;
+  long x_218X;
   long x_219X;
-  long key_220X;
-  long return_value_221X;
-  long arg2_222X;
-  long n_223X;
-  long n_224X;
-  long v_225X;
-  long obj_226X;
-  long x_227X;
-  long value_228X;
-  long name_229X;
-  unsigned char v_230X;
-  long tem_231X;
-  long obj_232X;
-  long v_233X;
-  long obj_234X;
-  long type_235X;
-  long start_hp_236X;
-  unsigned char v_237X;
-  long obj_238X;
-  long x_239X;
-  long start_hp_240X;
-  unsigned char v_241X;
-  long arg2_242X;
-  long old_243X;
-  long bytes_244X;
-  long v_245X;
-  long v_246X;
-  unsigned char x_247X;
-  long a_248X;
-  unsigned char v_249X;
-  long p_250X;
-  unsigned char v_251X;
-  long v_252X;
-  long v_253X;
-  FILE * port_254X;
-  long v_255X;
-  long arg2_256X;
-  long v_257X;
-  FILE * port_258X;
+  long arg2_220X;
+  long x_221X;
+  long x_222X;
+  long x_223X;
+  long a_224X;
+  long b_225X;
+  long x_226X;
+  long a_227X;
+  long b_228X;
+  long x_229X;
+  long arg2_230X;
+  long x_231X;
+  long a_232X;
+  long b_233X;
+  long x_234X;
+  long z_235X;
+  long x_236X;
+  long a_237X;
+  long b_238X;
+  long arg2_239X;
+  long x_240X;
+  long x_241X;
+  long x_242X;
+  long x_243X;
+  long x_244X;
+  long arg2_245X;
+  long x_246X;
+  unsigned char b_247X;
+  unsigned char b_248X;
+  unsigned char b_249X;
+  unsigned char b_250X;
+  long consumer_251X;
+  long start_arg_252X;
+  long start_loc_253X;
+  unsigned char b_254X;
+  unsigned char b_255X;
+  unsigned char b_256X;
+  long space_257X;
+  unsigned char b_258X;
   long p_259X;
-  unsigned char v_260X;
-  FILE * v_261X;
-  unsigned char b_262X;
-  long v_263X;
-  long x_264X;
-  long c_265X;
-  unsigned char Kchar_266X;
-  long p_267X;
-  unsigned char v_268X;
-  FILE * v_269X;
-  long v_270X;
-  long v_271X;
-  long v_272X;
-  unsigned char v_273X;
-  unsigned char okayP_274X;
-  long x_275X;
-  long v_276X;
-  long obj_277X;
-  long x_278X;
-  long descriptor_279X;
-  long v_280X;
-  unsigned char v_281X;
-  long arg2_282X;
-  unsigned char v_283X;
-  unsigned char x_284X;
-  long obj_285X;
-  long v_286X;
-  unsigned char v_287X;
-  long arg2_288X;
-  long arg3_289X;
-  long value_290X;
-  long index_291X;
-  long len_292X;
-  long v_293X;
-  long index_294X;
-  long len_295X;
-  long v_296X;
-  long arg2_297X;
-  long init_298X;
-  long len_299X;
-  long size_300X;
-  unsigned char v_301X;
-  unsigned char okayP_302X;
-  long x_303X;
-  long index_304X;
-  unsigned char b_305X;
-  long len_306X;
-  long index_307X;
-  unsigned char b_308X;
-  long len_309X;
-  long x_310X;
-  long len_311X;
-  unsigned char b_312X;
-  long size_313X;
+  long env_260X;
+  unsigned char b_261X;
+  long env_262X;
+  unsigned char b_263X;
+  long env_264X;
+  unsigned char b_265X;
+  unsigned char b_266X;
+  long env_267X;
+  unsigned char b_268X;
+  long v_269X;
+  unsigned char count_270X;
+  long space_271X;
+  long vector_272X;
+  long i_273X;
+  unsigned char v_274X;
+  long *areas_275X;
+  long *sizes_276X;
+  unsigned char count_277X;
+  long i_278X;
+  unsigned char v_279X;
+  long h_280X;
+  long addr_281X;
+  long h_282X;
+  long d_283X;
+  long sym_284X;
+  long v_285X;
+  long val_286X;
+  long i_287X;
+  long h_288X;
+  long bucket_289X;
+  long index_290X;
+  long new_291X;
+  long new_292X;
+  long b_293X;
+  unsigned char v_294X;
+  long new_295X;
+  long stob_296X;
+  long from_297X;
+  long from_298X;
+  long to_299X;
+  long arg2_300X;
+  long obj_301X;
+  long table_302X;
+  long v_303X;
+  long n_304X;
+  long arg2_305X;
+  long n_306X;
+  long new_307X;
+  long len_308X;
+  long obj_309X;
+  long l_310X;
+  long i_311X;
+  long i_312X;
+  long h_313X;
   unsigned char v_314X;
-  long temp_315X;
+  long i_315X;
   unsigned char v_316X;
-  long arg2_317X;
-  long x_318X;
-  unsigned char b_319X;
-  unsigned char b_320X;
-  long v_321X;
-  long space_322X;
-  unsigned char v_323X;
-  unsigned char okayP_324X;
-  long v_325X;
-  long x_326X;
-  unsigned char b_327X;
-  long x_328X;
-  unsigned char v_329X;
-  unsigned char v_330X;
-  unsigned char v_331X;
-  long x_332X;
-  unsigned char v_333X;
-  long arg2_334X;
-  unsigned char v_335X;
-  long arg2_336X;
-  unsigned char v_337X;
-  long arg2_338X;
-  long x_339X;
-  unsigned char v_340X;
-  long arg2_341X;
-  long x_342X;
-  long a_343X;
-  long b_344X;
-  unsigned char v_345X;
-  unsigned char v_346X;
-  unsigned char v_347X;
-  long arg2_348X;
-  long x_349X;
-  long z_350X;
-  unsigned char v_351X;
-  unsigned char v_352X;
-  long x_353X;
-  long x_354X;
-  long x_355X;
-  long x_356X;
-  long x_357X;
-  long arg2_358X;
-  long x_359X;
+  long resume_proc_317X;
+  long size_318X;
+  long b_319X;
+  long e_320X;
+  unsigned char v_321X;
+  long val_322X;
+  long c_323X;
+  long val_324X;
+  long key_325X;
+  long arg2_326X;
+  long mode_327X;
+  long i_328X;
+  long i_329X;
+  long i_330X;
+  long i_331X;
+  long index_332X;
+  long new_count_333X;
+  long old_count_334X;
+  FILE * *new_ports_335X;
+  long *new_vm_ports_336X;
+  FILE * port_337X;
+  long new_338X;
+  long index_339X;
+  long filename_340X;
+  unsigned char *spec_341X;
+  unsigned char *spec_342X;
+  long filename_343X;
+  unsigned char v_344X;
+  long new_345X;
+  long len_346X;
+  long string_347X;
+  long i_348X;
+  long new_349X;
+  long code_vector_350X;
+  long i_351X;
+  long val_352X;
+  long i_353X;
+  unsigned char okayP_354X;
+  long init_355X;
+  long new_356X;
+  long len_357X;
+  long new_358X;
+  long len_359X;
   unsigned char b_360X;
   unsigned char b_361X;
-  unsigned char b_362X;
-  unsigned char b_363X;
-  long consumer_364X;
-  long start_arg_365X;
-  long start_loc_366X;
-  unsigned char b_367X;
-  unsigned char b_368X;
-  unsigned char b_369X;
-  unsigned char x_370X;
-  long space_371X;
-  unsigned char v_372X;
-  unsigned char okayP_373X;
-  unsigned char b_374X;
-  long p_375X;
-  long v_376X;
-  long env_377X;
-  unsigned char b_378X;
-  long env_379X;
-  unsigned char b_380X;
-  long env_381X;
-  unsigned char b_382X;
-  unsigned char b_383X;
-  long env_384X;
-  unsigned char b_385X;
-  long v_386X;
-  unsigned char count_387X;
-  unsigned char x_388X;
-  long space_389X;
-  unsigned char v_390X;
-  unsigned char okayP_391X;
-  long vector_392X;
-  long i_393X;
-  unsigned char v_394X;
-  long *areas_395X;
-  long *sizes_396X;
-  char count_397X;
+  long new_362X;
+  long i_363X;
+  long n_364X;
+  long b_365X;
+  long c_366X;
+  long a_367X;
+  long b_368X;
+  long c_369X;
+  long a_370X;
+  long n_371X;
+  long b_372X;
+  long c_373X;
+  long a_374X;
+  long q_375X;
+  long a_376X;
+  long b_377X;
+  long b_378X;
+  long c_379X;
+  long a_380X;
+  long b_381X;
+  long lo_a_382X;
+  long lo_b_383X;
+  long hi_a_384X;
+  long hi_b_385X;
+  long lo_c_386X;
+  long mid_c_387X;
+  long c_388X;
+  long a_389X;
+  long offset_390X;
+  long list_391X;
+  long a_392X;
+  long new_393X;
+  long l_394X;
+  long last_395X;
+  long new_396X;
+  long a_397X;
   long i_398X;
-  unsigned char v_399X;
-  long h_400X;
-  long addr_401X;
-  long h_402X;
-  long d_403X;
-  long new_404X;
-  long new_405X;
-  long val_406X;
-  long i_407X;
-  long h_408X;
-  long bucket_409X;
-  long index_410X;
-  unsigned char v_411X;
-  long b_412X;
-  unsigned char v_413X;
-  long new_414X;
-  long stob_415X;
-  long from_416X;
-  long from_417X;
-  long to_418X;
-  long v_419X;
-  long v_420X;
-  long arg2_421X;
-  long obj_422X;
-  long table_423X;
-  long v_424X;
-  long v_425X;
-  long v_426X;
-  unsigned char v_427X;
-  long arg2_428X;
-  long n_429X;
+  long l_399X;
+  long space_400X;
+  long overflow_401X;
+  long args_402X;
+  long fast_403X;
+  long len_404X;
+  long slow_405X;
+  unsigned char move_slowP_406X;
+  long nargs_407X;
+  long args_408X;
+  long args_409X;
+  long loc_410X;
+  long arg_411X;
+  long v_412X;
+  long key_413X;
+  long v_414X;
+  long space_415X;
+  long key_416X;
+  long p_417X;
+  long v_418X;
+  long env_419X;
+  unsigned char b_420X;
+  long a_421X;
+  long new_422X;
+  long env_423X;
+  long i_424X;
+  unsigned char b_425X;
+  long env_426X;
+  long i_427X;
+  unsigned char b_428X;
+  long args_429X;
   long new_430X;
   long len_431X;
-  long obj_432X;
-  long l_433X;
-  long i_434X;
-  long i_435X;
-  long h_436X;
+  unsigned char b_432X;
+  unsigned char b_433X;
+  long v_434X;
+  unsigned char v_435X;
+  unsigned char v_436X;
   unsigned char v_437X;
-  char v_438X;
-  long i_439X;
+  unsigned char v_438X;
+  unsigned char v_439X;
   unsigned char v_440X;
-  long resume_proc_441X;
-  long new_442X;
-  long i_443X;
-  long header_444X;
-  long port_445X;
-  long count_446X;
-  long count_447X;
-  long size_448X;
-  long b_449X;
-  long e_450X;
-  char v_451X;
-  long val_452X;
-  long c_453X;
-  long val_454X;
-  long key_455X;
-  unsigned char v_456X;
-  long arg2_457X;
+  unsigned char v_441X;
+  unsigned char v_442X;
+  long r_443X;
+  unsigned char v_444X;
+  unsigned char v_445X;
+  unsigned char v_446X;
+  unsigned char v_447X;
+  long v_448X;
+  long key_449X;
+  long v_450X;
+  long cont_451X;
+  long tem_452X;
+  long pc_453X;
+  long args_454X;
+  long v_455X;
+  long v_456X;
+  long cont_457X;
   long v_458X;
-  long mode_459X;
-  long i_460X;
-  long x_461X;
-  long i_462X;
-  long x_463X;
-  long i_464X;
-  long i_465X;
-  long index_466X;
-  long new_count_467X;
-  long old_count_468X;
-  FILE * *new_ports_469X;
-  long *new_vm_ports_470X;
-  FILE * port_471X;
-  long new_472X;
-  long index_473X;
-  long filename_474X;
-  unsigned char *spec_475X;
-  unsigned char *spec_476X;
-  long filename_477X;
-  char v_478X;
-  long new_479X;
-  long len_480X;
-  long string_481X;
-  long i_482X;
-  long new_483X;
-  long code_vector_484X;
+  unsigned char next_op_459X;
+  long v_460X;
+  long next_461X;
+  long cont_462X;
+  long tem_463X;
+  long pc_464X;
+  long args_465X;
+  long v_466X;
+  long v_467X;
+  long args_468X;
+  long a1_469X;
+  long obj_470X;
+  long space_471X;
+  long v_472X;
+  unsigned char x_473X;
+  long tem_474X;
+  long obj_475X;
+  long space_476X;
+  long obj_477X;
+  long i_478X;
+  long m_479X;
+  long obj_480X;
+  long tem_481X;
+  long v_482X;
+  long key_483X;
+  long n_484X;
   long i_485X;
-  long val_486X;
-  long i_487X;
-  unsigned char okayP_488X;
-  long init_489X;
+  long i_486X;
+  long vec_487X;
+  long p_488X;
+  long i_489X;
   long new_490X;
   long len_491X;
-  long new_492X;
-  long len_493X;
-  unsigned char b_494X;
-  unsigned char b_495X;
-  long new_496X;
-  long i_497X;
-  char v_498X;
-  char v_499X;
-  long n_500X;
-  long b_501X;
-  long c_502X;
-  long a_503X;
-  long b_504X;
-  long c_505X;
-  long a_506X;
-  char v_507X;
-  char v_508X;
-  long n_509X;
-  long b_510X;
-  long c_511X;
-  long a_512X;
-  long q_513X;
-  long a_514X;
-  long b_515X;
-  long b_516X;
-  long c_517X;
-  long a_518X;
-  long b_519X;
-  long lo_a_520X;
-  long lo_b_521X;
-  long hi_a_522X;
-  long hi_b_523X;
-  long lo_c_524X;
-  long mid_c_525X;
-  long c_526X;
-  long a_527X;
-  long offset_528X;
-  long list_529X;
-  long a_530X;
-  long new_531X;
-  long l_532X;
-  long last_533X;
-  long new_534X;
-  long a_535X;
-  long i_536X;
-  long l_537X;
-  long space_538X;
-  unsigned char v_539X;
-  unsigned char okayP_540X;
-  long overflow_541X;
-  long args_542X;
-  long fast_543X;
-  long len_544X;
-  long slow_545X;
-  unsigned char move_slowP_546X;
-  long nargs_547X;
-  long args_548X;
-  long v_549X;
-  long args_550X;
-  long loc_551X;
-  long arg_552X;
-  long v_553X;
-  long key_554X;
-  long v_555X;
-  long space_556X;
-  unsigned char v_557X;
-  unsigned char okayP_558X;
-  long key_559X;
-  long p_560X;
+  long p_492X;
+  long v_493X;
+  long cont_494X;
+  long previous_495X;
+  long v_496X;
+  long cont_497X;
+  long p_498X;
+  long new_499X;
+  long v_500X;
+  long end_501X;
+  long top_502X;
+  long new_cont_503X;
+  long v_504X;
+  long from_505X;
+  long from_506X;
+  long to_507X;
+  long new_508X;
+  long env_509X;
+  long p_510X;
+  long env_511X;
+  long new_512X;
+  long cont_513X;
+  long env_514X;
+  long new_515X;
+  long len_516X;
+  long from_517X;
+  long to_518X;
+  long new_519X;
+  long bytes_520X;
+  long from_521X;
+  long p_522X;
+  long i_523X;
+  long key_524X;
+  long pc_525X;
+  long template_526X;
+  long cont_527X;
+  long space_528X;
+  long args_529X;
+  long count_530X;
+  long a_531X;
+  long new_532X;
+  long v_533X;
+  long value_534X;
+  long pc_535X;
+  long e_536X;
+  long b_537X;
+  long a_538X;
+  long value_539X;
+  long i_540X;
+  long a_541X;
+  long v_542X;
+  long start_543X;
+  long end_544X;
+  long addr_545X;
+  long v_546X;
+  long cont_547X;
+  long last_env_548X;
+  long env_549X;
+  long end_550X;
+  long *areas_551X;
+  long *sizes_552X;
+  unsigned char count_553X;
+  long env_554X;
+  long end_555X;
+  long addr_556X;
+  long v_557X;
+  long addr_558X;
+  long v_559X;
+  long addr_560X;
   long v_561X;
   long env_562X;
-  unsigned char v_563X;
-  unsigned char okayP_564X;
-  unsigned char b_565X;
-  long a_566X;
-  long new_567X;
-  long env_568X;
-  long i_569X;
-  unsigned char b_570X;
-  long env_571X;
-  long i_572X;
-  unsigned char b_573X;
-  long args_574X;
-  long new_575X;
-  long len_576X;
-  unsigned char b_577X;
-  unsigned char b_578X;
-  long v_579X;
-  char v_580X;
-  char v_581X;
-  char v_582X;
-  char v_583X;
-  char v_584X;
-  char v_585X;
-  long r_586X;
-  char v_587X;
-  char v_588X;
-  long v_589X;
-  long key_590X;
-  long v_591X;
-  long cont_592X;
-  long tem_593X;
-  long pc_594X;
-  long args_595X;
+  long start_563X;
+  long end_564X;
+  long v_565X;
+  long v_566X;
+  long value_567X;
+  long a_568X;
+  long v_569X;
+  long v_570X;
+  long value_571X;
+  long a_572X;
+  long v_573X;
+  long v_574X;
+  long value_575X;
+  long a_576X;
+  long v_577X;
+  long v_578X;
+  long value_579X;
+  long a_580X;
+  long v_581X;
+  long v_582X;
+  long value_583X;
+  long a_584X;
+  long tem_585X;
+  long v_586X;
+  long value_587X;
+  long a_588X;
+  long next_589X;
+  long thing_590X;
+  long value_591X;
+  long a_592X;
+  long a_593X;
+  long h_594X;
+  long descriptor_595X;
   long v_596X;
-  long v_597X;
-  long cont_598X;
-  long v_599X;
-  long v_600X;
-  unsigned char next_op_601X;
-  long v_602X;
-  long next_603X;
-  long cont_604X;
-  long tem_605X;
-  long pc_606X;
-  long args_607X;
-  long v_608X;
-  long v_609X;
-  long args_610X;
-  long a1_611X;
-  long v_612X;
-  long obj_613X;
-  unsigned char okayP_614X;
-  unsigned char v_615X;
-  long space_616X;
-  unsigned char x_617X;
-  long v_618X;
-  unsigned char x_619X;
-  long tem_620X;
-  long obj_621X;
-  long v_622X;
-  unsigned char okayP_623X;
-  unsigned char v_624X;
-  long space_625X;
-  unsigned char x_626X;
-  long v_627X;
-  long obj_628X;
-  long i_629X;
-  long m_630X;
-  long obj_631X;
-  long tem_632X;
-  long v_633X;
-  long v_634X;
-  long key_635X;
-  long n_636X;
-  long i_637X;
-  long i_638X;
-  long vec_639X;
-  long p_640X;
-  long i_641X;
-  long new_642X;
-  long len_643X;
-  long p_644X;
-  long v_645X;
-  long cont_646X;
-  long previous_647X;
-  long v_648X;
-  long cont_649X;
-  long p_650X;
-  long new_651X;
-  long v_652X;
-  long end_653X;
-  long cells_654X;
-  long top_655X;
-  long new_cont_656X;
-  long v_657X;
-  long from_658X;
-  long from_659X;
-  long to_660X;
-  long new_661X;
-  long env_662X;
-  long p_663X;
-  long env_664X;
-  long new_665X;
-  long cont_666X;
-  unsigned char v_667X;
-  long env_668X;
-  long new_669X;
-  long h_670X;
-  long len_671X;
-  long from_672X;
-  long to_673X;
-  long new_674X;
-  long bytes_675X;
-  long from_676X;
-  unsigned char x_677X;
-  unsigned char x_678X;
-  long p_679X;
-  long i_680X;
-  long key_681X;
-  long pc_682X;
-  long template_683X;
-  long cont_684X;
-  long space_685X;
-  unsigned char v_686X;
-  unsigned char okayP_687X;
-  long args_688X;
-  long count_689X;
-  long a_690X;
-  long new_691X;
-  long v_692X;
-  long value_693X;
-  long pc_694X;
-  long e_695X;
-  long b_696X;
-  long a_697X;
-  unsigned char v_698X;
-  long i_699X;
-  unsigned char x_700X;
-  long port_701X;
-  long header_702X;
-  long new_703X;
-  long value_704X;
-  long i_705X;
-  unsigned char v_706X;
-  long a_707X;
-  long v_708X;
-  long start_709X;
-  long end_710X;
-  long addr_711X;
-  long v_712X;
-  long cont_713X;
-  long last_env_714X;
-  long env_715X;
-  long byte_count_716X;
-  long *areas_717X;
-  long *sizes_718X;
-  char count_719X;
-  long env_720X;
-  long byte_count_721X;
-  long addr_722X;
-  long v_723X;
-  long addr_724X;
-  long v_725X;
-  long addr_726X;
-  long v_727X;
-  long env_728X;
-  long start_729X;
-  long end_730X;
-  long v_731X;
-  long v_732X;
-  long value_733X;
-  long a_734X;
-  unsigned char v_735X;
-  long v_736X;
-  long v_737X;
-  long value_738X;
-  long a_739X;
-  unsigned char v_740X;
-  long v_741X;
-  long v_742X;
-  long value_743X;
-  long a_744X;
-  unsigned char v_745X;
-  long v_746X;
-  long v_747X;
-  long value_748X;
-  long a_749X;
-  unsigned char v_750X;
-  long v_751X;
-  long v_752X;
-  long value_753X;
-  long a_754X;
-  unsigned char v_755X;
-  long tem_756X;
-  long v_757X;
-  long value_758X;
-  long a_759X;
-  unsigned char v_760X;
-  long next_761X;
-  long thing_762X;
-  long value_763X;
-  long a_764X;
-  unsigned char v_765X;
-  unsigned char v_766X;
-  long a_767X;
-  long h_768X;
-  long descriptor_769X;
-  long v_770X;
-  long o_771X;
-  long new_772X;
-  long x1_773X;
-  long header_774X;
-  long string_775X;
-  FILE * port_776X;
-  long v_777X;
-  FILE * port_778X;
-  long mode_779X;
-  long index_780X;
+  long o_597X;
+  long new_598X;
+  long x1_599X;
+  long i_600X;
+  long port_601X;
+  long header_602X;
+  long header_603X;
+  long new_604X;
+  long string_605X;
+  FILE * port_606X;
+  long mode_607X;
+  long index_608X;
 
-  long v_781X;
-  long z1_782X;
-  long z2_783X;
-  long i_784X;
-  long v_785X;
-  long z_786X;
-  unsigned char *v_787X;
-  long i_788X;
-  unsigned char v_789X;
-  unsigned char *c_790X;
-  long string_791X;
-  unsigned char c_792X;
-  long stob1_793X;
-  long stob2_794X;
-  long x_795X;
-  FILE * port_796X;
-  long vm_port_797X;
-  long port_798X;
-  long c_799X;
-  long thing_800X;
-  long c_801X;
-  long addr_802X;
-  long c_803X;
-  long value_804X;
-  long c_805X;
-  long start_806X;
-  long count_807X;
-  long code_pointer_808X;
-  long size_809X;
-  long c_810X;
-  long stob_811X;
-  long c_812X;
-  long env_813X;
-  long cont_814X;
-  long key_815X;
-  long c_816X;
-  long cont_817X;
-  long c_818X;
-  long key_819X;
-  char reason_820X;
-  long key_821X;
-  char c_822X;
-  char c_823X;
-  char bytes_consumed_824X;
-  char c_825X;
-  char nargs_826X;
-  char c_827X;
-  char byte_args_828X;
-  char c_829X;
-  char args_830X;
-  long a1_831X;
-  long a2_832X;
-  long a3_833X;
-  long a4_834X;
-  char c_835X;
-  char args_836X;
-  long a1_837X;
-  long a2_838X;
-  long a3_839X;
-  char c_840X;
-  char args_841X;
-  long a1_842X;
-  long a2_843X;
-  char c_844X;
-  char args_845X;
-  long a1_846X;
-  char c_847X;
-  long nargs_848X;
-  char c_849X;
-  char args_850X;
+  long v_609X;
+  long z1_610X;
+  long z2_611X;
+  long i_612X;
+  long z_613X;
+  unsigned char *v_614X;
+  long i_615X;
+  unsigned char *c_616X;
+  long string_617X;
+  unsigned char c_618X;
+  long stob1_619X;
+  long stob2_620X;
+  long x_621X;
+  FILE * port_622X;
+  long vm_port_623X;
+  unsigned char c_624X;
+  long c_625X;
+  long thing_626X;
+  long c_627X;
+  long addr_628X;
+  long c_629X;
+  long value_630X;
+  long c_631X;
+  long start_632X;
+  long count_633X;
+  long code_pointer_634X;
+  long size_635X;
+  long c_636X;
+  long old_stob_637X;
+  long c_638X;
+  long env_639X;
+  long cont_640X;
+  long key_641X;
+  long c_642X;
+  long cont_643X;
+  long c_644X;
+  long key_645X;
+  unsigned char reason_646X;
+  long key_647X;
+  unsigned char c_648X;
+  unsigned char c_649X;
+  unsigned char bytes_consumed_650X;
+  unsigned char c_651X;
+  unsigned char nargs_652X;
+  unsigned char c_653X;
+  unsigned char byte_args_654X;
+  unsigned char c_655X;
+  unsigned char args_656X;
+  long a1_657X;
+  long a2_658X;
+  long a3_659X;
+  long a4_660X;
+  unsigned char c_661X;
+  unsigned char args_662X;
+  long a1_663X;
+  long a2_664X;
+  long a3_665X;
+  unsigned char c_666X;
+  unsigned char args_667X;
+  long a1_668X;
+  long a2_669X;
+  unsigned char c_670X;
+  unsigned char args_671X;
+  long a1_672X;
+  unsigned char c_673X;
+  long nargs_674X;
+  unsigned char c_675X;
+  unsigned char args_676X;
  START: {
-  b_211X = *((unsigned char*)RScode_pointerS);
-  RScode_pointerS = (1 + RScode_pointerS);
-  switch (b_211X) {
+  b_141X = *((unsigned char *) (RScode_pointerS));
+  RScode_pointerS = (1 + (RScode_pointerS));
+  switch (b_141X) {
     case 0 : {
-      b_23X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      if ((SnargsS == ((long)b_23X))) {
+      b_20X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      if (((SnargsS) == ((long)b_20X))) {
         goto START;}
       else {
         merged_arg0K0 = 1;
         goto application_exception;}}
       break;
     case 1 : {
-      b_24X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      if ((SnargsS < ((long)b_24X))) {
+      b_21X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      if (((SnargsS) < ((long)b_21X))) {
         merged_arg0K0 = 1;
         goto application_exception;}
       else {
         goto START;}}
       break;
     case 2 : {
-      RSvalS = (((SnargsS)<<2));
+      RSvalS = ((((SnargsS))<<2));
       goto START;}
       break;
     case 3 : {
-      count_387X = *((unsigned char*)RScode_pointerS);
-      x_388X = Sstack_limitS < (-8 + (RSstackS - (((((long)count_387X))<<2))));
-      if (x_388X) {
-        goto L28086;}
+      count_270X = *((unsigned char *) (RScode_pointerS));
+      if (((Sstack_limitS) < (-8 + ((RSstackS) - (((((long)count_270X))<<2)))))) {
+        goto L27779;}
       else {
-        space_389X = 1 + ((((Sstack_endS - RSstackS))>>2));
-        v_390X = (ShpS + (((space_389X)<<2))) < SlimitS;
-        if (v_390X) {
+        space_271X = 1 + (((((Sstack_endS) - (RSstackS)))>>2));
+        if ((((ShpS) + (((space_271X)<<2))) < (SlimitS))) {
           arg1K0 = 0;
-          goto L28123;}
+          goto L27812;}
         else {
           merged_arg1K0 = 0;
           collect_saving_temp_return_tag = 0;
           goto collect_saving_temp;
          collect_saving_temp_return_0:
-          okayP_391X = (ShpS + (((space_389X)<<2))) < SlimitS;
-          if (okayP_391X) {
+          if ((((ShpS) + (((space_271X)<<2))) < (SlimitS))) {
             arg1K0 = 0;
-            goto L28123;}
+            goto L27812;}
           else {
             TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
             arg1K0 = 0;
-            goto L28123;}}}}
+            goto L27812;}}}}
       break;
     case 4 : {
-      space_27X = 2 + ((long)(*((unsigned char*)RScode_pointerS)));
-      v_26X = (ShpS + (((space_27X)<<2))) < SlimitS;
-      if (v_26X) {
-        goto L28160;}
+      space_22X = 2 + ((long)(*((unsigned char *) (RScode_pointerS))));
+      if ((((ShpS) + (((space_22X)<<2))) < (SlimitS))) {
+        goto L27845;}
       else {
         merged_arg1K0 = 0;
         collect_saving_temp_return_tag = 1;
         goto collect_saving_temp;
        collect_saving_temp_return_1:
-        okayP_25X = (ShpS + (((space_27X)<<2))) < SlimitS;
-        if (okayP_25X) {
-          goto L28160;}
+        if ((((ShpS) + (((space_22X)<<2))) < (SlimitS))) {
+          goto L27845;}
         else {
           TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
-          goto L28160;}}}
+          goto L27845;}}}
       break;
     case 5 : {
-      RSenvS = (*((long*)(-3 + RSenvS)));
+      RSenvS = (*((long *) (-3 + (RSenvS))));
       goto START;}
       break;
     case 6 : {
-      b_385X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      if ((64 == SnargsS)) {
-        RSstackS = (4 + RSstackS);
-        merged_arg1K0 = (*((long*)RSstackS));
-        merged_arg1K1 = ((-1 + SnargsS) - ((long)b_385X));
+      b_268X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      if ((64 == (SnargsS))) {
+        RSstackS = (4 + (RSstackS));
+        merged_arg1K0 = (*((long *) (RSstackS)));
+        merged_arg1K1 = ((-1 + (SnargsS)) - ((long)b_268X));
         pop_args_list_return_tag = 0;
         goto pop_args_list;
        pop_args_list_return_0:
-        v_28X = pop_args_list_return_value;
-        arg1K0 = v_28X;
-        goto L28232;}
+        v_23X = pop_args_list_return_value;
+        arg1K0 = v_23X;
+        goto L27913;}
       else {
         merged_arg1K0 = 25;
-        merged_arg1K1 = (SnargsS - ((long)b_385X));
+        merged_arg1K1 = ((SnargsS) - ((long)b_268X));
         pop_args_list_return_tag = 1;
         goto pop_args_list;
        pop_args_list_return_1:
-        v_386X = pop_args_list_return_value;
-        arg1K0 = v_386X;
-        goto L28232;}}
+        v_269X = pop_args_list_return_value;
+        arg1K0 = v_269X;
+        goto L27913;}}
       break;
     case 7 : {
-      b_29X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      RSvalS = (*((long*)((-3 + StemplateS) + (((((long)b_29X))<<2)))));
+      b_24X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      RSvalS = (*((long *) ((-3 + (StemplateS)) + (((((long)b_24X))<<2)))));
       goto START;}
       break;
     case 8 : {
-      b_383X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      env_384X = RSenvS;
-      arg1K0 = env_384X;
-      arg1K1 = ((long)b_383X);
-      goto L27984;}
+      b_266X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      env_267X = RSenvS;
+      arg1K0 = env_267X;
+      arg1K1 = ((long)b_266X);
+      goto L27677;}
       break;
     case 9 : {
-      env_381X = RSenvS;
-      b_382X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      RSvalS = (*((long*)((-3 + env_381X) + (((((long)b_382X))<<2)))));
-      if ((529 == RSvalS)) {
+      env_264X = RSenvS;
+      b_265X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      RSvalS = (*((long *) ((-3 + env_264X) + (((((long)b_265X))<<2)))));
+      if ((529 == (RSvalS))) {
         merged_arg0K0 = 1;
         goto raise_exception;}
       else {
         goto START;}}
       break;
     case 10 : {
-      env_379X = *((long*)(-3 + RSenvS));
-      b_380X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      RSvalS = (*((long*)((-3 + env_379X) + (((((long)b_380X))<<2)))));
-      if ((529 == RSvalS)) {
+      env_262X = *((long *) (-3 + (RSenvS)));
+      b_263X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      RSvalS = (*((long *) ((-3 + env_262X) + (((((long)b_263X))<<2)))));
+      if ((529 == (RSvalS))) {
         merged_arg0K0 = 1;
         goto raise_exception;}
       else {
         goto START;}}
       break;
     case 11 : {
-      env_377X = *((long*)(-3 + (*((long*)(-3 + RSenvS)))));
-      b_378X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      RSvalS = (*((long*)((-3 + env_377X) + (((((long)b_378X))<<2)))));
-      if ((529 == RSvalS)) {
+      env_260X = *((long *) (-3 + (*((long *) (-3 + (RSenvS))))));
+      b_261X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      RSvalS = (*((long *) ((-3 + env_260X) + (((((long)b_261X))<<2)))));
+      if ((529 == (RSvalS))) {
         merged_arg0K0 = 1;
         goto raise_exception;}
       else {
         goto START;}}
       break;
     case 12 : {
-      b_31X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      env_30X = RSenvS;
-      arg1K0 = env_30X;
-      arg1K1 = ((long)b_31X);
-      goto L28304;}
+      b_26X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      env_25X = RSenvS;
+      arg1K0 = env_25X;
+      arg1K1 = ((long)b_26X);
+      goto L27985;}
       break;
     case 13 : {
-      b_33X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      location_32X = *((long*)((-3 + StemplateS) + (((((long)b_33X))<<2))));
-      RSvalS = (*((long*)(-3 + location_32X)));
-      if ((17 == (255 & RSvalS))) {
+      b_28X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      location_27X = *((long *) ((-3 + (StemplateS)) + (((((long)b_28X))<<2))));
+      RSvalS = (*((long *) (-3 + location_27X)));
+      if ((17 == (255 & (RSvalS)))) {
         merged_arg0K0 = 1;
-        merged_arg1K1 = location_32X;
+        merged_arg1K1 = location_27X;
         goto raise_exception1;}
       else {
         goto START;}}
       break;
     case 14 : {
-      b_35X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      location_34X = *((long*)((-3 + StemplateS) + (((((long)b_35X))<<2))));
-      if ((273 == (*((long*)(-3 + location_34X))))) {
+      b_30X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      location_29X = *((long *) ((-3 + (StemplateS)) + (((((long)b_30X))<<2))));
+      if ((273 == (*((long *) (-3 + location_29X))))) {
         merged_arg0K0 = 1;
-        merged_arg1K1 = location_34X;
-        merged_arg1K2 = RSvalS;
+        merged_arg1K1 = location_29X;
+        merged_arg1K2 = (RSvalS);
         goto raise_exception2;}
       else {
-        *((long*)(-3 + location_34X)) = RSvalS;
+        *((long *) (-3 + location_29X)) = (RSvalS);
         RSvalS = 13;
         goto START;}}
       break;
     case 15 : {
-      p_375X = RSenvS;
-      if ((p_375X < Sstack_beginS)) {
+      p_259X = RSenvS;
+      if ((p_259X < (Sstack_beginS))) {
         arg1K0 = 0;
-        goto L28402;}
+        goto L28083;}
       else {
-        if ((Sstack_endS < p_375X)) {
+        if (((Sstack_endS) < p_259X)) {
           arg1K0 = 0;
-          goto L28402;}
+          goto L28083;}
         else {
-          v_376X = Sstack_endS - Sstack_beginS;
-          arg1K0 = v_376X;
-          goto L28402;}}}
+          arg1K0 = ((Sstack_endS) - (Sstack_beginS));
+          goto L28083;}}}
       break;
     case 16 : {
-      *((long*)RSstackS) = RSvalS;
-      RSstackS = (-4 + RSstackS);
+      *((long *) (RSstackS)) = (RSvalS);
+      RSstackS = (-4 + (RSstackS));
       goto START;}
       break;
     case 17 : {
-      RSstackS = (4 + RSstackS);
-      RSvalS = (*((long*)RSstackS));
+      RSstackS = (4 + (RSstackS));
+      RSvalS = (*((long *) (RSstackS)));
       goto START;}
       break;
     case 18 : {
-      b_36X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      RSvalS = (*((long*)(4 + (RSstackS + (((((long)b_36X))<<2))))));
+      b_31X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      RSvalS = (*((long *) (4 + ((RSstackS) + (((((long)b_31X))<<2))))));
       goto START;}
       break;
     case 19 : {
-      b_374X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      *((long*)(4 + (RSstackS + (((((long)b_374X))<<2))))) = RSvalS;
+      b_258X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      *((long *) (4 + ((RSstackS) + (((((long)b_258X))<<2))))) = (RSvalS);
       goto START;}
       break;
     case 20 : {
-      b_367X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      b_368X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      b_369X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      x_370X = Sstack_limitS < (-276 + RSstackS);
-      if (x_370X) {
+      b_254X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      b_255X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      b_256X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      if (((Sstack_limitS) < (-276 + (RSstackS)))) {
         arg1K0 = 0;
-        goto L28580;}
+        goto L28226;}
       else {
-        space_371X = 1 + ((((Sstack_endS - RSstackS))>>2));
-        v_372X = (ShpS + (((space_371X)<<2))) < SlimitS;
-        if (v_372X) {
+        space_257X = 1 + (((((Sstack_endS) - (RSstackS)))>>2));
+        if ((((ShpS) + (((space_257X)<<2))) < (SlimitS))) {
           arg1K0 = 0;
-          goto L28601;}
+          goto L28243;}
         else {
           merged_arg1K0 = 0;
           collect_saving_temp_return_tag = 2;
           goto collect_saving_temp;
          collect_saving_temp_return_2:
-          okayP_373X = (ShpS + (((space_371X)<<2))) < SlimitS;
-          if (okayP_373X) {
+          if ((((ShpS) + (((space_257X)<<2))) < (SlimitS))) {
             arg1K0 = 0;
-            goto L28601;}
+            goto L28243;}
           else {
             TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
             arg1K0 = 0;
-            goto L28601;}}}}
+            goto L28243;}}}}
       break;
     case 21 : {
-      space_39X = 1 + ((((Sstack_endS - RSstackS))>>2));
-      v_38X = (ShpS + (((space_39X)<<2))) < SlimitS;
-      if (v_38X) {
+      space_32X = 1 + (((((Sstack_endS) - (RSstackS)))>>2));
+      if ((((ShpS) + (((space_32X)<<2))) < (SlimitS))) {
         arg1K0 = 0;
-        goto L30336;}
+        goto L29927;}
       else {
         merged_arg1K0 = 0;
         collect_saving_temp_return_tag = 3;
         goto collect_saving_temp;
        collect_saving_temp_return_3:
-        okayP_37X = (ShpS + (((space_39X)<<2))) < SlimitS;
-        if (okayP_37X) {
+        if ((((ShpS) + (((space_32X)<<2))) < (SlimitS))) {
           arg1K0 = 0;
-          goto L30336;}
+          goto L29927;}
         else {
           TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
           arg1K0 = 0;
-          goto L30336;}}}
+          goto L29927;}}}
       break;
     case 22 : {
-      cont_41X = *((long*)(-3 + Sbottom_of_stackS));
-      if ((1 == cont_41X)) {
-        if ((0 == (3 & RSvalS))) {
-          RSvalS = (((RSvalS)>>2));
+      cont_34X = *((long *) (-3 + (Sbottom_of_stackS)));
+      if ((1 == cont_34X)) {
+        if ((0 == (3 & (RSvalS)))) {
+          RSvalS = ((((RSvalS))>>2));
           SvalS = RSvalS;
           SstackS = RSstackS;
           Scode_pointerS = RScode_pointerS;
@@ -1374,1552 +1183,1467 @@ long Tinterpret()
           TTreturn_value = 0;
           return(0L);}
         else {
-          RSstackS = (-11 + Sbottom_of_stackS);
-          *((long*)(-3 + Sbottom_of_stackS)) = 1;
+          RSstackS = (-11 + (Sbottom_of_stackS));
+          *((long *) (-3 + (Sbottom_of_stackS))) = 1;
           merged_arg0K0 = 0;
-          merged_arg1K1 = RSvalS;
+          merged_arg1K1 = (RSvalS);
           goto raise_exception1;}}
       else {
-        if ((1 == cont_41X)) {
-          RSstackS = (-11 + Sbottom_of_stackS);
-          *((long*)(-3 + Sbottom_of_stackS)) = 1;
-          arg1K0 = Sbottom_of_stackS;
-          goto L28710;}
+        if ((1 == cont_34X)) {
+          RSstackS = (-11 + (Sbottom_of_stackS));
+          *((long *) (-3 + (Sbottom_of_stackS))) = 1;
+          arg1K0 = (Sbottom_of_stackS);
+          goto L28344;}
         else {
-          merged_arg1K0 = cont_41X;
+          merged_arg1K0 = cont_34X;
           copy_continuation_from_heap_return_tag = 0;
           goto copy_continuation_from_heap;
          copy_continuation_from_heap_return_0:
-          v_40X = copy_continuation_from_heap_return_value;
-          arg1K0 = v_40X;
-          goto L28710;}}}
+          v_33X = copy_continuation_from_heap_return_value;
+          arg1K0 = v_33X;
+          goto L28344;}}}
       break;
     case 23 : {
-      SnargsS = ((long)(*((unsigned char*)RScode_pointerS)));
+      SnargsS = ((long)(*((unsigned char *) (RScode_pointerS))));
       merged_arg0K0 = 0;
       goto perform_application;}
       break;
     case 24 : {
-      SnargsS = ((long)(*((unsigned char*)RScode_pointerS)));
-      start_arg_365X = RSstackS + (((SnargsS)<<2));
-      start_loc_366X = -11 + ScontS;
-      if ((start_arg_365X < start_loc_366X)) {
-        arg1K0 = start_loc_366X;
-        arg1K1 = start_arg_365X;
-        goto L16015;}
+      SnargsS = ((long)(*((unsigned char *) (RScode_pointerS))));
+      start_arg_252X = (RSstackS) + ((((SnargsS))<<2));
+      start_loc_253X = -11 + (ScontS);
+      if ((start_arg_252X < start_loc_253X)) {
+        arg1K0 = start_loc_253X;
+        arg1K1 = start_arg_252X;
+        goto L15910;}
       else {
-        goto L15998;}}
+        goto L15893;}}
       break;
     case 25 : {
-      RSstackS = (4 + RSstackS);
-      proc_43X = *((long*)RSstackS);
-      list_42X = RSvalS;
-      arg1K0 = list_42X;
+      RSstackS = (4 + (RSstackS));
+      proc_36X = *((long *) (RSstackS));
+      list_35X = RSvalS;
+      arg1K0 = list_35X;
       arg1K1 = 0;
-      arg1K2 = list_42X;
+      arg1K2 = list_35X;
       arg3K3 = 0;
-      goto L25684;}
+      goto L25355;}
       break;
     case 26 : {
-      RSstackS = (4 + RSstackS);
-      cont_45X = *((long*)RSstackS);
-      if ((1 == cont_45X)) {
-        RSstackS = (-11 + Sbottom_of_stackS);
-        *((long*)(-3 + Sbottom_of_stackS)) = 1;
-        arg1K0 = Sbottom_of_stackS;
-        goto L30370;}
+      RSstackS = (4 + (RSstackS));
+      cont_38X = *((long *) (RSstackS));
+      if ((1 == cont_38X)) {
+        RSstackS = (-11 + (Sbottom_of_stackS));
+        *((long *) (-3 + (Sbottom_of_stackS))) = 1;
+        arg1K0 = (Sbottom_of_stackS);
+        goto L29957;}
       else {
-        merged_arg1K0 = cont_45X;
+        merged_arg1K0 = cont_38X;
         copy_continuation_from_heap_return_tag = 1;
         goto copy_continuation_from_heap;
        copy_continuation_from_heap_return_1:
-        v_44X = copy_continuation_from_heap_return_value;
-        arg1K0 = v_44X;
-        goto L30370;}}
+        v_37X = copy_continuation_from_heap_return_value;
+        arg1K0 = v_37X;
+        goto L29957;}}
       break;
     case 27 : {
-      RSstackS = (4 + RSstackS);
-      consumer_364X = *((long*)RSstackS);
-      *((long*)RSstackS) = RSvalS;
-      RSstackS = (-4 + RSstackS);
-      RSvalS = consumer_364X;
+      RSstackS = (4 + (RSstackS));
+      consumer_251X = *((long *) (RSstackS));
+      *((long *) (RSstackS)) = (RSvalS);
+      RSstackS = (-4 + (RSstackS));
+      RSvalS = consumer_251X;
       SnargsS = 1;
       merged_arg0K0 = 0;
       goto perform_application;}
       break;
     case 28 : {
-      cont_48X = ScontS;
-      tem_47X = *((long*)(5 + cont_48X));
-      pc_46X = *((long*)(1 + cont_48X));
-      StemplateS = tem_47X;
-      RScode_pointerS = ((-3 + (*((long*)(-3 + tem_47X)))) + (((pc_46X)>>2)));
-      RSenvS = (*((long*)(9 + cont_48X)));
-      ScontS = (*((long*)(-3 + cont_48X)));
-      RSstackS = (9 + cont_48X);
+      cont_41X = ScontS;
+      tem_40X = *((long *) (5 + cont_41X));
+      pc_39X = *((long *) (1 + cont_41X));
+      StemplateS = tem_40X;
+      RScode_pointerS = ((-3 + (*((long *) (-3 + tem_40X)))) + (((pc_39X)>>2)));
+      RSenvS = (*((long *) (9 + cont_41X)));
+      ScontS = (*((long *) (-3 + cont_41X)));
+      RSstackS = (9 + cont_41X);
       goto START;}
       break;
     case 29 : {
-      merged_arg1K0 = SnargsS;
+      merged_arg1K0 = (SnargsS);
       goto return_values;}
       break;
     case 30 : {
-      merged_arg1K0 = ((long)(*((unsigned char*)RScode_pointerS)));
+      merged_arg1K0 = ((long)(*((unsigned char *) (RScode_pointerS))));
       goto return_values;}
       break;
     case 31 : {
       goto START;}
       break;
     case 32 : {
-      b_50X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      tem_49X = *((long*)((-3 + StemplateS) + (((((long)b_50X))<<2))));
-      StemplateS = tem_49X;
-      RScode_pointerS = (-3 + (*((long*)(-3 + tem_49X))));
+      b_43X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      tem_42X = *((long *) ((-3 + (StemplateS)) + (((((long)b_43X))<<2))));
+      StemplateS = tem_42X;
+      RScode_pointerS = (-3 + (*((long *) (-3 + tem_42X))));
       goto START;}
       break;
     case 33 : {
-      b_53X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      SnargsS = ((long)b_53X);
-      b_52X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      tem_51X = *((long*)((-3 + StemplateS) + (((((long)b_52X))<<2))));
-      StemplateS = tem_51X;
-      RScode_pointerS = (-3 + (*((long*)(-3 + tem_51X))));
-      if ((0 == (Spending_interruptsS & Senabled_interruptsS))) {
+      b_46X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      SnargsS = ((long)b_46X);
+      b_45X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      tem_44X = *((long *) ((-3 + (StemplateS)) + (((((long)b_45X))<<2))));
+      StemplateS = tem_44X;
+      RScode_pointerS = (-3 + (*((long *) (-3 + tem_44X))));
+      if ((0 == ((Spending_interruptsS) & (Senabled_interruptsS)))) {
         goto START;}
       else {
         goto handle_interrupt;}}
       break;
     case 34 : {
-      b_55X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      b_54X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      if ((1 == RSvalS)) {
-        RScode_pointerS = (RScode_pointerS + ((((((long)b_55X))<<8)) + ((long)b_54X)));
+      b_48X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      b_47X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      if ((1 == (RSvalS))) {
+        RScode_pointerS = ((RScode_pointerS) + ((((((long)b_48X))<<8)) + ((long)b_47X)));
         goto START;}
       else {
         goto START;}}
       break;
     case 35 : {
-      b_362X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      b_363X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      RScode_pointerS = (RScode_pointerS + ((((((long)b_362X))<<8)) + ((long)b_363X)));
+      b_249X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      b_250X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      RScode_pointerS = ((RScode_pointerS) + ((((((long)b_249X))<<8)) + ((long)b_250X)));
       goto START;}
       break;
     case 36 : {
-      if ((0 == (3 & RSvalS))) {
-        val_57X = ((RSvalS)>>2);
-        b_56X = *((unsigned char*)RScode_pointerS);
-        RScode_pointerS = (1 + RScode_pointerS);
-        if ((val_57X < 0)) {
-          arg1K0 = (((((long)b_56X))<<1));
-          goto L28917;}
+      if ((0 == (3 & (RSvalS)))) {
+        val_50X = (((RSvalS))>>2);
+        b_49X = *((unsigned char *) (RScode_pointerS));
+        RScode_pointerS = (1 + (RScode_pointerS));
+        if ((val_50X < 0)) {
+          arg1K0 = (((((long)b_49X))<<1));
+          goto L28551;}
         else {
-          if ((val_57X < ((long)b_56X))) {
-            RScode_pointerS = (RScode_pointerS + (((val_57X)<<1)));
-            b_360X = *((unsigned char*)RScode_pointerS);
-            RScode_pointerS = (1 + RScode_pointerS);
-            b_361X = *((unsigned char*)RScode_pointerS);
-            RScode_pointerS = (1 + RScode_pointerS);
-            arg1K0 = ((((((long)b_360X))<<8)) + ((long)b_361X));
-            goto L28917;}
+          if ((val_50X < ((long)b_49X))) {
+            RScode_pointerS = ((RScode_pointerS) + (((val_50X)<<1)));
+            b_247X = *((unsigned char *) (RScode_pointerS));
+            RScode_pointerS = (1 + (RScode_pointerS));
+            b_248X = *((unsigned char *) (RScode_pointerS));
+            RScode_pointerS = (1 + (RScode_pointerS));
+            arg1K0 = ((((((long)b_247X))<<8)) + ((long)b_248X));
+            goto L28551;}
           else {
-            arg1K0 = (((((long)b_56X))<<1));
-            goto L28917;}}}
+            arg1K0 = (((((long)b_49X))<<1));
+            goto L28551;}}}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 37 : {
-      RSstackS = (4 + RSstackS);
-      arg2_358X = *((long*)RSstackS);
-      x_359X = RSvalS;
-      if ((arg2_358X == x_359X)) {
+      RSstackS = (4 + (RSstackS));
+      arg2_245X = *((long *) (RSstackS));
+      x_246X = RSvalS;
+      if ((arg2_245X == x_246X)) {
         arg0K0 = 5;
-        goto L30491;}
+        goto L30078;}
       else {
         arg0K0 = 1;
-        goto L30491;}}
+        goto L30078;}}
       break;
     case 38 : {
-      x_357X = RSvalS;
-      if ((0 == (3 & x_357X))) {
+      x_244X = RSvalS;
+      if ((0 == (3 & x_244X))) {
         arg0K0 = 5;
-        goto L30505;}
+        goto L30092;}
       else {
-        if ((3 == (3 & x_357X))) {
-          v_58X = 31 & ((((*((long*)(-7 + x_357X))))>>2));
-          if ((9 == v_58X)) {
+        if ((3 == (3 & x_244X))) {
+          if ((9 == (31 & ((((*((long *) (-7 + x_244X))))>>2))))) {
             arg0K0 = 5;
-            goto L30505;}
+            goto L30092;}
           else {
             arg0K0 = 1;
-            goto L30505;}}
+            goto L30092;}}
         else {
           arg0K0 = 1;
-          goto L30505;}}}
+          goto L30092;}}}
       break;
     case 39 : {
-      x_356X = RSvalS;
-      if ((0 == (3 & x_356X))) {
+      x_243X = RSvalS;
+      if ((0 == (3 & x_243X))) {
         RSvalS = 5;
         goto START;}
       else {
-        if ((3 == (3 & x_356X))) {
-          v_59X = 31 & ((((*((long*)(-7 + x_356X))))>>2));
-          if ((9 == v_59X)) {
+        if ((3 == (3 & x_243X))) {
+          if ((9 == (31 & ((((*((long *) (-7 + x_243X))))>>2))))) {
             merged_arg0K0 = 0;
-            merged_arg1K1 = x_356X;
+            merged_arg1K1 = x_243X;
             goto raise_exception1;}
           else {
-            goto L30525;}}
+            goto L30110;}}
         else {
-          goto L30525;}}}
+          goto L30110;}}}
       break;
     case 40 : {
-      x_355X = RSvalS;
-      if ((0 == (3 & x_355X))) {
+      x_242X = RSvalS;
+      if ((0 == (3 & x_242X))) {
         RSvalS = 5;
         goto START;}
       else {
-        if ((3 == (3 & x_355X))) {
-          v_60X = 31 & ((((*((long*)(-7 + x_355X))))>>2));
-          if ((9 == v_60X)) {
+        if ((3 == (3 & x_242X))) {
+          if ((9 == (31 & ((((*((long *) (-7 + x_242X))))>>2))))) {
             merged_arg0K0 = 0;
-            merged_arg1K1 = x_355X;
+            merged_arg1K1 = x_242X;
             goto raise_exception1;}
           else {
-            goto L30554;}}
+            goto L30137;}}
         else {
-          goto L30554;}}}
+          goto L30137;}}}
       break;
     case 41 : {
-      x_354X = RSvalS;
-      if ((0 == (3 & x_354X))) {
+      x_241X = RSvalS;
+      if ((0 == (3 & x_241X))) {
         RSvalS = 5;
         goto START;}
       else {
-        if ((3 == (3 & x_354X))) {
-          v_61X = 31 & ((((*((long*)(-7 + x_354X))))>>2));
-          if ((9 == v_61X)) {
+        if ((3 == (3 & x_241X))) {
+          if ((9 == (31 & ((((*((long *) (-7 + x_241X))))>>2))))) {
             merged_arg0K0 = 0;
-            merged_arg1K1 = x_354X;
+            merged_arg1K1 = x_241X;
             goto raise_exception1;}
           else {
-            goto L30583;}}
+            goto L30164;}}
         else {
-          goto L30583;}}}
+          goto L30164;}}}
       break;
     case 42 : {
-      x_353X = RSvalS;
-      if ((0 == (3 & x_353X))) {
+      x_240X = RSvalS;
+      if ((0 == (3 & x_240X))) {
         RSvalS = 5;
         goto START;}
       else {
-        if ((3 == (3 & x_353X))) {
-          v_62X = 31 & ((((*((long*)(-7 + x_353X))))>>2));
-          if ((9 == v_62X)) {
+        if ((3 == (3 & x_240X))) {
+          if ((9 == (31 & ((((*((long *) (-7 + x_240X))))>>2))))) {
             merged_arg0K0 = 0;
-            merged_arg1K1 = x_353X;
+            merged_arg1K1 = x_240X;
             goto raise_exception1;}
           else {
-            goto L30612;}}
+            goto L30191;}}
         else {
-          goto L30612;}}}
+          goto L30191;}}}
       break;
     case 43 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         RSvalS = 5;
         goto START;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 44 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 45 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 46 : {
-      RSstackS = (4 + RSstackS);
-      arg2_65X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_65X))) {
-        v_352X = 0 == (3 & RSvalS);
-        if (v_352X) {
-          x_64X = RSvalS;
-          z_63X = (((arg2_65X)>>2)) + (((x_64X)>>2));
-          if ((536870911 < z_63X)) {
-            goto L24535;}
-          else {
-            if ((z_63X < -536870912)) {
-              goto L24535;}
-            else {
-              RSvalS = (((z_63X)<<2));
-              goto START;}}}
+      RSstackS = (4 + (RSstackS));
+      arg2_239X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_239X | (RSvalS))))) {
+        x_52X = RSvalS;
+        z_51X = (((arg2_239X)>>2)) + (((x_52X)>>2));
+        if ((536870911 < z_51X)) {
+          goto L24242;}
         else {
-          goto L24513;}}
+          if ((z_51X < -536870912)) {
+            goto L24242;}
+          else {
+            RSvalS = (((z_51X)<<2));
+            goto START;}}}
       else {
-        goto L24513;}}
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_239X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
       break;
     case 47 : {
-      RSstackS = (4 + RSstackS);
-      arg2_69X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_69X))) {
-        v_351X = 0 == (3 & RSvalS);
-        if (v_351X) {
-          x_68X = RSvalS;
-          a_67X = ((arg2_69X)>>2);
-          b_66X = ((x_68X)>>2);
-          if ((a_67X < 0)) {
-            arg1K0 = (0 - a_67X);
-            goto L24331;}
-          else {
-            arg1K0 = a_67X;
-            goto L24331;}}
+      RSstackS = (4 + (RSstackS));
+      arg2_53X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_53X | (RSvalS))))) {
+        x_236X = RSvalS;
+        a_237X = ((arg2_53X)>>2);
+        b_238X = ((x_236X)>>2);
+        if ((a_237X < 0)) {
+          arg1K0 = (0 - a_237X);
+          goto L24038;}
         else {
-          goto L24306;}}
+          arg1K0 = a_237X;
+          goto L24038;}}
       else {
-        goto L24306;}}
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_53X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
       break;
     case 48 : {
-      RSstackS = (4 + RSstackS);
-      arg2_348X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_348X))) {
-        v_70X = 0 == (3 & RSvalS);
-        if (v_70X) {
-          x_349X = RSvalS;
-          z_350X = (((arg2_348X)>>2)) - (((x_349X)>>2));
-          if ((536870911 < z_350X)) {
-            goto L24214;}
-          else {
-            if ((z_350X < -536870912)) {
-              goto L24214;}
-            else {
-              RSvalS = (((z_350X)<<2));
-              goto START;}}}
+      RSstackS = (4 + (RSstackS));
+      arg2_54X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_54X | (RSvalS))))) {
+        x_234X = RSvalS;
+        z_235X = (((arg2_54X)>>2)) - (((x_234X)>>2));
+        if ((536870911 < z_235X)) {
+          goto L23921;}
         else {
-          goto L24192;}}
+          if ((z_235X < -536870912)) {
+            goto L23921;}
+          else {
+            RSvalS = (((z_235X)<<2));
+            goto START;}}}
       else {
-        goto L24192;}}
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_54X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
       break;
     case 49 : {
-      RSstackS = (4 + RSstackS);
-      arg2_74X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_74X))) {
-        v_347X = 0 == (3 & RSvalS);
-        if (v_347X) {
-          x_73X = RSvalS;
-          if ((0 == x_73X)) {
-            merged_arg0K0 = 0;
-            merged_arg1K1 = arg2_74X;
-            merged_arg1K2 = x_73X;
-            goto raise_exception2;}
-          else {
-            a_72X = ((arg2_74X)>>2);
-            b_71X = ((x_73X)>>2);
-            if ((a_72X < 0)) {
-              arg1K0 = (0 - a_72X);
-              goto L24008;}
-            else {
-              arg1K0 = a_72X;
-              goto L24008;}}}
+      RSstackS = (4 + (RSstackS));
+      arg2_55X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_55X | (RSvalS))))) {
+        x_231X = RSvalS;
+        if ((0 == x_231X)) {
+          merged_arg0K0 = 0;
+          merged_arg1K1 = arg2_55X;
+          merged_arg1K2 = x_231X;
+          goto raise_exception2;}
         else {
-          goto L23982;}}
+          a_232X = ((arg2_55X)>>2);
+          b_233X = ((x_231X)>>2);
+          if ((a_232X < 0)) {
+            arg1K0 = (0 - a_232X);
+            goto L23715;}
+          else {
+            arg1K0 = a_232X;
+            goto L23715;}}}
       else {
-        goto L23982;}}
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_55X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
       break;
     case 50 : {
-      RSstackS = (4 + RSstackS);
-      arg2_76X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_76X))) {
-        v_346X = 0 == (3 & RSvalS);
-        if (v_346X) {
-          x_75X = RSvalS;
-          if ((arg2_76X == x_75X)) {
-            arg0K0 = 5;
-            goto L23907;}
-          else {
-            arg0K0 = 1;
-            goto L23907;}}
+      RSstackS = (4 + (RSstackS));
+      arg2_230X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_230X | (RSvalS))))) {
+        x_56X = RSvalS;
+        if ((arg2_230X == x_56X)) {
+          arg0K0 = 5;
+          goto L30274;}
         else {
-          goto L23898;}}
+          arg0K0 = 1;
+          goto L30274;}}
       else {
-        goto L23898;}}
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_230X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
       break;
     case 51 : {
-      RSstackS = (4 + RSstackS);
-      arg2_78X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_78X))) {
-        v_345X = 0 == (3 & RSvalS);
-        if (v_345X) {
-          x_77X = RSvalS;
-          if ((arg2_78X < x_77X)) {
-            arg0K0 = 5;
-            goto L23823;}
-          else {
-            arg0K0 = 1;
-            goto L23823;}}
+      RSstackS = (4 + (RSstackS));
+      arg2_57X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_57X | (RSvalS))))) {
+        x_229X = RSvalS;
+        if ((arg2_57X < x_229X)) {
+          arg0K0 = 5;
+          goto L30298;}
         else {
-          goto L23814;}}
+          arg0K0 = 1;
+          goto L30298;}}
       else {
-        goto L23814;}}
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_57X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
       break;
     case 52 : {
-      RSstackS = (4 + RSstackS);
-      arg2_341X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_341X))) {
-        v_79X = 0 == (3 & RSvalS);
-        if (v_79X) {
-          x_342X = RSvalS;
-          if ((0 == x_342X)) {
-            merged_arg0K0 = 0;
-            merged_arg1K1 = arg2_341X;
-            merged_arg1K2 = x_342X;
-            goto raise_exception2;}
-          else {
-            a_343X = ((arg2_341X)>>2);
-            b_344X = ((x_342X)>>2);
-            if ((a_343X < 0)) {
-              arg1K0 = (0 - a_343X);
-              goto L23673;}
-            else {
-              arg1K0 = a_343X;
-              goto L23673;}}}
+      RSstackS = (4 + (RSstackS));
+      arg2_58X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_58X | (RSvalS))))) {
+        x_226X = RSvalS;
+        if ((0 == x_226X)) {
+          merged_arg0K0 = 0;
+          merged_arg1K1 = arg2_58X;
+          merged_arg1K2 = x_226X;
+          goto raise_exception2;}
         else {
-          goto L23647;}}
+          a_227X = ((arg2_58X)>>2);
+          b_228X = ((x_226X)>>2);
+          if ((a_227X < 0)) {
+            arg1K0 = (0 - a_227X);
+            goto L23380;}
+          else {
+            arg1K0 = a_227X;
+            goto L23380;}}}
       else {
-        goto L23647;}}
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_58X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
       break;
     case 53 : {
-      RSstackS = (4 + RSstackS);
-      arg2_83X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_83X))) {
-        v_340X = 0 == (3 & RSvalS);
-        if (v_340X) {
-          x_82X = RSvalS;
-          if ((0 == x_82X)) {
-            merged_arg0K0 = 0;
-            merged_arg1K1 = arg2_83X;
-            merged_arg1K2 = x_82X;
-            goto raise_exception2;}
-          else {
-            a_81X = ((arg2_83X)>>2);
-            b_80X = ((x_82X)>>2);
-            if ((a_81X < 0)) {
-              arg1K0 = (0 - a_81X);
-              goto L23542;}
-            else {
-              arg1K0 = a_81X;
-              goto L23542;}}}
+      RSstackS = (4 + (RSstackS));
+      arg2_59X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_59X | (RSvalS))))) {
+        x_223X = RSvalS;
+        if ((0 == x_223X)) {
+          merged_arg0K0 = 0;
+          merged_arg1K1 = arg2_59X;
+          merged_arg1K2 = x_223X;
+          goto raise_exception2;}
         else {
-          goto L23516;}}
+          a_224X = ((arg2_59X)>>2);
+          b_225X = ((x_223X)>>2);
+          if ((a_224X < 0)) {
+            arg1K0 = (0 - a_224X);
+            goto L23249;}
+          else {
+            arg1K0 = a_224X;
+            goto L23249;}}}
       else {
-        goto L23516;}}
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_59X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
       break;
     case 54 : {
-      if ((0 == (3 & RSvalS))) {
-        RSvalS = RSvalS;
+      if ((0 == (3 & (RSvalS)))) {
+        RSvalS = (RSvalS);
         goto START;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 55 : {
-      if ((0 == (3 & RSvalS))) {
-        RSvalS = RSvalS;
+      if ((0 == (3 & (RSvalS)))) {
+        RSvalS = (RSvalS);
         goto START;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 56 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         RSvalS = 4;
         goto START;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 57 : {
-      if ((0 == (3 & RSvalS))) {
-        RSvalS = RSvalS;
+      if ((0 == (3 & (RSvalS)))) {
+        RSvalS = (RSvalS);
         goto START;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 58 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         RSvalS = 0;
         goto START;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 59 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 60 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 61 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 62 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 63 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 64 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 65 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 66 : {
-      if ((0 == (3 & RSvalS))) {
+      if ((0 == (3 & (RSvalS)))) {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 67 : {
-      if ((0 == (3 & RSvalS))) {
-        x_84X = RSvalS;
-        if ((x_84X < 0)) {
+      if ((0 == (3 & (RSvalS)))) {
+        x_60X = RSvalS;
+        if ((x_60X < 0)) {
           merged_arg0K0 = 0;
-          merged_arg1K1 = x_84X;
+          merged_arg1K1 = x_60X;
           goto raise_exception1;}
         else {
           RSvalS = 0;
           goto START;}}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 68 : {
-      if ((0 == (3 & RSvalS))) {
-        x_339X = RSvalS;
-        if ((x_339X < 0)) {
-          arg1K0 = (0 - x_339X);
-          goto L30869;}
+      if ((0 == (3 & (RSvalS)))) {
+        x_222X = RSvalS;
+        if ((x_222X < 0)) {
+          arg1K0 = (0 - x_222X);
+          goto L30486;}
         else {
-          arg1K0 = x_339X;
-          goto L30869;}}
+          arg1K0 = x_222X;
+          goto L30486;}}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 69 : {
-      RSstackS = (4 + RSstackS);
-      arg2_338X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_338X))) {
-        v_85X = 0 == (3 & RSvalS);
-        if (v_85X) {
-          merged_arg0K0 = 0;
-          merged_arg1K1 = arg2_338X;
-          merged_arg1K2 = RSvalS;
-          goto raise_exception2;}
-        else {
-          goto L30892;}}
+      RSstackS = (4 + (RSstackS));
+      arg2_61X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_61X | (RSvalS))))) {
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_61X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}
       else {
-        goto L30892;}}
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_61X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
       break;
     case 70 : {
-      RSstackS = (4 + RSstackS);
-      arg2_86X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_86X))) {
-        v_337X = 0 == (3 & RSvalS);
-        if (v_337X) {
-          merged_arg0K0 = 0;
-          merged_arg1K1 = arg2_86X;
-          merged_arg1K2 = RSvalS;
-          goto raise_exception2;}
-        else {
-          goto L30913;}}
+      RSstackS = (4 + (RSstackS));
+      arg2_62X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_62X | (RSvalS))))) {
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_62X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}
       else {
-        goto L30913;}}
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_62X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
       break;
     case 71 : {
-      RSstackS = (4 + RSstackS);
-      arg2_336X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_336X))) {
-        v_87X = 0 == (3 & RSvalS);
-        if (v_87X) {
-          merged_arg0K0 = 0;
-          merged_arg1K1 = arg2_336X;
-          merged_arg1K2 = RSvalS;
-          goto raise_exception2;}
-        else {
-          goto L30934;}}
+      RSstackS = (4 + (RSstackS));
+      arg2_63X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_63X | (RSvalS))))) {
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_63X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}
       else {
-        goto L30934;}}
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_63X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
       break;
     case 72 : {
-      if ((0 == (3 & RSvalS))) {
-        RSvalS = ((((~ (((RSvalS)>>2))))<<2));
+      if ((0 == (3 & (RSvalS)))) {
+        RSvalS = ((((~ ((((RSvalS))>>2))))<<2));
         goto START;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 73 : {
-      RSstackS = (4 + RSstackS);
-      arg2_88X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_88X))) {
-        v_335X = 0 == (3 & RSvalS);
-        if (v_335X) {
-          RSvalS = (((((((arg2_88X)>>2)) & (((RSvalS)>>2))))<<2));
-          goto START;}
-        else {
-          goto L30967;}}
-      else {
-        goto L30967;}}
-      break;
-    case 74 : {
-      RSstackS = (4 + RSstackS);
-      arg2_334X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_334X))) {
-        v_89X = 0 == (3 & RSvalS);
-        if (v_89X) {
-          RSvalS = (((((((arg2_334X)>>2)) | (((RSvalS)>>2))))<<2));
-          goto START;}
-        else {
-          goto L30990;}}
-      else {
-        goto L30990;}}
-      break;
-    case 75 : {
-      RSstackS = (4 + RSstackS);
-      arg2_90X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_90X))) {
-        v_333X = 0 == (3 & RSvalS);
-        if (v_333X) {
-          RSvalS = (((((((arg2_90X)>>2)) ^ (((RSvalS)>>2))))<<2));
-          goto START;}
-        else {
-          goto L31013;}}
-      else {
-        goto L31013;}}
-      break;
-    case 76 : {
-      RSstackS = (4 + RSstackS);
-      arg2_97X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_97X))) {
-        v_331X = 0 == (3 & RSvalS);
-        if (v_331X) {
-          x_96X = RSvalS;
-          count_95X = ((x_96X)>>2);
-          value_94X = ((arg2_97X)>>2);
-          if ((count_95X < 0)) {
-            PS_SHIFT_RIGHT(value_94X, (0 - count_95X), x_332X)
-            RSvalS = (((x_332X)<<2));
-            goto START;}
-          else {
-            PS_SHIFT_LEFT(value_94X, count_95X, x_93X)
-            result_92X = (((((x_93X)<<2)))>>2);
-            PS_SHIFT_RIGHT(result_92X, count_95X, x_91X)
-            if ((value_94X == x_91X)) {
-              if ((value_94X < 0)) {
-                if ((result_92X < 0)) {
-                  goto L22991;}
-                else {
-                  goto L22988;}}
-              else {
-                if ((result_92X < 0)) {
-                  goto L22988;}
-                else {
-                  goto L22991;}}}
-            else {
-              goto L22988;}}}
-        else {
-          goto L22961;}}
-      else {
-        goto L22961;}}
-      break;
-    case 77 : {
-      x_98X = RSvalS;
-      if ((9 == (255 & x_98X))) {
-        arg0K0 = 5;
-        goto L31039;}
-      else {
-        arg0K0 = 1;
-        goto L31039;}}
-      break;
-    case 78 : {
-      RSstackS = (4 + RSstackS);
-      arg2_100X = *((long*)RSstackS);
-      if ((9 == (255 & arg2_100X))) {
-        v_330X = 9 == (255 & RSvalS);
-        if (v_330X) {
-          x_99X = RSvalS;
-          if ((arg2_100X == x_99X)) {
-            arg0K0 = 5;
-            goto L22886;}
-          else {
-            arg0K0 = 1;
-            goto L22886;}}
-        else {
-          goto L22877;}}
-      else {
-        goto L22877;}}
-      break;
-    case 79 : {
-      RSstackS = (4 + RSstackS);
-      arg2_102X = *((long*)RSstackS);
-      if ((9 == (255 & arg2_102X))) {
-        v_329X = 9 == (255 & RSvalS);
-        if (v_329X) {
-          x_101X = RSvalS;
-          if ((arg2_102X < x_101X)) {
-            arg0K0 = 5;
-            goto L22802;}
-          else {
-            arg0K0 = 1;
-            goto L22802;}}
-        else {
-          goto L22793;}}
-      else {
-        goto L22793;}}
-      break;
-    case 80 : {
-      if ((9 == (255 & RSvalS))) {
-        RSvalS = (((((long)(((((RSvalS)>>8))))))<<2));
+      RSstackS = (4 + (RSstackS));
+      arg2_64X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_64X | (RSvalS))))) {
+        RSvalS = (((((((arg2_64X)>>2)) & ((((RSvalS))>>2))))<<2));
         goto START;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = arg2_64X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
+      break;
+    case 74 : {
+      RSstackS = (4 + (RSstackS));
+      arg2_65X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_65X | (RSvalS))))) {
+        RSvalS = (((((((arg2_65X)>>2)) | ((((RSvalS))>>2))))<<2));
+        goto START;}
+      else {
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_65X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
+      break;
+    case 75 : {
+      RSstackS = (4 + (RSstackS));
+      arg2_66X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_66X | (RSvalS))))) {
+        RSvalS = (((((((arg2_66X)>>2)) ^ ((((RSvalS))>>2))))<<2));
+        goto START;}
+      else {
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_66X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
+      break;
+    case 76 : {
+      RSstackS = (4 + (RSstackS));
+      arg2_220X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_220X | (RSvalS))))) {
+        x_72X = RSvalS;
+        count_71X = ((x_72X)>>2);
+        value_70X = ((arg2_220X)>>2);
+        if ((count_71X < 0)) {
+          PS_SHIFT_RIGHT(value_70X, (0 - count_71X), x_221X)
+          RSvalS = (((x_221X)<<2));
+          goto START;}
+        else {
+          PS_SHIFT_LEFT(value_70X, count_71X, x_69X)
+          result_68X = (((((x_69X)<<2)))>>2);
+          PS_SHIFT_RIGHT(result_68X, count_71X, x_67X)
+          if ((value_70X == x_67X)) {
+            if ((value_70X < 0)) {
+              if ((result_68X < 0)) {
+                goto L22698;}
+              else {
+                goto L22695;}}
+            else {
+              if ((result_68X < 0)) {
+                goto L22695;}
+              else {
+                goto L22698;}}}
+          else {
+            goto L22695;}}}
+      else {
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_220X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
+      break;
+    case 77 : {
+      x_219X = RSvalS;
+      if ((9 == (255 & x_219X))) {
+        arg0K0 = 5;
+        goto L30614;}
+      else {
+        arg0K0 = 1;
+        goto L30614;}}
+      break;
+    case 78 : {
+      RSstackS = (4 + (RSstackS));
+      arg2_217X = *((long *) (RSstackS));
+      if ((9 == (255 & arg2_217X))) {
+        if ((9 == (255 & (RSvalS)))) {
+          x_218X = RSvalS;
+          if ((arg2_217X == x_218X)) {
+            arg0K0 = 5;
+            goto L30641;}
+          else {
+            arg0K0 = 1;
+            goto L30641;}}
+        else {
+          goto L30629;}}
+      else {
+        goto L30629;}}
+      break;
+    case 79 : {
+      RSstackS = (4 + (RSstackS));
+      arg2_215X = *((long *) (RSstackS));
+      if ((9 == (255 & arg2_215X))) {
+        if ((9 == (255 & (RSvalS)))) {
+          x_216X = RSvalS;
+          if ((arg2_215X < x_216X)) {
+            arg0K0 = 5;
+            goto L30670;}
+          else {
+            arg0K0 = 1;
+            goto L30670;}}
+        else {
+          goto L30658;}}
+      else {
+        goto L30658;}}
+      break;
+    case 80 : {
+      if ((9 == (255 & (RSvalS)))) {
+        RSvalS = (((((long)((((((RSvalS))>>8))))))<<2));
+        goto START;}
+      else {
+        merged_arg0K0 = 0;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 81 : {
-      if ((0 == (3 & RSvalS))) {
-        x_328X = ((RSvalS)>>2);
-        if ((255 < x_328X)) {
-          goto L31076;}
+      if ((0 == (3 & (RSvalS)))) {
+        x_73X = (((RSvalS))>>2);
+        if ((255 < x_73X)) {
+          goto L30701;}
         else {
-          if ((x_328X < 0)) {
-            goto L31076;}
+          if ((x_73X < 0)) {
+            goto L30701;}
           else {
-            RSvalS = (9 + (((((long)((x_328X))))<<8)));
+            RSvalS = (9 + (((((long)((x_73X))))<<8)));
             goto START;}}}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 82 : {
-      x_103X = RSvalS;
-      if ((21 == x_103X)) {
+      x_214X = RSvalS;
+      if ((21 == x_214X)) {
         arg0K0 = 5;
-        goto L31098;}
+        goto L30723;}
       else {
         arg0K0 = 1;
-        goto L31098;}}
+        goto L30723;}}
       break;
     case 83 : {
-      x_326X = RSvalS;
-      b_327X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      if ((3 == (3 & x_326X))) {
-        v_104X = 31 & ((((*((long*)(-7 + x_326X))))>>2));
-        if ((v_104X == ((long)b_327X))) {
+      x_75X = RSvalS;
+      b_74X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      if ((3 == (3 & x_75X))) {
+        if (((31 & ((((*((long *) (-7 + x_75X))))>>2))) == ((long)b_74X))) {
           arg0K0 = 5;
-          goto L31116;}
+          goto L30741;}
         else {
           arg0K0 = 1;
-          goto L31116;}}
+          goto L30741;}}
       else {
         arg0K0 = 1;
-        goto L31116;}}
+        goto L30741;}}
       break;
     case 84 : {
-      x_107X = RSvalS;
-      b_106X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      if ((3 == (3 & x_107X))) {
-        v_325X = 31 & ((((*((long*)(-7 + x_107X))))>>2));
-        if ((v_325X == ((long)b_106X))) {
-          x_105X = (((3 + ((long)(((unsigned long)(*((long*)(-7 + x_107X))))>>8))))>>2);
-          RSvalS = (((x_105X)<<2));
+      x_212X = RSvalS;
+      b_213X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      if ((3 == (3 & x_212X))) {
+        if (((31 & ((((*((long *) (-7 + x_212X))))>>2))) == ((long)b_213X))) {
+          RSvalS = (-4 & (3 + ((long)(((unsigned long)(*((long *) (-7 + x_212X))))>>8))));
           goto START;}
         else {
-          goto L22702;}}
+          goto L22411;}}
       else {
-        goto L22702;}}
+        goto L22411;}}
       break;
     case 85 : {
-      space_322X = 4 + (((((long)(*((unsigned char*)RScode_pointerS))))<<2));
-      v_323X = (ShpS + (((space_322X)<<2))) < SlimitS;
-      if (v_323X) {
-        goto L16739;}
+      space_76X = 4 + (((((long)(*((unsigned char *) (RScode_pointerS)))))<<2));
+      if ((((ShpS) + (((space_76X)<<2))) < (SlimitS))) {
+        goto L16612;}
       else {
         merged_arg1K0 = 0;
         collect_saving_temp_return_tag = 4;
         goto collect_saving_temp;
        collect_saving_temp_return_4:
-        okayP_324X = (ShpS + (((space_322X)<<2))) < SlimitS;
-        if (okayP_324X) {
-          goto L16739;}
+        if ((((ShpS) + (((space_76X)<<2))) < (SlimitS))) {
+          goto L16612;}
         else {
           TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
-          goto L16739;}}}
+          goto L16612;}}}
       break;
     case 86 : {
-      x_110X = RSvalS;
-      b_109X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      b_108X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      if ((3 == (3 & x_110X))) {
-        v_321X = 31 & ((((*((long*)(-7 + x_110X))))>>2));
-        if ((v_321X == ((long)b_109X))) {
-          RSvalS = (*((long*)((-3 + x_110X) + (((((long)b_108X))<<2)))));
+      x_209X = RSvalS;
+      b_210X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      b_211X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      if ((3 == (3 & x_209X))) {
+        if (((31 & ((((*((long *) (-7 + x_209X))))>>2))) == ((long)b_210X))) {
+          RSvalS = (*((long *) ((-3 + x_209X) + (((((long)b_211X))<<2)))));
           goto START;}
         else {
-          goto L25565;}}
+          goto L25238;}}
       else {
-        goto L25565;}}
+        goto L25238;}}
       break;
     case 87 : {
-      RSstackS = (4 + RSstackS);
-      arg2_317X = *((long*)RSstackS);
-      x_318X = RSvalS;
-      b_319X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      b_320X = *((unsigned char*)RScode_pointerS);
-      RScode_pointerS = (1 + RScode_pointerS);
-      if ((3 == (3 & arg2_317X))) {
-        v_111X = 31 & ((((*((long*)(-7 + arg2_317X))))>>2));
-        if ((v_111X == ((long)b_319X))) {
-          if ((3 == (3 & arg2_317X))) {
-            if ((0 == (128 & (*((long*)(-7 + arg2_317X)))))) {
-              *((long*)((-3 + arg2_317X) + (((((long)b_320X))<<2)))) = x_318X;
+      RSstackS = (4 + (RSstackS));
+      arg2_80X = *((long *) (RSstackS));
+      x_79X = RSvalS;
+      b_78X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      b_77X = *((unsigned char *) (RScode_pointerS));
+      RScode_pointerS = (1 + (RScode_pointerS));
+      if ((3 == (3 & arg2_80X))) {
+        if (((31 & ((((*((long *) (-7 + arg2_80X))))>>2))) == ((long)b_78X))) {
+          if ((3 == (3 & arg2_80X))) {
+            if ((0 == (128 & (*((long *) (-7 + arg2_80X)))))) {
+              *((long *) ((-3 + arg2_80X) + (((((long)b_77X))<<2)))) = x_79X;
               RSvalS = 13;
               goto START;}
             else {
-              goto L26044;}}
+              goto L25711;}}
           else {
-            goto L26044;}}
+            goto L25711;}}
         else {
-          goto L26044;}}
+          goto L25711;}}
       else {
-        goto L26044;}}
+        goto L25711;}}
       break;
     case 88 : {
-      RSstackS = (4 + RSstackS);
-      arg2_112X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_112X))) {
-        x_310X = RSvalS;
-        len_311X = ((arg2_112X)>>2);
-        b_312X = *((unsigned char*)RScode_pointerS);
-        RScode_pointerS = (1 + RScode_pointerS);
-        size_313X = 1 + len_311X;
-        if ((size_313X < 0)) {
-          goto L25432;}
+      RSstackS = (4 + (RSstackS));
+      arg2_208X = *((long *) (RSstackS));
+      if ((0 == (3 & arg2_208X))) {
+        x_85X = RSvalS;
+        len_84X = ((arg2_208X)>>2);
+        b_83X = *((unsigned char *) (RScode_pointerS));
+        RScode_pointerS = (1 + (RScode_pointerS));
+        size_82X = 1 + len_84X;
+        if ((len_84X < 0)) {
+          goto L25001;}
         else {
-          if ((4194304 < size_313X)) {
-            goto L25432;}
+          if ((4194304 < size_82X)) {
+            goto L25001;}
           else {
-            v_314X = (ShpS + (((size_313X)<<2))) < SlimitS;
-            if (v_314X) {
+            if ((((ShpS) + (((size_82X)<<2))) < (SlimitS))) {
               arg3K0 = 1;
-              arg1K1 = x_310X;
-              goto L25302;}
+              arg1K1 = x_85X;
+              goto L25006;}
             else {
-              merged_arg1K0 = x_310X;
+              merged_arg1K0 = x_85X;
               collect_saving_temp_return_tag = 5;
               goto collect_saving_temp;
              collect_saving_temp_return_5:
-              temp_315X = collect_saving_temp_return_value;
-              v_316X = (ShpS + (((size_313X)<<2))) < SlimitS;
-              arg3K0 = v_316X;
-              arg1K1 = temp_315X;
-              goto L25302;}}}}
+              temp_81X = collect_saving_temp_return_value;
+              arg3K0 = (((ShpS) + (((size_82X)<<2))) < (SlimitS));
+              arg1K1 = temp_81X;
+              goto L25006;}}}}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = arg2_112X;
-        merged_arg1K2 = RSvalS;
+        merged_arg1K1 = arg2_208X;
+        merged_arg1K2 = (RSvalS);
         goto raise_exception2;}}
       break;
     case 89 : {
-      RSstackS = (4 + RSstackS);
-      arg2_115X = *((long*)RSstackS);
-      v_114X = 0 == (3 & RSvalS);
-      if (v_114X) {
-        index_307X = ((RSvalS)>>2);
-        b_308X = *((unsigned char*)RScode_pointerS);
-        RScode_pointerS = (1 + RScode_pointerS);
-        if ((3 == (3 & arg2_115X))) {
-          v_113X = 31 & ((((*((long*)(-7 + arg2_115X))))>>2));
-          if ((v_113X == ((long)b_308X))) {
-            len_309X = (((3 + ((long)(((unsigned long)(*((long*)(-7 + arg2_115X))))>>8))))>>2);
-            if ((index_307X < 0)) {
-              goto L25123;}
+      RSstackS = (4 + (RSstackS));
+      arg2_207X = *((long *) (RSstackS));
+      if ((0 == (3 & (RSvalS)))) {
+        index_88X = (((RSvalS))>>2);
+        b_87X = *((unsigned char *) (RScode_pointerS));
+        RScode_pointerS = (1 + (RScode_pointerS));
+        if ((3 == (3 & arg2_207X))) {
+          if (((31 & ((((*((long *) (-7 + arg2_207X))))>>2))) == ((long)b_87X))) {
+            len_86X = (((3 + ((long)(((unsigned long)(*((long *) (-7 + arg2_207X))))>>8))))>>2);
+            if ((index_88X < 0)) {
+              goto L24824;}
             else {
-              if ((index_307X < len_309X)) {
-                RSvalS = (*((long*)((-3 + arg2_115X) + (((index_307X)<<2)))));
+              if ((index_88X < len_86X)) {
+                RSvalS = (*((long *) ((-3 + arg2_207X) + (((index_88X)<<2)))));
                 goto START;}
               else {
-                goto L25123;}}}
+                goto L24824;}}}
           else {
-            goto L25123;}}
+            goto L24824;}}
         else {
-          goto L25123;}}
+          goto L24824;}}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = arg2_115X;
-        merged_arg1K2 = RSvalS;
+        merged_arg1K1 = arg2_207X;
+        merged_arg1K2 = (RSvalS);
         goto raise_exception2;}}
       break;
     case 90 : {
-      RSstackS = (4 + RSstackS);
-      arg2_118X = *((long*)RSstackS);
-      RSstackS = (4 + RSstackS);
-      arg3_117X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_118X))) {
-        x_303X = RSvalS;
-        index_304X = ((arg2_118X)>>2);
-        b_305X = *((unsigned char*)RScode_pointerS);
-        RScode_pointerS = (1 + RScode_pointerS);
-        if ((3 == (3 & arg3_117X))) {
-          v_116X = 31 & ((((*((long*)(-7 + arg3_117X))))>>2));
-          if ((v_116X == ((long)b_305X))) {
-            len_306X = (((3 + ((long)(((unsigned long)(*((long*)(-7 + arg3_117X))))>>8))))>>2);
-            if ((index_304X < 0)) {
-              goto L25786;}
+      RSstackS = (4 + (RSstackS));
+      arg2_205X = *((long *) (RSstackS));
+      RSstackS = (4 + (RSstackS));
+      arg3_206X = *((long *) (RSstackS));
+      if ((0 == (3 & arg2_205X))) {
+        x_92X = RSvalS;
+        index_91X = ((arg2_205X)>>2);
+        b_90X = *((unsigned char *) (RScode_pointerS));
+        RScode_pointerS = (1 + (RScode_pointerS));
+        if ((3 == (3 & arg3_206X))) {
+          if (((31 & ((((*((long *) (-7 + arg3_206X))))>>2))) == ((long)b_90X))) {
+            len_89X = (((3 + ((long)(((unsigned long)(*((long *) (-7 + arg3_206X))))>>8))))>>2);
+            if ((index_91X < 0)) {
+              goto L25455;}
             else {
-              if ((index_304X < len_306X)) {
-                if ((3 == (3 & arg3_117X))) {
-                  if ((0 == (128 & (*((long*)(-7 + arg3_117X)))))) {
-                    *((long*)((-3 + arg3_117X) + (((index_304X)<<2)))) = x_303X;
+              if ((index_91X < len_89X)) {
+                if ((3 == (3 & arg3_206X))) {
+                  if ((0 == (128 & (*((long *) (-7 + arg3_206X)))))) {
+                    *((long *) ((-3 + arg3_206X) + (((index_91X)<<2)))) = x_92X;
                     RSvalS = 13;
                     goto START;}
                   else {
-                    goto L25786;}}
+                    goto L25455;}}
                 else {
-                  goto L25786;}}
+                  goto L25455;}}
               else {
-                goto L25786;}}}
+                goto L25455;}}}
           else {
-            goto L25786;}}
+            goto L25455;}}
         else {
-          goto L25786;}}
+          goto L25455;}}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = arg3_117X;
-        merged_arg1K2 = arg2_118X;
-        merged_arg1K3 = RSvalS;
+        merged_arg1K1 = arg3_206X;
+        merged_arg1K2 = arg2_205X;
+        merged_arg1K3 = (RSvalS);
         goto raise_exception3;}}
       break;
     case 91 : {
-      RSstackS = (4 + RSstackS);
-      arg2_297X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_297X))) {
-        v_119X = 0 == (3 & RSvalS);
-        if (v_119X) {
-          init_298X = ((RSvalS)>>2);
-          len_299X = ((arg2_297X)>>2);
-          size_300X = 1 + ((((3 + len_299X))>>2));
-          if ((size_300X < 0)) {
-            goto L22560;}
-          else {
-            if ((4194304 < size_300X)) {
-              goto L22560;}
-            else {
-              v_301X = (ShpS + (((size_300X)<<2))) < SlimitS;
-              if (v_301X) {
-                goto L22511;}
-              else {
-                merged_arg1K0 = 0;
-                collect_saving_temp_return_tag = 6;
-                goto collect_saving_temp;
-               collect_saving_temp_return_6:
-                okayP_302X = (ShpS + (((size_300X)<<2))) < SlimitS;
-                if (okayP_302X) {
-                  goto L22511;}
-                else {
-                  merged_arg0K0 = 0;
-                  merged_arg1K1 = (((len_299X)<<2));
-                  merged_arg1K2 = (((init_298X)<<2));
-                  goto raise_exception2;}}}}}
+      RSstackS = (4 + (RSstackS));
+      arg2_204X = *((long *) (RSstackS));
+      if ((0 == (3 & (arg2_204X | (RSvalS))))) {
+        init_95X = (((RSvalS))>>2);
+        len_94X = ((arg2_204X)>>2);
+        size_93X = 1 + ((((3 + len_94X))>>2));
+        if ((len_94X < 0)) {
+          goto L22159;}
         else {
-          goto L22462;}}
+          if ((4194304 < size_93X)) {
+            goto L22159;}
+          else {
+            if ((((ShpS) + (((size_93X)<<2))) < (SlimitS))) {
+              goto L22251;}
+            else {
+              merged_arg1K0 = 0;
+              collect_saving_temp_return_tag = 6;
+              goto collect_saving_temp;
+             collect_saving_temp_return_6:
+              if ((((ShpS) + (((size_93X)<<2))) < (SlimitS))) {
+                goto L22251;}
+              else {
+                merged_arg0K0 = 0;
+                merged_arg1K1 = (((len_94X)<<2));
+                merged_arg1K2 = (((init_95X)<<2));
+                goto raise_exception2;}}}}}
       else {
-        goto L22462;}}
+        merged_arg0K0 = 0;
+        merged_arg1K1 = arg2_204X;
+        merged_arg1K2 = (RSvalS);
+        goto raise_exception2;}}
       break;
     case 92 : {
-      obj_121X = RSvalS;
-      if ((3 == (3 & obj_121X))) {
-        v_296X = 31 & ((((*((long*)(-7 + obj_121X))))>>2));
-        if ((16 == v_296X)) {
-          x_120X = (long)(((unsigned long)(*((long*)(-7 + RSvalS))))>>8);
-          RSvalS = (((x_120X)<<2));
+      obj_96X = RSvalS;
+      if ((3 == (3 & obj_96X))) {
+        if ((16 == (31 & ((((*((long *) (-7 + obj_96X))))>>2))))) {
+          RSvalS = (((((long)(((unsigned long)(*((long *) (-7 + (RSvalS)))))>>8)))<<2));
           goto START;}
         else {
-          goto L31165;}}
+          goto L30788;}}
       else {
-        goto L31165;}}
+        goto L30788;}}
       break;
     case 93 : {
-      RSstackS = (4 + RSstackS);
-      arg2_123X = *((long*)RSstackS);
-      if ((3 == (3 & arg2_123X))) {
-        v_293X = 31 & ((((*((long*)(-7 + arg2_123X))))>>2));
-        if ((16 == v_293X)) {
-          v_122X = 0 == (3 & RSvalS);
-          if (v_122X) {
-            index_294X = ((RSvalS)>>2);
-            len_295X = (long)(((unsigned long)(*((long*)(-7 + arg2_123X))))>>8);
-            if ((index_294X < 0)) {
-              goto L22272;}
+      RSstackS = (4 + (RSstackS));
+      arg2_97X = *((long *) (RSstackS));
+      if ((3 == (3 & arg2_97X))) {
+        if ((16 == (31 & ((((*((long *) (-7 + arg2_97X))))>>2))))) {
+          if ((0 == (3 & (RSvalS)))) {
+            index_202X = (((RSvalS))>>2);
+            len_203X = (long)(((unsigned long)(*((long *) (-7 + arg2_97X))))>>8);
+            if ((index_202X < 0)) {
+              goto L22009;}
             else {
-              if ((index_294X < len_295X)) {
-                RSvalS = (((((long)(*((unsigned char*)((-3 + arg2_123X) + index_294X)))))<<2));
+              if ((index_202X < len_203X)) {
+                RSvalS = (((((long)(*((unsigned char *) ((-3 + arg2_97X) + index_202X)))))<<2));
                 goto START;}
               else {
-                goto L22272;}}}
+                goto L22009;}}}
           else {
-            goto L22277;}}
+            goto L22014;}}
         else {
-          goto L22277;}}
+          goto L22014;}}
       else {
-        goto L22277;}}
+        goto L22014;}}
       break;
     case 94 : {
-      RSstackS = (4 + RSstackS);
-      arg2_288X = *((long*)RSstackS);
-      RSstackS = (4 + RSstackS);
-      arg3_289X = *((long*)RSstackS);
-      if ((3 == (3 & arg3_289X))) {
-        v_125X = 31 & ((((*((long*)(-7 + arg3_289X))))>>2));
-        if ((16 == v_125X)) {
-          if ((0 == (3 & arg2_288X))) {
-            v_124X = 0 == (3 & RSvalS);
-            if (v_124X) {
-              value_290X = ((RSvalS)>>2);
-              index_291X = ((arg2_288X)>>2);
-              len_292X = (long)(((unsigned long)(*((long*)(-7 + arg3_289X))))>>8);
-              if ((index_291X < 0)) {
-                goto L24947;}
-              else {
-                if ((index_291X < len_292X)) {
-                  *((unsigned char*)((-3 + arg3_289X) + index_291X)) = ((unsigned char)value_290X);
-                  RSvalS = 13;
-                  goto START;}
-                else {
-                  goto L24947;}}}
+      RSstackS = (4 + (RSstackS));
+      arg2_99X = *((long *) (RSstackS));
+      RSstackS = (4 + (RSstackS));
+      arg3_98X = *((long *) (RSstackS));
+      if ((3 == (3 & arg3_98X))) {
+        if ((16 == (31 & ((((*((long *) (-7 + arg3_98X))))>>2))))) {
+          if ((0 == (3 & (arg2_99X | (RSvalS))))) {
+            value_199X = (((RSvalS))>>2);
+            index_200X = ((arg2_99X)>>2);
+            len_201X = (long)(((unsigned long)(*((long *) (-7 + arg3_98X))))>>8);
+            if ((index_200X < 0)) {
+              goto L24650;}
             else {
-              goto L24954;}}
+              if ((index_200X < len_201X)) {
+                *((unsigned char *) ((-3 + arg3_98X) + index_200X)) = ((unsigned char)value_199X);
+                RSvalS = 13;
+                goto START;}
+              else {
+                goto L24650;}}}
           else {
-            goto L24954;}}
+            goto L24657;}}
         else {
-          goto L24954;}}
+          goto L24657;}}
       else {
-        goto L24954;}}
+        goto L24657;}}
       break;
     case 95 : {
-      RSstackS = (4 + RSstackS);
-      arg2_131X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_131X))) {
-        v_287X = 9 == (255 & RSvalS);
-        if (v_287X) {
-          init_130X = (((RSvalS)>>8));
-          len_129X = ((arg2_131X)>>2);
-          size_128X = 1 + ((((4 + len_129X))>>2));
-          if ((size_128X < 0)) {
-            goto L22119;}
+      RSstackS = (4 + (RSstackS));
+      arg2_195X = *((long *) (RSstackS));
+      if ((0 == (3 & arg2_195X))) {
+        if ((9 == (255 & (RSvalS)))) {
+          init_196X = ((((RSvalS))>>8));
+          len_197X = ((arg2_195X)>>2);
+          size_198X = 1 + ((((4 + len_197X))>>2));
+          if ((len_197X < 0)) {
+            goto L21744;}
           else {
-            if ((4194304 < size_128X)) {
-              goto L22119;}
+            if ((4194304 < size_198X)) {
+              goto L21744;}
             else {
-              v_127X = (ShpS + (((size_128X)<<2))) < SlimitS;
-              if (v_127X) {
-                goto L22070;}
+              if ((((ShpS) + (((size_198X)<<2))) < (SlimitS))) {
+                goto L21838;}
               else {
                 merged_arg1K0 = 0;
                 collect_saving_temp_return_tag = 7;
                 goto collect_saving_temp;
                collect_saving_temp_return_7:
-                okayP_126X = (ShpS + (((size_128X)<<2))) < SlimitS;
-                if (okayP_126X) {
-                  goto L22070;}
+                if ((((ShpS) + (((size_198X)<<2))) < (SlimitS))) {
+                  goto L21838;}
                 else {
                   merged_arg0K0 = 0;
-                  merged_arg1K1 = (((len_129X)<<2));
-                  merged_arg1K2 = (9 + (((((long)(init_130X)))<<8)));
+                  merged_arg1K1 = (((len_197X)<<2));
+                  merged_arg1K2 = (9 + (((((long)(init_196X)))<<8)));
                   goto raise_exception2;}}}}}
         else {
-          goto L22019;}}
+          goto L21787;}}
       else {
-        goto L22019;}}
+        goto L21787;}}
       break;
     case 96 : {
-      obj_285X = RSvalS;
-      if ((3 == (3 & obj_285X))) {
-        v_132X = 31 & ((((*((long*)(-7 + obj_285X))))>>2));
-        if ((15 == v_132X)) {
-          v_286X = (long)(((unsigned long)(*((long*)(-7 + RSvalS))))>>8);
-          RSvalS = (-4 + (((v_286X)<<2)));
+      obj_100X = RSvalS;
+      if ((3 == (3 & obj_100X))) {
+        if ((15 == (31 & ((((*((long *) (-7 + obj_100X))))>>2))))) {
+          RSvalS = (-4 + (((((long)(((unsigned long)(*((long *) (-7 + (RSvalS)))))>>8)))<<2)));
           goto START;}
         else {
-          goto L31200;}}
+          goto L30819;}}
       else {
-        goto L31200;}}
+        goto L30819;}}
       break;
     case 97 : {
-      RSstackS = (4 + RSstackS);
-      arg2_282X = *((long*)RSstackS);
-      if ((3 == (3 & arg2_282X))) {
-        v_135X = 31 & ((((*((long*)(-7 + arg2_282X))))>>2));
-        if ((15 == v_135X)) {
-          v_283X = 0 == (3 & RSvalS);
-          if (v_283X) {
-            index_134X = ((RSvalS)>>2);
-            v_133X = (long)(((unsigned long)(*((long*)(-7 + arg2_282X))))>>8);
-            if ((index_134X < 0)) {
-              goto L21827;}
+      RSstackS = (4 + (RSstackS));
+      arg2_101X = *((long *) (RSstackS));
+      if ((3 == (3 & arg2_101X))) {
+        if ((15 == (31 & ((((*((long *) (-7 + arg2_101X))))>>2))))) {
+          if ((0 == (3 & (RSvalS)))) {
+            index_193X = (((RSvalS))>>2);
+            len_194X = -1 + ((long)(((unsigned long)(*((long *) (-7 + arg2_101X))))>>8));
+            if ((index_193X < 0)) {
+              goto L21594;}
             else {
-              if ((index_134X < (-1 + v_133X))) {
-                x_284X = ((long)(*((unsigned char*)((-3 + arg2_282X) + index_134X))));
-                RSvalS = (9 + (((((long)(x_284X)))<<8)));
+              if ((index_193X < len_194X)) {
+                RSvalS = (9 + (((((long)((((long)(*((unsigned char *) ((-3 + arg2_101X) + index_193X))))))))<<8)));
                 goto START;}
               else {
-                goto L21827;}}}
+                goto L21594;}}}
           else {
-            goto L21832;}}
+            goto L21599;}}
         else {
-          goto L21832;}}
+          goto L21599;}}
       else {
-        goto L21832;}}
+        goto L21599;}}
       break;
     case 98 : {
-      RSstackS = (4 + RSstackS);
-      arg2_140X = *((long*)RSstackS);
-      RSstackS = (4 + RSstackS);
-      arg3_139X = *((long*)RSstackS);
-      if ((3 == (3 & arg3_139X))) {
-        v_280X = 31 & ((((*((long*)(-7 + arg3_139X))))>>2));
-        if ((15 == v_280X)) {
-          if ((0 == (3 & arg2_140X))) {
-            v_281X = 9 == (255 & RSvalS);
-            if (v_281X) {
-              Kchar_138X = (((RSvalS)>>8));
-              index_137X = ((arg2_140X)>>2);
-              v_136X = (long)(((unsigned long)(*((long*)(-7 + arg3_139X))))>>8);
-              if ((index_137X < 0)) {
-                goto L24769;}
+      RSstackS = (4 + (RSstackS));
+      arg2_188X = *((long *) (RSstackS));
+      RSstackS = (4 + (RSstackS));
+      arg3_189X = *((long *) (RSstackS));
+      if ((3 == (3 & arg3_189X))) {
+        if ((15 == (31 & ((((*((long *) (-7 + arg3_189X))))>>2))))) {
+          if ((0 == (3 & arg2_188X))) {
+            if ((9 == (255 & (RSvalS)))) {
+              Kchar_190X = ((((RSvalS))>>8));
+              index_191X = ((arg2_188X)>>2);
+              len_192X = -1 + ((long)(((unsigned long)(*((long *) (-7 + arg3_189X))))>>8));
+              if ((index_191X < 0)) {
+                goto L24476;}
               else {
-                if ((index_137X < (-1 + v_136X))) {
-                  *((unsigned char*)((-3 + arg3_139X) + index_137X)) = ((unsigned char)((long)(Kchar_138X)));
+                if ((index_191X < len_192X)) {
+                  *((unsigned char *) ((-3 + arg3_189X) + index_191X)) = ((unsigned char)((long)(Kchar_190X)));
                   RSvalS = 13;
                   goto START;}
                 else {
-                  goto L24769;}}}
+                  goto L24476;}}}
             else {
-              goto L24776;}}
+              goto L24483;}}
           else {
-            goto L24776;}}
+            goto L24483;}}
         else {
-          goto L24776;}}
+          goto L24483;}}
       else {
-        goto L24776;}}
+        goto L24483;}}
       break;
     case 99 : {
-      obj_277X = RSvalS;
-      if ((3 == (3 & obj_277X))) {
-        v_142X = 31 & ((((*((long*)(-7 + obj_277X))))>>2));
-        if ((4 == v_142X)) {
-          x_278X = RSvalS;
-          descriptor_279X = *((long*)(-3 + x_278X));
-          if ((17 == (255 & descriptor_279X))) {
-            x_141X = 529 == (*((long*)(-3 + x_278X)));
-            if (x_141X) {
+      obj_104X = RSvalS;
+      if ((3 == (3 & obj_104X))) {
+        if ((4 == (31 & ((((*((long *) (-7 + obj_104X))))>>2))))) {
+          x_103X = RSvalS;
+          descriptor_102X = *((long *) (-3 + x_103X));
+          if ((17 == (255 & descriptor_102X))) {
+            if ((529 == (*((long *) (-3 + x_103X))))) {
               arg0K0 = 5;
-              goto L18416;}
+              goto L18245;}
             else {
               arg0K0 = 1;
-              goto L18416;}}
+              goto L18245;}}
           else {
             arg0K0 = 5;
-            goto L18416;}}
+            goto L18245;}}
         else {
-          goto L18407;}}
+          goto L18236;}}
       else {
-        goto L18407;}}
+        goto L18236;}}
       break;
     case 100 : {
-      RSstackS = (4 + RSstackS);
-      arg2_144X = *((long*)RSstackS);
-      if ((3 == (3 & arg2_144X))) {
-        v_276X = 31 & ((((*((long*)(-7 + arg2_144X))))>>2));
-        if ((4 == v_276X)) {
-          x_143X = RSvalS;
-          if ((1 == x_143X)) {
-            goto L21625;}
+      RSstackS = (4 + (RSstackS));
+      arg2_186X = *((long *) (RSstackS));
+      if ((3 == (3 & arg2_186X))) {
+        if ((4 == (31 & ((((*((long *) (-7 + arg2_186X))))>>2))))) {
+          x_187X = RSvalS;
+          if ((1 == x_187X)) {
+            goto L21394;}
           else {
-            if ((5 == x_143X)) {
-              goto L21625;}
+            if ((5 == x_187X)) {
+              goto L21394;}
             else {
-              goto L21653;}}}
+              goto L21422;}}}
         else {
-          goto L21653;}}
+          goto L21422;}}
       else {
-        goto L21653;}}
+        goto L21422;}}
       break;
     case 101 : {
-      x_275X = RSvalS;
-      if ((3 == (3 & x_275X))) {
-        if ((0 == (128 & (*((long*)(-7 + x_275X)))))) {
+      x_105X = RSvalS;
+      if ((3 == (3 & x_105X))) {
+        if ((0 == (128 & (*((long *) (-7 + x_105X)))))) {
           arg0K0 = 1;
-          goto L31240;}
+          goto L30855;}
         else {
           arg0K0 = 5;
-          goto L31240;}}
+          goto L30855;}}
       else {
         arg0K0 = 5;
-        goto L31240;}}
+        goto L30855;}}
       break;
     case 102 : {
-      x_145X = RSvalS;
-      if ((3 == (3 & x_145X))) {
-        if ((0 == (128 & (*((long*)(-7 + x_145X)))))) {
-          *((long*)(-7 + x_145X)) = (128 | (*((long*)(-7 + x_145X))));
-          goto L31255;}
+      x_185X = RSvalS;
+      if ((3 == (3 & x_185X))) {
+        if ((0 == (128 & (*((long *) (-7 + x_185X)))))) {
+          *((long *) (-7 + x_185X)) = (128 | (*((long *) (-7 + x_185X))));
+          goto L30870;}
         else {
-          goto L31255;}}
+          goto L30870;}}
       else {
-        goto L31255;}}
+        goto L30870;}}
       break;
     case 103 : {
-      v_273X = (20 + ShpS) < SlimitS;
-      if (v_273X) {
+      if (((20 + (ShpS)) < (SlimitS))) {
         arg1K0 = 0;
-        goto L21333;}
+        goto L21112;}
       else {
         merged_arg1K0 = 0;
         collect_saving_temp_return_tag = 8;
         goto collect_saving_temp;
        collect_saving_temp_return_8:
-        okayP_274X = (20 + ShpS) < SlimitS;
-        if (okayP_274X) {
+        if (((20 + (ShpS)) < (SlimitS))) {
           arg1K0 = 0;
-          goto L21333;}
+          goto L21112;}
         else {
           TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
           arg1K0 = 0;
-          goto L21333;}}}
+          goto L21112;}}}
       break;
     case 104 : {
-      obj_146X = RSvalS;
-      if ((3 == (3 & obj_146X))) {
-        v_272X = 31 & ((((*((long*)(-7 + obj_146X))))>>2));
-        if ((5 == v_272X)) {
-          merged_arg1K0 = RSvalS;
+      obj_184X = RSvalS;
+      if ((3 == (3 & obj_184X))) {
+        if ((5 == (31 & ((((*((long *) (-7 + obj_184X))))>>2))))) {
+          merged_arg1K0 = (RSvalS);
           close_port_return_tag = 0;
           goto close_port;
          close_port_return_0:
           RSvalS = 13;
           goto START;}
         else {
-          goto L31276;}}
+          goto L30891;}}
       else {
-        goto L31276;}}
+        goto L30891;}}
       break;
     case 105 : {
-      x_148X = RSvalS;
-      if ((3 == (3 & x_148X))) {
-        v_271X = 31 & ((((*((long*)(-7 + x_148X))))>>2));
-        if ((5 == v_271X)) {
-          x_147X = 4 == (*((long*)(-3 + x_148X)));
-          if (x_147X) {
+      x_183X = RSvalS;
+      if ((3 == (3 & x_183X))) {
+        if ((5 == (31 & ((((*((long *) (-7 + x_183X))))>>2))))) {
+          if ((4 == (*((long *) (-3 + x_183X))))) {
             arg0K0 = 5;
-            goto L31300;}
+            goto L30913;}
           else {
             arg0K0 = 1;
-            goto L31300;}}
+            goto L30913;}}
         else {
           arg0K0 = 1;
-          goto L31300;}}
+          goto L30913;}}
       else {
         arg0K0 = 1;
-        goto L31300;}}
+        goto L30913;}}
       break;
     case 106 : {
-      x_150X = RSvalS;
-      if ((3 == (3 & x_150X))) {
-        v_270X = 31 & ((((*((long*)(-7 + x_150X))))>>2));
-        if ((5 == v_270X)) {
-          x_149X = 8 == (*((long*)(-3 + x_150X)));
-          if (x_149X) {
+      x_182X = RSvalS;
+      if ((3 == (3 & x_182X))) {
+        if ((5 == (31 & ((((*((long *) (-7 + x_182X))))>>2))))) {
+          if ((8 == (*((long *) (-3 + x_182X))))) {
             arg0K0 = 5;
-            goto L31322;}
+            goto L30931;}
           else {
             arg0K0 = 1;
-            goto L31322;}}
+            goto L30931;}}
         else {
           arg0K0 = 1;
-          goto L31322;}}
+          goto L30931;}}
       else {
         arg0K0 = 1;
-        goto L31322;}}
+        goto L30931;}}
       break;
     case 107 : {
-      p_267X = RSvalS;
-      if ((3 == (3 & p_267X))) {
-        v_154X = 31 & ((((*((long*)(-7 + p_267X))))>>2));
-        if ((5 == v_154X)) {
-          v_268X = 4 == (*((long*)(-3 + p_267X)));
-          if (v_268X) {
-            if (((*((long*)(1 + p_267X))) < 0)) {
-              goto L17974;}
+      p_106X = RSvalS;
+      if ((3 == (3 & p_106X))) {
+        if ((5 == (31 & ((((*((long *) (-7 + p_106X))))>>2))))) {
+          if ((4 == (*((long *) (-3 + p_106X))))) {
+            if (((*((long *) (1 + p_106X))) < 0)) {
+              goto L17817;}
             else {
-              x_153X = RSvalS;
-              c_152X = *((long*)(5 + x_153X));
-              if ((1 == c_152X)) {
-                v_269X = *(Sopen_portsS + ((((*((long*)(1 + x_153X))))>>2)));
+              x_179X = RSvalS;
+              c_180X = *((long *) (5 + x_179X));
+              if ((1 == c_180X)) {
                 { int TTchar;
-                  PS_GETC(v_269X, TTchar);
+                  PS_GETC((*((Sopen_portsS) + ((((*((long *) (1 + x_179X))))>>2)))), TTchar);
                   if (EOF == TTchar) {
                     arg1K0 = 21;
-                    goto L17971;}
+                    goto L17814;}
                   else {
-                    unsigned char Kchar_151X = TTchar;
-                    arg1K0 = (9 + (((((long)(Kchar_151X)))<<8)));
-                    goto L17971;}}}
+                    unsigned char Kchar_181X = TTchar;
+                    arg1K0 = (9 + (((((long)(Kchar_181X)))<<8)));
+                    goto L17814;}}}
               else {
-                *((long*)(5 + x_153X)) = 1;
-                arg1K0 = c_152X;
-                goto L17971;}}}
+                *((long *) (5 + x_179X)) = 1;
+                arg1K0 = c_180X;
+                goto L17814;}}}
           else {
-            goto L17974;}}
+            goto L17817;}}
         else {
-          goto L17974;}}
+          goto L17817;}}
       else {
-        goto L17974;}}
+        goto L17817;}}
       break;
     case 108 : {
-      p_157X = RSvalS;
-      if ((3 == (3 & p_157X))) {
-        v_263X = 31 & ((((*((long*)(-7 + p_157X))))>>2));
-        if ((5 == v_263X)) {
-          v_156X = 4 == (*((long*)(-3 + p_157X)));
-          if (v_156X) {
-            if (((*((long*)(1 + p_157X))) < 0)) {
-              goto L17852;}
+      p_177X = RSvalS;
+      if ((3 == (3 & p_177X))) {
+        if ((5 == (31 & ((((*((long *) (-7 + p_177X))))>>2))))) {
+          if ((4 == (*((long *) (-3 + p_177X))))) {
+            if (((*((long *) (1 + p_177X))) < 0)) {
+              goto L17699;}
             else {
-              x_264X = RSvalS;
-              c_265X = *((long*)(5 + x_264X));
-              if ((1 == c_265X)) {
-                v_155X = *(Sopen_portsS + ((((*((long*)(1 + x_264X))))>>2)));
+              x_109X = RSvalS;
+              c_108X = *((long *) (5 + x_109X));
+              if ((1 == c_108X)) {
+                v_178X = *((Sopen_portsS) + ((((*((long *) (1 + x_109X))))>>2)));
                 { int TTchar;
-                  PS_GETC(v_155X, TTchar);
+                  PS_GETC(v_178X, TTchar);
                   if (EOF == TTchar) {
                     arg1K0 = 21;
-                    goto L17844;}
+                    goto L17691;}
                   else {
-                    unsigned char Kchar_266X = TTchar;
-                    arg1K0 = (9 + (((((long)(Kchar_266X)))<<8)));
-                    goto L17844;}}}
+                    unsigned char Kchar_107X = TTchar;
+                    arg1K0 = (9 + (((((long)(Kchar_107X)))<<8)));
+                    goto L17691;}}}
               else {
-                arg1K0 = c_265X;
-                goto L17849;}}}
+                arg1K0 = c_108X;
+                goto L17696;}}}
           else {
-            goto L17852;}}
+            goto L17699;}}
         else {
-          goto L17852;}}
+          goto L17699;}}
       else {
-        goto L17852;}}
+        goto L17699;}}
       break;
     case 109 : {
-      p_259X = RSvalS;
-      if ((3 == (3 & p_259X))) {
-        v_160X = 31 & ((((*((long*)(-7 + p_259X))))>>2));
-        if ((5 == v_160X)) {
-          v_260X = 4 == (*((long*)(-3 + p_259X)));
-          if (v_260X) {
-            if (((*((long*)(1 + p_259X))) < 0)) {
-              goto L17695;}
+      p_111X = RSvalS;
+      if ((3 == (3 & p_111X))) {
+        if ((5 == (31 & ((((*((long *) (-7 + p_111X))))>>2))))) {
+          if ((4 == (*((long *) (-3 + p_111X))))) {
+            if (((*((long *) (1 + p_111X))) < 0)) {
+              goto L17546;}
             else {
-              x_159X = RSvalS;
-              x_158X = *((long*)(5 + x_159X));
-              if ((1 == x_158X)) {
-                v_261X = *(Sopen_portsS + ((((*((long*)(1 + x_159X))))>>2)));
-                b_262X = char_ready_p(v_261X);
-                if (b_262X) {
+              x_175X = RSvalS;
+              x_176X = *((long *) (5 + x_175X));
+              if ((1 == x_176X)) {
+                b_110X = char_ready_p((*((Sopen_portsS) + ((((*((long *) (1 + x_175X))))>>2)))));
+                if (b_110X) {
                   arg0K0 = 5;
-                  goto L17692;}
+                  goto L17543;}
                 else {
                   arg0K0 = 1;
-                  goto L17692;}}
+                  goto L17543;}}
               else {
                 arg0K0 = 5;
-                goto L17692;}}}
+                goto L17543;}}}
           else {
-            goto L17695;}}
+            goto L17546;}}
         else {
-          goto L17695;}}
+          goto L17546;}}
       else {
-        goto L17695;}}
+        goto L17546;}}
       break;
     case 110 : {
-      RSstackS = (4 + RSstackS);
-      arg2_256X = *((long*)RSstackS);
-      if ((9 == (255 & arg2_256X))) {
-        p_162X = RSvalS;
-        if ((3 == (3 & p_162X))) {
-          v_257X = 31 & ((((*((long*)(-7 + p_162X))))>>2));
-          if ((5 == v_257X)) {
-            v_161X = 8 == (*((long*)(-3 + p_162X)));
-            if (v_161X) {
-              if (((*((long*)(1 + p_162X))) < 0)) {
-                goto L21238;}
+      RSstackS = (4 + (RSstackS));
+      arg2_112X = *((long *) (RSstackS));
+      if ((9 == (255 & arg2_112X))) {
+        p_174X = RSvalS;
+        if ((3 == (3 & p_174X))) {
+          if ((5 == (31 & ((((*((long *) (-7 + p_174X))))>>2))))) {
+            if ((8 == (*((long *) (-3 + p_174X))))) {
+              if (((*((long *) (1 + p_174X))) < 0)) {
+                goto L21021;}
               else {
-                port_258X = *(Sopen_portsS + ((((*((long*)(1 + RSvalS))))>>2)));
-                putc(((((arg2_256X)>>8))), port_258X);
+                putc(((((arg2_112X)>>8))), (*((Sopen_portsS) + ((((*((long *) (1 + (RSvalS)))))>>2)))));
                 RSvalS = 13;
                 goto START;}}
             else {
-              goto L21238;}}
+              goto L21021;}}
           else {
-            goto L21238;}}
+            goto L21021;}}
         else {
-          goto L21238;}}
+          goto L21021;}}
       else {
-        goto L21238;}}
+        goto L21021;}}
       break;
     case 111 : {
-      RSstackS = (4 + RSstackS);
-      arg2_165X = *((long*)RSstackS);
-      if ((3 == (3 & arg2_165X))) {
-        v_252X = 31 & ((((*((long*)(-7 + arg2_165X))))>>2));
-        if ((15 == v_252X)) {
-          p_164X = RSvalS;
-          if ((3 == (3 & p_164X))) {
-            v_253X = 31 & ((((*((long*)(-7 + p_164X))))>>2));
-            if ((5 == v_253X)) {
-              v_163X = 8 == (*((long*)(-3 + p_164X)));
-              if (v_163X) {
-                if (((*((long*)(1 + p_164X))) < 0)) {
-                  goto L21094;}
+      RSstackS = (4 + (RSstackS));
+      arg2_172X = *((long *) (RSstackS));
+      if ((3 == (3 & arg2_172X))) {
+        if ((15 == (31 & ((((*((long *) (-7 + arg2_172X))))>>2))))) {
+          p_173X = RSvalS;
+          if ((3 == (3 & p_173X))) {
+            if ((5 == (31 & ((((*((long *) (-7 + p_173X))))>>2))))) {
+              if ((8 == (*((long *) (-3 + p_173X))))) {
+                if (((*((long *) (1 + p_173X))) < 0)) {
+                  goto L20885;}
                 else {
-                  port_254X = *(Sopen_portsS + ((((*((long*)(1 + RSvalS))))>>2)));
-                  v_255X = (long)(((unsigned long)(*((long*)(-7 + arg2_165X))))>>8);
-                  fwrite((void *)(-3 + arg2_165X), sizeof(char), (-1 + v_255X), port_254X);
+                  fwrite((void *)(-3 + arg2_172X), sizeof(char), (-1 + ((long)(((unsigned long)(*((long *) (-7 + arg2_172X))))>>8))), (*((Sopen_portsS) + ((((*((long *) (1 + (RSvalS)))))>>2)))));
                   RSvalS = 13;
                   goto START;}}
               else {
-                goto L21094;}}
+                goto L20885;}}
             else {
-              goto L21094;}}
+              goto L20885;}}
           else {
-            goto L21094;}}
+            goto L20885;}}
         else {
-          goto L21094;}}
+          goto L20885;}}
       else {
-        goto L21094;}}
+        goto L20885;}}
       break;
     case 112 : {
-      p_250X = RSvalS;
-      if ((3 == (3 & p_250X))) {
-        v_167X = 31 & ((((*((long*)(-7 + p_250X))))>>2));
-        if ((5 == v_167X)) {
-          v_251X = 8 == (*((long*)(-3 + p_250X)));
-          if (v_251X) {
-            if (((*((long*)(1 + p_250X))) < 0)) {
-              goto L17599;}
+      p_113X = RSvalS;
+      if ((3 == (3 & p_113X))) {
+        if ((5 == (31 & ((((*((long *) (-7 + p_113X))))>>2))))) {
+          if ((8 == (*((long *) (-3 + p_113X))))) {
+            if (((*((long *) (1 + p_113X))) < 0)) {
+              goto L17454;}
             else {
-              port_166X = *(Sopen_portsS + ((((*((long*)(1 + RSvalS))))>>2)));
-              fflush(port_166X);
+              fflush((*((Sopen_portsS) + ((((*((long *) (1 + (RSvalS)))))>>2)))));
               RSvalS = 13;
               goto START;}}
           else {
-            goto L17599;}}
+            goto L17454;}}
         else {
-          goto L17599;}}
+          goto L17454;}}
       else {
-        goto L17599;}}
+        goto L17454;}}
       break;
     case 113 : {
       RSvalS = 529;
@@ -2931,7 +2655,7 @@ long Tinterpret()
       break;
     case 115 : {
       merged_arg0K0 = 0;
-      merged_arg1K1 = RSvalS;
+      merged_arg1K1 = (RSvalS);
       goto raise_exception1;}
       break;
     case 116 : {
@@ -2939,79 +2663,74 @@ long Tinterpret()
       goto START;}
       break;
     case 117 : {
-      RSstackS = (4 + RSstackS);
-      arg2_177X = *((long*)RSstackS);
-      RSstackS = (4 + RSstackS);
-      arg3_176X = *((long*)RSstackS);
-      if ((3 == (3 & arg3_176X))) {
-        v_245X = 31 & ((((*((long*)(-7 + arg3_176X))))>>2));
-        if ((15 == v_245X)) {
-          obj_175X = RSvalS;
-          if ((3 == (3 & obj_175X))) {
-            v_246X = 31 & ((((*((long*)(-7 + obj_175X))))>>2));
-            if ((15 == v_246X)) {
-              x_174X = RSvalS;
-              if ((0 == ((long)Spure_area_countS))) {
-                x_247X = 0 == ((long)Simpure_area_countS);
-                if (x_247X) {
-                  merged_arg1K0 = arg3_176X;
+      RSstackS = (4 + (RSstackS));
+      arg2_163X = *((long *) (RSstackS));
+      RSstackS = (4 + (RSstackS));
+      arg3_164X = *((long *) (RSstackS));
+      if ((3 == (3 & arg3_164X))) {
+        if ((15 == (31 & ((((*((long *) (-7 + arg3_164X))))>>2))))) {
+          obj_165X = RSvalS;
+          if ((3 == (3 & obj_165X))) {
+            if ((15 == (31 & ((((*((long *) (-7 + obj_165X))))>>2))))) {
+              x_166X = RSvalS;
+              if ((0 == ((long)(Spure_area_countS)))) {
+                if ((0 == ((long)(Simpure_area_countS)))) {
+                  merged_arg1K0 = arg3_164X;
                   extract_string_return_tag = 0;
                   goto extract_string;
                  extract_string_return_0:
-                  spec_173X = extract_string_return_value;
-                  port_172X = ps_open(spec_173X, "w");
-                  if ((NULL == port_172X)) {
+                  spec_167X = extract_string_return_value;
+                  port_168X = ps_open(spec_167X, "w");
+                  if ((NULL == port_168X)) {
                     merged_arg0K0 = 0;
-                    merged_arg1K1 = arg3_176X;
-                    merged_arg1K2 = arg2_177X;
+                    merged_arg1K1 = arg3_164X;
+                    merged_arg1K2 = arg2_163X;
                     goto raise_exception2;}
                   else {
-                    v_171X = (long)(((unsigned long)(*((long*)(-7 + x_174X))))>>8);
-                    fwrite((void *)(-3 + x_174X), sizeof(char), (-1 + v_171X), port_172X);
-                    b_170X = Snewspace_beginS;
-                    Snewspace_beginS = Soldspace_beginS;
-                    Soldspace_beginS = b_170X;
-                    e_169X = Snewspace_endS;
-                    Snewspace_endS = Soldspace_endS;
-                    Soldspace_endS = e_169X;
-                    Ssaved_limitS = SlimitS;
-                    Ssaved_hpS = ShpS;
-                    SlimitS = Snewspace_endS;
-                    ShpS = Snewspace_beginS;
+                    fwrite((void *)(-3 + x_166X), sizeof(char), (-1 + ((long)(((unsigned long)(*((long *) (-7 + x_166X))))>>8))), port_168X);
+                    b_169X = Snewspace_beginS;
+                    Snewspace_beginS = (Soldspace_beginS);
+                    Soldspace_beginS = b_169X;
+                    e_170X = Snewspace_endS;
+                    Snewspace_endS = (Soldspace_endS);
+                    Soldspace_endS = e_170X;
+                    Ssaved_limitS = (SlimitS);
+                    Ssaved_hpS = (ShpS);
+                    SlimitS = (Snewspace_endS);
+                    ShpS = (Snewspace_beginS);
                     Sweak_pointer_hpS = -1;
-                    if ((3 == (3 & arg2_177X))) {
-                      a_248X = -3 + arg2_177X;
-                      if ((a_248X < Soldspace_beginS)) {
-                        arg1K0 = arg2_177X;
-                        goto L29087;}
+                    if ((3 == (3 & arg2_163X))) {
+                      a_114X = -3 + arg2_163X;
+                      if ((a_114X < (Soldspace_beginS))) {
+                        arg1K0 = arg2_163X;
+                        goto L28721;}
                       else {
-                        v_249X = a_248X < Soldspace_endS;
-                        if (v_249X) {
-                          merged_arg1K0 = arg2_177X;
+                        if ((a_114X < (Soldspace_endS))) {
+                          merged_arg1K0 = arg2_163X;
                           copy_object_return_tag = 0;
                           goto copy_object;
                          copy_object_return_0:
-                          v_168X = copy_object_return_value;
-                          arg1K0 = v_168X;
-                          goto L29087;}
+                          v_171X = copy_object_return_value;
+                          arg1K0 = v_171X;
+                          goto L28721;}
                         else {
-                          arg1K0 = arg2_177X;
-                          goto L29087;}}}
+                          arg1K0 = arg2_163X;
+                          goto L28721;}}}
                     else {
-                      arg1K0 = arg2_177X;
-                      goto L29087;}}}
+                      arg1K0 = arg2_163X;
+                      goto L28721;}}}
                 else {
-                  goto L29205;}}
+                  goto L28806;}}
               else {
-                goto L29205;}}
+                goto L28806;}}
             else {
-              goto L29103;}}
+              goto L28737;}}
           else {
-            goto L29103;}}
+            goto L28737;}}
         else {
-          goto L29103;}}
+          goto L28737;}}
       else {
-        goto L29103;}}
+        goto L28737;}}
       break;
     case 118 : {
       RSvalS = 13;
@@ -3023,236 +2742,224 @@ long Tinterpret()
       goto START;}
       break;
     case 119 : {
-      RSstackS = (4 + RSstackS);
-      arg2_242X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_242X))) {
-        x_181X = RSvalS;
-        key_180X = ((arg2_242X)>>2);
-        if ((0 == key_180X)) {
-          n_178X = (((SlimitS - ShpS))>>2);
-          RSvalS = (((n_178X)<<2));
+      RSstackS = (4 + (RSstackS));
+      arg2_116X = *((long *) (RSstackS));
+      if ((0 == (3 & arg2_116X))) {
+        x_161X = RSvalS;
+        key_162X = ((arg2_116X)>>2);
+        if ((0 == key_162X)) {
+          RSvalS = (-4 & ((SlimitS) - (ShpS)));
           goto START;}
         else {
-          if ((1 == key_180X)) {
-            bytes_244X = Snewspace_endS - Snewspace_beginS;
-            RSvalS = (-4 & (3 + bytes_244X));
+          if ((1 == key_162X)) {
+            RSvalS = (-4 & (3 + ((Snewspace_endS) - (Snewspace_beginS))));
             goto START;}
           else {
-            if ((2 == key_180X)) {
-              n_179X = Sstack_endS - Sstack_beginS;
-              RSvalS = (((n_179X)<<2));
+            if ((2 == key_162X)) {
+              RSvalS = (((((Sstack_endS) - (Sstack_beginS)))<<2));
               goto START;}
             else {
-              if ((3 == key_180X)) {
-                if ((0 == (3 & x_181X))) {
-                  old_243X = Sminimum_recovered_spaceS;
-                  Sminimum_recovered_spaceS = (((x_181X)>>2));
-                  RSvalS = (((old_243X)<<2));
+              if ((3 == key_162X)) {
+                if ((0 == (3 & x_161X))) {
+                  old_115X = Sminimum_recovered_spaceS;
+                  Sminimum_recovered_spaceS = (((x_161X)>>2));
+                  RSvalS = (((old_115X)<<2));
                   goto START;}
                 else {
                   merged_arg0K0 = 0;
-                  merged_arg1K1 = (((key_180X)<<2));
-                  merged_arg1K2 = x_181X;
+                  merged_arg1K1 = (((key_162X)<<2));
+                  merged_arg1K2 = x_161X;
                   goto raise_exception2;}}
               else {
-                if ((4 == key_180X)) {
-                  RSvalS = (((Sgc_countS)<<2));
+                if ((4 == key_162X)) {
+                  RSvalS = ((((Sgc_countS))<<2));
                   goto START;}
                 else {
                   merged_arg0K0 = 0;
-                  merged_arg1K1 = (((key_180X)<<2));
-                  merged_arg1K2 = x_181X;
+                  merged_arg1K1 = (((key_162X)<<2));
+                  merged_arg1K2 = x_161X;
                   goto raise_exception2;}}}}}}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = arg2_242X;
-        merged_arg1K2 = RSvalS;
+        merged_arg1K1 = arg2_116X;
+        merged_arg1K2 = (RSvalS);
         goto raise_exception2;}}
       break;
     case 120 : {
-      obj_238X = RSvalS;
-      if ((3 == (3 & obj_238X))) {
-        v_185X = 31 & ((((*((long*)(-7 + obj_238X))))>>2));
-        if ((2 == v_185X)) {
-          x_239X = RSvalS;
-          start_hp_240X = ShpS;
+      obj_120X = RSvalS;
+      if ((3 == (3 & obj_120X))) {
+        if ((2 == (31 & ((((*((long *) (-7 + obj_120X))))>>2))))) {
+          x_119X = RSvalS;
+          start_hp_118X = ShpS;
           SvalS = RSvalS;
           SstackS = RSstackS;
           Scode_pointerS = RScode_pointerS;
           SenvS = RSenvS;
-          v_241X = hoistD0(Snewspace_beginS, ShpS, x_239X);
+          v_117X = hoistD1((Snewspace_beginS), (ShpS), x_119X);
           RSvalS = SvalS;
           RSstackS = SstackS;
           RScode_pointerS = Scode_pointerS;
           RSenvS = SenvS;
-          if (v_241X) {
-            areas_184X = Spure_areasS;
-            sizes_183X = Spure_sizesS;
-            count_182X = Spure_area_countS;
+          if (v_117X) {
+            areas_158X = Spure_areasS;
+            sizes_159X = Spure_sizesS;
+            count_160X = Spure_area_countS;
             arg1K0 = 0;
-            goto L17489;}
+            goto L17346;}
           else {
-            goto L17474;}}
+            goto L17331;}}
         else {
-          goto L17421;}}
+          goto L17278;}}
       else {
-        goto L17421;}}
+        goto L17278;}}
       break;
     case 121 : {
-      if ((0 == (3 & RSvalS))) {
-        type_235X = ((RSvalS)>>2);
-        start_hp_236X = ShpS;
-        *((long*)ShpS) = 0;
-        ShpS = (4 + ShpS);
+      if ((0 == (3 & (RSvalS)))) {
+        type_123X = (((RSvalS))>>2);
+        start_hp_122X = ShpS;
+        *((long *) (ShpS)) = 0;
+        ShpS = (4 + (ShpS));
         SvalS = RSvalS;
         SstackS = RSstackS;
         Scode_pointerS = RScode_pointerS;
         SenvS = RSenvS;
-        v_237X = hoistD1(Snewspace_beginS, start_hp_236X, type_235X);
+        v_121X = hoistD0((Snewspace_beginS), start_hp_122X, type_123X);
         RSvalS = SvalS;
         RSstackS = SstackS;
         RScode_pointerS = Scode_pointerS;
         RSenvS = SenvS;
-        if (v_237X) {
-          areas_188X = Simpure_areasS;
-          sizes_187X = Simpure_sizesS;
-          count_186X = Simpure_area_countS;
+        if (v_121X) {
+          areas_155X = Simpure_areasS;
+          sizes_156X = Simpure_sizesS;
+          count_157X = Simpure_area_countS;
           arg1K0 = 0;
-          goto L10169;}
+          goto L10070;}
         else {
-          goto L10107;}}
+          goto L10008;}}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 122 : {
-      RSvalS = Sdynamic_stateS;
+      RSvalS = (Sdynamic_stateS);
       goto START;}
       break;
     case 123 : {
-      Sdynamic_stateS = RSvalS;
+      Sdynamic_stateS = (RSvalS);
       RSvalS = 13;
       goto START;}
       break;
     case 124 : {
-      obj_234X = RSvalS;
-      if ((3 == (3 & obj_234X))) {
-        v_189X = 31 & ((((*((long*)(-7 + obj_234X))))>>2));
-        if ((3 == v_189X)) {
-          Sexception_handlerS = RSvalS;
+      obj_124X = RSvalS;
+      if ((3 == (3 & obj_124X))) {
+        if ((3 == (31 & ((((*((long *) (-7 + obj_124X))))>>2))))) {
+          Sexception_handlerS = (RSvalS);
           goto START;}
         else {
-          goto L31447;}}
+          goto L31052;}}
       else {
-        goto L31447;}}
+        goto L31052;}}
       break;
     case 125 : {
-      obj_232X = RSvalS;
-      if ((3 == (3 & obj_232X))) {
-        v_190X = 31 & ((((*((long*)(-7 + obj_232X))))>>2));
-        if ((2 == v_190X)) {
-          v_233X = (((3 + ((long)(((unsigned long)(*((long*)(-7 + RSvalS))))>>8))))>>2);
-          if ((v_233X < 3)) {
-            goto L29413;}
+      obj_125X = RSvalS;
+      if ((3 == (3 & obj_125X))) {
+        if ((2 == (31 & ((((*((long *) (-7 + obj_125X))))>>2))))) {
+          if ((((((3 + ((long)(((unsigned long)(*((long *) (-7 + (RSvalS)))))>>8))))>>2)) < 3)) {
+            goto L31071;}
           else {
-            Sinterrupt_handlersS = RSvalS;
+            Sinterrupt_handlersS = (RSvalS);
             goto START;}}
         else {
-          goto L29413;}}
+          goto L31071;}}
       else {
-        goto L29413;}}
+        goto L31071;}}
       break;
     case 126 : {
-      temp_191X = Senabled_interruptsS;
-      Senabled_interruptsS = (((RSvalS)>>2));
-      RSvalS = (((temp_191X)<<2));
+      temp_154X = Senabled_interruptsS;
+      Senabled_interruptsS = ((((RSvalS))>>2));
+      RSvalS = (((temp_154X)<<2));
       goto START;}
       break;
     case 127 : {
-      RSstackS = (4 + RSstackS);
-      Senabled_interruptsS = ((((*((long*)RSstackS)))>>2));
-      RSstackS = (4 + RSstackS);
-      SnargsS = ((((*((long*)RSstackS)))>>2));
-      RSstackS = (4 + RSstackS);
-      RSenvS = (*((long*)RSstackS));
-      RSstackS = (4 + RSstackS);
-      tem_231X = *((long*)RSstackS);
-      StemplateS = tem_231X;
-      RScode_pointerS = (-3 + (*((long*)(-3 + tem_231X))));
-      RSstackS = (4 + RSstackS);
-      RSvalS = (*((long*)RSstackS));
+      RSstackS = (4 + (RSstackS));
+      Senabled_interruptsS = ((((*((long *) (RSstackS))))>>2));
+      RSstackS = (4 + (RSstackS));
+      SnargsS = ((((*((long *) (RSstackS))))>>2));
+      RSstackS = (4 + (RSstackS));
+      RSenvS = (*((long *) (RSstackS)));
+      RSstackS = (4 + (RSstackS));
+      tem_126X = *((long *) (RSstackS));
+      StemplateS = tem_126X;
+      RScode_pointerS = (-3 + (*((long *) (-3 + tem_126X))));
+      RSstackS = (4 + (RSstackS));
+      RSvalS = (*((long *) (RSstackS)));
       goto START;}
       break;
     case 128 : {
-      if ((0 == (3 & RSvalS))) {
-        p_193X = RSvalS;
-        Spending_interruptsS = (-2 & Spending_interruptsS);
+      if ((0 == (3 & (RSvalS)))) {
+        p_152X = RSvalS;
+        Spending_interruptsS = (-2 & (Spending_interruptsS));
         SvalS = RSvalS;
         SstackS = RSstackS;
         Scode_pointerS = RScode_pointerS;
         SenvS = RSenvS;
-        n_192X = ps_schedule_interrupt((((p_193X)>>2)));
+        n_153X = ps_schedule_interrupt((((p_152X)>>2)));
         RSvalS = SvalS;
         RSstackS = SstackS;
         RScode_pointerS = Scode_pointerS;
         RSenvS = SenvS;
-        RSvalS = (((n_192X)<<2));
+        RSvalS = (((n_153X)<<2));
         goto START;}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = RSvalS;
+        merged_arg1K1 = (RSvalS);
         goto raise_exception1;}}
       break;
     case 129 : {
-      obj_226X = RSvalS;
-      if ((3 == (3 & obj_226X))) {
-        v_196X = 31 & ((((*((long*)(-7 + obj_226X))))>>2));
-        if ((12 == v_196X)) {
-          x_227X = RSvalS;
-          value_228X = *((long*)(1 + x_227X));
-          name_229X = *((long*)(-3 + x_227X));
-          if ((3 == (3 & name_229X))) {
-            v_195X = 31 & ((((*((long*)(-7 + name_229X))))>>2));
-            if ((15 == v_195X)) {
-              if ((3 == (3 & value_228X))) {
-                v_194X = 31 & ((((*((long*)(-7 + value_228X))))>>2));
-                if ((16 == v_194X)) {
+      obj_131X = RSvalS;
+      if ((3 == (3 & obj_131X))) {
+        if ((12 == (31 & ((((*((long *) (-7 + obj_131X))))>>2))))) {
+          x_130X = RSvalS;
+          value_129X = *((long *) (1 + x_130X));
+          name_128X = *((long *) (-3 + x_130X));
+          if ((3 == (3 & name_128X))) {
+            if ((15 == (31 & ((((*((long *) (-7 + name_128X))))>>2))))) {
+              if ((3 == (3 & value_129X))) {
+                if ((16 == (31 & ((((*((long *) (-7 + value_129X))))>>2))))) {
                   SvalS = RSvalS;
                   SstackS = RSstackS;
                   Scode_pointerS = RScode_pointerS;
                   SenvS = RSenvS;
-                  v_230X = lookup_external_name((-3 + name_229X), (-3 + value_228X));
+                  v_127X = lookup_external_name((-3 + name_128X), (-3 + value_129X));
                   RSvalS = SvalS;
                   RSstackS = SstackS;
                   RScode_pointerS = Scode_pointerS;
                   RSenvS = SenvS;
-                  if (v_230X) {
+                  if (v_127X) {
                     RSvalS = 13;
                     goto START;}
                   else {
-                    goto L17092;}}
+                    goto L16955;}}
                 else {
-                  goto L17092;}}
+                  goto L16955;}}
               else {
-                goto L17092;}}
+                goto L16955;}}
             else {
-              goto L17092;}}
+              goto L16955;}}
           else {
-            goto L17092;}}
+            goto L16955;}}
         else {
-          goto L17095;}}
+          goto L16958;}}
       else {
-        goto L17095;}}
+        goto L16958;}}
       break;
     case 130 : {
-      index_198X = -1 + SnargsS;
-      proc_197X = *((long*)(4 + (RSstackS + (((index_198X)<<2)))));
-      if ((3 == (3 & proc_197X))) {
-        v_225X = 31 & ((((*((long*)(-7 + proc_197X))))>>2));
-        if ((12 == v_225X)) {
-          SnargsS = (-1 + SnargsS);
-          RSvalS = proc_197X;
+      proc_151X = *((long *) ((RSstackS) + ((((SnargsS))<<2))));
+      if ((3 == (3 & proc_151X))) {
+        if ((12 == (31 & ((((*((long *) (-7 + proc_151X))))>>2))))) {
+          SnargsS = (-1 + (SnargsS));
+          RSvalS = proc_151X;
           SvalS = RSvalS;
           SstackS = RSstackS;
           Scode_pointerS = RScode_pointerS;
@@ -3260,99 +2967,99 @@ long Tinterpret()
           TTreturn_value = 1;
           return(0L);}
         else {
-          goto L31502;}}
+          goto L31124;}}
       else {
-        goto L31502;}}
+        goto L31124;}}
       break;
     case 131 : {
-      RSstackS = (4 + RSstackS);
-      arg2_222X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_222X))) {
-        x_201X = RSvalS;
-        key_200X = ((arg2_222X)>>2);
-        if ((0 == key_200X)) {
+      RSstackS = (4 + (RSstackS));
+      arg2_134X = *((long *) (RSstackS));
+      if ((0 == (3 & arg2_134X))) {
+        x_148X = RSvalS;
+        key_149X = ((arg2_134X)>>2);
+        if ((0 == key_149X)) {
           SvalS = RSvalS;
           SstackS = RSstackS;
           Scode_pointerS = RScode_pointerS;
           SenvS = RSenvS;
-          n_224X = ps_ticks_per_second();
+          n_132X = ps_ticks_per_second();
           RSvalS = SvalS;
           RSstackS = SstackS;
           RScode_pointerS = Scode_pointerS;
           RSenvS = SenvS;
-          RSvalS = (((n_224X)<<2));
+          RSvalS = (((n_132X)<<2));
           goto START;}
         else {
-          if ((1 == key_200X)) {
+          if ((1 == key_149X)) {
             SvalS = RSvalS;
             SstackS = RSstackS;
             Scode_pointerS = RScode_pointerS;
             SenvS = RSenvS;
-            n_199X = ps_run_time();
+            n_150X = ps_run_time();
             RSvalS = SvalS;
             RSstackS = SstackS;
             RScode_pointerS = Scode_pointerS;
             RSenvS = SenvS;
-            RSvalS = (((n_199X)<<2));
+            RSvalS = (((n_150X)<<2));
             goto START;}
           else {
-            if ((2 == key_200X)) {
+            if ((2 == key_149X)) {
               SvalS = RSvalS;
               SstackS = RSstackS;
               Scode_pointerS = RScode_pointerS;
               SenvS = RSenvS;
-              n_223X = ps_real_time();
+              n_133X = ps_real_time();
               RSvalS = SvalS;
               RSstackS = SstackS;
               RScode_pointerS = Scode_pointerS;
               RSenvS = SenvS;
-              RSvalS = (((n_223X)<<2));
+              RSvalS = (((n_133X)<<2));
               goto START;}
             else {
               merged_arg0K0 = 0;
-              merged_arg1K1 = (((key_200X)<<2));
-              merged_arg1K2 = x_201X;
+              merged_arg1K1 = (((key_149X)<<2));
+              merged_arg1K2 = x_148X;
               goto raise_exception2;}}}}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = arg2_222X;
-        merged_arg1K2 = RSvalS;
+        merged_arg1K1 = arg2_134X;
+        merged_arg1K2 = (RSvalS);
         goto raise_exception2;}}
       break;
     case 132 : {
-      RSstackS = (4 + RSstackS);
-      arg2_202X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_202X))) {
-        x_219X = RSvalS;
-        key_220X = ((arg2_202X)>>2);
+      RSstackS = (4 + (RSstackS));
+      arg2_147X = *((long *) (RSstackS));
+      if ((0 == (3 & arg2_147X))) {
+        x_137X = RSvalS;
+        key_136X = ((arg2_147X)>>2);
         SvalS = RSvalS;
         SstackS = RSstackS;
         Scode_pointerS = RScode_pointerS;
         SenvS = RSenvS;
-        return_value_221X = extended_vm(key_220X, x_219X);
+        return_value_135X = extended_vm(key_136X, x_137X);
         RSvalS = SvalS;
         RSstackS = SstackS;
         RScode_pointerS = Scode_pointerS;
         RSenvS = SenvS;
-        if ((17 == (255 & return_value_221X))) {
+        if ((17 == (255 & return_value_135X))) {
           merged_arg0K0 = 0;
-          merged_arg1K1 = (((key_220X)<<2));
-          merged_arg1K2 = x_219X;
+          merged_arg1K1 = (((key_136X)<<2));
+          merged_arg1K2 = x_137X;
           goto raise_exception2;}
         else {
-          RSvalS = return_value_221X;
+          RSvalS = return_value_135X;
           goto START;}}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = arg2_202X;
-        merged_arg1K2 = RSvalS;
+        merged_arg1K1 = arg2_147X;
+        merged_arg1K2 = (RSvalS);
         goto raise_exception2;}}
       break;
     case 133 : {
-      RSstackS = (4 + RSstackS);
-      arg2_203X = *((long*)RSstackS);
-      if ((0 == (3 & arg2_203X))) {
-        RSvalS = RSvalS;
+      RSstackS = (4 + (RSstackS));
+      arg2_146X = *((long *) (RSstackS));
+      if ((0 == (3 & arg2_146X))) {
+        RSvalS = (RSvalS);
         SvalS = RSvalS;
         SstackS = RSstackS;
         Scode_pointerS = RScode_pointerS;
@@ -3361,409 +3068,409 @@ long Tinterpret()
         return(0L);}
       else {
         merged_arg0K0 = 0;
-        merged_arg1K1 = arg2_203X;
-        merged_arg1K2 = RSvalS;
+        merged_arg1K1 = arg2_146X;
+        merged_arg1K2 = (RSvalS);
         goto raise_exception2;}}
       break;
     case 134 : {
-      RSstackS = (4 + RSstackS);
-      arg2_206X = *((long*)RSstackS);
-      if ((3 == (3 & arg2_206X))) {
-        v_217X = 31 & ((((*((long*)(-7 + arg2_206X))))>>2));
-        if ((15 == v_217X)) {
-          obj_205X = RSvalS;
-          if ((3 == (3 & obj_205X))) {
-            v_218X = 31 & ((((*((long*)(-7 + obj_205X))))>>2));
-            if ((15 == v_218X)) {
-              merged_arg1K0 = arg2_206X;
-              merged_arg1K1 = RSvalS;
+      RSstackS = (4 + (RSstackS));
+      arg2_143X = *((long *) (RSstackS));
+      if ((3 == (3 & arg2_143X))) {
+        if ((15 == (31 & ((((*((long *) (-7 + arg2_143X))))>>2))))) {
+          obj_144X = RSvalS;
+          if ((3 == (3 & obj_144X))) {
+            if ((15 == (31 & ((((*((long *) (-7 + obj_144X))))>>2))))) {
+              merged_arg1K0 = arg2_143X;
+              merged_arg1K1 = (RSvalS);
               stob_equalP_return_tag = 0;
               goto stob_equalP;
              stob_equalP_return_0:
-              x_204X = stob_equalP_return_value;
-              if (x_204X) {
+              x_145X = stob_equalP_return_value;
+              if (x_145X) {
                 arg0K0 = 5;
-                goto L20484;}
+                goto L20279;}
               else {
                 arg0K0 = 1;
-                goto L20484;}}
+                goto L20279;}}
             else {
-              goto L20475;}}
+              goto L20270;}}
           else {
-            goto L20475;}}
+            goto L20270;}}
         else {
-          goto L20475;}}
+          goto L20270;}}
       else {
-        goto L20475;}}
+        goto L20270;}}
       break;
     case 135 : {
-      obj_214X = RSvalS;
-      if ((3 == (3 & obj_214X))) {
-        v_207X = 31 & ((((*((long*)(-7 + obj_214X))))>>2));
-        if ((15 == v_207X)) {
-          x_215X = RSvalS;
-          v_216X = (long)(((unsigned long)(*((long*)(-7 + x_215X))))>>8);
+      obj_140X = RSvalS;
+      if ((3 == (3 & obj_140X))) {
+        if ((15 == (31 & ((((*((long *) (-7 + obj_140X))))>>2))))) {
+          x_139X = RSvalS;
+          n_138X = -1 + ((long)(((unsigned long)(*((long *) (-7 + x_139X))))>>8));
           arg1K0 = 0;
           arg1K1 = 0;
-          goto L16936;}
+          goto L16805;}
         else {
-          goto L16914;}}
+          goto L16783;}}
       else {
-        goto L16914;}}
+        goto L16783;}}
       break;
     case 136 : {
-      space_210X = 1 + ((((4 + RSvalS))>>2));
-      v_209X = (ShpS + (((space_210X)<<2))) < SlimitS;
-      if (v_209X) {
-        goto L20198;}
+      space_142X = 1 + ((((4 + (RSvalS)))>>2));
+      if ((((ShpS) + (((space_142X)<<2))) < (SlimitS))) {
+        goto L19999;}
       else {
         merged_arg1K0 = 0;
         collect_saving_temp_return_tag = 10;
         goto collect_saving_temp;
        collect_saving_temp_return_10:
-        okayP_208X = (ShpS + (((space_210X)<<2))) < SlimitS;
-        if (okayP_208X) {
-          goto L20198;}
+        if ((((ShpS) + (((space_142X)<<2))) < (SlimitS))) {
+          goto L19999;}
         else {
           TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
-          goto L20198;}}}
+          goto L19999;}}}
       break;
     case 137 : {
-      v_212X = (20 + ShpS) < SlimitS;
-      if (v_212X) {
-        goto L20072;}
+      if (((20 + (ShpS)) < (SlimitS))) {
+        goto L19881;}
       else {
         merged_arg1K0 = 0;
         collect_saving_temp_return_tag = 11;
         goto collect_saving_temp;
        collect_saving_temp_return_11:
-        okayP_213X = (20 + ShpS) < SlimitS;
-        if (okayP_213X) {
-          goto L20072;}
+        if (((20 + (ShpS)) < (SlimitS))) {
+          goto L19881;}
         else {
           TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
-          goto L20072;}}}
+          goto L19881;}}}
       break;
   }}
- L31416: {
-  vector_392X = arg1K0;
-  if ((1 == vector_392X)) {
+ L31021: {
+  vector_272X = arg1K0;
+  if ((1 == vector_272X)) {
     merged_arg0K0 = 0;
-    merged_arg1K1 = (((type_235X)<<2));
+    merged_arg1K1 = (((type_123X)<<2));
     goto raise_exception1;}
   else {
-    RSvalS = vector_392X;
+    RSvalS = vector_272X;
     goto START;}}
- L10107: {
-  ShpS = start_hp_236X;
+ L10008: {
+  ShpS = start_hp_122X;
   arg1K0 = 1;
-  goto L31416;}
- L10169: {
-  i_393X = arg1K0;
-  if ((i_393X < ((long)count_186X))) {
+  goto L31021;}
+ L10070: {
+  i_273X = arg1K0;
+  if ((i_273X < ((long)count_157X))) {
     SvalS = RSvalS;
     SstackS = RSstackS;
     Scode_pointerS = RScode_pointerS;
     SenvS = RSenvS;
-    v_394X = hoistD1((*(areas_188X + i_393X)), ((*(areas_188X + i_393X)) + (*(sizes_187X + i_393X))), type_235X);
+    v_274X = hoistD0((*(areas_155X + i_273X)), ((*(areas_155X + i_273X)) + (*(sizes_156X + i_273X))), type_123X);
     RSvalS = SvalS;
     RSstackS = SstackS;
     RScode_pointerS = Scode_pointerS;
     RSenvS = SenvS;
-    if (v_394X) {
-      arg1K0 = (1 + i_393X);
-      goto L10169;}
+    if (v_274X) {
+      arg1K0 = (1 + i_273X);
+      goto L10070;}
     else {
-      goto L10107;}}
+      goto L10008;}}
   else {
-    areas_395X = Spure_areasS;
-    sizes_396X = Spure_sizesS;
-    count_397X = Spure_area_countS;
+    areas_275X = Spure_areasS;
+    sizes_276X = Spure_sizesS;
+    count_277X = Spure_area_countS;
     arg1K0 = 0;
-    goto L10148;}}
- L10148: {
-  i_398X = arg1K0;
-  if ((i_398X < ((long)count_397X))) {
+    goto L10049;}}
+ L10049: {
+  i_278X = arg1K0;
+  if ((i_278X < ((long)count_277X))) {
     SvalS = RSvalS;
     SstackS = RSstackS;
     Scode_pointerS = RScode_pointerS;
     SenvS = RSenvS;
-    v_399X = hoistD1((*(areas_395X + i_398X)), ((*(areas_395X + i_398X)) + (*(sizes_396X + i_398X))), type_235X);
+    v_279X = hoistD0((*(areas_275X + i_278X)), ((*(areas_275X + i_278X)) + (*(sizes_276X + i_278X))), type_123X);
     RSvalS = SvalS;
     RSstackS = SstackS;
     RScode_pointerS = Scode_pointerS;
     RSenvS = SenvS;
-    if (v_399X) {
-      arg1K0 = (1 + i_398X);
-      goto L10148;}
+    if (v_279X) {
+      arg1K0 = (1 + i_278X);
+      goto L10049;}
     else {
-      goto L10107;}}
+      goto L10008;}}
   else {
-    *((long*)start_hp_236X) = (-1014 + ((((ShpS - start_hp_236X))<<8)));
-    arg1K0 = (7 + start_hp_236X);
-    goto L31416;}}
- L8863: {
-  h_400X = arg1K0;
-  arg1K0 = (4 + (addr_401X + (-4 & (3 + ((long)(((unsigned long)h_400X)>>8))))));
-  goto L8841;}
- L8841: {
-  addr_401X = arg1K0;
-  if ((addr_401X < ShpS)) {
-    d_403X = *((long*)addr_401X);
-    if ((2 == (3 & d_403X))) {
-      arg1K0 = d_403X;
-      goto L8863;}
+    *((long *) start_hp_122X) = (-1014 + (((((ShpS) - start_hp_122X))<<8)));
+    arg1K0 = (7 + start_hp_122X);
+    goto L31021;}}
+ L8840: {
+  h_280X = arg1K0;
+  arg1K0 = (4 + (addr_281X + (-4 & (3 + ((long)(((unsigned long)h_280X)>>8))))));
+  goto L8818;}
+ L8818: {
+  addr_281X = arg1K0;
+  if ((addr_281X < (ShpS))) {
+    d_283X = *((long *) addr_281X);
+    if ((2 == (3 & d_283X))) {
+      arg1K0 = d_283X;
+      goto L8840;}
     else {
-      h_402X = *((long*)(-7 + d_403X));
-      *((long*)addr_401X) = h_402X;
-      arg1K0 = h_402X;
-      goto L8863;}}
+      h_282X = *((long *) (-7 + d_283X));
+      *((long *) addr_281X) = h_282X;
+      arg1K0 = h_282X;
+      goto L8840;}}
   else {
-    RSvalS = (((size_448X)<<2));
+    RSvalS = (((size_318X)<<2));
     goto START;}}
- L12987: {
-  new_404X = arg1K0;
-  *((long*)ShpS) = 2050;
-  ShpS = (4 + ShpS);
-  new_405X = 3 + ShpS;
-  ShpS = (8 + ShpS);
-  *((long*)(-4 + ShpS)) = 0;
-  *((long*)(-3 + new_405X)) = new_404X;
-  *((long*)(1 + new_405X)) = bucket_409X;
-  *((long*)((-3 + table_423X) + (((index_410X)<<2)))) = new_405X;
-  arg1K0 = new_404X;
-  goto L20094;}
- L20094: {
-  val_406X = arg1K0;
-  RSvalS = val_406X;
-  goto START;}
- L13077: {
-  i_407X = arg1K0;
-  h_408X = arg1K1;
-  if ((i_407X < (-1 + v_425X))) {
-    v_411X = ((long)(*((unsigned char*)((-3 + arg2_421X) + i_407X))));
-    arg1K0 = (1 + i_407X);
-    arg1K1 = (h_408X + ((long)(v_411X)));
-    goto L13077;}
-  else {
-    index_410X = h_408X & (-1 + v_424X);
-    bucket_409X = *((long*)((-3 + table_423X) + (((index_410X)<<2))));
-    arg1K0 = bucket_409X;
-    goto L12979;}}
- L12979: {
-  b_412X = arg1K0;
-  if ((25 == b_412X)) {
-    *((long*)ShpS) = 1030;
-    ShpS = (4 + ShpS);
-    new_414X = 3 + ShpS;
-    ShpS = (4 + ShpS);
-    *((long*)(-4 + ShpS)) = 0;
-    *((long*)(-3 + new_414X)) = arg2_421X;
-    if ((3 == (3 & new_414X))) {
-      if ((0 == (128 & (*((long*)(-7 + new_414X)))))) {
-        *((long*)(-7 + new_414X)) = (128 | (*((long*)(-7 + new_414X))));
-        arg1K0 = new_414X;
-        goto L12987;}
-      else {
-        arg1K0 = new_414X;
-        goto L12987;}}
+ L13252: {
+  sym_284X = arg1K0;
+  if ((3 == (3 & sym_284X))) {
+    if ((0 == (128 & (*((long *) (-7 + sym_284X)))))) {
+      *((long *) (-7 + sym_284X)) = (128 | (*((long *) (-7 + sym_284X))));
+      arg1K0 = sym_284X;
+      goto L13194;}
     else {
-      arg1K0 = new_414X;
-      goto L12987;}}
+      arg1K0 = sym_284X;
+      goto L13194;}}
   else {
-    merged_arg1K0 = arg2_421X;
-    merged_arg1K1 = (*((long*)(-3 + (*((long*)(-3 + b_412X))))));
+    arg1K0 = sym_284X;
+    goto L13194;}}
+ L28093: {
+  v_285X = arg1K0;
+  RSvalS = v_285X;
+  goto START;}
+ L19903: {
+  val_286X = arg1K0;
+  RSvalS = val_286X;
+  goto START;}
+ L13296: {
+  i_287X = arg1K0;
+  h_288X = arg1K1;
+  if ((i_287X < n_304X)) {
+    arg1K0 = (1 + i_287X);
+    arg1K1 = (h_288X + ((long)((((long)(*((unsigned char *) ((-3 + arg2_300X) + i_287X))))))));
+    goto L13296;}
+  else {
+    index_290X = h_288X & (-1 + v_303X);
+    bucket_289X = *((long *) ((-3 + table_302X) + (((index_290X)<<2))));
+    arg1K0 = bucket_289X;
+    goto L13186;}}
+ L13194: {
+  new_291X = arg1K0;
+  *((long *) (ShpS)) = 2050;
+  ShpS = (4 + (ShpS));
+  new_292X = 3 + (ShpS);
+  ShpS = (8 + (ShpS));
+  *((long *) (-4 + (ShpS))) = 0;
+  *((long *) (-3 + new_292X)) = new_291X;
+  *((long *) (1 + new_292X)) = bucket_289X;
+  *((long *) ((-3 + table_302X) + (((index_290X)<<2)))) = new_292X;
+  arg1K0 = new_291X;
+  goto L19903;}
+ L13186: {
+  b_293X = arg1K0;
+  if ((25 == b_293X)) {
+    *((long *) (ShpS)) = 1030;
+    ShpS = (4 + (ShpS));
+    new_295X = 3 + (ShpS);
+    ShpS = (4 + (ShpS));
+    *((long *) (-4 + (ShpS))) = 0;
+    *((long *) (-3 + new_295X)) = arg2_300X;
+    if ((3 == (3 & new_295X))) {
+      if ((0 == (128 & (*((long *) (-7 + new_295X)))))) {
+        *((long *) (-7 + new_295X)) = (128 | (*((long *) (-7 + new_295X))));
+        arg1K0 = new_295X;
+        goto L13252;}
+      else {
+        arg1K0 = new_295X;
+        goto L13252;}}
+    else {
+      arg1K0 = new_295X;
+      goto L13252;}}
+  else {
+    merged_arg1K0 = arg2_300X;
+    merged_arg1K1 = (*((long *) (-3 + (*((long *) (-3 + b_293X))))));
     stob_equalP_return_tag = 1;
     goto stob_equalP;
    stob_equalP_return_1:
-    v_413X = stob_equalP_return_value;
-    if (v_413X) {
-      arg1K0 = (*((long*)(-3 + b_412X)));
-      goto L20094;}
+    v_294X = stob_equalP_return_value;
+    if (v_294X) {
+      arg1K0 = (*((long *) (-3 + b_293X)));
+      goto L19903;}
     else {
-      arg1K0 = (*((long*)(1 + b_412X)));
-      goto L12979;}}}
- L9834: {
-  stob_415X = arg1K0;
-  from_416X = 4 + RSstackS;
-  arg1K0 = from_416X;
-  arg1K1 = (1 + stob_415X);
-  goto L9873;}
- L9873: {
-  from_417X = arg1K0;
-  to_418X = arg1K1;
-  if ((from_417X < (from_416X + (((((long)b_577X))<<2))))) {
-    *((long*)to_418X) = (*((long*)from_417X));
-    arg1K0 = (4 + from_417X);
-    arg1K1 = (4 + to_418X);
-    goto L9873;}
+      arg1K0 = (*((long *) (1 + b_293X)));
+      goto L13186;}}}
+ L9735: {
+  stob_296X = arg1K0;
+  from_297X = 4 + (RSstackS);
+  arg1K0 = from_297X;
+  arg1K1 = (1 + stob_296X);
+  goto L9774;}
+ L9774: {
+  from_298X = arg1K0;
+  to_299X = arg1K1;
+  if ((from_298X < (from_297X + (((((long)b_432X))<<2))))) {
+    *((long *) to_299X) = (*((long *) from_298X));
+    arg1K0 = (4 + from_298X);
+    arg1K1 = (4 + to_299X);
+    goto L9774;}
   else {
-    RSstackS = (RSstackS - ((((0 - ((long)b_577X)))<<2)));
-    *((long*)(-3 + stob_415X)) = RSenvS;
-    RSenvS = stob_415X;
+    RSstackS = ((RSstackS) - ((((0 - ((long)b_432X)))<<2)));
+    *((long *) (-3 + stob_296X)) = (RSenvS);
+    RSenvS = stob_296X;
     goto START;}}
- L20072: {
-  RSstackS = (4 + RSstackS);
-  arg2_421X = *((long*)RSstackS);
-  if ((3 == (3 & arg2_421X))) {
-    v_420X = 31 & ((((*((long*)(-7 + arg2_421X))))>>2));
-    if ((15 == v_420X)) {
-      obj_422X = RSvalS;
-      if ((3 == (3 & obj_422X))) {
-        v_419X = 31 & ((((*((long*)(-7 + obj_422X))))>>2));
-        if ((2 == v_419X)) {
-          table_423X = RSvalS;
-          v_424X = (((3 + ((long)(((unsigned long)(*((long*)(-7 + table_423X))))>>8))))>>2);
-          v_425X = (long)(((unsigned long)(*((long*)(-7 + arg2_421X))))>>8);
+ L19881: {
+  RSstackS = (4 + (RSstackS));
+  arg2_300X = *((long *) (RSstackS));
+  if ((3 == (3 & arg2_300X))) {
+    if ((15 == (31 & ((((*((long *) (-7 + arg2_300X))))>>2))))) {
+      obj_301X = RSvalS;
+      if ((3 == (3 & obj_301X))) {
+        if ((2 == (31 & ((((*((long *) (-7 + obj_301X))))>>2))))) {
+          table_302X = RSvalS;
+          v_303X = (((3 + ((long)(((unsigned long)(*((long *) (-7 + table_302X))))>>8))))>>2);
+          n_304X = -1 + ((long)(((unsigned long)(*((long *) (-7 + arg2_300X))))>>8));
           arg1K0 = 0;
           arg1K1 = 0;
-          goto L13077;}
+          goto L13296;}
         else {
-          goto L20097;}}
+          goto L19906;}}
       else {
-        goto L20097;}}
+        goto L19906;}}
     else {
-      goto L20097;}}
+      goto L19906;}}
   else {
-    goto L20097;}}
- L20097: {
+    goto L19906;}}
+ L19906: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_421X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = arg2_300X;
+  merged_arg1K2 = (RSvalS);
   goto raise_exception2;}
- L20198: {
-  RSstackS = (4 + RSstackS);
-  arg2_428X = *((long*)RSstackS);
-  v_427X = 0 == (3 & RSvalS);
-  if (v_427X) {
-    n_429X = ((RSvalS)>>2);
-    if ((3 == (3 & arg2_428X))) {
-      v_426X = 31 & ((((*((long*)(-7 + arg2_428X))))>>2));
-      if ((0 == v_426X)) {
-        goto L20324;}
+ L19999: {
+  RSstackS = (4 + (RSstackS));
+  arg2_305X = *((long *) (RSstackS));
+  if ((0 == (3 & (RSvalS)))) {
+    n_306X = (((RSvalS))>>2);
+    if ((3 == (3 & arg2_305X))) {
+      if ((0 == (31 & ((((*((long *) (-7 + arg2_305X))))>>2))))) {
+        goto L20125;}
       else {
-        goto L20226;}}
+        goto L20027;}}
     else {
-      goto L20226;}}
+      goto L20027;}}
   else {
     merged_arg0K0 = 0;
-    merged_arg1K1 = arg2_428X;
-    merged_arg1K2 = RSvalS;
+    merged_arg1K1 = arg2_305X;
+    merged_arg1K2 = (RSvalS);
     goto raise_exception2;}}
- L20226: {
-  if ((25 == arg2_428X)) {
-    goto L20324;}
+ L20027: {
+  if ((25 == arg2_305X)) {
+    goto L20125;}
   else {
     merged_arg0K0 = 0;
-    merged_arg1K1 = arg2_428X;
-    merged_arg1K2 = (((n_429X)<<2));
+    merged_arg1K1 = arg2_305X;
+    merged_arg1K2 = (((n_306X)<<2));
     goto raise_exception2;}}
- L20324: {
-  len_431X = 1 + n_429X;
-  *((long*)ShpS) = (62 + (((len_431X)<<8)));
-  ShpS = (4 + ShpS);
-  new_430X = 3 + ShpS;
-  ShpS = (ShpS + (-4 & (3 + len_431X)));
-  if ((0 < len_431X)) {
-    *((long*)(-4 + ShpS)) = 0;
-    arg1K0 = new_430X;
-    goto L20243;}
+ L20125: {
+  len_308X = 1 + n_306X;
+  *((long *) (ShpS)) = (62 + (((len_308X)<<8)));
+  ShpS = (4 + (ShpS));
+  new_307X = 3 + (ShpS);
+  ShpS = ((ShpS) + (-4 & (3 + len_308X)));
+  if ((0 < len_308X)) {
+    *((long *) (-4 + (ShpS))) = 0;
+    arg1K0 = new_307X;
+    goto L20044;}
   else {
-    arg1K0 = new_430X;
-    goto L20243;}}
- L20243: {
-  obj_432X = arg1K0;
-  arg1K0 = arg2_428X;
-  arg1K1 = (-1 + n_429X);
-  goto L20245;}
- L20245: {
-  l_433X = arg1K0;
-  i_434X = arg1K1;
-  if ((i_434X < 0)) {
-    RSvalS = obj_432X;
+    arg1K0 = new_307X;
+    goto L20044;}}
+ L20044: {
+  obj_309X = arg1K0;
+  arg1K0 = arg2_305X;
+  arg1K1 = (-1 + n_306X);
+  goto L20046;}
+ L20046: {
+  l_310X = arg1K0;
+  i_311X = arg1K1;
+  if ((i_311X < 0)) {
+    RSvalS = obj_309X;
     goto START;}
   else {
-    *((unsigned char*)((-3 + obj_432X) + i_434X)) = ((unsigned char)((long)((((((*((long*)(-3 + l_433X))))>>8))))));
-    arg1K0 = (*((long*)(1 + l_433X)));
-    arg1K1 = (-1 + i_434X);
-    goto L20245;}}
- L16914: {
+    *((unsigned char *) ((-3 + obj_309X) + i_311X)) = ((unsigned char)((long)((((((*((long *) (-3 + l_310X))))>>8))))));
+    arg1K0 = (*((long *) (1 + l_310X)));
+    arg1K1 = (-1 + i_311X);
+    goto L20046;}}
+ L16783: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
+  merged_arg1K1 = (RSvalS);
   goto raise_exception1;}
- L16936: {
-  i_435X = arg1K0;
-  h_436X = arg1K1;
-  if ((i_435X < (-1 + v_216X))) {
-    v_437X = ((long)(*((unsigned char*)((-3 + x_215X) + i_435X))));
-    arg1K0 = (1 + i_435X);
-    arg1K1 = (h_436X + ((long)(v_437X)));
-    goto L16936;}
+ L16805: {
+  i_312X = arg1K0;
+  h_313X = arg1K1;
+  if ((i_312X < n_138X)) {
+    arg1K0 = (1 + i_312X);
+    arg1K1 = (h_313X + ((long)((((long)(*((unsigned char *) ((-3 + x_139X) + i_312X))))))));
+    goto L16805;}
   else {
-    RSvalS = (((h_436X)<<2));
+    RSvalS = (((h_313X)<<2));
     goto START;}}
- L20475: {
+ L20270: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_206X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = arg2_143X;
+  merged_arg1K2 = (RSvalS);
   goto raise_exception2;}
- L20484: {
-  v_438X = arg0K0;
-  RSvalS = ((long)v_438X);
+ L20279: {
+  v_314X = arg0K0;
+  RSvalS = ((long)v_314X);
   goto START;}
- L17095: {
+ L16958: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
+  merged_arg1K1 = (RSvalS);
   goto raise_exception1;}
- L17092: {
+ L16955: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = x_227X;
+  merged_arg1K1 = x_130X;
   goto raise_exception1;}
- L29413: {
+ L17278: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
+  merged_arg1K1 = (RSvalS);
   goto raise_exception1;}
- L17421: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
-  goto raise_exception1;}
- L17489: {
-  i_439X = arg1K0;
-  if ((i_439X < ((long)count_182X))) {
+ L17346: {
+  i_315X = arg1K0;
+  if ((i_315X < ((long)count_160X))) {
     SvalS = RSvalS;
     SstackS = RSstackS;
     Scode_pointerS = RScode_pointerS;
     SenvS = RSenvS;
-    v_440X = hoistD0((*(areas_184X + i_439X)), ((*(areas_184X + i_439X)) + (*(sizes_183X + i_439X))), x_239X);
+    v_316X = hoistD1((*(areas_158X + i_315X)), ((*(areas_158X + i_315X)) + (*(sizes_159X + i_315X))), x_119X);
     RSvalS = SvalS;
     RSstackS = SstackS;
     RScode_pointerS = Scode_pointerS;
     RSenvS = SenvS;
-    if (v_440X) {
-      arg1K0 = (1 + i_439X);
-      goto L17489;}
+    if (v_316X) {
+      arg1K0 = (1 + i_315X);
+      goto L17346;}
     else {
-      goto L17474;}}
+      goto L17331;}}
   else {
     RSvalS = 13;
     goto START;}}
- L17474: {
-  ShpS = start_hp_240X;
+ L17331: {
+  ShpS = start_hp_118X;
   merged_arg0K0 = 0;
   goto raise_exception;}
- L29103: {
+ L28737: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg3_176X;
-  merged_arg1K2 = arg2_177X;
-  merged_arg1K3 = RSvalS;
+  merged_arg1K1 = arg3_164X;
+  merged_arg1K2 = arg2_163X;
+  merged_arg1K3 = (RSvalS);
   goto raise_exception3;}
- L29205: {
+ L28806: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg3_176X;
-  merged_arg1K2 = arg2_177X;
+  merged_arg1K1 = arg3_164X;
+  merged_arg1K2 = arg2_163X;
   goto raise_exception2;}
- L29087: {
-  resume_proc_441X = arg1K0;
+ L28721: {
+  resume_proc_317X = arg1K0;
   SvalS = RSvalS;
   SstackS = RSstackS;
   Scode_pointerS = RScode_pointerS;
@@ -3773,1696 +3480,1579 @@ long Tinterpret()
   RSstackS = SstackS;
   RScode_pointerS = Scode_pointerS;
   RSenvS = SenvS;
-  arg1K0 = 2;
-  goto L29129;}
- L29140: {
-  new_442X = arg1K0;
-  *(Sopen_vm_portsS + i_443X) = new_442X;
-  goto L29133;}
- L29133: {
-  arg1K0 = (1 + i_443X);
-  goto L29129;}
- L29129: {
-  i_443X = arg1K0;
-  if ((i_443X == Snumber_of_portsS)) {
-    fputs("This is a Scheme48 heap image file.", port_172X);
-    putc(10, port_172X);
-    putc(12, port_172X);
-    putc(10, port_172X);
-    merged_arg1K0 = 15;
-    merged_arg2K1 = port_172X;
-    write_number_return_tag = 0;
-    goto write_number;
-   write_number_return_0:
-    merged_arg1K0 = 4;
-    merged_arg2K1 = port_172X;
-    write_number_return_tag = 1;
-    goto write_number;
-   write_number_return_1:
-    merged_arg1K0 = (((Snewspace_beginS)>>2));
-    merged_arg2K1 = port_172X;
-    write_number_return_tag = 2;
-    goto write_number;
-   write_number_return_2:
-    merged_arg1K0 = (((ShpS)>>2));
-    merged_arg2K1 = port_172X;
-    write_number_return_tag = 3;
-    goto write_number;
-   write_number_return_3:
-    merged_arg1K0 = resume_proc_441X;
-    merged_arg2K1 = port_172X;
-    write_number_return_tag = 4;
-    goto write_number;
-   write_number_return_4:
-    putc(12, port_172X);
-    *((long*)ShpS) = 1;
-    count_446X = (4 + ShpS) - ShpS;
-    fwrite((void *)ShpS, sizeof(char), count_446X, port_172X);
-    count_447X = ShpS - Snewspace_beginS;
-    fwrite((void *)Snewspace_beginS, sizeof(char), count_447X, port_172X);
-    size_448X = ShpS - Snewspace_beginS;
-    fclose(port_172X);
-    b_449X = Snewspace_beginS;
-    Snewspace_beginS = Soldspace_beginS;
-    Soldspace_beginS = b_449X;
-    e_450X = Snewspace_endS;
-    Snewspace_endS = Soldspace_endS;
-    Soldspace_endS = e_450X;
-    SlimitS = Ssaved_limitS;
-    ShpS = Ssaved_hpS;
-    arg1K0 = Snewspace_beginS;
-    goto L8841;}
-  else {
-    port_445X = *(Sopen_vm_portsS + i_443X);
-    if ((1 == port_445X)) {
-      goto L29133;}
-    else {
-      header_444X = *((long*)(-7 + port_445X));
-      if ((3 == (3 & header_444X))) {
-        arg1K0 = header_444X;
-        goto L29140;}
-      else {
-        merged_arg1K0 = port_445X;
-        close_port_noisily_return_tag = 0;
-        goto close_port_noisily;
-       close_port_noisily_return_0:
-        arg1K0 = 1;
-        goto L29140;}}}}
- L17599: {
+  close_untraced_portsB_return_tag = 0;
+  goto close_untraced_portsB;
+ close_untraced_portsB_return_0:
+  fputs("This is a Scheme48 heap image file.", port_168X);
+  putc(10, port_168X);
+  putc(12, port_168X);
+  putc(10, port_168X);
+  merged_arg1K0 = 15;
+  merged_arg2K1 = port_168X;
+  write_number_return_tag = 0;
+  goto write_number;
+ write_number_return_0:
+  merged_arg1K0 = 4;
+  merged_arg2K1 = port_168X;
+  write_number_return_tag = 1;
+  goto write_number;
+ write_number_return_1:
+  merged_arg1K0 = ((((Snewspace_beginS))>>2));
+  merged_arg2K1 = port_168X;
+  write_number_return_tag = 2;
+  goto write_number;
+ write_number_return_2:
+  merged_arg1K0 = ((((ShpS))>>2));
+  merged_arg2K1 = port_168X;
+  write_number_return_tag = 3;
+  goto write_number;
+ write_number_return_3:
+  merged_arg1K0 = resume_proc_317X;
+  merged_arg2K1 = port_168X;
+  write_number_return_tag = 4;
+  goto write_number;
+ write_number_return_4:
+  putc(12, port_168X);
+  *((long *) (ShpS)) = 1;
+  fwrite((void *)(ShpS), sizeof(char), ((4 + (ShpS)) - (ShpS)), port_168X);
+  fwrite((void *)(Snewspace_beginS), sizeof(char), ((ShpS) - (Snewspace_beginS)), port_168X);
+  size_318X = (ShpS) - (Snewspace_beginS);
+  fclose(port_168X);
+  b_319X = Snewspace_beginS;
+  Snewspace_beginS = (Soldspace_beginS);
+  Soldspace_beginS = b_319X;
+  e_320X = Snewspace_endS;
+  Snewspace_endS = (Soldspace_endS);
+  Soldspace_endS = e_320X;
+  SlimitS = (Ssaved_limitS);
+  ShpS = (Ssaved_hpS);
+  arg1K0 = (Snewspace_beginS);
+  goto L8818;}
+ L17454: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
+  merged_arg1K1 = (RSvalS);
   goto raise_exception1;}
- L21094: {
+ L20885: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_165X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = arg2_172X;
+  merged_arg1K2 = (RSvalS);
   goto raise_exception2;}
- L21238: {
+ L21021: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_256X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = arg2_112X;
+  merged_arg1K2 = (RSvalS);
   goto raise_exception2;}
- L17695: {
+ L17546: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
+  merged_arg1K1 = (RSvalS);
   goto raise_exception1;}
- L17692: {
-  v_451X = arg0K0;
-  RSvalS = ((long)v_451X);
+ L17543: {
+  v_321X = arg0K0;
+  RSvalS = ((long)v_321X);
   goto START;}
- L17852: {
+ L17699: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
+  merged_arg1K1 = (RSvalS);
   goto raise_exception1;}
- L17849: {
-  val_452X = arg1K0;
-  RSvalS = val_452X;
+ L17696: {
+  val_322X = arg1K0;
+  RSvalS = val_322X;
   goto START;}
- L17844: {
-  c_453X = arg1K0;
-  *((long*)(5 + x_264X)) = c_453X;
-  arg1K0 = c_453X;
-  goto L17849;}
- L17974: {
+ L17691: {
+  c_323X = arg1K0;
+  *((long *) (5 + x_109X)) = c_323X;
+  arg1K0 = c_323X;
+  goto L17696;}
+ L17817: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
+  merged_arg1K1 = (RSvalS);
   goto raise_exception1;}
- L17971: {
-  val_454X = arg1K0;
-  RSvalS = val_454X;
+ L17814: {
+  val_324X = arg1K0;
+  RSvalS = val_324X;
   goto START;}
- L21333: {
-  key_455X = arg1K0;
-  RSstackS = (4 + RSstackS);
-  arg2_457X = *((long*)RSstackS);
-  if ((3 == (3 & arg2_457X))) {
-    v_458X = 31 & ((((*((long*)(-7 + arg2_457X))))>>2));
-    if ((15 == v_458X)) {
-      v_456X = 0 == (3 & RSvalS);
-      if (v_456X) {
-        mode_459X = ((RSvalS)>>2);
+ L21112: {
+  key_325X = arg1K0;
+  RSstackS = (4 + (RSstackS));
+  arg2_326X = *((long *) (RSstackS));
+  if ((3 == (3 & arg2_326X))) {
+    if ((15 == (31 & ((((*((long *) (-7 + arg2_326X))))>>2))))) {
+      if ((0 == (3 & (RSvalS)))) {
+        mode_327X = (((RSvalS))>>2);
         arg1K0 = 0;
-        goto L21522;}
+        goto L21299;}
       else {
-        goto L21371;}}
+        goto L21150;}}
     else {
-      goto L21371;}}
+      goto L21150;}}
   else {
-    goto L21371;}}
- L21371: {
+    goto L21150;}}
+ L21150: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_457X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = arg2_326X;
+  merged_arg1K2 = (RSvalS);
   goto raise_exception2;}
- L21522: {
-  i_460X = arg1K0;
-  if ((i_460X < Snumber_of_portsS)) {
-    x_461X = *(Sopen_vm_portsS + i_460X);
-    if ((1 == x_461X)) {
-      arg1K0 = i_460X;
-      arg1K1 = arg2_457X;
-      goto L21407;}
+ L21299: {
+  i_328X = arg1K0;
+  if ((i_328X < (Snumber_of_portsS))) {
+    if ((1 == (*((Sopen_vm_portsS) + i_328X)))) {
+      arg1K0 = i_328X;
+      arg1K1 = arg2_326X;
+      goto L21186;}
     else {
-      arg1K0 = (1 + i_460X);
-      goto L21522;}}
+      arg1K0 = (1 + i_328X);
+      goto L21299;}}
   else {
     arg1K0 = -1;
-    arg1K1 = arg2_457X;
-    goto L21407;}}
- L21509: {
-  i_462X = arg1K0;
-  if ((i_462X < Snumber_of_portsS)) {
-    x_463X = *(Sopen_vm_portsS + i_462X);
-    if ((1 == x_463X)) {
-      arg1K0 = i_462X;
-      goto L21451;}
+    arg1K1 = arg2_326X;
+    goto L21186;}}
+ L21288: {
+  i_329X = arg1K0;
+  if ((i_329X < (Snumber_of_portsS))) {
+    if ((1 == (*((Sopen_vm_portsS) + i_329X)))) {
+      arg1K0 = i_329X;
+      goto L21230;}
     else {
-      arg1K0 = (1 + i_462X);
-      goto L21509;}}
+      arg1K0 = (1 + i_329X);
+      goto L21288;}}
   else {
     arg1K0 = -1;
-    goto L21451;}}
- L21479: {
-  i_464X = arg1K0;
-  if ((i_464X < Snumber_of_portsS)) {
-    *(new_ports_469X + i_464X) = (*(Sopen_portsS + i_464X));
-    *(new_vm_ports_470X + i_464X) = (*(Sopen_vm_portsS + i_464X));
-    arg1K0 = (1 + i_464X);
-    goto L21479;}
+    goto L21230;}}
+ L21258: {
+  i_330X = arg1K0;
+  if ((i_330X < (Snumber_of_portsS))) {
+    *(new_ports_335X + i_330X) = (*((Sopen_portsS) + i_330X));
+    *(new_vm_ports_336X + i_330X) = (*((Sopen_vm_portsS) + i_330X));
+    arg1K0 = (1 + i_330X);
+    goto L21258;}
   else {
-    free(Sopen_portsS);
-    free(Sopen_vm_portsS);
-    Sopen_portsS = new_ports_469X;
-    Sopen_vm_portsS = new_vm_ports_470X;
-    Snumber_of_portsS = new_count_467X;
-    arg1K0 = old_count_468X;
-    arg1K1 = filename_477X;
-    goto L21407;}}
- L21473: {
-  i_465X = arg1K0;
-  if ((i_465X < new_count_467X)) {
-    *(new_vm_ports_470X + i_465X) = 1;
-    arg1K0 = (1 + i_465X);
-    goto L21473;}
+    free((Sopen_portsS));
+    free((Sopen_vm_portsS));
+    Sopen_portsS = new_ports_335X;
+    Sopen_vm_portsS = new_vm_ports_336X;
+    Snumber_of_portsS = new_count_333X;
+    arg1K0 = old_count_334X;
+    arg1K1 = filename_343X;
+    goto L21186;}}
+ L21252: {
+  i_331X = arg1K0;
+  if ((i_331X < new_count_333X)) {
+    *(new_vm_ports_336X + i_331X) = 1;
+    arg1K0 = (1 + i_331X);
+    goto L21252;}
   else {
     arg1K0 = 0;
-    goto L21479;}}
- L21462: {
+    goto L21258;}}
+ L21241: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = filename_477X;
-  merged_arg1K2 = (((key_455X)<<2));
+  merged_arg1K1 = filename_343X;
+  merged_arg1K2 = (((key_325X)<<2));
   goto raise_exception2;}
- L21451: {
-  index_466X = arg1K0;
-  if ((index_466X < 0)) {
-    new_count_467X = 8 + Snumber_of_portsS;
-    old_count_468X = Snumber_of_portsS;
-    new_ports_469X = (FILE **)malloc(sizeof(FILE *) * new_count_467X);
-    new_vm_ports_470X = (long*)malloc(sizeof(long) * new_count_467X);
-    if ((NULL == new_ports_469X)) {
-      goto L21462;}
+ L21230: {
+  index_332X = arg1K0;
+  if ((index_332X < 0)) {
+    new_count_333X = 8 + (Snumber_of_portsS);
+    old_count_334X = Snumber_of_portsS;
+    new_ports_335X = (FILE **)malloc(sizeof(FILE *) * new_count_333X);
+    new_vm_ports_336X = (long*)malloc(sizeof(long) * new_count_333X);
+    if ((NULL == new_ports_335X)) {
+      goto L21241;}
     else {
-      if ((NULL == new_vm_ports_470X)) {
-        goto L21462;}
+      if ((NULL == new_vm_ports_336X)) {
+        goto L21241;}
       else {
         arg1K0 = 0;
-        goto L21473;}}}
+        goto L21252;}}}
   else {
-    arg1K0 = index_466X;
-    arg1K1 = filename_477X;
-    goto L21407;}}
- L21410: {
-  port_471X = arg2K0;
-  if ((NULL == port_471X)) {
+    arg1K0 = index_332X;
+    arg1K1 = filename_343X;
+    goto L21186;}}
+ L21189: {
+  port_337X = arg2K0;
+  if ((NULL == port_337X)) {
     RSvalS = 1;
     goto START;}
   else {
-    *((long*)ShpS) = 4118;
-    ShpS = (4 + ShpS);
-    new_472X = 3 + ShpS;
-    ShpS = (16 + ShpS);
-    *((long*)(-4 + ShpS)) = 0;
-    *((long*)(-3 + new_472X)) = (((mode_459X)<<2));
-    *((long*)(1 + new_472X)) = (((index_473X)<<2));
-    *((long*)(5 + new_472X)) = 1;
-    *((long*)(9 + new_472X)) = filename_474X;
-    *(Sopen_portsS + index_473X) = port_471X;
-    *(Sopen_vm_portsS + index_473X) = new_472X;
-    RSvalS = new_472X;
+    *((long *) (ShpS)) = 4118;
+    ShpS = (4 + (ShpS));
+    new_338X = 3 + (ShpS);
+    ShpS = (16 + (ShpS));
+    *((long *) (-4 + (ShpS))) = 0;
+    *((long *) (-3 + new_338X)) = (((mode_327X)<<2));
+    *((long *) (1 + new_338X)) = (((index_339X)<<2));
+    *((long *) (5 + new_338X)) = 1;
+    *((long *) (9 + new_338X)) = filename_340X;
+    *((Sopen_portsS) + index_339X) = port_337X;
+    *((Sopen_vm_portsS) + index_339X) = new_338X;
+    RSvalS = new_338X;
     goto START;}}
- L21407: {
-  index_473X = arg1K0;
-  filename_474X = arg1K1;
-  if ((index_473X < 0)) {
-    merged_arg1K0 = filename_474X;
+ L21186: {
+  index_339X = arg1K0;
+  filename_340X = arg1K1;
+  if ((index_339X < 0)) {
+    merged_arg1K0 = filename_340X;
     collect_saving_temp_return_tag = 12;
     goto collect_saving_temp;
    collect_saving_temp_return_12:
-    filename_477X = collect_saving_temp_return_value;
+    filename_343X = collect_saving_temp_return_value;
     arg1K0 = 0;
-    goto L21509;}
+    goto L21288;}
   else {
-    if ((2 == mode_459X)) {
-      merged_arg1K0 = filename_474X;
+    if ((2 == mode_327X)) {
+      merged_arg1K0 = filename_340X;
       extract_string_return_tag = 1;
       goto extract_string;
      extract_string_return_1:
-      spec_475X = extract_string_return_value;
-      arg2K0 = (ps_open(spec_475X, "w"));
-      goto L21410;}
+      spec_341X = extract_string_return_value;
+      arg2K0 = (ps_open(spec_341X, "w"));
+      goto L21189;}
     else {
-      merged_arg1K0 = filename_474X;
+      merged_arg1K0 = filename_340X;
       extract_string_return_tag = 2;
       goto extract_string;
      extract_string_return_2:
-      spec_476X = extract_string_return_value;
-      arg2K0 = (ps_open(spec_476X, "r"));
-      goto L21410;}}}
- L21625: {
-  if ((1 == RSvalS)) {
-    *((long*)(-3 + arg2_144X)) = 273;
-    goto L21650;}
+      spec_342X = extract_string_return_value;
+      arg2K0 = (ps_open(spec_342X, "r"));
+      goto L21189;}}}
+ L21394: {
+  if ((1 == (RSvalS))) {
+    *((long *) (-3 + arg2_186X)) = 273;
+    goto L21419;}
   else {
-    if ((17 == (255 & (*((long*)(-3 + arg2_144X)))))) {
-      *((long*)(-3 + arg2_144X)) = 529;
-      goto L21650;}
+    if ((17 == (255 & (*((long *) (-3 + arg2_186X)))))) {
+      *((long *) (-3 + arg2_186X)) = 529;
+      goto L21419;}
     else {
-      goto L21650;}}}
- L21653: {
+      goto L21419;}}}
+ L21422: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_144X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = arg2_186X;
+  merged_arg1K2 = (RSvalS);
   goto raise_exception2;}
- L21650: {
+ L21419: {
   RSvalS = 13;
   goto START;}
- L18407: {
+ L18236: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
+  merged_arg1K1 = (RSvalS);
   goto raise_exception1;}
- L18416: {
-  v_478X = arg0K0;
-  RSvalS = ((long)v_478X);
+ L18245: {
+  v_344X = arg0K0;
+  RSvalS = ((long)v_344X);
   goto START;}
- L24776: {
+ L24483: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg3_139X;
-  merged_arg1K2 = arg2_140X;
-  merged_arg1K3 = RSvalS;
+  merged_arg1K1 = arg3_189X;
+  merged_arg1K2 = arg2_188X;
+  merged_arg1K3 = (RSvalS);
   goto raise_exception3;}
- L24769: {
+ L24476: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg3_139X;
-  merged_arg1K2 = (((index_137X)<<2));
-  merged_arg1K3 = (9 + (((((long)(Kchar_138X)))<<8)));
+  merged_arg1K1 = arg3_189X;
+  merged_arg1K2 = (((index_191X)<<2));
+  merged_arg1K3 = (9 + (((((long)(Kchar_190X)))<<8)));
   goto raise_exception3;}
- L21832: {
+ L21599: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_282X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = arg2_101X;
+  merged_arg1K2 = (RSvalS);
   goto raise_exception2;}
- L21827: {
+ L21594: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_282X;
-  merged_arg1K2 = (((index_134X)<<2));
+  merged_arg1K1 = arg2_101X;
+  merged_arg1K2 = (((index_193X)<<2));
   goto raise_exception2;}
- L22070: {
-  len_480X = 1 + len_129X;
-  *((long*)ShpS) = (62 + (((len_480X)<<8)));
-  ShpS = (4 + ShpS);
-  new_479X = 3 + ShpS;
-  ShpS = (ShpS + (-4 & (3 + len_480X)));
-  if ((0 < len_480X)) {
-    *((long*)(-4 + ShpS)) = 0;
-    arg1K0 = new_479X;
-    goto L21994;}
+ L21838: {
+  len_346X = 1 + len_197X;
+  *((long *) (ShpS)) = (62 + (((len_346X)<<8)));
+  ShpS = (4 + (ShpS));
+  new_345X = 3 + (ShpS);
+  ShpS = ((ShpS) + (-4 & (3 + len_346X)));
+  if ((0 < len_346X)) {
+    *((long *) (-4 + (ShpS))) = 0;
+    arg1K0 = new_345X;
+    goto L21762;}
   else {
-    arg1K0 = new_479X;
-    goto L21994;}}
- L22019: {
+    arg1K0 = new_345X;
+    goto L21762;}}
+ L21787: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_131X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = arg2_195X;
+  merged_arg1K2 = (RSvalS);
   goto raise_exception2;}
- L22119: {
+ L21744: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = (((len_129X)<<2));
-  merged_arg1K2 = (9 + (((((long)(init_130X)))<<8)));
+  merged_arg1K1 = (((len_197X)<<2));
+  merged_arg1K2 = (9 + (((((long)(init_196X)))<<8)));
   goto raise_exception2;}
- L21994: {
-  string_481X = arg1K0;
-  arg1K0 = (-1 + len_129X);
-  goto L21996;}
- L21996: {
-  i_482X = arg1K0;
-  if ((i_482X < 0)) {
-    RSvalS = string_481X;
+ L21762: {
+  string_347X = arg1K0;
+  arg1K0 = (-1 + len_197X);
+  goto L21764;}
+ L21764: {
+  i_348X = arg1K0;
+  if ((i_348X < 0)) {
+    RSvalS = string_347X;
     goto START;}
   else {
-    *((unsigned char*)((-3 + string_481X) + i_482X)) = ((unsigned char)((long)(init_130X)));
-    arg1K0 = (-1 + i_482X);
-    goto L21996;}}
- L24954: {
+    *((unsigned char *) ((-3 + string_347X) + i_348X)) = ((unsigned char)((long)(init_196X)));
+    arg1K0 = (-1 + i_348X);
+    goto L21764;}}
+ L24657: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg3_289X;
-  merged_arg1K2 = arg2_288X;
-  merged_arg1K3 = RSvalS;
+  merged_arg1K1 = arg3_98X;
+  merged_arg1K2 = arg2_99X;
+  merged_arg1K3 = (RSvalS);
   goto raise_exception3;}
- L24947: {
+ L24650: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg3_289X;
-  merged_arg1K2 = (((index_291X)<<2));
-  merged_arg1K3 = (((value_290X)<<2));
+  merged_arg1K1 = arg3_98X;
+  merged_arg1K2 = (((index_200X)<<2));
+  merged_arg1K3 = (((value_199X)<<2));
   goto raise_exception3;}
- L22277: {
+ L22014: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_123X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = arg2_97X;
+  merged_arg1K2 = (RSvalS);
   goto raise_exception2;}
- L22272: {
+ L22009: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_123X;
-  merged_arg1K2 = (((index_294X)<<2));
+  merged_arg1K1 = arg2_97X;
+  merged_arg1K2 = (((index_202X)<<2));
   goto raise_exception2;}
- L22511: {
-  *((long*)ShpS) = (66 + (((len_299X)<<8)));
-  ShpS = (4 + ShpS);
-  new_483X = 3 + ShpS;
-  ShpS = (ShpS + (-4 & (3 + len_299X)));
-  if ((0 < len_299X)) {
-    *((long*)(-4 + ShpS)) = 0;
-    arg1K0 = new_483X;
-    goto L22437;}
+ L22251: {
+  *((long *) (ShpS)) = (66 + (((len_94X)<<8)));
+  ShpS = (4 + (ShpS));
+  new_349X = 3 + (ShpS);
+  ShpS = ((ShpS) + (-4 & (3 + len_94X)));
+  if ((0 < len_94X)) {
+    *((long *) (-4 + (ShpS))) = 0;
+    arg1K0 = new_349X;
+    goto L22177;}
   else {
-    arg1K0 = new_483X;
-    goto L22437;}}
- L22462: {
+    arg1K0 = new_349X;
+    goto L22177;}}
+ L22159: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_297X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = (((len_94X)<<2));
+  merged_arg1K2 = (((init_95X)<<2));
   goto raise_exception2;}
- L22560: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = (((len_299X)<<2));
-  merged_arg1K2 = (((init_298X)<<2));
-  goto raise_exception2;}
- L22437: {
-  code_vector_484X = arg1K0;
-  arg1K0 = (-1 + len_299X);
-  goto L22439;}
- L22439: {
-  i_485X = arg1K0;
-  if ((i_485X < 0)) {
-    RSvalS = code_vector_484X;
+ L22177: {
+  code_vector_350X = arg1K0;
+  arg1K0 = (-1 + len_94X);
+  goto L22179;}
+ L22179: {
+  i_351X = arg1K0;
+  if ((i_351X < 0)) {
+    RSvalS = code_vector_350X;
     goto START;}
   else {
-    *((unsigned char*)((-3 + code_vector_484X) + i_485X)) = ((unsigned char)init_298X);
-    arg1K0 = (-1 + i_485X);
-    goto L22439;}}
- L25786: {
+    *((unsigned char *) ((-3 + code_vector_350X) + i_351X)) = ((unsigned char)init_95X);
+    arg1K0 = (-1 + i_351X);
+    goto L22179;}}
+ L25455: {
   merged_arg0K0 = 1;
-  merged_arg1K1 = arg3_117X;
-  merged_arg1K2 = (((((long)b_305X))<<2));
-  merged_arg1K3 = (((index_304X)<<2));
-  merged_arg1K4 = x_303X;
+  merged_arg1K1 = arg3_206X;
+  merged_arg1K2 = (((((long)b_90X))<<2));
+  merged_arg1K3 = (((index_91X)<<2));
+  merged_arg1K4 = x_92X;
   goto raise_exception4;}
- L25123: {
+ L24824: {
   merged_arg0K0 = 1;
-  merged_arg1K1 = arg2_115X;
-  merged_arg1K2 = (((((long)b_308X))<<2));
-  merged_arg1K3 = (((index_307X)<<2));
+  merged_arg1K1 = arg2_207X;
+  merged_arg1K2 = (((((long)b_87X))<<2));
+  merged_arg1K3 = (((index_88X)<<2));
   goto raise_exception3;}
- L25432: {
+ L25001: {
   merged_arg0K0 = 1;
-  merged_arg1K1 = (((((long)b_312X))<<2));
-  merged_arg1K2 = (((len_311X)<<2));
-  merged_arg1K3 = x_310X;
+  merged_arg1K1 = (((((long)b_83X))<<2));
+  merged_arg1K2 = (((len_84X)<<2));
+  merged_arg1K3 = x_85X;
   goto raise_exception3;}
- L25313: {
-  val_486X = arg1K0;
-  arg1K0 = (-1 + len_311X);
-  goto L25315;}
- L25315: {
-  i_487X = arg1K0;
-  if ((i_487X < 0)) {
-    RSvalS = val_486X;
+ L25017: {
+  val_352X = arg1K0;
+  arg1K0 = (-1 + len_84X);
+  goto L25019;}
+ L25019: {
+  i_353X = arg1K0;
+  if ((i_353X < 0)) {
+    RSvalS = val_352X;
     goto START;}
   else {
-    *((long*)((-3 + val_486X) + (((i_487X)<<2)))) = init_489X;
-    arg1K0 = (-1 + i_487X);
-    goto L25315;}}
- L25302: {
-  okayP_488X = arg3K0;
-  init_489X = arg1K1;
-  if (okayP_488X) {
-    len_491X = ((len_311X)<<2);
-    *((long*)ShpS) = (2 + (((((((len_491X)<<6)) + ((long)b_312X)))<<2)));
-    ShpS = (4 + ShpS);
-    new_490X = 3 + ShpS;
-    ShpS = (ShpS + (-4 & (3 + len_491X)));
-    if ((0 < len_491X)) {
-      *((long*)(-4 + ShpS)) = 0;
-      arg1K0 = new_490X;
-      goto L25313;}
+    *((long *) ((-3 + val_352X) + (((i_353X)<<2)))) = init_355X;
+    arg1K0 = (-1 + i_353X);
+    goto L25019;}}
+ L25006: {
+  okayP_354X = arg3K0;
+  init_355X = arg1K1;
+  if (okayP_354X) {
+    len_357X = ((len_84X)<<2);
+    *((long *) (ShpS)) = (2 + (((((((len_357X)<<6)) + ((long)b_83X)))<<2)));
+    ShpS = (4 + (ShpS));
+    new_356X = 3 + (ShpS);
+    ShpS = ((ShpS) + (-4 & (3 + len_357X)));
+    if ((0 < len_357X)) {
+      *((long *) (-4 + (ShpS))) = 0;
+      arg1K0 = new_356X;
+      goto L25017;}
     else {
-      arg1K0 = new_490X;
-      goto L25313;}}
+      arg1K0 = new_356X;
+      goto L25017;}}
   else {
     merged_arg0K0 = 1;
-    merged_arg1K1 = (((((long)b_312X))<<2));
-    merged_arg1K2 = (((len_311X)<<2));
-    merged_arg1K3 = init_489X;
+    merged_arg1K1 = (((((long)b_83X))<<2));
+    merged_arg1K2 = (((len_84X)<<2));
+    merged_arg1K3 = init_355X;
     goto raise_exception3;}}
- L26044: {
+ L25711: {
   merged_arg0K0 = 2;
-  merged_arg1K1 = arg2_317X;
-  merged_arg1K2 = (((((long)b_319X))<<2));
-  merged_arg1K3 = (((((long)b_320X))<<2));
-  merged_arg1K4 = x_318X;
+  merged_arg1K1 = arg2_80X;
+  merged_arg1K2 = (((((long)b_78X))<<2));
+  merged_arg1K3 = (((((long)b_77X))<<2));
+  merged_arg1K4 = x_79X;
   goto raise_exception4;}
- L25565: {
+ L25238: {
   merged_arg0K0 = 2;
-  merged_arg1K1 = x_110X;
-  merged_arg1K2 = (((((long)b_109X))<<2));
-  merged_arg1K3 = (((((long)b_108X))<<2));
+  merged_arg1K1 = x_209X;
+  merged_arg1K2 = (((((long)b_210X))<<2));
+  merged_arg1K3 = (((((long)b_211X))<<2));
   goto raise_exception3;}
- L16739: {
-  b_495X = *((unsigned char*)RScode_pointerS);
-  RScode_pointerS = (1 + RScode_pointerS);
-  b_494X = *((unsigned char*)RScode_pointerS);
-  RScode_pointerS = (1 + RScode_pointerS);
-  len_493X = ((((long)b_495X))<<2);
-  *((long*)ShpS) = (2 + (((((((len_493X)<<6)) + ((long)b_494X)))<<2)));
-  ShpS = (4 + ShpS);
-  new_492X = 3 + ShpS;
-  ShpS = (ShpS + (-4 & (3 + len_493X)));
-  if ((0 < len_493X)) {
-    *((long*)(-4 + ShpS)) = 0;
-    arg1K0 = new_492X;
-    goto L16747;}
+ L16612: {
+  b_361X = *((unsigned char *) (RScode_pointerS));
+  RScode_pointerS = (1 + (RScode_pointerS));
+  b_360X = *((unsigned char *) (RScode_pointerS));
+  RScode_pointerS = (1 + (RScode_pointerS));
+  len_359X = ((((long)b_361X))<<2);
+  *((long *) (ShpS)) = (2 + (((((((len_359X)<<6)) + ((long)b_360X)))<<2)));
+  ShpS = (4 + (ShpS));
+  new_358X = 3 + (ShpS);
+  ShpS = ((ShpS) + (-4 & (3 + len_359X)));
+  if ((0 < len_359X)) {
+    *((long *) (-4 + (ShpS))) = 0;
+    arg1K0 = new_358X;
+    goto L16620;}
   else {
-    arg1K0 = new_492X;
-    goto L16747;}}
- L16747: {
-  new_496X = arg1K0;
-  if ((((long)b_495X) < 1)) {
-    goto L16778;}
+    arg1K0 = new_358X;
+    goto L16620;}}
+ L16620: {
+  new_362X = arg1K0;
+  if ((((long)b_361X) < 1)) {
+    goto L16651;}
   else {
-    *((long*)(-7 + (new_496X + (((((long)b_495X))<<2))))) = RSvalS;
-    arg1K0 = (-2 + ((long)b_495X));
-    goto L16756;}}
- L16778: {
-  RSvalS = new_496X;
+    *((long *) (-7 + (new_362X + (((((long)b_361X))<<2))))) = (RSvalS);
+    arg1K0 = (-2 + ((long)b_361X));
+    goto L16629;}}
+ L16651: {
+  RSvalS = new_362X;
   goto START;}
- L16756: {
-  i_497X = arg1K0;
-  if ((i_497X < 0)) {
-    goto L16778;}
+ L16629: {
+  i_363X = arg1K0;
+  if ((i_363X < 0)) {
+    goto L16651;}
   else {
-    RSstackS = (4 + RSstackS);
-    *((long*)((-3 + new_496X) + (((i_497X)<<2)))) = (*((long*)RSstackS));
-    arg1K0 = (-1 + i_497X);
-    goto L16756;}}
- L22702: {
+    RSstackS = (4 + (RSstackS));
+    *((long *) ((-3 + new_362X) + (((i_363X)<<2)))) = (*((long *) (RSstackS)));
+    arg1K0 = (-1 + i_363X);
+    goto L16629;}}
+ L22411: {
   merged_arg0K0 = 1;
-  merged_arg1K1 = x_107X;
-  merged_arg1K2 = (((((long)b_106X))<<2));
+  merged_arg1K1 = x_212X;
+  merged_arg1K2 = (((((long)b_213X))<<2));
   goto raise_exception2;}
- L22793: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_102X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
- L22802: {
-  v_498X = arg0K0;
-  RSvalS = ((long)v_498X);
+ L22698: {
+  RSvalS = (((result_68X)<<2));
   goto START;}
- L22877: {
+ L22695: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_100X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = arg2_220X;
+  merged_arg1K2 = x_72X;
   goto raise_exception2;}
- L22886: {
-  v_499X = arg0K0;
-  RSvalS = ((long)v_499X);
+ L23255: {
+  n_364X = arg1K0;
+  RSvalS = (((n_364X)<<2));
   goto START;}
- L22961: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_97X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
- L22991: {
-  RSvalS = (((result_92X)<<2));
-  goto START;}
- L22988: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_97X;
-  merged_arg1K2 = x_96X;
-  goto raise_exception2;}
- L23516: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_83X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
- L23548: {
-  n_500X = arg1K0;
-  RSvalS = (((n_500X)<<2));
-  goto START;}
- L23544: {
-  b_501X = arg1K0;
-  c_502X = a_503X % b_501X;
-  if ((a_81X < 0)) {
-    arg1K0 = (0 - c_502X);
-    goto L23548;}
+ L23251: {
+  b_365X = arg1K0;
+  c_366X = a_367X % b_365X;
+  if ((a_224X < 0)) {
+    arg1K0 = (0 - c_366X);
+    goto L23255;}
   else {
-    arg1K0 = c_502X;
-    goto L23548;}}
- L23542: {
-  a_503X = arg1K0;
-  if ((b_80X < 0)) {
-    arg1K0 = (0 - b_80X);
-    goto L23544;}
+    arg1K0 = c_366X;
+    goto L23255;}}
+ L23249: {
+  a_367X = arg1K0;
+  if ((b_225X < 0)) {
+    arg1K0 = (0 - b_225X);
+    goto L23251;}
   else {
-    arg1K0 = b_80X;
-    goto L23544;}}
- L23647: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_341X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
- L23681: {
-  if ((536870911 < c_505X)) {
+    arg1K0 = b_225X;
+    goto L23251;}}
+ L23388: {
+  if ((536870911 < c_369X)) {
     merged_arg0K0 = 0;
-    merged_arg1K1 = arg2_341X;
-    merged_arg1K2 = x_342X;
+    merged_arg1K1 = arg2_58X;
+    merged_arg1K2 = x_226X;
     goto raise_exception2;}
   else {
-    RSvalS = (((c_505X)<<2));
+    RSvalS = (((c_369X)<<2));
     goto START;}}
- L23678: {
-  RSvalS = ((((0 - c_505X))<<2));
+ L23385: {
+  RSvalS = ((((0 - c_369X))<<2));
   goto START;}
- L23675: {
-  b_504X = arg1K0;
-  c_505X = a_506X / b_504X;
-  if ((a_343X < 0)) {
-    if ((b_344X < 0)) {
-      goto L23681;}
+ L23382: {
+  b_368X = arg1K0;
+  c_369X = a_370X / b_368X;
+  if ((a_227X < 0)) {
+    if ((b_228X < 0)) {
+      goto L23388;}
     else {
-      goto L23678;}}
+      goto L23385;}}
   else {
-    if ((b_344X < 0)) {
-      goto L23678;}
+    if ((b_228X < 0)) {
+      goto L23385;}
     else {
-      goto L23681;}}}
- L23673: {
-  a_506X = arg1K0;
-  if ((b_344X < 0)) {
-    arg1K0 = (0 - b_344X);
-    goto L23675;}
+      goto L23388;}}}
+ L23380: {
+  a_370X = arg1K0;
+  if ((b_228X < 0)) {
+    arg1K0 = (0 - b_228X);
+    goto L23382;}
   else {
-    arg1K0 = b_344X;
-    goto L23675;}}
- L23814: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_78X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
- L23823: {
-  v_507X = arg0K0;
-  RSvalS = ((long)v_507X);
-  goto START;}
- L23898: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_76X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
- L23907: {
-  v_508X = arg0K0;
-  RSvalS = ((long)v_508X);
-  goto START;}
- L23982: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_74X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
- L24051: {
-  if ((536870911 < c_517X)) {
+    arg1K0 = b_228X;
+    goto L23382;}}
+ L23758: {
+  if ((536870911 < c_379X)) {
     merged_arg0K0 = 0;
-    merged_arg1K1 = arg2_74X;
-    merged_arg1K2 = x_73X;
+    merged_arg1K1 = arg2_55X;
+    merged_arg1K2 = x_231X;
     goto raise_exception2;}
   else {
-    arg1K0 = (((c_517X)<<2));
-    goto L24014;}}
- L24027: {
-  n_509X = arg1K0;
-  if ((0 == (((n_509X)<<2)))) {
-    RSvalS = q_513X;
+    arg1K0 = (((c_379X)<<2));
+    goto L23721;}}
+ L23734: {
+  n_371X = arg1K0;
+  if ((0 == (((n_371X)<<2)))) {
+    RSvalS = q_375X;
     goto START;}
   else {
     merged_arg0K0 = 0;
-    merged_arg1K1 = arg2_74X;
-    merged_arg1K2 = x_73X;
+    merged_arg1K1 = arg2_55X;
+    merged_arg1K2 = x_231X;
     goto raise_exception2;}}
- L24023: {
-  b_510X = arg1K0;
-  c_511X = a_512X % b_510X;
-  if ((a_514X < 0)) {
-    arg1K0 = (0 - c_511X);
-    goto L24027;}
+ L23730: {
+  b_372X = arg1K0;
+  c_373X = a_374X % b_372X;
+  if ((a_376X < 0)) {
+    arg1K0 = (0 - c_373X);
+    goto L23734;}
   else {
-    arg1K0 = c_511X;
-    goto L24027;}}
- L24021: {
-  a_512X = arg1K0;
-  if ((b_515X < 0)) {
-    arg1K0 = (0 - b_515X);
-    goto L24023;}
+    arg1K0 = c_373X;
+    goto L23734;}}
+ L23728: {
+  a_374X = arg1K0;
+  if ((b_377X < 0)) {
+    arg1K0 = (0 - b_377X);
+    goto L23730;}
   else {
-    arg1K0 = b_515X;
-    goto L24023;}}
- L24014: {
-  q_513X = arg1K0;
-  if ((0 == x_73X)) {
+    arg1K0 = b_377X;
+    goto L23730;}}
+ L23721: {
+  q_375X = arg1K0;
+  if ((0 == x_231X)) {
     merged_arg0K0 = 0;
-    merged_arg1K1 = arg2_74X;
-    merged_arg1K2 = x_73X;
+    merged_arg1K1 = arg2_55X;
+    merged_arg1K2 = x_231X;
     goto raise_exception2;}
   else {
-    a_514X = ((arg2_74X)>>2);
-    b_515X = ((x_73X)>>2);
-    if ((a_514X < 0)) {
-      arg1K0 = (0 - a_514X);
-      goto L24021;}
+    a_376X = ((arg2_55X)>>2);
+    b_377X = ((x_231X)>>2);
+    if ((a_376X < 0)) {
+      arg1K0 = (0 - a_376X);
+      goto L23728;}
     else {
-      arg1K0 = a_514X;
-      goto L24021;}}}
- L24010: {
-  b_516X = arg1K0;
-  c_517X = a_518X / b_516X;
-  if ((a_72X < 0)) {
-    if ((b_71X < 0)) {
-      goto L24051;}
+      arg1K0 = a_376X;
+      goto L23728;}}}
+ L23717: {
+  b_378X = arg1K0;
+  c_379X = a_380X / b_378X;
+  if ((a_232X < 0)) {
+    if ((b_233X < 0)) {
+      goto L23758;}
     else {
-      arg1K0 = ((((0 - c_517X))<<2));
-      goto L24014;}}
+      arg1K0 = ((((0 - c_379X))<<2));
+      goto L23721;}}
   else {
-    if ((b_71X < 0)) {
-      arg1K0 = ((((0 - c_517X))<<2));
-      goto L24014;}
+    if ((b_233X < 0)) {
+      arg1K0 = ((((0 - c_379X))<<2));
+      goto L23721;}
     else {
-      goto L24051;}}}
- L24008: {
-  a_518X = arg1K0;
-  if ((b_71X < 0)) {
-    arg1K0 = (0 - b_71X);
-    goto L24010;}
+      goto L23758;}}}
+ L23715: {
+  a_380X = arg1K0;
+  if ((b_233X < 0)) {
+    arg1K0 = (0 - b_233X);
+    goto L23717;}
   else {
-    arg1K0 = b_71X;
-    goto L24010;}}
- L24192: {
+    arg1K0 = b_233X;
+    goto L23717;}}
+ L23921: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_348X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = arg2_54X;
+  merged_arg1K2 = x_234X;
   goto raise_exception2;}
- L24214: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_348X;
-  merged_arg1K2 = x_349X;
-  goto raise_exception2;}
- L24306: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_69X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
- L24363: {
-  if ((536870911 < c_526X)) {
+ L24070: {
+  if ((536870911 < c_388X)) {
     merged_arg0K0 = 0;
-    merged_arg1K1 = arg2_69X;
-    merged_arg1K2 = x_68X;
+    merged_arg1K1 = arg2_53X;
+    merged_arg1K2 = x_236X;
     goto raise_exception2;}
   else {
-    RSvalS = (((c_526X)<<2));
+    RSvalS = (((c_388X)<<2));
     goto START;}}
- L24356: {
-  if ((536870912 < c_526X)) {
+ L24063: {
+  if ((536870912 < c_388X)) {
     merged_arg0K0 = 0;
-    merged_arg1K1 = arg2_69X;
-    merged_arg1K2 = x_68X;
+    merged_arg1K1 = arg2_53X;
+    merged_arg1K2 = x_236X;
     goto raise_exception2;}
   else {
-    RSvalS = ((((0 - c_526X))<<2));
+    RSvalS = ((((0 - c_388X))<<2));
     goto START;}}
- L24353: {
-  if ((536870911 < lo_c_524X)) {
-    goto L24348;}
+ L24060: {
+  if ((536870911 < lo_c_386X)) {
+    goto L24055;}
   else {
-    if ((8192 < mid_c_525X)) {
-      goto L24348;}
+    if ((8192 < mid_c_387X)) {
+      goto L24055;}
     else {
-      if ((a_67X < 0)) {
-        if ((b_66X < 0)) {
-          goto L24363;}
+      if ((a_237X < 0)) {
+        if ((b_238X < 0)) {
+          goto L24070;}
         else {
-          goto L24356;}}
+          goto L24063;}}
       else {
-        if ((b_66X < 0)) {
-          goto L24356;}
+        if ((b_238X < 0)) {
+          goto L24063;}
         else {
-          goto L24363;}}}}}
- L24348: {
+          goto L24070;}}}}}
+ L24055: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_69X;
-  merged_arg1K2 = x_68X;
+  merged_arg1K1 = arg2_53X;
+  merged_arg1K2 = x_236X;
   goto raise_exception2;}
- L24333: {
-  b_519X = arg1K0;
-  lo_a_520X = 65535 & a_527X;
-  lo_b_521X = 65535 & b_519X;
-  hi_a_522X = 65535 & (((a_527X)>>16));
-  hi_b_523X = 65535 & (((b_519X)>>16));
-  lo_c_524X = PS_SMALL_MULTIPLY(lo_a_520X, lo_b_521X);
-  mid_c_525X = PS_SMALL_MULTIPLY(lo_a_520X, hi_b_523X)
-	     + PS_SMALL_MULTIPLY(lo_b_521X, hi_a_522X);
-  c_526X = lo_c_524X + (((mid_c_525X)<<16));
-  if ((0 < hi_a_522X)) {
-    if ((0 < hi_b_523X)) {
-      goto L24348;}
+ L24040: {
+  b_381X = arg1K0;
+  lo_a_382X = 65535 & a_389X;
+  lo_b_383X = 65535 & b_381X;
+  hi_a_384X = 65535 & (((a_389X)>>16));
+  hi_b_385X = 65535 & (((b_381X)>>16));
+  lo_c_386X = PS_SMALL_MULTIPLY(lo_a_382X, lo_b_383X);
+  mid_c_387X = (PS_SMALL_MULTIPLY(lo_a_382X, hi_b_385X)) + (PS_SMALL_MULTIPLY(lo_b_383X, hi_a_384X));
+  c_388X = lo_c_386X + (((mid_c_387X)<<16));
+  if ((0 < hi_a_384X)) {
+    if ((0 < hi_b_385X)) {
+      goto L24055;}
     else {
-      goto L24353;}}
+      goto L24060;}}
   else {
-    goto L24353;}}
- L24331: {
-  a_527X = arg1K0;
-  if ((b_66X < 0)) {
-    arg1K0 = (0 - b_66X);
-    goto L24333;}
+    goto L24060;}}
+ L24038: {
+  a_389X = arg1K0;
+  if ((b_238X < 0)) {
+    arg1K0 = (0 - b_238X);
+    goto L24040;}
   else {
-    arg1K0 = b_66X;
-    goto L24333;}}
- L24513: {
+    arg1K0 = b_238X;
+    goto L24040;}}
+ L24242: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_65X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = arg2_239X;
+  merged_arg1K2 = x_52X;
   goto raise_exception2;}
- L24535: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_65X;
-  merged_arg1K2 = x_64X;
-  goto raise_exception2;}
- L28917: {
-  offset_528X = arg1K0;
-  RScode_pointerS = (RScode_pointerS + offset_528X);
+ L28551: {
+  offset_390X = arg1K0;
+  RScode_pointerS = ((RScode_pointerS) + offset_390X);
   goto START;}
- L25652: {
-  RSvalS = proc_43X;
+ L25323: {
+  RSvalS = proc_36X;
   merged_arg0K0 = 0;
   goto perform_application;}
- L15228: {
-  RSstackS = (4 + RSstackS);
-  list_529X = *((long*)RSstackS);
-  a_530X = *((long*)(-3 + list_529X));
-  *((long*)ShpS) = 2050;
-  ShpS = (4 + ShpS);
-  new_531X = 3 + ShpS;
-  ShpS = (8 + ShpS);
-  *((long*)(-4 + ShpS)) = 0;
-  *((long*)(-3 + new_531X)) = a_530X;
-  *((long*)(1 + new_531X)) = 25;
-  arg1K0 = (*((long*)(1 + list_529X)));
-  arg1K1 = new_531X;
-  goto L15238;}
- L15238: {
-  l_532X = arg1K0;
-  last_533X = arg1K1;
-  if ((25 == l_532X)) {
-    *((long*)RSstackS) = new_531X;
-    RSstackS = (-4 + RSstackS);
+ L15129: {
+  RSstackS = (4 + (RSstackS));
+  list_391X = *((long *) (RSstackS));
+  a_392X = *((long *) (-3 + list_391X));
+  *((long *) (ShpS)) = 2050;
+  ShpS = (4 + (ShpS));
+  new_393X = 3 + (ShpS);
+  ShpS = (8 + (ShpS));
+  *((long *) (-4 + (ShpS))) = 0;
+  *((long *) (-3 + new_393X)) = a_392X;
+  *((long *) (1 + new_393X)) = 25;
+  arg1K0 = (*((long *) (1 + list_391X)));
+  arg1K1 = new_393X;
+  goto L15139;}
+ L15139: {
+  l_394X = arg1K0;
+  last_395X = arg1K1;
+  if ((25 == l_394X)) {
+    *((long *) (RSstackS)) = new_393X;
+    RSstackS = (-4 + (RSstackS));
     SnargsS = 64;
-    goto L25652;}
+    goto L25323;}
   else {
-    a_535X = *((long*)(-3 + l_532X));
-    *((long*)ShpS) = 2050;
-    ShpS = (4 + ShpS);
-    new_534X = 3 + ShpS;
-    ShpS = (8 + ShpS);
-    *((long*)(-4 + ShpS)) = 0;
-    *((long*)(-3 + new_534X)) = a_535X;
-    *((long*)(1 + new_534X)) = 25;
-    *((long*)(1 + last_533X)) = new_534X;
-    arg1K0 = (*((long*)(1 + l_532X)));
-    arg1K1 = new_534X;
-    goto L15238;}}
- L15458: {
-  i_536X = arg1K0;
-  l_537X = arg1K1;
-  if ((0 < i_536X)) {
-    *((long*)RSstackS) = (*((long*)(-3 + l_537X)));
-    RSstackS = (-4 + RSstackS);
-    arg1K0 = (-1 + i_536X);
-    arg1K1 = (*((long*)(1 + l_537X)));
-    goto L15458;}
+    a_397X = *((long *) (-3 + l_394X));
+    *((long *) (ShpS)) = 2050;
+    ShpS = (4 + (ShpS));
+    new_396X = 3 + (ShpS);
+    ShpS = (8 + (ShpS));
+    *((long *) (-4 + (ShpS))) = 0;
+    *((long *) (-3 + new_396X)) = a_397X;
+    *((long *) (1 + new_396X)) = 25;
+    *((long *) (1 + last_395X)) = new_396X;
+    arg1K0 = (*((long *) (1 + l_394X)));
+    arg1K1 = new_396X;
+    goto L15139;}}
+ L15355: {
+  i_398X = arg1K0;
+  l_399X = arg1K1;
+  if ((0 < i_398X)) {
+    *((long *) (RSstackS)) = (*((long *) (-3 + l_399X)));
+    RSstackS = (-4 + (RSstackS));
+    arg1K0 = (-1 + i_398X);
+    arg1K1 = (*((long *) (1 + l_399X)));
+    goto L15355;}
   else {
-    if ((0 == overflow_541X)) {
-      SnargsS = nargs_547X;
-      goto L25652;}
+    if ((0 == overflow_401X)) {
+      SnargsS = nargs_407X;
+      goto L25323;}
     else {
-      *((long*)RSstackS) = l_537X;
-      RSstackS = (-4 + RSstackS);
-      space_538X = 3 * overflow_541X;
-      v_539X = (ShpS + (((space_538X)<<2))) < SlimitS;
-      if (v_539X) {
-        goto L15228;}
+      *((long *) (RSstackS)) = l_399X;
+      RSstackS = (-4 + (RSstackS));
+      space_400X = 3 * overflow_401X;
+      if ((((ShpS) + (((space_400X)<<2))) < (SlimitS))) {
+        goto L15129;}
       else {
         merged_arg1K0 = 0;
         collect_saving_temp_return_tag = 13;
         goto collect_saving_temp;
        collect_saving_temp_return_13:
-        okayP_540X = (ShpS + (((space_538X)<<2))) < SlimitS;
-        if (okayP_540X) {
-          goto L15228;}
+        if ((((ShpS) + (((space_400X)<<2))) < (SlimitS))) {
+          goto L15129;}
         else {
           TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
-          goto L15228;}}}}}
- L15422: {
-  overflow_541X = arg1K0;
-  arg1K0 = (len_544X - overflow_541X);
-  arg1K1 = args_548X;
-  goto L15458;}
- L25686: {
+          goto L15129;}}}}}
+ L15319: {
+  overflow_401X = arg1K0;
+  arg1K0 = (len_404X - overflow_401X);
+  arg1K1 = args_408X;
+  goto L15355;}
+ L25357: {
   merged_arg1K0 = 25;
-  merged_arg1K1 = ((long)(*((unsigned char*)RScode_pointerS)));
+  merged_arg1K1 = ((long)(*((unsigned char *) (RScode_pointerS))));
   pop_args_list_return_tag = 2;
   goto pop_args_list;
  pop_args_list_return_2:
-  args_542X = pop_args_list_return_value;
+  args_402X = pop_args_list_return_value;
   merged_arg0K0 = 0;
-  merged_arg1K1 = proc_43X;
-  merged_arg1K2 = args_542X;
-  merged_arg1K3 = RSvalS;
+  merged_arg1K1 = proc_36X;
+  merged_arg1K2 = args_402X;
+  merged_arg1K3 = (RSvalS);
   goto raise_exception3;}
- L25684: {
-  fast_543X = arg1K0;
-  len_544X = arg1K1;
-  slow_545X = arg1K2;
-  move_slowP_546X = arg3K3;
-  if ((25 == fast_543X)) {
-    args_548X = RSvalS;
-    nargs_547X = len_544X + ((long)(*((unsigned char*)RScode_pointerS)));
-    if ((63 < nargs_547X)) {
-      arg1K0 = (-63 + nargs_547X);
-      goto L15422;}
+ L25355: {
+  fast_403X = arg1K0;
+  len_404X = arg1K1;
+  slow_405X = arg1K2;
+  move_slowP_406X = arg3K3;
+  if ((25 == fast_403X)) {
+    args_408X = RSvalS;
+    nargs_407X = len_404X + ((long)(*((unsigned char *) (RScode_pointerS))));
+    if ((63 < nargs_407X)) {
+      arg1K0 = (-63 + nargs_407X);
+      goto L15319;}
     else {
       arg1K0 = 0;
-      goto L15422;}}
+      goto L15319;}}
   else {
-    if ((3 == (3 & fast_543X))) {
-      v_549X = 31 & ((((*((long*)(-7 + fast_543X))))>>2));
-      if ((0 == v_549X)) {
-        if (move_slowP_546X) {
-          if ((fast_543X == slow_545X)) {
+    if ((3 == (3 & fast_403X))) {
+      if ((0 == (31 & ((((*((long *) (-7 + fast_403X))))>>2))))) {
+        if (move_slowP_406X) {
+          if ((fast_403X == slow_405X)) {
             merged_arg1K0 = 25;
-            merged_arg1K1 = ((long)(*((unsigned char*)RScode_pointerS)));
+            merged_arg1K1 = ((long)(*((unsigned char *) (RScode_pointerS))));
             pop_args_list_return_tag = 3;
             goto pop_args_list;
            pop_args_list_return_3:
-            args_550X = pop_args_list_return_value;
+            args_409X = pop_args_list_return_value;
             merged_arg0K0 = 0;
-            merged_arg1K1 = proc_43X;
-            merged_arg1K2 = args_550X;
-            merged_arg1K3 = RSvalS;
+            merged_arg1K1 = proc_36X;
+            merged_arg1K2 = args_409X;
+            merged_arg1K3 = (RSvalS);
             goto raise_exception3;}
           else {
-            arg1K0 = (*((long*)(1 + fast_543X)));
-            arg1K1 = (1 + len_544X);
-            arg1K2 = (*((long*)(1 + slow_545X)));
+            arg1K0 = (*((long *) (1 + fast_403X)));
+            arg1K1 = (1 + len_404X);
+            arg1K2 = (*((long *) (1 + slow_405X)));
             arg3K3 = 0;
-            goto L25684;}}
+            goto L25355;}}
         else {
-          arg1K0 = (*((long*)(1 + fast_543X)));
-          arg1K1 = (1 + len_544X);
-          arg1K2 = slow_545X;
+          arg1K0 = (*((long *) (1 + fast_403X)));
+          arg1K1 = (1 + len_404X);
+          arg1K2 = slow_405X;
           arg3K3 = 1;
-          goto L25684;}}
+          goto L25355;}}
       else {
-        goto L25686;}}
+        goto L25357;}}
     else {
-      goto L25686;}}}
- L15998: {
+      goto L25357;}}}
+ L15893: {
   merged_arg0K0 = 0;
   goto perform_application;}
- L16015: {
-  loc_551X = arg1K0;
-  arg_552X = arg1K1;
-  if ((RSstackS < arg_552X)) {
-    *((long*)loc_551X) = (*((long*)arg_552X));
-    arg1K0 = (-4 + loc_551X);
-    arg1K1 = (-4 + arg_552X);
-    goto L16015;}
+ L15910: {
+  loc_410X = arg1K0;
+  arg_411X = arg1K1;
+  if (((RSstackS) < arg_411X)) {
+    *((long *) loc_410X) = (*((long *) arg_411X));
+    arg1K0 = (-4 + loc_410X);
+    arg1K1 = (-4 + arg_411X);
+    goto L15910;}
   else {
-    RSstackS = loc_551X;
-    goto L15998;}}
- L28710: {
-  v_553X = arg1K0;
-  ScontS = v_553X;
+    RSstackS = loc_410X;
+    goto L15893;}}
+ L28344: {
+  v_412X = arg1K0;
+  ScontS = v_412X;
   goto START;}
- L28580: {
-  key_554X = arg1K0;
-  merged_arg1K0 = (RScode_pointerS + ((((((long)b_367X))<<8)) + ((long)b_368X)));
-  merged_arg1K1 = ((long)b_369X);
-  merged_arg1K2 = key_554X;
+ L28226: {
+  key_413X = arg1K0;
+  merged_arg1K0 = ((RScode_pointerS) + ((((((long)b_254X))<<8)) + ((long)b_255X)));
+  merged_arg1K1 = ((long)b_256X);
+  merged_arg1K2 = key_413X;
   push_continuationB_return_tag = 0;
   goto push_continuationB;
  push_continuationB_return_0:
   goto START;}
- L28601: {
-  v_555X = arg1K0;
-  merged_arg1K0 = v_555X;
+ L28243: {
+  v_414X = arg1K0;
+  merged_arg1K0 = v_414X;
   copy_stack_into_heap_return_tag = 0;
   goto copy_stack_into_heap;
  copy_stack_into_heap_return_0:
   arg1K0 = 0;
-  goto L28580;}
- L28402: {
-  space_556X = arg1K0;
-  v_557X = (ShpS + (((space_556X)<<2))) < SlimitS;
-  if (v_557X) {
+  goto L28226;}
+ L28083: {
+  space_415X = arg1K0;
+  if ((((ShpS) + (((space_415X)<<2))) < (SlimitS))) {
     arg1K0 = 0;
-    goto L28404;}
+    goto L28085;}
   else {
     merged_arg1K0 = 0;
     collect_saving_temp_return_tag = 14;
     goto collect_saving_temp;
    collect_saving_temp_return_14:
-    okayP_558X = (ShpS + (((space_556X)<<2))) < SlimitS;
-    if (okayP_558X) {
+    if ((((ShpS) + (((space_415X)<<2))) < (SlimitS))) {
       arg1K0 = 0;
-      goto L28404;}
+      goto L28085;}
     else {
       TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
       arg1K0 = 0;
-      goto L28404;}}}
- L28404: {
-  key_559X = arg1K0;
-  p_560X = RSenvS;
-  if ((p_560X < Sstack_beginS)) {
-    arg1K0 = RSenvS;
-    goto L28406;}
+      goto L28085;}}}
+ L28085: {
+  key_416X = arg1K0;
+  p_417X = RSenvS;
+  if ((p_417X < (Sstack_beginS))) {
+    arg1K0 = (RSenvS);
+    goto L28087;}
   else {
-    if ((Sstack_endS < p_560X)) {
-      arg1K0 = RSenvS;
-      goto L28406;}
+    if (((Sstack_endS) < p_417X)) {
+      arg1K0 = (RSenvS);
+      goto L28087;}
     else {
-      merged_arg1K0 = RSenvS;
-      merged_arg1K1 = ScontS;
-      merged_arg1K2 = key_559X;
+      merged_arg1K0 = (RSenvS);
+      merged_arg1K1 = (ScontS);
+      merged_arg1K2 = key_416X;
       merged_arg0K3 = 0;
       save_env_in_heap_return_tag = 0;
       goto save_env_in_heap;
      save_env_in_heap_return_0:
-      v_561X = save_env_in_heap_return_value;
-      RSenvS = v_561X;
-      arg1K0 = RSenvS;
-      goto L28406;}}}
- L28406: {
-  env_562X = arg1K0;
-  v_563X = (12 + ShpS) < SlimitS;
-  if (v_563X) {
-    goto L28408;}
+      v_418X = save_env_in_heap_return_value;
+      RSenvS = v_418X;
+      arg1K0 = (RSenvS);
+      goto L28087;}}}
+ L28087: {
+  env_419X = arg1K0;
+  if (((12 + (ShpS)) < (SlimitS))) {
+    goto L28089;}
   else {
     merged_arg1K0 = 0;
     collect_saving_temp_return_tag = 15;
     goto collect_saving_temp;
    collect_saving_temp_return_15:
-    okayP_564X = (12 + ShpS) < SlimitS;
-    if (okayP_564X) {
-      goto L28408;}
+    if (((12 + (ShpS)) < (SlimitS))) {
+      goto L28089;}
     else {
       TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
-      goto L28408;}}}
- L28408: {
-  b_565X = *((unsigned char*)RScode_pointerS);
-  RScode_pointerS = (1 + RScode_pointerS);
-  a_566X = *((long*)((-3 + StemplateS) + (((((long)b_565X))<<2))));
-  *((long*)ShpS) = (2062 | 128); /**** JAR HACK - IMMUTABLE CLOSURES ****/
-  ShpS = (4 + ShpS);
-  new_567X = 3 + ShpS;
-  ShpS = (8 + ShpS);
-  *((long*)(-4 + ShpS)) = 0;
-  *((long*)(-3 + new_567X)) = a_566X;
-  *((long*)(1 + new_567X)) = env_562X;
-  RSvalS = new_567X;
-  goto START;}
- L28304: {
-  env_568X = arg1K0;
-  i_569X = arg1K1;
-  if ((0 == i_569X)) {
-    b_570X = *((unsigned char*)RScode_pointerS);
-    RScode_pointerS = (1 + RScode_pointerS);
-    *((long*)((-3 + env_568X) + (((((long)b_570X))<<2)))) = RSvalS;
+      goto L28089;}}}
+ L28089: {
+  b_420X = *((unsigned char *) (RScode_pointerS));
+  RScode_pointerS = (1 + (RScode_pointerS));
+  a_421X = *((long *) ((-3 + (StemplateS)) + (((((long)b_420X))<<2))));
+  *((long *) (ShpS)) = 2062;
+  ShpS = (4 + (ShpS));
+  new_422X = 3 + (ShpS);
+  ShpS = (8 + (ShpS));
+  *((long *) (-4 + (ShpS))) = 0;
+  *((long *) (-3 + new_422X)) = a_421X;
+  *((long *) (1 + new_422X)) = env_419X;
+  if ((3 == (3 & new_422X))) {
+    if ((0 == (128 & (*((long *) (-7 + new_422X)))))) {
+      *((long *) (-7 + new_422X)) = (128 | (*((long *) (-7 + new_422X))));
+      arg1K0 = new_422X;
+      goto L28093;}
+    else {
+      arg1K0 = new_422X;
+      goto L28093;}}
+  else {
+    arg1K0 = new_422X;
+    goto L28093;}}
+ L27985: {
+  env_423X = arg1K0;
+  i_424X = arg1K1;
+  if ((0 == i_424X)) {
+    b_425X = *((unsigned char *) (RScode_pointerS));
+    RScode_pointerS = (1 + (RScode_pointerS));
+    *((long *) ((-3 + env_423X) + (((((long)b_425X))<<2)))) = (RSvalS);
     RSvalS = 13;
     goto START;}
   else {
-    arg1K0 = (*((long*)(-3 + env_568X)));
-    arg1K1 = (-1 + i_569X);
-    goto L28304;}}
- L27984: {
-  env_571X = arg1K0;
-  i_572X = arg1K1;
-  if ((0 == i_572X)) {
-    b_573X = *((unsigned char*)RScode_pointerS);
-    RScode_pointerS = (1 + RScode_pointerS);
-    RSvalS = (*((long*)((-3 + env_571X) + (((((long)b_573X))<<2)))));
-    if ((529 == RSvalS)) {
+    arg1K0 = (*((long *) (-3 + env_423X)));
+    arg1K1 = (-1 + i_424X);
+    goto L27985;}}
+ L27677: {
+  env_426X = arg1K0;
+  i_427X = arg1K1;
+  if ((0 == i_427X)) {
+    b_428X = *((unsigned char *) (RScode_pointerS));
+    RScode_pointerS = (1 + (RScode_pointerS));
+    RSvalS = (*((long *) ((-3 + env_426X) + (((((long)b_428X))<<2)))));
+    if ((529 == (RSvalS))) {
       merged_arg0K0 = 2;
       goto raise_exception;}
     else {
       goto START;}}
   else {
-    arg1K0 = (*((long*)(-3 + env_571X)));
-    arg1K1 = (-1 + i_572X);
-    goto L27984;}}
- L28232: {
-  args_574X = arg1K0;
-  RSvalS = args_574X;
-  SnargsS = (1 + ((long)b_385X));
+    arg1K0 = (*((long *) (-3 + env_426X)));
+    arg1K1 = (-1 + i_427X);
+    goto L27677;}}
+ L27913: {
+  args_429X = arg1K0;
+  RSvalS = args_429X;
+  SnargsS = (1 + ((long)b_268X));
   goto START;}
- L28160: {
-  b_577X = *((unsigned char*)RScode_pointerS);
-  RScode_pointerS = (1 + RScode_pointerS);
-  len_576X = 4 + (((((long)b_577X))<<2));
-  *((long*)ShpS) = (10 + (((len_576X)<<8)));
-  ShpS = (4 + ShpS);
-  new_575X = 3 + ShpS;
-  ShpS = (ShpS + (-4 & (3 + len_576X)));
-  if ((0 < len_576X)) {
-    *((long*)(-4 + ShpS)) = 0;
-    arg1K0 = new_575X;
-    goto L9834;}
+ L27845: {
+  b_432X = *((unsigned char *) (RScode_pointerS));
+  RScode_pointerS = (1 + (RScode_pointerS));
+  len_431X = 4 + (((((long)b_432X))<<2));
+  *((long *) (ShpS)) = (10 + (((len_431X)<<8)));
+  ShpS = (4 + (ShpS));
+  new_430X = 3 + (ShpS);
+  ShpS = ((ShpS) + (-4 & (3 + len_431X)));
+  if ((0 < len_431X)) {
+    *((long *) (-4 + (ShpS))) = 0;
+    arg1K0 = new_430X;
+    goto L9735;}
   else {
-    arg1K0 = new_575X;
-    goto L9834;}}
- L28086: {
-  b_578X = *((unsigned char*)RScode_pointerS);
-  RScode_pointerS = (1 + RScode_pointerS);
-  *((long*)RSstackS) = RSenvS;
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = (1034 + (((((long)b_578X))<<10)));
-  RSstackS = (-4 + RSstackS);
-  RSenvS = (11 + RSstackS);
+    arg1K0 = new_430X;
+    goto L9735;}}
+ L27779: {
+  b_433X = *((unsigned char *) (RScode_pointerS));
+  RScode_pointerS = (1 + (RScode_pointerS));
+  *((long *) (RSstackS)) = (RSenvS);
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = (1034 + (((((long)b_433X))<<10)));
+  RSstackS = (-4 + (RSstackS));
+  RSenvS = (11 + (RSstackS));
   goto START;}
- L28123: {
-  v_579X = arg1K0;
-  merged_arg1K0 = v_579X;
+ L27812: {
+  v_434X = arg1K0;
+  merged_arg1K0 = v_434X;
   copy_stack_into_heap_return_tag = 1;
   goto copy_stack_into_heap;
  copy_stack_into_heap_return_1:
-  goto L28086;}
- L31502: {
+  goto L27779;}
+ L31124: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = proc_197X;
+  merged_arg1K1 = proc_151X;
   goto raise_exception1;}
- L31447: {
+ L31071: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
+  merged_arg1K1 = (RSvalS);
   goto raise_exception1;}
- L31322: {
-  v_580X = arg0K0;
-  RSvalS = ((long)v_580X);
-  goto START;}
- L31300: {
-  v_581X = arg0K0;
-  RSvalS = ((long)v_581X);
-  goto START;}
- L31276: {
+ L31052: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
+  merged_arg1K1 = (RSvalS);
   goto raise_exception1;}
- L31255: {
-  RSvalS = x_145X;
+ L30931: {
+  v_435X = arg0K0;
+  RSvalS = ((long)v_435X);
   goto START;}
- L31240: {
-  v_582X = arg0K0;
-  RSvalS = ((long)v_582X);
-  goto START;}
- L31200: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
-  goto raise_exception1;}
- L31165: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = RSvalS;
-  goto raise_exception1;}
- L31116: {
-  v_583X = arg0K0;
-  RSvalS = ((long)v_583X);
-  goto START;}
- L31098: {
-  v_584X = arg0K0;
-  RSvalS = ((long)v_584X);
-  goto START;}
- L31076: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = (((x_328X)<<2));
-  goto raise_exception1;}
- L31039: {
-  v_585X = arg0K0;
-  RSvalS = ((long)v_585X);
-  goto START;}
- L31013: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_90X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
- L30990: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_334X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
- L30967: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_88X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
- L30934: {
-  merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_336X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
  L30913: {
+  v_436X = arg0K0;
+  RSvalS = ((long)v_436X);
+  goto START;}
+ L30891: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_86X;
-  merged_arg1K2 = RSvalS;
-  goto raise_exception2;}
- L30892: {
+  merged_arg1K1 = (RSvalS);
+  goto raise_exception1;}
+ L30870: {
+  RSvalS = x_185X;
+  goto START;}
+ L30855: {
+  v_437X = arg0K0;
+  RSvalS = ((long)v_437X);
+  goto START;}
+ L30819: {
   merged_arg0K0 = 0;
-  merged_arg1K1 = arg2_338X;
-  merged_arg1K2 = RSvalS;
+  merged_arg1K1 = (RSvalS);
+  goto raise_exception1;}
+ L30788: {
+  merged_arg0K0 = 0;
+  merged_arg1K1 = (RSvalS);
+  goto raise_exception1;}
+ L30741: {
+  v_438X = arg0K0;
+  RSvalS = ((long)v_438X);
+  goto START;}
+ L30723: {
+  v_439X = arg0K0;
+  RSvalS = ((long)v_439X);
+  goto START;}
+ L30701: {
+  merged_arg0K0 = 0;
+  merged_arg1K1 = (((x_73X)<<2));
+  goto raise_exception1;}
+ L30670: {
+  v_440X = arg0K0;
+  RSvalS = ((long)v_440X);
+  goto START;}
+ L30658: {
+  merged_arg0K0 = 0;
+  merged_arg1K1 = arg2_215X;
+  merged_arg1K2 = (RSvalS);
   goto raise_exception2;}
- L30869: {
-  r_586X = arg1K0;
-  if ((536870911 < r_586X)) {
+ L30641: {
+  v_441X = arg0K0;
+  RSvalS = ((long)v_441X);
+  goto START;}
+ L30629: {
+  merged_arg0K0 = 0;
+  merged_arg1K1 = arg2_217X;
+  merged_arg1K2 = (RSvalS);
+  goto raise_exception2;}
+ L30614: {
+  v_442X = arg0K0;
+  RSvalS = ((long)v_442X);
+  goto START;}
+ L30486: {
+  r_443X = arg1K0;
+  if ((536870911 < r_443X)) {
     merged_arg0K0 = 0;
-    merged_arg1K1 = x_339X;
+    merged_arg1K1 = x_222X;
     goto raise_exception1;}
   else {
-    RSvalS = (((r_586X)<<2));
+    RSvalS = (((r_443X)<<2));
     goto START;}}
- L30612: {
+ L30298: {
+  v_444X = arg0K0;
+  RSvalS = ((long)v_444X);
+  goto START;}
+ L30274: {
+  v_445X = arg0K0;
+  RSvalS = ((long)v_445X);
+  goto START;}
+ L30191: {
   RSvalS = 1;
   goto START;}
- L30583: {
+ L30164: {
   RSvalS = 1;
   goto START;}
- L30554: {
+ L30137: {
   RSvalS = 1;
   goto START;}
- L30525: {
+ L30110: {
   RSvalS = 1;
   goto START;}
- L30505: {
-  v_587X = arg0K0;
-  RSvalS = ((long)v_587X);
+ L30092: {
+  v_446X = arg0K0;
+  RSvalS = ((long)v_446X);
   goto START;}
- L30491: {
-  v_588X = arg0K0;
-  RSvalS = ((long)v_588X);
+ L30078: {
+  v_447X = arg0K0;
+  RSvalS = ((long)v_447X);
   goto START;}
- L30370: {
-  v_589X = arg1K0;
-  ScontS = v_589X;
+ L29957: {
+  v_448X = arg1K0;
+  ScontS = v_448X;
   SnargsS = 0;
   merged_arg0K0 = 0;
   goto perform_application;}
- L30336: {
-  key_590X = arg1K0;
-  merged_arg1K0 = key_590X;
+ L29927: {
+  key_449X = arg1K0;
+  merged_arg1K0 = key_449X;
   merged_arg0K1 = 2;
   preserve_continuation_return_tag = 0;
   goto preserve_continuation;
  preserve_continuation_return_0:
-  v_591X = preserve_continuation_return_value;
-  RSvalS = v_591X;
+  v_450X = preserve_continuation_return_value;
+  RSvalS = v_450X;
   goto START;}
  raise_exception: {
-  args_850X = merged_arg0K0;{
+  args_676X = merged_arg0K0;{
   push_exception_continuationB_return_tag = 0;
   goto push_exception_continuationB;
  push_exception_continuationB_return_0:
-  *((long*)RSstackS) = (((((long)(*((unsigned char*)(-1 + (RScode_pointerS - ((long)args_850X)))))))<<2));
-  RSstackS = (-4 + RSstackS);
+  *((long *) (RSstackS)) = (((((long)(*((unsigned char *) (-1 + ((RScode_pointerS) - ((long)args_676X)))))))<<2));
+  RSstackS = (-4 + (RSstackS));
   merged_arg0K0 = 0;
   goto raise;}}
 
  return_values: {
-  nargs_848X = merged_arg1K0;{
-  if ((1 == nargs_848X)) {
-    RSstackS = (4 + RSstackS);
-    RSvalS = (*((long*)RSstackS));
-    cont_592X = ScontS;
-    tem_593X = *((long*)(5 + cont_592X));
-    pc_594X = *((long*)(1 + cont_592X));
-    StemplateS = tem_593X;
-    RScode_pointerS = ((-3 + (*((long*)(-3 + tem_593X)))) + (((pc_594X)>>2)));
-    RSenvS = (*((long*)(9 + cont_592X)));
-    ScontS = (*((long*)(-3 + cont_592X)));
-    RSstackS = (9 + cont_592X);
+  nargs_674X = merged_arg1K0;{
+  if ((1 == nargs_674X)) {
+    RSstackS = (4 + (RSstackS));
+    RSvalS = (*((long *) (RSstackS)));
+    cont_451X = ScontS;
+    tem_452X = *((long *) (5 + cont_451X));
+    pc_453X = *((long *) (1 + cont_451X));
+    StemplateS = tem_452X;
+    RScode_pointerS = ((-3 + (*((long *) (-3 + tem_452X)))) + (((pc_453X)>>2)));
+    RSenvS = (*((long *) (9 + cont_451X)));
+    ScontS = (*((long *) (-3 + cont_451X)));
+    RSstackS = (9 + cont_451X);
     goto START;}
   else {
-    if ((ScontS == Sbottom_of_stackS)) {
-      arg1K0 = (*((long*)(-3 + Sbottom_of_stackS)));
-      goto L27694;}
+    if (((ScontS) == (Sbottom_of_stackS))) {
+      arg1K0 = (*((long *) (-3 + (Sbottom_of_stackS))));
+      goto L27389;}
     else {
-      arg1K0 = ScontS;
-      goto L27694;}}}
- L27644: {
-  args_607X = arg1K0;
+      arg1K0 = (ScontS);
+      goto L27389;}}}
+ L27339: {
+  args_465X = arg1K0;
   merged_arg0K0 = 0;
-  merged_arg1K1 = args_607X;
+  merged_arg1K1 = args_465X;
   goto raise_exception1;}
- L27591: {
-  SnargsS = nargs_848X;
-  RSvalS = (*((long*)(13 + cont_598X)));
+ L27286: {
+  SnargsS = nargs_674X;
+  RSvalS = (*((long *) (13 + cont_457X)));
   merged_arg0K0 = 0;
   goto perform_application;}
- L27694: {
-  cont_598X = arg1K0;
-  if ((3 == (3 & cont_598X))) {
-    v_600X = 31 & ((((*((long*)(-7 + cont_598X))))>>2));
-    if ((8 == v_600X)) {
-      next_op_601X = *((unsigned char*)((-3 + (*((long*)(-3 + (*((long*)(5 + cont_598X))))))) + ((((*((long*)(1 + cont_598X))))>>2))));
-      if ((31 == ((long)next_op_601X))) {
-        cont_604X = ScontS;
-        tem_605X = *((long*)(5 + cont_604X));
-        pc_606X = *((long*)(1 + cont_604X));
-        StemplateS = tem_605X;
-        RScode_pointerS = ((-3 + (*((long*)(-3 + tem_605X)))) + (((pc_606X)>>2)));
-        RSenvS = (*((long*)(9 + cont_604X)));
-        ScontS = (*((long*)(-3 + cont_604X)));
-        RSstackS = (9 + cont_604X);
+ L27389: {
+  cont_457X = arg1K0;
+  if ((3 == (3 & cont_457X))) {
+    if ((8 == (31 & ((((*((long *) (-7 + cont_457X))))>>2))))) {
+      next_op_459X = *((unsigned char *) ((-3 + (*((long *) (-3 + (*((long *) (5 + cont_457X))))))) + ((((*((long *) (1 + cont_457X))))>>2))));
+      if ((31 == ((long)next_op_459X))) {
+        cont_462X = ScontS;
+        tem_463X = *((long *) (5 + cont_462X));
+        pc_464X = *((long *) (1 + cont_462X));
+        StemplateS = tem_463X;
+        RScode_pointerS = ((-3 + (*((long *) (-3 + tem_463X)))) + (((pc_464X)>>2)));
+        RSenvS = (*((long *) (9 + cont_462X)));
+        ScontS = (*((long *) (-3 + cont_462X)));
+        RSstackS = (9 + cont_462X);
         goto START;}
       else {
-        if ((27 == ((long)next_op_601X))) {
-          next_603X = *((long*)(-3 + ScontS));
-          if ((ScontS == Sbottom_of_stackS)) {
-            *((long*)(-3 + ScontS)) = (*((long*)(-3 + next_603X)));
-            goto L27591;}
+        if ((27 == ((long)next_op_459X))) {
+          next_461X = *((long *) (-3 + (ScontS)));
+          if (((ScontS) == (Sbottom_of_stackS))) {
+            *((long *) (-3 + (ScontS))) = (*((long *) (-3 + next_461X)));
+            goto L27286;}
           else {
-            ScontS = next_603X;
-            goto L27591;}}
+            ScontS = next_461X;
+            goto L27286;}}
         else {
-          if ((64 == nargs_848X)) {
-            RSstackS = (4 + RSstackS);
-            merged_arg1K0 = (*((long*)RSstackS));
+          if ((64 == nargs_674X)) {
+            RSstackS = (4 + (RSstackS));
+            merged_arg1K0 = (*((long *) (RSstackS)));
             merged_arg1K1 = 63;
             pop_args_list_return_tag = 4;
             goto pop_args_list;
            pop_args_list_return_4:
-            v_599X = pop_args_list_return_value;
-            arg1K0 = v_599X;
-            goto L27644;}
+            v_458X = pop_args_list_return_value;
+            arg1K0 = v_458X;
+            goto L27339;}
           else {
             merged_arg1K0 = 25;
-            merged_arg1K1 = nargs_848X;
+            merged_arg1K1 = nargs_674X;
             pop_args_list_return_tag = 5;
             goto pop_args_list;
            pop_args_list_return_5:
-            v_602X = pop_args_list_return_value;
-            arg1K0 = v_602X;
-            goto L27644;}}}}
+            v_460X = pop_args_list_return_value;
+            arg1K0 = v_460X;
+            goto L27339;}}}}
     else {
-      goto L27702;}}
+      goto L27397;}}
   else {
-    goto L27702;}}
- L27702: {
-  if ((64 == nargs_848X)) {
-    RSstackS = (4 + RSstackS);
-    merged_arg1K0 = (*((long*)RSstackS));
+    goto L27397;}}
+ L27397: {
+  if ((64 == nargs_674X)) {
+    RSstackS = (4 + (RSstackS));
+    merged_arg1K0 = (*((long *) (RSstackS)));
     merged_arg1K1 = 63;
     pop_args_list_return_tag = 6;
     goto pop_args_list;
    pop_args_list_return_6:
-    v_597X = pop_args_list_return_value;
-    arg1K0 = v_597X;
-    goto L27732;}
+    v_456X = pop_args_list_return_value;
+    arg1K0 = v_456X;
+    goto L27427;}
   else {
     merged_arg1K0 = 25;
-    merged_arg1K1 = nargs_848X;
+    merged_arg1K1 = nargs_674X;
     pop_args_list_return_tag = 7;
     goto pop_args_list;
    pop_args_list_return_7:
-    v_596X = pop_args_list_return_value;
-    arg1K0 = v_596X;
-    goto L27732;}}
- L27732: {
-  args_595X = arg1K0;
+    v_455X = pop_args_list_return_value;
+    arg1K0 = v_455X;
+    goto L27427;}}
+ L27427: {
+  args_454X = arg1K0;
   merged_arg0K0 = 0;
-  merged_arg1K1 = args_595X;
+  merged_arg1K1 = args_454X;
   goto raise_exception1;}}
 
  raise_exception1: {
-  args_845X = merged_arg0K0;
-  a1_846X = merged_arg1K1;{
+  args_671X = merged_arg0K0;
+  a1_672X = merged_arg1K1;{
   push_exception_continuationB_return_tag = 1;
   goto push_exception_continuationB;
  push_exception_continuationB_return_1:
-  *((long*)RSstackS) = (((((long)(*((unsigned char*)(-1 + (RScode_pointerS - ((long)args_845X)))))))<<2));
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = a1_846X;
-  RSstackS = (-4 + RSstackS);
+  *((long *) (RSstackS)) = (((((long)(*((unsigned char *) (-1 + ((RScode_pointerS) - ((long)args_671X)))))))<<2));
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = a1_672X;
+  RSstackS = (-4 + (RSstackS));
   merged_arg0K0 = 1;
   goto raise;}}
 
  raise_exception2: {
-  args_841X = merged_arg0K0;
-  a1_842X = merged_arg1K1;
-  a2_843X = merged_arg1K2;{
+  args_667X = merged_arg0K0;
+  a1_668X = merged_arg1K1;
+  a2_669X = merged_arg1K2;{
   push_exception_continuationB_return_tag = 2;
   goto push_exception_continuationB;
  push_exception_continuationB_return_2:
-  *((long*)RSstackS) = (((((long)(*((unsigned char*)(-1 + (RScode_pointerS - ((long)args_841X)))))))<<2));
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = a1_842X;
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = a2_843X;
-  RSstackS = (-4 + RSstackS);
+  *((long *) (RSstackS)) = (((((long)(*((unsigned char *) (-1 + ((RScode_pointerS) - ((long)args_667X)))))))<<2));
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = a1_668X;
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = a2_669X;
+  RSstackS = (-4 + (RSstackS));
   merged_arg0K0 = 2;
   goto raise;}}
 
  raise_exception3: {
-  args_836X = merged_arg0K0;
-  a1_837X = merged_arg1K1;
-  a2_838X = merged_arg1K2;
-  a3_839X = merged_arg1K3;{
+  args_662X = merged_arg0K0;
+  a1_663X = merged_arg1K1;
+  a2_664X = merged_arg1K2;
+  a3_665X = merged_arg1K3;{
   push_exception_continuationB_return_tag = 3;
   goto push_exception_continuationB;
  push_exception_continuationB_return_3:
-  *((long*)RSstackS) = (((((long)(*((unsigned char*)(-1 + (RScode_pointerS - ((long)args_836X)))))))<<2));
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = a1_837X;
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = a2_838X;
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = a3_839X;
-  RSstackS = (-4 + RSstackS);
+  *((long *) (RSstackS)) = (((((long)(*((unsigned char *) (-1 + ((RScode_pointerS) - ((long)args_662X)))))))<<2));
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = a1_663X;
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = a2_664X;
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = a3_665X;
+  RSstackS = (-4 + (RSstackS));
   merged_arg0K0 = 3;
   goto raise;}}
 
  raise_exception4: {
-  args_830X = merged_arg0K0;
-  a1_831X = merged_arg1K1;
-  a2_832X = merged_arg1K2;
-  a3_833X = merged_arg1K3;
-  a4_834X = merged_arg1K4;{
+  args_656X = merged_arg0K0;
+  a1_657X = merged_arg1K1;
+  a2_658X = merged_arg1K2;
+  a3_659X = merged_arg1K3;
+  a4_660X = merged_arg1K4;{
   push_exception_continuationB_return_tag = 4;
   goto push_exception_continuationB;
  push_exception_continuationB_return_4:
-  *((long*)RSstackS) = (((((long)(*((unsigned char*)(-1 + (RScode_pointerS - ((long)args_830X)))))))<<2));
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = a1_831X;
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = a2_832X;
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = a3_833X;
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = a4_834X;
-  RSstackS = (-4 + RSstackS);
+  *((long *) (RSstackS)) = (((((long)(*((unsigned char *) (-1 + ((RScode_pointerS) - ((long)args_656X)))))))<<2));
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = a1_657X;
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = a2_658X;
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = a3_659X;
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = a4_660X;
+  RSstackS = (-4 + (RSstackS));
   merged_arg0K0 = 4;
   goto raise;}}
 
  application_exception: {
-  byte_args_828X = merged_arg0K0;{
-  if ((64 == SnargsS)) {
-    RSstackS = (4 + RSstackS);
-    merged_arg1K0 = (*((long*)RSstackS));
+  byte_args_654X = merged_arg0K0;{
+  if ((64 == (SnargsS))) {
+    RSstackS = (4 + (RSstackS));
+    merged_arg1K0 = (*((long *) (RSstackS)));
     merged_arg1K1 = 63;
     pop_args_list_return_tag = 8;
     goto pop_args_list;
    pop_args_list_return_8:
-    v_609X = pop_args_list_return_value;
-    arg1K0 = v_609X;
-    goto L24697;}
+    v_467X = pop_args_list_return_value;
+    arg1K0 = v_467X;
+    goto L24404;}
   else {
     merged_arg1K0 = 25;
-    merged_arg1K1 = SnargsS;
+    merged_arg1K1 = (SnargsS);
     pop_args_list_return_tag = 9;
     goto pop_args_list;
    pop_args_list_return_9:
-    v_608X = pop_args_list_return_value;
-    arg1K0 = v_608X;
-    goto L24697;}}
- L24697: {
-  args_610X = arg1K0;
-  a1_611X = RSvalS;
-  *((long*)RSstackS) = (((((long)(*((unsigned char*)(-1 + (RScode_pointerS - ((long)byte_args_828X)))))))<<2));
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = a1_611X;
-  RSstackS = (-4 + RSstackS);
-  *((long*)RSstackS) = args_610X;
-  RSstackS = (-4 + RSstackS);
+    v_466X = pop_args_list_return_value;
+    arg1K0 = v_466X;
+    goto L24404;}}
+ L24404: {
+  args_468X = arg1K0;
+  a1_469X = RSvalS;
+  *((long *) (RSstackS)) = (((((long)(*((unsigned char *) (-1 + ((RScode_pointerS) - ((long)byte_args_654X)))))))<<2));
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = a1_469X;
+  RSstackS = (-4 + (RSstackS));
+  *((long *) (RSstackS)) = args_468X;
+  RSstackS = (-4 + (RSstackS));
   merged_arg0K0 = 2;
   goto raise;}}
 
  raise: {
-  nargs_826X = merged_arg0K0;{
-  SnargsS = (1 + ((long)nargs_826X));
-  RSvalS = Sexception_handlerS;
-  obj_613X = RSvalS;
-  if ((3 == (3 & obj_613X))) {
-    v_612X = 31 & ((((*((long*)(-7 + obj_613X))))>>2));
-    if ((3 == v_612X)) {
-      goto L16058;}
+  nargs_652X = merged_arg0K0;{
+  SnargsS = (1 + ((long)nargs_652X));
+  RSvalS = (Sexception_handlerS);
+  obj_470X = RSvalS;
+  if ((3 == (3 & obj_470X))) {
+    if ((3 == (31 & ((((*((long *) (-7 + obj_470X))))>>2))))) {
+      goto L15953;}
     else {
-      goto L16128;}}
+      goto L16015;}}
   else {
-    goto L16128;}}
- L16128: {
+    goto L16015;}}
+ L16015: {
   TTerror("exception handler is not a closure", 0, 0, 0, 0);
-  goto L16058;}
- L16060: {
-  if (Sexception_space_usedPS) {
-    x_619X = Sstack_limitS < (-296 + RSstackS);
-    if (x_619X) {
-      goto L16073;}
+  goto L15953;}
+ L15955: {
+  if ((Sexception_space_usedPS)) {
+    x_473X = (Sstack_limitS) < (-296 + (RSstackS));
+    if (x_473X) {
+      goto L15968;}
     else {
       TTerror("no space on stack to reserve exception space", 0, 0, 0, 0);
-      goto L16073;}}
+      goto L15968;}}
   else {
-    goto L16062;}}
- L16098: {
-  v_618X = arg1K0;
-  merged_arg1K0 = v_618X;
+    goto L15957;}}
+ L15989: {
+  v_472X = arg1K0;
+  merged_arg1K0 = v_472X;
   copy_stack_into_heap_return_tag = 2;
   goto copy_stack_into_heap;
  copy_stack_into_heap_return_2:
-  goto L16060;}
- L16062: {
+  goto L15955;}
+ L15957: {
   merged_arg0K0 = 0;
   goto perform_application;}
- L16073: {
-  Sstack_limitS = (296 + Sstack_beginS);
+ L15968: {
+  Sstack_limitS = (296 + (Sstack_beginS));
   Sexception_space_usedPS = 0;
-  goto L16062;}
- L16058: {
-  x_617X = Sstack_limitS < (-296 + RSstackS);
-  if (x_617X) {
-    goto L16060;}
+  goto L15957;}
+ L15953: {
+  if (((Sstack_limitS) < (-296 + (RSstackS)))) {
+    goto L15955;}
   else {
-    space_616X = 1 + ((((Sstack_endS - RSstackS))>>2));
-    v_615X = (ShpS + (((space_616X)<<2))) < SlimitS;
-    if (v_615X) {
+    space_471X = 1 + (((((Sstack_endS) - (RSstackS)))>>2));
+    if ((((ShpS) + (((space_471X)<<2))) < (SlimitS))) {
       arg1K0 = 0;
-      goto L16098;}
+      goto L15989;}
     else {
       merged_arg1K0 = 0;
       collect_saving_temp_return_tag = 16;
       goto collect_saving_temp;
      collect_saving_temp_return_16:
-      okayP_614X = (ShpS + (((space_616X)<<2))) < SlimitS;
-      if (okayP_614X) {
+      if ((((ShpS) + (((space_471X)<<2))) < (SlimitS))) {
         arg1K0 = 0;
-        goto L16098;}
+        goto L15989;}
       else {
         TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
         arg1K0 = 0;
-        goto L16098;}}}}}
+        goto L15989;}}}}}
 
  perform_application: {
-  bytes_consumed_824X = merged_arg0K0;{
-  obj_621X = RSvalS;
-  if ((3 == (3 & obj_621X))) {
-    v_622X = 31 & ((((*((long*)(-7 + obj_621X))))>>2));
-    if ((3 == v_622X)) {
-      RSenvS = (*((long*)(1 + RSvalS)));
-      tem_620X = *((long*)(-3 + RSvalS));
-      StemplateS = tem_620X;
-      RScode_pointerS = (-3 + (*((long*)(-3 + tem_620X))));
-      if ((0 == (Spending_interruptsS & Senabled_interruptsS))) {
+  bytes_consumed_650X = merged_arg0K0;{
+  obj_475X = RSvalS;
+  if ((3 == (3 & obj_475X))) {
+    if ((3 == (31 & ((((*((long *) (-7 + obj_475X))))>>2))))) {
+      RSenvS = (*((long *) (1 + (RSvalS))));
+      tem_474X = *((long *) (-3 + (RSvalS)));
+      StemplateS = tem_474X;
+      RScode_pointerS = (-3 + (*((long *) (-3 + tem_474X))));
+      if ((0 == ((Spending_interruptsS) & (Senabled_interruptsS)))) {
         goto START;}
       else {
         goto handle_interrupt;}}
     else {
-      goto L15871;}}
+      goto L15768;}}
   else {
-    goto L15871;}}
- L15871: {
-  merged_arg0K0 = bytes_consumed_824X;
+    goto L15768;}}
+ L15768: {
+  merged_arg0K0 = bytes_consumed_650X;
   goto application_exception;}}
 
  handle_interrupt: {
-{ x_626X = Sstack_limitS < (-276 + RSstackS);
-  if (x_626X) {
+{ if (((Sstack_limitS) < (-276 + (RSstackS)))) {
     arg1K0 = 0;
-    goto L16172;}
+    goto L16057;}
   else {
-    space_625X = 1 + ((((Sstack_endS - RSstackS))>>2));
-    v_624X = (ShpS + (((space_625X)<<2))) < SlimitS;
-    if (v_624X) {
+    space_476X = 1 + (((((Sstack_endS) - (RSstackS)))>>2));
+    if ((((ShpS) + (((space_476X)<<2))) < (SlimitS))) {
       arg1K0 = 0;
-      goto L16420;}
+      goto L16297;}
     else {
       merged_arg1K0 = 0;
       collect_saving_temp_return_tag = 17;
       goto collect_saving_temp;
      collect_saving_temp_return_17:
-      okayP_623X = (ShpS + (((space_625X)<<2))) < SlimitS;
-      if (okayP_623X) {
+      if ((((ShpS) + (((space_476X)<<2))) < (SlimitS))) {
         arg1K0 = 0;
-        goto L16420;}
+        goto L16297;}
       else {
         TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
         arg1K0 = 0;
-        goto L16420;}}}}
- L16172: {
-  key_635X = arg1K0;
-  n_636X = Spending_interruptsS & Senabled_interruptsS;
+        goto L16297;}}}}
+ L16057: {
+  key_483X = arg1K0;
+  n_484X = (Spending_interruptsS) & (Senabled_interruptsS);
   arg1K0 = 0;
   arg1K1 = 1;
-  goto L16404;}
- L16420: {
-  v_634X = arg1K0;
-  merged_arg1K0 = v_634X;
+  goto L16285;}
+ L16297: {
+  v_482X = arg1K0;
+  merged_arg1K0 = v_482X;
   copy_stack_into_heap_return_tag = 3;
   goto copy_stack_into_heap;
  copy_stack_into_heap_return_3:
   arg1K0 = 0;
-  goto L16172;}
- L16404: {
-  i_629X = arg1K0;
-  m_630X = arg1K1;
-  if ((0 == (n_636X & m_630X))) {
-    arg1K0 = (1 + i_629X);
-    arg1K1 = (((m_630X)<<1));
-    goto L16404;}
+  goto L16057;}
+ L16285: {
+  i_478X = arg1K0;
+  m_479X = arg1K1;
+  if ((0 == (n_484X & m_479X))) {
+    arg1K0 = (1 + i_478X);
+    arg1K1 = (((m_479X)<<1));
+    goto L16285;}
   else {
-    Spending_interruptsS = (n_636X & (~ m_630X));
-    *((long*)RSstackS) = RSvalS;
-    RSstackS = (-4 + RSstackS);
-    *((long*)RSstackS) = StemplateS;
-    RSstackS = (-4 + RSstackS);
-    *((long*)RSstackS) = RSenvS;
-    RSstackS = (-4 + RSstackS);
-    *((long*)RSstackS) = (((SnargsS)<<2));
-    RSstackS = (-4 + RSstackS);
-    *((long*)RSstackS) = (((Senabled_interruptsS)<<2));
-    RSstackS = (-4 + RSstackS);
-    tem_632X = Sinterrupt_templateS;
-    StemplateS = tem_632X;
-    RScode_pointerS = (-3 + (*((long*)(-3 + tem_632X))));
-    merged_arg1K0 = RScode_pointerS;
-    merged_arg1K1 = (5 + SnargsS);  /* Patched per RK's message of 2/25/94 */
-    merged_arg1K2 = key_635X;
+    Spending_interruptsS = (n_484X & (~ m_479X));
+    *((long *) (RSstackS)) = (RSvalS);
+    RSstackS = (-4 + (RSstackS));
+    *((long *) (RSstackS)) = (StemplateS);
+    RSstackS = (-4 + (RSstackS));
+    *((long *) (RSstackS)) = (RSenvS);
+    RSstackS = (-4 + (RSstackS));
+    *((long *) (RSstackS)) = ((((SnargsS))<<2));
+    RSstackS = (-4 + (RSstackS));
+    *((long *) (RSstackS)) = ((((Senabled_interruptsS))<<2));
+    RSstackS = (-4 + (RSstackS));
+    tem_481X = Sinterrupt_templateS;
+    StemplateS = tem_481X;
+    RScode_pointerS = (-3 + (*((long *) (-3 + tem_481X))));
+    merged_arg1K0 = (RScode_pointerS);
+    merged_arg1K1 = (5 + (SnargsS));
+    merged_arg1K2 = key_483X;
     push_continuationB_return_tag = 1;
     goto push_continuationB;
    push_continuationB_return_1:
-    *((long*)RSstackS) = (((Senabled_interruptsS)<<2));
-    RSstackS = (-4 + RSstackS);
+    *((long *) (RSstackS)) = ((((Senabled_interruptsS))<<2));
+    RSstackS = (-4 + (RSstackS));
     SnargsS = 1;
-    obj_631X = Sinterrupt_handlersS;
-    if ((3 == (3 & obj_631X))) {
-      v_633X = 31 & ((((*((long*)(-7 + obj_631X))))>>2));
-      if ((2 == v_633X)) {
-        goto L16214;}
+    obj_480X = Sinterrupt_handlersS;
+    if ((3 == (3 & obj_480X))) {
+      if ((2 == (31 & ((((*((long *) (-7 + obj_480X))))>>2))))) {
+        goto L16099;}
       else {
-        goto L16292;}}
+        goto L16175;}}
     else {
-      goto L16292;}}}
- L16292: {
+      goto L16175;}}}
+ L16175: {
   TTerror("interrupt handler is not a vector", 0, 0, 0, 0);
-  goto L16214;}
- L16242: {
-  TTerror("interrupt handler is not a closure", 1, i_629X, 0, 0);
-  goto L16232;}
- L16232: {
+  goto L16099;}
+ L16127: {
+  TTerror("interrupt handler is not a closure", 1, i_478X, 0, 0);
+  goto L16117;}
+ L16117: {
   merged_arg0K0 = 0;
   goto perform_application;}
- L16214: {
-  RSvalS = (*((long*)((-3 + Sinterrupt_handlersS) + (((i_629X)<<2)))));
+ L16099: {
+  RSvalS = (*((long *) ((-3 + (Sinterrupt_handlersS)) + (((i_478X)<<2)))));
   Senabled_interruptsS = 0;
-  obj_628X = RSvalS;
-  if ((3 == (3 & obj_628X))) {
-    v_627X = 31 & ((((*((long*)(-7 + obj_628X))))>>2));
-    if ((3 == v_627X)) {
-      goto L16232;}
+  obj_477X = RSvalS;
+  if ((3 == (3 & obj_477X))) {
+    if ((3 == (31 & ((((*((long *) (-7 + obj_477X))))>>2))))) {
+      goto L16117;}
     else {
-      goto L16242;}}
+      goto L16127;}}
   else {
-    goto L16242;}}}
+    goto L16127;}}}
 
  copy_stack_into_heap: {
-  key_821X = merged_arg1K0;{
-  arg1K0 = (4 + RSstackS);
+  key_647X = merged_arg1K0;{
+  arg1K0 = (4 + (RSstackS));
   arg1K1 = 0;
-  goto L15112;}
- L15112: {
-  p_640X = arg1K0;
-  i_641X = arg1K1;
-  if ((2 == (3 & (*((long*)p_640X))))) {
-    len_643X = ((i_641X)<<2);
-    *((long*)ShpS) = (10 + (((len_643X)<<8)));
-    ShpS = (4 + ShpS);
-    new_642X = 3 + ShpS;
-    ShpS = (ShpS + (-4 & (3 + len_643X)));
-    if ((0 < len_643X)) {
-      *((long*)(-4 + ShpS)) = 0;
-      arg1K0 = new_642X;
-      goto L14976;}
+  goto L15017;}
+ L15017: {
+  p_488X = arg1K0;
+  i_489X = arg1K1;
+  if ((2 == (3 & (*((long *) p_488X))))) {
+    len_491X = ((i_489X)<<2);
+    *((long *) (ShpS)) = (10 + (((len_491X)<<8)));
+    ShpS = (4 + (ShpS));
+    new_490X = 3 + (ShpS);
+    ShpS = ((ShpS) + (-4 & (3 + len_491X)));
+    if ((0 < len_491X)) {
+      *((long *) (-4 + (ShpS))) = 0;
+      arg1K0 = new_490X;
+      goto L14881;}
     else {
-      arg1K0 = new_642X;
-      goto L14976;}}
+      arg1K0 = new_490X;
+      goto L14881;}}
   else {
-    arg1K0 = (4 + p_640X);
-    arg1K1 = (1 + i_641X);
-    goto L15112;}}
- L14976: {
-  vec_639X = arg1K0;
-  arg1K0 = (-1 + i_641X);
-  goto L14978;}
- L15002: {
-  i_638X = arg1K0;
-  if ((i_638X < i_641X)) {
-    *((long*)RSstackS) = (*((long*)((-3 + vec_639X) + (((i_638X)<<2)))));
-    RSstackS = (-4 + RSstackS);
-    arg1K0 = (1 + i_638X);
-    goto L15002;}
+    arg1K0 = (4 + p_488X);
+    arg1K1 = (1 + i_489X);
+    goto L15017;}}
+ L14881: {
+  vec_487X = arg1K0;
+  arg1K0 = (-1 + i_489X);
+  goto L14883;}
+ L14907: {
+  i_486X = arg1K0;
+  if ((i_486X < i_489X)) {
+    *((long *) (RSstackS)) = (*((long *) ((-3 + vec_487X) + (((i_486X)<<2)))));
+    RSstackS = (-4 + (RSstackS));
+    arg1K0 = (1 + i_486X);
+    goto L14907;}
   else {
     goto copy_stack_into_heap_return;}}
- L14978: {
-  i_637X = arg1K0;
-  if ((-1 < i_637X)) {
-    RSstackS = (4 + RSstackS);
-    *((long*)((-3 + vec_639X) + (((i_637X)<<2)))) = (*((long*)RSstackS));
-    arg1K0 = (-1 + i_637X);
-    goto L14978;}
+ L14883: {
+  i_485X = arg1K0;
+  if ((-1 < i_485X)) {
+    RSstackS = (4 + (RSstackS));
+    *((long *) ((-3 + vec_487X) + (((i_485X)<<2)))) = (*((long *) (RSstackS)));
+    arg1K0 = (-1 + i_485X);
+    goto L14883;}
   else {
-    merged_arg1K0 = key_821X;
+    merged_arg1K0 = key_647X;
     merged_arg0K1 = 1;
     preserve_continuation_return_tag = 1;
     goto preserve_continuation;
    preserve_continuation_return_1:
     arg1K0 = 0;
-    goto L15002;}}
+    goto L14907;}}
  copy_stack_into_heap_return:
   switch (copy_stack_into_heap_return_tag) {
   case 0: goto copy_stack_into_heap_return_0;
@@ -5472,79 +5062,79 @@ long Tinterpret()
   }}
 
  preserve_continuation: {
-  key_819X = merged_arg1K0;
-  reason_820X = merged_arg0K1;{
-  p_644X = RSenvS;
-  if ((p_644X < Sstack_beginS)) {
-    goto L14717;}
+  key_645X = merged_arg1K0;
+  reason_646X = merged_arg0K1;{
+  p_492X = RSenvS;
+  if ((p_492X < (Sstack_beginS))) {
+    goto L14626;}
   else {
-    if ((Sstack_endS < p_644X)) {
-      goto L14717;}
+    if (((Sstack_endS) < p_492X)) {
+      goto L14626;}
     else {
-      merged_arg1K0 = RSenvS;
-      merged_arg1K1 = ScontS;
-      merged_arg1K2 = key_819X;
-      merged_arg0K3 = reason_820X;
+      merged_arg1K0 = (RSenvS);
+      merged_arg1K1 = (ScontS);
+      merged_arg1K2 = key_645X;
+      merged_arg0K3 = reason_646X;
       save_env_in_heap_return_tag = 1;
       goto save_env_in_heap;
      save_env_in_heap_return_1:
-      v_645X = save_env_in_heap_return_value;
-      RSenvS = v_645X;
-      goto L14717;}}}
- L14717: {
-  end_653X = *((long*)(-3 + Sbottom_of_stackS));
-  arg1K0 = ScontS;
-  arg1K1 = Sbottom_of_stackS;
-  goto L14722;}
- L14775: {
-  v_652X = arg1K0;
-  ScontS = v_652X;
-  preserve_continuation_return_value = cont_649X;
+      v_493X = save_env_in_heap_return_value;
+      RSenvS = v_493X;
+      goto L14626;}}}
+ L14626: {
+  end_501X = *((long *) (-3 + (Sbottom_of_stackS)));
+  arg1K0 = (ScontS);
+  arg1K1 = (Sbottom_of_stackS);
+  goto L14631;}
+ L14684: {
+  v_500X = arg1K0;
+  ScontS = v_500X;
+  preserve_continuation_return_value = cont_497X;
   goto preserve_continuation_return;}
- L14744: {
-  merged_arg1K0 = cont_646X;
-  merged_arg1K1 = key_819X;
+ L14653: {
+  merged_arg1K0 = cont_494X;
+  merged_arg1K1 = key_645X;
   copy_stob_return_tag = 0;
   goto copy_stob;
  copy_stob_return_0:
-  new_651X = copy_stob_return_value;
-  *((long*)(-3 + previous_647X)) = new_651X;
-  arg1K0 = (*((long*)(-3 + new_651X)));
-  arg1K1 = new_651X;
-  goto L14722;}
- L14722: {
-  cont_646X = arg1K0;
-  previous_647X = arg1K1;
-  if ((cont_646X == Sbottom_of_stackS)) {
-    *((long*)(-3 + previous_647X)) = end_653X;
-    cont_649X = *((long*)(-3 + Sbottom_of_stackS));
-    if ((1 == cont_649X)) {
-      arg1K0 = Sbottom_of_stackS;
-      goto L14775;}
+  new_499X = copy_stob_return_value;
+  *((long *) (-3 + previous_495X)) = new_499X;
+  arg1K0 = (*((long *) (-3 + new_499X)));
+  arg1K1 = new_499X;
+  goto L14631;}
+ L14631: {
+  cont_494X = arg1K0;
+  previous_495X = arg1K1;
+  if ((cont_494X == (Sbottom_of_stackS))) {
+    *((long *) (-3 + previous_495X)) = end_501X;
+    cont_497X = *((long *) (-3 + (Sbottom_of_stackS)));
+    if ((1 == cont_497X)) {
+      arg1K0 = (Sbottom_of_stackS);
+      goto L14684;}
     else {
-      merged_arg1K0 = cont_649X;
+      merged_arg1K0 = cont_497X;
       copy_continuation_from_heap_return_tag = 2;
       goto copy_continuation_from_heap;
      copy_continuation_from_heap_return_2:
-      v_648X = copy_continuation_from_heap_return_value;
-      arg1K0 = v_648X;
-      goto L14775;}}
+      v_496X = copy_continuation_from_heap_return_value;
+      arg1K0 = v_496X;
+      goto L14684;}}
   else {
-    p_650X = *((long*)(9 + cont_646X));
-    if ((p_650X < Sstack_beginS)) {
-      goto L14744;}
+    p_498X = *((long *) (9 + cont_494X));
+    if ((p_498X < (Sstack_beginS))) {
+      goto L14653;}
     else {
-      if ((Sstack_endS < p_650X)) {
-        goto L14744;}
+      if (((Sstack_endS) < p_498X)) {
+        goto L14653;}
       else {
-        merged_arg1K0 = (*((long*)(9 + cont_646X)));
-        merged_arg1K1 = cont_646X;
-        merged_arg1K2 = key_819X;
-        merged_arg0K3 = reason_820X;
+        merged_arg1K0 = (*((long *) (9 + cont_494X)));
+        merged_arg1K1 = cont_494X;
+        merged_arg1K2 = key_645X;
+        merged_arg0K3 = reason_646X;
         save_env_in_heap_return_tag = 2;
         goto save_env_in_heap;
        save_env_in_heap_return_2:
-        goto L14744;}}}}
+        goto L14653;}}}}
  preserve_continuation_return:
   switch (preserve_continuation_return_tag) {
   case 0: goto preserve_continuation_return_0;
@@ -5552,28 +5142,27 @@ long Tinterpret()
   }}
 
  copy_continuation_from_heap: {
-  cont_817X = merged_arg1K0;{
-  cells_654X = (((3 + ((long)(((unsigned long)(*((long*)(-7 + cont_817X))))>>8))))>>2);
-  top_655X = (-11 + Sbottom_of_stackS) - (((cells_654X)<<2));
-  new_cont_656X = 7 + top_655X;
-  RSstackS = (-4 + top_655X);
-  v_657X = (((3 + ((long)(((unsigned long)(*((long*)(-7 + cont_817X))))>>8))))>>2);
-  from_658X = -7 + cont_817X;
-  arg1K0 = from_658X;
-  arg1K1 = top_655X;
-  goto L12927;}
- L12927: {
-  from_659X = arg1K0;
-  to_660X = arg1K1;
-  if ((from_659X < (4 + (from_658X + (((v_657X)<<2)))))) {
-    *((long*)to_660X) = (*((long*)from_659X));
-    arg1K0 = (4 + from_659X);
-    arg1K1 = (4 + to_660X);
-    goto L12927;}
+  cont_643X = merged_arg1K0;{
+  top_502X = (-11 + (Sbottom_of_stackS)) - (-4 & (3 + ((long)(((unsigned long)(*((long *) (-7 + cont_643X))))>>8))));
+  new_cont_503X = 7 + top_502X;
+  RSstackS = (-4 + top_502X);
+  v_504X = (((3 + ((long)(((unsigned long)(*((long *) (-7 + cont_643X))))>>8))))>>2);
+  from_505X = -7 + cont_643X;
+  arg1K0 = from_505X;
+  arg1K1 = top_502X;
+  goto L12873;}
+ L12873: {
+  from_506X = arg1K0;
+  to_507X = arg1K1;
+  if ((from_506X < (4 + (from_505X + (((v_504X)<<2)))))) {
+    *((long *) to_507X) = (*((long *) from_506X));
+    arg1K0 = (4 + from_506X);
+    arg1K1 = (4 + to_507X);
+    goto L12873;}
   else {
-    *((long*)(-3 + Sbottom_of_stackS)) = (*((long*)(-3 + new_cont_656X)));
-    *((long*)(-3 + new_cont_656X)) = Sbottom_of_stackS;
-    copy_continuation_from_heap_return_value = new_cont_656X;
+    *((long *) (-3 + (Sbottom_of_stackS))) = (*((long *) (-3 + new_cont_503X)));
+    *((long *) (-3 + new_cont_503X)) = (Sbottom_of_stackS);
+    copy_continuation_from_heap_return_value = new_cont_503X;
     goto copy_continuation_from_heap_return;}}
  copy_continuation_from_heap_return:
   switch (copy_continuation_from_heap_return_tag) {
@@ -5583,56 +5172,55 @@ long Tinterpret()
   }}
 
  save_env_in_heap: {
-  env_813X = merged_arg1K0;
-  cont_814X = merged_arg1K1;
-  key_815X = merged_arg1K2;{
-  merged_arg1K0 = env_813X;
-  merged_arg1K1 = key_815X;
+  env_639X = merged_arg1K0;
+  cont_640X = merged_arg1K1;
+  key_641X = merged_arg1K2;{
+  merged_arg1K0 = env_639X;
+  merged_arg1K1 = key_641X;
   copy_stob_return_tag = 1;
   goto copy_stob;
  copy_stob_return_1:
-  new_661X = copy_stob_return_value;
-  *((long*)(-7 + env_813X)) = new_661X;
-  arg1K0 = new_661X;
-  goto L14215;}
- L14239: {
-  arg1K0 = cont_814X;
-  goto L14241;}
- L14241: {
-  cont_666X = arg1K0;
-  env_668X = *((long*)(9 + cont_666X));
-  if ((3 == (3 & env_668X))) {
-    v_667X = 3 == (3 & (*((long*)(-7 + env_668X))));
-    if (v_667X) {
-      *((long*)(9 + cont_666X)) = (*((long*)(-7 + env_668X)));
-      arg1K0 = (*((long*)(-3 + cont_666X)));
-      goto L14241;}
+  new_508X = copy_stob_return_value;
+  *((long *) (-7 + env_639X)) = new_508X;
+  arg1K0 = new_508X;
+  goto L14155;}
+ L14179: {
+  arg1K0 = cont_640X;
+  goto L14181;}
+ L14181: {
+  cont_513X = arg1K0;
+  env_514X = *((long *) (9 + cont_513X));
+  if ((3 == (3 & env_514X))) {
+    if ((3 == (3 & (*((long *) (-7 + env_514X)))))) {
+      *((long *) (9 + cont_513X)) = (*((long *) (-7 + env_514X)));
+      arg1K0 = (*((long *) (-3 + cont_513X)));
+      goto L14181;}
     else {
-      save_env_in_heap_return_value = new_661X;
+      save_env_in_heap_return_value = new_508X;
       goto save_env_in_heap_return;}}
   else {
-    save_env_in_heap_return_value = new_661X;
+    save_env_in_heap_return_value = new_508X;
     goto save_env_in_heap_return;}}
- L14215: {
-  env_662X = arg1K0;
-  p_663X = *((long*)(-3 + env_662X));
-  if ((p_663X < Sstack_beginS)) {
-    goto L14239;}
+ L14155: {
+  env_509X = arg1K0;
+  p_510X = *((long *) (-3 + env_509X));
+  if ((p_510X < (Sstack_beginS))) {
+    goto L14179;}
   else {
-    if ((Sstack_endS < p_663X)) {
-      goto L14239;}
+    if (((Sstack_endS) < p_510X)) {
+      goto L14179;}
     else {
-      env_664X = *((long*)(-3 + env_662X));
-      merged_arg1K0 = env_664X;
-      merged_arg1K1 = key_815X;
+      env_511X = *((long *) (-3 + env_509X));
+      merged_arg1K0 = env_511X;
+      merged_arg1K1 = key_641X;
       copy_stob_return_tag = 2;
       goto copy_stob;
      copy_stob_return_2:
-      new_665X = copy_stob_return_value;
-      *((long*)(-7 + env_664X)) = new_665X;
-      *((long*)(-3 + env_662X)) = new_665X;
-      arg1K0 = new_665X;
-      goto L14215;}}}
+      new_512X = copy_stob_return_value;
+      *((long *) (-7 + env_511X)) = new_512X;
+      *((long *) (-3 + env_509X)) = new_512X;
+      arg1K0 = new_512X;
+      goto L14155;}}}
  save_env_in_heap_return:
   switch (save_env_in_heap_return_tag) {
   case 0: goto save_env_in_heap_return_0;
@@ -5641,37 +5229,37 @@ long Tinterpret()
   }}
 
  copy_stob: {
-  stob_811X = merged_arg1K0;{
-  len_671X = (long)(((unsigned long)(*((long*)(-7 + stob_811X))))>>8);
-  h_670X = *((long*)(-7 + stob_811X));
-  *((long*)ShpS) = (2 + (((((((len_671X)<<6)) + (31 & (((h_670X)>>2)))))<<2)));
-  ShpS = (4 + ShpS);
-  new_669X = 3 + ShpS;
-  ShpS = (ShpS + (-4 & (3 + len_671X)));
-  if ((0 < len_671X)) {
-    *((long*)(-4 + ShpS)) = 0;
-    arg1K0 = new_669X;
-    goto L9221;}
+  old_stob_637X = merged_arg1K0;{
+  len_516X = (long)(((unsigned long)(*((long *) (-7 + old_stob_637X))))>>8);
+  *((long *) (ShpS)) = (66 + (((len_516X)<<8)));
+  ShpS = (4 + (ShpS));
+  new_515X = 3 + (ShpS);
+  ShpS = ((ShpS) + (-4 & (3 + len_516X)));
+  if ((0 < len_516X)) {
+    *((long *) (-4 + (ShpS))) = 0;
+    arg1K0 = new_515X;
+    goto L9117;}
   else {
-    arg1K0 = new_669X;
-    goto L9221;}}
- L9221: {
-  new_674X = arg1K0;
-  bytes_675X = (long)(((unsigned long)(*((long*)(-7 + stob_811X))))>>8);
-  from_676X = -3 + stob_811X;
-  arg1K0 = from_676X;
-  arg1K1 = (-3 + new_674X);
-  goto L9242;}
- L9242: {
-  from_672X = arg1K0;
-  to_673X = arg1K1;
-  if ((from_672X < (from_676X + (-4 & (3 + bytes_675X))))) {
-    *((long*)to_673X) = (*((long*)from_672X));
-    arg1K0 = (4 + from_672X);
-    arg1K1 = (4 + to_673X);
-    goto L9242;}
+    arg1K0 = new_515X;
+    goto L9117;}}
+ L9117: {
+  new_519X = arg1K0;
+  *((long *) (-7 + new_519X)) = (*((long *) (-7 + old_stob_637X)));
+  bytes_520X = (long)(((unsigned long)(*((long *) (-7 + old_stob_637X))))>>8);
+  from_521X = -3 + old_stob_637X;
+  arg1K0 = from_521X;
+  arg1K1 = (-3 + new_519X);
+  goto L9142;}
+ L9142: {
+  from_517X = arg1K0;
+  to_518X = arg1K1;
+  if ((from_517X < (from_521X + (-4 & (3 + bytes_520X))))) {
+    *((long *) to_518X) = (*((long *) from_517X));
+    arg1K0 = (4 + from_517X);
+    arg1K1 = (4 + to_518X);
+    goto L9142;}
   else {
-    copy_stob_return_value = new_674X;
+    copy_stob_return_value = new_519X;
     goto copy_stob_return;}}
  copy_stob_return:
   switch (copy_stob_return_tag) {
@@ -5681,41 +5269,39 @@ long Tinterpret()
   }}
 
  push_exception_continuationB: {
-{ x_677X = Sstack_limitS < (-296 + RSstackS);
-  if (x_677X) {
+{ if (((Sstack_limitS) < (-296 + (RSstackS)))) {
     arg1K0 = 0;
-    goto L14175;}
+    goto L14119;}
   else {
-    Sstack_limitS = Sstack_beginS;
+    Sstack_limitS = (Sstack_beginS);
     Sexception_space_usedPS = 1;
-    x_678X = Sstack_limitS < (-296 + RSstackS);
-    if (x_678X) {
+    if (((Sstack_limitS) < (-296 + (RSstackS)))) {
       arg1K0 = 0;
-      goto L14175;}
+      goto L14119;}
     else {
       TTerror("insufficient space on stack for exception frame", 0, 0, 0, 0);
       arg1K0 = 0;
-      goto L14175;}}}
- L14175: {
-  key_681X = arg1K0;
-  arg1K0 = (4 + RSstackS);
+      goto L14119;}}}
+ L14119: {
+  key_524X = arg1K0;
+  arg1K0 = (4 + (RSstackS));
   arg1K1 = 0;
-  goto L14187;}
- L14187: {
-  p_679X = arg1K0;
-  i_680X = arg1K1;
-  if ((2 == (3 & (*((long*)p_679X))))) {
-    merged_arg1K0 = RScode_pointerS;
-    merged_arg1K1 = i_680X;
-    merged_arg1K2 = key_681X;
+  goto L14131;}
+ L14131: {
+  p_522X = arg1K0;
+  i_523X = arg1K1;
+  if ((2 == (3 & (*((long *) p_522X))))) {
+    merged_arg1K0 = (RScode_pointerS);
+    merged_arg1K1 = i_523X;
+    merged_arg1K2 = key_524X;
     push_continuationB_return_tag = 2;
     goto push_continuationB;
    push_continuationB_return_2:
     goto push_exception_continuationB_return;}
   else {
-    arg1K0 = (4 + p_679X);
-    arg1K1 = (1 + i_680X);
-    goto L14187;}}
+    arg1K0 = (4 + p_522X);
+    arg1K1 = (1 + i_523X);
+    goto L14131;}}
  push_exception_continuationB_return:
   switch (push_exception_continuationB_return_tag) {
   case 0: goto push_exception_continuationB_return_0;
@@ -5726,19 +5312,18 @@ long Tinterpret()
   }}
 
  push_continuationB: {
-  code_pointer_808X = merged_arg1K0;
-  size_809X = merged_arg1K1;{
-  pc_682X = 12 + ((((code_pointer_808X - (*((long*)(-3 + StemplateS)))))<<2));
-  template_683X = StemplateS;
-  RSstackS = (-20 + RSstackS);
-  /*** JAR HACK -- IMMUTABLE CONTINUATIONS ***/
-  *((long*)(4 + RSstackS)) = ((4130 | 128) + (((size_809X)<<10)));
-  cont_684X = 11 + RSstackS;
-  *((long*)(1 + cont_684X)) = pc_682X;
-  *((long*)(5 + cont_684X)) = template_683X;
-  *((long*)(9 + cont_684X)) = RSenvS;
-  *((long*)(-3 + cont_684X)) = ScontS;
-  ScontS = cont_684X;
+  code_pointer_634X = merged_arg1K0;
+  size_635X = merged_arg1K1;{
+  pc_525X = 12 + ((((code_pointer_634X - (*((long *) (-3 + (StemplateS))))))<<2));
+  template_526X = StemplateS;
+  RSstackS = (-20 + (RSstackS));
+  *((long *) (4 + (RSstackS))) = (128 | (4130 + (((size_635X)<<10))));
+  cont_527X = 11 + (RSstackS);
+  *((long *) (1 + cont_527X)) = pc_525X;
+  *((long *) (5 + cont_527X)) = template_526X;
+  *((long *) (9 + cont_527X)) = (RSenvS);
+  *((long *) (-3 + cont_527X)) = (ScontS);
+  ScontS = cont_527X;
   goto push_continuationB_return;}
  push_continuationB_return:
   switch (push_continuationB_return_tag) {
@@ -5748,45 +5333,43 @@ long Tinterpret()
   }}
 
  pop_args_list: {
-  start_806X = merged_arg1K0;
-  count_807X = merged_arg1K1;{
-  space_685X = 3 * SnargsS;
-  v_686X = (ShpS + (((space_685X)<<2))) < SlimitS;
-  if (v_686X) {
-    goto L15130;}
+  start_632X = merged_arg1K0;
+  count_633X = merged_arg1K1;{
+  space_528X = 3 * (SnargsS);
+  if ((((ShpS) + (((space_528X)<<2))) < (SlimitS))) {
+    goto L15035;}
   else {
     merged_arg1K0 = 0;
     collect_saving_temp_return_tag = 18;
     goto collect_saving_temp;
    collect_saving_temp_return_18:
-    okayP_687X = (ShpS + (((space_685X)<<2))) < SlimitS;
-    if (okayP_687X) {
-      goto L15130;}
+    if ((((ShpS) + (((space_528X)<<2))) < (SlimitS))) {
+      goto L15035;}
     else {
       TTerror("Scheme48 heap overflow", 0, 0, 0, 0);
-      goto L15130;}}}
- L15130: {
-  arg1K0 = start_806X;
-  arg1K1 = count_807X;
-  goto L15132;}
- L15132: {
-  args_688X = arg1K0;
-  count_689X = arg1K1;
-  if ((0 < count_689X)) {
-    RSstackS = (4 + RSstackS);
-    a_690X = *((long*)RSstackS);
-    *((long*)ShpS) = 2050;
-    ShpS = (4 + ShpS);
-    new_691X = 3 + ShpS;
-    ShpS = (8 + ShpS);
-    *((long*)(-4 + ShpS)) = 0;
-    *((long*)(-3 + new_691X)) = a_690X;
-    *((long*)(1 + new_691X)) = args_688X;
-    arg1K0 = new_691X;
-    arg1K1 = (-1 + count_689X);
-    goto L15132;}
+      goto L15035;}}}
+ L15035: {
+  arg1K0 = start_632X;
+  arg1K1 = count_633X;
+  goto L15037;}
+ L15037: {
+  args_529X = arg1K0;
+  count_530X = arg1K1;
+  if ((0 < count_530X)) {
+    RSstackS = (4 + (RSstackS));
+    a_531X = *((long *) (RSstackS));
+    *((long *) (ShpS)) = 2050;
+    ShpS = (4 + (ShpS));
+    new_532X = 3 + (ShpS);
+    ShpS = (8 + (ShpS));
+    *((long *) (-4 + (ShpS))) = 0;
+    *((long *) (-3 + new_532X)) = a_531X;
+    *((long *) (1 + new_532X)) = args_529X;
+    arg1K0 = new_532X;
+    arg1K1 = (-1 + count_530X);
+    goto L15037;}
   else {
-    pop_args_list_return_value = args_688X;
+    pop_args_list_return_value = args_529X;
     goto pop_args_list_return;}}
  pop_args_list_return:
   switch (pop_args_list_return_tag) {
@@ -5803,315 +5386,307 @@ long Tinterpret()
   }}
 
  collect_saving_temp: {
-  value_804X = merged_arg1K0;{
-  b_696X = Snewspace_beginS;
-  Snewspace_beginS = Soldspace_beginS;
-  Soldspace_beginS = b_696X;
-  e_695X = Snewspace_endS;
-  Snewspace_endS = Soldspace_endS;
-  Soldspace_endS = e_695X;
-  Ssaved_limitS = SlimitS;
-  Ssaved_hpS = ShpS;
-  SlimitS = Snewspace_endS;
-  ShpS = Snewspace_beginS;
+  value_630X = merged_arg1K0;{
+  b_537X = Snewspace_beginS;
+  Snewspace_beginS = (Soldspace_beginS);
+  Soldspace_beginS = b_537X;
+  e_536X = Snewspace_endS;
+  Snewspace_endS = (Soldspace_endS);
+  Soldspace_endS = e_536X;
+  Ssaved_limitS = (SlimitS);
+  Ssaved_hpS = (ShpS);
+  SlimitS = (Snewspace_endS);
+  ShpS = (Snewspace_beginS);
   Sweak_pointer_hpS = -1;
-  pc_694X = 12 + ((((RScode_pointerS - (*((long*)(-3 + StemplateS)))))<<2));
-  value_693X = StemplateS;
-  if ((3 == (3 & value_693X))) {
-    a_697X = -3 + value_693X;
-    if ((a_697X < Soldspace_beginS)) {
-      arg1K0 = value_693X;
-      goto L13934;}
+  pc_535X = 12 + (((((RScode_pointerS) - (*((long *) (-3 + (StemplateS))))))<<2));
+  value_534X = StemplateS;
+  if ((3 == (3 & value_534X))) {
+    a_538X = -3 + value_534X;
+    if ((a_538X < (Soldspace_beginS))) {
+      arg1K0 = value_534X;
+      goto L13896;}
     else {
-      v_698X = a_697X < Soldspace_endS;
-      if (v_698X) {
-        merged_arg1K0 = value_693X;
+      if ((a_538X < (Soldspace_endS))) {
+        merged_arg1K0 = value_534X;
         copy_object_return_tag = 1;
         goto copy_object;
        copy_object_return_1:
-        v_692X = copy_object_return_value;
-        arg1K0 = v_692X;
-        goto L13934;}
+        v_533X = copy_object_return_value;
+        arg1K0 = v_533X;
+        goto L13896;}
       else {
-        arg1K0 = value_693X;
-        goto L13934;}}}
+        arg1K0 = value_534X;
+        goto L13896;}}}
   else {
-    arg1K0 = value_693X;
-    goto L13934;}}
- L13934: {
-  tem_756X = arg1K0;
-  StemplateS = tem_756X;
-  RScode_pointerS = ((-3 + (*((long*)(-3 + tem_756X)))) + (((pc_694X)>>2)));
-  value_758X = RSvalS;
-  if ((3 == (3 & value_758X))) {
-    a_759X = -3 + value_758X;
-    if ((a_759X < Soldspace_beginS)) {
-      arg1K0 = value_758X;
-      goto L13938;}
+    arg1K0 = value_534X;
+    goto L13896;}}
+ L13896: {
+  tem_585X = arg1K0;
+  StemplateS = tem_585X;
+  RScode_pointerS = ((-3 + (*((long *) (-3 + tem_585X)))) + (((pc_535X)>>2)));
+  value_587X = RSvalS;
+  if ((3 == (3 & value_587X))) {
+    a_588X = -3 + value_587X;
+    if ((a_588X < (Soldspace_beginS))) {
+      arg1K0 = value_587X;
+      goto L13900;}
     else {
-      v_760X = a_759X < Soldspace_endS;
-      if (v_760X) {
-        merged_arg1K0 = value_758X;
+      if ((a_588X < (Soldspace_endS))) {
+        merged_arg1K0 = value_587X;
         copy_object_return_tag = 2;
         goto copy_object;
        copy_object_return_2:
-        v_757X = copy_object_return_value;
-        arg1K0 = v_757X;
-        goto L13938;}
+        v_586X = copy_object_return_value;
+        arg1K0 = v_586X;
+        goto L13900;}
       else {
-        arg1K0 = value_758X;
-        goto L13938;}}}
+        arg1K0 = value_587X;
+        goto L13900;}}}
   else {
-    arg1K0 = value_758X;
-    goto L13938;}}
- L13938: {
-  v_751X = arg1K0;
-  RSvalS = v_751X;
-  value_753X = Sdynamic_stateS;
-  if ((3 == (3 & value_753X))) {
-    a_754X = -3 + value_753X;
-    if ((a_754X < Soldspace_beginS)) {
-      arg1K0 = value_753X;
-      goto L13942;}
+    arg1K0 = value_587X;
+    goto L13900;}}
+ L13900: {
+  v_581X = arg1K0;
+  RSvalS = v_581X;
+  value_583X = Sdynamic_stateS;
+  if ((3 == (3 & value_583X))) {
+    a_584X = -3 + value_583X;
+    if ((a_584X < (Soldspace_beginS))) {
+      arg1K0 = value_583X;
+      goto L13904;}
     else {
-      v_755X = a_754X < Soldspace_endS;
-      if (v_755X) {
-        merged_arg1K0 = value_753X;
+      if ((a_584X < (Soldspace_endS))) {
+        merged_arg1K0 = value_583X;
         copy_object_return_tag = 3;
         goto copy_object;
        copy_object_return_3:
-        v_752X = copy_object_return_value;
-        arg1K0 = v_752X;
-        goto L13942;}
+        v_582X = copy_object_return_value;
+        arg1K0 = v_582X;
+        goto L13904;}
       else {
-        arg1K0 = value_753X;
-        goto L13942;}}}
+        arg1K0 = value_583X;
+        goto L13904;}}}
   else {
-    arg1K0 = value_753X;
-    goto L13942;}}
- L13942: {
-  v_746X = arg1K0;
-  Sdynamic_stateS = v_746X;
-  value_748X = Sexception_handlerS;
-  if ((3 == (3 & value_748X))) {
-    a_749X = -3 + value_748X;
-    if ((a_749X < Soldspace_beginS)) {
-      arg1K0 = value_748X;
-      goto L13946;}
+    arg1K0 = value_583X;
+    goto L13904;}}
+ L13904: {
+  v_577X = arg1K0;
+  Sdynamic_stateS = v_577X;
+  value_579X = Sexception_handlerS;
+  if ((3 == (3 & value_579X))) {
+    a_580X = -3 + value_579X;
+    if ((a_580X < (Soldspace_beginS))) {
+      arg1K0 = value_579X;
+      goto L13908;}
     else {
-      v_750X = a_749X < Soldspace_endS;
-      if (v_750X) {
-        merged_arg1K0 = value_748X;
+      if ((a_580X < (Soldspace_endS))) {
+        merged_arg1K0 = value_579X;
         copy_object_return_tag = 4;
         goto copy_object;
        copy_object_return_4:
-        v_747X = copy_object_return_value;
-        arg1K0 = v_747X;
-        goto L13946;}
+        v_578X = copy_object_return_value;
+        arg1K0 = v_578X;
+        goto L13908;}
       else {
-        arg1K0 = value_748X;
-        goto L13946;}}}
+        arg1K0 = value_579X;
+        goto L13908;}}}
   else {
-    arg1K0 = value_748X;
-    goto L13946;}}
- L13946: {
-  v_741X = arg1K0;
-  Sexception_handlerS = v_741X;
-  value_743X = Sinterrupt_handlersS;
-  if ((3 == (3 & value_743X))) {
-    a_744X = -3 + value_743X;
-    if ((a_744X < Soldspace_beginS)) {
-      arg1K0 = value_743X;
-      goto L13950;}
+    arg1K0 = value_579X;
+    goto L13908;}}
+ L13908: {
+  v_573X = arg1K0;
+  Sexception_handlerS = v_573X;
+  value_575X = Sinterrupt_handlersS;
+  if ((3 == (3 & value_575X))) {
+    a_576X = -3 + value_575X;
+    if ((a_576X < (Soldspace_beginS))) {
+      arg1K0 = value_575X;
+      goto L13912;}
     else {
-      v_745X = a_744X < Soldspace_endS;
-      if (v_745X) {
-        merged_arg1K0 = value_743X;
+      if ((a_576X < (Soldspace_endS))) {
+        merged_arg1K0 = value_575X;
         copy_object_return_tag = 5;
         goto copy_object;
        copy_object_return_5:
-        v_742X = copy_object_return_value;
-        arg1K0 = v_742X;
-        goto L13950;}
+        v_574X = copy_object_return_value;
+        arg1K0 = v_574X;
+        goto L13912;}
       else {
-        arg1K0 = value_743X;
-        goto L13950;}}}
+        arg1K0 = value_575X;
+        goto L13912;}}}
   else {
-    arg1K0 = value_743X;
-    goto L13950;}}
- L13950: {
-  v_736X = arg1K0;
-  Sinterrupt_handlersS = v_736X;
-  value_738X = Sinterrupt_templateS;
-  if ((3 == (3 & value_738X))) {
-    a_739X = -3 + value_738X;
-    if ((a_739X < Soldspace_beginS)) {
-      arg1K0 = value_738X;
-      goto L13954;}
+    arg1K0 = value_575X;
+    goto L13912;}}
+ L13912: {
+  v_569X = arg1K0;
+  Sinterrupt_handlersS = v_569X;
+  value_571X = Sinterrupt_templateS;
+  if ((3 == (3 & value_571X))) {
+    a_572X = -3 + value_571X;
+    if ((a_572X < (Soldspace_beginS))) {
+      arg1K0 = value_571X;
+      goto L13916;}
     else {
-      v_740X = a_739X < Soldspace_endS;
-      if (v_740X) {
-        merged_arg1K0 = value_738X;
+      if ((a_572X < (Soldspace_endS))) {
+        merged_arg1K0 = value_571X;
         copy_object_return_tag = 6;
         goto copy_object;
        copy_object_return_6:
-        v_737X = copy_object_return_value;
-        arg1K0 = v_737X;
-        goto L13954;}
+        v_570X = copy_object_return_value;
+        arg1K0 = v_570X;
+        goto L13916;}
       else {
-        arg1K0 = value_738X;
-        goto L13954;}}}
+        arg1K0 = value_571X;
+        goto L13916;}}}
   else {
-    arg1K0 = value_738X;
-    goto L13954;}}
- L13954: {
-  v_731X = arg1K0;
-  Sinterrupt_templateS = v_731X;
-  value_733X = RSenvS;
-  if ((3 == (3 & value_733X))) {
-    a_734X = -3 + value_733X;
-    if ((a_734X < Soldspace_beginS)) {
-      arg1K0 = value_733X;
-      goto L13960;}
+    arg1K0 = value_571X;
+    goto L13916;}}
+ L13916: {
+  v_565X = arg1K0;
+  Sinterrupt_templateS = v_565X;
+  value_567X = RSenvS;
+  if ((3 == (3 & value_567X))) {
+    a_568X = -3 + value_567X;
+    if ((a_568X < (Soldspace_beginS))) {
+      arg1K0 = value_567X;
+      goto L13922;}
     else {
-      v_735X = a_734X < Soldspace_endS;
-      if (v_735X) {
-        merged_arg1K0 = value_733X;
+      if ((a_568X < (Soldspace_endS))) {
+        merged_arg1K0 = value_567X;
         copy_object_return_tag = 7;
         goto copy_object;
        copy_object_return_7:
-        v_732X = copy_object_return_value;
-        arg1K0 = v_732X;
-        goto L13960;}
+        v_566X = copy_object_return_value;
+        arg1K0 = v_566X;
+        goto L13922;}
       else {
-        arg1K0 = value_733X;
-        goto L13960;}}}
+        arg1K0 = value_567X;
+        goto L13922;}}}
   else {
-    arg1K0 = value_733X;
-    goto L13960;}}
- L13960: {
-  env_728X = arg1K0;
-  RSenvS = env_728X;
-  start_729X = 4 + RSstackS;
-  end_730X = -7 + ScontS;
-  arg1K0 = start_729X;
-  goto L14040;}
- L14040: {
-  addr_726X = arg1K0;
-  if ((addr_726X < end_730X)) {
-    merged_arg1K0 = addr_726X;
+    arg1K0 = value_567X;
+    goto L13922;}}
+ L13922: {
+  env_562X = arg1K0;
+  RSenvS = env_562X;
+  start_563X = 4 + (RSstackS);
+  end_564X = -7 + (ScontS);
+  arg1K0 = start_563X;
+  goto L13998;}
+ L13998: {
+  addr_560X = arg1K0;
+  if ((addr_560X < end_564X)) {
+    merged_arg1K0 = addr_560X;
     copy_next_return_tag = 0;
     goto copy_next;
    copy_next_return_0:
-    v_727X = copy_next_return_value;
-    arg1K0 = v_727X;
-    goto L14040;}
+    v_561X = copy_next_return_value;
+    arg1K0 = v_561X;
+    goto L13998;}
   else {
-    arg1K0 = ScontS;
+    arg1K0 = (ScontS);
     arg1K1 = 0;
-    goto L13975;}}
- L14026: {
-  addr_724X = arg1K0;
-  if ((addr_724X < ((-3 + cont_713X) + (-4 & (3 + byte_count_716X))))) {
-    merged_arg1K0 = addr_724X;
+    goto L13937;}}
+ L13984: {
+  addr_558X = arg1K0;
+  if ((addr_558X < end_550X)) {
+    merged_arg1K0 = addr_558X;
     copy_next_return_tag = 1;
     goto copy_next;
    copy_next_return_1:
-    v_725X = copy_next_return_value;
-    arg1K0 = v_725X;
-    goto L14026;}
+    v_559X = copy_next_return_value;
+    arg1K0 = v_559X;
+    goto L13984;}
   else {
-    if ((env_715X == last_env_714X)) {
-      goto L13982;}
+    if ((env_549X == last_env_548X)) {
+      goto L13942;}
     else {
-      arg1K0 = env_715X;
-      goto L13992;}}}
- L14012: {
-  addr_722X = arg1K0;
-  if ((addr_722X < ((-3 + env_720X) + (-4 & (3 + byte_count_721X))))) {
-    merged_arg1K0 = addr_722X;
+      arg1K0 = env_549X;
+      goto L13952;}}}
+ L13970: {
+  addr_556X = arg1K0;
+  if ((addr_556X < end_555X)) {
+    merged_arg1K0 = addr_556X;
     copy_next_return_tag = 2;
     goto copy_next;
    copy_next_return_2:
-    v_723X = copy_next_return_value;
-    arg1K0 = v_723X;
-    goto L14012;}
+    v_557X = copy_next_return_value;
+    arg1K0 = v_557X;
+    goto L13970;}
   else {
-    arg1K0 = (*((long*)(-3 + env_720X)));
-    goto L13992;}}
- L13992: {
-  env_720X = arg1K0;
-  if ((env_720X < Sstack_beginS)) {
-    goto L13982;}
+    arg1K0 = (*((long *) (-3 + env_554X)));
+    goto L13952;}}
+ L13952: {
+  env_554X = arg1K0;
+  if ((env_554X < (Sstack_beginS))) {
+    goto L13942;}
   else {
-    if ((Sstack_endS < env_720X)) {
-      goto L13982;}
+    if (((Sstack_endS) < env_554X)) {
+      goto L13942;}
     else {
-      byte_count_721X = (long)(((unsigned long)(*((long*)(-7 + env_720X))))>>8);
-      arg1K0 = (-3 + env_720X);
-      goto L14012;}}}
- L13982: {
-  if ((cont_713X == Sbottom_of_stackS)) {
-    areas_717X = Simpure_areasS;
-    sizes_718X = Simpure_sizesS;
-    count_719X = Simpure_area_countS;
+      end_555X = (-3 + env_554X) + (-4 & (3 + ((long)(((unsigned long)(*((long *) (-7 + env_554X))))>>8))));
+      arg1K0 = (-3 + env_554X);
+      goto L13970;}}}
+ L13942: {
+  if ((cont_547X == (Sbottom_of_stackS))) {
+    areas_551X = Simpure_areasS;
+    sizes_552X = Simpure_sizesS;
+    count_553X = Simpure_area_countS;
     arg1K0 = 0;
-    goto L14562;}
+    goto L14471;}
   else {
-    arg1K0 = (*((long*)(-3 + cont_713X)));
-    arg1K1 = env_715X;
-    goto L13975;}}
- L13975: {
-  cont_713X = arg1K0;
-  last_env_714X = arg1K1;
-  env_715X = *((long*)(9 + cont_713X));
-  byte_count_716X = (long)(((unsigned long)(*((long*)(-7 + cont_713X))))>>8);
-  arg1K0 = (-3 + cont_713X);
-  goto L14026;}
- L14572: {
-  addr_711X = arg1K0;
-  if ((addr_711X < end_710X)) {
-    merged_arg1K0 = addr_711X;
+    arg1K0 = (*((long *) (-3 + cont_547X)));
+    arg1K1 = env_549X;
+    goto L13937;}}
+ L13937: {
+  cont_547X = arg1K0;
+  last_env_548X = arg1K1;
+  env_549X = *((long *) (9 + cont_547X));
+  end_550X = (-3 + cont_547X) + (-4 & (3 + ((long)(((unsigned long)(*((long *) (-7 + cont_547X))))>>8))));
+  arg1K0 = (-3 + cont_547X);
+  goto L13984;}
+ L14481: {
+  addr_545X = arg1K0;
+  if ((addr_545X < end_544X)) {
+    merged_arg1K0 = addr_545X;
     copy_next_return_tag = 3;
     goto copy_next;
    copy_next_return_3:
-    v_712X = copy_next_return_value;
-    arg1K0 = v_712X;
-    goto L14572;}
+    v_546X = copy_next_return_value;
+    arg1K0 = v_546X;
+    goto L14481;}
   else {
-    arg1K0 = (1 + i_705X);
-    goto L14562;}}
- L14562: {
-  i_705X = arg1K0;
-  if ((i_705X < ((long)count_719X))) {
-    start_709X = *(areas_717X + i_705X);
-    end_710X = (*(areas_717X + i_705X)) + (*(sizes_718X + i_705X));
-    arg1K0 = start_709X;
-    goto L14572;}
+    arg1K0 = (1 + i_540X);
+    goto L14471;}}
+ L14471: {
+  i_540X = arg1K0;
+  if ((i_540X < ((long)count_553X))) {
+    start_543X = *(areas_551X + i_540X);
+    end_544X = (*(areas_551X + i_540X)) + (*(sizes_552X + i_540X));
+    arg1K0 = start_543X;
+    goto L14481;}
   else {
-    if ((3 == (3 & value_804X))) {
-      a_707X = -3 + value_804X;
-      if ((a_707X < Soldspace_beginS)) {
-        arg1K0 = value_804X;
-        goto L14457;}
+    if ((3 == (3 & value_630X))) {
+      a_541X = -3 + value_630X;
+      if ((a_541X < (Soldspace_beginS))) {
+        arg1K0 = value_630X;
+        goto L14397;}
       else {
-        v_706X = a_707X < Soldspace_endS;
-        if (v_706X) {
-          merged_arg1K0 = value_804X;
+        if ((a_541X < (Soldspace_endS))) {
+          merged_arg1K0 = value_630X;
           copy_object_return_tag = 8;
           goto copy_object;
          copy_object_return_8:
-          v_708X = copy_object_return_value;
-          arg1K0 = v_708X;
-          goto L14457;}
+          v_542X = copy_object_return_value;
+          arg1K0 = v_542X;
+          goto L14397;}
         else {
-          arg1K0 = value_804X;
-          goto L14457;}}}
+          arg1K0 = value_630X;
+          goto L14397;}}}
     else {
-      arg1K0 = value_804X;
-      goto L14457;}}}
- L14457: {
-  value_704X = arg1K0;
+      arg1K0 = value_630X;
+      goto L14397;}}}
+ L14397: {
+  value_539X = arg1K0;
   SvalS = RSvalS;
   SstackS = RSstackS;
   Scode_pointerS = RScode_pointerS;
@@ -6121,43 +5696,17 @@ long Tinterpret()
   RSstackS = SstackS;
   RScode_pointerS = Scode_pointerS;
   RSenvS = SenvS;
-  Sgc_countS = (1 + Sgc_countS);
-  arg1K0 = 2;
-  goto L14510;}
- L14521: {
-  new_703X = arg1K0;
-  *(Sopen_vm_portsS + i_699X) = new_703X;
-  goto L14514;}
- L14514: {
-  arg1K0 = (1 + i_699X);
-  goto L14510;}
- L14510: {
-  i_699X = arg1K0;
-  if ((i_699X == Snumber_of_portsS)) {
-    x_700X = (ShpS + (((Sminimum_recovered_spaceS)<<2))) < SlimitS;
-    if (x_700X) {
-      collect_saving_temp_return_value = value_704X;
-      goto collect_saving_temp_return;}
-    else {
-      Spending_interruptsS = (4 | Spending_interruptsS);
-      collect_saving_temp_return_value = value_704X;
-      goto collect_saving_temp_return;}}
+  Sgc_countS = (1 + (Sgc_countS));
+  close_untraced_portsB_return_tag = 1;
+  goto close_untraced_portsB;
+ close_untraced_portsB_return_1:
+  if ((((ShpS) + ((((Sminimum_recovered_spaceS))<<2))) < (SlimitS))) {
+    collect_saving_temp_return_value = value_539X;
+    goto collect_saving_temp_return;}
   else {
-    port_701X = *(Sopen_vm_portsS + i_699X);
-    if ((1 == port_701X)) {
-      goto L14514;}
-    else {
-      header_702X = *((long*)(-7 + port_701X));
-      if ((3 == (3 & header_702X))) {
-        arg1K0 = header_702X;
-        goto L14521;}
-      else {
-        merged_arg1K0 = port_701X;
-        close_port_noisily_return_tag = 1;
-        goto close_port_noisily;
-       close_port_noisily_return_1:
-        arg1K0 = 1;
-        goto L14521;}}}}
+    Spending_interruptsS = (4 | (Spending_interruptsS));
+    collect_saving_temp_return_value = value_539X;
+    goto collect_saving_temp_return;}}
  collect_saving_temp_return:
   switch (collect_saving_temp_return_tag) {
   case 0: goto collect_saving_temp_return_0;
@@ -6182,39 +5731,38 @@ long Tinterpret()
   }}
 
  copy_next: {
-  addr_802X = merged_arg1K0;{
-  next_761X = 4 + addr_802X;
-  thing_762X = *((long*)addr_802X);
-  if ((2 == (3 & thing_762X))) {
-    if (((31 & (((thing_762X)>>2))) < 15)) {
-      goto L11576;}
+  addr_628X = merged_arg1K0;{
+  next_589X = 4 + addr_628X;
+  thing_590X = *((long *) addr_628X);
+  if ((2 == (3 & thing_590X))) {
+    if (((31 & (((thing_590X)>>2))) < 15)) {
+      goto L11517;}
     else {
-      copy_next_return_value = (next_761X + (-4 & (3 + ((long)(((unsigned long)thing_762X)>>8)))));
+      copy_next_return_value = (next_589X + (-4 & (3 + ((long)(((unsigned long)thing_590X)>>8)))));
       goto copy_next_return;}}
   else {
-    goto L11576;}}
- L11576: {
-  if ((3 == (3 & thing_762X))) {
-    a_764X = -3 + thing_762X;
-    if ((a_764X < Soldspace_beginS)) {
-      copy_next_return_value = next_761X;
+    goto L11517;}}
+ L11517: {
+  if ((3 == (3 & thing_590X))) {
+    a_592X = -3 + thing_590X;
+    if ((a_592X < (Soldspace_beginS))) {
+      copy_next_return_value = next_589X;
       goto copy_next_return;}
     else {
-      v_765X = a_764X < Soldspace_endS;
-      if (v_765X) {
-        merged_arg1K0 = thing_762X;
+      if ((a_592X < (Soldspace_endS))) {
+        merged_arg1K0 = thing_590X;
         copy_object_return_tag = 9;
         goto copy_object;
        copy_object_return_9:
-        value_763X = copy_object_return_value;
-        *((long*)addr_802X) = value_763X;
-        copy_next_return_value = next_761X;
+        value_591X = copy_object_return_value;
+        *((long *) addr_628X) = value_591X;
+        copy_next_return_value = next_589X;
         goto copy_next_return;}
       else {
-        copy_next_return_value = next_761X;
+        copy_next_return_value = next_589X;
         goto copy_next_return;}}}
   else {
-    copy_next_return_value = next_761X;
+    copy_next_return_value = next_589X;
     goto copy_next_return;}}
  copy_next_return:
   switch (copy_next_return_tag) {
@@ -6225,55 +5773,54 @@ long Tinterpret()
   }}
 
  copy_object: {
-  thing_800X = merged_arg1K0;{
-  h_768X = *((long*)(-7 + thing_800X));
-  if ((3 == (3 & h_768X))) {
-    copy_object_return_value = h_768X;
+  thing_626X = merged_arg1K0;{
+  h_594X = *((long *) (-7 + thing_626X));
+  if ((3 == (3 & h_594X))) {
+    copy_object_return_value = h_594X;
     goto copy_object_return;}
   else {
-    if ((1070 == h_768X)) {
-      descriptor_769X = *((long*)(-3 + thing_800X));
-      if ((3 == (3 & descriptor_769X))) {
-        a_767X = -3 + descriptor_769X;
-        if ((a_767X < Soldspace_beginS)) {
-          goto L9664;}
+    if ((1070 == h_594X)) {
+      descriptor_595X = *((long *) (-3 + thing_626X));
+      if ((3 == (3 & descriptor_595X))) {
+        a_593X = -3 + descriptor_595X;
+        if ((a_593X < (Soldspace_beginS))) {
+          goto L9567;}
         else {
-          v_766X = a_767X < Soldspace_endS;
-          if (v_766X) {
+          if ((a_593X < (Soldspace_endS))) {
             SvalS = RSvalS;
             SstackS = RSstackS;
             Scode_pointerS = RScode_pointerS;
             SenvS = RSenvS;
-            v_770X = copy_weak_pointer(thing_800X);
+            v_596X = copy_weak_pointer(thing_626X);
             RSvalS = SvalS;
             RSstackS = SstackS;
             RScode_pointerS = Scode_pointerS;
             RSenvS = SenvS;
-            copy_object_return_value = v_770X;
+            copy_object_return_value = v_596X;
             goto copy_object_return;}
           else {
-            goto L9664;}}}
+            goto L9567;}}}
       else {
-        goto L9664;}}
+        goto L9567;}}
     else {
-      goto L9664;}}}
- L9664: {
-  *((long*)ShpS) = h_768X;
-  ShpS = (4 + ShpS);
-  new_772X = 3 + ShpS;
-  *((long*)(-7 + thing_800X)) = new_772X;
-  x1_773X = ShpS;
-  arg1K0 = (-3 + thing_800X);
-  goto L9678;}
- L9678: {
-  o_771X = arg1K0;
-  if ((ShpS < (x1_773X + (-4 & (3 + ((long)(((unsigned long)h_768X)>>8))))))) {
-    *((long*)ShpS) = (*((long*)o_771X));
-    ShpS = (4 + ShpS);
-    arg1K0 = (4 + o_771X);
-    goto L9678;}
+      goto L9567;}}}
+ L9567: {
+  *((long *) (ShpS)) = h_594X;
+  ShpS = (4 + (ShpS));
+  new_598X = 3 + (ShpS);
+  *((long *) (-7 + thing_626X)) = new_598X;
+  x1_599X = ShpS;
+  arg1K0 = (-3 + thing_626X);
+  goto L9581;}
+ L9581: {
+  o_597X = arg1K0;
+  if (((ShpS) < (x1_599X + (-4 & (3 + ((long)(((unsigned long)h_594X)>>8))))))) {
+    *((long *) (ShpS)) = (*((long *) o_597X));
+    ShpS = (4 + (ShpS));
+    arg1K0 = (4 + o_597X);
+    goto L9581;}
   else {
-    copy_object_return_value = new_772X;
+    copy_object_return_value = new_598X;
     goto copy_object_return;}}
  copy_object_return:
   switch (copy_object_return_tag) {
@@ -6289,59 +5836,81 @@ long Tinterpret()
   case 9: goto copy_object_return_9;
   }}
 
- close_port_noisily: {
-  port_798X = merged_arg1K0;{
-  header_774X = *((long*)(-7 + (*((long*)(9 + port_798X)))));
-  if ((3 == (3 & header_774X))) {
-    goto L12570;}
-  else {
-    goto L12570;}}
- L12570: {
-  merged_arg1K0 = port_798X;
+ close_untraced_portsB: {
+{ arg1K0 = 2;
+  goto L13669;}
+ L13715: {
+  merged_arg1K0 = port_601X;
   close_port_return_tag = 1;
   goto close_port;
  close_port_return_1:
-  fputs("Port closed: ", Scurrent_output_portS);
-  string_775X = *((long*)(9 + port_798X));
-  port_776X = Scurrent_output_portS;
-  v_777X = (long)(((unsigned long)(*((long*)(-7 + string_775X))))>>8);
-  fwrite((void *)(-3 + string_775X), sizeof(char), (-1 + v_777X), port_776X);
-  putc(10, Scurrent_output_portS);
-  goto close_port_noisily_return;}
- close_port_noisily_return:
-  switch (close_port_noisily_return_tag) {
-  case 0: goto close_port_noisily_return_0;
-  case 1: goto close_port_noisily_return_1;
+  fputs("Port closed: ", (Scurrent_output_portS));
+  string_605X = *((long *) (9 + port_601X));
+  fwrite((void *)(-3 + string_605X), sizeof(char), (-1 + ((long)(((unsigned long)(*((long *) (-7 + string_605X))))>>8))), (Scurrent_output_portS));
+  putc(10, (Scurrent_output_portS));
+  arg1K0 = 1;
+  goto L13695;}
+ L13700: {
+  arg1K0 = (1 + i_600X);
+  goto L13669;}
+ L13695: {
+  new_604X = arg1K0;
+  *((Sopen_vm_portsS) + i_600X) = new_604X;
+  goto L13700;}
+ L13669: {
+  i_600X = arg1K0;
+  if ((i_600X == (Snumber_of_portsS))) {
+    close_untraced_portsB_return_value = 0;
+    goto close_untraced_portsB_return;}
+  else {
+    port_601X = *((Sopen_vm_portsS) + i_600X);
+    if ((1 == port_601X)) {
+      goto L13700;}
+    else {
+      header_602X = *((long *) (-7 + port_601X));
+      if ((3 == (3 & header_602X))) {
+        arg1K0 = header_602X;
+        goto L13695;}
+      else {
+        header_603X = *((long *) (-7 + (*((long *) (9 + port_601X)))));
+        if ((3 == (3 & header_603X))) {
+          goto L13715;}
+        else {
+          goto L13715;}}}}}
+ close_untraced_portsB_return:
+  switch (close_untraced_portsB_return_tag) {
+  case 0: goto close_untraced_portsB_return_0;
+  case 1: goto close_untraced_portsB_return_1;
   }}
 
  close_port: {
-  vm_port_797X = merged_arg1K0;{
-  if (((*((long*)(1 + vm_port_797X))) < 0)) {
+  vm_port_623X = merged_arg1K0;{
+  if (((*((long *) (1 + vm_port_623X))) < 0)) {
     goto close_port_return;}
   else {
-    index_780X = (((*((long*)(1 + vm_port_797X))))>>2);
-    if ((0 == index_780X)) {
+    index_608X = (((*((long *) (1 + vm_port_623X))))>>2);
+    if ((0 == index_608X)) {
       goto close_port_return;}
     else {
-      if ((1 == index_780X)) {
+      if ((1 == index_608X)) {
         goto close_port_return;}
       else {
-        mode_779X = (((*((long*)(-3 + vm_port_797X))))>>2);
-        port_778X = *(Sopen_portsS + ((((*((long*)(1 + vm_port_797X))))>>2)));
-        if ((1 == mode_779X)) {
-          fclose(port_778X);
-          goto L11231;}
+        mode_607X = (((*((long *) (-3 + vm_port_623X))))>>2);
+        port_606X = *((Sopen_portsS) + ((((*((long *) (1 + vm_port_623X))))>>2)));
+        if ((1 == mode_607X)) {
+          fclose(port_606X);
+          goto L11174;}
         else {
-          if ((2 == mode_779X)) {
-            fclose(port_778X);
-            goto L11231;}
+          if ((2 == mode_607X)) {
+            fclose(port_606X);
+            goto L11174;}
           else {
             TTerror("this shouldn't happen when closing a port", 0, 0, 0, 0);
-            goto L11231;}}}}}}
- L11231: {
-  *((long*)(-3 + vm_port_797X)) = 0;
-  *((long*)(1 + vm_port_797X)) = -4;
-  *(Sopen_vm_portsS + index_780X) = 1;
+            goto L11174;}}}}}}
+ L11174: {
+  *((long *) (-3 + vm_port_623X)) = 0;
+  *((long *) (1 + vm_port_623X)) = -4;
+  *((Sopen_vm_portsS) + index_608X) = 1;
   goto close_port_return;}
  close_port_return:
   switch (close_port_return_tag) {
@@ -6350,27 +5919,27 @@ long Tinterpret()
   }}
 
  write_number: {
-  x_795X = merged_arg1K0;
-  port_796X = merged_arg2K1;{
-  if ((x_795X < 0)) {
-    putc(45, port_796X);
-    arg1K0 = (0 - x_795X);
-    goto L29726;}
+  x_621X = merged_arg1K0;
+  port_622X = merged_arg2K1;{
+  if ((x_621X < 0)) {
+    putc(45, port_622X);
+    arg1K0 = (0 - x_621X);
+    goto L29317;}
   else {
-    arg1K0 = x_795X;
-    goto L29726;}}
- L29726: {
-  v_781X = arg1K0;
+    arg1K0 = x_621X;
+    goto L29317;}}
+ L29317: {
+  v_609X = arg1K0;
   SvalS = RSvalS;
   SstackS = RSstackS;
   Scode_pointerS = RScode_pointerS;
   SenvS = RSenvS;
-  really_write_number(v_781X, port_796X);
+  really_write_number(v_609X, port_622X);
   RSvalS = SvalS;
   RSstackS = SstackS;
   RScode_pointerS = Scode_pointerS;
   RSenvS = SenvS;
-  putc(10, port_796X);
+  putc(10, port_622X);
   goto write_number_return;}
  write_number_return:
   switch (write_number_return_tag) {
@@ -6382,22 +5951,22 @@ long Tinterpret()
   }}
 
  stob_equalP: {
-  stob1_793X = merged_arg1K0;
-  stob2_794X = merged_arg1K1;{
-  z2_783X = *((long*)(-7 + stob2_794X));
-  z1_782X = *((long*)(-7 + stob1_793X));
-  if (((128 | z1_782X) == (128 | z2_783X))) {
+  stob1_619X = merged_arg1K0;
+  stob2_620X = merged_arg1K1;{
+  z2_611X = *((long *) (-7 + stob2_620X));
+  z1_610X = *((long *) (-7 + stob1_619X));
+  if (((128 | z1_610X) == (128 | z2_611X))) {
     arg1K0 = 0;
-    goto L8359;}
+    goto L8336;}
   else {
     stob_equalP_return_value = 0;
     goto stob_equalP_return;}}
- L8359: {
-  i_784X = arg1K0;
-  if ((i_784X < ((((3 + ((long)(((unsigned long)z1_782X)>>8))))>>2)))) {
-    if (((*((long*)((-3 + stob1_793X) + (((i_784X)<<2))))) == (*((long*)((-3 + stob2_794X) + (((i_784X)<<2))))))) {
-      arg1K0 = (1 + i_784X);
-      goto L8359;}
+ L8336: {
+  i_612X = arg1K0;
+  if ((i_612X < ((((3 + ((long)(((unsigned long)z1_610X)>>8))))>>2)))) {
+    if (((*((long *) ((-3 + stob1_619X) + (((i_612X)<<2))))) == (*((long *) ((-3 + stob2_620X) + (((i_612X)<<2))))))) {
+      arg1K0 = (1 + i_612X);
+      goto L8336;}
     else {
       stob_equalP_return_value = 0;
       goto stob_equalP_return;}}
@@ -6411,21 +5980,19 @@ long Tinterpret()
   }}
 
  extract_string: {
-  string_791X = merged_arg1K0;{
-  v_785X = (long)(((unsigned long)(*((long*)(-7 + string_791X))))>>8);
-  z_786X = -1 + v_785X;
-  v_787X = (unsigned char *)calloc( 1, 1 + z_786X);
+  string_617X = merged_arg1K0;{
+  z_613X = -1 + ((long)(((unsigned long)(*((long *) (-7 + string_617X))))>>8));
+  v_614X = (unsigned char *)calloc( 1, 1 + z_613X);
   arg1K0 = 0;
-  goto L10905;}
- L10905: {
-  i_788X = arg1K0;
-  if ((i_788X < z_786X)) {
-    v_789X = ((long)(*((unsigned char*)((-3 + string_791X) + i_788X))));
-    *(v_787X + i_788X) = v_789X;
-    arg1K0 = (1 + i_788X);
-    goto L10905;}
+  goto L10854;}
+ L10854: {
+  i_615X = arg1K0;
+  if ((i_615X < z_613X)) {
+    *(v_614X + i_615X) = (((long)(*((unsigned char *) ((-3 + string_617X) + i_615X)))));
+    arg1K0 = (1 + i_615X);
+    goto L10854;}
   else {
-    extract_string_return_value = v_787X;
+    extract_string_return_value = v_614X;
     goto extract_string_return;}}
  extract_string_return:
   switch (extract_string_return_tag) {
@@ -6435,152 +6002,150 @@ long Tinterpret()
   }}
 }
 
-long enter_string(unsigned char *string_851X)
+long enter_string(unsigned char *string_677X)
 {
   extern long ShpS;
   long arg1K0;
-  long new_852X;
-  long len_853X;
-  long z_854X;
-  long s_855X;
-  long i_856X;
-  unsigned char c_857X;
+  long new_678X;
+  long len_679X;
+  long z_680X;
+  long s_681X;
+  long i_682X;
 
- {z_854X = strlen(string_851X);
-  len_853X = 1 + z_854X;
-  *((long*)ShpS) = (62 + (((len_853X)<<8)));
-  ShpS = (4 + ShpS);
-  new_852X = 3 + ShpS;
-  ShpS = (ShpS + (-4 & (3 + len_853X)));
-  if ((0 < len_853X)) {
-    *((long*)(-4 + ShpS)) = 0;
-    arg1K0 = new_852X;
-    goto L11987;}
+ {z_680X = strlen(string_677X);
+  len_679X = 1 + z_680X;
+  *((long *) (ShpS)) = (62 + (((len_679X)<<8)));
+  ShpS = (4 + (ShpS));
+  new_678X = 3 + (ShpS);
+  ShpS = ((ShpS) + (-4 & (3 + len_679X)));
+  if ((0 < len_679X)) {
+    *((long *) (-4 + (ShpS))) = 0;
+    arg1K0 = new_678X;
+    goto L11926;}
   else {
-    arg1K0 = new_852X;
-    goto L11987;}}
- L11987: {
-  s_855X = arg1K0;
+    arg1K0 = new_678X;
+    goto L11926;}}
+ L11926: {
+  s_681X = arg1K0;
   arg1K0 = 0;
-  goto L11989;}
- L11989: {
-  i_856X = arg1K0;
-  if ((i_856X < z_854X)) {
-    c_857X = *(string_851X + i_856X);
-    *((unsigned char*)((-3 + s_855X) + i_856X)) = ((unsigned char)((long)(c_857X)));
-    arg1K0 = (1 + i_856X);
-    goto L11989;}
+  goto L11928;}
+ L11928: {
+  i_682X = arg1K0;
+  if ((i_682X < z_680X)) {
+    *((unsigned char *) ((-3 + s_681X) + i_682X)) = ((unsigned char)((long)((*(string_677X + i_682X)))));
+    arg1K0 = (1 + i_682X);
+    goto L11928;}
   else {
-    return(s_855X);}}}
+    return(s_681X);}}}
 
-long copy_weak_pointer(long weak_858X)
+long copy_weak_pointer(long weak_683X)
 {
   extern long ShpS;
   extern long Sweak_pointer_limitS;
   extern long Sweak_pointer_hpS;
-  unsigned char tempWW3518_859X;
-  long old_860X;
-  long new_861X;
+  unsigned char tempWW817_684X;
+  long old_685X;
+  long new_686X;
 
- {tempWW3518_859X = -1 == Sweak_pointer_hpS;
-  if (tempWW3518_859X) {
-    goto L8009;}
+ {tempWW817_684X = -1 == (Sweak_pointer_hpS);
+  if (tempWW817_684X) {
+    goto L7986;}
   else {
-    if ((Sweak_pointer_hpS < Sweak_pointer_limitS)) {
-      goto L8014;}
+    if (((Sweak_pointer_hpS) < (Sweak_pointer_limitS))) {
+      goto L7991;}
     else {
-      goto L8009;}}}
- L8009: {
-  old_860X = Sweak_pointer_hpS;
-  Sweak_pointer_hpS = ShpS;
-  ShpS = (1024 + ShpS);
-  Sweak_pointer_limitS = ShpS;
-  *((long*)Sweak_pointer_hpS) = 261186;
-  *((long*)(8 + Sweak_pointer_hpS)) = old_860X;
-  goto L8014;}
- L8014: {
-  new_861X = 7 + Sweak_pointer_hpS;
-  *((long*)(4 + Sweak_pointer_hpS)) = (*((long*)(-3 + weak_858X)));
-  Sweak_pointer_hpS = (8 + Sweak_pointer_hpS);
-  *((long*)(-7 + weak_858X)) = new_861X;
-  return(new_861X);}}
+      goto L7986;}}}
+ L7986: {
+  old_685X = Sweak_pointer_hpS;
+  Sweak_pointer_hpS = (ShpS);
+  ShpS = (1024 + (ShpS));
+  Sweak_pointer_limitS = (ShpS);
+  *((long *) (Sweak_pointer_hpS)) = 261186;
+  *((long *) (8 + (Sweak_pointer_hpS))) = old_685X;
+  goto L7991;}
+ L7991: {
+  new_686X = 7 + (Sweak_pointer_hpS);
+  *((long *) (4 + (Sweak_pointer_hpS))) = (*((long *) (-3 + weak_683X)));
+  Sweak_pointer_hpS = (8 + (Sweak_pointer_hpS));
+  *((long *) (-7 + weak_683X)) = new_686X;
+  return(new_686X);}}
 
-void really_write_number(long x_862X, FILE * port_863X)
+void really_write_number(long x_687X, FILE * port_688X)
 {
   extern void really_write_number(long, FILE *);
-  long v_864X;
-  long v_865X;
+  long v_689X;
+  long v_690X;
 
- {if ((x_862X < 10)) {
-    goto L29688;}
+ {if ((x_687X < 10)) {
+    goto L29279;}
   else {
-    v_864X = x_862X / 10;
-    really_write_number(v_864X, port_863X);
-    goto L29688;}}
- L29688: {
-  v_865X = x_862X % 10;
-  putc(((48 + v_865X)), port_863X);
+    v_689X = x_687X / 10;
+    really_write_number(v_689X, port_688X);
+    goto L29279;}}
+ L29279: {
+  v_690X = x_687X % 10;
+  putc(((48 + v_690X)), port_688X);
   return;}}
 
-long read_number(FILE * port_866X)
+long read_number(FILE * port_691X)
 {
   long arg1K0;
   unsigned char arg4K1;
   unsigned char arg4K0;
-  unsigned char ch_867X;
-  long r_868X;
-  unsigned char ch_869X;
-  long r_870X;
-  unsigned char Kchar_871X;
-  unsigned char ch_872X;
-  unsigned char Kchar_873X;
-  unsigned char ch_874X;
+  unsigned char ch_692X;
+  long r_693X;
+  unsigned char ch_694X;
+  long r_695X;
+  unsigned char Kchar_696X;
+  unsigned char ch_697X;
+  unsigned char Kchar_698X;
+  unsigned char ch_699X;
 
- {goto L4937;}
- L4966: {
-  ch_867X = arg4K0;
+ {goto L4911;}
+ L4940: {
+  ch_692X = arg4K0;
   arg1K0 = 0;
-  arg4K1 = ch_867X;
-  goto L4968;}
- L4968: {
-  r_868X = arg1K0;
-  ch_869X = arg4K1;
-  r_870X = (-48 + ((long)(ch_869X))) + (10 * r_868X);
+  arg4K1 = ch_692X;
+  goto L4942;}
+ L4942: {
+  r_693X = arg1K0;
+  ch_694X = arg4K1;
+  r_695X = (-48 + ((long)(ch_694X))) + (10 * r_693X);
   { int TTchar;
-    PS_GETC(port_866X, TTchar);
+    PS_GETC(port_691X, TTchar);
     if (EOF == TTchar) {
-      return(r_870X);}
+      return(r_695X);}
     else {
-      unsigned char Kchar_871X = TTchar;
-      ch_872X = Kchar_871X;
-      if ((((long)ch_872X) < 48)) {
-        return(r_870X);}
+      unsigned char Kchar_696X = TTchar;
+      ch_697X = Kchar_696X;
+      if ((((long)ch_697X) < 48)) {
+        return(r_695X);}
       else {
-        if ((57 < ((long)ch_872X))) {
-          return(r_870X);}
+        if ((57 < ((long)ch_697X))) {
+          return(r_695X);}
         else {
-          arg1K0 = r_870X;
-          arg4K1 = Kchar_871X;
-          goto L4968;}}}}}
- L4937: {
+          arg1K0 = r_695X;
+          arg4K1 = Kchar_696X;
+          goto L4942;}}}}}
+ L4911: {
   { int TTchar;
-    PS_GETC(port_866X, TTchar);
+    PS_GETC(port_691X, TTchar);
     if (EOF == TTchar) {
       arg4K0 = -1;
-      goto L4966;}
+      goto L4940;}
     else {
-      unsigned char Kchar_873X = TTchar;
-      ch_874X = Kchar_873X;
-      if ((((long)ch_874X) < 48)) {
-        goto L4937;}
+      unsigned char Kchar_698X = TTchar;
+      ch_699X = Kchar_698X;
+      if ((((long)ch_699X) < 48)) {
+        goto L4911;}
       else {
-        if ((57 < ((long)ch_874X))) {
-          goto L4937;}
+        if ((57 < ((long)ch_699X))) {
+          goto L4911;}
         else {
-          arg4K0 = Kchar_873X;
-          goto L4966;}}}}}}
+          arg4K0 = Kchar_698X;
+          goto L4940;}}}}}}
 
-long call_startup_procedure(long startup_proc_875X, unsigned char **startup_vector_876X, long startup_vector_length_877X)
+long call_startup_procedure(long startup_proc_700X, unsigned char **startup_vector_701X, long startup_vector_length_702X)
 {
   extern long Sbottom_of_stackS;
   extern long SenvS;
@@ -6594,7 +6159,6 @@ long call_startup_procedure(long startup_proc_875X, unsigned char **startup_vect
   extern long *Sopen_vm_portsS;
   extern long Scode_pointerS;
   extern long Tinterpret();
-  extern long call_external_value(long, long, long);
   extern long SnargsS;
   extern long SvalS;
   extern long SstackS;
@@ -6604,109 +6168,99 @@ long call_startup_procedure(long startup_proc_875X, unsigned char **startup_vect
   extern long enter_string(unsigned char*);
   extern long ShpS;
   long arg1K0;
-  long new_878X;
-  long len_879X;
-  long tem_880X;
-  long x_881X;
-  long x_882X;
-  long new_883X;
-  long count_884X;
-  long v_885X;
-  long v_886X;
-  long v_887X;
-  char option_888X;
-  long vector_889X;
-  long i_890X;
-  unsigned char x_891X;
-  long val_892X;
+  long new_703X;
+  long len_704X;
+  long tem_705X;
+  long new_706X;
+  long v_707X;
+  unsigned char option_708X;
+  long vector_709X;
+  long i_710X;
+  unsigned char x_711X;
+  long val_712X;
 
- {len_879X = ((startup_vector_length_877X)<<2);
-  *((long*)ShpS) = (10 + (((len_879X)<<8)));
-  ShpS = (4 + ShpS);
-  new_878X = 3 + ShpS;
-  ShpS = (ShpS + (-4 & (3 + len_879X)));
-  if ((0 < len_879X)) {
-    *((long*)(-4 + ShpS)) = 0;
-    arg1K0 = new_878X;
-    goto L15557;}
+ {len_704X = ((startup_vector_length_702X)<<2);
+  *((long *) (ShpS)) = (10 + (((len_704X)<<8)));
+  ShpS = (4 + (ShpS));
+  new_703X = 3 + (ShpS);
+  ShpS = ((ShpS) + (-4 & (3 + len_704X)));
+  if ((0 < len_704X)) {
+    *((long *) (-4 + (ShpS))) = 0;
+    arg1K0 = new_703X;
+    goto L15454;}
   else {
-    arg1K0 = new_878X;
-    goto L15557;}}
- L12687: {
+    arg1K0 = new_703X;
+    goto L15454;}}
+ L12633: {
   SenvS = 13;
-  tem_880X = Sinterrupt_templateS;
-  StemplateS = tem_880X;
-  Scode_pointerS = (-3 + (*((long*)(-3 + tem_880X))));
-  SnargsS = 13;
+  tem_705X = Sinterrupt_templateS;
+  StemplateS = tem_705X;
+  Scode_pointerS = (-3 + (*((long *) (-3 + tem_705X))));
+  SnargsS = 0;
   SvalS = 13;
   Sdynamic_stateS = 25;
   Sexception_handlerS = 25;
   Sinterrupt_handlersS = 25;
   Senabled_interruptsS = 0;
   Spending_interruptsS = 0;
-  *((long*)SstackS) = vector_889X;
-  SstackS = (-4 + SstackS);
-  x_881X = *(Sopen_vm_portsS + 0);
-  *((long*)SstackS) = x_881X;
-  SstackS = (-4 + SstackS);
-  x_882X = *(Sopen_vm_portsS + 1);
-  *((long*)SstackS) = x_882X;
-  SstackS = (-4 + SstackS);
-  *((long*)ShpS) = 578;
-  ShpS = (4 + ShpS);
-  new_883X = 3 + ShpS;
-  ShpS = (4 + ShpS);
-  *((long*)(-4 + ShpS)) = 0;
-  *((unsigned char*)(-3 + new_883X)) = 23;
-  *((unsigned char*)(-2 + new_883X)) = 3;
-  Scode_pointerS = (-3 + new_883X);
-  SvalS = startup_proc_875X;
-  goto L15491;}
- L12732: {
-  Sstack_limitS = (296 + Sstack_beginS);
+  *((long *) (SstackS)) = vector_709X;
+  SstackS = (-4 + (SstackS));
+  *((long *) (SstackS)) = (*((Sopen_vm_portsS) + 0));
+  SstackS = (-4 + (SstackS));
+  *((long *) (SstackS)) = (*((Sopen_vm_portsS) + 1));
+  SstackS = (-4 + (SstackS));
+  *((long *) (ShpS)) = 578;
+  ShpS = (4 + (ShpS));
+  new_706X = 3 + (ShpS);
+  ShpS = (4 + (ShpS));
+  *((long *) (-4 + (ShpS))) = 0;
+  *((unsigned char *) (-3 + new_706X)) = 23;
+  *((unsigned char *) (-2 + new_706X)) = 3;
+  Scode_pointerS = (-3 + new_706X);
+  SvalS = startup_proc_700X;
+  goto L15388;}
+ L12678: {
+  Sstack_limitS = (296 + (Sstack_beginS));
   Sexception_space_usedPS = 0;
-  goto L12687;}
- L15491: {
-  option_888X = TTrun_machine((long)Tinterpret);
-  if ((0 == ((long)option_888X))) {
-    return(SvalS);}
+  goto L12633;}
+ L15388: {
+  option_708X = TTrun_machine((long)Tinterpret);
+  if ((0 == ((long)option_708X))) {
+    return((SvalS));}
   else {
-    if ((1 == ((long)option_888X))) {
-      v_887X = *((long*)(-3 + (*((long*)(1 + SvalS)))));
-      v_886X = 4 + SstackS;
-      v_885X = call_external_value(v_887X, SnargsS, v_886X);
-      SvalS = v_885X;
-      count_884X = 1 + SnargsS;
-      SstackS = (SstackS - ((((0 - count_884X))<<2)));
-      goto L15491;}
+    if ((1 == ((long)option_708X))) {
+      v_707X = ((long(*)())(*((long *) (-3 + (*((long *) (1 + (SvalS))))))))((SnargsS), (4 + (SstackS)));
+      SvalS = v_707X;
+      SstackS = ((SstackS) - ((((-1 - (SnargsS)))<<2)));
+      goto L15388;}
     else {
-      TTerror("unkown VM return option", 1, ((long)option_888X), 0, 0);
+      TTerror("unkown VM return option", 1, ((long)option_708X), 0, 0);
       return(-1);}}}
- L15557: {
-  vector_889X = arg1K0;
+ L15454: {
+  vector_709X = arg1K0;
   arg1K0 = 0;
-  goto L15559;}
- L15559: {
-  i_890X = arg1K0;
-  if ((i_890X < startup_vector_length_877X)) {
-    val_892X = enter_string((*(startup_vector_876X + i_890X)));
-    *((long*)((-3 + vector_889X) + (((i_890X)<<2)))) = val_892X;
-    arg1K0 = (1 + i_890X);
-    goto L15559;}
+  goto L15456;}
+ L15456: {
+  i_710X = arg1K0;
+  if ((i_710X < startup_vector_length_702X)) {
+    val_712X = enter_string((*(startup_vector_701X + i_710X)));
+    *((long *) ((-3 + vector_709X) + (((i_710X)<<2)))) = val_712X;
+    arg1K0 = (1 + i_710X);
+    goto L15456;}
   else {
-    SstackS = (-11 + Sbottom_of_stackS);
-    *((long*)(-3 + Sbottom_of_stackS)) = 1;
-    if (Sexception_space_usedPS) {
-      x_891X = Sstack_limitS < (-296 + SstackS);
-      if (x_891X) {
-        goto L12732;}
+    SstackS = (-11 + (Sbottom_of_stackS));
+    *((long *) (-3 + (Sbottom_of_stackS))) = 1;
+    if ((Sexception_space_usedPS)) {
+      x_711X = (Sstack_limitS) < (-296 + (SstackS));
+      if (x_711X) {
+        goto L12678;}
       else {
         TTerror("no space on stack to reserve exception space", 0, 0, 0, 0);
-        goto L12732;}}
+        goto L12678;}}
     else {
-      goto L12687;}}}}
+      goto L12633;}}}}
 
-void initialize_vm(long memory_begin_893X, long memory_size_894X, long stack_begin_895X, long stack_size_896X)
+void initialize_vm(long memory_begin_713X, long memory_size_714X, long stack_begin_715X, long stack_size_716X)
 {
   extern long Soldspace_beginS;
   extern long Soldspace_endS;
@@ -6729,89 +6283,83 @@ void initialize_vm(long memory_begin_893X, long memory_size_894X, long stack_beg
   extern long Sinterrupt_templateS;
   extern long *Sopen_vm_portsS;
   long arg1K0;
-  char merged_arg0K1;
-  char merged_arg0K0;
+  unsigned char merged_arg0K1;
+  unsigned char merged_arg0K0;
 
   int make_template_containing_ops_return_tag;
   long make_template_containing_ops_return_value;
-  long semisize_897X;
-  FILE * *v_898X;
-  long *v_899X;
-  unsigned char tempWW3526_900X;
-  unsigned char v_901X;
-  long i_902X;
-  long v_903X;
-  long cont_904X;
-  long template_905X;
-  long new_906X;
-  long d_907X;
-  long new_908X;
-  long d_909X;
-  long *v_910X;
-  long length_911X;
-  long new_912X;
-  long new_913X;
-  long c_914X;
-  char op1_915X;
-  char op2_916X;
- {semisize_897X = (((-2 & memory_size_894X))<<1);
-  Snewspace_beginS = memory_begin_893X;
-  Snewspace_endS = (Snewspace_beginS + semisize_897X);
-  Soldspace_beginS = Snewspace_endS;
-  Soldspace_endS = (Soldspace_beginS + semisize_897X);
-  ShpS = Snewspace_beginS;
-  SlimitS = Snewspace_endS;
-  v_898X = (FILE **)malloc(sizeof(FILE *) * Snumber_of_portsS);
-  Sopen_portsS = v_898X;
-  v_899X = (long*)malloc(sizeof(long) * Snumber_of_portsS);
-  Sopen_vm_portsS = v_899X;
-  tempWW3526_900X = NULL == Sopen_portsS;
-  if (tempWW3526_900X) {
-    goto L13110;}
+  long semisize_717X;
+  unsigned char tempWW825_718X;
+  long i_719X;
+  long v_720X;
+  long cont_721X;
+  long template_722X;
+  long new_723X;
+  long d_724X;
+  long new_725X;
+  long d_726X;
+  long *v_727X;
+  long length_728X;
+  long new_729X;
+  long new_730X;
+  long c_731X;
+  unsigned char op1_732X;
+  unsigned char op2_733X;
+ {semisize_717X = (((-2 & memory_size_714X))<<1);
+  Snewspace_beginS = memory_begin_713X;
+  Snewspace_endS = ((Snewspace_beginS) + semisize_717X);
+  Soldspace_beginS = (Snewspace_endS);
+  Soldspace_endS = ((Soldspace_beginS) + semisize_717X);
+  ShpS = (Snewspace_beginS);
+  SlimitS = (Snewspace_endS);
+  Sopen_portsS = ((FILE **)malloc(sizeof(FILE *) * (Snumber_of_portsS)));
+  Sopen_vm_portsS = ((long*)malloc(sizeof(long) * (Snumber_of_portsS)));
+  tempWW825_718X = NULL == (Sopen_portsS);
+  if (tempWW825_718X) {
+    goto L12933;}
   else {
-    v_901X = NULL == Sopen_vm_portsS;
-    if (v_901X) {
-      goto L13110;}
+    if ((NULL == (Sopen_vm_portsS))) {
+      goto L12933;}
     else {
-      goto L13115;}}}
- L13110: {
+      goto L12938;}}}
+ L12933: {
   TTerror("out of memory, unable to continue", 0, 0, 0, 0);
-  goto L13115;}
- L13222: {
-  i_902X = arg1K0;
-  if ((i_902X < length_911X)) {
-    *(v_910X + i_902X) = 1;
-    arg1K0 = (1 + i_902X);
-    goto L13222;}
+  goto L12938;}
+ L13045: {
+  i_719X = arg1K0;
+  if ((i_719X < length_728X)) {
+    *(v_727X + i_719X) = 1;
+    arg1K0 = (1 + i_719X);
+    goto L13045;}
   else {
-    *(Sopen_portsS + 0) = Scurrent_input_portS;
-    *(Sopen_portsS + 1) = Scurrent_output_portS;
-    d_909X = enter_string("so");
-    *((long*)ShpS) = 4118;
-    ShpS = (4 + ShpS);
-    new_908X = 3 + ShpS;
-    ShpS = (16 + ShpS);
-    *((long*)(-4 + ShpS)) = 0;
-    *((long*)(-3 + new_908X)) = 8;
-    *((long*)(1 + new_908X)) = 4;
-    *((long*)(5 + new_908X)) = 1;
-    *((long*)(9 + new_908X)) = d_909X;
-    d_907X = enter_string("si");
-    *((long*)ShpS) = 4118;
-    ShpS = (4 + ShpS);
-    new_906X = 3 + ShpS;
-    ShpS = (16 + ShpS);
-    *((long*)(-4 + ShpS)) = 0;
-    *((long*)(-3 + new_906X)) = 4;
-    *((long*)(1 + new_906X)) = 0;
-    *((long*)(5 + new_906X)) = 1;
-    *((long*)(9 + new_906X)) = d_907X;
-    *(Sopen_vm_portsS + 0) = new_906X;
-    *(Sopen_vm_portsS + 1) = new_908X;
-    Sstack_beginS = stack_begin_895X;
-    Sstack_endS = (stack_begin_895X + (((stack_size_896X)<<2)));
-    Sstack_limitS = Sstack_beginS;
-    SstackS = (-4 + Sstack_endS);
+    *((Sopen_portsS) + 0) = (Scurrent_input_portS);
+    *((Sopen_portsS) + 1) = (Scurrent_output_portS);
+    d_726X = enter_string("so");
+    *((long *) (ShpS)) = 4118;
+    ShpS = (4 + (ShpS));
+    new_725X = 3 + (ShpS);
+    ShpS = (16 + (ShpS));
+    *((long *) (-4 + (ShpS))) = 0;
+    *((long *) (-3 + new_725X)) = 8;
+    *((long *) (1 + new_725X)) = 4;
+    *((long *) (5 + new_725X)) = 1;
+    *((long *) (9 + new_725X)) = d_726X;
+    d_724X = enter_string("si");
+    *((long *) (ShpS)) = 4118;
+    ShpS = (4 + (ShpS));
+    new_723X = 3 + (ShpS);
+    ShpS = (16 + (ShpS));
+    *((long *) (-4 + (ShpS))) = 0;
+    *((long *) (-3 + new_723X)) = 4;
+    *((long *) (1 + new_723X)) = 0;
+    *((long *) (5 + new_723X)) = 1;
+    *((long *) (9 + new_723X)) = d_724X;
+    *((Sopen_vm_portsS) + 0) = new_723X;
+    *((Sopen_vm_portsS) + 1) = new_725X;
+    Sstack_beginS = stack_begin_715X;
+    Sstack_endS = (stack_begin_715X + (((stack_size_716X)<<2)));
+    Sstack_limitS = (Sstack_beginS);
+    SstackS = (-4 + (Sstack_endS));
     ScontS = 1;
     SenvS = 17;
     merged_arg0K0 = 22;
@@ -6819,47 +6367,46 @@ void initialize_vm(long memory_begin_893X, long memory_size_894X, long stack_beg
     make_template_containing_ops_return_tag = 0;
     goto make_template_containing_ops;
    make_template_containing_ops_return_0:
-    template_905X = make_template_containing_ops_return_value;
-    SstackS = (-20 + SstackS);
-    /*** JAR HACK -- IMMUTABLE CONTINUATIONS ***/
-    *((long*)(4 + SstackS)) = (4130 | 128);
-    cont_904X = 11 + SstackS;
-    *((long*)(1 + cont_904X)) = 0;
-    *((long*)(5 + cont_904X)) = template_905X;
-    *((long*)(9 + cont_904X)) = SenvS;
-    *((long*)(-3 + cont_904X)) = ScontS;
-    ScontS = cont_904X;
-    Sbottom_of_stackS = ScontS;
+    template_722X = make_template_containing_ops_return_value;
+    SstackS = (-20 + (SstackS));
+    *((long *) (4 + (SstackS))) = 4258;
+    cont_721X = 11 + (SstackS);
+    *((long *) (1 + cont_721X)) = 0;
+    *((long *) (5 + cont_721X)) = template_722X;
+    *((long *) (9 + cont_721X)) = (SenvS);
+    *((long *) (-3 + cont_721X)) = (ScontS);
+    ScontS = cont_721X;
+    Sbottom_of_stackS = (ScontS);
     merged_arg0K0 = 31;
     merged_arg0K1 = 127;
     make_template_containing_ops_return_tag = 1;
     goto make_template_containing_ops;
    make_template_containing_ops_return_1:
-    v_903X = make_template_containing_ops_return_value;
-    Sinterrupt_templateS = v_903X;
+    v_720X = make_template_containing_ops_return_value;
+    Sinterrupt_templateS = v_720X;
     return;}}
- L13115: {
-  v_910X = Sopen_vm_portsS;
-  length_911X = Snumber_of_portsS;
+ L12938: {
+  v_727X = Sopen_vm_portsS;
+  length_728X = Snumber_of_portsS;
   arg1K0 = 0;
-  goto L13222;}
+  goto L13045;}
  make_template_containing_ops: {
-  op1_915X = merged_arg0K0;
-  op2_916X = merged_arg0K1;{
-  *((long*)ShpS) = 578;
-  ShpS = (4 + ShpS);
-  new_912X = 3 + ShpS;
-  ShpS = (4 + ShpS);
-  *((long*)(-4 + ShpS)) = 0;
-  *((long*)ShpS) = 2090;
-  ShpS = (4 + ShpS);
-  new_913X = 3 + ShpS;
-  ShpS = (8 + ShpS);
-  *((long*)(-4 + ShpS)) = 0;
-  *((long*)(-3 + new_913X)) = new_912X;
-  *((unsigned char*)(-3 + new_912X)) = ((unsigned char)((long)op1_915X));
-  *((unsigned char*)(-2 + new_912X)) = ((unsigned char)((long)op2_916X));
-  make_template_containing_ops_return_value = new_913X;
+  op1_732X = merged_arg0K0;
+  op2_733X = merged_arg0K1;{
+  *((long *) (ShpS)) = 578;
+  ShpS = (4 + (ShpS));
+  new_729X = 3 + (ShpS);
+  ShpS = (4 + (ShpS));
+  *((long *) (-4 + (ShpS))) = 0;
+  *((long *) (ShpS)) = 2090;
+  ShpS = (4 + (ShpS));
+  new_730X = 3 + (ShpS);
+  ShpS = (8 + (ShpS));
+  *((long *) (-4 + (ShpS))) = 0;
+  *((long *) (-3 + new_730X)) = new_729X;
+  *((unsigned char *) (-3 + new_729X)) = ((unsigned char)((long)op1_732X));
+  *((unsigned char *) (-2 + new_729X)) = ((unsigned char)((long)op2_733X));
+  make_template_containing_ops_return_value = new_730X;
   goto make_template_containing_ops_return;}
  make_template_containing_ops_return:
   switch (make_template_containing_ops_return_tag) {
@@ -6868,35 +6415,33 @@ void initialize_vm(long memory_begin_893X, long memory_size_894X, long stack_beg
   }}
 }
 
-long required_init_space(unsigned char **startup_vector_917X, long startup_vector_length_918X)
+long required_init_space(unsigned char **startup_vector_734X, long startup_vector_length_735X)
 {
   long arg1K1;
   long arg1K0;
-  long i_919X;
-  long s_920X;
-  long length_921X;
+  long i_736X;
+  long s_737X;
 
  {arg1K0 = 0;
   arg1K1 = 0;
-  goto L5397;}
- L5397: {
-  i_919X = arg1K0;
-  s_920X = arg1K1;
-  if ((i_919X < startup_vector_length_918X)) {
-    length_921X = strlen((*(startup_vector_917X + i_919X)));
-    arg1K0 = (1 + i_919X);
-    arg1K1 = (1 + (s_920X + ((((4 + length_921X))>>2))));
-    goto L5397;}
+  goto L5371;}
+ L5371: {
+  i_736X = arg1K0;
+  s_737X = arg1K1;
+  if ((i_736X < startup_vector_length_735X)) {
+    arg1K0 = (1 + i_736X);
+    arg1K1 = (1 + (s_737X + ((((4 + (strlen((*(startup_vector_734X + i_736X))))))>>2))));
+    goto L5371;}
   else {
-    return((22 + s_920X));}}}
+    return((22 + s_737X));}}}
 
-void note_interruptB(char interrupt_922X)
+void note_interruptB(unsigned char interrupt_738X)
 {
   extern long Spending_interruptsS;
-  long x_923X;
+  long x_739X;
 
- {PS_SHIFT_LEFT(1, ((long)interrupt_922X), x_923X)
-  Spending_interruptsS = (Spending_interruptsS | x_923X);
+ {PS_SHIFT_LEFT(1, ((long)interrupt_738X), x_739X)
+  Spending_interruptsS = ((Spending_interruptsS) | x_739X);
   return;}}
 
 void do_gc()
@@ -6912,193 +6457,185 @@ void do_gc()
   long arg1K1;
   long arg1K0;
   long RShpS = ShpS;
-  long value_924X;
-  long scan_925X;
-  long value_926X;
-  long a_927X;
-  unsigned char v_928X;
-  long h_929X;
-  long start_930X;
-  long end_931X;
-  long next_932X;
-  long value_933X;
-  long o_934X;
-  long new_935X;
-  long x1_936X;
-  long v_937X;
-  long descriptor_938X;
-  unsigned char v_939X;
-  long a_940X;
-  long h_941X;
-  long a_942X;
-  unsigned char v_943X;
-  long end_944X;
-  long x1_945X;
-  unsigned char x_946X;
-  long addr_947X;
-  long next_948X;
-  long thing_949X;
-  long start_950X;
-  long end_951X;
+  long value_740X;
+  long scan_741X;
+  long value_742X;
+  long a_743X;
+  long h_744X;
+  long start_745X;
+  long end_746X;
+  long next_747X;
+  long value_748X;
+  long o_749X;
+  long new_750X;
+  long x1_751X;
+  long v_752X;
+  long descriptor_753X;
+  long a_754X;
+  long h_755X;
+  long a_756X;
+  long end_757X;
+  long x1_758X;
+  long addr_759X;
+  long next_760X;
+  long thing_761X;
+  long start_762X;
+  long end_763X;
 
- {arg1K0 = Snewspace_beginS;
-  goto L13849;}
- L7763: {
-  arg1K0 = (8 + scan_925X);
-  goto L7718;}
- L7758: {
-  value_924X = arg1K0;
-  *((long*)(4 + scan_925X)) = value_924X;
-  goto L7763;}
- L7718: {
-  scan_925X = arg1K0;
-  if ((scan_925X < end_931X)) {
-    *((long*)scan_925X) = 1070;
-    value_926X = *((long*)(4 + scan_925X));
-    if ((3 == (3 & value_926X))) {
-      a_927X = -3 + value_926X;
-      if ((a_927X < Soldspace_beginS)) {
-        goto L7763;}
+ {arg1K0 = (Snewspace_beginS);
+  goto L13811;}
+ L7742: {
+  arg1K0 = (8 + scan_741X);
+  goto L7697;}
+ L7737: {
+  value_740X = arg1K0;
+  *((long *) (4 + scan_741X)) = value_740X;
+  goto L7742;}
+ L7697: {
+  scan_741X = arg1K0;
+  if ((scan_741X < end_746X)) {
+    *((long *) scan_741X) = 1070;
+    value_742X = *((long *) (4 + scan_741X));
+    if ((3 == (3 & value_742X))) {
+      a_743X = -3 + value_742X;
+      if ((a_743X < (Soldspace_beginS))) {
+        goto L7742;}
       else {
-        v_928X = a_927X < Soldspace_endS;
-        if (v_928X) {
-          if ((3 == (3 & value_926X))) {
-            h_929X = *((long*)(-7 + value_926X));
-            if ((3 == (3 & h_929X))) {
-              arg1K0 = h_929X;
-              goto L7758;}
+        if ((a_743X < (Soldspace_endS))) {
+          if ((3 == (3 & value_742X))) {
+            h_744X = *((long *) (-7 + value_742X));
+            if ((3 == (3 & h_744X))) {
+              arg1K0 = h_744X;
+              goto L7737;}
             else {
               arg1K0 = 1;
-              goto L7758;}}
+              goto L7737;}}
           else {
-            goto L7763;}}
+            goto L7742;}}
         else {
-          goto L7763;}}}
+          goto L7742;}}}
     else {
-      goto L7763;}}
+      goto L7742;}}
   else {
-    if ((-1 == next_932X)) {
-      if ((end_944X < Sweak_pointer_limitS)) {
-        *((long*)end_944X) = (66 + ((((-4 & (-4 + (Sweak_pointer_limitS - end_944X))))<<8)));
+    if ((-1 == next_747X)) {
+      if ((end_757X < (Sweak_pointer_limitS))) {
+        *((long *) end_757X) = (66 + ((((-4 & (-4 + ((Sweak_pointer_limitS) - end_757X))))<<8)));
         ShpS = RShpS;
         return;}
       else {
         ShpS = RShpS;
         return;}}
     else {
-      arg1K0 = (-1024 + next_932X);
-      arg1K1 = next_932X;
-      goto L11150;}}}
- L11150: {
-  start_930X = arg1K0;
-  end_931X = arg1K1;
-  next_932X = *((long*)(8 + start_930X));
-  arg1K0 = start_930X;
-  goto L7718;}
- L31993: {
-  value_933X = arg1K0;
-  *((long*)addr_947X) = value_933X;
-  arg1K0 = next_948X;
-  goto L13915;}
- L32048: {
-  o_934X = arg1K0;
-  if ((RShpS < (x1_936X + (-4 & (3 + ((long)(((unsigned long)h_941X)>>8))))))) {
-    *((long*)RShpS) = (*((long*)o_934X));
-    RShpS = (4 + RShpS);
-    arg1K0 = (4 + o_934X);
-    goto L32048;}
+      arg1K0 = (-1024 + next_747X);
+      arg1K1 = next_747X;
+      goto L11093;}}}
+ L11093: {
+  start_745X = arg1K0;
+  end_746X = arg1K1;
+  next_747X = *((long *) (8 + start_745X));
+  arg1K0 = start_745X;
+  goto L7697;}
+ L31621: {
+  value_748X = arg1K0;
+  *((long *) addr_759X) = value_748X;
+  arg1K0 = next_760X;
+  goto L13877;}
+ L31674: {
+  o_749X = arg1K0;
+  if (((RShpS) < (x1_751X + (-4 & (3 + ((long)(((unsigned long)h_755X)>>8))))))) {
+    *((long *) (RShpS)) = (*((long *) o_749X));
+    RShpS = (4 + (RShpS));
+    arg1K0 = (4 + o_749X);
+    goto L31674;}
   else {
-    arg1K0 = new_935X;
-    goto L31993;}}
- L32032: {
-  *((long*)RShpS) = h_941X;
-  RShpS = (4 + RShpS);
-  new_935X = 3 + RShpS;
-  *((long*)(-7 + thing_949X)) = new_935X;
-  x1_936X = RShpS;
-  arg1K0 = (-3 + thing_949X);
-  goto L32048;}
- L31983: {
-  if ((3 == (3 & thing_949X))) {
-    a_940X = -3 + thing_949X;
-    if ((a_940X < Soldspace_beginS)) {
-      arg1K0 = next_948X;
-      goto L13915;}
+    arg1K0 = new_750X;
+    goto L31621;}}
+ L31658: {
+  *((long *) (RShpS)) = h_755X;
+  RShpS = (4 + (RShpS));
+  new_750X = 3 + (RShpS);
+  *((long *) (-7 + thing_761X)) = new_750X;
+  x1_751X = RShpS;
+  arg1K0 = (-3 + thing_761X);
+  goto L31674;}
+ L31613: {
+  if ((3 == (3 & thing_761X))) {
+    a_754X = -3 + thing_761X;
+    if ((a_754X < (Soldspace_beginS))) {
+      arg1K0 = next_760X;
+      goto L13877;}
     else {
-      v_939X = a_940X < Soldspace_endS;
-      if (v_939X) {
-        h_941X = *((long*)(-7 + thing_949X));
-        if ((3 == (3 & h_941X))) {
-          arg1K0 = h_941X;
-          goto L31993;}
+      if ((a_754X < (Soldspace_endS))) {
+        h_755X = *((long *) (-7 + thing_761X));
+        if ((3 == (3 & h_755X))) {
+          arg1K0 = h_755X;
+          goto L31621;}
         else {
-          if ((1070 == h_941X)) {
-            descriptor_938X = *((long*)(-3 + thing_949X));
-            if ((3 == (3 & descriptor_938X))) {
-              a_942X = -3 + descriptor_938X;
-              if ((a_942X < Soldspace_beginS)) {
-                goto L32032;}
+          if ((1070 == h_755X)) {
+            descriptor_753X = *((long *) (-3 + thing_761X));
+            if ((3 == (3 & descriptor_753X))) {
+              a_756X = -3 + descriptor_753X;
+              if ((a_756X < (Soldspace_beginS))) {
+                goto L31658;}
               else {
-                v_943X = a_942X < Soldspace_endS;
-                if (v_943X) {
+                if ((a_756X < (Soldspace_endS))) {
                   ShpS = RShpS;
-                  v_937X = copy_weak_pointer(thing_949X);
+                  v_752X = copy_weak_pointer(thing_761X);
                   RShpS = ShpS;
-                  arg1K0 = v_937X;
-                  goto L31993;}
+                  arg1K0 = v_752X;
+                  goto L31621;}
                 else {
-                  goto L32032;}}}
+                  goto L31658;}}}
             else {
-              goto L32032;}}
+              goto L31658;}}
           else {
-            goto L32032;}}}
+            goto L31658;}}}
       else {
-        arg1K0 = next_948X;
-        goto L13915;}}}
+        arg1K0 = next_760X;
+        goto L13877;}}}
   else {
-    arg1K0 = next_948X;
-    goto L13915;}}
- L13875: {
-  x_946X = -1 == Sweak_pointer_hpS;
-  if (x_946X) {
+    arg1K0 = next_760X;
+    goto L13877;}}
+ L13837: {
+  if ((-1 == (Sweak_pointer_hpS))) {
     ShpS = RShpS;
     return;}
   else {
-    x1_945X = Sweak_pointer_limitS;
-    end_944X = Sweak_pointer_hpS;
-    arg1K0 = (-1024 + x1_945X);
-    arg1K1 = end_944X;
-    goto L11150;}}
- L13915: {
-  addr_947X = arg1K0;
-  if ((addr_947X < end_951X)) {
-    next_948X = 4 + addr_947X;
-    thing_949X = *((long*)addr_947X);
-    if ((2 == (3 & thing_949X))) {
-      if (((31 & (((thing_949X)>>2))) < 15)) {
-        goto L31983;}
+    x1_758X = Sweak_pointer_limitS;
+    end_757X = Sweak_pointer_hpS;
+    arg1K0 = (-1024 + x1_758X);
+    arg1K1 = end_757X;
+    goto L11093;}}
+ L13877: {
+  addr_759X = arg1K0;
+  if ((addr_759X < end_763X)) {
+    next_760X = 4 + addr_759X;
+    thing_761X = *((long *) addr_759X);
+    if ((2 == (3 & thing_761X))) {
+      if (((31 & (((thing_761X)>>2))) < 15)) {
+        goto L31613;}
       else {
-        arg1K0 = (next_948X + (-4 & (3 + ((long)(((unsigned long)thing_949X)>>8)))));
-        goto L13915;}}
+        arg1K0 = (next_760X + (-4 & (3 + ((long)(((unsigned long)thing_761X)>>8)))));
+        goto L13877;}}
     else {
-      goto L31983;}}
+      goto L31613;}}
   else {
-    if ((RShpS < SlimitS)) {
-      if ((end_951X < RShpS)) {
-        arg1K0 = end_951X;
-        goto L13849;}
+    if (((RShpS) < (SlimitS))) {
+      if ((end_763X < (RShpS))) {
+        arg1K0 = end_763X;
+        goto L13811;}
       else {
-        goto L13875;}}
+        goto L13837;}}
     else {
       TTerror("GC error: ran out of space in new heap", 0, 0, 0, 0);
-      goto L13875;}}}
- L13849: {
-  start_950X = arg1K0;
-  end_951X = RShpS;
-  arg1K0 = start_950X;
-  goto L13915;}}
+      goto L13837;}}}
+ L13811: {
+  start_762X = arg1K0;
+  end_763X = RShpS;
+  arg1K0 = start_762X;
+  goto L13877;}}
 
-long read_image(unsigned char *filename_952X, long startup_space_953X)
+long read_image(unsigned char *filename_764X, long startup_space_765X)
 {
   extern long read_number(FILE *);
   extern long Snewspace_endS;
@@ -7106,280 +6643,280 @@ long read_image(unsigned char *filename_952X, long startup_space_953X)
   extern long ShpS;
   long arg1K0;
   unsigned char arg3K0;
-  FILE * port_954X;
-  unsigned char reverseP_955X;
-  long v_956X;
-  long ptr_957X;
-  long value_958X;
-  unsigned char x_959X;
-  unsigned char x_960X;
-  long d_961X;
-  long v_962X;
-  long ptr_963X;
-  long descriptor_964X;
-  long result_965X;
-  long old_level_966X;
-  long old_bytes_per_cell_967X;
-  long cells_968X;
-  long old_begin_969X;
-  long cells_970X;
-  long old_hp_971X;
-  long startup_proc_972X;
-  unsigned char Kchar_973X;
-  unsigned char Kchar_974X;
-  long addr_975X;
-  unsigned char x_976X;
-  unsigned char x_977X;
-  long start_978X;
-  long new_limit_979X;
-  long new_hp_980X;
-  long delta_981X;
+  FILE * port_766X;
+  unsigned char reverseP_767X;
+  long v_768X;
+  long ptr_769X;
+  long value_770X;
+  unsigned char x_771X;
+  unsigned char x_772X;
+  long d_773X;
+  long v_774X;
+  long ptr_775X;
+  long descriptor_776X;
+  long result_777X;
+  long old_level_778X;
+  long old_bytes_per_cell_779X;
+  long cells_780X;
+  long old_begin_781X;
+  long cells_782X;
+  long old_hp_783X;
+  long startup_proc_784X;
+  unsigned char Kchar_785X;
+  unsigned char Kchar_786X;
+  long addr_787X;
+  unsigned char x_788X;
+  unsigned char x_789X;
+  long start_790X;
+  long new_limit_791X;
+  long new_hp_792X;
+  long delta_793X;
 
- {port_954X = ps_open(filename_952X, "r");
-  if ((NULL == port_954X)) {
+ {port_766X = ps_open(filename_764X, "r");
+  if ((NULL == port_766X)) {
     TTerror("Can't open heap image file", 0, 0, 0, 0);
-    goto L10288;}
+    goto L10187;}
   else {
-    goto L10288;}}
- L10348: {
-  reverseP_955X = arg3K0;
-  fread((void *)ShpS, sizeof(char), (old_hp_971X - old_begin_969X), port_954X);
-  if (reverseP_955X) {
-    fputs("Correcting byte order of resumed image.", Scurrent_output_portS);
-    putc(10, Scurrent_output_portS);
-    arg1K0 = start_978X;
-    goto L8615;}
+    goto L10187;}}
+ L10247: {
+  reverseP_767X = arg3K0;
+  fread((void *)(ShpS), sizeof(char), (old_hp_783X - old_begin_781X), port_766X);
+  if (reverseP_767X) {
+    fputs("Correcting byte order of resumed image.", (Scurrent_output_portS));
+    putc(10, (Scurrent_output_portS));
+    arg1K0 = start_790X;
+    goto L8592;}
   else {
-    goto L10358;}}
- L8641: {
-  v_956X = arg1K0;
-  arg1K0 = v_956X;
-  goto L8615;}
- L8615: {
-  ptr_957X = arg1K0;
-  x_960X = *((unsigned char*)ptr_957X);
-  *((unsigned char*)ptr_957X) = ((unsigned char)((long)(*((unsigned char*)(3 + ptr_957X)))));
-  *((unsigned char*)(3 + ptr_957X)) = ((unsigned char)((long)x_960X));
-  x_959X = *((unsigned char*)(1 + ptr_957X));
-  *((unsigned char*)(1 + ptr_957X)) = ((unsigned char)((long)(*((unsigned char*)(2 + ptr_957X)))));
-  *((unsigned char*)(2 + ptr_957X)) = ((unsigned char)((long)x_959X));
-  value_958X = *((long*)ptr_957X);
-  if ((ptr_957X < new_hp_980X)) {
-    if ((2 == (3 & value_958X))) {
-      if (((31 & (((value_958X)>>2))) < 15)) {
-        arg1K0 = (4 + ptr_957X);
-        goto L8641;}
+    goto L10257;}}
+ L8618: {
+  v_768X = arg1K0;
+  arg1K0 = v_768X;
+  goto L8592;}
+ L8592: {
+  ptr_769X = arg1K0;
+  x_772X = *((unsigned char *) ptr_769X);
+  *((unsigned char *) ptr_769X) = ((unsigned char)((long)(*((unsigned char *) (3 + ptr_769X)))));
+  *((unsigned char *) (3 + ptr_769X)) = ((unsigned char)((long)x_772X));
+  x_771X = *((unsigned char *) (1 + ptr_769X));
+  *((unsigned char *) (1 + ptr_769X)) = ((unsigned char)((long)(*((unsigned char *) (2 + ptr_769X)))));
+  *((unsigned char *) (2 + ptr_769X)) = ((unsigned char)((long)x_771X));
+  value_770X = *((long *) ptr_769X);
+  if ((ptr_769X < new_hp_792X)) {
+    if ((2 == (3 & value_770X))) {
+      if (((31 & (((value_770X)>>2))) < 15)) {
+        arg1K0 = (4 + ptr_769X);
+        goto L8618;}
       else {
-        arg1K0 = ((4 + ptr_957X) + (-4 & (3 + ((long)(((unsigned long)value_958X)>>8)))));
-        goto L8641;}}
+        arg1K0 = ((4 + ptr_769X) + (-4 & (3 + ((long)(((unsigned long)value_770X)>>8)))));
+        goto L8618;}}
     else {
-      arg1K0 = (4 + ptr_957X);
-      goto L8641;}}
+      arg1K0 = (4 + ptr_769X);
+      goto L8618;}}
   else {
-    goto L10358;}}
- L8740: {
-  d_961X = arg1K0;
-  *((long*)ptr_963X) = d_961X;
-  if ((2 == (3 & d_961X))) {
-    if (((31 & (((d_961X)>>2))) < 15)) {
-      arg1K0 = (4 + ptr_963X);
-      goto L8758;}
+    goto L10257;}}
+ L8717: {
+  d_773X = arg1K0;
+  *((long *) ptr_775X) = d_773X;
+  if ((2 == (3 & d_773X))) {
+    if (((31 & (((d_773X)>>2))) < 15)) {
+      arg1K0 = (4 + ptr_775X);
+      goto L8735;}
     else {
-      arg1K0 = ((4 + ptr_963X) + (-4 & (3 + ((long)(((unsigned long)d_961X)>>8)))));
-      goto L8758;}}
+      arg1K0 = ((4 + ptr_775X) + (-4 & (3 + ((long)(((unsigned long)d_773X)>>8)))));
+      goto L8735;}}
   else {
-    arg1K0 = (4 + ptr_963X);
-    goto L8758;}}
- L8758: {
-  v_962X = arg1K0;
-  arg1K0 = v_962X;
-  goto L8730;}
- L8730: {
-  ptr_963X = arg1K0;
-  if ((ptr_963X < new_hp_980X)) {
-    descriptor_964X = *((long*)ptr_963X);
-    if ((3 == (3 & descriptor_964X))) {
-      arg1K0 = (3 + ((-3 + descriptor_964X) + delta_981X));
-      goto L8740;}
+    arg1K0 = (4 + ptr_775X);
+    goto L8735;}}
+ L8735: {
+  v_774X = arg1K0;
+  arg1K0 = v_774X;
+  goto L8707;}
+ L8707: {
+  ptr_775X = arg1K0;
+  if ((ptr_775X < new_hp_792X)) {
+    descriptor_776X = *((long *) ptr_775X);
+    if ((3 == (3 & descriptor_776X))) {
+      arg1K0 = (3 + ((-3 + descriptor_776X) + delta_793X));
+      goto L8717;}
     else {
-      arg1K0 = descriptor_964X;
-      goto L8740;}}
+      arg1K0 = descriptor_776X;
+      goto L8717;}}
   else {
-    goto L10368;}}
- L10538: {
-  result_965X = arg1K0;
-  fclose(port_954X);
-  return(result_965X);}
- L10290: {
-  old_level_966X = read_number(port_954X);
-  old_bytes_per_cell_967X = read_number(port_954X);
-  cells_968X = read_number(port_954X);
-  old_begin_969X = ((cells_968X)<<2);
-  cells_970X = read_number(port_954X);
-  old_hp_971X = ((cells_970X)<<2);
-  startup_proc_972X = read_number(port_954X);
-  goto L10489;}
- L10514: {
+    goto L10267;}}
+ L10437: {
+  result_777X = arg1K0;
+  fclose(port_766X);
+  return(result_777X);}
+ L10189: {
+  old_level_778X = read_number(port_766X);
+  old_bytes_per_cell_779X = read_number(port_766X);
+  cells_780X = read_number(port_766X);
+  old_begin_781X = ((cells_780X)<<2);
+  cells_782X = read_number(port_766X);
+  old_hp_783X = ((cells_782X)<<2);
+  startup_proc_784X = read_number(port_766X);
+  goto L10388;}
+ L10413: {
   { int TTchar;
-    PS_GETC(port_954X, TTchar);
+    PS_GETC(port_766X, TTchar);
     if (EOF == TTchar) {
       TTerror("end of file while looking for page break", 0, 0, 0, 0);
-      goto L10290;}
+      goto L10189;}
     else {
-      unsigned char Kchar_973X = TTchar;
-      if ((12 == ((long)Kchar_973X))) {
-        goto L10290;}
+      unsigned char Kchar_785X = TTchar;
+      if ((12 == ((long)Kchar_785X))) {
+        goto L10189;}
       else {
-        goto L10514;}}}}
- L10311: {
-  if ((15 == old_level_966X)) {
-    goto L10321;}
+        goto L10413;}}}}
+ L10210: {
+  if ((15 == old_level_778X)) {
+    goto L10220;}
   else {
-    TTerror("format of image is incompatible with this version of system", 2, old_level_966X, 15, 0);
-    goto L10321;}}
- L10489: {
+    TTerror("format of image is incompatible with this version of system", 2, old_level_778X, 15, 0);
+    goto L10220;}}
+ L10388: {
   { int TTchar;
-    PS_GETC(port_954X, TTchar);
+    PS_GETC(port_766X, TTchar);
     if (EOF == TTchar) {
       TTerror("end of file while looking for page break", 0, 0, 0, 0);
-      goto L10311;}
+      goto L10210;}
     else {
-      unsigned char Kchar_974X = TTchar;
-      if ((12 == ((long)Kchar_974X))) {
-        goto L10311;}
+      unsigned char Kchar_786X = TTchar;
+      if ((12 == ((long)Kchar_786X))) {
+        goto L10210;}
       else {
-        goto L10489;}}}}
- L10368: {
-  ShpS = new_hp_980X;
-  if ((3 == (3 & startup_proc_972X))) {
-    arg1K0 = (3 + ((-3 + startup_proc_972X) + delta_981X));
-    goto L10538;}
+        goto L10388;}}}}
+ L10267: {
+  ShpS = new_hp_792X;
+  if ((3 == (3 & startup_proc_784X))) {
+    arg1K0 = (3 + ((-3 + startup_proc_784X) + delta_793X));
+    goto L10437;}
   else {
-    arg1K0 = startup_proc_972X;
-    goto L10538;}}
- L10358: {
-  if ((0 == delta_981X)) {
-    goto L10368;}
+    arg1K0 = startup_proc_784X;
+    goto L10437;}}
+ L10257: {
+  if ((0 == delta_793X)) {
+    goto L10267;}
   else {
-    arg1K0 = start_978X;
-    goto L8730;}}
- L10345: {
-  fread((void *)ShpS, sizeof(char), 4, port_954X);
-  if ((1 == (*((long*)ShpS)))) {
+    arg1K0 = start_790X;
+    goto L8707;}}
+ L10244: {
+  fread((void *)(ShpS), sizeof(char), 4, port_766X);
+  if ((1 == (*((long *) (ShpS))))) {
     arg3K0 = 0;
-    goto L10348;}
+    goto L10247;}
   else {
-    addr_975X = ShpS;
-    x_976X = *((unsigned char*)addr_975X);
-    *((unsigned char*)addr_975X) = ((unsigned char)((long)(*((unsigned char*)(3 + addr_975X)))));
-    *((unsigned char*)(3 + addr_975X)) = ((unsigned char)((long)x_976X));
-    x_977X = *((unsigned char*)(1 + addr_975X));
-    *((unsigned char*)(1 + addr_975X)) = ((unsigned char)((long)(*((unsigned char*)(2 + addr_975X)))));
-    *((unsigned char*)(2 + addr_975X)) = ((unsigned char)((long)x_977X));
-    if ((1 == (*((long*)ShpS)))) {
+    addr_787X = ShpS;
+    x_788X = *((unsigned char *) addr_787X);
+    *((unsigned char *) addr_787X) = ((unsigned char)((long)(*((unsigned char *) (3 + addr_787X)))));
+    *((unsigned char *) (3 + addr_787X)) = ((unsigned char)((long)x_788X));
+    x_789X = *((unsigned char *) (1 + addr_787X));
+    *((unsigned char *) (1 + addr_787X)) = ((unsigned char)((long)(*((unsigned char *) (2 + addr_787X)))));
+    *((unsigned char *) (2 + addr_787X)) = ((unsigned char)((long)x_789X));
+    if ((1 == (*((long *) (ShpS))))) {
       arg3K0 = 1;
-      goto L10348;}
+      goto L10247;}
     else {
-      TTerror("unable to correct byte order", 1, (*((long*)ShpS)), 0, 0);
+      TTerror("unable to correct byte order", 1, (*((long *) (ShpS))), 0, 0);
       arg3K0 = 0;
-      goto L10348;}}}
- L10331: {
-  delta_981X = ShpS - old_begin_969X;
-  new_hp_980X = old_hp_971X + delta_981X;
-  new_limit_979X = Snewspace_endS;
-  start_978X = ShpS;
-  if (((startup_space_953X + new_hp_980X) < new_limit_979X)) {
-    goto L10345;}
+      goto L10247;}}}
+ L10230: {
+  delta_793X = (ShpS) - old_begin_781X;
+  new_hp_792X = old_hp_783X + delta_793X;
+  new_limit_791X = Snewspace_endS;
+  start_790X = ShpS;
+  if (((startup_space_765X + new_hp_792X) < new_limit_791X)) {
+    goto L10244;}
   else {
-    TTerror("heap not big enough to restore this image", 2, new_hp_980X, new_limit_979X, 0);
-    goto L10345;}}
- L10321: {
-  if ((4 == old_bytes_per_cell_967X)) {
-    goto L10331;}
+    TTerror("heap not big enough to restore this image", 2, new_hp_792X, new_limit_791X, 0);
+    goto L10244;}}
+ L10220: {
+  if ((4 == old_bytes_per_cell_779X)) {
+    goto L10230;}
   else {
-    TTerror("incompatible bytes-per-cell", 2, old_bytes_per_cell_967X, 4, 0);
-    goto L10331;}}
- L10288: {
-  goto L10514;}}
+    TTerror("incompatible bytes-per-cell", 2, old_bytes_per_cell_779X, 4, 0);
+    goto L10230;}}
+ L10187: {
+  goto L10413;}}
 
-long check_image_header(unsigned char *filename_982X)
+long check_image_header(unsigned char *filename_794X)
 {
   extern long read_number(FILE *);
   extern FILE * Scurrent_output_portS;
   long arg1K0;
-  FILE * port_983X;
-  FILE * out_984X;
-  long result_985X;
-  FILE * out_986X;
-  long old_level_987X;
-  long old_bytes_per_cell_988X;
-  long cells_989X;
-  long cells_990X;
-  FILE * out_991X;
-  unsigned char Kchar_992X;
+  FILE * port_795X;
+  FILE * out_796X;
+  long result_797X;
+  FILE * out_798X;
+  long old_level_799X;
+  long old_bytes_per_cell_800X;
+  long cells_801X;
+  long cells_802X;
+  FILE * out_803X;
+  unsigned char Kchar_804X;
 
- {port_983X = ps_open(filename_982X, "r");
-  if ((NULL == port_983X)) {
-    out_984X = Scurrent_output_portS;
-    fputs("Can't open heap image file", out_984X);
-    putc(10, out_984X);
+ {port_795X = ps_open(filename_794X, "r");
+  if ((NULL == port_795X)) {
+    out_796X = Scurrent_output_portS;
+    fputs("Can't open heap image file", out_796X);
+    putc(10, out_796X);
     arg1K0 = -1;
-    goto L6566;}
+    goto L6545;}
   else {
-    goto L6522;}}
- L6566: {
-  result_985X = arg1K0;
-  fclose(port_983X);
-  return(result_985X);}
- L6428: {
-  old_level_987X = read_number(port_983X);
-  old_bytes_per_cell_988X = read_number(port_983X);
-  cells_989X = read_number(port_983X);
-  cells_990X = read_number(port_983X);
-  if ((15 == old_level_987X)) {
-    if ((4 == old_bytes_per_cell_988X)) {
-      arg1K0 = ((((cells_990X)<<2)) - (((cells_989X)<<2)));
-      goto L6566;}
+    goto L6501;}}
+ L6545: {
+  result_797X = arg1K0;
+  fclose(port_795X);
+  return(result_797X);}
+ L6407: {
+  old_level_799X = read_number(port_795X);
+  old_bytes_per_cell_800X = read_number(port_795X);
+  cells_801X = read_number(port_795X);
+  cells_802X = read_number(port_795X);
+  if ((15 == old_level_799X)) {
+    if ((4 == old_bytes_per_cell_800X)) {
+      arg1K0 = ((((cells_802X)<<2)) - (((cells_801X)<<2)));
+      goto L6545;}
     else {
-      out_986X = Scurrent_output_portS;
-      fputs("incompatible bytes-per-cell in image", out_986X);
-      putc(10, out_986X);
+      out_798X = Scurrent_output_portS;
+      fputs("incompatible bytes-per-cell in image", out_798X);
+      putc(10, out_798X);
       arg1K0 = -1;
-      goto L6566;}}
+      goto L6545;}}
   else {
-    out_991X = Scurrent_output_portS;
-    fputs("format of image is incompatible with this version of system", out_991X);
-    putc(10, out_991X);
+    out_803X = Scurrent_output_portS;
+    fputs("format of image is incompatible with this version of system", out_803X);
+    putc(10, out_803X);
     arg1K0 = -1;
-    goto L6566;}}
- L6522: {
+    goto L6545;}}
+ L6501: {
   { int TTchar;
-    PS_GETC(port_983X, TTchar);
+    PS_GETC(port_795X, TTchar);
     if (EOF == TTchar) {
       TTerror("end of file while looking for page break", 0, 0, 0, 0);
-      goto L6428;}
+      goto L6407;}
     else {
-      unsigned char Kchar_992X = TTchar;
-      if ((12 == ((long)Kchar_992X))) {
-        goto L6428;}
+      unsigned char Kchar_804X = TTchar;
+      if ((12 == ((long)Kchar_804X))) {
+        goto L6407;}
       else {
-        goto L6522;}}}}}
+        goto L6501;}}}}}
 
-void register_static_areas(char pure_count_993X, long *pure_areas_994X, long *pure_sizes_995X, char impure_count_996X, long *impure_areas_997X, long *impure_sizes_998X)
+void register_static_areas(unsigned char pure_count_805X, long *pure_areas_806X, long *pure_sizes_807X, unsigned char impure_count_808X, long *impure_areas_809X, long *impure_sizes_810X)
 {
-  extern char Spure_area_countS;
+  extern unsigned char Spure_area_countS;
   extern long *Spure_areasS;
   extern long *Spure_sizesS;
-  extern char Simpure_area_countS;
+  extern unsigned char Simpure_area_countS;
   extern long *Simpure_areasS;
   extern long *Simpure_sizesS;
 
- {Spure_area_countS = pure_count_993X;
-  Spure_areasS = pure_areas_994X;
-  Spure_sizesS = pure_sizes_995X;
-  Simpure_area_countS = impure_count_996X;
-  Simpure_areasS = impure_areas_997X;
-  Simpure_sizesS = impure_sizes_998X;
+ {Spure_area_countS = pure_count_805X;
+  Spure_areasS = pure_areas_806X;
+  Spure_sizesS = pure_sizes_807X;
+  Simpure_area_countS = impure_count_808X;
+  Simpure_areasS = impure_areas_809X;
+  Simpure_sizesS = impure_sizes_810X;
   return;}}
 scheme48_init()
 {

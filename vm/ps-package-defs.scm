@@ -13,7 +13,6 @@
   (begin
     (define extended-vm (external (=> (int32 int32) int32) #f))
     (define lookup-external-name (external (=> (int32 int32) boolean) #f))
-    (define call-external-value (external (=> (int32 int32 int32) int32) #f))
     (define ps-schedule-interrupt (external (=> (int32) int32) #f))
     (define ps-real-time (external (=> () int32) #f))
     (define ps-run-time (external (=> () int32) #f))

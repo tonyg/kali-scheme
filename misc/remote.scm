@@ -108,11 +108,13 @@
 
 
 (define (make-remote-package in out opens id)
-  (make-simple-package opens
-		       (make-remote-eval in out)
-		       (reflective-tower
-			  (package->environment (interaction-environment)))
-		       id))
+  (let ((p (make-simple-package opens
+ 				#t
+ 				(reflective-tower
+ 				 (package->environment (interaction-environment)))
+ 				id)))
+    (set-package-evaluator! p (make-remote-eval in out))
+    p))
 
 (define (remote-repl host-name socket-port-number)
   (let ((in #f) (out #f))
@@ -124,8 +126,8 @@
 	   (set! in i-port)
 	   (set! out o-port))))
      (lambda ()
-       (command-loop list #f
-		     (make-remote-package in out (list scheme) 'remote)))
+       (with-interaction-environment (make-remote-package in out (list scheme) 'remote)
+				     (lambda () (command-loop list #f))))
      (lambda ()
        (if in (close-input-port in))
        (if out (close-output-port out))))))

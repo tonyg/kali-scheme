@@ -228,10 +228,6 @@
   (and (header? h)
        (>= (header-type h) least-b-vector-type)))
 
-(define (okay-stob-size? size)
-  (and (>= size 0)
-       (<= size max-stob-size-in-cells)))
-
 ; Stored objects
 ;  The data field of a descriptor for a stored object contains the
 ;  cell number of the first cell after the object's header cell.

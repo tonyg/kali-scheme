@@ -23,3 +23,15 @@ void TTerror(message, count, data1, data2, data3)
   }
   exit(-1);
 }
+
+/* Driver loop for tail-recursive calls */
+
+long TTreturn_value;
+
+long
+TTrun_machine(long (*proc) (void))
+{
+  while (proc != 0)
+    proc = (long (*) (void)) (*proc)();
+  return TTreturn_value;
+}

@@ -233,7 +233,8 @@
 (define make-continuation-header
   (let ((type (enum stob continuation)))
     (lambda (arg-count)
-      (make-header type (cells->bytes (+ arg-count continuation-cells))))))
+      (make-header-immutable
+       (make-header type (cells->bytes (+ arg-count continuation-cells)))))))
 
 (define (pop-continuation-from-stack set-template!)
   (let ((cont *cont*))

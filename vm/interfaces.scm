@@ -60,7 +60,7 @@
 	  header-length-in-bytes header-length-in-cells
 	  immutable-header? make-header-immutable
 	  d-vector-header? b-vector-header?
-	  okay-stob-size?
+	  max-stob-size-in-cells
 
 	  address->stob-descriptor
 	  stob-descriptor->address
@@ -212,8 +212,6 @@
 	  ps-ticks-per-second
 	  ps-schedule-interrupt
 	  lookup-external-name
-	  call-external-value
-
 	  ))
 
 ; From Scheme 48

@@ -135,7 +135,8 @@
   (export config-package
 	  new-command-processor
 	  get-structure
-	  get-package))
+	  get-package
+	  set-package-evaluator!))
 
 (define-interface debuginfo-interface
   (export read-debug-info

@@ -22,9 +22,9 @@
   (reset-stack-pointer)
   (reserve-exception-space exception-frame-size universal-key)
   (set-current-env! unspecific)
-  (set-template! *interrupt-template*          ; has to be some template
+  (set-template! *interrupt-template*           ; has to be some template
 		 (enter-fixnum 0))
-  (set! *nargs*              unspecific)        ; interpreter regs
+  (set! *nargs*              0)                 ; interpreter regs
   (set! *val*                unspecific)
   (set! *dynamic-state*      null)
   (set! *exception-handler*  null)

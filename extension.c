@@ -93,11 +93,8 @@ extended_vm (long key, scheme_value value)
     if (!PAIRP(value)) return UNDEFINED;
     { extern int socket_connect(char *, int);
       char *hostname = &STRING_REF(CAR(value), 0);
-      long hostname_length = STRING_LENGTH(CAR(value));
       long port = EXTRACT_FIXNUM(CDR(value));
       int fd;
-      if (hostname[hostname_length] != '\0')
-	return UNDEFINED;
       fd = socket_connect(hostname, port);
       return (fd < 0) ? UNDEFINED : ENTER_FIXNUM(fd);
     }

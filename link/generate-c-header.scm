@@ -93,7 +93,7 @@
     (c-define "VECTOR_REF(x, i) STOB_REF(x, i)")
     (c-define "CODE_VECTOR_LENGTH(x)  STOB_BLENGTH(x)")
     (c-define "CODE_VECTOR_REF(x, i)  (ADDRESS_AFTER_HEADER(x, unsigned char)[i])")
-    (c-define "STRING_LENGTH(x)  STOB_BLENGTH(x)")
+    (c-define "STRING_LENGTH(x)  (STOB_BLENGTH(x)-1)")
     (c-define "STRING_REF(x, i)  (ADDRESS_AFTER_HEADER(x, char)[i])")))
 
 ; - becomes _ and > becomes TO_ (so -> turns into _TO_)

@@ -12,6 +12,8 @@
 (define (ashr i n)
   (arithmetic-shift i (- 0 n)))
 
+(define small* *) ; could do a range check
+
 ; What we will get in C.
 (define pre-scheme-integer-size 32)
 

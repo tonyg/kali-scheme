@@ -84,7 +84,7 @@ START_LINKER = echo ,batch; echo ,bench on;
 IMAGE = scheme48.image
 INITIAL = $(srcdir)/initial.image
 VM = scheme48vm
-OBJS = unix.o dynload.o error.o extension.o scheme48vm.o
+OBJS = unix.o dynload.o prescheme.o extension.o scheme48vm.o
 
 # Sources:
 
@@ -126,7 +126,7 @@ dynload.o: dynload.c sysdep.h scheme48.h
 $(IMAGE): $(VM) env/init-defpackage.scm more-interfaces.scm link-packages.scm \
 	   more-packages.scm $(usual-files) initial.debug build-usual-image
 	sh $(srcdir)/build-usual-image "$(srcdir)" "$(LIB)" "$(IMAGE)" \
-	   "./$(VM)" "$(INITIAL)"
+	   "$(VM)" "$(INITIAL)"
 
 # Unix man page...
 
@@ -147,10 +147,10 @@ script:
 install: script install-vm install-image install-misc install-man install-inc
 	$(INSTALL_PROGRAM) script $(bindir)/$(RUNNABLE)
 
-install-vm: $(VM) $(LIB)
+install-vm: $(VM)
 	$(INSTALL_PROGRAM) $(VM) $(LIB)/
 
-install-image: $(IMAGE) $(LIB)
+install-image: $(IMAGE)
 	$(INSTALL_DATA) $(IMAGE) $(LIB)/
 
 install-man: $(MANPAGE)
@@ -174,8 +174,6 @@ install-misc: $(LIB)/rts $(LIB)/env $(LIB)/big $(LIB)/opt \
 	    do $(INSTALL_DATA) $$f $(LIB)/link/; done
 	$(INSTALL_DATA) $(srcdir)/rts/jar-defrecord.scm $(LIB)/rts/
 #  -p: Intermediate directories are created as necessary.
-$(LIB):
-	mkdir -p $(LIB)
 $(LIB)/rts:
 	mkdir -p $(LIB)/rts
 $(LIB)/env:
@@ -203,7 +201,7 @@ man:	$(MANPAGE)
 
 check:	$(VM) $(IMAGE) debug/check.scm
 	(echo ,translate =scheme48/ $(srcdir)/; \
-	 echo ,config ,load $(srcdir)/debug/test.scm; \
+ 	 echo ,config ,load $(srcdir)/debug/test.scm; \
 	 echo ,exec ,load $(srcdir)/debug/check.scm; echo ,exec "(done)") \
 	| ./$(VM) -i $(IMAGE) -a batch
 
@@ -242,7 +240,8 @@ DISTFILES = COPYING README INSTALL NEWS TODO \
 	    *.[ch] \
 	    initial.image initial.debug \
 	    link/*.lisp link/*.exec \
-	    emacs/*.el emacs/README .gdbinit *-version-number
+	    emacs/*.el .gdbinit *-version-number \
+	    */README
 
 distfile = $(RUNNABLE)-0.`cat minor-version-number`.tar.gz
 

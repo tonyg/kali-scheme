@@ -2,15 +2,19 @@
 
 Recent changes to Scheme 48.
 
+3/16/94  (version 0.35)
+	 Fixed (exact->inexact 0.1) -> 0..1. bug.
+         Fixed VM bug that permitted the creation of stored objects with
+	   negative sizes.
+
 3/8/94   (version 0.34)
+	 "make check" target tests out various features.
 	 Fixes for SGI IRIX 4.0.5 and MIPS RISC/OS 4.51, courtesy
 	   Bryan O'Sullivan.
-	 Removed non-Posix use of $< in Makefile.
 	 debug/run.scm and the "medium system" work again now.
-	 misc/static.scm should work now for the 68000.
-	 "make check" target tests out various features.
-	 Command processor no longer fluid-binds the
-	   interaction-environment on recursive entry.
+	 misc/static.scm should work on the 68000.
+	 Command processor no longer fluid-binds (interaction-environment)
+	   on recursive entry.
 
 2/24/94  (version 0.33)
 	 Fixed bug in VM's interrupt system.

@@ -455,25 +455,3 @@ get_reloc_file()
   }
 }
 
-/* ---------------------------------------- */
-/* Non-unix-specific things. */
-
-/* Driver loop for tail-recursive calls */
-
-long TTreturn_value;
-
-long
-TTrun_machine(long (*proc) (void))
-{
-  while (proc != 0)
-    proc = (long (*) (void)) (*proc)();
-  return TTreturn_value;
-}
-
-/* Temporary hack until this is added as a Pre-Scheme primitive */
-
-long
-call_external_value(long proc, long nargs, long *args)
-{
-  return ((long(*)())proc)(nargs, args);
-}

@@ -15,7 +15,11 @@
 (define-method &rational? ((n :innum)) (rational? (innum-exact n)))
 (define-method &integer?  ((n :innum)) (integer?  (innum-exact n)))
 
-(define-method &exact->inexact (n) (make-innum n))
+(define-method &exact->inexact (n)
+  (if (innum? n)
+      (next-method)
+      (make-innum n)))
+
 (define-method &inexact->exact ((n :innum)) (innum-exact n))
 
 (define (inexactify n)

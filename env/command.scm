@@ -450,7 +450,7 @@
     (for-each (lambda (s)
                 (write-line s o-port))
               '(
-"This is a beta-test version of Scheme 48.  You are interacting with"
+"This is an alpha-test version of Scheme 48.  You are interacting with"
 "the command processor.  A command is either a Scheme form to evaluate"
 "or one of the following:"
 ""))

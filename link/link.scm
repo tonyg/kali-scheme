@@ -44,7 +44,8 @@
 				       (reify-structures some))
 		     (lambda (exp locs least)
 		       (set! loser exp)
-		       `(,make-resumer-exp ',locs))))
+		       `(,make-resumer-exp ,(strange-quotation locs)
+					   ,least))))
 		 filename)
     (let ((f (namestring filename #f 'env)))
       (call-with-output-file f

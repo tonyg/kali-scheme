@@ -34,7 +34,7 @@ The Revised^5 Report hasn't been published yet, but it will be very
 similar to the Revised^4 Report.  For a list of differences, see
 doc/meeting.tex.
 
-This is what might be called a beta release.  Please report bugs,
+This is what might be called an alpha release.  Please report bugs,
 especially in the VM, especially core dumps, to
 scheme-48-bugs@altdorf.ai.mit.edu.  Include the version number x.yy
 from the "Welcome to Scheme 48 x.yy" greeting message in your bug

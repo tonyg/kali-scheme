@@ -90,5 +90,5 @@ typedef long scheme_value;
 #define VECTOR_REF(x, i) STOB_REF(x, i)
 #define CODE_VECTOR_LENGTH(x)  STOB_BLENGTH(x)
 #define CODE_VECTOR_REF(x, i)  (ADDRESS_AFTER_HEADER(x, unsigned char)[i])
-#define STRING_LENGTH(x)  STOB_BLENGTH(x)
+#define STRING_LENGTH(x)  (STOB_BLENGTH(x)-1)
 #define STRING_REF(x, i)  (ADDRESS_AFTER_HEADER(x, char)[i])

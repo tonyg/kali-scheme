@@ -38,8 +38,8 @@
    This is an ancient Unix version 7 thing, but if gettimeofday()
    isn't available then it may be the only way to get sub-second
    resolution for elapsed time. */
-#define HAVE_FTIME 1
-#define HAVE_SYS_TIMEB_H 1
+/* #undef HAVE_FTIME */
+/* #undef HAVE_SYS_TIMEB_H */
 
 /* Define if you have the nlist() function.  This is a
    not-very-portable way of looking up external symbols. */

@@ -36,6 +36,7 @@
 	  ascii->char char->ascii
 
 	  ; extras
+	  small*  ; hack for robots
 	  allocate-memory deallocate-memory read-block write-block
 	  deallocate null-pointer? null-port?
 	  ashl ashr lshr
@@ -46,6 +47,7 @@
 	  unassigned
 	  error
 	  write-string
+	  call-external-value
 	  ))
 
 (define-interface pre-scheme-internal-primitives-interface

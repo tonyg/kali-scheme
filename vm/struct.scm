@@ -7,10 +7,11 @@
 
 ; An ugly and unsafe macro for defining VM data structures.
 ;
-; (DEFINE-PRIMITIVE-DATA-TYPE <name> <constructor-name> <slot>*)
+; (DEFINE-PRIMITIVE-DATA-TYPE <name> <type> <immutable?> <constructor-name>
+;                             <slot>*)
 ; <slot> ::= (<accessor-name>) | (<accessor-name> <modifier-name>)
 ;
-; (define-primitive-data-type pair cons (car set-car!) (cdr))
+; (define-primitive-data-type pair N #f cons (car set-car!) (cdr))
 ; =>
 ; (begin
 ;  (define (cons a b) (d-vector ...))
@@ -22,7 +23,7 @@
 
 (define-syntax define-primitive-data-type
   (lambda (exp rename compare)
-    (destructure (((d-p-d-t name type make . body) exp))
+    (destructure (((d-p-d-t name type immutable? make . body) exp))
       (define (concatenate-symbol . syms)
 	(string->symbol (apply string-append (map symbol->string syms))))
       (let* ((pred (concatenate-symbol name '?))
@@ -32,9 +33,11 @@
 	`(begin (define ,make
 		  (let ((type (enum stob ,type)))
 		    (lambda (,@vars key)
-		      (d-vector type key ,@vars))))
+		      ,(if immutable?
+			   `(immutable-d-vector type key ,@vars)
+			   `(d-vector type key ,@vars)))))
 		(define ,pred (stob-predicate (enum stob ,type)))
-		(define ,size ,(+ (length body) 1))
+		(define ,size (+ ,(length body) 1))
 		,@(do ((s body (cdr s))
 		       (i 0 (+ i 1))
 		       (d '() (let* ((slot (car s))
@@ -58,17 +61,20 @@
 (define-syntax define-shared-primitive-data-type
   (lambda (exp rename compare)
     (let ((name (cadr exp))
-	  (scheme? (cddr exp)))
+	  (scheme? (if (null? (cddr exp)) #f (car (cddr exp))))
+	  (immutable? (if (or (null? (cddr exp))
+			      (null? (cdddr exp)))
+			  #f
+			  (cadr (cddr exp)))))
       (define (concatenate-symbol . syms)
 	(string->symbol (apply string-append (map symbol->string syms))))
       (let ((data (cddr (assq name stob-data)))
 	    (fixup (lambda (n)
-		     (if (not (null? scheme?))
-			 (concatenate-symbol 'vm- n)
-			 n))))
+		     (if scheme? (concatenate-symbol 'vm- n) n))))
 	`(define-primitive-data-type
 	   ,(fixup name)
 	   ,name
+	   ,immutable?
 	   ,(fixup (car data))
 	   . ,(map (lambda (p)
 		     (cons (fixup (car p))
@@ -89,6 +95,13 @@
 		(z '() (cons `(d-vector-set! v ,i ,(car a)) z)))
 	       ((null? a) (reverse z)))
 	 v))))
+
+(define-syntax immutable-d-vector
+  (syntax-rules ()
+   ((immutable-d-vector stuff ...)
+    (let ((vec (d-vector stuff ...)))
+      (make-immutable! vec)
+      vec))))
 
 ; A simpler macro for defining types of vectors.  Again SCHEME? being #T
 ; causes VM- to be prepended to the defined names.
@@ -126,15 +139,15 @@
 ; data for these comes from STOB-DATA in arch.scm
 
 (define-shared-primitive-data-type pair #t)
-(define-shared-primitive-data-type symbol #t)
-(define-shared-primitive-data-type closure)
+(define-shared-primitive-data-type symbol #t #t)
+(define-shared-primitive-data-type closure #f #t)
 (define-shared-primitive-data-type location)
 (define-shared-primitive-data-type weak-pointer)
 (define-shared-primitive-data-type external)
 
 ; The one currently unshared data structure.
 
-(define-primitive-data-type port port make-port
+(define-primitive-data-type port port #f make-port
   (port-mode set-port-mode!)
   (port-index set-port-index!)
   (peeked-char set-peeked-char!)

@@ -19,6 +19,7 @@
 	compiler
 	command-processor
 	interfaces
+ 	environments
 	;; For both?
 	packages
 	;; packages-internal ?

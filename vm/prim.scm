@@ -287,7 +287,8 @@
     (let ((lose (lambda ()
 		  (goto raise-exception2 0 (enter-fixnum len) (enter-fixnum init))))
 	  (size (code-vector-size len)))
-      (if (not (okay-stob-size? size))
+      (if (or (< len 0)
+	      (> size max-stob-size-in-cells))
 	  (lose)
 	  (maybe-ensure-space-saving-temp
 	   size
@@ -333,7 +334,8 @@
     (let ((lose (lambda ()
 		  (goto raise-exception2 0 (enter-fixnum len) (enter-char init))))
 	  (size (vm-string-size len)))
-      (if (not (okay-stob-size? size))
+      (if (or (< len 0)
+	      (> size max-stob-size-in-cells))
 	  (lose)
 	  (maybe-ensure-space-saving-temp
 	   size
@@ -371,7 +373,8 @@
 		   (goto raise-exception3 1 (enter-fixnum type)
 			 (enter-fixnum len) init)))
 	   (size (vm-vector-size len)))
-      (if (not (okay-stob-size? size))
+      (if (or (< len 0)
+	      (> size max-stob-size-in-cells))
 	  (lose init)
 	  (maybe-ensure-space-saving-temp size init
             (lambda (okay? key init)
