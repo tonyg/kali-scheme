@@ -262,6 +262,8 @@
 	 (gc-mask (bytes->bits gc-mask-bytes)))
     (write-char #\space)
     (display (list (get-offset code (- (+ pc size) 2))))
+    (if (zero? gc-mask-size)
+	(display " all-live"))
     (let loop ((mask gc-mask) (i 0))
       (if (not (zero? mask))
 	  (begin
