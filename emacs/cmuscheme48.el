@@ -32,18 +32,21 @@
 	  (save-excursion
 	    (set-buffer scheme-buffer)
 	    (expand-file-name default-directory)))
-	 (len (length scheme-dir)))
-    (if (and (> (length file) len)
-	     (string-equal scheme-dir (substring file 0 len)))
-	(substring file len)
-	(if *scheme48-home-directory-kludge*
+	 (len (length scheme-dir))
+	 (raw
+	  (cond
+	   ((and (> (length file) len)
+		 (string-equal scheme-dir (substring file 0 len)))
+	    (substring file len))
+	   (*scheme48-home-directory-kludge*
 	    (let* ((home-dir (expand-file-name "~/"))
 		   (len (length home-dir)))
 	      (if (and (> (length file) len)
 		       (string-equal home-dir (substring file 0 len)))
 		  (concat "~/" (substring file len))
-		  file))
-	    file))))
+		file)))
+	   (t file))))
+    (replace-in-string raw "\\\\" "/")))
 
 (defvar *scheme48-home-directory-kludge* t)
 
