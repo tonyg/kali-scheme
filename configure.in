@@ -117,21 +117,21 @@ dnl POSIX says it's `environ'.
 		  else
 		     return 1;],
                dnl Have `environ'
-		 AC_DEFINE(ENVIRON_NAME,environ)
-		 AC_MSG_RESULT([using environ]),
+		 [AC_DEFINE(ENVIRON_NAME,environ)
+		  AC_MSG_RESULT([using environ])],
                dnl Do not have `environ'
-	         AC_TRY_LINK([],
-		             [extern char **__environ;
-			      if (__environ)
-			        return 0;   
-			      else
-				return 1;],
-                           dnl Have `__environ'
-		             AC_DEFINE(ENVIRON_NAME,__environ)
-	     		     AC_MSG_RESULT([using __environ]),
+	         [AC_TRY_LINK([],
+		              [extern char **__environ;
+			       if (__environ)
+			         return 0;   
+			       else
+				 return 1;],
+                            dnl Have `__environ'
+		               [AC_DEFINE(ENVIRON_NAME,__environ)
+	     		        AC_MSG_RESULT([using __environ])],
                            dnl Do not have `__environ'
-                             AC_MSG_WARN([no environ variable found])
-                             [AC_LIBOBJ([c/fake/environ.o])]))
+                               [AC_MSG_WARN([no environ variable found])
+                                AC_LIBOBJ([c/fake/environ.o])])])
      AC_MSG_CHECKING([n_name])
      AC_TRY_LINK([#include <nlist.h>],
 		 [struct nlist name_list;
@@ -154,6 +154,5 @@ fail
      S48_USCORE
      S48_RDYNAMIC
      AC_SUBST(CFLAGS)
-dnl     AC_SUBST(LIBOBJS)
      AC_SUBST(LDFLAGS)
 AC_OUTPUT(Makefile)
