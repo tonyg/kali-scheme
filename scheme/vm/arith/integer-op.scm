@@ -34,22 +34,32 @@
 	(else
 	 (goto return-boolean #f))))
 
-(define (vm-number-predicate rationals? doubles?)
+(define-primitive integer?  (any->)
+  (lambda (n)
+    (cond ((or (fixnum? n)
+	       (bignum? n))
+	       (goto return-boolean #t))
+	  ((or (extended-number? n)
+	       (double? n))
+	   (unary-lose n))
+	  (else
+	   (goto return-boolean #f)))))
+
+(define vm-number-predicate
   (lambda (n)
     (cond ((or (fixnum? n)
 	       (bignum? n)
-	       (and rationals? (ratnum? n))
-	       (and doubles? (double? n)))
+	       (ratnum? n)
+	       (double? n))
 	   (goto return-boolean #t))
 	  ((extended-number? n)
 	   (unary-lose n))
 	  (else
 	   (goto return-boolean #f)))))
 
-(define-primitive integer?  (any->) (vm-number-predicate #f #f))
-(define-primitive rational? (any->) (vm-number-predicate #t #t))
-(define-primitive real?     (any->) (vm-number-predicate #t #t))
-(define-primitive complex?  (any->) (vm-number-predicate #t #t))
+(define-primitive rational? (any->) vm-number-predicate)
+(define-primitive real?     (any->) vm-number-predicate)
+(define-primitive complex?  (any->) vm-number-predicate)
 
 ; These assume that ratnums and doubles aren't being used.
 
