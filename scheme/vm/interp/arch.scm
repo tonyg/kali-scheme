@@ -33,6 +33,8 @@
 ;  big-env-data - environment specification with two-byte values
 ;  moves-data   - specification of stack shuffle moves
 ;  big-moves-data - specification of stack shuffle moves
+;  cont-data    - cont-data specification
+;  protocol     - protocol specification
 ;  0 1 2 ...    - the number of non-instruction-stream arguments (some
 ;                 instructions take a variable number of arguments; the first
 ;                 number is the argument count implemented by the VM)
@@ -96,7 +98,7 @@
 
   (current-cont)	         ; copy *cont* to *val*, use WITH-CONTINUATION
 			         ; to use copied continuation
-  (cont-data      offset)	 ; offset of next instruction; never executed
+  (cont-data      cont-data)	 ; offset of next instruction; never executed
 
   ;; Different ways to call procedures
   (call     offset nargs 1 +)    ; last argument is the procedure to call,
