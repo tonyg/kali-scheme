@@ -536,7 +536,7 @@ read_done(DWORD dwErr,
   callback_data_t* callback_data = &(stream_descriptor->callback_data);
   long fd = callback_data->fd;
 
-  if ((dwErr == 0) && (bytes_read != 0) && s48_is_pending(fd))
+  if ((dwErr == 0) && s48_is_pending(fd))
     {
       switch (stream_descriptor->type) {
       case STREAM_FILE_REGULAR:
@@ -769,6 +769,7 @@ ps_read_fd(long fd, char *buffer, long max, bool waitp,
 	    thread_data->callback_thread = s48_main_thread;
 	    thread_data->callback = read_callback;
 	    ReleaseSemaphore(thread_data->check_semaphore, 1, NULL);
+	    *pending = TRUE;
 	  }
 	return 0;
       }
