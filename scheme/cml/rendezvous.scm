@@ -9,7 +9,8 @@
   (wrap-proc prim-rv-wrap-proc)
   ;; This is a thunk which checks whether the rendezvous is currently
   ;; enabled or not; if it is, the thunk must return an ENABLED
-  ;; record, if it isn't, a BLOCKED record.
+  ;; record, if it isn't, a BLOCKED record.  It must perform only
+  ;; provisional operations.
   (poll-thunk prim-rv-poll-thunk))
 
 (define (make-prim-rv poll-thunk)
@@ -20,7 +21,8 @@
   enabled?
   (priority enabled-priority)
   ;; DO-PROC takes as its argument a queue of thread cells where it's
-  ;; supposed to enqueue threads to be woken up upon commit.
+  ;; supposed to enqueue threads to be woken up upon commit.  It must
+  ;; perform only provisional operations.
   (do-proc enabled-do-proc))
 
 (define-record-type blocked :blocked
@@ -36,7 +38,8 @@
   ;; CLEANUP-PROC is a procedure which takes a thread queue as an
   ;; argument; it can enqueue thread cells whose threads it wants
   ;; woken up.  This procedure is called from an operation which
-  ;; enables this rendezvous
+  ;; enables this rendezvous.  It must perform only provisional state
+  ;; mutations.
   
   ;; WRAP-PROC is the complete, composed-together chain of WRAP
   ;; procedures of the event.
@@ -67,6 +70,9 @@
 
 ;; Condition variables for internal use
 
+;; These are essentially for placeholder-like rendezvous, only they
+;; don't communicate a value.
+
 (define-synchronized-record-type cvar :cvar
   (really-make-cvar state)
   cvar?
@@ -83,8 +89,6 @@
   (make-cvar-item trans-id cleanup-proc wrap-proc)
   cvar-item?
   (trans-id cvar-item-trans-id)
-  ;; CLEANUP-PROC takes as its argument a queue of thread cells where it's
-  ;; supposed to enqueue threads to be woken up upon commit.
   (cleanup-proc cvar-item-cleanup-proc)
   (wrap-proc cvar-item-wrap-proc))
 
@@ -96,17 +100,22 @@
 (define (make-cvar)
   (really-make-cvar (make-cvar-unset-state '())))
 
+;; Note that this happens during synchronization which is why the
+;; QUEUE argument is there.
+
 (define (cvar-set! cvar queue)
   (let ((state (cvar-state cvar)))
     (cond
      ((cvar-unset-state? state)
       (for-each (lambda (cvar-item)
 		  (let ((trans-id (cvar-item-trans-id cvar-item)))
-		    ((cvar-item-cleanup-proc cvar-item) queue)
-		    (trans-id-set-value! trans-id
-					 (cons (unspecific)
-					       (cvar-item-wrap-proc cvar-item)))
-		    (enqueue! queue (trans-id-thread-cell trans-id))))
+		    (if (not (trans-id-cancelled? trans-id))
+			(begin
+			  ((cvar-item-cleanup-proc cvar-item) queue)
+			  (trans-id-set-value! trans-id
+					       (cons (unspecific)
+						     (cvar-item-wrap-proc cvar-item)))
+			  (enqueue! queue (trans-id-thread-cell trans-id))))))
 		(cvar-unset-state-blocked state))
       (set-cvar-state! cvar (make-cvar-set-state 1)))
      (else
