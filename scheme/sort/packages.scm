@@ -1,36 +1,25 @@
 ;;; Package defs for the Scheme Underground sorting package,
-;;; in the Scheme48 module language.
-
-;;; Packages defined:
-;;;   sort-package
-;;;   sorted?-package
-;;;   lmsort-package
-;;;   vmsort-package
-;;;   vhsort-package
-;;;   vqsort-package
-;;;   visort-package
+;;; in the Scheme 48 module language.
 
 ;;; The general sort package:
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-structure sort-package sort-interface
-  (open lmsort-package vhsort-package vmsort-package sorted?-package
-	delndups-package scheme)
+(define-structure sort sort-interface
+  (open scheme
+	list-merge-sort
+	vector-heap-sort
+	vector-merge-sort
+	sorted
+	delete-neighbor-duplicates)
   (files sort)
   (optimize auto-integrate))
 
-
-;;; sort? - sorted predicates
-
-(define-structure sorted?-package sorted?-interface
+(define-structure sorted sorted-interface
   (open scheme
 	vector-utils)
   (files sortp)
   (optimize auto-integrate))
 
-;;; delndups - deleting neighbor duplicates
-
-(define-structure delndups-package delndups-interface
+(define-structure delete-neighbor-duplicates delete-neighbor-duplicates-interface
   (open scheme
 	receiving
 	formats
@@ -38,45 +27,36 @@
   (files delndups)
   (optimize auto-integrate))
 
-;; binary search
-
 (define-structure binary-searches binary-searches-interface
   (open scheme
 	vector-utils)
   (files vbinsearch))
 
-;;; lmsort - list merge sort
-
-(define-structure lmsort-package lmsort-interface
+(define-structure list-merge-sort list-merge-sort-interface
   (open scheme
 	receiving
 	(subset signals (error)))
   (files lmsort)
   (optimize auto-integrate))
 
-;;; vmsort - vector merge sort
-
-(define-structure vmsort-package vmsort-interface
+(define-structure vector-merge-sort vector-merge-sort-interface
   (open scheme
 	receiving
 	vector-utils
-	visort-internals-package)
+	vector-insertion-sort-internal)
   (files vmsort)
   (optimize auto-integrate))
 
-;;; vhsort - vector heap sort
-
-(define-structure vhsort-package vhsort-interface
+(define-structure vector-heap-sort vector-heap-sort-interface
   (open scheme
 	receiving
 	vector-utils)
   (files vhsort)
   (optimize auto-integrate))
 
-;;; visort - vector insertion sort
-
-(define-structures ((visort-package visort-interface)
-		    (visort-internals-package visort-internals-interface))
+(define-structures ((vector-insertion-sort vector-insertion-sort-interface)
+		    (vector-insertion-sort-internal
+		     vector-insertion-sort-internal-interface))
   (open scheme
 	vector-utils)
   (files visort)
