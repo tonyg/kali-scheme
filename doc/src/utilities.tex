@@ -2035,7 +2035,7 @@ an element to its associated key. The elements of the vector are assumed
 to be ordered by the $<$ relation on these keys. That is, 
 
 \begin{example}
-(vector-sorted? (lambda (x y) (\(<\) (\var{elt-$>$key} x) (\var{elt-$>$key} y)))
+(vector-sorted? (lambda (x y) (\(<\) (\var{elt-\(>\)key} x) (\var{elt-\(>\)key} y)))
                 \var{vector} \var{start} \var{end}) \(\Longrightarrow\) true
 \end{example}
 
@@ -2043,8 +2043,8 @@ An element \var{e} of \var{vector} is a match for \var{key} if it's
 neither less nor greater than the key:
 
 \begin{example}
-(and (not (\(<\) (\var{elt-$>$key} \var{e}) \var{key}))
-     (not (\(<\) \var{key} (\var{elt-$>$key} \var{e}))))
+(and (not (\(<\) (\var{elt-\(>\)key} \var{e}) \var{key}))
+     (not (\(<\) \var{key} (\var{elt-\(>\)key} \var{e}))))
 \end{example}
 
 If there is such an element, the procedure returns its index in the
