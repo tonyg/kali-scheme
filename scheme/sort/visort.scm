@@ -1,4 +1,4 @@
-;;; The SRFI-?? sort package -- stable vector insertion sort	-*- Scheme -*-
+;;; The sort package -- stable vector insertion sort	-*- Scheme -*-
 ;;; Copyright (c) 1998 by Olin Shivers.
 ;;; This code is open-source; see the end of the file for porting and
 ;;; more copyright information.
@@ -62,14 +62,14 @@
 ;;; guarantee nothing bad will happen. However, note that if you alter
 ;;; %VECTOR-INSERT-SORT! to use dangerous primitives, you must ensure
 ;;; it is only called from clients that guarantee to observe its
-;;; preconditions. In the SRFI-?? reference implementation,
-;;; %VECTOR-INSERT-SORT! is only called from VECTOR-INSERT-SORT! and
-;;; the quick-sort code in vqsort.scm, and the preconditions are
-;;; guaranteed for these two clients.  This should provide *big*
-;;; speedups. In fact, all the code bumming I've done pretty much
-;;; disappears in the noise unless you have a good compiler and also
-;;; can dump the vector-index checks and generic arithmetic -- so I've
-;;; really just set things up for you to exploit.
+;;; preconditions. In the implementation, %VECTOR-INSERT-SORT! is only
+;;; called from VECTOR-INSERT-SORT! and the quick-sort code in
+;;; vqsort.scm, and the preconditions are guaranteed for these two
+;;; clients.  This should provide *big* speedups. In fact, all the
+;;; code bumming I've done pretty much disappears in the noise unless
+;;; you have a good compiler and also can dump the vector-index checks
+;;; and generic arithmetic -- so I've really just set things up for
+;;; you to exploit.
 ;;;
 ;;; If your Scheme has a faster mechanism for handling optional arguments
 ;;; (e.g., Chez), you should definitely port over to it. Note that argument
