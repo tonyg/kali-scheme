@@ -102,7 +102,7 @@
       '(srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
 	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
 	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
-	srfi-31 srfi-37
+	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
 	srfi-42 srfi-45))
 
     ; Some SRFI's redefine Scheme variables.
@@ -359,6 +359,64 @@
 	 (letrec ( (NAME (lambda VARIABLES . BODY)) ) NAME))
 	((rec NAME EXPRESSION)
 	 (letrec ( (NAME EXPRESSION) ) NAME))))))
+
+; Exception Handling for Programs
+
+(define-interface srfi-34-interface
+  (export with-exception-handler
+	  raise
+	  (guard :syntax)))
+
+(define-structure srfi-34 srfi-34-interface
+  (open scheme
+	exceptions))
+
+; Conditions
+
+(define-interface srfi-35-interface
+  (export make-condition-type
+	  condition-type?
+	  make-condition
+	  condition?
+	  condition-has-type?
+	  condition-ref
+	  make-compound-condition
+	  extract-condition
+
+	  (define-condition-type :syntax)
+	  (condition :syntax)
+
+	  &condition
+	  &message message-condition? condition-message
+	  &serious serious-condition?
+	  &error error?))
+
+(define-structure srfi-35 srfi-35-interface
+  (open scheme
+	conditions))
+
+; I/O Conditions
+
+(define-interface srfi-36-interface
+  (export &i/o-error i/o-error?
+	  &i/o-port-error i/o-port-error?
+	  i/o-error-port
+	  &i/o-read-error i/o-read-error?
+	  &i/o-write-error i/o-write-error?
+	  &i/o-closed-error i/o-closed-error?
+	  &i/o-filename-error i/o-filename-error?
+	  i/o-error-filename
+	  &i/o-malformed-filename-error i/o-malformed-filename-error?
+	  &i/o-file-protection-error i/o-file-protection-error?
+	  &i/o-file-is-read-only-error i/o-file-is-read-only-error?
+	  &i/o-file-already-exists-error i/o-file-already-exists-error?
+	  &i/o-no-such-file-error i/o-no-such-file-error?
+	  &read-error read-error?
+	  read-error-line read-error-column read-error-position read-error-span))
+
+(define-structure srfi-36 srfi-36-interface
+  (open scheme
+	i/o-conditions))
 
 ; args-fold: a program argument processor
 
