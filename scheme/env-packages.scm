@@ -299,6 +299,7 @@
           make-attribution
           make-opcode-table
           opcode-table-set!
+          protocol-nargs n-ary-protocol?          
           env-data? env-data-total-count env-data-frame-offsets
           env-data-closure-offsets env-data-env-offsets
           cont-data? cont-data-length cont-data-mask-bytes cont-data-pc

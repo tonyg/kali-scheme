@@ -168,8 +168,9 @@
 	      (count (+ closure-count frame-count)))
 	  (let loop ((pc pc) (count count) (rev-env-offsets '()))
 	    (if (= count total-count)
-                (make-env-data total-count frame-offsets closure-offsets
-                               (reverse rev-env-offsets))
+                (values (- pc start-pc)
+                        (make-env-data total-count frame-offsets closure-offsets
+                                       (reverse rev-env-offsets)))
 		(let* ((env (fetch code pc))
 		       (count-here (fetch code (+ pc size)))
 		       (indexes (get-offsets code 
@@ -234,6 +235,33 @@
 
   (map maybe-parse-one-dispatch (list 3 4 5 2)))
 
+(define (n-ary-protocol? p-args)
+  (let ((protocol (car p-args)))
+    (if (or (= protocol two-byte-nargs+list-protocol)
+            (and (= protocol big-stack-protocol)
+                 (n-ary-protocol? (cadr p-args))))
+        #t
+        (if (or (<= protocol maximum-stack-args)
+                (= protocol two-byte-nargs-protocol))
+            #f
+            (error "unknown protocol in n-ary-protocol?" p-args)))))
+
+(define (protocol-nargs p-args)
+  (let ((protocol (car p-args)))
+    (cond ((<= protocol maximum-stack-args)
+           protocol)
+	  ((= protocol two-byte-nargs-protocol)
+	   (cadr p-args))
+	  ((= protocol two-byte-nargs+list-protocol)
+	   (cadr p-args))
+	  ((= protocol args+nargs-protocol)
+           (cadr p-args))
+	  ((= protocol big-stack-protocol)
+           (protocol-nargs (cadr p-args)))
+	  (else
+	   (error "unknown protocol in protocol-nargs" p-args)))))
+
+
 ; Generic opcode argument parser
 
 (define (parse-opcode-args op start-pc code template attribution)
@@ -248,6 +276,13 @@
                      (+ pc size) 
                      (+ len size) 
                      (cons (cons 'protocol p-args) args))))
+            ((eq? (car specs) 'env-data)
+             (receive (size env-data)
+                 (parse-flat-env-args pc code 1 code-vector-ref)
+               (loop (cdr specs)
+                     (+ pc size)
+                     (+ len size)
+                     (cons (cons 'env-data env-data) args))))
             ((= 0 (arg-spec-size (car specs) pc code))
              (cons len args))
 	    (else
@@ -268,7 +303,8 @@
   (case spec
     ((nargs byte stob literal) 1)
     ((offset offset- index small-index two-bytes) 2)
-    ((env-data) (+ 1 (* 2 (code-vector-ref code pc))))
+    ((env-data) (error "env-data in arg-spec-size"))
+    ((protocol) (error "protocol in arg-spec-size"))
     ((moves-data)
      (let ((n-moves (code-vector-ref code pc)))
        (+ 1 (* 2 n-moves))))
@@ -301,8 +337,6 @@
       (pc->label (- start-pc (get-offset code pc)) attribution))
      ((stob)
       (code-vector-ref code pc))
-     ((env-data)
-      (parse-flat-env-args pc code 1 code-vector-ref))
      ((cont-data)
       (parse-cont-data-args pc code template attribution))
      ((moves-data)
@@ -348,7 +382,7 @@
 		      (lp (+ the-pc 1)))))))
     (make-cont-data len
                     mask-bytes
-                    (pc->label (+ offset pc) attribution)
+                    (pc->label offset attribution)
                     gc-mask-size
                     depth)))
 ;----------------
