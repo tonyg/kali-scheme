@@ -117,6 +117,32 @@ s48_initialize_external()
  * then a throw transfers control up past the call to `proc'.
  */
 
+typedef s48_value (*proc_0_t)(void);
+typedef s48_value (*proc_1_t)(s48_value);
+typedef s48_value (*proc_2_t)(s48_value, s48_value);
+typedef s48_value (*proc_3_t)(s48_value, s48_value, s48_value);
+typedef s48_value (*proc_4_t)(s48_value, s48_value, s48_value, s48_value);
+typedef s48_value (*proc_5_t)(s48_value, s48_value, s48_value, s48_value,
+			      s48_value);
+typedef s48_value (*proc_6_t)(s48_value, s48_value, s48_value, s48_value,
+			      s48_value, s48_value);
+typedef s48_value (*proc_7_t)(s48_value, s48_value, s48_value, s48_value,
+			      s48_value, s48_value, s48_value);
+typedef s48_value (*proc_8_t)(s48_value, s48_value, s48_value, s48_value,
+			      s48_value, s48_value, s48_value, s48_value);
+typedef s48_value (*proc_9_t)(s48_value, s48_value, s48_value, s48_value,
+			      s48_value, s48_value, s48_value, s48_value,
+			      s48_value);
+typedef s48_value (*proc_10_t)(s48_value, s48_value, s48_value, s48_value,
+			       s48_value, s48_value, s48_value, s48_value,
+			       s48_value, s48_value);
+typedef s48_value (*proc_11_t)(s48_value, s48_value, s48_value, s48_value,
+			       s48_value, s48_value, s48_value, s48_value,
+			       s48_value, s48_value, s48_value);
+typedef s48_value (*proc_12_t)(s48_value, s48_value, s48_value, s48_value,
+			       s48_value, s48_value, s48_value, s48_value,
+			       s48_value, s48_value, s48_value, s48_value);
+
 s48_value
 s48_external_call(s48_value sch_proc, s48_value proc_name,
 		  long nargs, char *char_argv)
@@ -128,8 +154,7 @@ s48_external_call(s48_value sch_proc, s48_value proc_name,
 
   long *argv = (long *) char_argv;
 
-  s48_value (*proc)() = (s48_value (*)())
-                         *S48_EXTRACT_VALUE_POINTER(sch_proc, long);
+  proc_0_t proc = S48_EXTRACT_VALUE(sch_proc, proc_0_t);
 
   int throw_reason;
 
@@ -150,52 +175,52 @@ s48_external_call(s48_value sch_proc, s48_value proc_name,
       external_return_value = proc();
       break;
     case 1:
-      external_return_value = proc(argv[0]);
+      external_return_value = ((proc_1_t)proc)(argv[0]);
       break;
     case 2:
-      external_return_value = proc(argv[1], argv[0]);
+      external_return_value = ((proc_2_t)proc)(argv[1], argv[0]);
       break;
     case 3:
-      external_return_value = proc(argv[2], argv[1], argv[0]);
+      external_return_value = ((proc_3_t)proc)(argv[2], argv[1], argv[0]);
       break;
     case 4:
-      external_return_value = proc(argv[3], argv[2], argv[1], argv[0]);
+      external_return_value = ((proc_4_t)proc)(argv[3], argv[2], argv[1], argv[0]);
       break;
     case 5:
-      external_return_value = proc(argv[4],
-				   argv[3], argv[2], argv[1], argv[0]);
+      external_return_value = ((proc_5_t)proc)(argv[4],
+					       argv[3], argv[2], argv[1], argv[0]);
       break;
     case 6:
-      external_return_value = proc(argv[5], argv[4],
-				   argv[3], argv[2], argv[1], argv[0]);
+      external_return_value = ((proc_6_t)proc)(argv[5], argv[4],
+					       argv[3], argv[2], argv[1], argv[0]);
       break;
     case 7:
-      external_return_value = proc(argv[6], argv[5], argv[4],
-				   argv[3], argv[2], argv[1], argv[0]);
+      external_return_value = ((proc_7_t)proc)(argv[6], argv[5], argv[4],
+					       argv[3], argv[2], argv[1], argv[0]);
       break;
     case 8:
-      external_return_value = proc(argv[7], argv[6], argv[5], argv[4],
-				   argv[3], argv[2], argv[1], argv[0]);
+      external_return_value = ((proc_8_t)proc)(argv[7], argv[6], argv[5], argv[4],
+					       argv[3], argv[2], argv[1], argv[0]);
       break;
     case 9:
-      external_return_value = proc(argv[8],
-				   argv[7], argv[6], argv[5], argv[4],
-				   argv[3], argv[2], argv[1], argv[0]);
+      external_return_value = ((proc_9_t)proc)(argv[8],
+					       argv[7], argv[6], argv[5], argv[4],
+					       argv[3], argv[2], argv[1], argv[0]);
       break;
     case 10:
-      external_return_value = proc(argv[9], argv[8],
-				   argv[7], argv[6], argv[5], argv[4],
-				   argv[3], argv[2], argv[1], argv[0]);
+      external_return_value = ((proc_10_t)proc)(argv[9], argv[8],
+						argv[7], argv[6], argv[5], argv[4],
+						argv[3], argv[2], argv[1], argv[0]);
       break;
     case 11:
-      external_return_value = proc(argv[10], argv[9], argv[8],
-				   argv[7], argv[6], argv[5], argv[4],
-				   argv[3], argv[2], argv[1], argv[0]);
+      external_return_value = ((proc_11_t)proc)(argv[10], argv[9], argv[8],
+						argv[7], argv[6], argv[5], argv[4],
+						argv[3], argv[2], argv[1], argv[0]);
       break;
     case 12:
-      external_return_value = proc(argv[11], argv[10], argv[9], argv[8],
-				   argv[7], argv[6], argv[5], argv[4],
-				   argv[3], argv[2], argv[1], argv[0]);
+      external_return_value = ((proc_12_t)proc)(argv[11], argv[10], argv[9], argv[8],
+						argv[7], argv[6], argv[5], argv[4],
+						argv[3], argv[2], argv[1], argv[0]);
       break;
     default:
       fprintf(stderr, "external-apply called with too many arguments");
@@ -749,7 +774,7 @@ s48_enter_pointer(void *pointer)
   s48_value obj;
 
   obj = s48_allocate_stob(S48_STOBTYPE_BYTE_VECTOR, sizeof(void *));
-  *(S48_ADDRESS_AFTER_HEADER(obj, void **)) = pointer;
+  *(S48_ADDRESS_AFTER_HEADER(obj, void *)) = pointer;
 
   return obj;
 }

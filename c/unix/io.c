@@ -147,26 +147,6 @@ ps_write_char(char ch, FILE *port)
       return 0; }
 }
 
-long
-ps_write_integer(long n, FILE *port)
-{
-  int status;
-
-  static long write_integer(unsigned long n, FILE *port);
-
-  if (n == 0) {
-    WRITE_CHAR('0', port, status);
-    return status; }
-  else if (n > 0)
-    return write_integer(n, port);
-  else {
-    WRITE_CHAR('-', port, status);
-    if (status == 0)
-      return write_integer(- n, port);
-    else
-      return status; }
-}
-
 static long
 write_integer(unsigned long n, FILE *port)
 {
@@ -181,6 +161,24 @@ write_integer(unsigned long n, FILE *port)
       ch = (n % 10) + '0';
       WRITE_CHAR(ch, port,status); } }
   return status;
+}
+
+long
+ps_write_integer(long n, FILE *port)
+{
+  int status;
+
+  if (n == 0) {
+    WRITE_CHAR('0', port, status);
+    return status; }
+  else if (n > 0)
+    return write_integer(n, port);
+  else {
+    WRITE_CHAR('-', port, status);
+    if (status == 0)
+      return write_integer(- n, port);
+    else
+      return status; }
 }
 
 long
@@ -259,21 +257,21 @@ ps_really_open_file(char *filename, long *status, char *mode)
   char *expanded;
   extern char *s48_expand_file_name(char *, char *, int);
 
-  FILE *new;
+  FILE *new_file;
 
   expanded = s48_expand_file_name(filename, filename_temp, FILE_NAME_SIZE);
   if (expanded == NULL) {
     *status = EDOM;    /* has to be something */
     return NULL; }
 
-  RETRY_NULL(new, fopen(expanded, mode));
+  RETRY_NULL(new_file, fopen(expanded, mode));
 
-  if (new == NULL) {
+  if (new_file == NULL) {
     *status = errno;
     return NULL; }
 
   *status = NO_ERRORS;
-  return new;
+  return new_file;
 }
 
 FILE *

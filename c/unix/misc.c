@@ -26,15 +26,12 @@
    Note: strncpy(x, y, n) copies from y to x.
 */
 
-char *s48_expand_file_name (name, buffer, buffer_len)
-  char *name, *buffer;
-  int buffer_len;
+char *s48_expand_file_name (char *name, char *buffer, int buffer_len)
 {
 #define USER_NAME_SIZE 256
   char *dir, *p, user_name[USER_NAME_SIZE];
   struct passwd *user_data;
   int dir_len, i;
-  extern char *getenv();
   int name_len = strlen(name);
 
   dir = 0;
@@ -137,7 +134,7 @@ s48_get_file_size(unsigned char *name)
   struct stat file_data;
   int status;
   
-  if (-1 == stat(name, &file_data) ||
+  if (-1 == stat((char*)name, &file_data) ||
       ! S_ISREG(file_data.st_mode))
     return -1;
   else

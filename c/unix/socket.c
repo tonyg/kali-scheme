@@ -668,7 +668,6 @@ static s48_value
 get_hostname(struct in_addr addr)
 {
   char		*hostname;
-  char		*new;
   struct hostent *hostdata;
   
   hostdata = gethostbyaddr((char *) &addr, sizeof(struct in_addr), AF_INET);

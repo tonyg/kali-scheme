@@ -86,11 +86,11 @@ s48_external_lookup(s48_value svname, s48_value svlocp)
 static s48_value
 s48_old_external_call(s48_value svproc, s48_value svargv)
 {
-	s48_value	(*func)();
+	s48_value	(*func)(long, long*);
 	long		*argv,
 			argc;
 
-	func = (s48_value (*)())*S48_EXTRACT_VALUE_POINTER(svproc, long);
+	func = (s48_value (*)(long, long*))*S48_EXTRACT_VALUE_POINTER(svproc, long);
 	argc = S48_VECTOR_LENGTH(svargv);
 	argv = S48_ADDRESS_AFTER_HEADER(svargv, long);
 	return (func(argc, argv));

@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <sys/times.h>
 #include <errno.h>              /* for errno, (POSIX?/ANSI) */
+#include <string.h>		/* FD_ZERO sometimes needs this */
 #include "sysdep.h"
 #include "c-mods.h"
 #include "scheme48vm.h"
@@ -19,9 +20,9 @@
 #define block_interrupts()
 #define allow_interrupts()
 
-void		s48_when_keyboard_interrupt();
-void		s48_when_alarm_interrupt();
-static void     when_sigpipe_interrupt();
+void		s48_when_keyboard_interrupt(int ign);
+void		s48_when_alarm_interrupt(int ign);
+static void     when_sigpipe_interrupt(int ign);
 bool		s48_setcatcher(int signum, void (*catcher)(int));
 void		s48_start_alarm_interrupts(void);
 
@@ -176,13 +177,13 @@ s48_run_time(long *ticks)
 void
 s48_start_alarm_interrupts(void)
 {
-  struct itimerval new, old;
+  struct itimerval newv, old;
 
-  new.it_value.tv_sec = 0;
-  new.it_value.tv_usec = USEC_PER_POLL;
-  new.it_interval.tv_sec = 0;
-  new.it_interval.tv_usec = USEC_PER_POLL;
-  if (0 != setitimer(ITIMER_REAL, &new, &old)) {
+  newv.it_value.tv_sec = 0;
+  newv.it_value.tv_usec = USEC_PER_POLL;
+  newv.it_interval.tv_sec = 0;
+  newv.it_interval.tv_usec = USEC_PER_POLL;
+  if (0 != setitimer(ITIMER_REAL, &newv, &old)) {
     perror("setitimer");
     exit(-1); }
 }
@@ -190,13 +191,13 @@ s48_start_alarm_interrupts(void)
 void
 s48_stop_alarm_interrupts(void)
 {
-  struct itimerval new, old;
+  struct itimerval newv, old;
 
-  new.it_value.tv_sec = 0;
-  new.it_value.tv_usec = 0;
-  new.it_interval.tv_sec = 0;
-  new.it_interval.tv_usec = 0;
-  if (0 != setitimer(ITIMER_REAL, &new, &old)) {
+  newv.it_value.tv_sec = 0;
+  newv.it_value.tv_usec = 0;
+  newv.it_interval.tv_sec = 0;
+  newv.it_interval.tv_usec = 0;
+  if (0 != setitimer(ITIMER_REAL, &newv, &old)) {
     perror("setitimer");
     exit(-1); }
 }
@@ -443,17 +444,17 @@ s48_add_pending_fd(int fd, bool is_input)
 static fd_struct	*
 add_fd(int fd, bool is_input)
 {
-  struct fd_struct	*new;
+  struct fd_struct	*new_fd;
 
-  new = (struct fd_struct *)malloc(sizeof(*new));
-  if (new != NULL) {
-    new->fd = fd;
-    new->status = FD_QUIESCENT;
-    new->is_input = is_input;
-    new->next = NULL;
-    fds[fd] = new;
+  new_fd = (struct fd_struct *)malloc(sizeof(struct fd_struct));
+  if (new_fd != NULL) {
+    new_fd->fd = fd;
+    new_fd->status = FD_QUIESCENT;
+    new_fd->is_input = is_input;
+    new_fd->next = NULL;
+    fds[fd] = new_fd;
   }
-  return (new);
+  return (new_fd);
 }
 
 

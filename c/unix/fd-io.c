@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <errno.h>              /* for errno, (POSIX?/ANSI) */
+#include <string.h>		/* FD_ZERO sometimes needs this */
 #include "sysdep.h"
 #include "c-mods.h"
 #include "scheme48vm.h"

@@ -46,13 +46,11 @@ MIT in each case. */
 #include "scheme48.h"	/* for S48_GC_PROTECT_GLOBAL */
 #include <stdio.h>
 #include <stdlib.h>	/* abort */
+#include <math.h>
 
 /* Forward references */
 static int bignum_equal_p_unsigned(bignum_type, bignum_type);
-/*
 static enum bignum_comparison bignum_compare_unsigned(bignum_type, bignum_type);
-*/
-static int bignum_compare_unsigned(bignum_type, bignum_type);
 static bignum_type bignum_add_unsigned(bignum_type, bignum_type, int);
 static bignum_type bignum_subtract_unsigned(bignum_type, bignum_type);
 static bignum_type bignum_multiply_unsigned(bignum_type, bignum_type, int);
@@ -94,13 +92,13 @@ static void bignum_destructive_zero(bignum_type);
 */
 
 /* Added for bitwise operations. */
-static bignum_type bignum_magnitude_ash();
+static bignum_type bignum_magnitude_ash(bignum_type arg1, long n);
 static bignum_type bignum_pospos_bitwise_op(int op, bignum_type, bignum_type);
 static bignum_type bignum_posneg_bitwise_op(int op, bignum_type, bignum_type);
 static bignum_type bignum_negneg_bitwise_op(int op, bignum_type, bignum_type);
 static void        bignum_negate_magnitude(bignum_type);
-static long        bignum_unsigned_logcount();
-static int         bignum_unsigned_logbitp();
+static long        bignum_unsigned_logcount(bignum_type arg);
+static int         bignum_unsigned_logbitp(int shift, bignum_type bignum);
 
 static s48_value s48_bignum_zero    = (s48_value) NULL;
 static s48_value s48_bignum_pos_one = (s48_value) NULL;
@@ -337,7 +335,8 @@ int
 s48_bignum_divide(bignum_type numerator, bignum_type denominator,
 		  void* quotient, void * remainder)
 {
-  return bignum_divide(numerator, denominator, quotient, remainder);
+  return bignum_divide(numerator, denominator,
+		       (bignum_type *)quotient, (bignum_type *)remainder);
 }
 
 bignum_type
@@ -538,7 +537,6 @@ s48_bignum_to_ulong(bignum_type bignum)
 bignum_type
 s48_double_to_bignum(double x)
 {
-  extern double frexp ();
   int exponent;
   double significand = (frexp (x, (&exponent)));
   if (exponent <= 0) return (BIGNUM_ZERO ());
@@ -728,7 +726,7 @@ bignum_equal_p_unsigned(bignum_type x, bignum_type y)
     }
 }
 
-static int /* enum bignum_comparison */
+static enum bignum_comparison
 bignum_compare_unsigned(bignum_type x, bignum_type y)
 {
   bignum_length_type x_length = (BIGNUM_LENGTH (x));

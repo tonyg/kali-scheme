@@ -36,15 +36,14 @@ extern void	s48_initialize_external_modules(void);
 char *s48_object_file;   /* specified via a command line argument */
 
 int
-s48_main(argc, argv)
-     int argc; char **argv;
+s48_main(int argc, char *argv[])
 {
   char *image_name = DEFAULT_IMAGE_NAME;
   long heap_size = DEFAULT_HEAP_SIZE;    /* in numbers of cells */
   long stack_size = DEFAULT_STACK_SIZE;  /* in numbers of cells */
   int errors = 0;
   long return_value;
-  void *stack;
+  char *stack;
   int warn_undefined_imported_bindings_p = 1;
 
 #if defined(STATIC_AREAS)
@@ -139,7 +138,7 @@ Options: -h <total heap size in words>\n\
     fprintf(stderr, "Image file \"%s\" is unusable.\n", image_name);
     return 1; }
   
-  stack = (void *) malloc(stack_size * sizeof(long));
+  stack = (char *) malloc(stack_size * sizeof(long));
     
   if (!stack) {
     fprintf(stderr, "system is out of memory\n");

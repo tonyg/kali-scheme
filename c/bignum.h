@@ -49,12 +49,10 @@ typedef void * bignum_type;
 
 enum bignum_comparison
 {
-  bignum_comparison_equal, bignum_comparison_less, bignum_comparison_greater
+  bignum_comparison_equal = 0,
+  bignum_comparison_less = -1,
+  bignum_comparison_greater = 1
 };
-
-#define bignum_comparison_equal 0
-#define bignum_comparison_less -1
-#define bignum_comparison_greater 1
 
 typedef void * bignum_procedure_context;
 extern void s48_bignum_make_cached_constants();

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <unistd.h>
 #include <string.h>
 #include "sysdep.h"
 
@@ -33,7 +34,7 @@ main(int argc, char *argv[])
     }
   language_tag = p + 7;
 
-  new_argv = malloc((argc + 4) * sizeof(char *));
+  new_argv = (char **)malloc((argc + 4) * sizeof(char *));
   if (!new_argv)
     {
       fprintf(stderr, "%s: out of memory\n", argv[0]);
