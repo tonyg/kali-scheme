@@ -255,7 +255,7 @@
       (let ((code (make-code-vector (make-return-code-count opcode-count) key)))
 	; A whole lot of stuff to make the GC and disassembler happy.
 	(code-vector-set! code 0 (enum op protocol))
-	(code-vector-set! code 1 0)	; no arguments       - for disassembler
+	(code-vector-set! code 1 protocol) 
 	(code-vector-set! code 2 #b00)	; no env or template - for disassembler
 	(code-vector-set! code 3 (enum op cont-data))	;    - etc.
 	(code-vector-set! code 4 0)             ; high byte of size  
