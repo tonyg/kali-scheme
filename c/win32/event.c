@@ -511,4 +511,6 @@ s48_sysdep_init(void)
 void
 s48_initialize_external_modules()
 {
+  extern void s48_init_socket(void);
+  s48_init_socket();
 }

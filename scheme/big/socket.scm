@@ -83,9 +83,9 @@
 (define (blocking-socket-op socket op)
   (let ((channel (socket-channel socket))
 	(condvar (socket-condvar socket)))
-    (let loop ()
+    (let loop ((retry? #f))
       (disable-interrupts!)
-      (cond ((op channel)
+      (cond ((op channel retry?)
 	     => (lambda (result)
 		  (enable-interrupts!)
 		  result))
@@ -94,7 +94,7 @@
 	     (with-new-proposal (lose)
 	       (maybe-commit-and-wait-for-condvar condvar))
 	     (enable-interrupts!)
-	     (loop))))))
+	     (loop #t))))))
 
 ; Connect to the socket and return input and output ports.
 
@@ -113,7 +113,7 @@
 
 (define (socket-client-channels host-name port-number)
   (let ((channel (new-socket #f #f)))
-    (let loop ((retry? #t))
+    (let loop ((retry? #f))
       (disable-interrupts!)
       (let ((output-channel (real-socket-connect channel
 						 host-name
@@ -174,7 +174,7 @@
 		     'udp-output-socket)))
       (call-error "not a UDP output socket" udp-send socket address buffer count))
   (blocking-socket-op socket
-		      (lambda (channel)
+		      (lambda (channel retry?)
 			(real-udp-send channel address buffer count))))
 
 (define (udp-receive socket buffer)
@@ -183,7 +183,7 @@
 		     'udp-input-socket)))
       (call-error "not a UDP input socket" udp-receive socket buffer))
   (let ((got (blocking-socket-op socket
-				 (lambda (channel)
+				 (lambda (channel retry?)
 				   (real-udp-receive channel buffer)))))
     (values (car got) (cdr got))))
 
@@ -205,7 +205,7 @@
 (import-lambda-definition bind-socket (socket number) "s48_bind")
 (import-lambda-definition socket-number (socket) "s48_socket_number")
 (import-lambda-definition real-socket-listen (socket) "s48_listen")
-(import-lambda-definition real-socket-accept (socket) "s48_accept")
+(import-lambda-definition real-socket-accept (socket retry?) "s48_accept")
 (import-lambda-definition real-socket-connect (socket
 					       machine
 					       port-number

@@ -58,6 +58,9 @@ typedef struct {
       file_thread_data_t thread_data;
     } file_special_data;
   
+    struct {
+      SOCKET handle;
+    } socket_data;
   }
 
   struct callback_data callback_data;
