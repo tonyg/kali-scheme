@@ -49,7 +49,7 @@
 		((and (i/o-port-error? c)
 		      (or (i/o-read-error? c)
 			  (read-command-error? c)))
-		 (let ((port (last (i/o-error-port c))))
+		 (let ((port (i/o-error-port c)))
 		   (if (eq? port i-port)
 		       (eat-until-newline i-port))
 		   (display-condition c (command-output))
