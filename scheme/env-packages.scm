@@ -310,6 +310,7 @@
         continuations
         locations
         code-vectors
+	bitwise
         closures
         architecture
         signals)

@@ -75,6 +75,7 @@
 		    ((= opcode (enum op protocol))
 		     (display-protocol (code-vector-ref code (+ pc 1)) pc code))
 		    ((= opcode (enum op cont-data))
+		     (display-cont-data pc code)
 		     (+ pc (get-offset code (+ pc 1))))
 		    ((or (= opcode (enum op global))
 			 (= opcode (enum op set-global!)))
@@ -247,6 +248,33 @@
 		 size))
 	      (else
 	       (error "unknown protocol" protocol)))))
+
+(define (display-cont-data pc code)
+  (let* ((size (get-offset code (+ pc 1)))
+	 (gc-mask-size (code-vector-ref code (- (+ pc size) 3)))
+	 (gc-mask-start (+ pc 3))
+	 (gc-mask-bytes
+	  (let loop ((i (- gc-mask-size 1)) (r '()))
+	    (if (>= i 0)
+		(loop (- i 1)
+		      (cons (code-vector-ref code (+ gc-mask-start i)) r))
+		r)))
+	 (gc-mask (bytes->bits gc-mask-bytes)))
+    (let loop ((mask gc-mask) (i 0))
+      (if (not (zero? mask))
+	  (begin
+	    (if (bitwise-and mask 1)
+		(begin
+		  (write-char #\space)
+		  (display i)))
+	    (loop (arithmetic-shift mask -1) (+ 1 i)))))))
+		  
+(define (bytes->bits l)
+  (let loop ((n 0) (l l))
+    (if (null? l)
+	n
+	(loop (+ (arithmetic-shift n 8) (car l))
+	      (cdr l)))))
 
 (define (display-dispatch code pc index tag)
   (let ((offset (code-vector-ref code (+ pc index))))
