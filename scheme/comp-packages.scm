@@ -204,6 +204,7 @@
   (open scheme-level-2
 	fluids filenames cells
 	features		;current-noise-port force-output
+	signals                         ;error
 	)
   (files (bcomp read-form)))
 
