@@ -137,20 +137,28 @@ The verifications and subsequent writes to memory are performed atomically
 % Explain better.  Add an example?
 
 \begin{protos}
-\proto{ensure-atomicity}{ thunk}{value(s)}
-\protonoresult{ensure-atomicity!}{ thunk}
+\proto{call-ensuring-atomicity}{ thunk}{value \ldots}
+\protonoresult{call-ensuring-atomicity!}{ thunk}
+\syntaxproto{ensure-atomicity}{ \cvar{exp} \ldots}{value \ldots}
+\syntaxprotonoresult{ensure-atomicity!}{ \cvar{exp} \ldots}
 \end{protos}
 \noindent
 If there is a proposal in place 
- \code{ensure-atomicity} and \code{ensure-atomicity!}
+ \code{call-ensuring-atomicity} and \code{call-ensuring-atomicity!}
  simply make a (tail-recursive) call to \cvar{thunk}.
 If the current proposal is \code{\#f} they create a new proposal,
  install it, call \cvar{thunk}, and then try to commit to the proposal.
 This process repeats, with a new proposal on each iteration, until
  the commit succeeds.
-\code{Ensure-atomicity} returns whatever values are returned by \cvar{thunk}
- on its final invocation, while \code{ensure-atomicity!} discards any such
+\code{Call-ensuring-atomicity} returns whatever values are returned by \cvar{thunk}
+ on its final invocation, while \code{ensuring-atomicity!} discards any such
  values and returns nothing.
+
+\code{Ensure-Atomicity} and \code{ensure-atomicity!} are macro versions of
+\code{call-ensuring-atomicity} and \code{call-ensuring-atomicity!}:
+\code{(ensure-atomicity \cvar{exp} \ldots)} expands into
+\code{(call-ensuring-atomicity (lambda () \cvar{exp} \ldots))}; likewise for
+\code{ensure-atomicity!} and \code{call-ensuring-atomicity!}.
 
 \begin{protos}
 \proto{provisional-car}{ pair}{value}
@@ -232,16 +240,25 @@ If the optional list of field tags is present then only those fields will
  be logged.
 
 \begin{protos}
-\proto{atomically}{ thunk}{value(s)}
-\protonoresult{atomically!}{ thunk}
+\syntaxproto{call-atomically}{ thunk}{value(s)}
+\syntaxprotonoresult{call-atomically!}{ thunk}
+\syntaxproto{atomically}{ \cvar{exp} \ldots}{value(s)}
+\syntaxprotonoresult{atomically!}{ \cvar{exp} \ldots}
 \end{protos}
 \noindent
-\code{Atomically} and \code{atomically!} are identical
- to \code{ensure-atomicity} and \code{ensure-atomicity!} except that they
+\code{Call-atomically} and \code{call-atomically!} are identical
+ to \code{call-ensuring-atomicity} and \code{call-ensuring-atomicity!} except that they
  always install a new proposal before calling \code{thunk}.
 The current proposal is saved and then restored after \code{thunk} returns.
-\code{Atomically} and \code{atomically!} are useful if \code{thunk} contains
+\code{Call-atomically} and \code{Call-atomically!} are useful if \code{thunk} contains
  code that is not to be combined with any other operation.
+
+\code{Atomically} and \code{atomically!} are macro versions of
+\code{call-atomically} and \code{call-atomically!}:
+\code{(atomically \cvar{exp} \ldots)} expands into
+\code{(call-atomically (lambda () \cvar{exp} \ldots))}; likewise for
+\code{atomically!} and \code{call-atomically!}.
+
 % example?
 
 The following procedures give access to the low-level proposal mechanism.
