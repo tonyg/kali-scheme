@@ -262,15 +262,24 @@ posix_waitpid(void)
     }
     else {
       s48_value sch_pid = lookup_pid(c_pid);
+      s48_value temp = S48_UNSPECIFIC;
+      S48_DECLARE_GC_PROTECT(2);
+      
+      S48_GC_PROTECT_2(sch_pid, temp);
 
       if (sch_pid != S48_FALSE) {
 	if (WIFEXITED(stat))
 	  S48_UNSAFE_RECORD_SET(sch_pid, 1, s48_enter_fixnum(WEXITSTATUS(stat)));
-	else
-	  S48_UNSAFE_RECORD_SET(sch_pid, 2, enter_signal(WTERMSIG(stat)));
+	else {
+	  temp = enter_signal(WTERMSIG(stat));
+	  S48_UNSAFE_RECORD_SET(sch_pid, 2, temp);
+	}
 
+	S48_GC_UNPROTECT();
 	return sch_pid;
       }
+      else
+     	S48_GC_UNPROTECT();
     }
   }
 }
