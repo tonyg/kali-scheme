@@ -46,6 +46,10 @@
   (cond ((closure? proc)
          (set-val! proc)
 	 (let ((retval (perform-application nargs)))
+	   ;; This is necessary to remove the stack from a callback
+	   ;; from C.  If we don't do this, a single callback works,
+	   ;; but two in a row fails.  I'm not sure if this is the
+	   ;; right place for this fix.  --Mike
 	   (remove-current-frame)
 	   retval))
 	(else
