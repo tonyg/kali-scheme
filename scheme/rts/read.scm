@@ -66,10 +66,14 @@
     (if (eof-object? c)
         c
 	(let ((scalar-value (char->scalar-value c)))
-	  (if (< scalar-value *dispatch-table-limit*)
-	      ((vector-ref read-dispatch-vector (char->scalar-value c))
-	       c port)
-	      (sub-read-constituent c port))))))
+	  (cond
+	   ((< scalar-value *dispatch-table-limit*)
+	    ((vector-ref read-dispatch-vector (char->scalar-value c))
+	     c port))
+	   ((char-alphabetic? c)
+	    (sub-read-constituent c port))
+	   (else
+	    (reading-error port "illegal character read" c)))))))
 
 (let ((sub-read-whitespace
        (lambda (c port)
