@@ -84,6 +84,33 @@ They are in the structure \code{byte-vectors}.
 \protonoresult{byte-vector-set!}{ byte-vector k i}
 \end{protos}
 
+\section{Sparse vectors}
+
+These are vectors that grow as large as they need to.  That is, they
+can be indexed by arbitrarily large nonnegative integers.  The
+implementation allows for arbitrarily large gaps by arranging the
+entries in a tree.  They are in the structure \code{sparse-vectors}.
+
+\begin{protos}
+\proto{make-sparse-vector}{}{sparse-vector}
+\proto{sparse-vector-ref}{ sparse-vector k}{value}
+\protonoresult{sparse-vector-set!}{ sparse-vector k value}
+\proto{sparse-vector->list}{ sparse-vector}{list}
+\end{protos}
+%
+\code{Make-sparse-vector}, \code{sparse-vector-ref}, and
+\code{sparse-vector-set!} are analogous to \code{make-vector},
+\code{vector-ref}, and \code{vector-set!}, except that the indices
+passed to \code{sparse-vector-ref} and \code{sparse-vector-set!} can
+be arbitrarily large.  For indices whose elements have not been set in
+a sparse vector, \code{sparse-vector-ref} returns \code{\#f}.
+
+\code{Sparse-vector->list} is for debugging: It returns a list of the
+consecutive elements in a sparse vector from 0 to the highest element
+that has been set.  Note that the list will also include all the
+\code{\#f} elements for the unset elements.
+
+
 \section{Cells}
 \label{cells}
 

@@ -369,6 +369,14 @@
   (optimize auto-integrate)
   (files (big search-tree)))
 
+; vectors that grow as large as they need to
+
+(define-structure sparse-vectors sparse-vectors-interface
+  (open scheme
+	bitwise
+	define-record-types)
+  (files (big hilbert)))
+
 ; record types with a fixed number of instances
 
 (define-structure finite-types (export ((define-finite-type

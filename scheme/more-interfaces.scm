@@ -402,6 +402,11 @@
           search-tree-min pop-search-tree-min!
           walk-search-tree))
 
+(define-interface sparse-vectors-interface
+  (export make-sparse-vector
+	  sparse-vector-ref sparse-vector-set!
+	  sparse-vector->list))
+
 ; This is getting to be a hodge-podge.
 
 (define-interface big-util-interface       

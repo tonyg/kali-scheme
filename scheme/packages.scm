@@ -447,6 +447,7 @@
 	    sicp
 	    sockets
 	    sort
+	    sparse-vectors
 	    spatial
 	    strong
 	    traverse
