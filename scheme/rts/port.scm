@@ -58,16 +58,14 @@
     (one-arg-proc->handler (lambda (port)
 			     ((port-handler-byte (port-handler port))
 			      port
-			      #t
-			      1))
+			      #t))
 			   signal-vm-exception))
     
   (define-vm-exception-handler (enum op peek-byte)
     (one-arg-proc->handler (lambda (port)
 			     ((port-handler-byte (port-handler port))
 			      port
-			      #f
-			      1))
+			      #f))
 			   signal-vm-exception))
   
   (define-vm-exception-handler (enum op write-byte)
