@@ -123,6 +123,10 @@ SOURCE=.\c\fake\glue.c
 # End Source File
 # Begin Source File
 
+SOURCE=".\c\win32\init-external.c"
+# End Source File
+# Begin Source File
+
 SOURCE=.\c\init.c
 # End Source File
 # Begin Source File
