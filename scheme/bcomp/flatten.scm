@@ -195,19 +195,31 @@
 	      (node-set! var 'assigned 'maybe))
 	    vars)
   (let ((vals (flatten-list vals free))
+	(temps (map (lambda (var)
+		      (make-node operator/name
+				 (generate-name (node-form var) #f #f)))
+		    vars))
 	(body (flatten-node body free)))
     (set-difference! free vars)
-    (make-node operator/call
-	       (cons (make-node operator/lambda
-				`(lambda ,vars
-				   ,(make-node operator/begin
-					       `(begin ,@(map make-cell-set!
-							      vars
-							      vals)
-						       ,body))))
-		     (map (lambda (ignore)
-			    (make-unassigned-cell))
-			  vars)))))
+    (make-node
+     operator/call
+     (cons
+      (make-node operator/lambda
+       `(lambda ,vars
+	  ,(make-node
+	    operator/call
+	    (cons
+	     (make-node operator/lambda
+			`(lambda ,temps
+			   ,(make-node operator/begin
+				       `(begin ,@(map make-cell-set!
+						      vars
+						      temps)
+					       ,body))))
+	     vals))))
+      (map (lambda (ignore)
+	     (make-unassigned-cell))
+	   vars)))))
 
 ; Pick out the lexical variables from the list of free variables in the
 ; LAP form.
@@ -328,6 +340,7 @@
 
 (define operator/flat-lambda (get-operator 'flat-lambda))
 (define operator/lambda      (get-operator 'lambda))
+(define operator/name        (get-operator 'name))
 (define operator/letrec      (get-operator 'letrec))
 (define operator/pure-letrec (get-operator 'pure-letrec))
 (define operator/begin       (get-operator 'begin))
