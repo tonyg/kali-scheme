@@ -27,6 +27,12 @@ s48_provide_asm_values(s48_value asm_vector)
   extern long s48_restart_vm();
   extern long s48_gc_for_native_code();
   extern long s48_native_add();
+  extern long s48_native_sub();
+  extern long s48_native_E();
+  extern long s48_native_L();
+  extern long s48_native_G();
+  extern long s48_native_LE();
+  extern long s48_native_GE();
   extern long s48_Sstack_limitS;
   extern long s48_ShpS;
   extern long s48_SlimitS;
@@ -44,7 +50,19 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 11, s48_enter_fixnum((long) &s48_restart_vm));
   S48_VECTOR_SET(asm_vector, 12, s48_enter_fixnum((long) &s48_gc_for_native_code));
   S48_VECTOR_SET(asm_vector, 13, s48_enter_fixnum((long) &s48_native_add));
+  S48_VECTOR_SET(asm_vector, 14, s48_enter_fixnum((long) &s48_native_sub));
+  S48_VECTOR_SET(asm_vector, 15, s48_enter_fixnum((long) &s48_native_E));
+  S48_VECTOR_SET(asm_vector, 16, s48_enter_fixnum((long) &s48_native_L));
+  S48_VECTOR_SET(asm_vector, 17, s48_enter_fixnum((long) &s48_native_G));
+  S48_VECTOR_SET(asm_vector, 18, s48_enter_fixnum((long) &s48_native_LE));
+  S48_VECTOR_SET(asm_vector, 19, s48_enter_fixnum((long) &s48_native_GE));
   return S48_UNSPECIFIC;
+}
+
+int
+s48_is_integer_or_flonum(s48_value thing)
+{
+  return (S48_FIXNUM_P (thing) || S48_BIGNUM_P (thing) || S48_DOUBLE_P (thing));
 }
 
 /*

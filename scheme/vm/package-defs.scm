@@ -45,6 +45,26 @@
       (if (double? x)
 	  (flonum-add x y)
 	  (integer-add x y)))
+    (define (s48-integer-or-floanum-sub x y)
+      (if (double? x)
+	  (flonum-subtract x y)
+	  (integer-subtract x y)))
+
+    (define-syntax define-integer-or-floanum-comparison
+      (syntax-rules ()
+	((define-integer-or-floanum-comparison 
+	   s48-integer-or-floanum-proc integer-op flonum-op)
+	 (define (s48-integer-or-floanum-proc x y)
+	   (enter-boolean
+	    (if (double? x)
+		(flonum-op x y)
+		(integer-op x y)))))))
+
+    (define-integer-or-floanum-comparison s48-integer-or-floanum-= integer= flonum=)
+    (define-integer-or-floanum-comparison s48-integer-or-floanum-< integer< flonum<)
+    (define-integer-or-floanum-comparison s48-integer-or-floanum-> integer> flonum>)
+    (define-integer-or-floanum-comparison s48-integer-or-floanum-<= integer<= flonum<=)
+    (define-integer-or-floanum-comparison s48-integer-or-floanum->= integer>= flonum>=)
     ))
 
 ; Byte code architecture.

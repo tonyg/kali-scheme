@@ -636,4 +636,10 @@
 	  check-stack
 	  s48-make-blank-return-code
 	  s48-integer-or-floanum-add
+	  s48-integer-or-floanum-sub
+	  s48-integer-or-floanum-=
+	  s48-integer-or-floanum-<
+	  s48-integer-or-floanum->
+	  s48-integer-or-floanum-<=
+	  s48-integer-or-floanum->=
 	  ))
