@@ -565,8 +565,10 @@
 		     (offset (code-pointer-ref16 code-pointer 2)))
 		 (if (= offset 0)
 		     (skip-current-continuation! 0)	; we're done with it
-		     (shrink-and-reset-continuation!
-		       (address+ code-pointer offset)))
+		     (begin
+		       (shrink-and-reset-continuation!
+			(address+ code-pointer offset))
+		       (remove-current-frame)))
 		 (push *val*)
 		 (set! *val* proc)
 		 (goto perform-application-with-rest-list 1 null 0)))
