@@ -43,6 +43,8 @@
       (list 'uninitialized-cell)
       (list 'cell)))
 
+;; this overwrites the method defined in rts/continuation.scm
+
 (define-method &disclose ((obj :continuation))
   (list (if (exception-continuation? obj)
 	    'exception-continuation
@@ -50,7 +52,7 @@
 	(list 'pc (continuation-pc obj))
 	(let ((tem (continuation-template obj)))
 	  (if tem
-	      (or (template-print-name tem)
+	      (or (template-print-name tem) ; <-- the original method doesn't have this
 		  (template-id tem))
 	      '?))))
   
