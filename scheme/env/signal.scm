@@ -14,7 +14,7 @@
 		       (type type)
 		       (stuff stuff))))
 	  (converted
-	   ;; this is the stuff in simple-signal.scm, #### and some more
+	   ;; this is the stuff in simple-condition.scm
 	   (cond
 	    ((sc:call-error? simple-condition)
 	     (condition (&message (message (car stuff)))

@@ -18,14 +18,18 @@
 
 (define (make-condition-type name supertype fields)
   (if (not (symbol? name))
-      (error "make-condition-type: name is not a symbol"
-             name))
+      (call-error "name is not a symbol"
+		  make-condition-type
+		  name))
   (if (not (condition-type? supertype))
-      (error "make-condition-type: supertype is not a condition type"
-             supertype))
+      (call-error "supertype is not a condition type"
+		  make-condition-type
+		  supertype))
   (if (elements-in-common? (condition-type-all-fields supertype)
 			   fields)
-      (error "duplicate field name" (condition-type-all-fields supertype) fields))
+      (call-error "duplicate field name"
+		  make-condition-type
+		  fields (condition-type-all-fields supertype)))
   (really-make-condition-type name
                               supertype
                               fields
@@ -67,7 +71,7 @@
 ; The type-field-alist is of the form
 ; ((<type> (<field-name> . <value>) ...) ...)
 (define-record-type condition :condition
-  (really-make-condition type-field-alist)
+  (really-really-make-condition type-field-alist)
   condition?
   (type-field-alist condition-type-field-alist))
 
@@ -107,7 +111,13 @@
 	;; rare case: all we have is the converted simple condition
 	(cons (simple-condition-type c)
 	      (simple-condition-stuff c))
-	(let ((relevant
+	(let ((type-symbol
+	       (cond
+		((error? c) 'error)
+		((warning? c) 'warning)
+		((bug? c) 'bug)
+		(else 'condition)))
+	      (relevant
 	       (apply append
 		      (filter-map (lambda (pair)
 				    (let ((type (car pair)))
@@ -119,14 +129,28 @@
 				       (else
 					(disclose-primitive-condition (car pair) (cdr pair) c)))))
 				  (condition-type-field-alist c)))))
-	  `(condition
-	    ,(if (message-condition? c)
-		 (condition-message c)
-		 "<unknown>")
+	  `(,type-symbol
+	    ,@(if (message-condition? c)
+		  (list (condition-message c))
+		  '())
 	    ,@(if (irritants? c)
 		  (condition-irritants c)
 		  '())
 	    ,@relevant)))))
+
+(define (really-make-condition type-field-alist)
+  (for-each (lambda (pair)
+	      (let ((type (car pair))
+		    (alist (cdr pair)))
+		(if (not (list-set-eq? (condition-type-all-fields type)
+				       (map car alist)))
+		    (call-error "condition fields don't match condition type"
+				really-make-condition
+				(map car alist)
+				(condition-type-all-fields type)
+				type-field-alist))))
+	    type-field-alist)
+  (really-really-make-condition type-field-alist))
 
 (define (make-condition type . field-plist)
   (let ((alist (let label ((plist field-plist))
@@ -137,7 +161,9 @@
                            (label (cddr plist)))))))
     (if (not (list-set-eq? (condition-type-all-fields type)
 			   (map car alist)))
-        (error "condition fields don't match condition type"))
+        (apply call-error "condition fields don't match condition type"
+	       make-condition
+	       type field-plist))
     (really-make-condition (list (cons type alist)))))
 
 (define (condition-has-type? condition type)
@@ -149,11 +175,12 @@
   (type-field-alist-ref (condition-type-field-alist condition)
                         field))
 
-(define (type-field-alist-ref type-field-alist field)
-  (let loop ((type-field-alist type-field-alist))
+(define (type-field-alist-ref the-type-field-alist field)
+  (let loop ((type-field-alist the-type-field-alist))
     (cond ((null? type-field-alist)
-           (error "type-field-alist-ref: field not found"
-                  type-field-alist field))
+           (call-error "field not found"
+		       type-field-alist-ref
+		       field the-type-field-alist))
           ((assq field (cdr (car type-field-alist)))
            => cdr)
           (else
@@ -169,8 +196,9 @@
 			(condition-subtype? (car entry) type))
 		      (condition-type-field-alist condition))))
     (if (not entry)
-        (error "extract-condition: invalid condition type"
-                      condition type))
+        (call-error "invalid condition type"
+		    extract-condition
+		    condition type))
     (really-make-condition
       (list (cons type
                   (map (lambda (field)
@@ -189,13 +217,21 @@
 (define (type-field-alist->condition type-field-alist)
   (really-make-condition
    (map (lambda (entry)
-          (cons (car entry)
-                (map (lambda (field)
-                       (or (assq field (cdr entry))
-                           (cons field
-                                 (type-field-alist-ref type-field-alist field))))
-                     (condition-type-all-fields (car entry)))))
-        type-field-alist)))
+	  (let* ((type (car entry))
+		 (all-fields (condition-type-all-fields type)))
+	    (if (not (list-set<=? (map car (cdr entry)) all-fields))
+		(call-error "invalid field or fields"
+			    type-field-alist->condition
+			    (map car (cdr entry))
+			    type
+			    all-fields))
+	    (cons type
+		  (map (lambda (field)
+			 (or (assq field (cdr entry))
+			     (cons field
+				   (type-field-alist-ref type-field-alist field))))
+		       all-fields))))
+	type-field-alist)))
 
 (define (condition-types condition)
   (map car (condition-type-field-alist condition)))
@@ -216,9 +252,11 @@
 				     (let ((type (car entry)))
 				       (condition-subtype? type supertype)))
 				   the-type-field-alist))
-                            (error "missing field in condition construction"
-                                   type
-                                   missing-field))))
+                            (call-error "missing field in condition construction"
+					check-condition-type-field-alist
+					type
+					missing-field
+					the-type-field-alist))))
                     (list-set-difference all-fields fields))
           (loop (cdr type-field-alist))))))
 
@@ -232,14 +270,14 @@
 	  (memq element-1 list-2))
 	list-1))
 
-(define (list-set-<=? list-1 list-2)
+(define (list-set<=? list-1 list-2)
   (every? (lambda (element-1)
 	    (memq element-1 list-2))
 	  list-1))
 
 (define (list-set-eq? list-1 list-2)
-  (and (list-set-<=? list-1 list-2)
-       (list-set-<=? list-2 list-1)))
+  (and (list-set<=? list-1 list-2)
+       (list-set<=? list-2 list-1)))
 
 (define (list-set-difference list-1 list-2)
   (filter (lambda (element-1)
@@ -364,6 +402,12 @@
 (define-condition-type &interrupt &condition
   interrupt?
   (type interrupt-type))
+
+(define-primitive-condition-discloser &interrupt
+  (lambda (c)
+    (list
+     (list '&interrupt
+	   (enumerand->name (interrupt-type c) interrupt)))))
 
 ;; This is for backwards compatibility and shouldn't be used by application code
 (define-condition-type &simple-condition &condition

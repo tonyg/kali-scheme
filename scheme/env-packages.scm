@@ -412,10 +412,13 @@
 (define-structure conditions conditions-interface
   (open scheme
 	define-record-types
-	simple-signals ; ####
+	simple-signals
 	methods
 	display-conditions
-	disclosers)
+	disclosers
+	(subset architecture (interrupt))
+        enumerated              ; enumerand->name
+	)
   (files (env condition)))
 
 (define-structure i/o-conditions i/o-conditions-interface
