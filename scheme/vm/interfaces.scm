@@ -635,4 +635,5 @@
 	  s48-copy-stack-into-heap
 	  check-stack
 	  s48-make-blank-return-code
+	  s48-integer-or-floanum-add
 	  ))

@@ -26,6 +26,7 @@ s48_provide_asm_values(s48_value asm_vector)
   extern long s48_exception_handler();
   extern long s48_restart_vm();
   extern long s48_gc_for_native_code();
+  extern long s48_native_add();
   extern long s48_Sstack_limitS;
   extern long s48_ShpS;
   extern long s48_SlimitS;
@@ -42,6 +43,7 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 10, s48_enter_fixnum((long) &s48_exception_handler));
   S48_VECTOR_SET(asm_vector, 11, s48_enter_fixnum((long) &s48_restart_vm));
   S48_VECTOR_SET(asm_vector, 12, s48_enter_fixnum((long) &s48_gc_for_native_code));
+  S48_VECTOR_SET(asm_vector, 13, s48_enter_fixnum((long) &s48_native_add));
   return S48_UNSPECIFIC;
 }
 
@@ -96,3 +98,16 @@ s48_stob_start_address(s48_value stob)
   return s48_enter_integer((long) S48_ADDRESS_AFTER_HEADER(stob, void));
 }
 
+s48_value
+s48_is_integer_or_floanum(s48_value value)
+{
+  return (S48_FIXNUM_P (value) || S48_BIGNUM_P (value) || S48_DOUBLE_P (value));
+}
+
+s48_value
+s48_are_integers_or_floanums(s48_value value1, s48_value value2)
+{
+  return (((S48_FIXNUM_P (value1) || S48_BIGNUM_P (value1)) && 
+	   (S48_FIXNUM_P (value2) || S48_BIGNUM_P (value2))) ||
+	  ((S48_DOUBLE_P (value1) && S48_DOUBLE_P (value2))));
+}

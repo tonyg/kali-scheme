@@ -6,6 +6,7 @@
 	external 
 	bignum-low
 	integer-arithmetic
+	flonum-arithmetic
 	data struct
 	interpreter interpreter-internal
 	stack gc interpreter-gc gc-util
@@ -38,6 +39,12 @@
     
     (define (s48-enter-integer x)
       (enter-integer x (ensure-space long-as-integer-size)))
+    
+    ; arguments must either both be intergers or both floanums
+    (define (s48-integer-or-floanum-add x y)
+      (if (double? x)
+	  (flonum-add x y)
+	  (integer-add x y)))
     ))
 
 ; Byte code architecture.
