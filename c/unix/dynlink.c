@@ -52,21 +52,9 @@ shared_object_dlsym(s48_value handle, s48_value name)
   
   native_handle = S48_EXTRACT_VALUE(handle, void *);
 
-#ifdef USCORE
-  native_name = malloc(S48_STRING_LENGTH(name) + 2);
-  native_name[0] = '_';
-  strcpy(native_name + 1, s48_extract_string(name));
-  if (native_name == NULL)
-    s48_raise_out_of_memory_error();
-#else
   native_name = s48_extract_string(name);
-#endif
 
   entry = dlsym(native_handle, native_name);
-
-#ifdef USCORE
-  free(native_name);
-#endif
 
   if (entry == NULL)
     s48_raise_string_os_error((char*)dlerror());
