@@ -214,7 +214,7 @@
   (open scheme-level-2 nodes signals
 	optimizer primops
 	util			;every
-	var-utilities)
+	names var-utilities)
   (files (bcomp flatten)))
 
 ;----------------
