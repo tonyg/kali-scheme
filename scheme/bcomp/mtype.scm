@@ -619,6 +619,8 @@
 	      (reduce join-type (car l) (cdr l))))
 	   ((mask->type)
 	    (mask->type (cadr x)))
+           ((variable)
+            (variable-type (sexp->type (cadr x) r?)))
 	   (else (error "unrecognized type" x))))
 	(else (error "unrecognized type" x))))
 
@@ -641,18 +643,20 @@
 ; Convert type to S-expression
 
 (define (type->sexp t r?)
-  (if (> (bitwise-and (type-mask t) mask/&rest) 0)
-      (if (same-type? t any-values-type)
-	  ':values
-	  `(some-values ,@(rail-type->sexp t r?)))
-      (let ((j (disjoin-type t)))
-	(cond ((null? j) ':error)
-	      ((null? (cdr j))
-	       (atomic-type->sexp (car j) r?))
-	      (else
-	       `(join ,@(map (lambda (t)
-			       (atomic-type->sexp t r?))
-			     j)))))))
+  (if (variable-type? t)
+      `(variable ,(type->sexp (variable-value-type t) r?))
+      (if (> (bitwise-and (type-mask t) mask/&rest) 0)
+          (if (same-type? t any-values-type)
+              ':values
+              `(some-values ,@(rail-type->sexp t r?)))
+          (let ((j (disjoin-type t)))
+            (cond ((null? j) ':error)
+                  ((null? (cdr j))
+                   (atomic-type->sexp (car j) r?))
+                  (else
+                   `(join ,@(map (lambda (t)
+                                   (atomic-type->sexp t r?))
+                                 j))))))))
 	 
 (define (atomic-type->sexp t r?)
   (let ((m (type-mask t)))
