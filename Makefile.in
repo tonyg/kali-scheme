@@ -213,9 +213,9 @@ $(VM): c/main.o $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
 	rm -f /tmp/s48_external_$$$$.c
 
 $(LIBSCHEME48): $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
-	$(RM) $@								\
-	rm -f /tmp/s48_external_$$$$.c &&				\
-	$(srcdir)/build/build-external-modules /tmp/s48_external_$$$$.c		\
+	rm -f $@;							\
+	rm -f /tmp/s48_external_$$$$.c;					\
+	$(srcdir)/build/build-external-modules /tmp/s48_external_$$$$.c	\
 		$(EXTERNAL_INITIALIZERS) &&				\
 	$(CC) -c $(CFLAGS) -o  /tmp/s48_external_$$$$.o			\
 			/tmp/s48_external_$$$$.c &&			\
