@@ -11,6 +11,11 @@
 (define (signal type . stuff)
   (signal-condition (make-condition type stuff)))
 
+; Error
+
+(define (error message . irritants)
+  (signal 'error message irritants))
+
 ; Warn
 
 (define (warn message . irritants)

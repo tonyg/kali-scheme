@@ -595,48 +595,6 @@
       ((null? args)
        code)))
 
-; (error message irritant1 irritant2)
-;  => (trap (cons 'error (cons message (cons irritant1 (cons irritant2 '())))))
-
-(let ((cons-instruction
-       (instruction (enum op make-stored-object) 2 (enum stob pair))))
-
-  (define-n-ary-compiler-primitive 'error error-type 1
-    (lambda (node depth frame cont)
-      (let* ((exp (node-form node))
-	     (args (cdr exp)))
-	(sequentially
-	  (stack-indirect-instruction (template-offset frame depth)
-				      (literal->index frame 'error))
-	  (instruction (enum op push))
-	  (push-arguments node (+ depth 1) frame)
-	  (stack-indirect-instruction
-	    (template-offset frame
-			     (+ depth 1 (length args)))
-	    (literal->index frame '()))
-	  (apply sequentially
-		 (map (lambda (arg) cons-instruction) args))
-	  cons-instruction
-	  (deliver-value (instruction (enum op trap)) cont))))
-    (cons 2
-	  (lambda (frame)
-	    ; stack at start is: template irritants message
-	    (sequentially (nary-lambda-protocol 1 #t #f)
-			  (instruction (enum op stack-ref) 2)       ; irritants
-			  (instruction (enum op push))
-			  (instruction (enum op stack-ref) 2)       ; message
-			  cons-instruction
-			  (instruction (enum op push))
-			  ; (message . irritants) template irritants message
-			  (instruction (enum op stack-indirect)
-				       1
-				       (literal->index frame 'error))
-			  (instruction (enum op push))
-			  (instruction (enum op stack-ref) 1)
-			  cons-instruction
-			  (instruction (enum op trap))
-			  (instruction (enum op return)))))))
-    
 ; (call-external-value external-routine arg ...)
 
 (define-n-ary-compiler-primitive 'call-external-value value-type 1
