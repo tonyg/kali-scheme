@@ -23,6 +23,7 @@
 			     name
 			     usual-variable-type  ;May get clobbered later
 			     (get-location (vector-ref locs i))))))
+    (make-table-immutable! (package-definitions p))
     p))
 
 (define (transform names+proc env type-exp source name)

@@ -31,10 +31,11 @@
   (lambda (c) `(simple-type ,(simple-type-id c))))
 
 (define (make-simple-type supers predicate id)
-  (really-make-simple-type supers
-			   predicate
-			   (compute-priority supers)
-			   id))
+  (make-immutable!
+   (really-make-simple-type supers
+			    predicate
+			    (compute-priority supers)
+			    id)))
 
 (define (compute-priority supers)
   (if (null? supers)
@@ -127,11 +128,14 @@
 ; Method-info records are triples <type-list, n-ary?, proc>.
 
 (define-record-type method-info :method-info
-  (make-method-info types n-ary? proc)
+  (really-make-method-info types n-ary? proc)
   method-info?
   (types method-info-types)
   (n-ary? method-info-n-ary?)
   (proc method-info-proc))
+
+(define (make-method-info types n-ary? proc)
+  (make-immutable! (really-make-method-info types n-ary? proc)))
 
 (define-record-discloser :method-info
   (lambda (info)

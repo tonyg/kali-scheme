@@ -1,0 +1,134 @@
+-*- Mode: Indented-text; -*-
+
+Don't worry if the ".notify" target fails.  Its only purpose is
+to send a message to scheme-48-notifications@martigny.ai.mit.edu,
+so that we can get a rough idea of how much Scheme 48 is being
+used.
+     
+-----
+
+Customizing the installation
+
+  0. If you don't believe in configure scripts, or don't have a
+     /bin/sh that can handle it, you can make sysdep.h and Makefile
+     manually from sysdep.h.in and Makefile.in.  The technique is
+     fairly obvious.
+
+  1. If you definitely won't be installing Scheme 48, you should set
+     libdir to the distribution directory (e.g. "make libdir=`pwd`").
+     This will make the ,open and ,load-package commands work for the
+     library packages defined in more-packages.scm.
+
+  2. If desired, customize the contents of the development environment
+     heap image by editing the definitions of USUAL-COMMANDS and/or
+     USUAL-FEATURES in more-packages.scm; see below.
+
+  3. If you're using a DEC MIPS, and want to use the foreign function
+     interface, specify LDFLAGS=-N (with e.g. "make LDFLAGS=-N").
+
+-----
+
+Customizing scheme48.image
+
+By default, the image consists of a core Scheme system (Revised^4
+Scheme plus a very minimal read-eval-print loop) together with a
+standard set of "options" (command processor, debugging commands,
+inspector, disassembler, generic arithmetic).  The set of options is
+controlled by the definitions of USUAL-COMMANDS and USUAL-FEATURES in
+more-packages.scm.  If you make the (open ...) clause empty, then
+"make scheme48.image" will create a Scheme system without any extras
+(such as error recovery), and the image will be smaller.  The files
+are listed in approximate order of decreasing desirability; you'll
+probably want at least these:
+
+    package-commands, build
+       - necessary for the scheme48.image script to work
+    debuginfo, disclosers
+       - necessary if you want error messages to be at all helpful
+    debugging
+       - defines important debugging commands such as ,preview and ,trace
+
+After editing the definition of usual-features, simply
+
+        make scheme48.image
+
+to rebuild the image.
+
+Deeper changes to the system -- for example, edits to most of the
+files in the rts/ directory -- will require use of the static linker.
+After you have a working scheme48.image, you can create a linker image
+with
+
+        make linker
+
+after which you can say
+
+        make image
+
+to get the linker to build a new initial.image and initial.debug;
+scheme48.image will then be built from those.
+
+-----
+
+Editor support
+
+We recommend interacting with the Scheme 48 command processor using the
+emacs/scheme interface written by Olin Shivers at CMU.  Copies of the
+relevant .el files, together with a "cmuscheme48.el", are in the
+emacs/ subdirectory of the release.  Usage information is in
+doc/user-guide.txt.
+
+You will probably want to byte-compile the .el files to get .elc
+files.  Use M-x byte-compile-file to do this.
+
+-----
+
+Performance
+
+If you don't have a C compiler that optimizes as well as gcc does,
+then performance may suffer.  Take a look at the automatically
+generated code in scheme48vm.c to find out why.  With a good register
+allocator, all those variables (including some of the virtual
+machine's virtual registers) get allocated to hardware registers, and
+it really flies.  Without one, performance can be pretty bad.
+
+The configure script automatically sets the Makefile variable CFLAGS
+to -O2 -g if gcc is available, or to -O if it isn't.  This can be
+overriden by specifying a different CFLAGS, e.g. "make CFLAGS=-g" for
+no optimization.
+
+Even if you do have a good compiler, you should be able to improve
+overall performance even more, maybe about 6-10%, by removing the
+range check from the interpreter's instruction dispatch.  To do this,
+use the -S flag to get assembly code for scheme48vm.c, then find the
+instructions in scheme48vm.s corresponding to the big dispatch in
+Interpret():
+
+ START: {
+  unsigned char b_111X;
+  b_111X = *((unsigned char *) RScode_pointerS);
+  RScode_pointerS = (1L + RScode_pointerS);
+  switch (b_111X) {
+    ... }
+
+There will be one or two comparison instructions to see whether b_113X
+is in range; just remove them.  For the 68000 I use a "sed" script
+
+    /cmpl #158,d0/ N
+    /cmpl #158,d0\n     jhi L/ d
+
+but of course the constant will probably have to change when a new
+release comes along.
+
+See the user's guide for information on the ,bench command, which
+makes programs run faster.
+
+-----
+
+filenames.make is "include"d by the Makefile, but is automatically
+generated from the module dependencies laid out in the various
+configuration files (*-packages.scm).  If you edit any of these .scm
+files, you may want to do a "make filenames.make" before you do any
+further "make"s in order to update the depedencies.  This step isn't
+necessary if you're using Gnu make, because Gnu make will make
+included files automatically.

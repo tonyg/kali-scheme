@@ -10,21 +10,20 @@
 		    (handle (export ignore-errors))
 		    (features features-interface))
   (open scheme-level-2)
-  (files (alt features)))
+  (files features))
 
 (define-structure records records-interface
   (open scheme-level-2 signals)
-  (files (alt record)))
+  (files record))
 
 (define-structure ascii (export ascii->char char->ascii)
   (open scheme-level-2 signals)
-  (files (alt ascii)))
+  (files ascii))
 
 (define-structure bitwise bitwise-interface
   (open scheme-level-2 signals)
-  (files (alt bitwise)))
+  (files bitwise))
 
 (define-structure code-vectors code-vectors-interface
   (open scheme-level-1)
-  (files (alt code-vectors)))
-
+  (files code-vectors))

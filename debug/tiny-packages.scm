@@ -2,8 +2,7 @@
 
 ; (link-simple-system '(debug tiny) 'start tiny-system)
 
-(define base (make-compiler-base))
 (define-structure tiny-system (export start)
-  (open base)
+  (define-all-operators)
   (usual-transforms)
   (files tiny))

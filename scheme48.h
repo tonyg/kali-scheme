@@ -1,69 +1,93 @@
+typedef long scheme_value;
 
-/* Big kludge.  This ought to be automagically generated from data.scm. */
-/* Use of case is inconsistent.  Sometimes it's C style, sometimes what the
-   prescheme compiler would generate. */
-
-typedef long scheme_value;	/* better be 32 bits */
+#define FIXNUM_TAG 0
+#define FIXNUMP(x) (((long)(x) & 3L) == FIXNUM_TAG)
+#define IMMEDIATE_TAG 1
+#define IMMEDIATEP(x) (((long)(x) & 3L) == IMMEDIATE_TAG)
+#define HEADER_TAG 2
+#define HEADERP(x) (((long)(x) & 3L) == HEADER_TAG)
+#define STOB_TAG 3
+#define STOBP(x) (((long)(x) & 3L) == STOB_TAG)
 
 #define ENTER_FIXNUM(n)   ((scheme_value)((n) << 2))
 #define EXTRACT_FIXNUM(x) ((long)(x) >> 2)
-#define FIXNUMP(x)	  (((long)(x) & 3L) == 0)
-#define GREATEST_FIXNUM_VALUE ((1 << 29) - 1)
-#define LEAST_FIXNUM_VALUE (-1 << 29)
 
-#define IMM_TAG 1
-#define MISC_IMMEDIATE(n) (scheme_value)(IMM_TAG | (n << 2))
+#define MISC_IMMEDIATE(n) (scheme_value)(IMMEDIATE_TAG | ((n) << 2))
 #define SCHFALSE    MISC_IMMEDIATE(0)
-#define SCHTRUE	    MISC_IMMEDIATE(1)
-#define UNSPECIFIED MISC_IMMEDIATE(3)
-#define UNDEFINED   MISC_IMMEDIATE(4)
-#define SCHEOF      MISC_IMMEDIATE(5)
-#define SCHNULL	    MISC_IMMEDIATE(6)
+#define SCHTRUE    MISC_IMMEDIATE(1)
+#define SCHCHAR    MISC_IMMEDIATE(2)
+#define SCHUNSPECIFIC    MISC_IMMEDIATE(3)
+#define SCHUNDEFINED    MISC_IMMEDIATE(4)
+#define SCHEOF    MISC_IMMEDIATE(5)
+#define SCHNULL    MISC_IMMEDIATE(6)
+#define UNDEFINED SCHUNDEFINED
+
 #define ENTER_BOOLEAN(n) ((n) ? SCHTRUE : SCHFALSE)
 #define EXTRACT_BOOLEAN(x) ((x) != SCHFALSE)
 
-#define ENTER_CHAR(c) (MISC_IMMEDIATE(2) | ((c) << 8))
+#define ENTER_CHAR(c) (SCHCHAR | ((c) << 8))
 #define EXTRACT_CHAR(x) ((x) >> 8)
 
-#define STOB_TAG 3
-#define STOBP(x) (((long)(x) & 3L) == STOB_TAG)
 #define ADDRESS_AFTER_HEADER(x, type) ((type *)((x) - STOB_TAG))
 #define STOB_REF(x, i) ((ADDRESS_AFTER_HEADER(x, long))[i])
-#define STOB_HEADER(x) STOB_REF(x, -1)
-#define STOB_TYPE(x) (((long)STOB_HEADER(x) >> 2) & 31L)
+#define STOB_TYPE(x)   ((STOB_HEADER(x)>>2)&&31)
+#define STOB_HEADER(x) (STOB_REF((x),-1))
+#define STOB_BLENGTH(x) (STOB_HEADER(x) >> 7)
+#define STOB_LLENGTH(x) (STOB_HEADER(x) >> 9)
 
-#define HEADER_LENGTH_SHIFT 8
-#define STOB_BLENGTH(x) \
- (STOB_HEADER(x) >> HEADER_LENGTH_SHIFT)
-#define STOB_LLENGTH(x) \
- (STOB_HEADER(x) >> (HEADER_LENGTH_SHIFT + 2))
-
-/* Cf. arch.scm */
 #define STOBTYPE_PAIR 0
+#define PAIRP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_PAIR))
+#define STOBTYPE_SYMBOL 1
+#define SYMBOLP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_SYMBOL))
 #define STOBTYPE_VECTOR 2
+#define VECTORP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_VECTOR))
+#define STOBTYPE_CLOSURE 3
+#define CLOSUREP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_CLOSURE))
+#define STOBTYPE_LOCATION 4
+#define LOCATIONP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_LOCATION))
 #define STOBTYPE_PORT 5
+#define PORTP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_PORT))
+#define STOBTYPE_RATIO 6
+#define RATIOP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_RATIO))
+#define STOBTYPE_RECORD 7
+#define RECORDP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_RECORD))
+#define STOBTYPE_CONTINUATION 8
+#define CONTINUATIONP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_CONTINUATION))
+#define STOBTYPE_EXTENDED_NUMBER 9
+#define EXTENDED_NUMBERP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_EXTENDED_NUMBER))
+#define STOBTYPE_TEMPLATE 10
+#define TEMPLATEP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_TEMPLATE))
+#define STOBTYPE_WEAK_POINTER 11
+#define WEAK_POINTERP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_WEAK_POINTER))
+#define STOBTYPE_EXTERNAL 12
+#define EXTERNALP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_EXTERNAL))
+#define STOBTYPE_UNUSED_D_HEADER1 13
+#define UNUSED_D_HEADER1P(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_UNUSED_D_HEADER1))
+#define STOBTYPE_UNUSED_D_HEADER2 14
+#define UNUSED_D_HEADER2P(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_UNUSED_D_HEADER2))
 #define STOBTYPE_STRING 15
-#define STOBTYPE_BYTE_VECTOR 16
-#define STOB_OF_TYPE_P(x, type) (STOBP(x) && STOB_TYPE(x) == (type))
+#define STRINGP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_STRING))
+#define STOBTYPE_CODE_VECTOR 16
+#define CODE_VECTORP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_CODE_VECTOR))
+#define STOBTYPE_DOUBLE 17
+#define DOUBLEP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_DOUBLE))
+#define STOBTYPE_BIGNUM 18
+#define BIGNUMP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_BIGNUM))
 
-#define pairp(x) STOB_OF_TYPE_P((x), STOBTYPE_PAIR)
-#define car(x) STOB_REF(x, 0) /* cf. vm/struct.scm */
-#define cdr(x) STOB_REF(x, 1) /* cf. vm/struct.scm */
+#define CAR(x) STOB_REF(x, 0)
+#define CDR(x) STOB_REF(x, 1)
+#define SYMBOL_TO_STRING(x) STOB_REF(x, 0)
+#define CONTENTS(x) STOB_REF(x, 0)
+#define LOCATION_ID(x) STOB_REF(x, 1)
+#define CLOSURE_TEMPLATE(x) STOB_REF(x, 0)
+#define CLOSURE_ENV(x) STOB_REF(x, 1)
+#define WEAK_POINTER_REF(x) STOB_REF(x, 0)
+#define EXTERNAL_NAME(x) STOB_REF(x, 0)
+#define EXTERNAL_VALUE(x) STOB_REF(x, 1)
 
-#define vectorp(x) STOB_OF_TYPE_P((x), STOBTYPE_VECTOR)
-#define vector_length(x) STOB_LLENGTH(x)
-#define vector_ref(x, i) STOB_REF(x, i)
-
-#define byte_vectorp(x)  STOB_OF_TYPE_P((x), STOBTYPE_BYTE_VECTOR)
-#define byte_vector_length(x)  STOB_BLENGTH(x)
-#define byte_vector_ref(x, i)  (ADDRESS_AFTER_HEADER(x, unsigned char)[i])
-
-#define stringp(x) STOB_OF_TYPE_P((x), STOBTYPE_STRING)
-#define string_length(x)  STOB_BLENGTH(x)
-#define string_ref(x, i)  (ADDRESS_AFTER_HEADER(x, char)[i])
-#define extract_string(x)  ADDRESS_AFTER_HEADER(x, char)
-
-#define portp(x) STOB_OF_TYPE_P((x), STOBTYPE_PORT)
-#define port_index(x) EXTRACT_FIXNUM(STOB_REF(x, 1)) /* 1=in, 2=out */
-#define for_input 1
-#define for_output 2
+#define VECTOR_LENGTH(x) STOB_LLENGTH(x)
+#define VECTOR_REF(x, i) STOB_REF(x, i)
+#define CODE_VECTOR_LENGTH(x)  STOB_BLENGTH(x)
+#define CODE_VECTOR_REF(x, i)  (ADDRESS_AFTER_HEADER(x, unsigned char)[i])
+#define STRING_LENGTH(x)  STOB_BLENGTH(x)
+#define STRING_REF(x, i)  (ADDRESS_AFTER_HEADER(x, char)[i])

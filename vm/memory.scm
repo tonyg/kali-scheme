@@ -1,6 +1,4 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
-
 
 ; This is file memory.scm.
 
@@ -50,9 +48,6 @@
 (define (bytes->a-units byte-count)
   (cells->a-units (bytes->cells byte-count)))
 
-(define (a-units->bytes byte-count)
-  (cells->bytes (a-units->cells byte-count)))
-
 ; The following operations work on addresses (which just happen to be
 ; implemented as fixnums).
 
@@ -74,55 +69,31 @@
 (define *memory-begin* 0)
 (define *memory-end*   0)
 
+(define (memory-begin)
+  *memory-begin*)
+
+; Size of memory in cells.
+(define (memory-size)
+  (a-units->cells (addr-difference *memory-end* *memory-begin*)))
+
 (define (create-memory size initial-value)   ;size in cells
   (let ((size (cells->a-units size)))
     (cond ((not (= size (addr-difference *memory-end* *memory-begin*)))
-           (set! *memory* (make-byte-vector size))
-	   (set! *memory-begin* (make-byte-vector-pointer *memory* 0))
-           (set! *memory-end* (make-byte-vector-pointer *memory* size))))
-;    (byte-vector-word-fill! *memory* initial-value)
-   ))
+	   (if (not (= *memory-end* 0))
+	       (deallocate-memory *memory*))
+           (set! *memory* (allocate-memory size))
+	   (if (= -1 *memory*)
+	       (error "out of memory, unable to continue"))
+	   (set! *memory-begin* *memory*)
+           (set! *memory-end* (+ *memory* size))))))
 
-;;; Should check that ADDRESS is on a cell boundary for FETCH and STORE!
+(define fetch word-ref)
+(define fetch-byte unsigned-byte-ref)
+(define store! word-set!)
+(define store-byte! unsigned-byte-set!)
 
-; Memory statistics
-;(define *fetches* 0)
-;(define *stores*  0)
-;
-;(define (init-stats)
-;  (set! *fetches* 0)
-;  (set! *stores* 0))
-;               
-;(define io-hack '#(fetches 0 stores 0))
-;
-;(define (stats)
-;  (vector-set! io-hack 1 *fetches*) ; Wrong, shouldn't modify quoted structure
-;  (vector-set! io-hack 3 *stores*)
-;  io-hack)
+(define (read-bytes pointer count port)
+  (read-block port pointer count))
 
-(define (fetch address)
-;  (set! *fetches* (+ 1 *fetches*))
-  (byte-vector-pointer-word-ref *memory* address))
-
-(define (store! address value)
-;  (set! *stores* (+ 1 *stores*))
-  (byte-vector-pointer-word-set! *memory* address value))
-
-(define (fetch-byte address)
-  (byte-vector-pointer-ref *memory* address))
-
-(define (store-byte! address value)
-  (byte-vector-pointer-set! *memory* address value))
-
-(define (write-bytes address count port)
-  (write-block port *memory* address count))
-
-(define (read-bytes address count port)
-  (read-block port *memory* address count))
-
-
-
-
-
-
-
+(define (write-bytes pointer count port)
+  (write-block port pointer count))

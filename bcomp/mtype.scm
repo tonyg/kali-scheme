@@ -10,7 +10,7 @@
 ;   There exists an x : t1 such that (f x) : t2.
 
 (define-record-type meta-type :meta-type
-  (make-type mask more info)
+  (really-make-type mask more info)
   meta-type?
   (mask type-mask)
   (more type-more)
@@ -25,6 +25,9 @@
 		  more))
 	   ,(type-info t))))
 
+(define (make-type mask more info)
+  (make-immutable!
+   (really-make-type mask more info)))
 
 (define name->type-table (make-table))
 (define mask->name-table (make-table))
@@ -102,11 +105,11 @@
 	((or (optional-type? t1)
 	     (optional-type? t2))
 	 (make-type (bitwise-ior (type-mask t1) mask/two-or-more)
-		    (cons t1 t2)
+		    (make-immutable! (cons t1 t2))
 		    #f))
 	(else
 	 (make-type mask/two-or-more
-		    (cons t1 t2)
+		    (make-immutable! (cons t1 t2))
 		    (type-info t1)))))
 
 (define (make-optional-type t)
@@ -124,6 +127,7 @@
 			   z
 			   (type-info t))))
 	(set-cdr! z t)
+	(make-immutable! z)
 	t)))
 
 (define (head-type t)			;Can return an &opt type

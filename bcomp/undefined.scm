@@ -41,7 +41,7 @@
 				  (cdr p+names))))
 		    (if (not (null? names))
 			(begin (display "Undefined")
-			       (if (not (eq? env p))
+			       (if (and p (not (eq? env p)))
 				   (begin (display " in ")
 					  (write (car p+names))))
 			       (display ": ")

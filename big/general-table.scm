@@ -138,7 +138,8 @@
   (let ((set!-proc (table-set!-procedure table)))
     (do ((alist alist (vector-ref alist 2)))
 	((not alist))
-      (set!-proc table (vector-ref alist 0) (vector-ref alist 1)))))
+      (let ((value (vector-ref alist 1)))
+	(if value (set!-proc table (vector-ref alist 0) value))))))
 
 (define (table-expand-table! table size)
   (set-table-size! table 0)
@@ -147,6 +148,12 @@
       (error "requested table size is too large" size)))
 
 (define (table-walk proc table)
+  (really-table-walk (lambda (v)
+		       (let ((value (vector-ref v 1)))
+			 (if value (proc (vector-ref v 0) value))))
+		     table))
+		       
+(define (really-table-walk proc table)
   (let ((data (table-data table)))
     (cond ((not data))
 	  ((= 3 (vector-length data))
@@ -159,8 +166,12 @@
 (define (alist-walk proc alist)
   (do ((alist alist (vector-ref alist 2)))
       ((not alist))
-    (let ((value (vector-ref alist 1)))
-      (if value (proc (vector-ref alist 0) value)))))
+    (proc alist)))
+
+(define (make-table-immutable! table)
+  (really-table-walk make-immutable! table)
+  (make-immutable! (table-data table))
+  (make-immutable! table))
 
 (define (table->entry-list table)
   (let ((list '()))

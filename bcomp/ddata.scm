@@ -33,6 +33,7 @@
 ; template.
 
 (define (debug-data->info debug-data)
+  (make-immutable! debug-data)
   (if (interesting-debug-data? debug-data)
       (if (tabulate-debug-data?)
 	  (begin (note-debug-data! debug-data)

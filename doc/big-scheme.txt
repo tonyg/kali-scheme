@@ -73,19 +73,24 @@ Hash tables
 Enumerations
 
 (DEFINE-ENUMERATION <type-name> (<name0> <name1> ...))      *SYNTAX*
-  Define <type-name> to be an enumeration and <type-name>/<nameI> to
-  be the integer I.  For example (DEFINE-ENUMERATION COLOR (GREEN))
-  defines COLOR/GREEN to be zero.
+  Defines <type-name> to be an enumeration with components <name0>
+  <name1> ....  Also defines <type-name>-COUNT to be the number of
+  components.
 
 (ENUM <type-name> <component-name>) => <integer>            *SYNTAX*
   Evaluates to the value of <component-name> within the enumeration
-  <type-name>.
+  <type-name>.  For example, if (DEFINE-ENUMERATION COLOR (GREEN
+  RED)), then (ENUM COLOR GREEN) is zero and (ENUM COLOR RED) is one.
+  The mapping from name to integer is done at macro-expansion time, so
+  there is no run-time overhead.
 
 (ENUMERAND->NAME <integer> <enumeration>) => <symbol>
   Returns the name associated with <integer> within <enumeration>.
+  E.g. (ENUMERAND->NAME 1 COLOR) => 'RED.
 
 (NAME->ENUMERAND <symbol> <enumeration>)  => <integer>
   Returns the integer associated with <symbol> within <enumeration>.
+  E.g. (ENUMERAND->NAME 'GREEN COLOR) => 0.
 
 -----
 

@@ -22,6 +22,7 @@
       (lambda ()
 	(let ((maps (emit-with-environment-maps! astate segment)))
 	  (set-debug-data-env-maps! debug-data maps)
+	  (make-immutable! cv)
 	  (segment-data->template cv
 				  (debug-data->info debug-data)
 				  (reverse (astate-literals astate))))))))

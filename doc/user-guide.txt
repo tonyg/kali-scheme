@@ -309,21 +309,18 @@ emacs load-path:
 
     (setq load-path (append load-path '("<scheme48-directory>/emacs")))
 
-And, you will probably want to byte-compile the .el files to get .elc
-files.  Use M-x byte-compile-file to do this.
-
-For further documentation see cmuscheme.el and comint.el.
+For further documentation see emacs/cmuscheme.el and emacs/comint.el.
 
 -----
 
-Benchmark mode
+Performance
 
-If you want to run benchmarks, or just generally have your code run
-faster than it normally would, enter "benchmark mode" before loading
-anything.  Otherwise calls to primitives (like + and cons) and in-line
-procedures (like not and cadr) won't be open-coded, and programs will
-run more slowly.  Enter benchmark mode by issuing the ,bench command
-to the command processor.
+If you want to generally have your code run faster than it normally
+would, enter "benchmark mode" before loading anything.  Otherwise
+calls to primitives (like + and cons) and in-line procedures (like not
+and cadr) won't be open-coded, and programs will run more slowly.
+Enter benchmark mode by issuing the ,bench command to the command
+processor.
 
 The system doesn't start in benchmark mode by default because the
 Scheme report permits redefinitions of built-in procedures.  In
@@ -361,6 +358,9 @@ For example:
 When a new object is selected, the previous one is pushed onto a
 stack.  You can pop the stack, reverting to the previous object, with
 the U command.
+
+The inspector is particularly useful with procedures, continuations,
+and records.
 
 Other inspector commands:
 	u	pop object stack

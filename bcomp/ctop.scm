@@ -114,7 +114,8 @@
       (let* ((form (node-form node))
 	     (name (cadr form))
 	     (loc (binding-place (lookup cenv name))))
-	(sequentially (instruction-with-location (enum op literal) (lambda () loc))
+	(sequentially (instruction-with-location (enum op literal)
+						 (lambda () loc))
 		      (instruction (enum op push))
 		      (compile-top (caddr form)
 				   cenv
@@ -136,30 +137,37 @@
 (define (get-location binding cenv name want-type)
   (if (binding? binding)
       (let ((win (lambda ()
-		   (note-caching cenv name (binding-place binding))))
-	    (have-type (binding-type binding)))
-	(if (compatible-types? have-type want-type)
+		   (note-caching cenv name (binding-place binding)))))
+	(if (compatible-types? (binding-type binding) want-type)
 	    win
 	    (if (variable-type? want-type)
-		(begin (warn "invalid assignment" name)
-		       (lambda ()
-			 (location-for-undefined cenv name want-type)))
+		(get-location-for-unassignable cenv name)
 		(begin (warn "invalid variable reference" name)
 		       win))))
-      (begin (note-undefined! (grumble cenv) name)
-	     (lambda ()
-	       (location-for-undefined cenv name want-type)))))
+      (get-location-for-undefined cenv name)))
 
-(define (location-for-undefined cenv name want-type)
+(define (get-location-for-undefined cenv name)
   (if (generated? name)
-      (location-for-undefined (generated-env name)
-			      (generated-symbol name)
-			      want-type)
+      (get-location-for-undefined (generated-env name)
+				  (generated-symbol name))
       (let ((p (grumble cenv)))
-	(if (variable-type? want-type)
-	    (location-for-assignment p name)
-	    (note-caching p name
-			  (location-for-reference p name))))))
+	(note-undefined! p name)
+	(if (package? p)
+	    (lambda ()
+	      (package-note-caching p name
+				    (location-for-reference p name)))
+	    (lambda ()
+	      (make-undefined-location name))))))
+		    
+(define (get-location-for-unassignable cenv name)
+  (if (generated? name)
+      (get-location-for-unassignable (generated-env name)
+				     (generated-symbol name))
+      (let ((p (grumble cenv)))
+	(warn "invalid assignment" name)
+	(if (package? p)
+	    (lambda () (location-for-assignment p name))
+	    (lambda () (make-undefined-location name))))))
 
 (define (package-accessor-on-demand id init)
   (lambda (p)
@@ -167,13 +175,6 @@
 	(let ((foo (init)))
 	  (package-put! p id foo)
 	  foo))))
-      
-;  (let ((table (make-table)))
-;    (lambda (p)
-;      (or (table-ref table (package-uid p))
-;          (let ((value (init)))         ;undefined names
-;            (table-set! table (package-uid p) value)
-;            value))))
 
 (define (location-on-demand accessor)
   (lambda (p name)
@@ -184,7 +185,6 @@
 	    new)))))
 
 ; Create undefined variable -> location tables on demand.
-; These should be examined by the *new-location-hook*.
 
 (define package-undefineds
   (package-accessor-on-demand 'undefineds
@@ -214,10 +214,15 @@
       (note-caching (generated-env name)
 		    (generated-symbol name)
 		    place)
-      (package-note-caching (grumble cenv) name place)))
+      (let ((p (grumble cenv)))
+	(if (package? p)
+	    (package-note-caching p name place)
+	    place))))
 
 (define (grumble cenv)
-  (cond ((procedure? cenv) (extract-package-from-environment cenv))
+  (cond ((procedure? cenv)
+	 ;; This returns #f if package is stable (static linking).
+	 (extract-package-from-environment cenv))
 	((package? cenv) cenv)
 	((structure? cenv) (structure-package cenv))))
 

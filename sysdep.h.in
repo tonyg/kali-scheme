@@ -1,0 +1,26 @@
+/* config.h.in.  Generated automatically from configure.in by autoheader.  */
+/* ... and then modified manually to add NLIST_HAS_N_NAME, etc. */
+
+/* Define to empty if the const keyword does not work.  */
+#undef const
+
+/* Define if you have header file sys/timeb.h.  (Probably only on SGI.) */
+#undef HAVE_SYS_TIMEB_H
+
+/* Define if you have header file libgen.h. */
+#undef HAVE_LIBGEN_H
+
+/* Define if you have gettimeofday.  */
+#undef HAVE_GETTIMEOFDAY
+
+/* Define if you have socket.  */
+#undef HAVE_SOCKET
+
+/* Define if you have dlopen.  */
+#undef HAVE_DLOPEN
+
+/* Define if nlist structs, defined in <nlist.h>, have n_name components. */
+#undef NLIST_HAS_N_NAME
+
+/* Define if FILEs, defined in <stdio.h>, have _cnt component. */
+#undef FILE_HAS__CNT

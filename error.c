@@ -2,26 +2,24 @@
 
 #include <stdio.h>
 
-void Qps_error_0(message)
+void TTerror(message, count, data1, data2, data3)
   const char *message;
+  int count;
+  long data1, data2, data3;
 {
-  fprintf(stderr, "\n%s\n", message);
+  switch (count) {
+  case 0:
+    fprintf(stderr, "\n%s\n", message);
+    break;
+  case 1:
+    fprintf(stderr, "\n%s\n%d\n", message, data1);
+    break;
+  case 2:
+    fprintf(stderr, "\n%s\n%d\n%d\n", message, data1, data2);
+    break;
+  case 3:
+    fprintf(stderr, "\n%s\n%d\n%d\n%d\n", message, data1, data2, data3);
+    break;
+  }
   exit(-1);
 }
-
-void Qps_error_1(message, data1)
-  const char *message;
-  long data1;
-{
-  fprintf(stderr, "\n%s\n%d\n", message, data1);
-  exit(-1);
-}
-
-void Qps_error_2(message, data1, data2)
-  const char *message;
-  long data1, data2;
-{
-  fprintf(stderr, "\n%s\n%d\n%d\n", message, data1, data2);
-  exit(-1);
-}
-

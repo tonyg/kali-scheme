@@ -34,16 +34,16 @@
 ; This is for generic arithmetic, mostly
 
 (define make-opcode-generic!
-  (let ((f (lambda (opcode)
-	     (lambda (next-method . args)
-	       (signal-exception opcode args))))
-	(p (lambda (perform)
-	     (lambda (opcode args)
-	       ((perform) args)))))
+  (let ((except (lambda (opcode)
+		  (lambda (next-method . args)
+		    (signal-exception opcode args))))
+	(handler (lambda (perform)
+		   (lambda (opcode args)
+		     ((perform) args)))))
     (lambda (opcode mtable)
-      (set-final-method! mtable (f opcode))
+      (set-final-method! mtable (except opcode))
       (define-exception-handler opcode
-	(p (method-table-get-perform mtable))))))
+	(handler (method-table-get-perform mtable))))))
 
 ; Raising and handling conditions.
 ; (fluid $condition-handlers) is a list of handler procedures.

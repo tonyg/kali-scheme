@@ -22,20 +22,12 @@
 		     (table-set! *the-external-table*
 				 (external-name external)
 				 external))
-		   (find-all-xs (vector-posq 'external stob))))
+		   (find-all-xs (enum stob external))))
 
 (define (gc-externals)
   (flush-the-external-table!)
   (collect)
   (restore-the-external-table!))
-
-(define (vector-posq e v)
-  (let loop ((i 0))
-    (if (< i (vector-length v))
-	(if (eq? e (vector-ref v i))
-	    i
-	    (loop (+ i 1)))
-	#f)))
 
 (define (vector-for-each proc vector)
   (do ((i 0 (+ i 1)))

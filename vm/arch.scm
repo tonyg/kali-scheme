@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
+; Copyright (c) 1992 by Richard Kelsey and Jonathan Rees.  See file COPYING.
 
 
 ; This is file arch.scm.
@@ -238,6 +238,9 @@
    double        ; double precision floating point
    bignum
    ))
+
+; This is here to try to ensure that it is changed when STOB changes.
+(define least-b-vector-type (enum stob string))
 
 ; (stob predicate constructor . (accessor modifier)*)
 ; If nothing else, the runtime system and the VM need to agree on the

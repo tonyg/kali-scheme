@@ -51,6 +51,7 @@
 			  (table-set! table name type)))
 		    (table-set! table item undeclared-type)))
 	      items)
+    (make-table-immutable! table)
     (really-make-simple-interface table name)))
 
 (define (really-make-simple-interface table name)

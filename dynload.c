@@ -2,11 +2,12 @@
 /* Dynamic loading.  Copyright unclear. */
 
 #include <stdio.h>
+#include "sysdep.h"
 #include "scheme48.h"
 
 /* 
    Hey folks, please help us out with conditions under which the
-   ANCIENT_DYNLOAD and/or HAS_DLOPEN code might work.  About all we
+   ANCIENT_DYNLOAD and/or HAVE_DLOPEN code might work.  About all we
    know is that ANCIENT_DYNLOAD worked once upon a time on the DEC
    MIPS (how to conditionalize for that I don't know -- #ifdef ultrix
    perhaps?), is very similar to something that worked under BSD 4.2,
@@ -16,14 +17,8 @@
 #define ANCIENT_DYNLOAD
 #endif
 
-#if defined(svr4) || defined(SVR4) || defined (__svr4__) || defined(sun) 
-#if !defined(MACH)
-#define HAS_DLOPEN
-#endif /*not MACH*/
-#endif /*svr4*/
 
-
-#if defined(HAS_DLOPEN)
+#if defined(HAVE_DLOPEN)
 
 /*-------------------------------------------------------------------
    Following is the preferred modern method, supposedly.  dlopen() is
@@ -32,15 +27,11 @@
    thanks!
  */
 
-#if defined(svr4) || defined(SVR4) || defined(__svr4__)
-#define HAS_LIBGEN
-#endif
-
 #include <stdlib.h>
 #include <unistd.h>
 #include <dlfcn.h>
 
-#ifdef HAS_LIBGEN
+#ifdef HAVE_LIBGEN_H
 #include <libgen.h>
 /* if we have pathfind, get the file name with $LD_LIBRARY_PATH or $S48_EXTERN_PATH */
 static char *shared_object_name(char *name)
@@ -55,14 +46,14 @@ static char *shared_object_name(char *name)
   return name;
 } /* end of shared_object_name */
 #define SHARED_OBJECT_NAME(Name) shared_object_name(Name)
-#else /* no HAS_LIBGEN */
+#else /* no HAVE_LIBGEN_H */
 #define SHARED_OBJECT_NAME(Name) (Name)
-#endif /*HAS_LIBGEN*/
+#endif /*HAVE_LIBGEN_H*/
 
 
 #ifndef MAXNB_DLOPEN
 #define MAXNB_DLOPEN 40
-#endif MAXNB_DLOPEN
+#endif /* MAXNB_DLOPEN */
 
 #ifndef S48_DLOPEN_MODE
 /* SunoS5 & SVR4 define RTLD_NOW */
@@ -470,9 +461,9 @@ s48_dynamic_load( long nargs, scheme_value *argv )
 
   arg = argv[0];
   
-  if (!stringp(arg)) return(SCHFALSE);
+  if (!STRINGP(arg)) return(SCHFALSE);
 
-  if (0 == dynamic_load(&string_ref(arg, 0)))
+  if (0 == dynamic_load(&STRING_REF(arg, 0)))
     return(SCHTRUE);
   else
     return(SCHFALSE);

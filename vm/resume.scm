@@ -1,31 +1,51 @@
-; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
-
-
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
 
 ; This is file resume.scm.
 
-;;;; Top level entry into Scheme48 system
-
 ; RESUME is the main entry point to the entire system
 
-(define (resume filename startup-string)
-  (let* ((resume-space (+ (vm-string-size (string-length startup-string))
+(define (resume filename startup-vector startup-vector-length
+		initial-memory-size initial-stack-size)
+  (create-memory (a-units->cells initial-memory-size) 0)
+  (initialize-heap (memory-begin)
+		   (- (memory-size) (a-units->cells initial-stack-size)))
+  (let* ((resume-space (+ (do ((i 0 (+ i 1))
+			       (s 0 (+ s (vm-string-size
+					  (string-length
+					   (vector-ref startup-vector i))))))
+			      ((>= i startup-vector-length)
+			       s))
 			  (code-vector-size 2)))
-	 (startup-proc (read-image filename resume-space)))
-    (call-startup-procedure startup-proc startup-string)))
+	 (startup-proc (read-image filename
+				   (+ initial-heap-space resume-space))))
+    (initialize-i/o-system)
+    (initialize-stack (+ (memory-begin)
+			 (- (cells->a-units (memory-size)) initial-stack-size))
+		      (a-units->cells initial-stack-size))
+    (initialize-interpreter)
+    (call-startup-procedure startup-proc startup-vector startup-vector-length)))
 
-(define (call-startup-procedure startup-proc startup-string)
-  (clear-registers)
-  (push (enter-string startup-string))	; get it in the heap so suspend will
-					; save it
-  (push (initial-input-port))
-  (push (initial-output-port))
-  (let ((code (make-code-vector 2 universal-key)))
-    (code-vector-set! code 0 op/call)
-    (code-vector-set! code 1 3)         ; nargs    
-    (set! *code-pointer* (address-after-header code)))
-  (restart startup-proc))
+(define initial-heap-space
+  (+ initial-interpreter-heap-space
+     (+ initial-stack-heap-space
+	initial-i/o-heap-space)))
+
+(define (call-startup-procedure startup-proc startup-vector startup-vector-length)
+  (let ((vector (vm-make-vector startup-vector-length universal-key)))
+    (do ((i 0 (+ i 1)))
+	((>= i startup-vector-length))
+      (vm-vector-set! vector i (enter-string (vector-ref startup-vector i))))
+    (clear-registers)
+    (push vector)
+    (push (initial-input-port))
+    (push (initial-output-port))
+    (let ((code (make-code-vector 2 universal-key)))
+      (code-vector-set! code 0 op/call)
+      (code-vector-set! code 1 3)         ; nargs    
+      (set! *code-pointer* (address-after-header code)))
+    (restart startup-proc)))
+
+(define op/call (enum op call))
 
 (define (restart value)
   (set! *val* value)
@@ -37,8 +57,8 @@
 	     (set! *val* (call-external-value             ; type inference hack
 			  (fetch (address-after-header (external-value *val*)))
 			  *nargs*
-			  (pointer-to-top-of-stack)))
-	     (stack-add (- 0 (+ *nargs* 1)))  ; remove proc and args
+			  (pointer-to-stack-arguments)))
+	     (remove-stack-arguments (+ *nargs* 1))  ; remove proc and args
 	     (loop))
 	    (else
              (error "unkown VM return option" option)

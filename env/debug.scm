@@ -14,42 +14,45 @@
 ; preview  -- show continuations
 
 (define (preview)
-  (display-preview ;; (continuation-preview (command-continuation))
-		   (command-continuation)
+  (display-preview (continuation-preview (command-continuation))
 		   (command-output)))
 
-(define (display-preview c port)
-  ;; (for-each (lambda (id+pc) ...) preview)
-  (if (continuation? c)
-      (begin
-	(if (not (fluid-let-continuation? c))
-	    (display-template-names (template-names (continuation-template c))
-				    port))
-	(display-preview (continuation-parent c) port))))
+(define (display-preview preview port)
+  (for-each (lambda (info+pc)
+	      (if (not (fluid-let-continuation-info? (car info+pc)))
+		  (display-template-names (car info+pc) port)))
+	    preview))
 
-(define (display-template-names names port)
-  (display "  " port)
-  (if (null? names)
-      (display "unnamed" port)
-      (let loop ((names names))
-	(if (car names)
-	    (write (car names) port)
-	    (display "unnamed" port))
-	(if (and (not (null? (cdr names)))
-		 (cadr names))
-	    (begin (display " in " port)
-		   (loop (cdr names))))))
-  (newline port))
+(define (display-template-names info port)
+  (let ((names (debug-data-names info)))
+    (display "  " port)
+    (if (null? names)
+	(begin (display "unnamed " port)
+	       (write `(id ,(if (debug-data? info)
+				(debug-data-uid info)
+				info))
+		      port))
+	(let loop ((names names))
+	  (if (car names)
+	      (write (car names) port)
+	      (display "unnamed" port))
+	  (if (and (not (null? (cdr names)))
+		   (cadr names))
+	      (begin (display " in " port)
+		     (loop (cdr names))))))
+    (newline port)))
 
-(define fluid-let-continuation?
+(define fluid-let-continuation-info?	;Incestuous!
   (let ((id (let-fluid (make-fluid #f) #f
 	      (lambda ()
 		(primitive-catch (lambda (k)
 				   (template-id
 				    (continuation-template k))))))))
-    (lambda (c)
-      (and (continuation? c)
-	   (eq? (template-id (continuation-template c)) id)))))
+    (lambda (info) 
+      (eqv? (if (debug-data? info)
+		(debug-data-uid info)
+		info)
+	    id))))
 
 
 (define-command-syntax 'preview ""
@@ -232,7 +235,10 @@
 
 ; Flush debug data base
 
-(define-command-syntax 'flush "[<kind>]" "start forgetting debug information"
+(define-command-syntax 'flush "[<kind> ...]"
+  "start forgetting debug information
+Kind should be one of: names maps files source tabulate
+ location-names file-packages"
   '(&rest name))
 
 (define (flush . kinds)
@@ -248,6 +254,8 @@
 			     (if (eq? kind 'table) (make-table) #f)))
 			   ((eq? kind 'location-names)
 			    (flush-location-names))
+			   ((eq? kind 'file-packages)
+			    (forget-file-environments))
 			   (else
 			    (write-line "Unrecognized debug flag"
 					(command-output)))))
@@ -255,8 +263,9 @@
 
 ; Control retention of debugging information
 
-(define-command-syntax 'keep "[<kind>]"
-  "start remembering debug information"
+(define-command-syntax 'keep "[<kind> ...]"
+  "start remembering debug information
+Kind should be one of: names maps files source tabulate"
   '(&rest name))
 
 (define (keep . kinds)
@@ -318,10 +327,15 @@
 
 ; Trace and untrace
 
+(define traced-procedures
+  (user-context-accessor 'traced (lambda () '())))
+(define set-traced-procedures!
+  (user-context-modifier 'traced))
+
 (define (trace . names)
   (if (null? names)
       (let ((port (command-output)))
-	(write (map car (fluid $traced)) port)
+	(write (map car (traced-procedures)) port)
 	(newline port))
       (for-each trace-1 names)))
 
@@ -331,7 +345,7 @@
 
 (define (untrace . names)
   (if (null? names)
-      (for-each untrace-1 (map car (fluid $traced)))
+      (for-each untrace-1 (map car (traced-procedures)))
       (for-each untrace-1 names)))
 
 (define-command-syntax 'untrace "<name> ..." "stop tracing calls"
@@ -339,21 +353,19 @@
 
 ; Trace internals
 
-(define $traced       (make-fluid '()))
-
 (define (trace-1 name)
   (let* ((env (environment-for-commands))
 	 (proc (environment-ref env name))
 	 (traced (make-traced proc name)))
-    (set-fluid! $traced
+    (set-traced-procedures!
 		(cons (list name traced proc env)
-		      (fluid $traced)))
+		      (traced-procedures)))
     (environment-define! env name traced))) ;was environment-set!
 	   
 ; Should be doing clookup's here -- avoid creating new locations
 
 (define (untrace-1 name)
-  (let ((probe (assq name (fluid $traced))))
+  (let ((probe (assq name (traced-procedures))))
     (if probe
 	(let* ((traced (cadr probe))
 	       (proc (caddr probe))
@@ -365,10 +377,10 @@
 		(write name out)
 		(display " changed since ,trace; not restoring it." out)
 		(newline out)))
-	  (set-fluid! $traced
+	  (set-traced-procedures!
 		      (filter (lambda (x)
 				(not (eq? (car x) name)))
-			      (fluid $traced))))
+			      (traced-procedures))))
 	(write-line "?" (command-output)))))
 
 (define (make-traced proc name)
@@ -487,34 +499,43 @@
 
 
 ; Filename -> environment map.
-; These should probably be weak pointers.  Fix later.
 
-(define *file-environments* '())
+(define file-environments
+  (user-context-accessor 'file-environments (lambda () '())))
+
+(define set-file-environments!
+  (user-context-modifier 'file-environments))
+
+(define (forget-file-environments)
+  (set-file-environments! '()))
 
 (define (note-file-environment! filename env)
-  (let* ((translated ((structure-ref filenames translate) filename))
-	 (probe (or (assoc filename *file-environments*)    ;What to do?
-		    (assoc translated *file-environments*))))
-    (if probe
-	(if (not (eq? env (cdr probe)))
-	    (let ((port (command-output)))
-	      (newline port)
-	      (display "Changing default package for file " port)
-	      (display filename port)
-	      (display " from" port)
-	      (newline port)
-	      (write (cdr probe) port)
-	      (display " to " port)
-	      (write env port)
-	      (newline port)
-	      (set-cdr! probe env)))
-	(set! *file-environments*
-	      (cons (cons filename env) *file-environments*)))))
+  (if (user-context)
+      (let* ((translated ((structure-ref filenames translate) filename))
+	     (envs (file-environments))
+	     (probe (or (assoc filename envs) ;What to do?
+			(assoc translated envs))))
+	(if probe
+	    (if (not (eq? env (weak-pointer-ref (cdr probe))))
+		(let ((port (command-output)))
+		  (newline port)
+		  (display "Changing default package for file " port)
+		  (display filename port)
+		  (display " from" port)
+		  (newline port)
+		  (write (weak-pointer-ref (cdr probe)) port)
+		  (display " to " port)
+		  (write env port)
+		  (newline port)
+		  (set-cdr! probe (make-weak-pointer env))))
+	    (set-file-environments!
+	     (cons (cons filename (make-weak-pointer env))
+		   envs))))))
 
 (define (get-file-environment filename)
-  (let ((probe (assoc filename *file-environments*))) ;translate ?
+  (let ((probe (assoc filename (file-environments)))) ;translate ?
     (if probe
-	(cdr probe)
+	(weak-pointer-ref (cdr probe))
 	#f)))
 
 (set-fluid! $note-file-package note-file-environment!)

@@ -2,6 +2,34 @@
 
 Recent changes to Scheme 48.
 
+2/7/94   (version 0.31)
+	 New "configure" script generates Makefile from Makefile.in
+	   and sysdep.h from sysdep.h.in (thanks to Gnu autoconf).
+	   See INSTALL and doc/install.txt.
+	 Incompatible change:
+	   The names of all of the macros defined in scheme48.h
+	   (pairp, car, string_length, etc.) are now all upper case.
+	 Bug fixes:
+           Can now make vectors (strings, etc.) as big as the amount
+             of heap space available (but you're screwed if you
+             try to make one bigger than 2^23 bytes - don't do it).
+	   Non-ANSI-ness fixed in scheme48vm.c (jump out of, then
+	     back into, a block expected block-local variables to be
+	     unchanged).
+	   Fixed big/external.scm (had VECTOR-POSQ instead of ENUM).
+	   In (define-syntax foo bar) you got an error if bar was a
+	     variable reference.
+	   Plugged a storage leak (file-environments table in
+	     env/debug.scm).  Images made with ,build were too large.
+	   Flushed extraneous delay from make-reflective-tower.
+	 Renamed variables in Makefile to resemble Gnu standards.
+	 Fixed definition of LINKER_RUNNABLE in Makefile.
+	 Added doc/call-back.txt.
+	 Fixed define-enumerated documentation (doc/big-scheme.txt).
+	 Environment maps no longer retained for things in initial.image
+	   and scheme48.image.  This makes scheme48.image about 170K
+	   smaller.
+
 2/3/94   (version 0.30)
 	 Faster EXPT.
 	 FLOATNUMS improvement: (inexact->exact <float>) should now
@@ -9,7 +37,7 @@ Recent changes to Scheme 48.
            (inexact->exact (/ 1. 3.)) => 6004799503160661/18014398509481984
          Reinstated ACCESS-SCHEME-48 for the benefit of PSD (portable
            scheme debugger) and a certain other software package that
-           shal remain nameless.  It only knows about a small number of
+           shall remain nameless.  It only knows about a small number of
            procedures, including things like ERROR and FORCE-OUTPUT.
          Various changes to support the Pre-Scheme compiler, notably
 	   SET-REFLECTIVE-TOWER-MAKER!.

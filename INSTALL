@@ -1,203 +1,120 @@
--*- Mode: Indented-text; -*-
+   This is a generic INSTALL file for utilities distributions.
+If this package does not come with, e.g., installable documentation or
+data files, please ignore the references to them below.
 
-To install the system, you can use the Unix "make" program:
+   [For information specific to Scheme 48, see doc/install.txt.]
 
-    1. If you intend to ever install Scheme 48 somewhere, then
-       edit the definitions of BIN, LIB, and MAN at top of Makefile as
-       appropriate for your system (see comments in Makefile).
-       E.g. BIN = /usr/local/bin, LIB = /usr/local/lib/scheme48,
-       MAN = /usr/local/man/man1.
+   The `configure' shell script attempts to guess correct values for
+various system-dependent variables used during compilation, and
+creates the Makefile(s) (one in each subdirectory of the source
+directory).  In some packages it creates a C header file containing
+system-dependent definitions.  It also creates a file `config.status'
+that you can run in the future to recreate the current configuration.
 
-       If you like descriptive command names, you might want to set
-       RUNNABLE = scheme48 instead of s48. 
+To compile this package:
 
-       If you're using a DEC MIPS, and want to use the foreign function
-       interface, uncomment VMLINKFLAGS = -N.
+1.  Configure the package for your system.
 
-       If you don't have gcc, Scheme 48 will probably run very slowly,
-       but you can try it anyhow by changing CC and CFLAGS as
-       appropriate.  Try CFLAGS = -O.
+   Normally, you just `cd' to the directory containing the package's
+source code and type `./configure'.  If you're using `csh' on an old
+version of System V, you might need to type `sh configure' instead to
+prevent `csh' from trying to execute `configure' itself.
 
-    2. Issue the "make" command with no arguments.  This creates
-       scheme48vm (the virtual machine) from the .c files, and creates
-       scheme48.image by loading various modules on top of the initial
-       heap image supplied with the distribution (initial.image).
+   Running `configure' takes a minute or two.  While it is running, it
+prints some messages that tell what it is doing.  If you don't want to
+see the messages, run `configure' with its standard output redirected
+to `/dev/null'; for example, `./configure >/dev/null'.
 
-       This initial "make" might fail, complaining that ./scheme48vm
-       doesn't exist.  This probably means that "make" believes
-       filenames.make to be out of date.  Unfortunately, the make rule
-       for this file won't work until there's a runnable Scheme 48
-       system.  If this happens, do "touch filenames.make" to fake it out.
+   To compile the package in a different directory from the one
+containing the source code, you must use a version of `make' that
+supports the `VPATH' variable, such as GNU `make'.  `cd' to the
+directory where you want the object files and executables to go and run
+the `configure' script.  `configure' automatically checks for the
+source code in the directory that `configure' is in and in `..'.  If
+for some reason `configure' is not in the source code directory that
+you are configuring, then it will report that it can't find the source
+code.  In that case, run `configure' with the option `--srcdir=DIR',
+where DIR is the directory that contains the source code.
 
-       At this point you may want to test the system.  Do
+   By default, `make install' will install the package's files in
+`/usr/local/bin', `/usr/local/man', etc.  You can specify an
+installation prefix other than `/usr/local' by giving `configure' the
+option `--prefix=PATH'.  Alternately, you can do so by consistently
+giving a value for the `prefix' variable when you run `make', e.g.,
+     make prefix=/usr/gnu
+     make prefix=/usr/gnu install
 
-	    ./scheme48vm -i scheme48.image
+   You can specify separate installation prefixes for
+architecture-specific files and architecture-independent files.  If you
+give `configure' the option `--exec-prefix=PATH' or set the `make'
+variable `exec_prefix' to PATH, the package will use PATH as the prefix
+for installing programs and libraries.  Data files and documentation
+will still use the regular prefix.  Normally, all files are installed
+using the same prefix.
 
-       and type a few Scheme forms.
+   Some packages pay attention to `--with-PACKAGE' options to
+`configure', where PACKAGE is something like `gnu-as' or `x' (for the X
+Window System).  The README should mention any `--with-' options that
+the package recognizes.
 
-    3. Installation: do "make install" to copy scheme48vm, the heap
-       image file, and the library to BIN/s48 and LIB/s48.
+   `configure' ignores any other arguments that you give it.
 
-A more thorough test of the system is to have it build a fresh heap
-image from sources.  Do this with:
+   On systems that require unusual options for compilation or linking
+that the package's `configure' script does not know about, you can give
+`configure' initial values for variables by setting them in the
+environment.  In Bourne-compatible shells, you can do that on the
+command line like this:
 
-        mv initial.image initial.image.save
-	make image
+     CC='gcc -traditional' LIBS=-lposix ./configure
 
-Now you can do ./scheme48vm -i scheme48.image, etc.
+   Here are the `make' variables that you might want to override with
+environment variables when running `configure'.
 
-See below for information on customizing the default heap image.
+   For these variables, any value given in the environment overrides the
+value that `configure' would choose:
 
------
+ - Variable: CC
+     C compiler program.  The default is `cc'.
 
-The Scheme 48 root directory should contain the following subdirectories:
+ - Variable: INSTALL
+     Program to use to install files.  The default is `install' if you
+     have it, `cp' otherwise.
 
-    doc		   some documentation
-    emacs	   gnu emacs support
-    rts            run-time system sources
-    bcomp	   the byte-code compiler
-    link           static linker
-    env		   development environment modules (debugger, etc.)
-    big		   useful Scheme libraries and extensions ("Big Scheme")
-    vm             virtual machine sources
-    alt		   portable implementations of some Scheme 48 features
-    opt		   optional code optimizer for the byte-code compiler
-    misc           very miscellaneous things (e.g. AMB operator)
+   For these variables, any value given in the environment is added to
+the value that `configure' chooses:
 
-The Scheme 48 root directory should contain the following files:
+ - Variable: DEFS
+     Configuration options, in the form `-Dfoo -Dbar...'.  Do not use
+     this variable in packages that create a configuration header file.
 
-    README              
-    INSTALL		this file
-    NEWS		recent changes
-    TODO		list of bugs and things to do
-    Makefile		Makefile for Unix
-    filenames.make      included by Makefile, generated automatically
-    initial.image	an image file containing a minimal Scheme system
-    initial.debug	debugging database for same
-    scheme48vm.c	most of the VM (generated by PreScheme compiler)
-    main.c		part of the VM
-    unix.c		part of the VM
-    error.c		part of the VM
-    extension.c		stub definition of vm_extension()
-    dynload.c		dynamic Unix object file loader
-    scheme48.man        a Unix-style manual page
-    interfaces.scm	internal interfaces
-    initial.scm		module definitions
-    rts-packages.scm
-    comp-packages.scm
-    more-interfaces.scm
-    more-packages.scm
-    debug-packages.scm
-    link-packages.scm
-    alt-packages.scm
+ - Variable: LIBS
+     Libraries to link with, in the form `-lfoo -lbar...'.
 
-The PreScheme compiler isn't included in this distribution because
-it's too rickety.  The vm directory should therefore be considered to
-be documentation, not source.
+   If you need to do unusual things to compile the package, we encourage
+you to figure out how `configure' could check whether to do them, and
+mail diffs or instructions to the address given in the README so we
+can include them in the next release.
 
------
+2.  Type `make' to compile the package.  If you want, you can override
+the `make' variables CFLAGS and LDFLAGS like this:
 
-filenames.make is included by the Makefile, but is automatically
-generated from the module dependencies laid out in the various
-configuration files (*-packages.scm).  If you edit any of these.scm
-files, you may want to do a "make filenames.make" before you do any
-further "make"s.  (This isn't necessary if you're using Gnu make,
-because Gnu make will do it automatically.)
+	make CFLAGS=-O2 LDFLAGS=-s
 
------
+3.  If the package comes with self-tests and you want to run them,
+type `make check'.  If you're not sure whether there are any, try it;
+if `make' responds with something like
+	make: *** No way to make target `check'.  Stop.
+then the package does not come with self-tests.
 
-Editor support
+4.  Type `make install' to install programs, data files, and
+documentation.
 
-We recommend interacting with the Scheme 48 command processor using the
-emacs/scheme interface written by Olin Shivers at CMU.  Copies of the
-relevant .el files, together with a "cmuscheme48.el", are in the
-emacs/ subdirectory of the release.  Usage information is in
-doc/user-guide.txt.
+5.  You can remove the program binaries and object files from the
+source directory by typing `make clean'.  To also remove the
+Makefile(s), the header file containing system-dependent definitions
+(if the package uses one), and `config.status' (all the files that
+`configure' created), type `make distclean'.
 
-If you like this sort of thing, you can get more stuff like it by
-anonymous Internet FTP from
-
-    	cs.cmu.edu  	    128.2.222.173
-     or a.gp.cs.cmu.edu	    128.2.242.7
-
-Login as anonymous, cd /afs/cs.cmu.edu/user/shivers/lib/emacs,
-establish binary mode transfer (usually the "bin" ftp command), and
-get the .el files.  Also possibly available from the Scheme
-Repository, nexus.yorku.ca [130.63.9.66] pub/scheme, but this may not
-be the most recent version.
-
------
-
-Performance
-
-If you don't have a C compiler that optimizes as well or better than
-gcc does, then performance may suffer greatly.  Take a look at the
-automatically generated code in scheme48vm.c to find out why.  With a
-good register allocator, all those variables (including the virtual
-machine's register) get allocated to hardware registers, and it really
-flies.  Without one, performance could be pretty bad.
-
-Even if you do have a good compiler, you should be able to improve
-overall performance even more, maybe about 6-10%, by removing the
-range check from the interpreter's instruction dispatch.  To do this,
-use the -S flag to get assembly code for scheme48vm.c, then find the
-instructions in scheme48vm.s corresponding to the big dispatch in
-interpret():
-
- START: {
-  unsigned char b_111X;
-  b_111X = *((unsigned char *) RScode_pointerS);
-  RScode_pointerS = (1L + RScode_pointerS);
-  switch (b_111X) {
-    ... }
-
-There will be one or two comparison instructions to see whether b_113X
-is in range; just remove them.  For the 68000 I use a "sed" script
-
-    /cmpl #158,d0/ N
-    /cmpl #158,d0\n	jhi L/ d
-
-but of course the constant will probably have to change when a new
-release comes along.
-
------
-
-Customization:
-
-Configuring your scheme48.image: by default, the image consists of a
-core Scheme system (Revised^4 Scheme plus a very minimal
-read-eval-print loop) together with a standard set of "options"
-(command processor, debugging commands, inspector, disassembler,
-generic arithmetic).  The set of options is controlled by the
-definition of usual-features in more-packages.scm.  If you make the
-(open ...) clause empty, then "make scheme48.image" will create a
-Scheme system without any extras (such as error recovery), and the
-image will be smaller.  The files are listed in approximate order of
-decreasing desirability; you'll probably want at least these:
-
-    package-commands, build
-       - necessary for the scheme48.image script to work
-    debuginfo, disclosers
-       - necessary if you want error messages to be at all helpful
-    debugging
-       - defines important debugging commands such as ,preview and ,trace
-
-After editing the definition of usual-features, simply
-
-	make scheme48.image
-
-to rebuild the image.
-
-Deeper changes to the system -- for example, any edits to most of the
-files in the rts/ directory -- will require use of the static linker.
-After you have a working scheme48.image, you can create a linker image
-with
-
-	make linker
-
-after which you can say
-
-	make image
-
-to get the linker to build a new initial.image and initial.debug;
-scheme48.image will then be built from those.
+   The file `configure.in' is used to create `configure' by a program
+called `autoconf'.  You only need it if you want to regenerate
+`configure' using a newer version of `autoconf'.

@@ -61,7 +61,7 @@
 	(begin (if *debug?*
 		   (note "assigned -> defined" name))
 	       (table-set! (package-undefined-but-assigneds p) name #f)
-	       (set-location-forward! aloc new)))
+	       (set-location-forward! aloc new name p)))
     new))
 
 (define (note . rest) (apply signal 'note rest))
@@ -141,8 +141,11 @@
     (cons p losers)))
 
 
-(define (set-location-forward! loser new)
-  ;; (write `(forwarding: ,loser ,new)) (newline)
+(define (set-location-forward! loser new name p)
+  (write `(forward ,loser ,new)) (newline)
+  (for-each (lambda (q)
+	      (package-note-caching q name new))
+	    (packages-seeing-location p name loser))
   (shadow-location! loser '() #f new))
 
 
@@ -227,11 +230,7 @@
 			  (if (eq? place prev)
 			      (error "lossage - verify-package-undefineds"
 				     p name binding))
-			  (if *debug?*
-			      (begin (write `(forward ,prev ,place))
-				     (newline)))
-			  (package-note-caching p name place)  ;Yowza
-			  (set-location-forward! prev place)
+			  (set-location-forward! prev place name p)
 			  (set! newly-defined
 				(cons name newly-defined))))))
 		undefs)
@@ -334,7 +333,12 @@
     (if probe
 	(begin (table-set! (package-definitions p) name #f)
 	       (set-location-defined?! (binding-place probe) #f)
-	       (set-location-forward! (binding-place probe)
-				      (location-for-reference p name)))
-	(warn "can't undefine, because not defined here"
+	       (set-location-forward!
+		 (binding-place probe)
+		 (let ((new (package-lookup p name)))
+		   (if (binding? new)
+		       (binding-place new)
+		       (location-for-reference p name)))
+		 name p))
+	(warn "can't undefine - binding is inherited"
 	      p name))))

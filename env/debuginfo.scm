@@ -54,7 +54,9 @@
 	       (let loop ()
 		 (let ((z (read port)))
 		   (if (pair? z)
-		       (begin (table-set! table (car z) (cadr z))
+		       (begin (table-set! table
+					  (car z)
+					  (make-immutable! (cadr z)))
 			      ;; (set! *location-uid*
 			      ;;       (max *location-uid* (+ (car z) 1)))
 			      (loop))))))))
@@ -68,7 +70,8 @@
 		     ;;	      (max *template-uid* (+ (car z) 1)))
 		     (table-set! (debug-data-table)
 				 (car z)
-				 (apply make-debug-data
-					(append z '(()))))
+				 (make-immutable!
+				  (apply make-debug-data
+					 (append z '(())))))
 		     (loop))))))))
 

@@ -191,10 +191,10 @@
 	     (symbol? thing) (char? thing))
 	 thing)
 	((string? thing)
-	 (make-immutable thing))
+	 (make-immutable! thing))
 	((generated? thing) (desyntaxify (generated-symbol thing)))
 	((pair? thing)
-	 (make-immutable
+	 (make-immutable!
 	  (let ((x (desyntaxify (car thing)))
 		(y (desyntaxify (cdr thing))))
 	    (if (and (eq? x (car thing))
@@ -202,7 +202,7 @@
 		thing
 		(cons x y)))))
 	((vector? thing)
-	 (make-immutable
+	 (make-immutable!
 	  (let ((new (make-vector (vector-length thing) #f)))
 	    (let loop ((i 0) (same? #t))
 	      (if (>= i (vector-length thing))
@@ -217,10 +217,6 @@
 	(else
 	 (warn "invalid datum in quotation" thing)
 	 thing)))
-
-(define (make-immutable thing)
-  (make-immutable! thing)
-  thing)
 
 ; --------------------
 ; Transforms
@@ -242,9 +238,10 @@
   (let ((type (if (or (pair? type) (symbol? type))
 		  (sexp->type type #t)
 		  type)))
-    (if (pair? thing)
-	(really-make-transform (car thing) env type (cdr thing) source id)
-	(really-make-transform thing env type #f source id))))
+    (make-immutable!
+     (if (pair? thing)
+	 (really-make-transform (car thing) env type (cdr thing) source id)
+	 (really-make-transform thing env type #f source id)))))
 
 (define-record-discloser :transform
   (lambda (m) (list 'transform (transform-id m))))
@@ -342,7 +339,9 @@
 ; replaced with the given type.
 
 (define (impose-type type b integrate?)
-  (if (eq? type syntax-type)
+  (if (or (eq? type syntax-type)
+	  (and (eq? type undeclared-type) integrate?) ;+++
+	  (not (binding? b)))
       b
       (really-make-binding (if (eq? type undeclared-type)
 			       (let ((type (binding-type b)))
@@ -699,12 +698,14 @@
   (let* ((eval+env (force (reflective-tower env)))
 	 (thing ((car eval+env)
 		 ;; Bootstrap kludge to macro expand SYNTAX-RULES
-		 (let ((probe (lookup env (car form))))
-		   (if (and (binding? probe)
-			    (binding-transform probe))
-		       ((transform-procedure (binding-transform probe))
-			form (lambda (x) x) eq?)
-		       form))
+		 (if (pair? form)
+		     (let ((probe (lookup env (car form))))
+		       (if (and (binding? probe)
+				(binding-transform probe))
+			   ((transform-procedure (binding-transform probe))
+			    form (lambda (x) x) eq?)
+			   form))
+		     form)
 		 (cdr eval+env))))
     (make-transform thing env-or-whatever syntax-type form name)))
 

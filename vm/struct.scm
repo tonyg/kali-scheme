@@ -1,17 +1,124 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
-
 
 ; This is file struct.scm.
-
-;;;; Structure definitions
 
 ; This file defines a level of abstraction for storage somewhat higher
 ; than that of d-vectors and b-vectors: pairs, symbols, and other datatypes.
 
-;; (assert (>= (ashl 1 header-type-field-width)
-;;              (vector-length stob)))
+; An ugly and unsafe macro for defining VM data structures.
+;
+; (DEFINE-PRIMITIVE-DATA-TYPE <name> <constructor-name> <slot>*)
+; <slot> ::= (<accessor-name>) | (<accessor-name> <modifier-name>)
+;
+; (define-primitive-data-type pair cons (car set-car!) (cdr))
+; =>
+; (begin
+;  (define (cons a b) (d-vector ...))
+;  (define pair? (stob-predicate ...))
+;  (define pair-size 3)
+;  (define (car x) (d-vector-ref x 0))
+;  (define (set-car! x val) (d-vector-set! x 0 val))
+;  (define (cdr x) (d-vector-ref x 1))
 
+(define-syntax define-primitive-data-type
+  (lambda (exp rename compare)
+    (destructure (((d-p-d-t name type make . body) exp))
+      (define (concatenate-symbol . syms)
+	(string->symbol (apply string-append (map symbol->string syms))))
+      (let* ((pred (concatenate-symbol name '?))
+	     (size (concatenate-symbol name '- 'size))
+	     (shorten (lambda (l1 l2) (map (lambda (x1 x2) x2 x1) l1 l2)))
+	     (vars (shorten `(a b c d e f g) body)))
+	`(begin (define ,make
+		  (let ((type (enum stob ,type)))
+		    (lambda (,@vars key)
+		      (d-vector type key ,@vars))))
+		(define ,pred (stob-predicate (enum stob ,type)))
+		(define ,size ,(+ (length body) 1))
+		,@(do ((s body (cdr s))
+		       (i 0 (+ i 1))
+		       (d '() (let* ((slot (car s))
+				     (d (cons `(define (,(car slot) x)
+						 (d-vector-ref x ,i))
+					      d)))
+				(if (null? (cdr slot))
+				    d
+				    (cons `(define (,(cadr slot) x val)
+					     (d-vector-set! x ,i val))
+					  d)))))
+		      ((null? s) (reverse d))))))))
+
+; This is a front for DEFINE-PRIMITIVE-DATA-TYPE that gets the names from
+; STOB-DATA (which is defined in arch.scm).  This ensures that the run-time
+; code, the VM, and the linker agree on what these structures look like.
+;
+; SCHEME? is #T if the data structure is a Scheme structure, in which case
+; the names defined by the form all have VM- prepended.
+
+(define-syntax define-shared-primitive-data-type
+  (lambda (exp rename compare)
+    (let ((name (cadr exp))
+	  (scheme? (cddr exp)))
+      (define (concatenate-symbol . syms)
+	(string->symbol (apply string-append (map symbol->string syms))))
+      (let ((data (cddr (assq name stob-data)))
+	    (fixup (lambda (n)
+		     (if (not (null? scheme?))
+			 (concatenate-symbol 'vm- n)
+			 n))))
+	`(define-primitive-data-type
+	   ,(fixup name)
+	   ,name
+	   ,(fixup (car data))
+	   . ,(map (lambda (p)
+		     (cons (fixup (car p))
+			   (if (not (cadr p))
+			       '()
+			       (list (fixup (cadr p))))))
+		   (cdr data)))))))
+
+; A d-vector macro version of the VECTOR procedure.
+; This is only used in the expansion of DEFINE-PRIMITIVE-DATA-TYPE.
+
+(define-syntax d-vector
+  (lambda (exp rename compare)
+    (destructure (((d-v type key . args) exp))
+      `(let ((v (make-d-vector ,type ,(length args) key)))
+	 ,@(do ((a args (cdr a))
+		(i 0 (+ i 1))
+		(z '() (cons `(d-vector-set! v ,i ,(car a)) z)))
+	       ((null? a) (reverse z)))
+	 v))))
+
+; A simpler macro for defining types of vectors.  Again SCHEME? being #T
+; causes VM- to be prepended to the defined names.
+
+(define-syntax define-vector-data-type
+  (lambda (exp rename compare)
+    (let ((name (cadr exp))
+	  (scheme? (cddr exp)))
+      (define (concatenate-symbol . syms)
+	(string->symbol (apply string-append (map symbol->string syms))))
+      (let* ((type `(enum stob ,name))
+	     (fix (if (not (null? scheme?))
+		      'vm-
+		      (string->symbol "")))
+	     (pred (concatenate-symbol fix name '?))
+	     (make (concatenate-symbol fix 'make- name))
+	     (size (concatenate-symbol fix name '- 'size))
+	     (length (concatenate-symbol fix name '- 'length))
+	     (ref (concatenate-symbol fix name '- 'ref))
+	     (set (concatenate-symbol fix name '- 'set!)))
+	`(begin (define ,make (stob-maker ,type make-d-vector))
+		(define ,pred (stob-predicate ,type))
+		(define (,size len) (+ len 1))
+		(define ,length d-vector-length)
+		(define ,ref d-vector-ref)
+		(define ,set d-vector-set!))))))
+
+(define (stob-maker type maker)
+  (lambda (length key)
+    (maker type length key)))
 
 (define (stob-predicate type)
   (lambda (obj) (stob-of-type? obj type)))
@@ -25,70 +132,59 @@
 (define-shared-primitive-data-type weak-pointer)
 (define-shared-primitive-data-type external)
 
-(define-primitive-data-type stob/port port make-port
+; The one currently unshared data structure.
+
+(define-primitive-data-type port port make-port
   (port-mode set-port-mode!)
   (port-index set-port-index!)
   (peeked-char set-peeked-char!)
   (port-id set-port-id!))  ; setter needed by the post-GC code
 
-; Vectors
+; Vectors and so on
 
-(define (vm-make-vector len key)
-  (make-d-vector stob/vector len key))
-(define vm-vector?       (stob-predicate stob/vector))
-(define vm-vector-length d-vector-length)
-(define vm-vector-ref    d-vector-ref)
-(define vm-vector-set!   d-vector-set!)
-
-(define (vm-vector-size len)
-  (+ len 1))
+(define-vector-data-type vector #t)
+(define-vector-data-type record)
+(define-vector-data-type extended-number)
+(define-vector-data-type continuation)
+(define-vector-data-type template)
 
 (define (vm-vector-fill! v val)
   (do ((i 0 (+ i 1)))
       ((= i (vm-vector-length v)) v)
     (vm-vector-set! v i val)))
 
-; Records
+(define (continuation-cont     c) (continuation-ref c 0))
+(define (continuation-pc       c) (continuation-ref c 1))
+(define (continuation-template c) (continuation-ref c 2))
+(define (continuation-env      c) (continuation-ref c 3))
 
-(define (make-record len key)
-  (make-d-vector stob/record len key))
-(define record?       (stob-predicate stob/record))
-(define record-length d-vector-length)
-(define record-ref    d-vector-ref)
-(define record-set!   d-vector-set!)
+(define (set-continuation-cont!     c val) (continuation-set! c 0 val))
+(define (set-continuation-pc!       c val) (continuation-set! c 1 val))
+(define (set-continuation-template! c val) (continuation-set! c 2 val))
+(define (set-continuation-env!      c val) (continuation-set! c 3 val))
 
-(define (record-size len)
-  (+ len 1))
+(define continuation-cells 4)
 
-; Extended-Numbers
+(define (template-code tem) (template-ref tem 0))
+(define (template-name tem) (template-ref tem 1))
 
-(define (make-extended-number len key)
-  (make-d-vector stob/extended-number len key))
-(define extended-number?       (stob-predicate stob/extended-number))
-(define extended-number-length d-vector-length)
-(define extended-number-ref    d-vector-ref)
-(define extended-number-set!   d-vector-set!)
+; The VM needs a few templates for various obscure purposes.
 
-(define (extended-number-size len)
-  (+ len 1))
+(define (make-template-containing-ops op1 op2)
+  (let ((temp (make-template 2 universal-key))
+        (code (make-code-vector 2 universal-key)))
+    (template-set! temp 0 code)
+    (code-vector-set! code 0 op1)
+    (code-vector-set! code 1 op2)
+    temp))
 
-; Continuations
-
-(define (make-continuation len key)
-  (make-d-vector stob/continuation len key))
-(define continuation?       (stob-predicate stob/continuation))
-(define continuation-length d-vector-length)
-(define continuation-ref    d-vector-ref)
-(define continuation-set!   d-vector-set!)
-
-(define (continuation-size len)
-  (+ len 1))
+(define (op-template-size op-count)
+  (+ (template-size 2) (code-vector-size op-count)))
 
 ; Code vectors
 
-(define (make-code-vector len key)
-  (make-b-vector stob/code-vector len key))
-(define code-vector?        (stob-predicate  stob/code-vector))
+(define make-code-vector   (stob-maker (enum stob code-vector) make-b-vector))
+(define code-vector?       (stob-predicate (enum stob code-vector)))
 (define code-vector-length b-vector-length)
 (define code-vector-ref    b-vector-ref)
 (define code-vector-set!   b-vector-set!)
@@ -96,49 +192,10 @@
 (define (code-vector-size len)
   (+ 1 (bytes->cells len)))
 
-; Templates
-
-(define (make-template len key)
-  (make-d-vector stob/template len key))
-(define template?       (stob-predicate stob/template))
-(define template-length d-vector-length)
-(define template-ref    d-vector-ref)
-(define template-set!   d-vector-set!)
-
-(define (template-size len)
-  (+ len 1))
-
-(define (template-code tem) (template-ref tem 0))
-(define (template-name tem) (template-ref tem 1))
-
-(define (make-special-op-template op)
-  (let ((temp (make-template 2 universal-key))
-        (code (make-code-vector 2 universal-key)))
-    (template-set! temp 0 code)
-    (code-vector-set! code 0 op)
-    (code-vector-set! code 1 op/return)
-    temp))
-
-(define (make-special-two-op-template op1 op2)
-  (let ((temp (make-template 2 universal-key))
-        (code (make-code-vector 3 universal-key)))
-    (template-set! temp 0 code)
-    (code-vector-set! code 0 op1)
-    (code-vector-set! code 0 op2)
-    (code-vector-set! code 1 op/return)
-    temp))
-
-(define special-op-template-size
-  (+ (template-size 2) (code-vector-size 2)))
-
-(define special-two-op-template-size
-  (+ (template-size 2) (code-vector-size 3)))
-
 ; Strings
 
-(define (vm-make-string len key)
-  (make-b-vector stob/string len key))
-(define vm-string?       (stob-predicate  stob/string))
+(define vm-make-string   (stob-maker (enum stob string) make-b-vector))
+(define vm-string?       (stob-predicate (enum stob string)))
 (define vm-string-length b-vector-length)
 (define vm-string-ref    (lambda (s i) (ascii->char (b-vector-ref s i))))
 (define vm-string-set!   (lambda (s i c) (b-vector-set! s i (char->ascii c))))
@@ -220,43 +277,4 @@
   (table-searcher (lambda (sym) (vm-string-hash (vm-symbol->string sym)))
 		  vm-eq?
 		  (lambda (sym key) sym)))
-
-(define xlookup
-  (table-searcher (lambda (sym) (vm-string-hash (vm-symbol->string sym)))
-                  (lambda (sym location)
-                    (vm-eq? sym (location-id location)))
-                  (lambda (sym key) (make-location unbound-marker sym key))))
-
-(define (lookup env sym key)
-  (xlookup sym env key))
-
-; Cf. struct.scm:
-;
-; The hash function was tested on 607 symbols from the
-; scheme48 sources.  Whether or not the symbol table size (modulus)
-; was prime or not was found not to make much difference; in fact,
-; moduli of 256 and 512 worked out pretty well.  The standard
-; deviation for the length of the buckets was as follows:
-;      199           1.744
-;      256           1.695
-;      509           1.175
-;      512           1.202
-;      1021          0.828
-; Since taking a remainder mod 512 is much faster than taking one mod
-; 509, 512 is the choice here for the table size.
-
-(define log-table-size 9)
-(define table-size (ashl 1 log-table-size))
-
-(define (make-hash-table key)
-  (let ((table (vm-make-vector table-size key)))
-    (vm-vector-fill! table null)
-    table))
-
-(define make-location-table make-hash-table)
-
-(define make-symbol-table   make-hash-table)
-
-
-; Eventually, perhaps: make-table, table-ref, table-set!
 

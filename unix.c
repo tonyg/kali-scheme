@@ -14,6 +14,8 @@
    "ps_" stands for "Pre-Scheme"
 */
 
+#include "sysdep.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,20 +26,12 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/times.h>
-#ifndef sgi
+#if defined(HAVE_SYS_TIMEB_H)
 #include <sys/timeb.h>
 #endif
 
 #include <signal.h>
 #include <nlist.h>
-
-
-
-#if defined(svr4) || defined(SVR4) || defined (__svr4__) || defined(sun) 
-#if !defined(MACH)
-#define HAS_DLOPEN
-#endif /*not MACH*/
-#endif /*svr4*/
 
 /*
 From: Jim.Rees@umich.edu
@@ -51,7 +45,6 @@ If you (or your compiler) are squeamish about passing too many parameters in
 to a system call, you might want to do it differently, but in any case you
 should always use gettimeofday on bsd machines.
  */
-#define HAS_GETTIMEOFDAY
 
 #define USER_NAME_SIZE 256
 
@@ -149,9 +142,8 @@ main(argc, argv)
 #define FILENAME_SIZE 256
 #define SPEC_SIZE 16
 
-long ps_open(filename, spec)
+FILE *ps_open(filename, spec)
   char *filename, *spec;
-
 {
   char filename_temp[FILENAME_SIZE], spec_temp[SPEC_SIZE];
   char *expanded;
@@ -166,7 +158,7 @@ long ps_open(filename, spec)
   if (expanded == NULL) return((long) NULL);
   strncpy(spec_temp, spec, spec_len);
   spec_temp[spec_len] = 0;
-  return((long) fopen(expanded, spec_temp));
+  return fopen(expanded, spec_temp);
 }
 
 /* For char-ready? */
@@ -183,9 +175,14 @@ int char_ready_p( FILE* stream )
     return EOF;
 
   /* Grossly unportable examination of stdio buffer internals */
-#if defined(sgi) || defined(HPUX) || defined(sun4) || defined(ultrix)
+#if defined(FILE_HAS__CNT)
   if (stream->_cnt)
     return stream->_cnt;
+#elif defined(__linux__)
+  if (stream->_IO_read_ptr < stream->_IO_read_end)
+    return(stream->_IO_read_end - stream->_IO_read_ptr);
+#else
+  /* Add your own favorites here. */
 #endif
 
   FD_ZERO(&readfds);
@@ -212,7 +209,7 @@ int char_ready_p( FILE* stream )
 
 long ps_real_time()
 {
-#if defined(HAS_GETTIMEOFDAY)
+#if defined(HAVE_GETTIMEOFDAY)
   struct timeval tv;
   static struct timeval tv_orig;
   static int initp = 0;
@@ -223,7 +220,7 @@ long ps_real_time()
   gettimeofday(&tv, NULL);
   return ((long)((tv.tv_sec - tv_orig.tv_sec)*TICKS_PER_SECOND
 		 + (tv.tv_usec - tv_orig.tv_usec)/(1000000/TICKS_PER_SECOND)));
-#else /*! HAS_GETTIMEOFDAY*/
+#else /*not HAVE_GETTIMEOFDAY*/
   struct timeb tb;
   static struct timeb tb_origin;
   static int initp = 0;
@@ -234,7 +231,7 @@ long ps_real_time()
   ftime(&tb);
   return((long)((tb.time - tb_origin.time) * TICKS_PER_SECOND
 		+ (tb.millitm / (1000 / TICKS_PER_SECOND))));
-#endif /*HAS_GETTIMEOFDAY */
+#endif /*HAVE_GETTIMEOFDAY */
 }
 
 long ps_ticks_per_second()
@@ -327,17 +324,17 @@ char
   }
 }
 
-#ifdef NeXT
+#if !defined(NLIST_HAS_N_NAME)
 #define n_name	n_un.n_name
 #endif
 
 long
 lookup_external_name( char *name, long *location )
 {
-#ifdef HAS_DLOPEN
+#if defined(HAVE_DLOPEN)
   extern int lookup_dlsym(char*, long*);
   return lookup_dlsym(name, location);
-#else /* !HAS_DLOPEN */
+#else /* not HAVE_DLOPEN */
   char *reloc_info_file;
   struct nlist name_list[2];
   int status;
@@ -361,7 +358,7 @@ lookup_external_name( char *name, long *location )
     *location = name_list[0].n_value;
     return 1;
   }
-#endif /*! HAS_DLOPEN */
+#endif /*! HAVE_DLOPEN */
 }
 
 /* temporary hack until this is added as a PreScheme primitive */

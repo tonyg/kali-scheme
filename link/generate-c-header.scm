@@ -1,13 +1,13 @@
 
-;Date: Mon, 24 Jan 94 15:19:31 -0500
-;From: kelsey@research.nj.nec.com
-;To: jar@martigny.ai.mit.edu
-;Subject: C header file generator
-;
-;Here is the generator (this needs Big Scheme):
+; [This is a kludge.  Richard is loathe to include it in the
+; distribution.]
 
 ; Reads arch.scm and data.scm and writes out a C .h file with constants
 ; and macros for dealing with Scheme 48 data structures.
+
+; Needs Big Scheme.
+
+; (make-c-header-file "scheme48.h" "vm/arch.scm" "vm/data.scm")
 
 (define (make-c-header-file c-file arch-file data-file)
   (receive (stob-list stob-data)
@@ -28,7 +28,7 @@
 		     enum-definition-list)
       (with-output-to-file c-file
 	(lambda ()
-	  (format #t "typedef int scheme_value;~%~%")
+	  (format #t "typedef long scheme_value;~%~%")
 	  (tag-stuff tag-list)
 	  (newline)
 	  (immediate-stuff immediate-list)
@@ -47,17 +47,18 @@
   (c-define "EXTRACT_FIXNUM(x) ((long)(x) >> 2)"))
 
 (define (immediate-stuff imm-list)
-  (c-define "MISC_IMMEDIATE(n) (scheme_value)(IMM_TAG | ((n) << 2))")
+  (c-define "MISC_IMMEDIATE(n) (scheme_value)(IMMEDIATE_TAG | ((n) << 2))")
   (do ((imm imm-list (cdr imm))
        (i 0 (+ i 1)))
       ((null? imm))
     (let ((name (upcase (car imm))))
       (c-define "SCH~A    MISC_IMMEDIATE(~D)" name i)))
+  (c-define "UNDEFINED SCHUNDEFINED")
   (newline)
   (c-define "ENTER_BOOLEAN(n) ((n) ? SCHTRUE : SCHFALSE)")
   (c-define "EXTRACT_BOOLEAN(x) ((x) != SCHFALSE)")
   (newline)
-  (c-define "ENTER_CHAR(c) (MISC_IMMEDIATE(SCHCHAR) | ((c) << 8))")
+  (c-define "ENTER_CHAR(c) (SCHCHAR | ((c) << 8))")
   (c-define "EXTRACT_CHAR(x) ((x) >> 8)"))
 
 (define (stob-stuff stob-list stob-data)
@@ -76,7 +77,8 @@
 	((null? stob))
       (let ((name (upcase (car stob))))
 	(c-define "STOBTYPE_~A ~D" name i)
-	(c-define "~AP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_~A))" name name)))
+	(c-define "~AP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_~A))"
+		  name name)))
     (newline)
     (for-each (lambda (data)
 		(do ((accs (cdddr data) (cdr accs))
@@ -88,8 +90,8 @@
     (newline)
     (c-define "VECTOR_LENGTH(x) STOB_LLENGTH(x)")
     (c-define "VECTOR_REF(x, i) STOB_REF(x, i)")
-    (c-define "BYTE_VECTOR_LENGTH(x)  STOB_BLENGTH(x)")
-    (c-define "BYTE_VECTOR_REF(x, i)  (ADDRESS_AFTER_HEADER(x, unsigned char)[i])")
+    (c-define "CODE_VECTOR_LENGTH(x)  STOB_BLENGTH(x)")
+    (c-define "CODE_VECTOR_REF(x, i)  (ADDRESS_AFTER_HEADER(x, unsigned char)[i])")
     (c-define "STRING_LENGTH(x)  STOB_BLENGTH(x)")
     (c-define "STRING_REF(x, i)  (ADDRESS_AFTER_HEADER(x, char)[i])")))
 
@@ -144,8 +146,6 @@
 		  ((eof-object? next)
 		   (error "file ~S doesn't have ~A" file (cdar not-found)))
 		  (else
-		   (loop (cond ((and (pair? next)
-				     (search next not-found))
-				=> identity)
-			       (else
-				not-found)))))))))))
+		   (loop (or (and (pair? next)
+				  (search next not-found))
+			     not-found))))))))))

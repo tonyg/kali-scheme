@@ -374,6 +374,13 @@
 
 (define *debug?* #f)
 
+; utility
+
+(define (package-lookup-type p name)
+  (let ((probe (package-lookup p name)))
+    (if (binding? probe)
+	(binding-type probe)
+	#f)))
 
 ; --------------------
     

@@ -37,7 +37,7 @@
   (open scheme-level-1
 	bummed-define-record-types
 	records records-internal
-	bitwise util
+	bitwise util features
 	signals)
   (files (rts method))
   (optimize auto-integrate))
@@ -142,7 +142,8 @@
 	ascii		;for dispatch table
 	signals		;warn, signal-condition, make-condition
 	conditions	;define-condition-type
-	silly)		;really-string->symbol, reverse-list->string
+	features	;make-immutable!
+	silly)		;reverse-list->string
   (files (rts read)))
 
 (define-structure scheme-level-2 scheme-level-2-interface

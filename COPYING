@@ -9,3 +9,25 @@ only if, in addition to the acknowledgement required for
 non-commercial users, written notification of such use is provided by
 the commercial user to the authors prior to the fabrication and
 distribution of the resulting software.
+
+
+
+
+Distributing Autoconf Output
+****************************
+
+   The configuration scripts that Autoconf produces are covered by the
+GNU General Public License.  This is because they consist almost
+entirely of parts of Autoconf itself, rearranged somewhat, and Autoconf
+is distributed under the terms of the GPL.  As applied to Autoconf, the
+GPL just means that you need to distribute `configure.in' along with
+`configure'.
+
+   Programs that use Autoconf scripts to configure themselves do not
+automatically come under the GPL.  Distributing an Autoconf
+configuration script as part of a program is considered to be *mere
+aggregation* of that work with the Autoconf script.  Such programs are
+not derivative works based on Autoconf; only their configuration scripts
+are.  We still encourage software authors to distribute their work under
+terms like those of the GPL, but doing so is not required to use
+Autoconf.

@@ -16,30 +16,11 @@
       (set-contents! replacement (contents old)))
   (set-location-id! old
 		    (vector replacement p-uids new))
-
-;  (let ((bar (cdr (or (assq old *replaced-locations*)
-;                      (let ((foo (list old replacement)))
-;                        (set! *replaced-locations*
-;                              (cons foo *replaced-locations*))
-;                        foo)))))
-;    (set-cdr! bar (cons (cons p-uids new) (cdr bar))))
-
   (set-location-defined?! old #f))  ;so that exceptions will be raised
 
 (define maybe-replace-location
-  (let ((assq assq)	;paranoia
-	(memv memv))
+  (let ((memv memv))
     (lambda (loc p-uid)			;Package's unique id
-;      (let ((probe (assq loc *replaced-locations*)))
-;        (if probe
-;            (let ((bar (cdr probe)))
-;              (let loop2 ((frobs (cdr bar)))
-;                (if (eq? frobs '())     ;(null? frobs)
-;                    (maybe-replace-location (car bar) p-uid)
-;                    (if (memv p-uid (car (car frobs)))
-;                        (maybe-replace-location (cdr (car frobs)) p-uid)
-;                        (loop2 (cdr frobs))))))
-;            loc))
       (let ((foo (location-id loc)))
 	(if (vector? foo)
 	    (maybe-replace-location

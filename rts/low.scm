@@ -79,17 +79,12 @@
 ; The symbol table
 
 (define (string->symbol string)
-  (really-string->symbol (if (immutable? string)
-			     string	;+++
-			     (string-copy string))))
-
-(define (really-string->symbol string)
   (if (eq? *the-symbol-table* #f)
       (restore-the-symbol-table!))
-  (make-immutable! string)
-  (let ((sym (intern string *the-symbol-table*)))
-    (make-immutable! sym)
-    sym))
+  (make-immutable! (intern (if (immutable? string)
+			       string	;+++
+			       (string-copy string))
+			   *the-symbol-table*)))
 
 (define *the-symbol-table* #f)
 

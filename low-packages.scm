@@ -20,7 +20,7 @@
 		    (ascii ascii-interface)
 		    (locations locations-interface)
 		    (signals signals-interface)
-		    (silly (export really-string->symbol reverse-list->string))
+		    (silly (export reverse-list->string))
 		    (structure-refs (export (structure-ref :syntax))))
   (define-all-operators)		; Primitive Scheme, in the LSC paper
   (usual-transforms and cond do let let* or)

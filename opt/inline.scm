@@ -132,16 +132,3 @@
 (define (qlookup env parent symbol)
   (let ((binding (generic-lookup env parent)))
     (generic-lookup (transform-env (binding-static binding)) symbol)))
-
-
-; cf. packages.scm
-
-(define (generic-lookup env name)
-  (cond ((package? env)
-	 (package-lookup env name))
-	((structure? env)
-	 (structure-lookup env name #t))
-	((procedure? env)
-	 (lookup env name))
-	(else
-	 (error "invalid environment" env name))))

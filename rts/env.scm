@@ -5,38 +5,40 @@
 ; Accessing packages
 
 (define (environment-ref package name)
-  (let ((binding (package-lookup package name)))
-    (if (unbound? binding)
-	(error "unbound variable" name package)
-	(contents-carefully binding package name))))
+  (carefully (package-lookup package name) contents package name))
 
 (define (environment-set! package name value)
   (let ((binding (package-lookup package name)))
-    (if (unbound? binding)
-	(error "unbound variable" name package)
-	(if (not (variable-type? (binding-type binding)))
-	    (error "invalid assignment" name package value)
-	    (set-contents! (binding-place binding) value)))))
+    (if (and (binding? binding)
+	     (not (variable-type? (binding-type binding))))
+	(error "invalid assignment" name package value)
+	(carefully binding
+		   (lambda (loc)
+		     (set-contents! loc value))
+		   package name))))
 
 (define (environment-define! package name value)
   (set-contents! (package-define! package name usual-variable-type) value))
 
 (define (*structure-ref struct name)
   (let ((binding (structure-lookup struct name #f)))
-    (cond ((unbound? binding)
-	   (error "structure-ref: name not exported" struct name))
-	  (else (contents-carefully binding struct name)))))
+    (if binding
+	(carefully binding contents struct name)
+	(error "structure-ref: name not exported" struct name))))
 
-(define (contents-carefully binding env name)
-  (if (and (binding? binding)
-	   (location? (binding-place binding)))
+(define (carefully binding action env name)
+  (if (binding? binding)
       (if (eq? (binding-type binding) syntax-type)
 	  (error "attempt to reference syntax as variable" name env)
 	  (let ((loc (binding-place binding)))
-	    (if (location-defined? loc)
-		(contents loc)
-		(error "unbound variable" name env))))
-      (error "peculiar binding" name env)))
+	    (if (location? loc)
+		(if (location-defined? loc)
+		    (action loc)
+		    (error "unbound variable" name env))
+		(error "variable has no location" name env))))
+      (if (unbound? binding)
+	  (error "unbound variable" name env)
+	  (error "peculiar binding" binding name env))))
 
 
 
@@ -83,7 +85,7 @@
     (delay (cons eval
 		 (make-simple-package structs
 				      eval
-				      (delay (recur (+ level 1)))
+				      (recur (+ level 1))
 				      `(for-syntax ,level ,id))))))
 
 ; (set-reflective-tower-maker! p (lambda (clauses id) ...))

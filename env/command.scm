@@ -566,8 +566,9 @@
                (display info port)))
     (display "." port)
     (newline port)
-    (write-line "Copyright (c) 1993 by Richard Kelsey and Jonathan Rees." port)
-    (write-line "Please report bugs to scheme48-bugs@altdorf.ai.mit.edu."
+    (write-line "Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees."
+		port)
+    (write-line "Please report bugs to scheme-48-bugs@altdorf.ai.mit.edu."
                 port)
     (write-line "Type ,? (comma question-mark) for help." port)))
 

@@ -1,123 +1,6 @@
-; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
-; BREAKPOINT also needs to be defined somehow
+; Disassembler that uses the VM's data structures.
 
-
-(define s48-directory "~/s48/new/")
-
-(define vm-files
-  '(
-    s48-features
-    scheme-util
-    macros
-    
-    memory
-    arch
-    data
-    struct
-    vmio
-    init
-    gc
-
-    istruct
-    stack
-    interp
-    prim
-
-    resume
-    ))
-
-(define compiler-files
-  '(
-    (boot features)
-    (boot s48-record)
-    (boot s48-features)
-
-    (vm arch)
-    (rts cenv)
-    (rts comp)
-    (rts cprim)
-    (rts derive)
-    ))
-    
-(define debug-files
-  '(
-    s48-debug
-    transport
-    debug
-    ))
-
-(define (load-file spec)
-  (load (string-append s48-directory
-		       (symbol->string (car spec))
-		       "/"
-		       (symbol->string (cadr spec))
-		       ".scm")))
-
-(define (load-vm)
-  (for-each load-file (map (lambda (n) (list 'vm n)) vm-files))
-  (set! no-exceptions? #t))
-
-(define (load-debug)
-  (for-each load-file compiler-files)
-  (for-each load-file (map (lambda (n) (list 'vm n)) debug-files)))
-
-; useful debugging proc
-(define (binary x)
-  (do ((x x (quotient x 2))
-       (r '() (cons (bitwise-and x 1) r)))
-      ((= x 0) r)))
-
-(define (heap-walk proc)
-  (let loop ((addr *newspace-begin*))
-    (if (>= addr *hp*)
-	#t
-	(let ((d (fetch addr)))
-	  (if (header? d)
-	      (proc addr))
-	  (loop (addr1+ (addr+ addr (header-a-units d))))))))
-
-(define (find-location name)
-  (heap-walk (lambda (addr)
-	       (let ((d (fetch addr)))
-		 (if (= stob/location (header-type d))
-		     (let ((loc (make-stob-descriptor (addr1+ addr))))
-		       (if (string=? name
-				     (extract-string
-				      (vm-symbol->string (location-id loc))))
-			   (format #t "~D~%" loc))))))))
-
-(define (preview)
-  (do ((c *cont* (continuation-cont c)))
-      ((not (continuation? c)))
-    (let ((id (template-name (continuation-template c))))
-      (display (if (vm-symbol? id)
-		   (extract-string
-		    (vm-symbol->string
-		     id))
-		   #f))
-      (newline))))
-
-(define (template-locations temp)
-  (do ((i 2 (+ i 1))
-       (r '() (cons
-	       (let ((x (vm-vector-ref temp i)))
-		 (if (location? x)
-		     (extract-string (vm-symbol->string (location-id x)))
-		     #f)) r)))
-      ((>= i (vm-vector-length temp))
-       (reverse r))))
-
-(define (stack-locations)
-  (do ((c *cont* (continuation-cont c)))
-      ((not (continuation? c)))
-    (let ((id (template-name (continuation-template c))))
-      (format #t "~A: ~S~%"
-	      (if (vm-symbol? id)
-		  (extract-string (vm-symbol->string id))
-		  #f)
-	      (xtemplate (continuation-template c))))))
-  
 (define (disasm . maybe-stuff)
   (let* ((template (if (null? maybe-stuff)
 		       *template*
@@ -148,6 +31,8 @@
   (if (< pc 10) (display " "))
   (write pc))
 
+(define op/computed-goto (enum op computed-goto))
+
 (define (write-instruction template pc level write-sub-templates?)
   (let* ((code (template-code template))
          (opcode (code-vector-ref code pc)))
@@ -161,6 +46,8 @@
 				     level write-sub-templates?))))
       (display #\) )
       pc)))
+
+(define byte-limit (ashl 1 bits-used-per-byte))
 
 (define (display-computed-goto pc code)
   (display #\space)
@@ -212,8 +99,7 @@
 
 (define (write-literal-thing thing level write-templates?)
   (cond ((location? thing)
-	 (write `(location ,(or (location-name thing)
-				(location-id thing)))))
+	 (write `(location ,thing ,(location-id thing))))
 	((not (template? thing))
 	 (display #\')
 	 (write thing))

@@ -10,8 +10,8 @@
 ;  reverse-list->string  -- ok to define as follows:
 ;    (define (reverse-list->string l n)
 ;      (list->string (reverse l)))
-;  really-string->symbol -- ok to define as follows:
-;    (define really-string->symbol string->symbol)
+;  make-immutable! -- ok to define as follows:
+;    (define (make-immutable! x) x)
 ;  signal (only for use by reading-error; easily excised)
 
 
@@ -240,12 +240,12 @@
 	(or (char-numeric? c) (char=? c #\+) (char=? c #\-) (char=? c #\.)))
       (cond ((string->number string))
 	    ((member string strange-symbol-names)
-	     (really-string->symbol string))
+	     (string->symbol (make-immutable! string)))
 	    ((string=? string ".")
 	     dot)
 	    (else
 	     (reading-error port "unsupported number syntax" string)))
-      (really-string->symbol string)))
+      (string->symbol (make-immutable! string))))
 
 (define strange-symbol-names
   '("+" "-" "..."

@@ -10,7 +10,7 @@
   (open scheme-level-1
 	bummed-define-record-types
 	signals
-	features)    ; string-hash
+	features)    ; string-hash, make-immutable!
   (files (big general-table))
   (optimize auto-integrate))
 
@@ -24,6 +24,7 @@
 (define-structure meta-types meta-types-interface
   (open scheme-level-2
 	bummed-define-record-types tables bitwise
+	features ;make-immutable!
 	util signals)
   (files (bcomp mtype))
   (optimize auto-integrate))
@@ -94,6 +95,7 @@
 	syntactic
 	architecture
 	bummed-define-record-types
+	features  ;make-immutable!
 	records util tables fluids signals)
   (files (bcomp segment)
 	 (bcomp state)
@@ -108,6 +110,7 @@
 	packages
 	packages-internal       ;only for structure-package ?
 	interfaces		;interface-ref
+	locations		;make-undefined-location
 	reconstruction
 	segments
 	signals

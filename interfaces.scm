@@ -490,7 +490,8 @@
 	  table?
 	  table-ref
 	  table-set!
-	  table-walk))
+	  table-walk
+	  make-table-immutable!))
 
 (define-interface usual-macros-interface
   (export usual-transform))
@@ -651,7 +652,6 @@
 	  package?			;command.scm
 	  structure-lookup		;env.scm
 	  generic-lookup		;inline.scm
-	  package-lookup-type		;reify.scm
 	  structure-interface		;config.scm
 	  package->environment
 	  structure?
@@ -683,9 +683,6 @@
 	  package-opens
 	  set-package-integrate?!
 	  structure-name
-
-	  ;; For linker
-	  with-fresh-packages-state
 
 	  ;; For package mutation
 	  for-each-definition

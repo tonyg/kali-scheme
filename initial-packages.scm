@@ -112,5 +112,6 @@
 	syntactic usual-macros
 	meta-types			;sexp->type
 	interfaces			;make-simple-interface
-	inline)
+	inline
+	tables)
   (files (bcomp for-reify)))

@@ -92,3 +92,8 @@ and switch to the process buffer."
 		      (concat ",load "
 			      (enough-scheme-file-name file-name)
 			      "\n")))
+
+
+; For Pertti Kellom\"aki's debugger.
+; Cf. misc/psd-s48.scm.
+(defvar psd-using-slib nil "Scheme 48, not SLIB.")

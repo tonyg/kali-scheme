@@ -1,4 +1,5 @@
-/*Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.*/
+/* Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.
+   See file COPYING.*/
 
 #include <stdio.h>
 #include <sys/signal.h>
@@ -27,59 +28,15 @@ static void when_interrupt(sig, code, scp)
   return;
 }
 
-static char *c_string_to_prescheme_string(char *str)
-{
-  typedef struct ps_string {long length; char contents[1];} ps_string;
-  struct ps_string *new;
-  
-  new = (struct ps_string *)malloc(sizeof(ps_string) + strlen(str));
-  if (new == NULL) {
-    fprintf(stderr, "malloc out of space, aborting execution\n");
-    exit(1);
-  }
-  new->length = strlen(str);
-  strcpy(new->contents, str);
-  return new->contents;
-}
-
-static char *string_append(char *strings[], int count)
-{
-  int size, i, j;
-  char *result;
-
-  if (count == 0)
-    result = "";
-  else {
-    size = count;     /* room for spaces and the final \0 */
-    for (i = 0; i < count; ++i)
-      size += strlen(strings[i]);
-    result = (char *)malloc(size);
-    if (result == NULL) {
-      fprintf(stderr, "malloc out of space, aborting execution\n");
-      exit(1);
-    }
-    strcpy(result, strings[0]);
-    for (i = 1, j = strlen(strings[0]);
-	 i < count;
-	 j += 1 + strlen(strings[i]), i++)
-      {
-	result[j] = ' ';
-        strcpy(result + j + 1, strings[i]);
-      }
-  }
-  return result;
-}
-
 main(argc, argv)
      int argc; char **argv;
 {
   char *image_name = DEFAULT_IMAGE_NAME;
-  char *argument = "";
   long heap_size = DEFAULT_HEAP_SIZE; /* in numbers of cells. */
   int errors = 0;
   long return_value;
   extern long resume();
-  extern long Sinitial_heap_sizeS;
+  long vm_argc = 0;
   char *me = *argv;		/* Save program name. */
 
   object_file = reloc_file = NULL;
@@ -102,13 +59,13 @@ main(argc, argv)
 	break;
       case 'a':
 	argc--; argv++;
-	argument = string_append(argv, argc);
+	vm_argc = argc;    /* remaining args are passed to the VM */
 	argc = 0;
 	break;
       case 'o':
         argc--; argv++;
 	if (argc == 0) { errors++; break; }
-        object_file = c_string_to_prescheme_string(*argv);
+        object_file = *argv;
 	break;
       default:
 	fprintf(stderr, "Invalid argument: %s\n", *argv);
@@ -129,14 +86,11 @@ Options: -h <total heap size in words>\n\
     exit(1);
   }
 
-  argument = c_string_to_prescheme_string(argument);
-
   scheme48_init();
-  Sinitial_heap_sizeS = heap_size;
   signal(SIGINT, when_interrupt);
   signal(SIGPIPE, SIG_IGN);
 
-  return_value = resume((long)image_name, (long)argument);
+  return_value = resume(image_name, argv, vm_argc, heap_size << 2, 10000L);
 
   if (reloc_file != NULL)
     if (0 != unlink(reloc_file))

@@ -1,67 +1,11 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
-
-; This is file interp-st.scm.
-
-; Machine state
-
-(define (initialize-machine)          ;Used only at startup
-  (set! *interrupt-template*
-	(make-special-two-op-template op/ignore-values
-				      op/return-from-interrupt))
-  (initialize-stack))
-
-(define initial-machine-heap-space
-  (+ special-two-op-template-size
-     initial-stack-heap-space))
-
-; Continuations
-
-(define *template* (unassigned))
-(define *env*      (unassigned))
-(define *cont*     (unassigned))
-
-(define continuation-stack-size (stack-continuation-size continuation-cells))
-
-(define (push-continuation code-pointer size key)
-  (let ((cont (push-continuation-on-stack size key)))
-    (set-continuation-pc!       cont (code-pointer->pc code-pointer *template*))
-    (set-continuation-template! cont *template*)
-    (set-continuation-env!      cont *env*)
-    (set-continuation-cont!     cont *cont*)
-    (set! *cont* cont)))
-
-(define (push-exception-continuation key)
-  (push-continuation *code-pointer* (arguments-on-stack) key))
-
-(define (pop-continuation)
-  (let ((cont *cont*))
-    (restore-from-continuation cont)
-    (pop-continuation-from-stack cont)))
-
-(define (restore-from-continuation cont)
-  (set-template! (continuation-template cont)
-		 (continuation-pc       cont))
-  (set! *env*    (continuation-env      cont))
-  (set! *cont*   (continuation-cont     cont)))
-
-(define *code-pointer* (unassigned)) ; pointer to next instruction byte
-
-(define (set-template! tem pc)
-  (set! *template* tem)
-  (set! *code-pointer* (addr+ (address-after-header (template-code tem))
-			      (extract-fixnum pc))))
-
-(define (code-pointer->pc pointer template)
-  (enter-fixnum (addr- pointer
-                       (address-after-header (template-code template)))))
-
-(define (current-pc)
-  (code-pointer->pc *code-pointer* *template*))
+; This is file interp.scm.
 
 ; Interpreter state
 
+(define *template*           (unassigned))
+(define *code-pointer*       (unassigned)) ; pointer to next instruction byte
 (define *nargs*              (unassigned))
 (define *val*                (unassigned))
 (define *enabled-interrupts* (unassigned))
@@ -75,11 +19,11 @@
 (define *interrupt-template*       (unassigned))
 
 (define (clear-registers)
+  (reset-stack-pointer)
+  (reserve-exception-space exception-frame-size universal-key)
+  (set-current-env! unspecific)
   (set-template! *interrupt-template*          ; has to be some template
 		 (enter-fixnum 0))
-  (set! *env*                unspecific)
-  (set! *cont*               (reset-stack-pointer))
-
   (set! *nargs*              unspecific)        ; interpreter regs
   (set! *val*                unspecific)
   (set! *dynamic-state*      null)
@@ -89,6 +33,49 @@
 
   (set! *pending-interrupts* 0)
   unspecific)
+
+(define (trace-registers)
+  (let ((pc (code-pointer->pc *code-pointer* *template*)))
+    (set-template! (trace-value *template*) pc))
+  (set! *val*                (trace-value *val*))
+  (set! *dynamic-state*      (trace-value *dynamic-state*))
+  (set! *exception-handler*  (trace-value *exception-handler*))
+  (set! *interrupt-handlers* (trace-value *interrupt-handlers*))
+  (set! *interrupt-template* (trace-value *interrupt-template*))
+  (set-current-env! (trace-value (current-env)))
+  (trace-stack trace-locations))
+
+(define (set-template! tem pc)
+  (set! *template* tem)
+  (set! *code-pointer* (addr+ (address-after-header (template-code tem))
+			      (extract-fixnum pc))))
+
+(define (code-pointer->pc pointer template)
+  (enter-fixnum (addr- pointer
+                       (address-after-header (template-code template)))))
+
+(define (current-pc)
+  (code-pointer->pc *code-pointer* *template*))
+
+(define (initialize-interpreter)          ;Used only at startup
+  (set! *interrupt-template*
+	(make-template-containing-ops op/ignore-values
+				      op/return-from-interrupt)))
+
+(define initial-interpreter-heap-space (op-template-size 2))
+
+; Continuations
+
+(define (push-continuation! code-pointer size key)
+  (let ((pc (code-pointer->pc code-pointer *template*)))
+    (push-continuation-on-stack *template* pc size key)))
+
+(define (push-exception-continuation!)
+  (let ((key (allow-exception-consing exception-frame-size)))
+    (push-continuation! *code-pointer* (arguments-on-stack) key)))
+
+(define (pop-continuation!)
+  (pop-continuation-from-stack set-template!))
 
 ; Instruction stream access
 
@@ -120,65 +107,46 @@
 (define (current-opcode code-args)
   (fetch-byte (addr- *code-pointer* (+ code-args 1))))
 
-; Environment access
-
-(define make-rib vm-make-vector)
-(define rib-ref  vm-vector-ref)
-(define rib-set! vm-vector-set!)
-(define (rib-parent rib) (rib-ref rib 0))
-
-(define (env-back env back)  ;Resembles NTHCDR
-  (do ((env env (rib-parent env))
-       (i back (- i 1)))
-      ((= i 0) env)))
-
 ; Different ways to call the GC.
 
-(define (maybe-ensure-space space)
-  (if (not (available? space))
-      (interpreter-collect)))
-
 (define (ensure-space space)
-  (if (not (available? space))
-      (interpreter-collect))
+  (maybe-ensure-space-saving-temp space (enter-fixnum 0)
+    (lambda (okay? key temp)
+      (if (not okay?)
+	  (error "Scheme48 heap overflow"))
+      key)))
+
+(define (maybe-ensure-space-saving-temp space temp cont)
   (if (available? space)
-      (preallocate-space space)
-      (error "Scheme48 heap overflow")))
+      (cont #t (preallocate-space space) temp)
+      (let ((temp (collect-saving-temp temp)))
+	(cont (available? space) 0 temp))))
 
 ; Actual call to GC
 
 (define *minimum-recovered-space* 0)
 
-(define (interpreter-collect)
+(define (collect)
   (collect-saving-temp (enter-fixnum 0)))
 
 (define (collect-saving-temp value)
   (begin-collection)
   (trace-registers)
   (let ((value (trace-value value)))
+    (do-gc)
     (end-collection)
+    (close-untraced-ports!)
     (if (not (available? *minimum-recovered-space*))
 	(set-interrupt! interrupt/memory-shortage))
     value))
 
-(define (trace-registers)
-  (let ((pc (code-pointer->pc *code-pointer* *template*)))
-    (set-template! (trace-value *template*) pc))
-  (set! *env*                (trace-value *env*))
-  (set! *val*                (trace-value *val*))
-  (set! *dynamic-state*      (trace-value *dynamic-state*))
-  (set! *exception-handler*  (trace-value *exception-handler*))
-  (set! *interrupt-handlers* (trace-value *interrupt-handlers*))
-  (set! *interrupt-template* (trace-value *interrupt-template*))
-  (trace-stack *cont*))
-
 ; INTERPRET is the main instruction dispatch for the interpreter.
 
-(define trace-instructions? #f)
+;(define trace-instructions? #f)
 
 (define (interpret)
-  (if trace-instructions?
-      (write-instruction *template* (extract-fixnum (current-pc)) 1 #f))
+;  (if trace-instructions?
+;      (write-instruction *template* (extract-fixnum (current-pc))))
   (let ((op-code (next-byte)))
     ((vector-ref opcode-dispatch op-code))))
 
@@ -190,24 +158,29 @@
 
 (vector+length-fill! opcode-dispatch op-count uuo)
 
-(define (define-opcode opcode tag)
-  (vector-set! opcode-dispatch opcode tag))
+;(define (define-opcode opcode tag)
+;  (vector-set! opcode-dispatch opcode tag))
+
+(define-syntax define-opcode
+  (syntax-rules ()
+    ((define-opcode op-name body ...)
+     (vector-set! opcode-dispatch (enum op op-name) (lambda () body ...)))))
 
 ; Check number of arguments
 
-(define-opcode op/check-nargs= (lambda ()
+(define-opcode check-nargs=
   (if (= *nargs* (next-byte))
       (goto interpret)
-      (goto application-exception 1))))
+      (goto application-exception 1)))
 
-(define-opcode op/check-nargs>= (lambda ()
+(define-opcode check-nargs>=
   (if (>= *nargs* (next-byte))
       (goto interpret)
-      (goto application-exception 1))))
+      (goto application-exception 1)))
 
-(define-opcode op/nargs (lambda ()
+(define-opcode nargs
   (set! *val* (enter-fixnum *nargs*))
-  (goto interpret)))
+  (goto interpret))
 
 ; Pop off all arguments into a list and raise and exception.  *val* is the
 ; procedure being called.  BYTE-ARGS is the number of bytes of the instruction
@@ -231,169 +204,163 @@
 ;  If *nargs* is args-stack-overflow-nargs the top of the stack is a list of
 ; arguments and not just the last argument.
 
-(define-opcode op/make-rest-list (lambda ()
+(define-opcode make-rest-list
   (let* ((min-args (next-byte))
 	 (args (if (= *nargs* arg-stack-overflow-nargs)
 		   (pop-args-list (pop) (- (- *nargs* 1) min-args))
 		   (pop-args-list null  (- *nargs* min-args)))))
     (set! *val* args)
     (set! *nargs* (+ min-args 1))
-    (goto interpret))))
+    (goto interpret)))
 
 ; Environment creation
-;  The MAKE-ENV instruction adds a rib to the local environment.
-; It pops values off the stack and stores them into the new rib.
+;  The MAKE-ENV instruction adds a env to the local environment.
+; It pops values off the stack and stores them into the new env.
 
-(define-opcode op/make-env (lambda ()
-  (let* ((key (ensure-env-space (this-byte)))
-	 (env (pop-args-into-env (this-byte) key)))
-      (next-byte)
-      (rib-set! env 0 *env*)
-      (set! *env* env)
-      (goto interpret))))
+(define-opcode make-env
+  (let ((key (ensure-stack-space (stack-env-space (this-byte)) ensure-space)))
+    (pop-args-into-env (next-byte) key)
+    (goto interpret)))
 
 ; The above with the environment in the heap and not on the stack.
 
-(define-opcode op/make-heap-env (lambda ()
-  (let* ((key (ensure-heap-env-space *nargs*))
-	 (env (pop-args-into-heap-env (this-byte) key)))
-      (next-byte)
-      (rib-set! env 0 *env*)
-      (set! *env* env)
-      (goto interpret))))
+(define-opcode make-heap-env
+  (let ((key (ensure-space (heap-env-space (this-byte)))))
+    (pop-args-into-heap-env (next-byte) key)
+    (goto interpret)))
 
-(define-opcode op/pop-env (lambda ()
-  (set! *env* (rib-parent *env*))
-  (goto interpret)))
+(define-opcode pop-env
+  (set-current-env! (env-parent (current-env)))
+  (goto interpret))
 
 ; Literals
 
-(define-opcode op/literal (lambda ()    ;Load a literal into *val*.
+(define-opcode literal    ;Load a literal into *val*.
   (set! *val* (next-literal))
-  (goto interpret)))
+  (goto interpret))
 
 ; Local variable access and assignment
 
-(define-opcode op/local (lambda ()      ;Load value of a local.
-  (finish-local (env-back *env* (next-byte)) 2)))
+(define-opcode local      ;Load value of a local.
+  (goto finish-local (env-back (current-env) (next-byte)) 2))
 
-(define-opcode op/local0 (lambda ()
-  (finish-local *env* 1)))
+(define-opcode local0
+  (goto finish-local (current-env) 1))
 
-(define-opcode op/local1 (lambda ()
-  (finish-local (rib-parent *env*) 1)))
+(define-opcode local1
+  (goto finish-local (env-parent (current-env)) 1))
 
-(define-opcode op/local2 (lambda ()
-  (finish-local (rib-parent (rib-parent *env*)) 1)))
+(define-opcode local2
+  (goto finish-local (env-parent (env-parent (current-env))) 1))
 
 (define (finish-local env arg-count)
-  (set! *val* (rib-ref env (next-byte)))
+  (set! *val* (env-ref env (next-byte)))
   (cond ((not (vm-eq? *val* unassigned-marker))
 	 (goto interpret))
 	(else
 	 (goto raise-exception arg-count))))
 
-(define-opcode op/set-local! (lambda ()
+(define-opcode set-local!
   (let ((back (next-byte)))
-    (rib-set! (env-back *env* back)
+    (env-set! (env-back (current-env) back)
               (next-byte)
               *val*)
     (set! *val* unspecific)
-    (goto interpret))))
+    (goto interpret)))
 
 ; Global variable access
 
-(define-opcode op/global (lambda ()        ;Load a global variable.
+(define-opcode global        ;Load a global variable.
   (let ((location (next-literal)))
     (set! *val* (contents location))
     (cond ((undefined? *val*)           ;unbound or unassigned
 	   (goto raise-exception1 1 location))
           (else
-           (goto interpret))))))
+           (goto interpret)))))
 
-(define-opcode op/set-global! (lambda ()
+(define-opcode set-global!
   (let ((location (next-literal)))
     (cond ((vm-eq? (contents location) unbound-marker)
            (goto raise-exception2 1 location *val*))
           (else
            (set-contents! location *val*)
            (set! *val* unspecific)
-           (goto interpret))))))
+           (goto interpret)))))
 
 ; Stack operation
 
-(define-opcode op/push (lambda ()       ;Push *val* onto the stack.
+(define-opcode push       ;Push *val* onto the stack.
   (push *val*)
-  (goto interpret)))
+  (goto interpret))
 
-(define-opcode op/pop (lambda ()       ;Pop *val* from the stack.
+(define-opcode pop       ;Pop *val* from the stack.
   (set! *val* (pop))
-  (goto interpret)))
+  (goto interpret))
 
-(define-opcode op/stack-ref (lambda ()
+(define-opcode stack-ref
   (set! *val* (stack-ref (next-byte)))
-  (goto interpret)))
+  (goto interpret))
 
-(define-opcode op/stack-set! (lambda ()
+(define-opcode stack-set!
   (stack-set! (next-byte) *val*)
-  (goto interpret)))
+  (goto interpret))
 
 ; LAMBDA
 
-(define-opcode op/closure (lambda ()
-  (preserve-*env*)     ; may cause a GC
-  (let ((key (ensure-space closure-size)))
-    (set! *val* (make-closure (next-literal) *env* key))
-    (goto interpret))))
+(define-opcode closure
+  (let ((env (preserve-current-env (ensure-space (current-env-size))))
+	(key (ensure-space closure-size)))
+    (set! *val* (make-closure (next-literal) env key))
+    (goto interpret)))
 
 ; Procedure call
 
-(define-opcode op/call (lambda ()
+(define-opcode call
   (set! *nargs* (this-byte))
-  (goto perform-application 0)))
+  (goto perform-application 0))
 
-; Same as OP/CALL except that the arguments are moved to just above *CONT*
-; before the call is made.  For non-tail calls and some tail-calls the arguments
-; will already be there.
+; Same as op/call except that the arguments are moved to just above the
+; current continuation before the call is made.  For non-tail calls and some
+; tail-calls the arguments will already be there.
 
-(define-opcode op/move-args-and-call (lambda ()
+(define-opcode move-args-and-call
   (set! *nargs* (this-byte))
-  (move-args-above-cont *cont* *nargs*)
-  (goto perform-application 0)))
+  (move-args-above-cont! *nargs*)
+  (goto perform-application 0))
 
-(define-opcode op/goto-template (lambda ()
+(define-opcode goto-template
   (set-template! (next-literal) 0)
-  (goto interpret)))
+  (goto interpret))
 
-(define-opcode op/call-template (lambda ()
+(define-opcode call-template
   (set! *nargs* (next-byte))  ; needed in case of interrupts
   (set-template! (next-literal) 0)
-  (goto poll-for-interrupts)))
+  (goto poll-for-interrupts))
 
 ; Continuation creation and invocation
 
-(define-opcode op/make-cont (lambda ()   ;Start a non-tail call.
-  (let* ((key (ensure-stack-space continuation-stack-size))
-	 (offset (next-offset))
-	 (size (next-byte)))
-     (push-continuation (addr+ *code-pointer* offset) size key)
-     (goto interpret))))
+(define-opcode make-cont   ;Start a non-tail call.
+  (let* ((offset (next-offset))
+	 (size (next-byte))
+	 (key (ensure-stack-space stack-continuation-size ensure-space)))
+    (push-continuation! (addr+ *code-pointer* offset) size key)
+    (goto interpret)))
 
-(define-opcode op/return (lambda ()            ;Invoke the continuation.
-  (pop-continuation)
-  (goto interpret)))
+(define-opcode return            ;Invoke the continuation.
+  (pop-continuation!)
+  (goto interpret))
 
 ; The arguments are sitting on the stack, with the count in *nargs*.
 ; This is only used in the closed-compiled version of VALUES.
 
-(define-opcode op/values (lambda ()
-  (goto return-values *nargs*)))
+(define-opcode values
+  (goto return-values *nargs*))
 
 ; Same as the above, except that the value count is in the instruction stream.
 ; This is used for in-lining calls to VALUES.
 
-(define-opcode op/return-values (lambda ()
-  (goto return-values (this-byte))))
+(define-opcode return-values
+  (goto return-values (this-byte)))
 
 ; NARGS return values are on the stack.  If there is only one value, pop
 ; it off and do a normal return.  Otherwise, find the actual continuation
@@ -403,41 +370,34 @@
 (define (return-values nargs)
   (cond ((= nargs 1)
 	 (set! *val* (pop))
-	 (pop-continuation)
+	 (pop-continuation!)
 	 (goto interpret))
-	((not (addr= *cont* *bottom-of-stack*))
-	 (goto really-return-values *cont* nargs))
-	((continuation? (continuation-cont *cont*))
-         (goto really-return-values (continuation-cont *cont*) nargs))
 	(else
-	 (goto return-exception nargs))))
+	 (let ((cont (peek-at-current-continuation)))
+	   (if (continuation? cont)
+	       (goto really-return-values cont nargs)
+	       (goto return-exception nargs))))))
 	 
+; If the next op-code is:
+; op/ignore-values - just return, ignoring the return values
+; op/call-with-values - remove the continuation containing the consumer
+;  (the consumer is the only useful information it contains), and then call
+;  the consumer.
+; anything else - only one argument was expected so raise an exception.
+
 (define (really-return-values cont nargs)
   (let ((op (code-vector-ref (template-code (continuation-template cont))
 			     (extract-fixnum (continuation-pc cont)))))
     (cond ((= op op/ignore-values)
-	   (pop-continuation)
+	   (pop-continuation!)
 	   (goto interpret))
 	  ((= op op/call-with-values)
-	   (goto do-call-with-values nargs))
+	   (skip-current-continuation!)
+	   (set! *nargs* nargs)
+	   (set! *val* (continuation-ref cont continuation-cells))
+	   (goto perform-application 0))
 	  (else
 	   (goto return-exception nargs)))))
-
-; The continuation containing the consumer is removed (the consumer
-; is the only useful information it contains), and then the consumer
-; is called.
-
-(define (do-call-with-values nargs)
-  (let ((cont (if (addr= *cont* *bottom-of-stack*)
-		  (let ((cont (continuation-cont *cont*)))
-		    (set-continuation-cont! *cont* (continuation-cont cont))
-		    cont)
-		  (let ((cont *cont*))
-		    (set! *cont* (continuation-cont cont))
-		    cont))))
-    (set! *nargs* nargs)
-    (set! *val* (continuation-ref cont continuation-cells))
-    (goto perform-application 0)))
 
 ; This would avoid the need for the consumer to be a closure.  It doesn't
 ; work because the NARGS check (which would be the next instruction to be
@@ -451,8 +411,8 @@
 ;	(else
 ;	 (restore-from-continuation cont)))
 ;  (set! *nargs* nargs)
-;  (set! *code-pointer* (addr+ *code-pointer* 1)) ; move past op/call-with-values
-;  (goto interpret))
+;  (set! *code-pointer* (addr+ *code-pointer* 1)) ; move past (enum op call-with-values
+;)  (goto interpret))
 
 (define (return-exception nargs)
   (let ((args (if (= nargs arg-stack-overflow-nargs)
@@ -462,34 +422,34 @@
 
 ; This is executed only if the producer returned exactly one value.
 
-(define-opcode op/call-with-values (lambda ()
+(define-opcode call-with-values
   (let ((consumer (pop)))
     (push *val*)
     (set! *val* consumer)
     (set! *nargs* 1)
-    (goto perform-application 0))))
+    (goto perform-application 0)))
 
 ; This is just a marker for the code that handles returns.
 
-(define-opcode op/ignore-values (lambda ()
-  (goto interpret)))
+(define-opcode ignore-values
+  (goto interpret))
 
 ; IF
 
-(define-opcode op/jump-if-false (lambda ()
+(define-opcode jump-if-false
   (let ((offset (next-offset)))
     (cond ((false? *val*)
            (set! *code-pointer* (addr+ *code-pointer* offset))
            (goto interpret))
           (else
-           (goto interpret))))))
+           (goto interpret)))))
 
 ; Unconditional jump
 
-(define-opcode op/jump (lambda ()
+(define-opcode jump
   (let ((offset (next-offset)))
     (set! *code-pointer* (addr+ *code-pointer* offset))
-    (goto interpret))))
+    (goto interpret)))
 
 ; Computed goto
 ; Goto index is in *val*, the next byte is the number of offsets specified
@@ -497,7 +457,7 @@
 ; The instruction stream looks like
 ; op/computed-goto max offset0 offset1 ... offsetmax-1 code-for-default...
 
-(define-opcode op/computed-goto (lambda ()
+(define-opcode computed-goto
   (if (not (fixnum? *val*))
       (goto raise-exception1 0 *val*)
       (let ((max (next-byte))
@@ -507,41 +467,39 @@
 			  (nth-offset val)
 			  (* max 2))))
 	  (set! *code-pointer* (addr+ *code-pointer* offset))
-	  (goto interpret))))))
+	  (goto interpret)))))
 
-; Put *cont* in *val* (used by primitive-catch)
+; Preserve the current continuation and put it in *val*.
 
-(define-opcode op/current-cont (lambda ()
-  (let* ((key (ensure-space (stack-size)))
-	 (cont (preserve-continuation *cont* key copy/preserve)))
-    (set! *cont* (restore-continuation cont))
-    (set! *val* cont)
-    (goto interpret))))
+(define-opcode current-cont
+  (let ((key (ensure-space (current-continuation-size))))
+    (set! *val* (current-continuation key))
+    (goto interpret)))
 
-(define-opcode op/with-continuation (lambda ()
-  (set! *cont* (restore-continuation (pop)))
+(define-opcode with-continuation
+  (set-current-continuation! (pop))
   (set! *nargs* 0)
-  (goto perform-application 0)))
+  (goto perform-application 0))
 
 ; only used in the stack underflow template
 
-(define-opcode op/get-cont-from-heap (lambda ()
+(define-opcode get-cont-from-heap
   (let ((cont (get-continuation-from-heap)))
     (cond ((not (false? cont))
-	   (set! *cont* cont)
+	   (set-current-continuation! cont)
 	   (goto interpret))
 	  ((fixnum? *val*)           ; VM returns here
 	   (set! *val* (extract-fixnum *val*))
 	   return-option/exit)
 	  (else
 	   (reset-stack-pointer)     ; get a real continuation on the stack
-	   (goto raise-exception1 0 *val*))))))
+	   (goto raise-exception1 0 *val*)))))
 
 ; APPLY - pop the procedure off of the stack, push each argument from the list,
 ; and then call the procedure.  Tne next byte is the number of arguments that
 ; have already been pushed on the stack.
 
-(define-opcode op/apply (lambda ()
+(define-opcode apply
   (let ((proc (pop)))
     (okay-argument-list
      *val*
@@ -551,7 +509,7 @@
        (goto perform-application 0))
      (lambda ()
        (let ((args (pop-args-list null (this-byte))))
-	 (goto raise-exception3 0 proc args *val*)))))))
+	 (goto raise-exception3 0 proc args *val*))))))
        
 ; If LIST is a proper list (final cdr is null) then OKAY-CONT is called on the
 ; length of LIST, otherwise LOSE-CONT is called.
@@ -610,37 +568,37 @@
 
 ; Miscellaneous primitive procedures
 
-(define-opcode op/unassigned (lambda ()
+(define-opcode unassigned
   (set! *val* unassigned-marker)
-  (goto interpret)))
+  (goto interpret))
 
-(define-opcode op/unspecific (lambda ()
+(define-opcode unspecific
   (set! *val* unspecific)
-  (goto interpret)))
+  (goto interpret))
 
-(define-opcode op/set-exception-handler! (lambda ()
+(define-opcode set-exception-handler!
   ;; New exception handler in *val*
   (cond ((not (closure? *val*))
 	 (goto raise-exception1 0 *val*))
 	(else
 	 (set! *exception-handler* *val*)
-	 (goto interpret)))))
+	 (goto interpret))))
 
-(define-opcode op/set-interrupt-handlers! (lambda ()
+(define-opcode set-interrupt-handlers!
   ;; New interrupt handler vector in *val*
   (cond ((or (not (vm-vector? *val*))
 	     (< (vm-vector-length *val*) interrupt-count))
 	 (goto raise-exception1 0 *val*))
 	(else
 	 (set! *interrupt-handlers* *val*)
-	 (goto interpret)))))
+	 (goto interpret))))
 
-(define-opcode op/set-enabled-interrupts! (lambda ()
+(define-opcode set-enabled-interrupts!
   ;; New interrupt mask as fixnum in *val*
   (let ((temp *enabled-interrupts*))
     (set! *enabled-interrupts* (extract-fixnum *val*))
     (set! *val* (enter-fixnum temp))
-    (goto interpret))))
+    (goto interpret)))
 
 ;;; Procedure call
 ; The CLOSURE? check must come before the interrupt check, as the interrupt
@@ -649,7 +607,7 @@
 
 (define (perform-application bytes-consumed)
   (cond ((closure? *val*)
-         (set! *env* (closure-env *val*))
+         (set-current-env! (closure-env *val*))
          (set-template! (closure-template *val*) 0)
 	 (goto poll-for-interrupts))
 	(else
@@ -666,12 +624,11 @@
 ; is called.
 
 (define exception-frame-size      ; a continuation plus up to five arguments
-  (+ continuation-stack-size 5))  ; one of which is the opcode
+  (+ stack-continuation-size 5))  ; one of which is the opcode
 
 (define (start-exception args)
-  (let ((key (allow-exception-consing)))
-    (push-exception-continuation key)
-    (push (enter-fixnum (current-opcode args)))))
+  (push-exception-continuation!)
+  (push (enter-fixnum (current-opcode args))))
 
 (define (raise-exception args)
   (start-exception args)
@@ -712,13 +669,15 @@
 (define no-exceptions? #f)
 
 (define (raise nargs)
-  (if no-exceptions?
-      (breakpoint "exception check" nargs))
+;  (if no-exceptions?
+;      (breakpoint "exception check" nargs))
   (set! *nargs* (+ nargs 1))   ; extra arg is the op-code
   (set! *val* *exception-handler*)
   (if (not (closure? *val*))
       (error "exception handler is not a closure"))
-  (reserve-exception-space)
+  (reserve-exception-space exception-frame-size
+			   (ensure-stack-space exception-frame-size
+					       ensure-space))
   (goto perform-application 0))
 
 ; Interrupts
@@ -728,14 +687,14 @@
 ; *enabled-interrupts*.
 
 (define (handle-interrupt)
-  (let ((key (ensure-stack-space continuation-stack-size))
+  (let ((key (ensure-stack-space stack-continuation-size ensure-space))
 	(interrupt (get-highest-priority-interrupt!)))
     (push *template*)
-    (push *env*)
+    (push (current-env))
     (push (enter-fixnum *nargs*))
     (push (enter-fixnum *enabled-interrupts*))
     (set-template! *interrupt-template* (enter-fixnum 0))
-    (push-continuation *code-pointer* (+ *nargs* 4) key)
+    (push-continuation! *code-pointer* (+ *nargs* 4) key)
     (push (enter-fixnum *enabled-interrupts*))
     (set! *nargs* 1)
     (if (not (vm-vector? *interrupt-handlers*))
@@ -746,12 +705,12 @@
         (error "interrupt handler is not a closure" interrupt))
     (goto perform-application 0)))
 
-(define-opcode op/return-from-interrupt (lambda ()
+(define-opcode return-from-interrupt
   (set! *enabled-interrupts* (extract-fixnum (pop)))
   (set! *nargs*              (extract-fixnum (pop)))
-  (set! *env*                (pop))
-  (set-template! (pop) 0)
-  (goto interpret)))
+  (set-current-env! (pop))
+  (set-template!    (pop) 0)
+  (goto interpret))
 
 (define (get-highest-priority-interrupt!)
   (let ((n (bitwise-and *pending-interrupts* *enabled-interrupts*)))
@@ -771,4 +730,9 @@
   (set! *pending-interrupts*
 	(bitwise-and *pending-interrupts*
 		     (bitwise-not (ashl 1 interrupt)))))
+
+(define op/ignore-values (enum op ignore-values))
+(define op/call-with-values (enum op call-with-values))
+(define op/return-from-interrupt (enum op return-from-interrupt))
+
 

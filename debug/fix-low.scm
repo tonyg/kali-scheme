@@ -39,14 +39,10 @@
   (access true-scheme)
   (files level-0))
 
-(define-structure silly (export really-string->symbol
-				reverse-list->string)
+(define-structure silly (export reverse-list->string)
   (open true-scheme)
-  (begin
-    (define really-string->symbol string->symbol)
-
-    (define (reverse-list->string l n)
-      (list->string (reverse l)))))
+  (begin (define (reverse-list->string l n)
+	   (list->string (reverse l)))))
 
 (define-structure cont-primitives
     (export make-continuation

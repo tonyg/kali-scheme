@@ -95,12 +95,9 @@
   (open scheme-level-2 signals escapes)
   (files (alt low)))
 
-(define-structure silly (export really-string->symbol
-				reverse-list->string)
+(define-structure silly (export reverse-list->string)
   (open scheme-level-1)
   (begin
-    (define really-string->symbol
-      string->symbol)
     (define (reverse-list->string l n)
       ;; Significantly faster than (list->string (reverse l))
       (let ((s (make-string n #\x)))

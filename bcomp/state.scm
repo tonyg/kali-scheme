@@ -34,7 +34,7 @@
 
 (define $debug-flags
   (make-fluid (make-debug-flags #t	;proc names
-				#t	;env maps
+				#f	;env maps
 				#f	;no file names
 				#f	;no cont source
 				#f	;no tabulate
@@ -60,7 +60,7 @@
 
 (define (with-fresh-compiler-state template-uid-origin thunk)
   (let-fluid $debug-flags (make-debug-flags #t ;proc names
-					    #t ;env maps
+					    #f ;env maps
 					    #f ;no file names
 					    #f ;no cont source
 					    #t ;tabulate       ***

@@ -48,7 +48,7 @@
 
 ; Image builder.
 
-(define-structures ((build (export build-image))
+(define-structures ((build (export build-image stand-alone-resumer))
 		    (build-commands build-commands-interface))
   (open scheme-level-2
         command-processor
@@ -118,7 +118,9 @@
         debug-data
         packages
         packages-internal
-        syntactic)
+        syntactic
+	features
+	weak)
   (files (env debuginfo)))
 
 ; Most of the debugging commands.
@@ -544,7 +546,7 @@
 	    receiving
 	    search-trees
 	    sicp
-	    sockets
+	    ;; sockets
 	    sort
 	    threads
 	    traverse
