@@ -82,6 +82,7 @@
 
 (define-structure placeholders placeholder-interface
   (open scheme-level-1 proposals queues
+	(subset util (unspecific))
 	threads threads-internal
 	interrupts
 	signals)
