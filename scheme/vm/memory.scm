@@ -1,52 +1,6 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
 ; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-
-; This is file memory.scm.
-
-; Fundamental parameters
-
-(define bits-per-byte 8)
-(define bytes-per-cell 4)
-(define bits-per-cell (* bits-per-byte bytes-per-cell))
-
-(define (bytes->cells bytes)
-  ; using shift instead of quotient for speed
-  ; (quotient (+ bytes (- bytes-per-cell 1)) bytes-per-cell)
-  (arithmetic-shift-right (+ bytes (- bytes-per-cell 1))
-			  2))  ; log(bytes-per-cell)
-
-(define (cells->bytes cells)
-  (* cells bytes-per-cell))
-
-; Addresses
-;
-;  An "addressing unit" is the smallest quantum of storage addressed by
-;  an address on a particular machine.  On a DEC-20, 3600, or other
-;  word-addressed architecture there is one addressing unit per cell.  On
-;  the VAX or 68000, though, the addressing unit is the byte, of which there
-;  are 4 to a cell.
-;
-;  Note: by a "byte" is meant enough bits to store either a character or
-;  a bytecode.  That probably means either 7, 8, or 9 bits.
-;
-;  If the addressing unit is smaller than a cell each address will have some
-;  number of "unused bits" at its low end.  On a byte-addressable machine with
-;  32 bit addresses, there are two.
-
-(define unused-field-width 2)
-
-(define addressing-units-per-cell 4)
-
-(define (cells->a-units cells)
-  (adjoin-bits cells 0 unused-field-width))
-
-(define (a-units->cells cells)
-  (high-bits cells unused-field-width))
-
-(define (bytes->a-units byte-count)
-  (cells->a-units (bytes->cells byte-count)))
-
 (define (address1+ x)
   (address+ x addressing-units-per-cell))
 
@@ -84,7 +38,26 @@
 (define store-byte! unsigned-byte-set!)
 (define store-flonum! flonum-set!)
 
-
 (define fetch-string char-pointer->string)
 (define fetch-nul-terminated-string char-pointer->nul-terminated-string)
 
+;----------------------------------------------------------------
+
+(define (address->stob-descriptor addr)
+  (add-stob-tag (address->integer addr)))
+
+(define stob-overhead 1)  ; header uses up one descriptor
+
+(define (address-after-header stob)
+  (assert (stob? stob))
+  (integer->address (remove-stob-tag stob)))
+
+(define (address-at-header stob)
+  (address- (address-after-header stob)
+	    (cells->a-units 1)))
+
+(define (stob-header stob)
+  (fetch (address-at-header stob)))
+
+(define (stob-header-set! stob header)
+  (store! (address-at-header stob) header))

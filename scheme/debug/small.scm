@@ -44,7 +44,8 @@
 			  (arithmetic-shift 1 (enum port-status-options
 						    open-for-output)))
 	     channel
-	     #f #f #f ; input stuff
+	     #f		; lock
+	     #f #f	; input stuff
 	     (make-code-vector buffer-size 0)
 	     0))
 
@@ -55,10 +56,11 @@
 			  (arithmetic-shift 1 (enum port-status-options
 						    open-for-input)))
 	     channel
+	     #f		; lock
 	     (make-code-vector buffer-size 0)
 	     0
 	     0
-	     #f #f))  ; ouput stuff
+	     #f #f))  ; output stuff
 
 (define *error-channel* #f)
 

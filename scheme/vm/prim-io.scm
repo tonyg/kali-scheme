@@ -229,19 +229,19 @@
       (if (and (port? port)
 	       (port-has-status? port
 				 (enum port-status-options open-for-input)))
-	  (let ((i (extract-fixnum (port-index port)))
-		(l (extract-fixnum (port-limit port)))
-		(b (port-buffer port)))
-	    (cond ((or (vm-eq? (port-locked? port) true)
-		       (false? b)
-		       (= i l))
-		   (raise-exception buffer-full/empty 1 port))
-		  (else
-		   (if read?
-		       (set-port-index! port (enter-fixnum (+ i 1))))
-		   (goto continue-with-value
-			 (enter-char (ascii->char (code-vector-ref b i)))
-			 1))))
+	  (let ((b (port-buffer port)))
+	    (if (false? b)
+		(raise-exception buffer-full/empty 1 port)
+		(let ((i (extract-fixnum (port-index port)))
+		      (l (extract-fixnum (port-limit port))))
+		  (cond ((= i l)
+			 (raise-exception buffer-full/empty 1 port))
+			(else
+			 (if read?
+			     (set-port-index! port (enter-fixnum (+ i 1))))
+			 (goto continue-with-value
+			       (enter-char (ascii->char (code-vector-ref b i)))
+			       1))))))
 	  (raise-exception wrong-type-argument 1 port)))))
 
 (let ((do-it (read-or-peek-char #t)))
@@ -264,20 +264,20 @@
 	       (port? port)
 	       (port-has-status? port
 				 (enum port-status-options open-for-output)))
-	  (let ((i (extract-fixnum (port-index port)))
-		(b (port-buffer port)))
-	    (cond ((or (vm-eq? (port-locked? port) true)
-		       (false? b)
-		       (= i (code-vector-length b)))
-		   (raise-exception buffer-full/empty 1 char port))
-		  (else
-		   (set-port-index! port (enter-fixnum (+ i 1)))
-		   (code-vector-set! (port-buffer port)
-				     i
-				     (char->ascii (extract-char char)))
-		   (goto continue-with-value
-			 unspecific-value
-			 1))))
+	  (let ((b (port-buffer port)))
+	    (if (false? b)
+		(raise-exception buffer-full/empty 1 char port)
+		(let ((i (extract-fixnum (port-index port))))
+		  (cond ((= i (code-vector-length b))
+			 (raise-exception buffer-full/empty 1 char port))
+			(else
+			 (set-port-index! port (enter-fixnum (+ i 1)))
+			 (code-vector-set! (port-buffer port)
+					   i
+					   (char->ascii (extract-char char)))
+			 (goto continue-with-value
+			       unspecific-value
+			       1))))))
 	  (raise-exception wrong-type-argument 1 char port)))))
 	  
 ; Do an ASSQ-like walk up the current dynamic environment, looking for

@@ -191,28 +191,44 @@
 (define (current-pc)
   (code-pointer->pc *code-pointer* *template*))
 
+; These two templates are used when pushing continuations for calls to
+; interrupt and exception handlers.  The continuation data gives zero
+; as the size, which tells the stack-tracing code that the real size
+; is in the continuation just below the saved registers.
+
 (define (initialize-interpreter+gc)          ;Used only at startup
-  (let ((key (ensure-space (* 2 (op-template-size 3)))))
+  (let ((key (ensure-space (* 2 (op-template-size 6)))))
     (set! *interrupt-template*
-	  (make-template-containing-three-ops (enum op protocol)
-					      ignore-values-protocol
-					      (enum op return-from-interrupt)
-					      key))
+	  (make-template-containing-six-ops (enum op cont-data)
+					    0
+					    0
+					    (enum op protocol)
+					    ignore-values-protocol
+					    (enum op return-from-interrupt)
+					    key))
     (set! *exception-template*
-	  (make-template-containing-three-ops (enum op protocol)
-					      1	; want exactly one return value
-					      (enum op return-from-exception)
-					      key))))
+	  (make-template-containing-six-ops (enum op cont-data)
+					    0
+					    0
+					    (enum op protocol)
+					    1	; want exactly one return value
+					    (enum op return-from-exception)
+					    key))))
+
+; Users of the above templates have to skip over the continuation data.
+(define continuation-data-size 3)
 
 ;----------------
 ; Continuations
 
-(define (push-continuation! code-pointer size)
-  (let ((pc (code-pointer->pc code-pointer *template*)))
-    (push-continuation-on-stack *template* pc size)))
+(define (push-continuation! code-pointer)
+  (push-continuation-on-stack *template* code-pointer))
 
 (define (pop-continuation!)
-  (pop-continuation-from-stack set-template!))
+  (pop-continuation-from-stack
+    (lambda (template code-pointer)
+      (set! *code-pointer* code-pointer)
+      (set! *template* template))))
   
 ;----------------
 ; Instruction stream access
@@ -323,21 +339,20 @@
 
 (define (push-exception-continuation! exception instruction-size)
   (let ((opcode (current-opcode)))
-    (push (enter-fixnum instruction-size))
-    (push (enter-fixnum exception))
-    (push *template*)
-    (push (current-pc))
-    (set-template! *exception-template* (enter-fixnum 0))
-    (push-continuation! *code-pointer* (arguments-on-stack))
+    (push-exception-data *template*
+			 (current-pc)
+			 (enter-fixnum exception)
+			 (enter-fixnum instruction-size))
+    (set-template! *exception-template* (enter-fixnum continuation-data-size))
+    (push-continuation! *code-pointer*)
     (push (enter-fixnum opcode))
     (push (enter-fixnum exception))))
 
 (define-opcode return-from-exception
-  (let* ((pc (extract-fixnum (pop)))
-	 (template (pop))
-	 (exception (pop))	; ignored
-	 (size (extract-fixnum (pop))))
-    (set-template! template (enter-fixnum (+ pc size)))
+  (receive (pc template exception size)
+      (pop-exception-data)
+    (set-template! template (enter-fixnum (+ (extract-fixnum pc)
+					     (extract-fixnum size))))
     (goto interpret *code-pointer*)))
 
 ;(define no-exceptions? #t)
@@ -572,15 +587,8 @@
 
 (define-opcode make-cont   ;Start a non-tail call.
   (push-continuation! (address+ *code-pointer*
-				(code-offset 0))
-		      (code-byte 2))
-  (goto continue 3))
-
-(define-opcode make-big-cont   ;Start a non-tail call.
-  (push-continuation! (address+ *code-pointer*
-				(code-offset 0))
-		      (code-offset 2))
-  (goto continue 4))
+				(code-offset 0)))
+  (goto continue 2))
 
 ;----------------
 ; Preserve the current continuation and put it in *val*.

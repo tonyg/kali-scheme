@@ -43,13 +43,8 @@
 ; stack.
 
 (define (s48-restart proc nargs)
-  (save-temp0! proc)
-  (let ((key (ensure-space (code-vector-size 2))))
-    (let ((code (make-code-vector 2 key))
-	  (proc (recover-temp0!)))
-      (code-vector-set! code 0 (enum op call))
-      (code-vector-set! code 1 nargs)
-      (set-code-pointer! code 0)
-      (set-val! proc)
-      (interpret (code-pointer)))))
-
+  (cond ((closure? proc)
+         (set-val! proc)
+	 (perform-application nargs))
+	(else
+	 (error "s48-restart called with non-procedure" proc))))

@@ -34,33 +34,33 @@ static void relocate_image(long delta_0X, char * start_1X, char * end_2X)
   long descriptor_4X;
   char * ptr_3X;
  {  arg1K0 = start_1X;
-  goto L1648;}
- L1648: {
+  goto L1676;}
+ L1676: {
   ptr_3X = arg1K0;
   if ((ptr_3X < end_2X)) {
     descriptor_4X = *((long *) ptr_3X);
     if ((3 == (3 & descriptor_4X))) {
       arg0K0 = (3 + (((long) ((((char *) (-3 + descriptor_4X))) + delta_0X))));
-      goto L1653;}
+      goto L1681;}
     else {
       arg0K0 = descriptor_4X;
-      goto L1653;}}
+      goto L1681;}}
   else {
     return;}}
- L1653: {
+ L1681: {
   d_5X = arg0K0;
   *((long *) ptr_3X) = d_5X;
   if ((2 == (3 & d_5X))) {
     if (((31 & (((d_5X)>>2))) < 17)) {
-      goto L1667;}
+      goto L1695;}
     else {
       arg1K0 = (ptr_3X + (4 + (-4 & (3 + ((long)(((unsigned long)d_5X)>>8))))));
-      goto L1648;}}
+      goto L1676;}}
   else {
-    goto L1667;}}
- L1667: {
+    goto L1695;}}
+ L1695: {
   arg1K0 = (ptr_3X + 4);
-  goto L1648;}
+  goto L1676;}
 }
 static char relocate_symbol_tableB(long table_6X, long delta_7X)
 {
@@ -81,12 +81,12 @@ static char relocate_symbol_tableB(long table_6X, long delta_7X)
  {  if ((3 == (3 & table_6X))) {
     if ((2 == (31 & ((((*((long *) ((((char *) (-3 + table_6X))) + -4))))>>2))))) {
       arg0K0 = 0;
-      goto L1825;}
+      goto L1853;}
     else {
       return;}}
   else {
     return;}}
- L1825: {
+ L1853: {
   i_8X = arg0K0;
   temp_9X = 1024 == i_8X;
   if (temp_9X) {
@@ -95,60 +95,60 @@ static char relocate_symbol_tableB(long table_6X, long delta_7X)
     link_10X = *((long *) ((((char *) (-3 + table_6X))) + (((i_8X)<<2))));
     if ((0 == (3 & link_10X))) {
       arg0K0 = (3 + (-4 & link_10X));
-      goto L1771;}
+      goto L1799;}
     else {
       arg0K0 = link_10X;
-      goto L1771;}}}
- L1771: {
+      goto L1799;}}}
+ L1799: {
   bucket_11X = arg0K0;
   if ((1 == bucket_11X)) {
-    goto L1830;}
+    goto L1858;}
   else {
     bucket_12X = bucket_11X + delta_7X;
     if ((3 == (3 & bucket_12X))) {
       arg0K0 = (-4 & bucket_12X);
-      goto L1782;}
+      goto L1810;}
     else {
       arg0K0 = bucket_12X;
-      goto L1782;}}}
- L1830: {
+      goto L1810;}}}
+ L1858: {
   arg0K0 = (1 + i_8X);
-  goto L1825;}
- L1782: {
+  goto L1853;}
+ L1810: {
   value_13X = arg0K0;
   addr_14X = (((char *) (-3 + table_6X))) + (((i_8X)<<2));
   S48_WRITE_BARRIER(table_6X, addr_14X, value_13X);
   *((long *) addr_14X) = value_13X;
   arg0K0 = bucket_12X;
-  goto L1788;}
- L1788: {
+  goto L1816;}
+ L1816: {
   entry_15X = arg0K0;
   link_16X = *((long *) ((((char *) (-3 + entry_15X))) + 4));
   if ((0 == (3 & link_16X))) {
     arg0K0 = (3 + (-4 & link_16X));
-    goto L1792;}
+    goto L1820;}
   else {
     arg0K0 = link_16X;
-    goto L1792;}}
- L1792: {
+    goto L1820;}}
+ L1820: {
   next_17X = arg0K0;
   if ((1 == next_17X)) {
-    goto L1830;}
+    goto L1858;}
   else {
     next_18X = next_17X + delta_7X;
     if ((3 == (3 & next_18X))) {
       arg0K0 = (-4 & next_18X);
-      goto L1803;}
+      goto L1831;}
     else {
       arg0K0 = next_18X;
-      goto L1803;}}}
- L1803: {
+      goto L1831;}}}
+ L1831: {
   val_19X = arg0K0;
   addr_20X = (((char *) (-3 + entry_15X))) + 4;
   S48_WRITE_BARRIER(entry_15X, addr_20X, val_19X);
   *((long *) addr_20X) = val_19X;
   arg0K0 = next_18X;
-  goto L1788;}
+  goto L1816;}
 }
 static char relocate_binding_tableB(long table_21X, long delta_22X)
 {
@@ -169,12 +169,12 @@ static char relocate_binding_tableB(long table_21X, long delta_22X)
  {  if ((3 == (3 & table_21X))) {
     if ((2 == (31 & ((((*((long *) ((((char *) (-3 + table_21X))) + -4))))>>2))))) {
       arg0K0 = 0;
-      goto L2025;}
+      goto L2053;}
     else {
       return;}}
   else {
     return;}}
- L2025: {
+ L2053: {
   i_23X = arg0K0;
   temp_24X = 1024 == i_23X;
   if (temp_24X) {
@@ -183,60 +183,60 @@ static char relocate_binding_tableB(long table_21X, long delta_22X)
     link_25X = *((long *) ((((char *) (-3 + table_21X))) + (((i_23X)<<2))));
     if ((0 == (3 & link_25X))) {
       arg0K0 = (3 + (-4 & link_25X));
-      goto L1971;}
+      goto L1999;}
     else {
       arg0K0 = link_25X;
-      goto L1971;}}}
- L1971: {
+      goto L1999;}}}
+ L1999: {
   bucket_26X = arg0K0;
   if ((1 == bucket_26X)) {
-    goto L2030;}
+    goto L2058;}
   else {
     bucket_27X = bucket_26X + delta_22X;
     if ((3 == (3 & bucket_27X))) {
       arg0K0 = (-4 & bucket_27X);
-      goto L1982;}
+      goto L2010;}
     else {
       arg0K0 = bucket_27X;
-      goto L1982;}}}
- L2030: {
+      goto L2010;}}}
+ L2058: {
   arg0K0 = (1 + i_23X);
-  goto L2025;}
- L1982: {
+  goto L2053;}
+ L2010: {
   value_28X = arg0K0;
   addr_29X = (((char *) (-3 + table_21X))) + (((i_23X)<<2));
   S48_WRITE_BARRIER(table_21X, addr_29X, value_28X);
   *((long *) addr_29X) = value_28X;
   arg0K0 = bucket_27X;
-  goto L1988;}
- L1988: {
+  goto L2016;}
+ L2016: {
   entry_30X = arg0K0;
   link_31X = *((long *) ((((char *) (-3 + entry_30X))) + 12));
   if ((0 == (3 & link_31X))) {
     arg0K0 = (3 + (-4 & link_31X));
-    goto L1992;}
+    goto L2020;}
   else {
     arg0K0 = link_31X;
-    goto L1992;}}
- L1992: {
+    goto L2020;}}
+ L2020: {
   next_32X = arg0K0;
   if ((1 == next_32X)) {
-    goto L2030;}
+    goto L2058;}
   else {
     next_33X = next_32X + delta_22X;
     if ((3 == (3 & next_33X))) {
       arg0K0 = (-4 & next_33X);
-      goto L2003;}
+      goto L2031;}
     else {
       arg0K0 = next_33X;
-      goto L2003;}}}
- L2003: {
+      goto L2031;}}}
+ L2031: {
   val_34X = arg0K0;
   addr_35X = (((char *) (-3 + entry_30X))) + 12;
   S48_WRITE_BARRIER(entry_30X, addr_35X, val_34X);
   *((long *) addr_35X) = val_34X;
   arg0K0 = next_33X;
-  goto L1988;}
+  goto L2016;}
 }
 long s48_startup_procedure(void)
 {
@@ -313,8 +313,8 @@ void s48_reverse_byte_orderB(char * start_46X, char * end_47X)
   { long ignoreXX;
   PS_WRITE_CHAR(10, (stderr), ignoreXX) }
   arg1K0 = start_46X;
-  goto L1549;}
- L1549: {
+  goto L1577;}
+ L1577: {
   ptr_48X = arg1K0;
   if ((ptr_48X < end_47X)) {
     x_49X = *((unsigned char *) ptr_48X);
@@ -328,13 +328,13 @@ void s48_reverse_byte_orderB(char * start_46X, char * end_47X)
     if ((2 == (3 & value_51X))) {
       if (((31 & (((value_51X)>>2))) < 17)) {
         arg1K0 = next_52X;
-        goto L1549;}
+        goto L1577;}
       else {
         arg1K0 = (next_52X + (-4 & (3 + ((long)(((unsigned long)value_51X)>>8)))));
-        goto L1549;}}
+        goto L1577;}}
     else {
       arg1K0 = next_52X;
-      goto L1549;}}
+      goto L1577;}}
   else {
     return;}}
 }
@@ -468,9 +468,9 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     SstatusS = NO_ERRORS;
     SeofPS = 0;
     if ((SeofPS)) {
-      goto L2724;}
+      goto L2752;}
     else {
-      goto L3463;}}
+      goto L3491;}}
   else {
     ps_write_string("Can't open heap image file", (stderr));
     { long ignoreXX;
@@ -479,300 +479,300 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2724: {
+ L2752: {
   if ((SeofPS)) {
-    goto L2757;}
+    goto L2785;}
   else {
-    goto L3427;}}
- L3463: {
+    goto L3455;}}
+ L3491: {
   PS_READ_CHAR(port_61X, ch_63X, eofP_64X, status_65X)
   if (eofP_64X) {
     arg2K0 = eofP_64X;
     arg0K1 = status_65X;
-    goto L2702;}
+    goto L2730;}
   else {
     if ((status_65X == NO_ERRORS)) {
       if ((12 == ch_63X)) {
         arg2K0 = 0;
         arg0K1 = status_65X;
-        goto L2702;}
+        goto L2730;}
       else {
-        goto L3463;}}
+        goto L3491;}}
     else {
       arg2K0 = eofP_64X;
       arg0K1 = status_65X;
-      goto L2702;}}}
- L2757: {
+      goto L2730;}}}
+ L2785: {
   if ((SeofPS)) {
     arg2K0 = 0;
-    goto L2790;}
+    goto L2818;}
   else {
     arg0K0 = 0;
-    goto L3403;}}
- L3427: {
+    goto L3431;}}
+ L3455: {
   PS_READ_CHAR(port_61X, ch_66X, eofP_67X, status_68X)
   if (eofP_67X) {
     arg2K0 = eofP_67X;
     arg0K1 = status_68X;
-    goto L2735;}
+    goto L2763;}
   else {
     if ((status_68X == NO_ERRORS)) {
       if ((10 == ch_66X)) {
         arg2K0 = 0;
         arg0K1 = status_68X;
-        goto L2735;}
+        goto L2763;}
       else {
-        goto L3427;}}
+        goto L3455;}}
     else {
       arg2K0 = eofP_67X;
       arg0K1 = status_68X;
-      goto L2735;}}}
- L2702: {
+      goto L2763;}}}
+ L2730: {
   eofP_69X = arg2K0;
   status_70X = arg0K1;
   if (eofP_69X) {
     SeofPS = 1;
-    goto L2724;}
+    goto L2752;}
   else {
     if (((SstatusS) == NO_ERRORS)) {
-      goto L2724;}
+      goto L2752;}
     else {
       SeofPS = 1;
       SstatusS = status_70X;
-      goto L2724;}}}
- L2790: {
+      goto L2752;}}}
+ L2818: {
   same_versionP_71X = arg2K0;
   if ((SeofPS)) {
     arg0K0 = -1;
-    goto L2825;}
+    goto L2853;}
   else {
     PS_READ_INTEGER(port_61X, thing_72X, eofP_73X, status_74X)
     if (eofP_73X) {
       SeofPS = 1;
       arg0K0 = -1;
-      goto L2825;}
+      goto L2853;}
     else {
       if (((SstatusS) == NO_ERRORS)) {
         arg0K0 = thing_72X;
-        goto L2825;}
+        goto L2853;}
       else {
         SeofPS = 1;
         SstatusS = status_74X;
         arg0K0 = -1;
-        goto L2825;}}}}
- L3403: {
+        goto L2853;}}}}
+ L3431: {
   i_75X = arg0K0;
   PS_READ_CHAR(port_61X, ch_76X, eofP_77X, status_78X)
   if (eofP_77X) {
     arg2K0 = 0;
     arg2K1 = eofP_77X;
     arg0K2 = status_78X;
-    goto L2768;}
+    goto L2796;}
   else {
     if ((status_78X == NO_ERRORS)) {
-      if ((i_75X == (strlen((char *) "Vanilla 22")))) {
+      if ((i_75X == (strlen((char *) "Vanilla 23")))) {
         arg2K0 = (10 == ch_76X);
         arg2K1 = 0;
         arg0K2 = status_78X;
-        goto L2768;}
+        goto L2796;}
       else {
-        if ((ch_76X == (*("Vanilla 22" + i_75X)))) {
+        if ((ch_76X == (*("Vanilla 23" + i_75X)))) {
           arg0K0 = (1 + i_75X);
-          goto L3403;}
+          goto L3431;}
         else {
           arg2K0 = 0;
           arg2K1 = 0;
           arg0K2 = status_78X;
-          goto L2768;}}}
+          goto L2796;}}}
     else {
       arg2K0 = 0;
       arg2K1 = eofP_77X;
       arg0K2 = status_78X;
-      goto L2768;}}}
- L2735: {
+      goto L2796;}}}
+ L2763: {
   eofP_79X = arg2K0;
   status_80X = arg0K1;
   if (eofP_79X) {
     SeofPS = 1;
-    goto L2757;}
+    goto L2785;}
   else {
     if (((SstatusS) == NO_ERRORS)) {
-      goto L2757;}
+      goto L2785;}
     else {
       SeofPS = 1;
       SstatusS = status_80X;
-      goto L2757;}}}
- L2825: {
+      goto L2785;}}}
+ L2853: {
   old_bytes_per_cell_81X = arg0K0;
   if ((SeofPS)) {
     arg0K0 = -1;
-    goto L2860;}
+    goto L2888;}
   else {
     PS_READ_INTEGER(port_61X, thing_82X, eofP_83X, status_84X)
     if (eofP_83X) {
       SeofPS = 1;
       arg0K0 = -1;
-      goto L2860;}
+      goto L2888;}
     else {
       if (((SstatusS) == NO_ERRORS)) {
         arg0K0 = thing_82X;
-        goto L2860;}
+        goto L2888;}
       else {
         SeofPS = 1;
         SstatusS = status_84X;
         arg0K0 = -1;
-        goto L2860;}}}}
- L2768: {
+        goto L2888;}}}}
+ L2796: {
   thing_85X = arg2K0;
   eofP_86X = arg2K1;
   status_87X = arg0K2;
   if (eofP_86X) {
     SeofPS = 1;
     arg2K0 = 0;
-    goto L2790;}
+    goto L2818;}
   else {
     if (((SstatusS) == NO_ERRORS)) {
       arg2K0 = thing_85X;
-      goto L2790;}
+      goto L2818;}
     else {
       SeofPS = 1;
       SstatusS = status_87X;
       arg2K0 = 0;
-      goto L2790;}}}
- L2860: {
+      goto L2818;}}}
+ L2888: {
   cells_88X = arg0K0;
   old_begin_89X = ((char *) (((cells_88X)<<2)));
   if ((SeofPS)) {
     arg0K0 = -1;
-    goto L2897;}
+    goto L2925;}
   else {
     PS_READ_INTEGER(port_61X, thing_90X, eofP_91X, status_92X)
     if (eofP_91X) {
       SeofPS = 1;
       arg0K0 = -1;
-      goto L2897;}
+      goto L2925;}
     else {
       if (((SstatusS) == NO_ERRORS)) {
         arg0K0 = thing_90X;
-        goto L2897;}
+        goto L2925;}
       else {
         SeofPS = 1;
         SstatusS = status_92X;
         arg0K0 = -1;
-        goto L2897;}}}}
- L2897: {
+        goto L2925;}}}}
+ L2925: {
   cells_93X = arg0K0;
   old_hp_94X = ((char *) (((cells_93X)<<2)));
   if ((SeofPS)) {
     arg0K0 = -1;
-    goto L2934;}
+    goto L2962;}
   else {
     PS_READ_INTEGER(port_61X, thing_95X, eofP_96X, status_97X)
     if (eofP_96X) {
       SeofPS = 1;
       arg0K0 = -1;
-      goto L2934;}
+      goto L2962;}
     else {
       if (((SstatusS) == NO_ERRORS)) {
         arg0K0 = thing_95X;
-        goto L2934;}
+        goto L2962;}
       else {
         SeofPS = 1;
         SstatusS = status_97X;
         arg0K0 = -1;
-        goto L2934;}}}}
- L2934: {
+        goto L2962;}}}}
+ L2962: {
   v_98X = arg0K0;
   SsymbolsS = v_98X;
   if ((SeofPS)) {
     arg0K0 = -1;
-    goto L2970;}
+    goto L2998;}
   else {
     PS_READ_INTEGER(port_61X, thing_99X, eofP_100X, status_101X)
     if (eofP_100X) {
       SeofPS = 1;
       arg0K0 = -1;
-      goto L2970;}
+      goto L2998;}
     else {
       if (((SstatusS) == NO_ERRORS)) {
         arg0K0 = thing_99X;
-        goto L2970;}
+        goto L2998;}
       else {
         SeofPS = 1;
         SstatusS = status_101X;
         arg0K0 = -1;
-        goto L2970;}}}}
- L2970: {
+        goto L2998;}}}}
+ L2998: {
   v_102X = arg0K0;
   Simported_bindingsS = v_102X;
   if ((SeofPS)) {
     arg0K0 = -1;
-    goto L3006;}
+    goto L3034;}
   else {
     PS_READ_INTEGER(port_61X, thing_103X, eofP_104X, status_105X)
     if (eofP_104X) {
       SeofPS = 1;
       arg0K0 = -1;
-      goto L3006;}
+      goto L3034;}
     else {
       if (((SstatusS) == NO_ERRORS)) {
         arg0K0 = thing_103X;
-        goto L3006;}
+        goto L3034;}
       else {
         SeofPS = 1;
         SstatusS = status_105X;
         arg0K0 = -1;
-        goto L3006;}}}}
- L3006: {
+        goto L3034;}}}}
+ L3034: {
   v_106X = arg0K0;
   Sexported_bindingsS = v_106X;
   if ((SeofPS)) {
     arg0K0 = -1;
-    goto L3042;}
+    goto L3070;}
   else {
     PS_READ_INTEGER(port_61X, thing_107X, eofP_108X, status_109X)
     if (eofP_108X) {
       SeofPS = 1;
       arg0K0 = -1;
-      goto L3042;}
+      goto L3070;}
     else {
       if (((SstatusS) == NO_ERRORS)) {
         arg0K0 = thing_107X;
-        goto L3042;}
+        goto L3070;}
       else {
         SeofPS = 1;
         SstatusS = status_109X;
         arg0K0 = -1;
-        goto L3042;}}}}
- L3042: {
+        goto L3070;}}}}
+ L3070: {
   v_110X = arg0K0;
   Sresumer_recordsS = v_110X;
   if ((SeofPS)) {
     arg0K0 = -1;
-    goto L3078;}
+    goto L3106;}
   else {
     PS_READ_INTEGER(port_61X, thing_111X, eofP_112X, status_113X)
     if (eofP_112X) {
       SeofPS = 1;
       arg0K0 = -1;
-      goto L3078;}
+      goto L3106;}
     else {
       if (((SstatusS) == NO_ERRORS)) {
         arg0K0 = thing_111X;
-        goto L3078;}
+        goto L3106;}
       else {
         SeofPS = 1;
         SstatusS = status_113X;
         arg0K0 = -1;
-        goto L3078;}}}}
- L3078: {
+        goto L3106;}}}}
+ L3106: {
   v_114X = arg0K0;
   Sstartup_procedureS = v_114X;
   if ((SeofPS)) {
-    goto L3114;}
+    goto L3142;}
   else {
-    goto L3334;}}
- L3114: {
+    goto L3362;}}
+ L3142: {
   if (((SstatusS) == NO_ERRORS)) {
     if ((SeofPS)) {
       SstatusS = EDOM;
@@ -780,12 +780,12 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
       { long ignoreXX;
       PS_WRITE_CHAR(10, (stderr), ignoreXX) }
       if (((SstatusS) == NO_ERRORS)) {
-        goto L3203;}
+        goto L3231;}
       else {
         ps_write_string((ps_error_string((SstatusS))), (stderr));
         { long ignoreXX;
         PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-        goto L3203;}}
+        goto L3231;}}
     else {
       if (same_versionP_71X) {
         if ((4 == old_bytes_per_cell_81X)) {
@@ -795,73 +795,73 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
             if (eofP_117X) {
               arg2K0 = 0;
               arg3K1 = "Premature EOF when reading image file";
-              goto L2536;}
+              goto L2564;}
             else {
               if ((got_116X < 4)) {
                 arg2K0 = 0;
                 arg3K1 = "Read returned too few bytes";
-                goto L2536;}
+                goto L2564;}
               else {
                 arg2K0 = 1;
                 arg3K1 = "";
-                goto L2536;}}}
+                goto L2564;}}}
           else {
             SstatusS = status_118X;
             arg2K0 = 0;
             arg3K1 = "Error reading from image file";
-            goto L2536;}}
+            goto L2564;}}
         else {
           ps_write_string("Incompatible bytes-per-cell in image", (stderr));
           { long ignoreXX;
           PS_WRITE_CHAR(10, (stderr), ignoreXX) }
           if (((SstatusS) == NO_ERRORS)) {
-            goto L3263;}
+            goto L3291;}
           else {
             ps_write_string((ps_error_string((SstatusS))), (stderr));
             { long ignoreXX;
             PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-            goto L3263;}}}
+            goto L3291;}}}
       else {
         ps_write_string("Format of image is incompatible with this version of system", (stderr));
         { long ignoreXX;
         PS_WRITE_CHAR(10, (stderr), ignoreXX) }
         if (((SstatusS) == NO_ERRORS)) {
-          goto L3233;}
+          goto L3261;}
         else {
           ps_write_string((ps_error_string((SstatusS))), (stderr));
           { long ignoreXX;
           PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-          goto L3233;}}}}
+          goto L3261;}}}}
   else {
     ps_write_string("Error reading from image file", (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     if (((SstatusS) == NO_ERRORS)) {
-      goto L3178;}
+      goto L3206;}
     else {
       ps_write_string((ps_error_string((SstatusS))), (stderr));
       { long ignoreXX;
       PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-      goto L3178;}}}
- L3334: {
+      goto L3206;}}}
+ L3362: {
   PS_READ_CHAR(port_61X, ch_119X, eofP_120X, status_121X)
   if (eofP_120X) {
     arg2K0 = eofP_120X;
     arg0K1 = status_121X;
-    goto L3092;}
+    goto L3120;}
   else {
     if ((status_121X == NO_ERRORS)) {
       if ((12 == ch_119X)) {
         arg2K0 = 0;
         arg0K1 = status_121X;
-        goto L3092;}
+        goto L3120;}
       else {
-        goto L3334;}}
+        goto L3362;}}
     else {
       arg2K0 = eofP_120X;
       arg0K1 = status_121X;
-      goto L3092;}}}
- L3203: {
+      goto L3120;}}}
+ L3231: {
   status_122X = ps_close(port_61X);
   if ((status_122X == NO_ERRORS)) {
     return -1;}
@@ -870,7 +870,7 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2536: {
+ L2564: {
   okayP_123X = arg2K0;
   string_124X = arg3K1;
   if (okayP_123X) {
@@ -880,7 +880,7 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
       arg1K2 = old_begin_89X;
       arg1K3 = old_hp_94X;
       arg2K4 = 0;
-      goto L2166;}
+      goto L2194;}
     else {
       x_125X = *((unsigned char *) new_begin_115X);
       *((unsigned char *) new_begin_115X) = (*((unsigned char *) (new_begin_115X + 3)));
@@ -894,30 +894,30 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
         arg1K2 = old_begin_89X;
         arg1K3 = old_hp_94X;
         arg2K4 = 1;
-        goto L2166;}
+        goto L2194;}
       else {
         ps_write_string("Unable to correct byte order", (stderr));
         { long ignoreXX;
         PS_WRITE_CHAR(10, (stderr), ignoreXX) }
         if (((SstatusS) == NO_ERRORS)) {
-          goto L2633;}
+          goto L2661;}
         else {
           ps_write_string((ps_error_string((SstatusS))), (stderr));
           { long ignoreXX;
           PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-          goto L2633;}}}}
+          goto L2661;}}}}
   else {
     ps_write_string(string_124X, (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     if (((SstatusS) == NO_ERRORS)) {
-      goto L2587;}
+      goto L2615;}
     else {
       ps_write_string((ps_error_string((SstatusS))), (stderr));
       { long ignoreXX;
       PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-      goto L2587;}}}
- L3263: {
+      goto L2615;}}}
+ L3291: {
   status_127X = ps_close(port_61X);
   if ((status_127X == NO_ERRORS)) {
     return -1;}
@@ -926,7 +926,7 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L3233: {
+ L3261: {
   status_128X = ps_close(port_61X);
   if ((status_128X == NO_ERRORS)) {
     return -1;}
@@ -935,7 +935,7 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L3178: {
+ L3206: {
   status_129X = ps_close(port_61X);
   if ((status_129X == NO_ERRORS)) {
     return -1;}
@@ -944,20 +944,20 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L3092: {
+ L3120: {
   eofP_130X = arg2K0;
   status_131X = arg0K1;
   if (eofP_130X) {
     SeofPS = 1;
-    goto L3114;}
+    goto L3142;}
   else {
     if (((SstatusS) == NO_ERRORS)) {
-      goto L3114;}
+      goto L3142;}
     else {
       SeofPS = 1;
       SstatusS = status_131X;
-      goto L3114;}}}
- L2166: {
+      goto L3142;}}}
+ L2194: {
   port_132X = arg4K0;
   new_begin_133X = arg1K1;
   old_begin_134X = arg1K2;
@@ -971,22 +971,22 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     if (eofP_141X) {
       arg2K0 = 0;
       arg3K1 = "Premature EOF when reading image file";
-      goto L2174;}
+      goto L2202;}
     else {
       if ((got_140X < need_139X)) {
         arg2K0 = 0;
         arg3K1 = "Read returned too few bytes";
-        goto L2174;}
+        goto L2202;}
       else {
         arg2K0 = 1;
         arg3K1 = "";
-        goto L2174;}}}
+        goto L2202;}}}
   else {
     SstatusS = status_142X;
     arg2K0 = 0;
     arg3K1 = "Error reading from image file";
-    goto L2174;}}
- L2633: {
+    goto L2202;}}
+ L2661: {
   status_143X = ps_close(port_61X);
   if ((status_143X == NO_ERRORS)) {
     return -1;}
@@ -995,7 +995,7 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2587: {
+ L2615: {
   status_144X = ps_close(port_61X);
   if ((status_144X == NO_ERRORS)) {
     return -1;}
@@ -1004,7 +1004,7 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2174: {
+ L2202: {
   okayP_145X = arg2K0;
   string_146X = arg3K1;
   PS_READ_CHAR(port_132X, v_147X, eofP_148X, status_149X)
@@ -1016,65 +1016,65 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
           descriptor_151X = Sstartup_procedureS;
           if ((3 == (3 & descriptor_151X))) {
             arg0K0 = (3 + (((long) ((((char *) (-3 + descriptor_151X))) + delta_137X))));
-            goto L2206;}
+            goto L2234;}
           else {
             arg0K0 = descriptor_151X;
-            goto L2206;}}
+            goto L2234;}}
         else {
           ps_write_string("Error closing image file", (stderr));
           { long ignoreXX;
           PS_WRITE_CHAR(10, (stderr), ignoreXX) }
           if (((SstatusS) == NO_ERRORS)) {
-            goto L2373;}
+            goto L2401;}
           else {
             ps_write_string((ps_error_string((SstatusS))), (stderr));
             { long ignoreXX;
             PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-            goto L2373;}}}
+            goto L2401;}}}
       else {
         ps_write_string("Image file has extraneous data after image", (stderr));
         { long ignoreXX;
         PS_WRITE_CHAR(10, (stderr), ignoreXX) }
         if (((SstatusS) == NO_ERRORS)) {
-          goto L2343;}
+          goto L2371;}
         else {
           ps_write_string((ps_error_string((SstatusS))), (stderr));
           { long ignoreXX;
           PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-          goto L2343;}}}
+          goto L2371;}}}
     else {
       ps_write_string("Error reading from image file", (stderr));
       { long ignoreXX;
       PS_WRITE_CHAR(10, (stderr), ignoreXX) }
       if (((SstatusS) == NO_ERRORS)) {
-        goto L2313;}
+        goto L2341;}
       else {
         ps_write_string((ps_error_string((SstatusS))), (stderr));
         { long ignoreXX;
         PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-        goto L2313;}}}
+        goto L2341;}}}
   else {
     ps_write_string(string_146X, (stderr));
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     if (((SstatusS) == NO_ERRORS)) {
-      goto L2283;}
+      goto L2311;}
     else {
       ps_write_string((ps_error_string((SstatusS))), (stderr));
       { long ignoreXX;
       PS_WRITE_CHAR(10, (stderr), ignoreXX) }
-      goto L2283;}}}
- L2206: {
+      goto L2311;}}}
+ L2234: {
   v_152X = arg0K0;
   Sstartup_procedureS = v_152X;
   descriptor_153X = SsymbolsS;
   if ((3 == (3 & descriptor_153X))) {
     arg0K0 = (3 + (((long) ((((char *) (-3 + descriptor_153X))) + delta_137X))));
-    goto L2211;}
+    goto L2239;}
   else {
     arg0K0 = descriptor_153X;
-    goto L2211;}}
- L2373: {
+    goto L2239;}}
+ L2401: {
   status_154X = ps_close(port_132X);
   if ((status_154X == NO_ERRORS)) {
     return -1;}
@@ -1083,7 +1083,7 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2343: {
+ L2371: {
   status_155X = ps_close(port_132X);
   if ((status_155X == NO_ERRORS)) {
     return -1;}
@@ -1092,7 +1092,7 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2313: {
+ L2341: {
   status_156X = ps_close(port_132X);
   if ((status_156X == NO_ERRORS)) {
     return -1;}
@@ -1101,7 +1101,7 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2283: {
+ L2311: {
   status_157X = ps_close(port_132X);
   if ((status_157X == NO_ERRORS)) {
     return -1;}
@@ -1110,45 +1110,45 @@ long s48_read_image(char *filename_59X, long heap_size_60X)
     { long ignoreXX;
     PS_WRITE_CHAR(10, (stderr), ignoreXX) }
     return -1;}}
- L2211: {
+ L2239: {
   v_158X = arg0K0;
   SsymbolsS = v_158X;
   descriptor_159X = Simported_bindingsS;
   if ((3 == (3 & descriptor_159X))) {
     arg0K0 = (3 + (((long) ((((char *) (-3 + descriptor_159X))) + delta_137X))));
-    goto L2216;}
+    goto L2244;}
   else {
     arg0K0 = descriptor_159X;
-    goto L2216;}}
- L2216: {
+    goto L2244;}}
+ L2244: {
   v_160X = arg0K0;
   Simported_bindingsS = v_160X;
   descriptor_161X = Sexported_bindingsS;
   if ((3 == (3 & descriptor_161X))) {
     arg0K0 = (3 + (((long) ((((char *) (-3 + descriptor_161X))) + delta_137X))));
-    goto L2221;}
+    goto L2249;}
   else {
     arg0K0 = descriptor_161X;
-    goto L2221;}}
- L2221: {
+    goto L2249;}}
+ L2249: {
   v_162X = arg0K0;
   Sexported_bindingsS = v_162X;
   descriptor_163X = Sresumer_recordsS;
   if ((3 == (3 & descriptor_163X))) {
     arg0K0 = (3 + (((long) ((((char *) (-3 + descriptor_163X))) + delta_137X))));
-    goto L2226;}
+    goto L2254;}
   else {
     arg0K0 = descriptor_163X;
-    goto L2226;}}
- L2226: {
+    goto L2254;}}
+ L2254: {
   v_164X = arg0K0;
   Sresumer_recordsS = v_164X;
   if (reverseP_136X) {
     s48_reverse_byte_orderB(new_begin_133X, new_hp_138X);
-    goto L2237;}
+    goto L2265;}
   else {
-    goto L2237;}}
- L2237: {
+    goto L2265;}}
+ L2265: {
   if ((0 == delta_137X)) {
     return 0;}
   else {

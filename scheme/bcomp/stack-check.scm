@@ -98,6 +98,12 @@
 	((assq i jumps)
 	 => (lambda (pair)
 	      (stack-max code-vector i (cdr pair) maximum jumps)))
+	((= (code-vector-ref code-vector i)
+	    (enum op cont-data))
+	 (continue code-vector
+		   (+ i 3)		; how do I know this?
+		   maximum
+		   jumps))
 	(else
 	 (error "stack-max: no one jumps to target" i))))
 
@@ -239,17 +245,14 @@
 ; The -1 is to back up over the opcode.
 ; Could check that the we agree with the compiler on the size of the stack.
 
-(define (do-make-cont total-bytes)
+(define-delta make-cont
   (lambda (code-vector i depth maximum jumps)
     (let ((target (+ i -1 (get-offset code-vector i))))
       (stack-max code-vector
-		 (+ i total-bytes)  ; eat offset and size
+		 (+ i 2)  ; eat offset
 		 (+ depth continuation-stack-size)
 		 (max maximum (+ depth continuation-stack-size))
 		 (cons (cons target depth) jumps)))))
-
-(define-delta make-cont (do-make-cont 3))
-(define-delta make-big-cont (do-make-cont 4))
 
 ; Add the jump target(s) and either fall-through or not.
 ; The -1 is to back up over the opcode.

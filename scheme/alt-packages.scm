@@ -50,7 +50,7 @@
 ; run-time (generally speaking, things needed by the linker)
 
 ; Same as in rts-packages.scm:
-(define-structure architecture architecture-interface
+(define-structure architecture vm-architecture-interface
   (open scheme-level-1 signals enumerated)
   (files (vm arch)))
 

@@ -8,6 +8,7 @@
     '(run (prescheme-compiler
 	   '(interpreter heap-init)
 	   '("../scheme/vm/interfaces.scm"
+	     "../scheme/vm/shared-interfaces.scm"
 	     "../scheme/vm/ps-package-defs.scm"
 	     "../scheme/vm/package-defs.scm")
 	   'scheme48-init

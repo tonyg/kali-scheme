@@ -21,6 +21,7 @@
 ; annoying "undefined" warnings for interfaces.
 (for-each load
 	  '("scheme/interfaces.scm"
+	    "scheme/vm/shared-interfaces.scm"
 	    "scheme/more-interfaces.scm"))
 
 (load-configuration "scheme/packages.scm")

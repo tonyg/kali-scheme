@@ -373,36 +373,31 @@ extern void s48_check_record_type(s48_value record, s48_value type_binding);
 #define S48_UNSAFE_PORT_LOCK(x) (S48_STOB_REF((x), 2))
 #define S48_SET_PORT_LOCK(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 2, (v)))
 #define S48_UNSAFE_SET_PORT_LOCK(x, v) S48_STOB_SET((x), 2, (v))
-#define S48_PORT_LOCKEDP_OFFSET 3
-#define S48_PORT_LOCKEDP(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 3))
-#define S48_UNSAFE_PORT_LOCKEDP(x) (S48_STOB_REF((x), 3))
-#define S48_SET_PORT_LOCKEDP(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 3, (v)))
-#define S48_UNSAFE_SET_PORT_LOCKEDP(x, v) S48_STOB_SET((x), 3, (v))
-#define S48_PORT_DATA_OFFSET 4
-#define S48_PORT_DATA(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 4))
-#define S48_UNSAFE_PORT_DATA(x) (S48_STOB_REF((x), 4))
-#define S48_SET_PORT_DATA(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 4, (v)))
-#define S48_UNSAFE_SET_PORT_DATA(x, v) S48_STOB_SET((x), 4, (v))
-#define S48_PORT_BUFFER_OFFSET 5
-#define S48_PORT_BUFFER(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 5))
-#define S48_UNSAFE_PORT_BUFFER(x) (S48_STOB_REF((x), 5))
-#define S48_SET_PORT_BUFFER(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 5, (v)))
-#define S48_UNSAFE_SET_PORT_BUFFER(x, v) S48_STOB_SET((x), 5, (v))
-#define S48_PORT_INDEX_OFFSET 6
-#define S48_PORT_INDEX(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 6))
-#define S48_UNSAFE_PORT_INDEX(x) (S48_STOB_REF((x), 6))
-#define S48_SET_PORT_INDEX(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 6, (v)))
-#define S48_UNSAFE_SET_PORT_INDEX(x, v) S48_STOB_SET((x), 6, (v))
-#define S48_PORT_LIMIT_OFFSET 7
-#define S48_PORT_LIMIT(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 7))
-#define S48_UNSAFE_PORT_LIMIT(x) (S48_STOB_REF((x), 7))
-#define S48_SET_PORT_LIMIT(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 7, (v)))
-#define S48_UNSAFE_SET_PORT_LIMIT(x, v) S48_STOB_SET((x), 7, (v))
-#define S48_PORT_PENDING_EOFP_OFFSET 8
-#define S48_PORT_PENDING_EOFP(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 8))
-#define S48_UNSAFE_PORT_PENDING_EOFP(x) (S48_STOB_REF((x), 8))
-#define S48_SET_PORT_PENDING_EOFP(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 8, (v)))
-#define S48_UNSAFE_SET_PORT_PENDING_EOFP(x, v) S48_STOB_SET((x), 8, (v))
+#define S48_PORT_DATA_OFFSET 3
+#define S48_PORT_DATA(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 3))
+#define S48_UNSAFE_PORT_DATA(x) (S48_STOB_REF((x), 3))
+#define S48_SET_PORT_DATA(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 3, (v)))
+#define S48_UNSAFE_SET_PORT_DATA(x, v) S48_STOB_SET((x), 3, (v))
+#define S48_PORT_BUFFER_OFFSET 4
+#define S48_PORT_BUFFER(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 4))
+#define S48_UNSAFE_PORT_BUFFER(x) (S48_STOB_REF((x), 4))
+#define S48_SET_PORT_BUFFER(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 4, (v)))
+#define S48_UNSAFE_SET_PORT_BUFFER(x, v) S48_STOB_SET((x), 4, (v))
+#define S48_PORT_INDEX_OFFSET 5
+#define S48_PORT_INDEX(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 5))
+#define S48_UNSAFE_PORT_INDEX(x) (S48_STOB_REF((x), 5))
+#define S48_SET_PORT_INDEX(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 5, (v)))
+#define S48_UNSAFE_SET_PORT_INDEX(x, v) S48_STOB_SET((x), 5, (v))
+#define S48_PORT_LIMIT_OFFSET 6
+#define S48_PORT_LIMIT(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 6))
+#define S48_UNSAFE_PORT_LIMIT(x) (S48_STOB_REF((x), 6))
+#define S48_SET_PORT_LIMIT(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 6, (v)))
+#define S48_UNSAFE_SET_PORT_LIMIT(x, v) S48_STOB_SET((x), 6, (v))
+#define S48_PORT_PENDING_EOFP_OFFSET 7
+#define S48_PORT_PENDING_EOFP(x) (s48_stob_ref((x), S48_STOBTYPE_PORT, 7))
+#define S48_UNSAFE_PORT_PENDING_EOFP(x) (S48_STOB_REF((x), 7))
+#define S48_SET_PORT_PENDING_EOFP(x, v) (s48_stob_set((x), S48_STOBTYPE_PORT, 7, (v)))
+#define S48_UNSAFE_SET_PORT_PENDING_EOFP(x, v) S48_STOB_SET((x), 7, (v))
 #define S48_CHANNEL_STATUS_OFFSET 0
 #define S48_CHANNEL_STATUS(x) (s48_stob_ref((x), S48_STOBTYPE_CHANNEL, 0))
 #define S48_UNSAFE_CHANNEL_STATUS(x) (S48_STOB_REF((x), 0))

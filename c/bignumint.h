@@ -1,6 +1,6 @@
 /* -*-C-*-
 
-$Id: bignmint.h,v 1.4 1993/10/27 23:57:07 gjr Exp $
+$Id: bignumint.h,v 1.1.1.1 2001/05/07 06:32:17 sperber Exp $
 
 Copyright (c) 1989-1992 Massachusetts Institute of Technology
 

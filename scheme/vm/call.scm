@@ -18,14 +18,13 @@
 		 (set! *template* template)
 		 (set-current-env! (closure-env *val*))
 		 (set-code-pointer! code 2)
-		 (ensure-default-procedure-space! ensure-space)
+		 (ensure-default-procedure-space!)
 		 (if (pending-interrupt?)
 		     (goto handle-interrupt stack-arg-count)
 		     (goto interpret *code-pointer*)))
 		((= (native->byte-protocol protocol)
 		    stack-arg-count)
-		 (call-native-code *val* 2 stack-arg-count)
-		 (goto interpret *code-pointer*))
+		 (goto call-native-code *val* 2 stack-arg-count))
 		(else
 		 (goto plain-protocol-match stack-arg-count))))
 	(goto application-exception
@@ -34,14 +33,35 @@
 
 ; Native protocols have the high bit set.
 
+(define (native-protocol? protocol)
+  (< 127 protocol))
+
 (define (native->byte-protocol protocol)
   (bitwise-and protocol 127))
 
+(define (byte->native-protocol protocol)
+  (bitwise-ior protocol 128))
+
 (define (call-native-code proc protocol-skip stack-nargs)
-  (set! *template* (closure-template proc))
-  (set-code-pointer! (template-code *template*) protocol-skip)
   (move-args-above-cont! stack-nargs)
-  (s48-call-native-code proc))
+  (goto post-native-dispatch (s48-call-native-procedure proc protocol-skip)))
+
+(define s48-*native-protocol*)
+
+; The external code just sets the C variable directly, but we export this to
+; let the Pre-Scheme compiler know that someone, somewhere, does a set.
+
+(define (s48-set-native-protocol! protocol)
+  (set! s48-*native-protocol* protocol))
+
+(define (post-native-dispatch tag)
+  (case tag
+    ((0)
+     (goto return-values s48-*native-protocol* null 0))
+    ((1)
+     (goto perform-application s48-*native-protocol*))
+    (else
+     (error "unexpected native return value" tag))))
 
 ; As above but with a two-byte argument count.
 
@@ -62,14 +82,13 @@
 		   (goto interpret *code-pointer*))))
 	(code (template-code (get-literal 0))))
     (cond ((= 0 (code-vector-ref code 1))
-	   (ensure-default-procedure-space! ensure-space)
+	   (ensure-default-procedure-space!)
 	   (win))
 	  ((and (= big-stack-protocol (code-vector-ref code 1))
 		(= 0 (code-vector-ref code (- (code-vector-length code) 3))))
 	   (ensure-stack-space! (code-vector-ref16
 				   code
-				   (- (code-vector-length code) 2))
-				ensure-space)
+				   (- (code-vector-length code) 2)))
 	   (win))
 	  (else
 	   (raise-exception wrong-type-argument 3 (get-literal 0))))))
@@ -224,7 +243,7 @@
     (set-current-env! (closure-env *val*))))
 
 (define (check-interrupts-and-go stack-slots stack-arg-count)
-  (ensure-stack-space! stack-slots ensure-space)
+  (ensure-stack-space! stack-slots)
   (if (pending-interrupt?)
       (goto handle-interrupt stack-arg-count)
       (goto interpret *code-pointer*)))
@@ -265,12 +284,16 @@
     (assert (= (enum op protocol)
 	       (code-vector-ref code 0)))
     (let loop ((protocol (code-vector-ref code 1))
-	       (stack-space default-stack-space))
+	       (stack-space default-stack-space)
+	       (native? #f))
       (let ((win (lambda (skip stack-arg-count)
-		   (install-*val*-closure skip)
-		   (goto check-interrupts-and-go
-			 stack-space
-			 stack-arg-count))))
+		   (if native?
+		       (goto call-native-code *val* skip stack-arg-count)
+		       (begin
+			 (install-*val*-closure skip)
+			 (goto check-interrupts-and-go
+			       stack-space
+			       stack-arg-count))))))
 	(let ((fixed-match (lambda (wants skip)
 			     (if (= wants total-arg-count)
 				 (begin
@@ -325,12 +348,17 @@
 			 (code-vector-ref code 2))
 		     (args+nargs-match 3)
 		     (lose)))
+		((native-protocol? protocol)
+		 (loop (native->byte-protocol protocol)
+		       stack-space
+		       #t))
 		((= protocol two-byte-nargs-protocol)
 		 (fixed-match (code-vector-ref16 code 2) 4))
 		((= protocol big-stack-protocol)
 		 (let ((length (code-vector-length code)))
 		   (loop (code-vector-ref code (- length 3))
-			 (code-vector-ref16 code (- length 2)))))
+			 (code-vector-ref16 code (- length 2))
+			 native?)))
 		(else
 		 (error "unknown protocol" protocol)
 		 (lose))))))))
@@ -388,6 +416,15 @@
 		 (code-vector-ref code-vector (+ index 1))
 		 bits-used-per-byte)))
 
+(define (code-pointer-ref code-pointer index)
+  (fetch-byte (address+ code-pointer index)))
+
+(define (code-pointer-ref16 code-pointer index)
+  (let ((high (code-pointer-ref code-pointer index)))
+    (adjoin-bits high
+		 (code-pointer-ref code-pointer (+ index 1))
+		 bits-used-per-byte)))
+
 ;----------------
 ; Returns - these use many of the same protocols.
 
@@ -406,16 +443,20 @@
 
 (define-opcode return
   (let loop ()
-    (let* ((cont (current-continuation))
-	   (code (template-code (continuation-template cont)))
-	   (pc (extract-fixnum (continuation-pc cont))))
+    (let ((code-pointer (current-continuation-code-pointer)))
       (assert (= (enum op protocol)
-		 (code-vector-ref code pc)))
-      (let ((protocol (code-vector-ref code (+ pc 1))))
+		 (code-pointer-ref code-pointer 0)))
+      (let ((protocol (code-pointer-ref code-pointer 1)))
 	(cond ((or (= protocol 1)
 		   (= protocol ignore-values-protocol))
 	       (pop-continuation!)
 	       (goto continue 1))		; one protocol byte
+	      ((or (= protocol (byte->native-protocol 1))
+		   (= protocol (byte->native-protocol
+				  ignore-values-protocol)))
+	       (goto post-native-dispatch
+		     (s48-invoke-native-continuation
+		       (+ (pop-native-continuation-from-stack) 2))))
 	      ((= protocol bottom-of-stack-protocol)
 	       (let ((cont (get-continuation-from-heap)))
 		 (if (continuation? cont)
@@ -424,12 +465,13 @@
 		       (loop))
 		     (goto return-from-vm cont))))
 	      ((= protocol call-with-values-protocol)
-	       (skip-current-continuation!)
-	       (push *val*)
-	       (set! *val* (continuation-ref cont continuation-cells))
+	       (let ((consumer (current-continuation-ref continuation-cells)))
+		 (skip-current-continuation!)
+		 (push *val*)
+	         (set! *val* consumer))
 	       (goto perform-application-with-rest-list 1 null 0))
 	      ((= protocol two-byte-nargs+list-protocol)
-	       (let ((wants-stack-args (code-vector-ref16 code (+ pc 2))))
+	       (let ((wants-stack-args (code-pointer-ref16 code-pointer 2)))
 		 (cond ((= 0 wants-stack-args)
 			(pop-continuation!)
 			(push (vm-cons *val* null (ensure-space vm-pair-size)))
@@ -492,12 +534,10 @@
 ;   and invoke it on the current values.
 
 (define (return-values stack-nargs list-args list-arg-count)
-  (let* ((cont (current-continuation))
-	 (code (template-code (continuation-template cont)))
-	 (pc (extract-fixnum (continuation-pc cont)))
-	 (protocol (code-vector-ref code (+ pc 1))))
+  (let* ((code-pointer (current-continuation-code-pointer))
+	 (protocol (code-pointer-ref code-pointer 1)))
     (assert (= (enum op protocol)
-	       (code-vector-ref code pc)))
+	       (code-pointer-ref code-pointer 0)))
     (cond ((= protocol 1)
 	   (if (= 1 (+ stack-nargs list-arg-count))
 	       (begin
@@ -519,20 +559,21 @@
 		   (else
 		    (goto return-exception stack-nargs list-args)))))
 	  ((= protocol call-with-values-protocol)
-	   (skip-current-continuation!)
-	   (set! *val* (continuation-ref cont continuation-cells))
-	   (goto perform-application-with-rest-list
-		 stack-nargs
-		 list-args
-		 list-arg-count))
+	   (let ((consumer (current-continuation-ref continuation-cells)))
+	     (skip-current-continuation!)
+	     (set! *val* consumer)
+	     (goto perform-application-with-rest-list
+		   stack-nargs
+		   list-args
+		   list-arg-count)))
 	  ((<= protocol maximum-stack-args)
 	   (goto fixed-arg-return protocol 1
 		 stack-nargs list-args list-arg-count))
 	  ((= protocol two-byte-nargs+list-protocol)
-	   (goto nary-arg-return (code-vector-ref16 code (+ pc 2)) 3
+	   (goto nary-arg-return (code-pointer-ref16 code-pointer 2) 3
 		 stack-nargs list-args list-arg-count))
 	  ((= protocol two-byte-nargs-protocol)
-	   (goto fixed-arg-return (code-vector-ref16 code (+ pc 2)) 3
+	   (goto fixed-arg-return (code-pointer-ref16 code-pointer 2) 3
 		 stack-nargs list-args list-arg-count))
 	  (else
 	   (error "unknown protocol" protocol)
@@ -544,7 +585,7 @@
 
 (define (fixed-arg-return count bytes-used stack-nargs list-args list-arg-count)
   (if (= count (+ stack-nargs list-arg-count))
-      (let ((arg-top (top-of-argument-stack)))
+      (let ((arg-top (pointer-to-stack-arguments)))
 	(pop-continuation!)
 	(move-stack-arguments! arg-top stack-nargs)
 	(if (not (= 0 list-arg-count))
@@ -559,7 +600,7 @@
 
 (define (nary-arg-return count bytes-used stack-nargs list-args list-arg-count)
   (if (<= count (+ stack-nargs list-arg-count))
-      (let ((arg-top (top-of-argument-stack)))
+      (let ((arg-top (pointer-to-stack-arguments)))
 	(pop-continuation!)
 	(move-stack-arguments! arg-top stack-nargs)
 	(push (if (<= stack-nargs count)
@@ -597,7 +638,7 @@
 
 (define (push-list list count)
   (push list)
-  (ensure-stack-space! count ensure-space)
+  (ensure-stack-space! count)
   (let ((list (pop)))
     (do ((i count (- i 1))
 	 (l list (vm-cdr l)))

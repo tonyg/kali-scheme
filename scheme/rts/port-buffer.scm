@@ -6,7 +6,6 @@
       (make-port handler
 		 (bitwise-ior input-port-mask open-input-port-mask)
 		 #f		; timestamp (was lock)
-		 #f             ; locked?  (not currently used)
 		 data
 		 buffer
 		 index
@@ -22,7 +21,6 @@
       (make-port handler
 		 open-output-port-status
 		 #f		; timestamp (was lock)
-		 #f             ; locked?  (not currently used)
 		 data
 		 buffer
 		 index

@@ -185,7 +185,6 @@
 	  port-buffer       
 
 	  port-lock         set-port-lock!
-	  port-locked?      set-port-locked?!
 	  port-status       set-port-status!
 	  port-data         set-port-data!
 	  port-index        set-port-index!
@@ -1209,45 +1208,6 @@
   (export eval load load-into eval-from-file
 	  ; eval-scanned-forms
 	  ))
-
-; VM architecture
-
-(define-interface architecture-interface
-  (export (enum :syntax)  ;So you don't have to remember to open ENUMERATED
-	  (enumerand->name :syntax)
-	  (name->enumerand :syntax)
-	  bits-used-per-byte byte-limit
-	  (exception :enumeration)
-	  exception-count
-	  (interrupt :enumeration)
-	  interrupt-count
-	  (memory-status-option :enumeration)
-	  memory-status-option-count
-	  (op :enumeration)
-	  op-count
-	  opcode-arg-specs
-	  (stob :enumeration)
-	  stob-count
-	  stob-data
-	  (channel-status-option :enumeration)
-	  (time-option :enumeration)
-	  time-option-count
-	  (port-status-options :enumeration)
-	  (current-port-marker :syntax)
-
-	  maximum-stack-args
-	  two-byte-nargs-protocol
-	  two-byte-nargs+list-protocol
-	  ignore-values-protocol
-	  args+nargs-protocol
-	  nary-dispatch-protocol
-	  call-with-values-protocol
-	  big-stack-protocol
-
-	  default-stack-space
-	  environment-stack-size
-	  continuation-stack-size
-	  available-stack-space))
 
 (define-interface display-conditions-interface
   (export display-condition		;command.scm

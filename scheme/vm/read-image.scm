@@ -141,11 +141,11 @@
       (image-read-block port new-begin (cells->a-units 1))
     (cond ((not okay?)
 	   (read-lost string port))
-	  ((= (fetch new-begin) 1)
+	  ((= (fetch new-begin) false)
 	   (really-read-image port new-begin old-begin old-hp #f))
 	  (else
 	   (reverse-descriptor-byte-order! new-begin)
-	   (if (= (fetch new-begin) 1)
+	   (if (= (fetch new-begin) false)
 	       (really-read-image port new-begin old-begin old-hp #t)
 	       (read-lost "Unable to correct byte order" port))))))
 

@@ -98,8 +98,9 @@ FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
 
 # Sources:
 
-CONFIG_FILES = scheme/interfaces.scm scheme/low-packages.scm \
-	       scheme/rts-packages.scm scheme/comp-packages.scm
+CONFIG_FILES = scheme/interfaces.scm scheme/vm/shared-interfaces.scm	\
+	       scheme/low-packages.scm scheme/rts-packages.scm		\
+	       scheme/comp-packages.scm
 
 # Rules:
 
@@ -111,10 +112,11 @@ enough: $(VM) $(IMAGE) go
 # External code to include in the VM
 # After changing any of these you should delete `scheme48vm' and remake it.
 
-EXTERNAL_OBJECTS = $(POSIX_OBJECTS) $(SOCKET_OBJECTS) $(LOOKUP_OBJECTS)
+EXTERNAL_OBJECTS = $(POSIX_OBJECTS) $(SOCKET_OBJECTS) $(LOOKUP_OBJECTS)	\
+		   $(ASM_OBJECTS)
 EXTERNAL_LD_FLAGS = $(POSIX_LD_FLAGS) $(SOCKET_LD_FLAGS)
 EXTERNAL_INITIALIZERS = $(POSIX_INITIALIZERS) $(SOCKET_INITIALIZERS)	\
-                        $(LOOKUP_INITIALIZERS)
+                        $(LOOKUP_INITIALIZERS) $(ASM_INITIALIZERS)
 
 # Rules for any external code.
 
@@ -160,17 +162,23 @@ LOOKUP_OBJECTS = c/unix/dynamo.o
 LOOKUP_INITIALIZERS = 	s48_init_external_lookup
 
 # End of lookup rules
+# Native-code glue rules
+
+ASM_OBJECTS = c/glue.o c/asm-glue.o
+ASM_INITIALIZERS = 	s48_init_asm_glue
+
+# End of native-code glue rules
 # End of external rules
 # --------------------
 
 $(VM): c/main.o $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
-	rm -f /tmp/s48_external_$$$$.c &&					\
-	build/build-external-modules /tmp/s48_external_$$$$.c			\
-		$(EXTERNAL_INITIALIZERS) &&					\
-	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/main.o $(OBJS) $(UNIX_OBJS)		\
-		/tmp/s48_external_$$$$.c					\
-		$(LIBOBJS) $(LIBS)						\
-		$(EXTERNAL_OBJECTS) $(EXTERNAL_LD_FLAGS) &&			\
+	rm -f /tmp/s48_external_$$$$.c &&				\
+	build/build-external-modules /tmp/s48_external_$$$$.c		\
+		$(EXTERNAL_INITIALIZERS) &&				\
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/main.o $(OBJS) $(UNIX_OBJS)	\
+		/tmp/s48_external_$$$$.c				\
+		$(LIBOBJS) $(LIBS)					\
+		$(EXTERNAL_OBJECTS) $(EXTERNAL_LD_FLAGS) &&		\
 	rm -f /tmp/s48_external_$$$$.c
 
 c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
@@ -453,6 +461,7 @@ link/linker-in-lucid: build/lucid-script.lisp $(linker-files) \
 $(INITIAL): $(LINKER_IMAGE) $(CONFIG_FILES) build/initial.scm $(initial-files)
 	($(START_LINKER);						\
 		echo '(load-configuration "scheme/interfaces.scm")';	\
+		echo '(load-configuration "scheme/vm/shared-interfaces.scm")'; \
 		echo '(load-configuration "scheme/packages.scm")';	\
 		echo '(flatload initial-structures)';			\
 		echo '(load "build/initial.scm")';			\

@@ -374,9 +374,13 @@
 				 (low-byte 2))
                     (instruction (enum op local0) 1) ;consumer
                     (instruction (enum op push))
-                    (instruction-using-label (enum op make-cont) label 1)
+                    (instruction-using-label (enum op make-cont) label)
                     (instruction (enum op local0) 2) ;producer
                     (instruction (enum op call) 0)
+		    (let ((cont-size (+ 1 continuation-cells)))
+		      (instruction (enum op cont-data)
+				   (high-byte cont-size)
+				   (low-byte cont-size)))
                     (attach-label label
                                   (instruction (enum op protocol)
 					       call-with-values-protocol))))))

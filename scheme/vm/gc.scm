@@ -16,7 +16,6 @@
   (swap-spaces)
   (set-heap-pointer! (s48-heap-begin))
   (set! *weak-pointer-hp* null-address)
-  (trace-static-areas)
   (s48-gc-root)			; trace the interpreter's roots
   (do-gc)
   (clean-weak-pointers)
@@ -36,14 +35,6 @@
   (if (in-oldspace? stob)
       (copy-object stob)
       stob))
-
-; Complete a GC after all roots have been traced.
-
-(define (trace-static-areas)
-  (walk-impure-areas
-   (lambda (start end)
-     (s48-trace-locations! start end)
-     #t)))
 
 ; Scan the heap, copying pointed to objects, starting from START.  Quit once
 ; the scanning pointer catches up with the heap pointer.

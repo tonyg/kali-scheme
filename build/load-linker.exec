@@ -38,7 +38,7 @@
       (open scheme-level-1 signals)
       (files (rts defenum scm))))
 
-(r '(define-structure architecture architecture-interface
+(r '(define-structure architecture vm-architecture-interface
       (open scheme-level-1 signals enumerated)
       (files (rts arch))))
 
@@ -60,7 +60,9 @@
 						      %features-structures))))
 
 ; Load the linker's interface and structure definitions.
-(config '(load "interfaces.scm" "more-interfaces.scm"))
+(config '(load "interfaces.scm"
+               "vm/shared-interfaces.scm"
+	       "more-interfaces.scm"))
 (let ((z (config '(run %linker-structures)))
       (env (config interaction-environment)))
   (config (lambda () (flatload z env))))

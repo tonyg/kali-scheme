@@ -27,7 +27,7 @@
 ;     sort of annoying)
 
 ;;;;
-;;;; $Id: psd-s48.scm,v 1.1 1994/07/13 04:28:45 bdc Exp $
+;;;; $Id: psd-s48.scm,v 1.1.1.3 2001/05/07 06:34:09 sperber Exp $
 ;;;;
 ;;;; psd -- a portable Scheme debugger, version 1.1
 ;;;; Copyright (C) 1992 Pertti Kellomaki, pk@cs.tut.fi
@@ -47,7 +47,10 @@
 ;;;; Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 ;;;; See file COPYING in the psd distribution.
 ;;;;
-;;;;  $Log: psd.scm,v $
+;;;;  $Log: psd-s48.scm,v $
+;;;;  Revision 1.1.1.3  2001/05/07 06:34:09  sperber
+;;;;  0.55 early release from Richard.
+;;;;
 ;;;; Revision 1.6  1993/10/07  08:20:14  pk
 ;;;; Define force-output, redefinition hurts less than getting an error
 ;;;; message about nonexistent procedure.

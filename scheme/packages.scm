@@ -278,6 +278,7 @@
 	    templates
 	    threads
 	    util
+	    vm-data
 	    weak)
 	   :structure)))
 

@@ -36,7 +36,7 @@
     (if (= reason (enum exception arithmetic-overflow))
 	(+ (* arg0 1000)		; seconds
 	   (car maybe-arg1))		; milliseconds
-	(apply signal-exception opcode reason option arg0 mayge-arg1))))
+	(apply signal-exception opcode reason option arg0 maybe-arg1))))
 
 ; This is for generic arithmetic, mostly
 

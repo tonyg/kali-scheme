@@ -24,7 +24,10 @@
   (push *env*)
   (push (make-header (enum stob vector) (cells->bytes (+ count 1))))
   (add-env-stats count)
-  (set! *env* (address->stob-descriptor (address2+ *stack*))))
+  (set! *env* (address->stob-descriptor (address1+ *stack*))))
+
+(define (stack-loc s)
+  (- (address->integer *stack-end*) s))
 
 ; Alternative method for making environments - put the values into the heap.
 
@@ -33,11 +36,11 @@
 
 (define (pop-args-into-heap-env count key)
   (let ((stob (make-d-vector (enum stob vector) (+ count 1) key)))
-    (copy-memory! (address1+ *stack*)
+    (copy-memory! *stack*
 		  (address+ (address-after-header stob)
 			    (cells->a-units 1))
 		  (cells->bytes count))
-    (add-cells-to-stack! (- 0 count))
+    (add-cells-to-stack! (- count))
     (vm-vector-set! stob 0 *env*)
     (set! *env* stob)))
 
@@ -74,11 +77,11 @@
                (set-env-parent! env new)
                (loop new)))))
     (let loop ((cont cont))
-      (let ((env (continuation-env cont)))
+      (let ((env (stack-cont-env cont)))
         (cond ((and (stob? env)
                     (stob? (stob-header env)))
-               (set-continuation-env! cont (stob-header env))
-               (loop (continuation-cont cont))))))
+               (set-stack-cont-env! cont (stob-header env))
+               (loop (integer->address (stack-cont-cont cont)))))))
     top))
 
 ; ARGUMENTS-ON-STACK needs to walk down the stack and find the end of the

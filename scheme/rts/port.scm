@@ -237,7 +237,6 @@
       (make-port handler
 		 (bitwise-ior input-port-mask open-input-port-mask)
 		 #f		; timestamp (not used for unbuffered ports)
-		 #f             ; locked?    (not currently used)
 		 data
 		 #f		; buffer
 		 #f		; index
@@ -275,7 +274,6 @@
       (make-port handler
 		 open-output-port-status
 		 #f		; lock     (not used in unbuffered ports)
-		 #f             ; locked?  (not currently used)
 		 data
 		 #f		; buffer
 		 #f		; index
@@ -309,9 +307,8 @@
 
 (define (make-null-output-port)
   (make-port null-output-port-handler
-	     open-output-port-mask
+	     open-output-port-status
 	     #f		; timestamp
-	     #f         ; locked?   (not currently used)
 	     #f		; data
 	     null-output-buffer
 	     0		; index

@@ -60,7 +60,9 @@
 (define (run-time) 0)
 (define (cheap-time) 0)
 
-(define s48-call-native-code (fake-it 's48-call-native-code))
+(define s48-call-native-procedure (fake-it 's48-call-native-code))
+(define s48-invoke-native-continuation (fake-it 's48-call-native-code))
+(define s48-native-return 0)
 
 (define get-proposal-lock!     (fake-it 'get-proposal-lock!))
 (define release-proposal-lock! (fake-it 'release-proposal-lock!))

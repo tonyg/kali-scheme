@@ -3,61 +3,63 @@
 
 ; Continuations
 
-(define (continuation-cont                c) (continuation-ref c 0))
-(define (real-continuation-pc             c) (continuation-ref c 1))
-(define (real-continuation-template       c) (continuation-ref c 2))
-(define (continuation-env                 c) (continuation-ref c 3))
-(define (exception-continuation-pc        c) (continuation-ref c 4))
-(define (exception-continuation-template  c) (continuation-ref c 5))
-(define (exception-continuation-exception c) (continuation-ref c 6))
+(define (make-ref index)
+  (lambda (c)
+    (continuation-ref c index)))
+
+(define continuation-cont          (make-ref continuation-cont-index))
+(define real-continuation-pc       (make-ref continuation-pc-index))
+(define real-continuation-template (make-ref continuation-template-index))
+(define continuation-env           (make-ref continuation-env-index))
+(define exception-cont-pc          (make-ref exception-cont-pc-index))
+(define exception-cont-template    (make-ref exception-cont-template-index))
+
+; This one is exported
+(define exception-continuation-exception
+  (make-ref exception-cont-exception-index))
 
 ; Exception continuations contain the state of the VM when an exception occured.
 
 (define (exception-continuation? thing)
   (and (continuation? thing)
-       (= 0 (real-continuation-pc thing))
+       (= 3 (real-continuation-pc thing))
        (let ((code (template-code (real-continuation-template thing))))
 	 (and (= 1				; one return value
-		 (code-vector-ref code 1))
+		 (code-vector-ref code 4))
 	      (= (enum op return-from-exception)
-		 (code-vector-ref code 2))))))
+		 (code-vector-ref code 5))))))
 
 (define (continuation-pc c)
   (if (exception-continuation? c)
-      (exception-continuation-pc c)
+      (exception-cont-pc c)
       (real-continuation-pc c)))
 
 (define (continuation-template c)
   (if (exception-continuation? c)
-      (exception-continuation-template c)
+      (exception-cont-template c)
       (real-continuation-template c)))
 
 ; Accessing the saved operand stack.
 
-(define normal-continuation-overhead 4)
-
-(define exception-continuation-overhead
-  (+ normal-continuation-overhead 4))
-
 (define (continuation-arg c i)
   (continuation-ref c (+ (if (exception-continuation? c)
-			     exception-continuation-overhead
-			     normal-continuation-overhead)
+			     exception-continuation-cells
+			     continuation-cells)
 			 i)))
 
 (define (continuation-arg-count c)
   (- (continuation-length c)
      (if (exception-continuation? c)
-	 exception-continuation-overhead
-	 normal-continuation-overhead)))
+	 exception-continuation-cells
+	 continuation-cells)))
 
 (define-simple-type :continuation (:value) continuation?)
 
 (define-method &disclose ((obj :continuation))
   (if (exception-continuation? obj)
       (list 'exception-continuation
-	    `(pc ,(exception-continuation-pc obj))
-	    (template-info (exception-continuation-template obj)))
+	    `(pc ,(exception-cont-pc obj))
+	    (template-info (exception-cont-template obj)))
       (list 'continuation
 	    `(pc ,(continuation-pc obj))
 	    (template-info (continuation-template obj)))))

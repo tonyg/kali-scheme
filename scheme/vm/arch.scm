@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 22")
+(define architecture-version "Vanilla 23")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -79,10 +79,10 @@
   (stack-ref      byte)	         ; index'th element of stack into *val*
   (stack-set!     byte 1)        ; *val* to index'th element of stack
 
-  (make-cont      offset byte)      ; save state in *cont*
-  (make-big-cont  offset two-bytes) ; save state in *cont*, two-byte size
+  (make-cont      offset)        ; save state in *cont*
   (current-cont)	         ; copy *cont* to *val*, use WITH-CONTINUATION
 			         ; to use copied continuation
+  (cont-data      two-bytes)     ; continuation size, never executed
 
   ;; Five different ways to call procedures
   (call     nargs     1 +)       ; last argument is the procedure to call
@@ -353,6 +353,10 @@
 
 (define bottom-of-stack-protocol (next-protocol))
 
+; Native protocols are the same, except with the high bit set.
+
+(define native-protocol-mask #x80)
+
 ; The maximum number of arguments that can be passed to EXTERNAL-CALL.
 ; This is determined by the C procedure `external_call()'.
 
@@ -371,6 +375,25 @@
 
 (define available-stack-space 8000) ; how much stack space is available for
                                     ; any one procedure
+
+; The number of values that the VM adds to continuations.
+(define continuation-cells 4)
+
+; Offsets of saved registers in continuations
+(define continuation-pc-index       0)
+(define continuation-cont-index     1)
+(define continuation-template-index 2)
+(define continuation-env-index      3)
+
+; The number of additional values that the VM adds to exception continuations.
+(define exception-continuation-cells 5)
+
+; Offsets of saved registers in exception continuations
+(define exception-cont-size-index             (+ continuation-cells 0))
+(define exception-cont-pc-index               (+ continuation-cells 1))
+(define exception-cont-template-index         (+ continuation-cells 2))
+(define exception-cont-exception-index        (+ continuation-cells 3))
+(define exception-cont-instruction-size-index (+ continuation-cells 4))
 
 ;----------------
 
@@ -469,7 +492,6 @@
       (port-handler)
       (port-status  set-port-status!)
       (port-lock    set-port-lock!)		; used for buffer timestamps
-      (port-locked? set-port-locked?!)		; no longer used
       (port-data    set-port-data!)
       (port-buffer  set-port-buffer!)
       (port-index   set-port-index!)

@@ -124,10 +124,6 @@
 (define *pure-area-count* 0)
 (define *impure-area-count* 0)
 
-(define (have-static-areas?)
-  (or (< 0 *impure-area-count*)
-      (< 0 *pure-area-count*)))
-
 (define (s48-register-static-areas pure-count pure-areas pure-sizes
 				   impure-count impure-areas impure-sizes)
   (set! *pure-area-count* pure-count)

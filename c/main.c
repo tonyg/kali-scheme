@@ -114,7 +114,7 @@ Options: -h <total heap size in words>\n\
 	 -s <stack buffer size in words>\n\
          -i <image file name>\n\
          -o <object file name>\n\
-         -u [don't warn on unbound external identifiers]",
+         -u [don't warn on unbound external identifiers]\n",
 	    me);
     return 1;
   }

@@ -2,6 +2,23 @@
 
 Recent changes to Scheme 48.
 
+...	 ???
+	 Bug fixes:
+	  Fixed a problem with the debug data for LETREC environments.
+	  Null output ports now marked as output ports.
+	 Changes:
+	  Image writer now uses hash tables instead of breaking hearts.  This
+	   allows for more careful construction of the image files and means
+	   that having static areas no longer prevents writing images.
+	  Continuations no longer have headers when on the stack.
+	  Removed the unused PORT-LOCKED? from ports.
+	  Made for less duplication of code between the VM and RTS: put the
+	   continuation offsets into vm/arch.scm, moved some code around so
+	   that vm/data.scm could be used by the RTS, the interface definitions
+	   for vm/arch.scm and vm/data.scm are now shared.
+	  The VM's stack pointer (*stack*) now points to the top value on the
+	   stack instead of the unused location just above.
+
 7/15/01  (version 0.57)
 	 Additions:
 	  Added a SYSTEM procedure that calls the C system() function

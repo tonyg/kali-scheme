@@ -4,8 +4,6 @@
 ; To load the VM into Scheme 48:
 ;   ,exec ,load load-vm.scm
 ;
-; You must have already loaded Pre-Scheme.
-;
 ; Then, for example,
 ;  (start-vm "=scheme48/../build/initial.image" 4000000 20000 '#())
 ; in the user package will start up the VM with the initial image.
@@ -76,7 +74,10 @@
 ; VM (no MAP, etc.).  
 
 (config)
+(load "../prescheme/interface.scm")
+(load "../prescheme/package-defs.scm")
 (load "interfaces.scm")
+(load "shared-interfaces.scm")
 (load "s48-package-defs.scm")
 (load "package-defs.scm")
 (load-package 'destructuring)  ; used in FOR-SYNTAX clause

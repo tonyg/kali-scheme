@@ -198,9 +198,38 @@
   (open scheme-level-1 signals)
   (files (rts defenum scm)))
 
-(define-structure architecture architecture-interface
+(define-structure architecture vm-architecture-interface
   (open scheme-level-1 signals enumerated)
   (files (vm arch)))
+
+(define-structure vm-data vm-data-interface
+  (open scheme-level-1 enumerated bitwise ascii
+	architecture
+	(subset signals (error)))
+  (begin
+    ; Scheme/Pre-Scheme differences
+    (define (arithmetic-shift-right n k)
+      (arithmetic-shift n (- k)))
+    (define shift-left arithmetic-shift)
+    
+    ; From vm/vm-utilities.scm
+    (define (adjoin-bits high low k)
+      (+ (arithmetic-shift high k) low))
+    
+    (define (low-bits n k)
+      (bitwise-and n (- (arithmetic-shift 1 k) 1)))
+    
+    (define high-bits arithmetic-shift-right)
+    
+    (define unsigned-high-bits high-bits)
+    
+    (define-syntax assert
+      (syntax-rules ()
+	((assert foo) #t)))
+    
+    ; We just know this.
+    (define useful-bits-per-word 32))
+  (files (vm data)))
 
 (define-structures ((exceptions exceptions-interface)
 		    (handle handle-interface))
@@ -213,6 +242,7 @@
 	meta-methods
 	more-types
 	architecture
+	enumerated
 	debug-messages	  ; for printing from last-resort-condition handler
 	vm-exposure	  ;primitive-catch
 	templates	  ;template-code, template-info

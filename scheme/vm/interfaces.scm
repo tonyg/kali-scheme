@@ -11,54 +11,11 @@
 	  error-message
 	  ))
 
-(define-interface vm-architecture-interface
-  (export architecture-version
-          (enum :syntax) ;so you don't have to remember to open enumerated
-	  bits-used-per-byte byte-limit
-	  (interrupt :syntax)
-	  interrupt-count
-	  (memory-status-option :syntax)
-	  (op :syntax)
-	  op-count
-	  opcode-arg-specs
-	  (exception :syntax)
-	  (stob :syntax)
-	  stob-count
-	  least-b-vector-type
-	  stob-data
-	  (time-option :syntax)
-	  (channel-status-option :syntax)
-	  (port-status-options :syntax)
-	  (current-port-marker :syntax)
-
-	  maximum-stack-args
-	  two-byte-nargs-protocol
-	  two-byte-nargs+list-protocol
-	  ignore-values-protocol
-	  args+nargs-protocol
-	  nary-dispatch-protocol
-	  bottom-of-stack-protocol
-	  call-with-values-protocol
-	  big-stack-protocol
-	  maximum-external-call-args
-
-	  default-stack-space
-	  environment-stack-size
-	  continuation-stack-size
-	  available-stack-space
-	  ))
-
 ; Memory
 
 (define-interface memory-interface
   (export create-memory memory-begin memory-size
 
-	  bytes-per-cell bits-per-cell
-	  bytes->cells
-	  cells->bytes
-	  a-units->cells
-	  cells->a-units
-	  bytes->a-units
 	  address+ address- address1+ address2+
 	  address-difference
 	  address= address< address<= address> address>=
@@ -73,33 +30,6 @@
 
 	  copy-memory! memory-equal?    ; from ps-memory
 	  read-block write-block        ; from ps-memory
-	  ))
-
-; Low-level data structures
-
-(define-interface data-interface
-  (export vm-eq?
-	  fixnum? immediate? header? stob?
-
-	  enter-fixnum extract-fixnum
-	  bits-per-fixnum greatest-fixnum-value
-	  too-small-for-fixnum? too-big-for-fixnum?
-	  descriptor->fixnum fixnum->stob
-	  fixnum= fixnum< fixnum> fixnum<= fixnum>=
-	  fixnum-bitwise-not fixnum-bitwise-and
-	  fixnum-bitwise-ior fixnum-bitwise-xor
-	  
-	  undefined?
-	  true false eof-object null unspecific-value unreleased-value quiescent
-	  unbound-marker unassigned-marker
-	  vm-boolean? false? enter-boolean extract-boolean
-	  vm-char? enter-char extract-char vm-char=? vm-char<?
-
-	  make-header header-type
-	  header-length-in-bytes header-length-in-cells header-length-in-a-units
-	  immutable-header? make-header-immutable
-	  d-vector-header? b-vector-header?
-	  max-stob-contents-size-in-cells
 
 	  address->stob-descriptor
 	  address-at-header
@@ -107,6 +37,8 @@
 	  stob-header stob-header-set!
 	  stob-overhead
 	  ))
+
+; Low-level data structures
 
 (define-interface fixnum-arithmetic-interface
   (export add-carefully subtract-carefully
@@ -169,7 +101,6 @@
 	  heap-limit
 	  set-heap-pointer!
 	  heap-pointer
-	  have-static-areas?
 	  walk-impure-areas
 	  allocate
 	  bytes-available?))
@@ -273,7 +204,10 @@
 	  table-walker
 	  table-tracer
 	  table-cleaner
-	  table-relocator))
+	  table-relocator
+
+	  value->link
+	  link->value))
 
 (define-interface struct-interface
   (export vm-pair? vm-pair-size vm-cons vm-car vm-set-car! vm-cdr vm-set-cdr!
@@ -304,7 +238,6 @@
 	  port-index set-port-index!
 	  port-limit set-port-limit!
 	  port-lock
-	  port-locked? set-port-locked?!
 	  port-pending-eof? set-port-pending-eof?!
    
 	  vm-vector? vm-vector-size vm-make-vector vm-vector-length
@@ -338,7 +271,7 @@
 	  template-ref template-set!
 	  template-code template-name
 	  make-template-containing-ops
-	  make-template-containing-three-ops
+	  make-template-containing-six-ops
 	  op-template-size
 
 	  vm-string? vm-string-size vm-make-string vm-string-length
@@ -401,8 +334,10 @@
 
 	  push-continuation-on-stack
 	  pop-continuation-from-stack
+	  pop-native-continuation-from-stack
+	  push-exception-data
+	  pop-exception-data
 
-	  current-continuation
 	  set-current-continuation!
 	  current-continuation-size
 	  copy-current-continuation-to-heap
@@ -410,9 +345,12 @@
 	  get-continuation-from-heap
 	  copy-continuation-from-heap!
 
+	  current-continuation-code-pointer
+	  current-continuation-ref
+
 	  trace-stack
 
-	  top-of-argument-stack
+	  pointer-to-stack-arguments
 	  move-stack-arguments!
 	  move-args-above-cont!
 	  arguments-on-stack
@@ -420,6 +358,8 @@
 	  remove-stack-arguments
 
 	  report-continuation-uids
+
+	  s48-copy-stack-into-heap
 
 	  *cont*
 	  *stack*
@@ -457,7 +397,9 @@
  	  external-bignum->long
  	  external-bignum-fits-in-word?
 
-	  s48-call-native-code
+	  s48-call-native-procedure
+	  s48-invoke-native-continuation
+	  s48-native-return
 
 	  get-proposal-lock!
 	  release-proposal-lock!
@@ -605,7 +547,7 @@
 (define-interface interpreter-interface
   (export initialize-interpreter+gc
 	  clear-registers
-	  interpret
+	  perform-application
 	  s48-set-extension-value!
 	  s48-note-event
 	  s48-*extension-value*
@@ -613,6 +555,8 @@
 	  s48-*pending-interrupt?*
 	  s48-reset-interrupts!
 	  s48-initialize-shared-registers!
+	  s48-*native-protocol*
+	  s48-set-native-protocol!
 	  
 	  *template*
 	  *code-pointer*
@@ -684,4 +628,7 @@
 	  *cont*
 	  *stack*
 	  *stack-limit*
+	  s48-*native-protocol*
+	  s48-set-native-protocol!
+	  s48-copy-stack-into-heap
 	  ))

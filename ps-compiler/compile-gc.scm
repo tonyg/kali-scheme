@@ -9,6 +9,7 @@
     '(run (prescheme-compiler
            '(allocation heap heap-init gc)
            '("../scheme/vm/interfaces.scm"
+	     "../scheme/vm/shared-interfaces.scm"
              "../scheme/vm/ps-package-defs.scm"
              "../scheme/vm/package-defs.scm"
              "../scheme/vm/alt-vm-package-defs.scm")
@@ -22,6 +23,7 @@
     '(run (prescheme-compiler
            '(read-image)
            '("../scheme/vm/interfaces.scm"
+	     "../scheme/vm/shared-interfaces.scm"
              "../scheme/vm/ps-package-defs.scm"
              "../scheme/vm/package-defs.scm"
              "../scheme/vm/alt-vm-package-defs.scm"
@@ -35,6 +37,7 @@
     '(run (prescheme-compiler
 	   '(write-image)
 	   '("../scheme/vm/interfaces.scm"
+	     "../scheme/vm/shared-interfaces.scm"
 	     "../scheme/vm/ps-package-defs.scm"
 	     "../scheme/vm/package-defs.scm"
 	     "../scheme/vm/alt-vm-package-defs.scm"

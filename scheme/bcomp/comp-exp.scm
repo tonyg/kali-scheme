@@ -252,21 +252,19 @@
   (if (return-cont? cont) 
       code
       (let ((label (make-label)))
-	(sequentially (if (>= depth byte-limit)
-			  (instruction-using-label (enum op make-big-cont)
-						   label
-						   (high-byte depth)
-						   (low-byte depth))
-			  (instruction-using-label (enum op make-cont)
-						   label
-						   depth))
+	(sequentially (instruction-using-label (enum op make-cont)
+					       label)
 		      (if (keep-source-code?)
 			  (note-source-code (fixup-source (cont-source-info cont))
 					    code)
 			  code)
-		      ;; Header and/or other data goes here.
-		      ;; But what about the stack-check code?
-		      ;; What about alignment?
+		      ; Header and/or other data goes here.
+		      ; We would really like to align this to get the desired
+		      ; header tag for scanning purposes.  What to do?
+		      (let ((cont-size (+ depth continuation-cells)))
+			(instruction (enum op cont-data)
+				     (high-byte cont-size)
+				     (low-byte cont-size)))
 		      (attach-label label
 				    (if (accept-values-cont? cont)
 					empty-segment
@@ -342,6 +340,11 @@
 ; (PURE-LETREC ((<var> <val>) ...) (<free var> ...) <body>)
 ; These are LETREC's where the values are all LAMBDA's.  They are produced by
 ; opt/flatten.scm. 
+;
+; The LETREC-CLOSURES opcode foolishly puts the closures into opposite orders
+; in the recursive environment used by the closures and the plain environment
+; used by the body.  Because of this we need separate NOTE-ENVIRONMENT calls
+; for the two chunks of code.  An easy fix to the VM would get rid of this.
 
 (define-compilator 'pure-letrec syntax-type
   (lambda (node level depth cont)
@@ -349,26 +352,32 @@
 	   (specs (cadr exp))
 	   (free-vars (caddr exp))
 	   (body (cadddr exp))
-	   (count (length specs)))
+	   (count (length specs))
+	   (names (map name-node->symbol (map car specs))))
       (call-with-values
         (lambda ()
 	  (compile-flat-environment free-vars level))
 	(lambda (env-code free-vars)
 	  (maybe-push-continuation
-	    (sequentially
-	     (instruction-with-literal (enum op literal) (fluid $env-key))
-	     (if (empty-segment? env-code)
-		 (instruction (enum op make-stored-object)
-			      1
-			      (enum stob vector))
-		 env-code)
-	     (instruction (enum op letrec-closures)
-			  (high-byte count)
-			  (low-byte count))
-	     (letrec-lambda-code specs free-vars)
-	     (letrec-body-code body specs level (cont-name cont)))
-	    depth
-	    cont))))))
+	   (sequentially 
+	     (note-environment
+	       (reverse names)
+	       (sequentially
+		  (instruction-with-literal (enum op literal) (fluid $env-key))
+		  (if (empty-segment? env-code)
+		      (instruction (enum op make-stored-object)
+				   1
+				   (enum stob vector))
+		      env-code)
+		  (instruction (enum op letrec-closures)
+			       (high-byte count)
+			       (low-byte count))
+		  (letrec-lambda-code specs free-vars)))
+	     (note-environment
+	       names
+	       (letrec-body-code body specs level (cont-name cont))))
+	   depth
+	   cont))))))
 
 (define (empty-segment? segment)
   (= 0 (segment-size segment)))
@@ -393,9 +402,7 @@
   (let ((vars (map car specs))
 	(level (+ level 1)))
     (set-lexical-offsets! (reverse vars) level)
-    (note-environment
-     (map name-node->symbol vars)
-     (compile body level 0 (return-cont name)))))
+    (compile body level 0 (return-cont name))))
 
 ; --------------------
 ; Compile-time continuations

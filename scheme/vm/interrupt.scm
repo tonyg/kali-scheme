@@ -29,9 +29,10 @@
   (push (current-pc))
   (push (current-proposal))
   (push (enter-fixnum *enabled-interrupts*))
+  (push (enter-fixnum (+ stack-arg-count continuation-cells 6)))
   (set-current-proposal! false)
-  (set-template! *interrupt-template* (enter-fixnum 0))
-  (push-continuation! *code-pointer* (+ stack-arg-count 5))
+  (set-template! *interrupt-template* (enter-fixnum continuation-data-size))
+  (push-continuation! *code-pointer*)
   (let* ((pending-interrupt (get-highest-priority-interrupt!))
 	 (arg-count (push-interrupt-args pending-interrupt))
 	 (handlers (shared-ref *interrupt-handlers*)))
@@ -101,6 +102,7 @@
 ; Return from a call to an interrupt handler.
 
 (define-opcode return-from-interrupt
+  (pop)					; removed size
   (set-enabled-interrupts! (extract-fixnum (pop)))
   (set-current-proposal! (pop))
   (let ((pc (pop)))

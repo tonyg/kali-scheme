@@ -65,3 +65,6 @@ extern char *		s48_set_gc_roots_baseB(void);
 extern char		s48_release_gc_roots_baseB(char *);
 extern void		s48_register_gc_rootB(char *marker);
 extern void		s48_reset_external_rootsB();
+
+/* for native code */
+extern void		s48_copy_stack_into_heap();

@@ -27,8 +27,12 @@
     (define run-time 
       (external "s48_run_time" (=> () integer integer)))
 
-    (define s48-call-native-code
-      (external "s48_call_native_code" (=> (integer) null)))
+    (define s48-call-native-procedure
+      (external "s48_call_native_procedure" (=> (integer integer) integer)))
+    (define s48-invoke-native-continuation
+      (external "s48_invoke_native_continuation" (=> (integer) integer)))
+    (define s48-native-return
+      (external "((long)&s48_native_return)" integer))
 
     (define get-proposal-lock!
       (external "GET_PROPOSAL_LOCK" (=> () null)))

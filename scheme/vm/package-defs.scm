@@ -12,7 +12,7 @@
 	integer-arithmetic
 	data struct
 	interpreter interpreter-internal
-	stack gc interpreter-gc gc-util
+	stack gc interpreter-gc gc-util gc-static-hack
 	vmio
 	arithmetic-opcodes
 	external-opcodes
@@ -135,16 +135,16 @@
 ;----------------
 ; Data structures
 
-(define-structure memory memory-interface
-  (open prescheme ps-memory vm-utilities)
-  ;(optimize auto-integrate)
-  (files memory))
-
-(define-structure data data-interface
+(define-structure data vm-data-interface
   (open prescheme vm-utilities
-	system-spec vm-architecture memory)
+	system-spec vm-architecture)
   ;(optimize auto-integrate)
   (files data))
+
+(define-structure memory memory-interface
+  (open prescheme ps-memory vm-utilities data)
+  ;(optimize auto-integrate)
+  (files memory))
 
 (define-structure stob stob-interface
   (open prescheme ps-receive vm-utilities vm-architecture
@@ -175,6 +175,18 @@
 	heap heap-gc-util
 	interpreter-gc)
   (files gc))
+
+; This should be in heap.scm except that it needs GC and GC needs HEAP,
+; so we have to put this in its own package to avoid a dependency loop.
+
+(define-structure gc-static-hack (export)
+  (open prescheme gc heap-gc-util gc-roots)
+  (begin
+    (add-gc-root! (lambda ()
+		    (walk-impure-areas
+		     (lambda (start end)
+		       (s48-trace-locations! start end)
+		       #t))))))
 
 (define-structure allocation allocation-interface
   (open prescheme memory heap-gc-util gc data vm-architecture)
@@ -229,20 +241,48 @@
   (files read-image))
 
 (define-structure write-image (export s48-write-image)
-  (open prescheme vm-utilities vm-architecture
-	memory data
-	image-gc
-	vmio			;s48-channels s48-channel-count
+  (open prescheme ps-receive vm-utilities vm-architecture
+	memory data struct
+	heap
+	image-table
+	image-util
+	string-tables
 	symbols			;s48-symbol-table
 	external-opcodes)	;s48-imported-bindings s48-exported-bindings
   (files write-image))
 
-(define-structure image-gc image-gc-interface
-  (open prescheme ps-receive vm-utilities vm-architecture
-	memory data struct
-	heap
-	string-tables)
-  (files image-gc))
+(define-interface image-table-interface
+  (export make-image-location
+          image-location-new-descriptor
+          image-location-next
+          set-image-location-next!
+
+          make-table
+	  deallocate-table
+	  break-table!
+	  table-okay?
+          table-set!
+          table-ref))
+
+(define-structure image-table image-table-interface
+  (open prescheme ps-memory ps-record-types)
+  (files image-table))
+
+(define-interface image-util-interface
+  (export write-page
+	  (write-check :syntax)
+	  write-header-integer
+	  image-write-init
+	  image-write-terminate
+	  image-write-status
+	  write-descriptor
+	  write-image-block
+	  empty-image-buffer!))
+
+(define-structure image-util image-util-interface
+  (open prescheme ps-memory
+	(subset memory	(address1+)))
+  (files image-util))
 
 ;----------------
 ; GC and allocation utilities for the interpreter.
@@ -309,7 +349,7 @@
 
 (define-structure external-gc-roots external-gc-roots-interface
   (open prescheme ps-memory
-	memory stob
+	memory data
 	gc gc-roots)
   (files gc-root))
 

@@ -8,6 +8,7 @@
     '(run (prescheme-compiler
 	   '(vm external-gc-roots interpreter-gc)
 	   '("../scheme/vm/interfaces.scm"
+	     "../scheme/vm/shared-interfaces.scm"
 	     "../scheme/vm/ps-package-defs.scm"
 	     "../scheme/vm/package-defs.scm"
 	     "../scheme/vm/alt-gc-package-defs.scm"
@@ -19,5 +20,7 @@
 	   '(no-copy (interpreter interpret
 				  application-exception
 				  handle-interrupt
+				  list-protocol-match
+				  raise
 				  uuo)
 		     (vm s48-restart)))))
