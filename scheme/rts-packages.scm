@@ -101,6 +101,7 @@
 	channels
 	i/o i/o-internal
 	signals
+	(subset threads-internal (maybe-commit-no-interrupts))
 	proposals
 	condvars condvars-internal
 	interrupts

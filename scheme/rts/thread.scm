@@ -671,6 +671,18 @@
 	   (set-enabled-interrupts! ints)
 	   #f))))
 
+;; Common pattern
+
+(define (maybe-commit-no-interrupts thunk)
+  (let ((ints (disable-interrupts!)))
+    (cond ((maybe-commit)
+	   (thunk)
+	   (set-enabled-interrupts! ints)
+	   #t)
+	  (else
+	   (set-enabled-interrupts! ints)
+	   #f))))
+
 ; Make all of the threads on QUEUE ready (and don't run any of them until
 ; all have been processed).
 

@@ -17,34 +17,24 @@
 ; #F if the commit failed.
 
 (define (channel-maybe-commit-and-read channel buffer start count condvar wait?)
-  (let ((ints (disable-interrupts!)))
-    (if (maybe-commit)
-	(let ((got (channel-maybe-read channel buffer start count wait?)))
-	  (if got
-	      (note-channel-result! condvar got)
-	      (add-channel-condvar! channel condvar))
-	  (set-enabled-interrupts! ints)
-	  #t)
-	(begin
-	  (set-enabled-interrupts! ints)
-	  #f))))
+  (maybe-commit-no-interrupts
+   (lambda ()
+     (let ((got (channel-maybe-read channel buffer start count wait?)))
+       (if got
+	   (note-channel-result! condvar got)
+	   (add-channel-condvar! channel condvar))))))
 
 (define (channel-maybe-commit-and-write channel buffer start count condvar wait?)
-  (let ((ints (disable-interrupts!)))
-    (if (maybe-commit)
-	(let ((got (channel-maybe-write channel buffer start count)))
-	  (if got
-	      (note-channel-result! condvar got)
-	      (add-channel-condvar! channel condvar))
-	  (if wait?
-	      (with-new-proposal (lose)
-		;; this should always succeed and re-enable interrupts
-		(maybe-commit-and-wait-for-condvar condvar)))
-	  (set-enabled-interrupts! ints)
-	  #t)
-	(begin
-	  (set-enabled-interrupts! ints)
-	  #f))))
+  (maybe-commit-no-interrupts
+   (lambda ()
+     (let ((got (channel-maybe-write channel buffer start count)))
+       (if got
+	   (note-channel-result! condvar got)
+	   (begin
+	     (add-channel-condvar! channel condvar)
+	     (if wait?
+		 (with-new-proposal (lose)
+		   (maybe-commit-and-wait-for-condvar condvar)))))))))
 
 ; Set CONDVAR's value to be RESULT.
 
@@ -73,23 +63,18 @@
 ;----------------
 
 (define (channel-maybe-commit-and-close channel close-channel)
-  (let ((ints (disable-interrupts!)))
-    (if (maybe-commit)
-	(let ((condvar (fetch-channel-condvar! channel)))
-	  (if condvar
-	      (begin
-		(channel-abort channel)
-		(close-channel channel)
-		(note-channel-result! condvar
-				      (if (input-channel? channel)
-					  (eof-object)
-					  0)))
-	      (close-channel channel))
-	  (set-enabled-interrupts! ints)
-	  #t)
-	(begin
-	  (set-enabled-interrupts! ints)
-	  #f))))
+  (maybe-commit-no-interrupts
+   (lambda ()
+     (let ((condvar (fetch-channel-condvar! channel)))
+       (if condvar
+	   (begin
+	     (channel-abort channel)
+	     (close-channel channel)
+	     (note-channel-result! condvar
+				   (if (input-channel? channel)
+				       (eof-object)
+				       0)))
+	   (close-channel channel))))))
 
 (define (input-channel? channel)
   (= (channel-status channel)

@@ -608,6 +608,7 @@
 	  maybe-commit-and-block
 	  maybe-commit-and-block-on-queue
 	  maybe-commit-and-make-ready
+	  maybe-commit-no-interrupts
 	  spawn-on-scheduler spawn-on-root
 	  wait
 	  upcall propogate-upcall
