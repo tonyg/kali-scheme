@@ -544,6 +544,7 @@ ps_close_fd(long fd)
 
 extern psbool s48_is_pending(long);
 extern void s48_add_ready_fd(long, psbool, long);
+extern void s48_register_error(DWORD error);
 
 /* This is called as the result of a completed read operation; either
    from the overlapped I/O completion routine, or from the callback
@@ -557,7 +558,10 @@ read_done(DWORD dwErr,
   callback_data_t* callback_data = &(stream_descriptor->callback_data);
   long fd = callback_data->fd;
 
-  if ((dwErr == 0) && s48_is_pending(fd))
+  if (dwErr != 0)
+    s48_register_error(dwErr);
+
+  if (s48_is_pending(fd))
     {
       switch (stream_descriptor->type) {
       case STREAM_FILE_REGULAR:
@@ -591,11 +595,6 @@ read_done(DWORD dwErr,
       stream_descriptor->callback_data.current = 
 	stream_descriptor->callback_data.buffer;
     }
-  else
-    {
-      // ####
-    }
-
 }
 
 /* for regular files; from overlapped I/O */
@@ -903,8 +902,11 @@ write_done(DWORD dwErr,
 {
   callback_data_t* callback_data = &(stream_descriptor->callback_data);
   long fd = callback_data->fd;
-  
-  if ((dwErr == 0) && (bytes_written != 0) && (s48_is_pending(fd)))
+
+  if (dwErr != 0)
+    s48_register_error(dwErr);
+
+  if ((bytes_written != 0) && (s48_is_pending(fd)))
     {
       switch (stream_descriptor->type) {
       case STREAM_FILE_REGULAR:
@@ -915,10 +917,6 @@ write_done(DWORD dwErr,
 	}
       }
       s48_add_ready_fd(fd, PSFALSE, (long)bytes_written);
-    }
-  else
-    {
-      // ####
     }
 }
 

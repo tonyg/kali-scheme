@@ -380,7 +380,13 @@ s48_remove_fd(int fd)
   return TRUE;
 }
 
+static DWORD last_error = 0;
 
+void
+s48_register_error(DWORD error)
+{
+  last_error = error;
+}
 
 /*
  *  ; Scheme version of the get-next-event procedure
@@ -422,7 +428,6 @@ s48_get_next_event(long *ready_fd, long *status)
 {
   /* extern int s48_os_signal_pending(void); */
 
-  int io_poll_status;
   /*
     fprintf(stderr, "[poll at %d (waiting for %d)]\n", s48_current_time, alarm_time);
     */
@@ -432,12 +437,12 @@ s48_get_next_event(long *ready_fd, long *status)
     return (KEYBOARD_INTERRUPT_EVENT);
   }
   if (poll_time != -1 && s48_current_time >= poll_time) {
+    last_error = NO_ERRORS;
     SleepEx(0, TRUE);
-    io_poll_status = NO_ERRORS; // ####
-    if (io_poll_status == NO_ERRORS)
+    if (last_error == NO_ERRORS)
       poll_time = s48_current_time + poll_interval;
     else {
-      *status = io_poll_status;
+      *status = last_error;
       return (ERROR_EVENT);
     }
   }
@@ -482,8 +487,10 @@ s48_wait_for_event(long max_wait, psbool is_minutes)
     else
       dwMilliseconds = max_wait * (1000 / TICKS_PER_SECOND);
 
+    last_error = NO_ERRORS;
     SleepEx(dwMilliseconds,
 	    TRUE);
+    status = last_error;
     if (there_are_ready_ports())
       NOTE_EVENT;
   }
