@@ -69,9 +69,9 @@
 	       (cond
 		((eof-object? result)
 		 (provisional-set-port-pending-eof?! port #t))
-		((i/o-error-status? result)
+		((i/o-error? result)
 		 (if (maybe-commit)
-		     (signal-condition (i/o-error-status-condition result))
+		     (signal-condition result)
 		     #f))
 		(else
 		 (provisional-set-port-index! port 0)
@@ -142,7 +142,7 @@
 	  ((condvar-has-value? condvar)
 	   (let ((result (condvar-value condvar)))
 	     (set-condvar-has-value?! condvar #f)
-	     (if (i/o-error-status? result)
+	     (if (i/o-error? result)
 		 (begin
 		   ;; #### We should probably maintain some kind of
 		   ;; "error status" with the channel cell that allows
@@ -154,7 +154,7 @@
 		   (note-buffer-reuse! port)
 		   (set-channel-cell-in-use?! cell #f)
 		   (if (maybe-commit)
-		       (signal-condition (i/o-error-status-condition result))
+		       (signal-condition result)
 		       #f))
 		 (let ((sent (+ result (channel-cell-sent cell))))
 		   (if (< sent

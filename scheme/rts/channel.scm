@@ -19,32 +19,35 @@
 (define (channel-maybe-commit-and-read channel buffer start count condvar wait?)
   (maybe-commit-no-interrupts
    (lambda ()
-     (let ((got
-	    (with-handler ; this seems like too much overhead for an uncommon case
-	     (lambda (condition punt)
-	       (make-i/o-error-status condition))
-	     (lambda ()
-	       (channel-maybe-read channel buffer start count wait?)))))
-       (if got
-	   (note-channel-result! condvar got)
-	   (add-channel-condvar! channel condvar))))))
+     (let ((got (channel-maybe-read channel buffer start count wait?)))
+       (cond
+	((not got)
+	 (add-channel-condvar! channel condvar))
+	((cell? got)
+	 (note-channel-result! condvar
+			       (make-i/o-error (cell-ref got)
+					       channel-maybe-read
+					       (list channel buffer start count wait?))))
+	(else
+	 (note-channel-result! condvar got)))))))
 
 (define (channel-maybe-commit-and-write channel buffer start count condvar wait?)
   (maybe-commit-no-interrupts
    (lambda ()
-     (let ((got
-	    (with-handler ; this seems like too much overhead
-	     (lambda (condition punt)
-	       (make-i/o-error-status condition))
-	     (lambda ()
-	       (channel-maybe-write channel buffer start count)))))
-       (if got
-	   (note-channel-result! condvar got)
-	   (begin
-	     (add-channel-condvar! channel condvar)
-	     (if wait?
-		 (with-new-proposal (lose)
-		   (maybe-commit-and-wait-for-condvar condvar)))))))))
+     (let ((got (channel-maybe-write channel buffer start count)))
+       (cond
+	((not got)
+	 (add-channel-condvar! channel condvar)
+	 (if wait?
+	     (with-new-proposal (lose)
+	       (maybe-commit-and-wait-for-condvar condvar))))
+	((cell? got)
+	 (note-channel-result! condvar
+			       (make-i/o-error (cell-ref got)
+					       channel-maybe-write
+					       (list channel buffer start count))))
+	(else
+	 (note-channel-result! condvar got)))))))
 
 ; Set CONDVAR's value to be RESULT.
 
@@ -111,18 +114,11 @@
     (if condvar
 	(note-channel-result! condvar
 			      (if error?
-				  (make-i/o-error-status
-				   (make-exception #f
-						   (enum exception os-error)
-						   (list channel
-							 (os-error-message status))))
+				  (make-i/o-error status
+						  i/o-completion-handler
+						  (list channel error? status enabled-interrupts))
 				  status)))))
 				  
-
-(define-record-type i/o-error-status :i/o-error-status
-  (make-i/o-error-status condition)
-  i/o-error-status?
-  (condition i/o-error-status-condition))
 
 ; Exported procedure
 ; This should check the list for condvars which have no waiters.

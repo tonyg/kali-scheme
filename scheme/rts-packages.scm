@@ -97,11 +97,10 @@
   (optimize auto-integrate))
 
 (define-structure channel-i/o channel-i/o-interface
-  (open scheme-level-1 byte-vectors define-record-types
+  (open scheme-level-1 byte-vectors cells
 	channels
 	i/o i/o-internal
-	signals handle conditions
-	(subset primitives (os-error-message))
+	conditions
 	(subset threads-internal (maybe-commit-no-interrupts))
 	proposals
 	condvars condvars-internal
@@ -118,7 +117,7 @@
 	channels channel-i/o
 	proposals
 	condvars
-	signals
+	signals conditions
 	architecture		; channel-opening options
 	debug-messages		; for error messages
 	(subset util		(unspecific))
@@ -126,7 +125,8 @@
   (files (rts channel-port)))
 
 (define-structure conditions conditions-interface
-  (open scheme-level-1 signals)
+  (open scheme-level-1 signals
+	(subset primitives (os-error-message)))
   (files (rts condition)))
 
 (define-structure writing writing-interface

@@ -61,6 +61,20 @@
 (define (make-exception opcode reason args)
   (make-condition 'exception (cons opcode (cons reason args))))
 
+; I/O errors
+
+(define-condition-type 'i/o-error '(error))
+(define i/o-error? (condition-predicate 'i/o-error))
+(define i/o-error-status cadr)
+(define i/o-error-message caddr)
+(define i/o-error-operation cadddr)
+(define i/o-error-arguments cddddr)
+
+(define (make-i/o-error status operation args)
+  (make-condition 'i/o-error
+		  (cons status
+			(cons (os-error-message status)
+			      (cons operation args)))))
 
 ; Warnings
 

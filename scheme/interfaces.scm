@@ -493,7 +493,14 @@
 	  exception-reason
 	  exception-opcode
 	  exception?
-	  make-exception))
+	  make-exception
+
+	  i/o-error?
+	  i/o-error-status
+	  i/o-error-message
+	  i/o-error-operation
+	  i/o-error-arguments
+	  make-i/o-error))
 
 (define-interface wind-interface
   (export call-with-current-continuation
@@ -559,8 +566,6 @@
 	  channel-maybe-commit-and-write
 	  channel-maybe-commit-and-close
 	  channel-write
-
-	  i/o-error-status? i/o-error-status-condition
 
 	  initialize-channel-i/o!       ;scheduler
 	  waiting-for-i/o?              ;scheduler

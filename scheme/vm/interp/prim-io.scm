@@ -99,12 +99,14 @@
 ;----------------
 ; Reading from and writing to channels.
 ;
-; This is a wrapper around CHANNEL-READ-BLOCK.  We check argument types and
-; interpret the return value.
+; This is a wrapper around CHANNEL-READ-BLOCK.  We check argument
+; types and interpret the return value.  We either return a
+; number---the number of bytes read---or a cell containing the OS
+; error code in the case of an I/O error.
 
 (define-consing-primitive channel-maybe-read
   (channel-> any-> fixnum-> fixnum-> boolean->)
-  (lambda (ignore) error-string-size)
+  (lambda (ignore) cell-size)
   (lambda (channel buffer start count wait? key)
     (if (and (input-channel? channel)
 	     (buffer? buffer)
@@ -117,21 +119,15 @@
 					  start)
 				count
 				wait?)
-	  (if (error? status)
-	      (raise-exception os-error 0
-			       channel
-			       buffer
-			       (enter-fixnum start)
-			       (enter-fixnum count)
-			       (enter-boolean wait?)
-			       (get-error-string status key))
-	      (goto return
-		    (cond (eof? eof-object)
-			  (pending?
-			   (set-channel-os-status! channel true)
-			   false)
-			  (else
-			   (enter-fixnum got))))))
+	  (goto return
+		(cond ((error? status)
+		       (make-cell (enter-fixnum status) key))
+		      (eof? eof-object)
+		      (pending?
+		       (set-channel-os-status! channel true)
+		       false)
+		      (else
+		       (enter-fixnum got)))))
 	(raise-exception wrong-type-argument 0
 			 channel
 			 buffer
@@ -139,12 +135,14 @@
 			 (enter-fixnum count)
 			 (enter-boolean wait?)))))
 
-; This is a wrapper around CHANNEL-WRITE-BLOCK.  We check argument types and
-; interpret the return value.
+; This is a wrapper around CHANNEL-WRITE-BLOCK.  We check argument
+; types and interpret the return value.  We either return a
+; number---the number of bytes written---or a cell containing the OS
+; error code in the case of an I/O error.
 
 (define-consing-primitive channel-maybe-write
   (channel-> any-> fixnum-> fixnum->)
-  (lambda (ignore) error-string-size)
+  (lambda (ignore) cell-size)
   (lambda (channel buffer start count key)
     (if (and (output-channel? channel)
 	     (buffer? buffer)
@@ -155,19 +153,15 @@
 				 (address+ (address-after-header buffer)
 					   start)
 				 count)
-	  (if (error? status)
-	      (raise-exception os-error 0
-			       channel
-			       buffer
-			       (enter-fixnum start)
-			       (enter-fixnum count)
-			       (get-error-string status key))
-	      (goto return
-		    (if pending?
-			(begin
-			  (set-channel-os-status! channel true)
-			  false)
-			(enter-fixnum got)))))
+	  (goto return
+		(cond
+		 ((error? status)
+		  (make-cell (enter-fixnum status) key))
+		 (pending?
+		  (set-channel-os-status! channel true)
+		  false)
+		 (else
+		  (enter-fixnum got)))))
 	(raise-exception wrong-type-argument 0
 			 channel
 			 buffer
