@@ -383,7 +383,7 @@
 			    (vm-exception-arguments c)))))
 
 ;; could be smoother wrt SRFI 36
-(define-condition-type &primitive-i/o-error &condition
+(define-condition-type &primitive-i/o-error &error
   primitive-i/o-error?
   (status i/o-error-status)
   (operation i/o-error-operation)
