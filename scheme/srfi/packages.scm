@@ -93,7 +93,7 @@
     (define available-srfis
       '(srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
 	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
-	srfi-23 srfi-25 srfi-26 srfi-27 
+	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	srfi-31 srfi-42))
 
     ; Some SRFI's redefine Scheme variables.
@@ -300,6 +300,16 @@
    (subset srfi-23 (error))
    (subset posix-time (current-time time-seconds)))
   (files srfi-27))
+
+(define-interface srfi-28-interface
+  (export format))
+
+(define-structure srfi-28 srfi-28-interface
+  (open scheme
+	(subset signals (error))
+	srfi-6				; string ports
+	)
+  (files srfi-28))
 
 (define-interface srfi-31-interface
   (export (rec :syntax)))
