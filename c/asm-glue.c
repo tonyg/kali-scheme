@@ -25,6 +25,7 @@ s48_provide_asm_values(s48_value asm_vector)
   extern long s48_interrupt_handler();
   extern long s48_exception_handler();
   extern long s48_restart_vm();
+  extern long s48_gc_for_native_code();
   extern long s48_Sstack_limitS;
   extern long s48_ShpS;
   extern long s48_SlimitS;
@@ -40,6 +41,7 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 9, s48_enter_fixnum((long) &s48_interrupt_handler));
   S48_VECTOR_SET(asm_vector, 10, s48_enter_fixnum((long) &s48_exception_handler));
   S48_VECTOR_SET(asm_vector, 11, s48_enter_fixnum((long) &s48_restart_vm));
+  S48_VECTOR_SET(asm_vector, 12, s48_enter_fixnum((long) &s48_gc_for_native_code));
   return S48_UNSPECIFIC;
 }
 
