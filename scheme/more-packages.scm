@@ -264,6 +264,15 @@
 	external-calls)
   (files (big shared-object)))
 
+(define-structure load-dynamic-externals load-dynamic-externals-interface
+  (open scheme-level-2
+	define-record-types
+	shared-objects
+	reinitializers
+	(subset big-util (delq delete any))
+	(subset signals (error)))
+  (files (big dynamic-external)))
+
 (define-structure c-system-function (export have-system? system)
   (open scheme-level-2 external-calls signals)
   (begin

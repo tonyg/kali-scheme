@@ -325,10 +325,17 @@
   (export open-shared-object
 	  close-shared-object
 	  shared-object?
+	  shared-object-name
 	  shared-object-address
 	  shared-object-address?
 	  shared-object-address-value
 	  call-shared-object-address))
+
+(define-interface load-dynamic-externals-interface
+  (export load-dynamic-externals
+	  import-dynamic-externals
+	  reload-dynamic-externals
+	  unload-dynamic-externals))
 
 (define-interface dump/restore-interface
   (export dump

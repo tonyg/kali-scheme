@@ -428,6 +428,7 @@
 	    inspector
 	    inspector-internal
 	    list-interfaces
+	    load-dynamic-externals
 	    locks
 	    lu-decompositions
 	    masks

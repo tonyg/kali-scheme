@@ -21,7 +21,10 @@
 ;; can avoid ordering problems.  Morever, the filename specified might
 ;; be relative, causing further problems.
 
-(define-record-resumer :shared-object #f)
+;; On the other hand, the high-level code might have a better approach
+;; to this, so we don't forbid dumping on these.
+
+(define-record-resumer :shared-object #t)
 
 (define (open-shared-object name)
   (let ((shared-object (make-shared-object name
