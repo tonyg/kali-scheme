@@ -96,6 +96,7 @@
 	     (if (eof-object? got)
 		 (set-port-pending-eof?! port #t)
 		 (begin
+		   (set-port-location-index! location 0)
 		   (set-port-index! port 0)
 		   (set-port-limit! port got)))
 	     #t))
