@@ -10,8 +10,8 @@
 
 (load-configuration "packages.scm")  
 
-; The following is unnecessary; it only serves to suppress an annoying
-; "undefined" warning for some forward references.
+; The following defines are unnecessary; theyonly serve to suppress
+; annoying "undefined" warnings for some forward references.
 (define syntactic 0) 
 (define tables 0) 
 
@@ -24,4 +24,6 @@
 (define u-f (all-file-names usual-features initial-system))
 
 (write-file-names "filenames.make"      
-		  'initial-files i-f 'usual-files u-f 'linker-files q-f)
+		  'initial-files i-f
+		  'usual-files u-f
+		  'linker-files q-f)

@@ -21,6 +21,7 @@ typedef long scheme_value;
 #define SCHEOF    MISC_IMMEDIATE(5)
 #define SCHNULL    MISC_IMMEDIATE(6)
 #define UNDEFINED SCHUNDEFINED
+#define UNSPECIFIC SCHUNSPECIFIC
 
 #define ENTER_BOOLEAN(n) ((n) ? SCHTRUE : SCHFALSE)
 #define EXTRACT_BOOLEAN(x) ((x) != SCHFALSE)
@@ -30,10 +31,10 @@ typedef long scheme_value;
 
 #define ADDRESS_AFTER_HEADER(x, type) ((type *)((x) - STOB_TAG))
 #define STOB_REF(x, i) ((ADDRESS_AFTER_HEADER(x, long))[i])
-#define STOB_TYPE(x)   ((STOB_HEADER(x)>>2)&&31)
+#define STOB_TYPE(x)   ((STOB_HEADER(x)>>2)&31)
 #define STOB_HEADER(x) (STOB_REF((x),-1))
-#define STOB_BLENGTH(x) (STOB_HEADER(x) >> 7)
-#define STOB_LLENGTH(x) (STOB_HEADER(x) >> 9)
+#define STOB_BLENGTH(x) (STOB_HEADER(x) >> 8)
+#define STOB_LLENGTH(x) (STOB_HEADER(x) >> 10)
 
 #define STOBTYPE_PAIR 0
 #define PAIRP(x) (STOBP(x) && (STOB_TYPE(x) == STOBTYPE_PAIR))

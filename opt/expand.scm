@@ -82,22 +82,22 @@
 						       (expand arg-exp env))
 						     (cdr form))))))))
 
-(define (define-expander name proc)
-  (operator-define! expanders name proc))
+(define (define-expander name type proc)
+  (operator-define! expanders (list name type) proc))
 
 (define (get-expander id)
   (operator-table-ref expanders id))
 
-(define-expander 'literal
+(define-expander 'literal #f
   (lambda (node env)
     (set-expanded node)))
 
-(define-expander 'name
+(define-expander 'name #f
   (lambda (node env)
     (note-reference! node)
     node))
 
-(define-expander 'call
+(define-expander 'call #f
   (lambda (node env)
     (let ((exp (node-form node)))
       (let ((proc-node (expand (car exp) env)))
@@ -111,11 +111,11 @@
 
 ; Special operators
 
-(define-expander (list 'quote syntax-type)
+(define-expander 'quote syntax-type
   (lambda (node env)
     (set-expanded node)))
 
-(define-expander (list 'lambda syntax-type)
+(define-expander 'lambda syntax-type
   (lambda (node env)
     (set-fluid! $inferior-lambdas? #t)
     (let-fluid $inferior-lambdas? #f
@@ -148,7 +148,7 @@
 	node))))
 
 
-(define-expander (list 'letrec syntax-type)
+(define-expander 'letrec syntax-type
   (lambda (node env)
     (set-fluid! $inferior-lambdas? #t)	;foo
     (let* ((exp (node-form node))
@@ -202,7 +202,7 @@
 	    (car nodes)
 	    (set-expanded (make-node op (cons 'begin nodes))))))))
 
-(define-expander (list 'set! syntax-type)
+(define-expander 'set! syntax-type
   (lambda (node env)
     (let ((exp (node-form node)))
       (let ((lhs (classify (cadr exp) env))
@@ -221,15 +221,15 @@
   (or (node-ref node 'binding)
       (lookup cenv (node-form node))))
 
-(define-expander (list 'define syntax-type)
+(define-expander 'define syntax-type
   (lambda (node env)
     (let ((form (node-form node)))
       (make-expanded node
-		 (list (car form)
-		       (cadr form)
-		       (expand (caddr form) env))))))
+		     (list (car form)
+			   (cadr form)
+			   (expand (caddr form) env))))))
 
-(define-expander (list 'if syntax-type)
+(define-expander 'if syntax-type
   (lambda (node env)
     (let ((exp (node-form node)))
       (make-expanded node
@@ -238,7 +238,7 @@
 			   (expand (caddr exp) env)
 			   (expand (cadddr exp) env))))))
 
-(define-expander (list 'primitive-procedure syntax-type)
+(define-expander 'primitive-procedure syntax-type
   (lambda (node env)
     (set-expanded node)))
 

@@ -13,7 +13,7 @@ LIBS = @LIBS@
 CFLAGS = @CFLAGS@
 INSTALL = @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
-INSTALL_DATA = $(INSTALL) -m 644
+INSTALL_DATA = @INSTALL_DATA@
 
 LDFLAGS = -g
 
@@ -21,7 +21,8 @@ prefix = /usr/local
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 libdir = $(exec_prefix)/lib
-mandir = $(prefix)/man/man1
+incdir = $(exec_prefix)/include
+mandir = $(prefix)/man
 manext = 1
 
 # HP 9000 series, if you don't have gcc
@@ -33,21 +34,22 @@ manext = 1
 #   LDFLAGS = -N
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(DEFS) -I$(srcdir) $(CFLAGS) $<
+	$(CC) -c $(CPPFLAGS) $(DEFS) -I$(srcdir) $(CFLAGS) -o $@ $<
 
 # You might want to change RUNNABLE to "s48"
 RUNNABLE = scheme48
 MANPAGE = $(RUNNABLE).$(manext)
 LIB = $(libdir)/$(RUNNABLE)
 
-distdir = /users/ftp/pub/jar
+#distdir = /users/ftp/pub/s48
+distdir = /net/mini-wheats/fs/admin/ftp/pub/s48
 
 # If make barfs on this include line, just comment it out.  It's only
 # really needed if you want to build the linker or rebuild initial.image.
-include filenames.make
+include $(srcdir)/filenames.make
 #
 #NetBSD make wants to see this instead:
-#.include "filenames.make"
+#.include "$(srcdir)/filenames.make"
 
 
 # Static linker:
@@ -83,8 +85,9 @@ START_LINKER = echo ,batch; echo ,bench on;
 # Targets:
 
 IMAGE = scheme48.image
+INITIAL = $(srcdir)/initial.image
 VM = scheme48vm
-OBJS = main.o unix.o dynload.o error.o extension.o scheme48vm.o
+OBJS = unix.o dynload.o error.o extension.o scheme48vm.o
 
 # Sources:
 
@@ -100,15 +103,15 @@ enough: $(VM) $(IMAGE) script $(MANPAGE) .notify
 # The developers are curious to know.  Don't be concerned if this fails.
 .notify: minor-version-number
 	touch .notify
-	-echo Another 0.`cat minor-version-number` installation. \
+	-echo Another 0.`cat $(srcdir)/minor-version-number` installation. \
 	   | mail scheme-48-notifications@martigny.ai.mit.edu 
 
-$(VM): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+$(VM): main.o $(OBJS)
+	$(CC) $(LDFLAGS) -o $@ main.o $(OBJS) $(LIBS)
 
 main.o: main.c
-	$(CC) -c -DDEFAULT_IMAGE_NAME=\"$(LIB)/$(IMAGE)\" \
-	    $(CPPFLAGS) $(CFLAGS) main.c
+	$(CC) -c -o $@ -DDEFAULT_IMAGE_NAME=\"$(LIB)/$(IMAGE)\" \
+	    $(CPPFLAGS) $(CFLAGS) $<
 scheme48vm.o: scheme48vm.c prescheme.h
 extension.o: extension.c scheme48.h
 unix.o: unix.c sysdep.h
@@ -128,64 +131,71 @@ dynload.o: dynload.c sysdep.h scheme48.h
 
 $(IMAGE): $(VM) more-interfaces.scm more-packages.scm $(usual-files) \
 	  initial.debug
-	(echo ,load env/init-defpackage.scm; \
+	(echo ,load $(srcdir)/env/init-defpackage.scm; \
 	 echo \(\(\*structure-ref filenames \'set-translation!\)     \
-	        \"=scheme48/\" \"./\"\);			     \
-	 echo ,load more-interfaces.scm =scheme48/link-packages.scm; \
+	        \"=scheme48/\" \"$(srcdir)/\"\);		     \
+	 echo ,load =scheme48/more-interfaces.scm =scheme48/link-packages.scm; \
 	 echo ,load =scheme48/more-packages.scm;		     \
 	 echo \(ensure-loaded command-processor\);		     \
 	 echo \(ensure-loaded usual-commands\);			     \
 	 echo \(\(\*structure-ref command-processor \'set-command-structure!\)\
 	        usual-commands\); \
 	 echo ,go \(\(*structure-ref command-processor \'command-processor\) \
-	            \"batch\"\); \
+	            \(list \"batch\"\)\); \
 	 echo \(ensure-loaded usual-features\);		            \
 	 echo ,structure more-structures more-structures-interface; \
-	 echo ,in debuginfo \(read-debug-info \"initial.debug\"\);  \
+	 echo ,in debuginfo \(read-debug-info \"$(srcdir)/initial.debug\"\);  \
 	 echo ,keep maps source files;				     \
 	 echo ,translate =scheme48/ $(LIB)/ ;			     \
 	 echo ,build \(\(*structure-ref package-commands-internal    \
 				        \'new-command-processor\)    \
 		       \"\(made by $$USER on `date`\)\"		     \
 		       built-in-structures more-structures\) $(IMAGE) ) \
-	| ./$(VM) -i initial.image -a batch
+	| ./$(VM) -i $(INITIAL) -a batch
 
 # Unix man page...
 
 $(MANPAGE): scheme48.man Makefile
-	sed 's=LBIN=$(bindir)=g' scheme48.man \
+	sed 's=LBIN=$(bindir)=g' $(srcdir)/scheme48.man \
 	 | sed 's=LLIB=$(LIB)=g' \
 	 | sed 's=LS48=$(RUNNABLE)=g' >$@
 	chmod +r $@
 
-### Fake targets:  all clean install man dist
-
-install: install-vm install-misc install-image script $(MANPAGE)
-	$(INSTALL_PROGRAM) script $(bindir)/$(RUNNABLE)
-	if test -d $(mandir);  \
-	  then $(INSTALL_DATA) $(MANPAGE) $(mandir); \
-          else echo "No man directory, not installing man page"; fi
-
-install-image: $(IMAGE)
-	$(INSTALL_DATA) $(IMAGE) $(LIB)/$(IMAGE)
-
 script:
 	(echo '#!/bin/sh'; \
-	 echo exec '$(LIB)/$(VM)' -o '$(LIB)/$(VM)' -i '$(LIB)/$(IMAGE)' \$$\@) \
+	 echo exec '$(LIB)/$(VM)' -o '$(LIB)/$(VM)' -i '$(LIB)/$(IMAGE)' \"\$$\@\") \
 	   > script
 	chmod +x script
 
-install-vm: $(VM)
-	$(INSTALL_PROGRAM) $(VM) $(LIB)/
+### Fake targets:  all clean install man dist
 
-install-misc: $(LIB)/rts $(LIB)/env $(LIB)/big $(LIB)/opt $(LIB)/misc $(LIB)/link
-	for f in rts/*num.scm; do $(INSTALL_DATA) $$f $(LIB)/rts; done
-	for f in env/*.scm; do $(INSTALL_DATA) $$f $(LIB)/env; done
-	for f in big/*.scm; do $(INSTALL_DATA) $$f $(LIB)/big; done
-	for f in opt/*.scm; do $(INSTALL_DATA) $$f $(LIB)/opt; done
-	for f in misc/*.scm; do $(INSTALL_DATA) $$f $(LIB)/misc; done
-	for f in link/*.scm; do $(INSTALL_DATA) $$f $(LIB)/link; done
-	$(INSTALL_DATA) rts/jar-defrecord.scm $(LIB)/rts/
+install: script install-vm install-image install-misc install-man install-inc
+	$(INSTALL_PROGRAM) script $(bindir)/$(RUNNABLE)
+
+install-vm: $(VM)
+	$(INSTALL_PROGRAM) $< $(LIB)/
+
+install-image: $(IMAGE)
+	$(INSTALL_DATA) $< $(LIB)/$(IMAGE)
+
+install-man: $(MANPAGE)
+	if test -d $(mandir)/man$(manext);  \
+	  then $(INSTALL_DATA) $< $(mandir)/man$(manext); \
+          else echo "No man directory, not installing man page"; fi
+
+install-inc: scheme48.h
+	$(INSTALL_DATA) $< $(incdir)/
+
+install-misc: $(LIB)/rts $(LIB)/env $(LIB)/big $(LIB)/opt \
+	      $(LIB)/misc $(LIB)/link
+	for f in $(srcdir)/rts/*num.scm; do $(INSTALL_DATA) $$f $(LIB)/rts; done
+	for f in $(srcdir)/env/*.scm; do $(INSTALL_DATA) $$f $(LIB)/env; done
+	for f in $(srcdir)/big/*.scm; do $(INSTALL_DATA) $$f $(LIB)/big; done
+	for f in $(srcdir)/opt/*.scm; do $(INSTALL_DATA) $$f $(LIB)/opt; done
+	for f in $(srcdir)/misc/*.scm; do $(INSTALL_DATA) $$f $(LIB)/misc; done
+	for f in $(srcdir)/link/*.scm; do $(INSTALL_DATA) $$f $(LIB)/link; done
+	$(INSTALL_DATA) $(srcdir)/rts/jar-defrecord.scm $(LIB)/rts/
+#  -p: Intermediate directories are created as necessary.
 $(LIB)/rts:
 	mkdir -p $(LIB)/rts
 $(LIB)/env:
@@ -198,8 +208,6 @@ $(LIB)/misc:
 	mkdir -p $(LIB)/misc
 $(LIB)/link:
 	mkdir -p $(LIB)/link
-$(LIB):
-	mkdir $(LIB)
 
 configure: configure.in
 	cd $(srcdir); autoconf
@@ -208,7 +216,7 @@ all: vm linker
 	$(MAKE) image
 vm: $(VM)
 linker: $(LINKER_IMAGE)
-image: initial.image
+image: $(INITIAL)
 	$(MAKE) $(IMAGE)
 
 clean:
@@ -245,12 +253,12 @@ DISTFILES = COPYING README INSTALL NEWS TODO \
 	    link/*.lisp link/*.exec \
 	    emacs/*.el emacs/README .gdbinit *-version-number
 
-DIST = $(distdir)/$(RUNNABLE)-0-`cat minor-version-number`.tar.gz
+distfile = $(RUNNABLE)-0.`cat minor-version-number`.tar.gz
 
 dist: initial.image
-	tar cf - $(DISTFILES) | gzip -c >$(DIST)
+	tar cf - $(DISTFILES) | gzip -c >$(distdir)/$(distfile)
 	rm -f $(distdir)/$(RUNNABLE).tar.gz
-	ln -s $(DIST) $(distdir)/$(RUNNABLE).tar.gz
+	dist=$(distfile); cd $(distdir); ln -s $$dist $(RUNNABLE).tar.gz
 #	$(MAKE) inc
 
 # Increment the minor version number
@@ -288,7 +296,7 @@ PACKAGES=packages.scm rts-packages.scm alt-packages.scm \
 
 filenames.make: $(PACKAGES)
 	$(MAKE) $(VM) PACKAGES=
-	./$(VM) -i initial.image -a batch <filenames.scm
+	./$(VM) -i $(INITIAL) -a batch <$(srcdir)/filenames.scm
 # or:	$(RUNNABLE) -a batch <filenames.scm
 
 # --------------------
@@ -326,7 +334,8 @@ link/linker-in-lucid: link/lucid-script.lisp $(linker-files) \
 # Scheme, the byte-code compiler, and a minimal command processor, but
 # no debugging environment to speak of.
 
-initial.image: $(LINKER_IMAGE) $(CONFIG_FILES) initial.scm $(initial-files)
+$(INITIAL): $(LINKER_IMAGE) $(CONFIG_FILES) initial.scm $(initial-files) \
+	       bcomp/for-reify.scm
 	($(START_LINKER)               \
 	 echo \(load-configuration \"interfaces.scm\"\); \
 	 echo \(load-configuration \"packages.scm\"\); \
@@ -339,28 +348,45 @@ initial.image: $(LINKER_IMAGE) $(CONFIG_FILES) initial.scm $(initial-files)
 # Various small images for debugging low-level changes
 
 LOAD_DEBUG = \
+	 $(START_LINKER) \
 	 echo \(load-configuration \"interfaces.scm\"\); \
 	 echo \(load-configuration \"packages.scm\"\); \
 	 echo \(flatload initial-structures\); \
 	 echo \(load-configuration \"debug-packages.scm\"\);
 
-debug/medium.image: $(LINKER_IMAGE) $(CONFIG_FILES) $(medium-files)
+debug/tiny.image: $(LINKER_IMAGE) debug/tiny-packages.scm debug/tiny.scm
 	($(START_LINKER) \
-	 $(LOAD_DEBUG) \
-	 echo \(link-medium-system\)) \
-	| $(LINKER)
-
-debug/mini.image: $(LINKER_IMAGE) $(CONFIG_FILES)
-	($(START_LINKER) \
-	 $(LOAD_DEBUG) \
-	 echo \(link-mini-system\))    \
+	 echo \(load-configuration \"debug/tiny-packages.scm\"\); \
+	 echo \(link-simple-system \'\(debug tiny\) \'start tiny-system\)) \
 	| $(LINKER)
 
 debug/little.image: $(LINKER_IMAGE) $(CONFIG_FILES) debug-packages.scm
-	($(START_LINKER) \
-	 $(LOAD_DEBUG) \
+	($(LOAD_DEBUG) \
 	 echo \(link-little-system\))    \
 	| time $(LINKER)
+
+debug/mini.image: $(LINKER_IMAGE) $(CONFIG_FILES)
+	($(LOAD_DEBUG) \
+	 echo \(link-mini-system\))    \
+	| $(LINKER)
+
+debug/medium.image: $(LINKER_IMAGE) $(CONFIG_FILES) $(medium-files)
+	($(LOAD_DEBUG) \
+	 echo \(link-medium-system\)) \
+	| $(LINKER)
+
+smain.o: main.c
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -DSTATIC_AREAS -o $@ $<
+
+little: little-heap.o smain.o
+	$(CC) $(LDFLAGS) -o $@ smain.o little-heap.o $(OBJS) $(LIBS)
+
+little-heap.o: debug/little-heap.c
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+debug/little-heap.c: debug/little.image
+	(echo ,exec ,load misc/load-static.scm; \
+	 echo \(do-it 100000 \"$<\" \"$@\"\)) \
+	| $(RUNNABLE) -i 3000000 -a batch
 
 # --------------------
 # Generate scheme48.h from VM sources
@@ -369,9 +395,9 @@ scheme48.h: vm/arch.scm vm/data.scm link/generate-c-header.scm
 	(echo ,bench; \
 	 echo ,load-package big-scheme; echo ,open big-scheme; \
 	 echo ,load link/generate-c-header.scm; \
-	 echo \(make-c-header-file \"scheme48.h\" \
-				   \"vm/arch.scm\" \"vm/data.scm\"\)) \
+	 echo \(make-c-header-file \"$@\" \
+				   \"$(srcdir)/vm/arch.scm\" \"$(srcdir)/vm/data.scm\"\)) \
 	| $(RUNNABLE) -a batch
 
 #scheme48vm.c: $(vm-files)
-#	prescheme vm/compile-vm
+#	prescheme $(srcdir)/vm/compile-vm

@@ -561,7 +561,6 @@
 	  clobber-binding!
 	  binding-static
 	  binding-type
-	  binding-transform
 	  make-binding
 	  desyntaxify
 	  forget-integration
@@ -569,14 +568,16 @@
 	  literal?
 	  generate-name			;package.scm, for accesses
 	  generated-env
-	  generated-symbol
 	  generated-parent-name
+	  generated-symbol
 	  generated?
 	  get-operator
+	  make-qualified
 	  make-operator-table
 	  make-transform
 	  maybe-transform-call
 	  n-ary?
+	  name->qualified
 	  name->symbol
 	  name-hash			;package.scm
 	  name?				;assem.scm
@@ -591,6 +592,9 @@
 	  operator?
 	  operators-table		;config.scm
 	  process-syntax
+	  qualified?
+	  qualified-parent-name
+	  qualified-symbol
 	  set-binding-place!
 	  same-denotation?		;for redefinition messages
 	  syntax?
@@ -859,7 +863,8 @@
 
 (define-interface inline-interface
   (export inline-transform
-	  name->qualified qualified->name qualified?
+	  ;; name->qualified qualified?
+	  qualified->name
 	  substitute))
 
 ; Bindings needed by the form composed by REIFY-STRUCTURES.

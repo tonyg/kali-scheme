@@ -9,9 +9,9 @@
 
 (define (modulo x y)
   (let ((r (remainder x y)))
-    (if (not (eq? (< r 0) (< y 0)))
-        (+ r y)
-	r)))
+    (if (eq? (< r 0) (< y 0))
+        r
+	(+ r y))))
 
 (define (ceiling x)
   (- 0 (floor (- 0 x))))		;floor is primitive

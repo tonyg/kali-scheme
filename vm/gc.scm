@@ -18,6 +18,7 @@
 ; (BEGIN-COLLECTION)                    ; call first
 ; (TRACE-VALUE value) => copied value
 ; (TRACE-LOCATIONS start end)           ; trace all pointers,
+; (TRACE-IMPURE-AREAS)
 ; (DO-GC)                               ; then do the GC,
 ; (END-COLLECTION)                      ; and either finish
 ; (ABORT-COLLECTION)                    ; or abort
@@ -49,6 +50,12 @@
       (copy-object value)
       value))
     
+(define (trace-impure-areas)
+  (walk-impure-areas
+   (lambda (start end)
+     (trace-locations start end)
+     #t)))
+
 (define (end-collection)
   (set! *gc-count* (+ *gc-count* 1)))
 
@@ -110,7 +117,8 @@
     (cond ((stob? h)            ;***Broken heart
 	   ;; (assert (in-newspace? h))
 	   h)
-	  ((vm-eq? weak-pointer-header h)
+	  ((and (vm-eq? weak-pointer-header h)
+		(in-oldspace? (d-vector-ref thing 0)))
 	   (copy-weak-pointer thing))
 	  (else
 	   (store-next! h)
@@ -183,11 +191,9 @@
 	(scan-weak-pointer-blocks start end)
 	(if (not (>= end *weak-pointer-limit*))
 	    (let ((unused-portion (addr- *weak-pointer-limit* (addr1+ end))))
-	      (store! end (make-header stob/code-vector
+	      (store! end (make-header (enum stob code-vector)
 				       (cells->bytes
 					(a-units->cells unused-portion)))))))))
-
-(define stob/code-vector (enum stob code-vector))
 
 (define (scan-weak-pointer-blocks start end)
   (let loop ((start start) (end end))

@@ -288,13 +288,18 @@
 
 
 ; --------------------
-; Condition variables
+; Condition variables (single-assignment cells)
 
-(define (make-condvar)
-  (cons (make-queue) #f))
-(define (condvar? x) (and (pair? x) (queue? (car x))))
-(define condvar-queue car)  ; #f means variable has been set
-(define condvar-value cdr)
+(define-record-type condvar :condvar
+  (really-make-condvar queue id)
+  condvar?
+  (queue condvar-queue set-condvar-queue!)  ; #f means it has been set
+  (value condvar-value set-condvar-value!)
+  (id condvar-id))
+
+(define (make-condvar . id-option)
+  (really-make-condvar (make-queue)
+		       (if (null? id-option) #f (car id-option))))
 
 (define (condvar-ref condvar)		;Interrupts enabled
   (if (condvar? condvar)
@@ -315,8 +320,8 @@
 	    (lambda ()
 	      (let ((q (condvar-queue condvar)))
 		(if q
-		    (begin (set-cdr! condvar value)
-			   (set-car! condvar #f)
+		    (begin (set-condvar-value! condvar value)
+			   (set-condvar-queue! condvar #f)
 			   (if (queue-empty? q)
 			       #f
 			       (let ((first (dequeue q)))

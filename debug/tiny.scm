@@ -11,8 +11,9 @@
 
 (define (start arg in out)
   (write-string "Hello " out)
-  (if (string? arg)
-      (write-string arg out))
+  (if (vector? arg)
+      (if (< 0 (vector-length arg))
+	  (write-string (vector-ref arg 0) out)))
   (write-char #\newline out)
   (force-output out)
   0)

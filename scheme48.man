@@ -74,9 +74,6 @@ the default image.
 .SH BUGS
 Procedure calls with more than 63 explicit arguments might not work.
 
-.I #e1.7
-reads as an inexact number.
-
 .I max
 and
 .I min

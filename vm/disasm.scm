@@ -1,17 +1,14 @@
 
 ; Disassembler that uses the VM's data structures.
 
-(define (disasm . maybe-stuff)
-  (let* ((template (if (null? maybe-stuff)
-		       *template*
-		       (let ((x (car maybe-stuff)))
-			 (cond ((template? x) x)
-			       ((closure? x) (closure-template x))
-			       ((and (location? x)
-				     (closure? (contents x)))
-				(closure-template (contents x)))
-			       (else
-				(error "cannot coerce to template" x)))))))
+(define (disassemble stuff)
+  (let ((template (cond ((template? stuff) stuff)
+			((closure? stuff) (closure-template stuff))
+			((and (location? stuff)
+			      (closure? (contents stuff)))
+			 (closure-template (contents stuff)))
+			(else
+			 (error "cannot coerce to template" stuff)))))
     (really-disassemble template 0)
     (newline)))
 
@@ -31,8 +28,6 @@
   (if (< pc 10) (display " "))
   (write pc))
 
-(define op/computed-goto (enum op computed-goto))
-
 (define (write-instruction template pc level write-sub-templates?)
   (let* ((code (template-code template))
          (opcode (code-vector-ref code pc)))
@@ -40,14 +35,14 @@
     (write-pc pc)
     (display " (")
     (write (enumerand->name opcode op))
-    (let ((pc (if (= opcode op/computed-goto)
+    (let ((pc (if (= opcode (enum op computed-goto))
 		  (display-computed-goto pc code)
 		  (print-opcode-args opcode (+ pc 1) code template
 				     level write-sub-templates?))))
       (display #\) )
       pc)))
 
-(define byte-limit (ashl 1 bits-used-per-byte))
+(define byte-limit (arithmetic-shift 1 bits-used-per-byte))
 
 (define (display-computed-goto pc code)
   (display #\space)

@@ -103,22 +103,23 @@
 
 (define environment-for-commands interaction-environment)
 
-(define (command-processor arg)
-  (start-command-processor arg
+(define (command-processor args)
+  (start-command-processor args
                            (make-user-context unspecific)
                            (interaction-environment)
                            unspecific))
 
 ; Main entry point.
 
-(define (start-command-processor resume-arg context initial-env start-thunk)
+(define (start-command-processor resume-args context initial-env start-thunk)
   (interrupt-before-heap-overflow!)
   ((let-fluids $command-levels '()
                $user-context context  ;Log in
                $session (make-session (current-input-port)
                                       (current-output-port)
-                                      (list resume-arg)
-                                      (equal? resume-arg "batch")
+                                      resume-args
+				      (and (pair? resume-args)
+					   (equal? (car resume-args) "batch"))
                                       #f)
      (lambda ()
        (command-loop start-thunk #f initial-env)))))
@@ -460,8 +461,8 @@
                 (write-line s o-port))
               '(
 "This is an alpha-test version of Scheme 48.  You are interacting with"
-"the command processor.  The command processor accepts either a command"
-"or a Scheme form to evaluate.  Commands are:"
+"the command processor.  A command is either a Scheme form to evaluate"
+"or one of the following:"
 ""))
 
     (list-command-help (user-command-help) f? o-port)
@@ -570,7 +571,8 @@
 		port)
     (write-line "Please report bugs to scheme-48-bugs@altdorf.ai.mit.edu."
                 port)
-    (write-line "Type ,? (comma question-mark) for help." port)))
+    (if (not (batch-mode?))
+	(write-line "Type ,? (comma question-mark) for help." port))))
 
 
 (define (command-continuation)          ;utility for debugger

@@ -47,17 +47,19 @@
   (make-operator-table (lambda (node cenv depth cont)
 			 (generate-trap cont
 					"not valid in expression context"
-					(schemify node)))
+					(schemify node cenv)))
 		       (lambda (frob)  ;for let-syntax, with-aliases, etc.
 			 (lambda (node cenv depth cont)
 			   (call-with-values (lambda () (frob node cenv))
 			     (lambda (form cenv)
 			       (compile form cenv depth cont)))))))
 
-(define (define-compilator name proc)
-  (operator-define! compilators name proc))
+(define (define-compilator name type proc)
+  (operator-define! compilators
+		    (if type (list name type) name)
+		    proc))
 
-(define-compilator 'literal
+(define-compilator 'literal #f
   (lambda (node cenv depth cont)
     (let ((obj (node-form node)))
       (if (eq? obj #f)
@@ -65,7 +67,7 @@
 	  (deliver-value (instruction (enum op false)) cont)
 	  (compile-constant obj depth cont)))))
 
-(define-compilator 'quote
+(define-compilator 'quote syntax-type
   (lambda (node cenv depth cont)
     (let ((exp (node-form node)))
       cenv				;ignored
@@ -80,7 +82,7 @@
 
 ; Variable reference
 
-(define-compilator 'name
+(define-compilator 'name #f
   (lambda (node cenv depth cont)
     (let* ((binding (name-node-binding node cenv))
 	   (name (node-form node)))
@@ -102,7 +104,7 @@
 
 ; Assignment
 
-(define-compilator (list 'set! syntax-type)
+(define-compilator 'set! syntax-type
   (lambda (node cenv depth cont)
     (let* ((exp (node-form node))
 	   (lhs-node (classify (cadr exp) cenv))
@@ -123,7 +125,7 @@
 
 ; Conditional
 
-(define-compilator (list 'if syntax-type)
+(define-compilator 'if syntax-type
   (lambda (node cenv depth cont)
     (let ((exp (node-form node))
 	  (alt-label (make-label))
@@ -144,7 +146,7 @@
 		     empty-segment)))))
 
 
-(define-compilator (list 'begin syntax-type)
+(define-compilator 'begin syntax-type
   (lambda (node cenv depth cont)
     (let ((exp (node-form node)))
       (compile-begin (cdr exp) cenv depth cont))))
@@ -182,7 +184,7 @@
 		  (compile-unknown-call node cenv depth cont)
 		  (compile new-node cenv depth cont)))))))
 
-(define-compilator 'call compile-call)
+(define-compilator 'call #f compile-call)
 
 
 ; A redex is a call of the form ((lambda (x1 ... xn) body ...) e1 ... en).
@@ -251,7 +253,7 @@
      
 ; OK, now that you've got all that under your belt, here's LAMBDA.
 
-(define-compilator (list 'lambda syntax-type)
+(define-compilator 'lambda syntax-type
   (lambda (node cenv depth cont)
     (let ((exp (node-form node))
 	  (name (cont-name cont)))
@@ -331,7 +333,7 @@
 			    specs)
 		       cenv depth cont)))))
 
-(define-compilator (list 'letrec syntax-type) compile-letrec)
+(define-compilator 'letrec syntax-type compile-letrec)
 
 ; --------------------
 ; Deal with internal defines (ugh)
@@ -432,8 +434,7 @@
 	    (cond ((null? names)
 		   (lookup cenv name))
 		  ((eq? name (car names))
-		   (make-binding usual-variable-type
-				 (cons level over)))
+		   (make-binding usual-variable-type (cons level over) #f))
 		  (else (loop (+ over 1) (cdr names)))))))))
 
 (define (initial-cenv cenv)
@@ -475,33 +476,26 @@
 	   (> (+ (segment-size seg1) (segment-size seg2))
 	      large-segment-size))
       (if (> (segment-size seg1) (segment-size seg2))
-	  (sequentially (maybe-push-continuation
-			 (sequentially 
-			  (instruction-with-template
-			   (enum op closure)
-			   (sequentially seg1
-					 (instruction (enum op return)))
-			   #f)
-			  (instruction (enum op call) 0))
-			 0
-			 (fall-through-cont #f #f))
+	  (sequentially (shrink-segment seg1 (fall-through-cont #f #f))
 			seg2)
 	  (sequentially seg1
-			(maybe-push-continuation
-			 (sequentially 
-			  (instruction-with-template
-			   (enum op closure)
-			   (if (return-cont? cont)
-			       seg2
-			       (sequentially seg2
-					     (instruction (enum op return))))
-			   #f)
-			  (instruction (enum op call) 0))
-			 0
-			 cont)))
+			(shrink-segment seg2 cont)))
       (sequentially seg1 seg2)))
 
 (define large-segment-size (* byte-limit 2))
+
+(define (shrink-segment seg cont)
+  (maybe-push-continuation
+   (sequentially (instruction-with-template
+		  (enum op closure)
+		  (if (return-cont? cont)
+		      seg
+		      (sequentially seg
+				    (instruction (enum op return))))
+		  #f)
+		 (instruction (enum op call) 0))
+   0
+   cont))
 
 ; --------------------
 ; Type checking.  This gets called on all nodes.
@@ -516,7 +510,8 @@
 		    (cond ((procedure-type? proc-type)
 			   (if (restrictive? proc-type)
 			       (let* ((args (if (eq? *type-check?* 'heavy)
-						(map (lambda (exp) (classify exp cenv)) 
+						(map (lambda (exp)
+						       (classify exp cenv)) 
 						     (cdr form))
 						(cdr form)))
 				      (args-type (make-some-values-type
@@ -526,16 +521,19 @@
 							  value-type))
 						       args)))
 				      (node (make-similar-node node
-							       (cons proc-node args))))
+							       (cons proc-node
+								     args))))
 				 (if (not (meet? args-type
 						 (procedure-type-domain proc-type)))
-				     (diagnose-call-error node proc-type args-type))
+				     (diagnose-call-error node proc-type cenv))
 				 node)
 			       node))
 			  ((not (meet? proc-type any-procedure-type))
 			   ;; Could also check args for one-valuedness.
 			   (let ((message "non-procedure in operator position"))
-			     (warn message (schemify node) `(procedure: ,proc-type))
+			     (warn message
+				   (schemify node cenv)
+				   `(procedure: ,proc-type))
 			     (node-set! node 'type-error message))
 			   node)
 			  (else node)))
@@ -549,7 +547,7 @@
 (define *type-check?* 'heavy)
 
 
-(define (diagnose-call-error node proc-type args-type)
+(define (diagnose-call-error node proc-type cenv)
   (let ((message
 	 (cond ((not (fixed-arity-procedure-type? proc-type))
 		"invalid arguments")
@@ -559,16 +557,18 @@
 	       (else
 		"wrong number of arguments"))))
     (warn message
-	  (schemify node)
+	  (schemify node cenv)
 	  `(procedure wants:
 		      ,(rail-type->sexp (procedure-type-domain proc-type)
 					#f))
-	  `(arguments are: ,(rail-type->sexp args-type #t)))
+	  `(arguments are: ,(map (lambda (arg)
+				   (type->sexp (node-type arg cenv) #t))
+				 (cdr (node-form node)))))
     (node-set! node 'type-error message)))
 
 
 ; Type system loophole
 
-(define-compilator (list 'loophole syntax-type)
+(define-compilator 'loophole syntax-type
   (lambda (node cenv depth cont)
     (compile (caddr (node-form node)) cenv depth cont)))

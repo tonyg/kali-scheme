@@ -25,7 +25,7 @@
 ; The assembler uses opcode-arg-specs to check the number and type of arguments
 ; to the opcodes.
 
-(define-compilator (list 'lap syntax-type)
+(define-compilator 'lap syntax-type
   (lambda (node cenv depth cont)
     (let* ((exp (node-form node))
 	   (template (compile-lap (cadr exp) (cddr exp) cenv)))

@@ -30,5 +30,7 @@
   RESULT = TTy >= 32 ? 0 : X << TTy; \
 }  
 
+#define PS_SMALL_MULTIPLY(x,y) ((x) * (y))
+
 extern long TTreturn_value, TTrun_machine();
 extern FILE *ps_open(char *, char *);

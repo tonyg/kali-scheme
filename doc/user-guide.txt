@@ -35,11 +35,15 @@ doc/meeting.tex.
 
 This is what might be called an alpha release.  Please report bugs,
 especially in the VM, especially core dumps, to
-scheme48-bugs@altdorf.ai.mit.edu.  Include the version number x.yy
+scheme-48-bugs@altdorf.ai.mit.edu.  Include the version number x.yy
 from the "Welcome to Scheme 48 x.yy" greeting message in your bug
 report.  It is a goal of this project to produce a bullet-proof
 system; we want no bugs and, especially, no crashes.  (There are a few
 known bugs, listed in the TODO file that comes with the distribution.)
+
+Send mail to scheme-48-request@altdorf.ai.mit.edu to be put on a
+mailing list for announcements, discussion, bug reports, and bug
+fixes.
 
 -----
 
@@ -72,14 +76,13 @@ it starts up.
 
 -a argument ...
     is only useful with images built using ,build.  The arguments are
-    concatenated, with spaces to separate them, and then passed as a
-    single string to the procedure specified in the ,build command.
+    passed as a list to the procedure specified in the ,build command.
     E.g.
 
-        > ,build (lambda (a) (display a) (newline) 0) foo.image
+        > ,build (lambda (a) (for-each display a) (newline) 0) foo.image
 	> ,exit
-	% scheme48vm -i foo.image -a mumble foo
-	mumble foo
+	% scheme48vm -i foo.image -a mumble "foo x"
+	mumblefoo x
 	% 
 
 The usual definition of the "s48" or "scheme48" command is actually a
@@ -174,7 +177,6 @@ Debugging commands:
 Building images:
 
  ,dump <filename> [<identification>]
-
     This writes out the current heap.  When the new image is resumed,
     it starts in the command processor.  If present, <identification>
     should be a string (written with double quotes); this string will
@@ -182,12 +184,17 @@ Building images:
 
  ,build <exp> <filename>
     <exp> should evaluate to a procedure of one argument.  When
-    <filename> is resumed, that procedure will be invoked on the
-    VM's -a argument, which is passed as a string.  <exp> should
+    <filename> is resumed, that procedure will be invoked on the VM's
+    -a arguments, which are passed as a list of strings.  <exp> should
     return an integer (as for ,exit).  The command processor and
-    debugging system are not included in the image (unless you
-    go to some effort to preserve them, such as retaining a
-    continuation).
+    debugging system are not included in the image (unless you go to
+    some effort to preserve them, such as retaining a continuation).
+
+    Doing ",flush" before building an image will make for smaller
+    images, but if an error occurs, the error message may be less
+    helpful.  Doing ",flush source maps" before loading any programs
+    will make the image still smaller.
+    
 
 
 Modes:
@@ -259,9 +266,9 @@ Resource query and control:
 
  ,flush
     The flush command with no argument deletes the database of names
-    of initial procedures.  Doing ",flush" before a ,build will make
-    the resulting image significantly smaller (by about 140K bytes),
-    but will compromise the information content of many error
+    of initial procedures.  Doing ",flush" before a ,build or ,dump
+    will make the resulting image significantly smaller (by up to 200K
+    bytes), but will compromise the information content of many error
     messages.
 
 
@@ -279,10 +286,10 @@ Quite obscure:
     names beginning with the string <from> will be changed so that the
     initial <from> is replaced by the string <to>.  E.g.
 
-        ,translate /usr/gjc/ /u/gjc/
+        ,translate /usr/gjc/ /zu/gjc/
 
     will cause (load "/usr/gjc/foo.scm") to have the same effect as
-    (load "/usr/gjc/foo.scm").
+    (load "/zu/gjc/foo.scm").
 
  ,from-file <filename> <form> ... ,end
     This is used by the cmuscheme48 Emacs library.
@@ -300,14 +307,14 @@ subdirectory.  It is a variant of the "cmuscheme" library, which
 comes to us courtesy of Olin Shivers, formerly of CMU.  You might want
 to put the following in your emacs init file (.emacs):
 
-    (setq scheme-program-name "s48")  ;or whatever scheme48 is installed as
+    (setq scheme-program-name "scheme48")
     (autoload 'run-scheme  "cmuscheme" "Run an inferior Scheme process." t)
 
 To make the autoload and (require ...) forms work, you will also need
 to put the directory containing cmuscheme and related files in your
 emacs load-path:
 
-    (setq load-path (append load-path '("<scheme48-directory>/emacs")))
+    (setq load-path (append load-path '("<scheme-48-directory>/emacs")))
 
 For further documentation see emacs/cmuscheme.el and emacs/comint.el.
 

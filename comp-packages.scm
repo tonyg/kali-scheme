@@ -47,7 +47,8 @@
 	features		;make-immutable!
 	;; locations		;location?
 	)
-  (files (bcomp syntax))
+  (files (bcomp syntax)
+	 (bcomp schemify))
   (optimize auto-integrate))
 
 (define-structure usual-macros usual-macros-interface
@@ -85,7 +86,8 @@
 	features		;force-output
 	filenames)		;translate
   (files (bcomp scan)
-	 (bcomp undefined)))
+	 (bcomp undefined))
+  (optimize auto-integrate))
 
 ; Compiler back end
 
@@ -139,7 +141,9 @@
 
 (define-structure types types-interface  ;Typing language
   (open scheme-level-2 meta-types syntactic loopholes)
-  (files (bcomp type)))
+  (files (bcomp type))
+  ;; (optimize auto-integrate)  - doesn't work
+  )
 
 (define-structure module-system (compound-interface defpackage-interface
 						    types-interface)

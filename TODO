@@ -45,8 +45,7 @@ Programming environment:
     Command (and procedure) to change current directory.
 
 Performance:
-    Put initial pure objects in read-only memory somehow (for faster
-      startup and fork() calls).
+    Generational GC.
     More compact representation for debugging data?
     Leaf procedure compilation (RK's rts/no-leaf-env.scm): if no
       continuations or lambdas, skip the make-env and access locals
@@ -68,7 +67,6 @@ Performance:
 
 Big Scheme features:
     ,more-threads command doesn't get defined (new bug in 0.26).
-    Add Olin's "cig" (C interface generator).
     How about deleting entries from tables?
     Non-blocking I/O for threads.  I think access to Unix select() might
       be sufficient (with pause() and sleep() as degenerate cases).
@@ -99,7 +97,7 @@ Module system features:
       segment.scm).
 
 VM:
-    The ATAN byte code should take two operands, not one.
+    Heaps that can grow larger.
     Merge in Olin's changes and extensions (command line processing,
       the #! syntax for scripts, external function call, etc.).
     Interrupt while writing out image causes an exit.  [Fixed?]
@@ -108,31 +106,33 @@ VM:
       from.  E.g. "out of ports" shouldn't cause a VM halt, it should
       just cause open-port to return #f or an error code.  [Fixed?]
     Get VM interp.scm-without-gc.scm working again.
-    Null terminated Scheme strings [fixed in RK's version].
+    Make the number predicate instructions return #t when apprioate
+      for the built-in number stored object types (bignum, double,
+      ratnum).
 
 Documentation:
+    Olin's "cig" (C interface generator).
     user-guide.txt should point to the existing lsc.ps?
     (optimize auto-integrate) and ,load-package analysis.
     How to use the static linker.
-    How scheme48.image gets built.
+    How initial.image and scheme48.image get built, really.
     Techniques for debugging the runtime system (debug/for-debugging.scm).
     Threads, fluids, records, tables.  [all in big-scheme.txt?]
-    File name translation and the ,translate command.
 
 Cleanup:
   VM:
-    Fix unix.c and the other .c files to be Posix compliant, to the
-      extent possible.  E.g. use sigaction() instead of signal() and
-      time() instead of ftime().  Default case for every compile-time
-      conditionalization should assume Posix.
     Revert to the old exception system: vector of handlers (not just a
       single procedure), and each handler gets an exception code.
     Rename "unassigned" to "uninitialized"?  Or phase it out entirely.
+    In unix.c, use getrusage(), when available, to get run time.
   Run-time / features / development environment:
+    A DIVIDE procedure (maybe an instruction as well) that returns two
+      values.
     Figure out how to merge the two type systems (META-METHODS and
       META-TYPES).  The generic function system could make use of the
       SUBTYPE? and INTERSECT? predicates.
-    Correct floating point, esp. reading and printing.
+    Correct floating point, esp. reading and printing.  And
+      (= 1/3 (/ 1. 3.)) returns #t, but ought to return #f.
     Parameterize over file name syntax somehow.  Currently
       big/filename.scm assumes Unix (cf. DIRECTORY-COMPONENT-SEPARATOR,
       FILE-NAME-PREFERRED-CASE).  Perhaps there should be VM support for
@@ -141,7 +141,7 @@ Cleanup:
       another.
     Disassembler should generate S-expression first, and then print
       it independently.
-    Combine condition, signals, and handle into a single structure?
+    Combine conditions, signals, and handle into a single structure?
     Figure out a better way to implement ##.
     Be consistent about "filename" versus "file-name".
   Compiler / linker / module system:
@@ -163,9 +163,37 @@ Cleanup:
     Add ENVIRONMENT-DEFINED? ?
     Make USUAL-TRANSFORM return a transform?
     Add enough to the node signature to make it usable on its own?
+    make-c-header-file should put definitions for the interrupt
+      enumeration into scheme48.h, and unix.c et al should use them.
   Etc:
     Start using a source control system (like rcs).
     We ought to have a test system / validation suite.
+
+
+To: jar@cs.cornell.edu
+Subject: Not a bug this time. :-)
+Date: Tue, 22 Feb 94 19:13:37 -0500
+From: Paul Stodghill <stodghil@cs.cornell.edu>
+
+The result of ,expand can be confusing. In particular, it doesn't
+distinguish between different identifiers that have the same name.
+
+For instance, in the example below, it would be more useful if the result
+of the ,expand was something like,
+
+	'((lambda (.x.1) (set! x (- .x.1))) x)
+
+Welcome to Scheme 48 0.31 (made by jar on Sun Feb 13 18:33:57 EST 1994).
+Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+Please report bugs to scheme-48-bugs@altdorf.ai.mit.edu.
+Type ,? (comma question-mark) for help.
+> (define-syntax foo
+    (syntax-rules ()
+      ((foo var) ((lambda (x) (set! var (- x))) var))))
+> (define x 1)
+> ,expand (foo x)
+'((lambda (x) (set! x (- x))) x)
+> 
 
 
 

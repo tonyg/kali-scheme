@@ -160,12 +160,29 @@ lookup_dlsym(char *name, long *location)
 #include <sys/types.h>      /* sbrk   */
 #include <strings.h>        /* strlen */
 
-#ifdef mips
-struct exec {               /* an exec like structure for the MIPS */
+#ifdef mips /* or should this be ultrix? */
+struct exec {               /* an exec-like structure for the MIPS */
   struct filehdr ex_f;
   struct aouthdr ex_o;
 };
-#endif
+
+#define a_magic ex_o.magic
+#define a_text ex_o.tsize
+#define a_data ex_o.dsize
+#define a_bss  ex_o.bsize
+
+#define BAD_MAGIC(output_file_header) N_BADMAG(output_file_header.ex_o)
+#define TEXT_OFFSET(output_file_header) \
+	    (long) N_TXTOFF(output_file_header.ex_f, output_file_header.ex_o)
+
+#else /* not mips */
+
+#define BAD_MAGIC(output_file_header) N_BADMAG(output_file_header)
+#define TEXT_OFFSET(output_file_header) \
+	    (long) N_TXTOFF(output_file_header)
+
+#endif	    
+
 
 extern char *object_file;   /* specified via a command line argument */
 extern char *reloc_file;
@@ -346,31 +363,14 @@ really_dynamic_load( char *reloc_info_file, char *output_file, char *user_args )
     return(-1);
   }
 
-#ifdef mips
-
-  if (N_BADMAG(output_file_header.ex_o)) {
-    fprintf(stderr, "output file has bad magic number %d\n",
-	    output_file_header.ex_o.magic);
-    abort_load(NULL, output_file_desc, output_file);
-    return(-1);
-  }
-
-  loaded_size = output_file_header.ex_o.tsize + output_file_header.ex_o.dsize;
-  required_size = loaded_size + output_file_header.ex_o.bsize;
-
-#else  /* not MIPS */
-
-  if (N_BADMAG(output_file_header)) {
+  if (BAD_MAGIC(output_file_header)) {
     fprintf(stderr, "output file has bad magic number %d\n",
 	    output_file_header.a_magic);
     abort_load(NULL, output_file_desc, output_file);
     return(-1);
   }
-
   loaded_size = output_file_header.a_text + output_file_header.a_data;
   required_size = loaded_size + output_file_header.a_bss;
-
-#endif
 
   /* get required memory */
   actual_load_point = (long) sbrk(required_size);
@@ -388,13 +388,7 @@ really_dynamic_load( char *reloc_info_file, char *output_file, char *user_args )
   }
   
   /* go to beginning of text */
-  if (fseek(output_file_desc,
-#ifdef mips
-	    (long) N_TXTOFF(output_file_header.ex_f, output_file_header.ex_o),
-#else
-	    (long) N_TXTOFF(output_file_header),
-#endif	    
-	    0)
+  if (fseek(output_file_desc, TEXT_OFFSET(output_file_header), 0)
       < 0) {
     fprintf(stderr, "unable to seek to beginning of linked file text\n");
     abort_load(NULL, output_file_desc, output_file);

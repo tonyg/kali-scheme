@@ -1,5 +1,6 @@
 ; -*- Mode: Scheme; -*-
 ;  ,exec ,load misc/load-static.scm
+;  (do-it 100000 "debug/little.image" "debug/little-heap.c")
 
 (config
  (lambda ()
@@ -10,6 +11,7 @@
 (load-package 'bigbit)
 ; The following is for struct's (for-syntax ...) clause
 (load-package 'big-scheme)
+(load-package 'heap)
 
 (in 'heap
     (lambda ()
@@ -32,3 +34,5 @@
 		(files (misc static)))))
 
 (load-package 'static)
+(user '(open static))
+

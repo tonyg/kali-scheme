@@ -11,7 +11,7 @@
 (define-structures ((scheme-level-1 scheme-level-1-interface)
 		    (util util-interface))
   (open scheme-level-0 ascii signals)
-  (usual-transforms case delay quasiquote syntax-rules)
+  (usual-transforms case quasiquote syntax-rules)
   (files (rts base)
 	 (rts util)
 	 (rts number)
@@ -82,11 +82,13 @@
 
 (define-structure templates templates-interface
   (open scheme-level-1 primitives methods)
-  (files (rts template)))
+  (files (rts template))
+  (optimize auto-integrate))
 
 (define-structure continuations continuations-interface
   (open scheme-level-1 primitives templates methods)
-  (files (rts continuation)))
+  (files (rts continuation))
+  (optimize auto-integrate))
 
 (define-structure more-types (export :closure :code-vector :location :template)
   (open methods
@@ -144,7 +146,8 @@
 	conditions	;define-condition-type
 	features	;make-immutable!
 	silly)		;reverse-list->string
-  (files (rts read)))
+  (files (rts read))
+  (optimize auto-integrate))
 
 (define-structure scheme-level-2 scheme-level-2-interface
   (open scheme-level-1

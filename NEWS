@@ -2,17 +2,50 @@
 
 Recent changes to Scheme 48.
 
-2/7/94   (version 0.31)
+2/24/94  (version 0.33)
+	 Fixed bug in VM's interrupt system.
+	 Made non-local srcdir work in Makefile.
+	 Added (load-package 'bigbit) to vm/README.
+
+2/23/94  (version 0.32)
+	 Some incompatible changes to the VM; .image files will have
+	   to be rebuilt.
+	 Improvements to configuration script and to unix.c to support
+	   a wider variety of Unixes.  The system should now work
+	   under any Posix-compliant Unix (except maybe for
+	   char-ready?; see comments in unix.c).
+	 Upped the default heap size from 4 meg (2 per semispace) to 6
+	   meg (3 per semispace).
+	 New command line argument -s <size> for specifying size of
+	   stack buffer.  Default is 2500 (words).
+         $@ -> "$@" in script (thanks to Paul Stodghill for this fix).
+	 Obscure interrupt/exception VM bug fixed.
+	 It is now possible to put an initial heap image into static
+	   memory (effectively allocated by OS process creation).
+	   Immutable initial objects go into static read-only memory,
+	   and mutable initial objects go into static read-write
+	   memory.  Initial objects not copied by the GC.  There is no
+	   documentation yet, but look at the rules for little and
+	   debug/little.o in the Makefile if you're interested.
+
+2/13/94  (version 0.31)
+	 Incompatible changes:
+	   In interfaces, all exported syntactic keywords must be
+	     given type :syntax.  For example,
+	       (define-interface my-macros
+	         (export (my-macro :syntax) ...))
+	   Image entry procedures for the ,build command are now
+	     passed a list of strings, not just a single string, for
+	     the command line arguments following -a.
+	   The names of the macros defined in scheme48.h
+	     (pairp, car, string_length, etc.) are now all upper case.
 	 New "configure" script generates Makefile from Makefile.in
 	   and sysdep.h from sysdep.h.in (thanks to Gnu autoconf).
 	   See INSTALL and doc/install.txt.
-	 Incompatible change:
-	   The names of all of the macros defined in scheme48.h
-	   (pairp, car, string_length, etc.) are now all upper case.
 	 Bug fixes:
            Can now make vectors (strings, etc.) as big as the amount
-             of heap space available (but you're screwed if you
-             try to make one bigger than 2^23 bytes - don't do it).
+             of heap space available (but you're still screwed if you
+             try to make one bigger than 2^23-1 bytes - don't do it).
 	   Non-ANSI-ness fixed in scheme48vm.c (jump out of, then
 	     back into, a block expected block-local variables to be
 	     unchanged).
@@ -65,7 +98,7 @@ Recent changes to Scheme 48.
 	   the use of other comparison predicates besides EQ?, and
 	   eliminates some code that had a restrictive copyright
 	   notice.
-         ENUM, NAME->ENUMERAND, ENUMERAND->NAME, are all macros.
+         ENUM, NAME->ENUMERAND, and ENUMERAND->NAME are all macros.
          Enumerated types themselves are now macros as well.
 
 1/23/94  Fixed bad multiplication bug in VM: (* 214760876 10) was

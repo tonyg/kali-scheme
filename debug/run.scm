@@ -53,10 +53,10 @@
 		 (let ((loc (cdr binding)))
 		   (if (location-defined? loc)
 		       (contents loc)
-		       (error "uninitialized variable" (schemify node))))
-		 (error "invalid variable reference" (schemify node))))
+		       (error "uninitialized variable" (schemify node env))))
+		 (error "invalid variable reference" (schemify node env))))
 	    ((unbound? binding)
-	     (error "unbound variable" (schemify node)))
+	     (error "unbound variable" (schemify node env)))
 	    (else
 	     (error "peculiar binding" node binding))))))
 
@@ -127,7 +127,7 @@
 	     (if (and (location-defined? (binding-place probe))
 		      (variable-type? (binding-type probe)))
 		 (set-contents! (cdr probe) (run (caddr exp) env))
-		 (error "invalid assignment" (schemify node))))
+		 (error "invalid assignment" (schemify node env))))
 	    ((unbound? probe) (error "unbound variable" exp))
 	    (else (error "peculiar assignment" exp))))))
 
@@ -151,7 +151,8 @@
 (define (run-letrec specs body env)
   (let* ((bindings (map (lambda (spec)
 			  (make-binding usual-variable-type
-					(make-undefined-location (car spec))))
+					(make-undefined-location (car spec))
+					#f))
 			specs))
 	 (env (bind (map car specs)
 		    bindings
@@ -212,7 +213,7 @@
   (let ((loc (make-undefined-location name)))
     (set-location-defined?! loc #t)
     (set-contents! loc arg)
-    (bind1 name (make-binding usual-variable-type loc) env)))
+    (bind1 name (make-binding usual-variable-type loc #f) env)))
 
 (define (bind-vars names args env)
   (cond ((null? names)

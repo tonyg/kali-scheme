@@ -8,19 +8,27 @@
 
 (define the-usual-transforms (make-table))
 
-(define (define-usual-macro name proc aux-names)
+(define (define-usual-macro name n proc aux-names)
   (table-set! the-usual-transforms
 	      name
 	      (cons (lambda (exp rename compare)
-		      (apply proc rename compare (cdr exp)))
+		      (if (long-enough? (cdr exp) n)
+			  (apply proc rename compare (cdr exp))
+			  exp))
 		    aux-names)))
 
 (define (usual-transform name)
-  (table-ref the-usual-transforms name))
+  (or (table-ref the-usual-transforms name)
+      (call-error "no such transform" usual-transform name)))
+
+(define (long-enough? l n)
+  (if (= n 0)
+      #t
+      (and (pair? l) (long-enough? (cdr l) (- n 1)))))
 
 ;
 
-(define-usual-macro 'and
+(define-usual-macro 'and 0
   (lambda (rename compare . conjuncts)
     (cond ((null? conjuncts) `#t)
           ((null? (cdr conjuncts)) (car conjuncts))
@@ -33,7 +41,7 @@
 ; Tortuously crafted so as to avoid dependency on any (unspecific)
 ; procedure.
 
-(define-usual-macro 'cond
+(define-usual-macro 'cond 1
   (lambda (rename compare . clauses)
     (let ((result
 	   (let recur ((clauses clauses))
@@ -42,7 +50,9 @@
 		 (list
 		  (let ((clause (car clauses))
 			(more-clauses (cdr clauses)))
-		    (cond ((and (null? more-clauses)
+		    (cond ((not (pair? clause))
+			   (syntax-error "invalid COND clause" clause))
+			  ((and (null? more-clauses)
 				(compare (car clause) (rename 'else)))
 			   `(,(rename 'begin) ,@(cdr clause)))
 			  ((null? (cdr clause))
@@ -64,7 +74,7 @@
 	  (car result))))
   '(or cond begin let if begin))
 
-(define-usual-macro 'do
+(define-usual-macro 'do 2
   (lambda (rename compare . (specs end . body))
     (let ((%loop (rename 'loop))
 	  (%letrec (rename 'letrec))
@@ -83,7 +93,7 @@
 		 (,%loop ,@(map cadr specs)))))
   '(letrec lambda cond))
 
-(define-usual-macro 'let
+(define-usual-macro 'let 2
   (lambda (rename compare . (specs . body))
     (cond ((list? specs)
            `((,(rename 'lambda) ,(map car specs) ,@body)
@@ -100,7 +110,7 @@
 			      `(let ,specs ,@body)))))
   '(lambda letrec))
 
-(define-usual-macro 'let*
+(define-usual-macro 'let* 2
   (lambda (rename compare . (specs . body))
     (if (or (null? specs)
             (null? (cdr specs)))
@@ -109,7 +119,7 @@
 			 (,(rename 'let*) ,(cdr specs) ,@body))))
   '(let let*))
 
-(define-usual-macro 'or
+(define-usual-macro 'or 0
   (lambda (rename compare . disjuncts)
     (cond ((null? disjuncts) #f)  ;not '#f
           ((null? (cdr disjuncts)) (car disjuncts))
@@ -123,7 +133,7 @@
 
 ; CASE needs auxiliary MEMV.
 
-(define-usual-macro 'case
+(define-usual-macro 'case 2
   (lambda (rename compare . (key . clauses))
     (let ((temp (rename 'temp))
 	  (%eqv? (rename 'eq?))
@@ -146,7 +156,7 @@
 
 ; Quasiquote
 
-(define-usual-macro 'quasiquote
+(define-usual-macro 'quasiquote 1
   (lambda (rename compare . (x))
 
     (define %quote (rename 'quote))

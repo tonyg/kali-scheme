@@ -192,15 +192,19 @@
 (define (code-vector-size len)
   (+ 1 (bytes->cells len)))
 
-; Strings
+; Strings are presented as being one character shorter than they really
+; are to hide the null character at the end.
 
-(define vm-make-string   (stob-maker (enum stob string) make-b-vector))
+(define vm-make-string   (stob-maker (enum stob string)
+				     (lambda (type len key)
+				       (make-b-vector type (+ len 1) key))))
 (define vm-string?       (stob-predicate (enum stob string)))
-(define vm-string-length b-vector-length)
+(define vm-string-length (lambda (x) (- (b-vector-length x) 1)))
 (define vm-string-ref    (lambda (s i) (ascii->char (b-vector-ref s i))))
 (define vm-string-set!   (lambda (s i c) (b-vector-set! s i (char->ascii c))))
 
-(define vm-string-size code-vector-size)
+(define (vm-string-size length)
+  (+ 1 (bytes->cells (+ 1 length))))
 
 (define (enter-string string)           ; used by VMIO on startup
   (let ((z (string-length string)))
@@ -271,7 +275,10 @@
   (table-searcher vm-string-hash
                   (lambda (string sym)
                     (vm-string=? string (vm-symbol->string sym)))
-                  vm-make-symbol))
+		  (lambda (string key)
+		    (let ((sym (vm-make-symbol string key)))
+		      (make-immutable! sym)
+		      sym))))
 
 (define add-to-symbol-table
   (table-searcher (lambda (sym) (vm-string-hash (vm-symbol->string sym)))

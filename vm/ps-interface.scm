@@ -38,7 +38,7 @@
 	  ; extras
 	  allocate-memory deallocate-memory read-block write-block
 	  deallocate null-pointer? null-port?
-	  ashl ashr
+	  ashl ashr lshr
 	  bitwise-and bitwise-ior bitwise-xor bitwise-not
 	  force-output
 	  ;abort

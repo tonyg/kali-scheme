@@ -15,14 +15,15 @@
 
 (define (no-coercion x) x)
 
-(define any->      (input-type (lambda (x) x #t) no-coercion))
-(define fixnum->   (input-type fixnum?  extract-fixnum))
-(define char->     (input-type vm-char? extract-char))
-(define vm-char->  (input-type vm-char? no-coercion))
-(define boolean->  (input-type vm-boolean? extract-boolean))
-(define location-> (input-type location? no-coercion))
-(define string->   (input-type vm-string? no-coercion))
-(define vector->   (input-type vm-vector? no-coercion))
+(define any->         (input-type (lambda (x) x #t) no-coercion))
+(define fixnum->      (input-type fixnum?      extract-fixnum))
+(define char->        (input-type vm-char?     extract-char))
+(define vm-char->     (input-type vm-char?     no-coercion))
+(define boolean->     (input-type vm-boolean?  extract-boolean))
+(define location->    (input-type location?    no-coercion))
+(define string->      (input-type vm-string?   no-coercion))
+(define vector->      (input-type vm-vector?   no-coercion))
+(define code-vector-> (input-type code-vector? no-coercion))
 
 ; Output coercion
 
@@ -197,14 +198,6 @@
 	  (goto return-fixnum (d-vector-length stob))
 	  (goto raise-exception2 1 stob (enter-fixnum type))))))
   
-(define-primitive stored-object-byte-length
-  (any->)
-  (lambda (stob)
-    (let ((type (next-byte)))
-      (if (stob-of-type? stob type)
-	  (goto return-fixnum (b-vector-length stob))
-	  (goto raise-exception2 1 stob (enter-fixnum type))))))
-
 ; Fixed sized objects
 
 (define-primitive stored-object-ref
@@ -238,56 +231,121 @@
 ; Indexed objects
 
 (define-primitive stored-object-indexed-ref
-  (any-> any->)
-  (stob-indexed-ref d-vector-length d-vector-ref return))
-
-(define-primitive stored-object-indexed-byte-ref
-  (any-> any->)
-  (stob-indexed-ref b-vector-length b-vector-ref return-fixnum))
-
-(define-primitive stored-object-indexed-char-ref
-  (any-> any->)
-  (stob-indexed-ref b-vector-length vm-string-ref return-char))
-
-(define (stob-indexed-ref length ref returner)
+  (any-> fixnum->)
   (lambda (stob index)
-    (let* ((type (next-byte))
-	   (lose (lambda ()
-		   (goto raise-exception3 1 stob (enter-fixnum type) index))))
-      (if (fixnum? index)
-	  (let ((index (extract-fixnum index)))
-	    (if (and (stob-of-type? stob type)
-		     (valid-index? index (length stob)))
-		(goto returner (ref stob index))
-		(lose)))
-	  (lose)))))
+    (let ((type (next-byte)))
+      (if (and (stob-of-type? stob type)
+	       (valid-index? index (d-vector-length stob)))
+	  (goto return (d-vector-ref stob index))
+	  (goto raise-exception3 1
+		stob (enter-fixnum type) (enter-fixnum index))))))
 
-(define (stob-indexed-setter length value-type setter!)
-  (let ((value? (input-type-predicate value-type))
-	(extract-value (input-type-coercion value-type)))
-    (lambda (stob index value)
-      (let ((type (next-byte)))
-	(cond ((and (stob-of-type? stob type)
-		    (fixnum? index)
-		    (valid-index? (extract-fixnum index) (length stob))
-		    (value? value)
-		    (not (immutable? stob)))
-	       (setter! stob (extract-fixnum index) (extract-value value))
-	       (goto return unspecific))
-	      (else
-	       (goto raise-exception4 1 stob (enter-fixnum type) index value)))))))
-  
-; STOB-INDEXED-SETTER must be called at load time because the type checker will
-; not accept it.
+(define-primitive stored-object-indexed-set! (any-> fixnum-> any->)
+  (lambda (stob index value)
+    (let ((type (next-byte)))
+      (cond ((and (stob-of-type? stob type)
+		  (valid-index? index (d-vector-length stob))
+		  (not (immutable? stob)))
+	     (d-vector-set! stob index value)
+	     (goto return unspecific))
+	    (else
+	     (goto raise-exception4 1
+		   stob
+		   (enter-fixnum type)
+		   (enter-fixnum index)
+		   value))))))
 
-(let ((setter (stob-indexed-setter d-vector-length any-> d-vector-set!)))
-  (define-primitive stored-object-indexed-set! (any-> any-> any->) setter))
+; Code-vectors
 
-(let ((setter (stob-indexed-setter b-vector-length fixnum-> b-vector-set!)))
-  (define-primitive stored-object-indexed-byte-set! (any-> any-> any->) setter))
+(define-primitive code-vector-length
+  (code-vector->)
+  (lambda (code-vector)
+    (goto return-fixnum (code-vector-length code-vector))))
 
-(let ((setter (stob-indexed-setter b-vector-length char-> vm-string-set!)))
-  (define-primitive stored-object-indexed-char-set! (any-> any-> any->) setter))
+(define-primitive code-vector-ref
+  (code-vector-> fixnum->)
+  (lambda (code-vector index)
+    (if (valid-index? index (code-vector-length code-vector))
+	(goto return-fixnum (code-vector-ref code-vector index))
+	(goto raise-exception2 0 code-vector (enter-fixnum index)))))
+
+(define-primitive code-vector-set!
+  (code-vector-> fixnum-> fixnum->)
+  (lambda (code-vector index value)
+    (cond ((valid-index? index (code-vector-length code-vector))
+	   (code-vector-set! code-vector index value)
+	   (goto return unspecific))
+	  (else
+	   (goto raise-exception3 0
+		 code-vector
+		 (enter-fixnum index)
+		 (enter-fixnum value))))))
+
+(define-primitive make-code-vector
+  (fixnum-> fixnum->)
+  (lambda (len init)
+    (let ((lose (lambda ()
+		  (goto raise-exception2 0 (enter-fixnum len) (enter-fixnum init))))
+	  (size (code-vector-size len)))
+      (if (not (okay-stob-size? size))
+	  (lose)
+	  (maybe-ensure-space-saving-temp
+	   size
+	   (enter-fixnum 0)
+	   (lambda (okay? key ignore)
+	     (if (not okay?)
+		 (lose)
+		 (let ((code-vector (make-code-vector len key)))
+		   (do ((i (- len 1) (- i 1)))
+		       ((< i 0))
+		     (code-vector-set! code-vector i init))
+		   (goto return code-vector)))))))))
+
+; Strings
+
+(define-primitive string-length
+  (string->)
+  (lambda (string)
+    (goto return-fixnum (vm-string-length string))))
+
+(define-primitive string-ref
+  (string-> fixnum->)
+  (lambda (string index)
+    (if (valid-index? index (vm-string-length string))
+	(goto return-char (vm-string-ref string index))
+	(goto raise-exception2 0 string (enter-fixnum index)))))
+
+(define-primitive string-set!
+  (string-> fixnum-> char->)
+  (lambda (string index char)
+    (cond ((valid-index? index (vm-string-length string))
+	   (vm-string-set! string index char)
+	   (goto return unspecific))
+	  (else
+	   (goto raise-exception3 0
+		 string
+		 (enter-fixnum index)
+		 (enter-char char))))))
+
+(define-primitive make-string
+  (fixnum-> char->)
+  (lambda (len init)
+    (let ((lose (lambda ()
+		  (goto raise-exception2 0 (enter-fixnum len) (enter-char init))))
+	  (size (vm-string-size len)))
+      (if (not (okay-stob-size? size))
+	  (lose)
+	  (maybe-ensure-space-saving-temp
+	   size
+	   (enter-fixnum 0)
+	   (lambda (okay? key ignore)
+	     (if (not okay?)
+		 (lose)
+		 (let ((string (vm-make-string len key)))
+		   (do ((i (- len 1) (- i 1)))
+		       ((< i 0))
+		     (vm-string-set! string i init))
+		   (goto return string)))))))))
 
 ; Constructors
 
@@ -306,40 +364,24 @@
       new))
   return)
 
-(define (vector-maker size make set init-type)
-  (let ((init? (input-type-predicate init-type))
-	(extract-init (input-type-coercion init-type)))
-    (lambda (len init)
-      (let* ((type (next-byte))
-	     (lose (lambda ()
-		     (goto raise-exception3 1 (enter-fixnum type)
-			   (enter-fixnum len) init))))
-	(if (or (not (init? init))
-		(not (>= len 0)))
-	    (lose)
-	    (maybe-ensure-space-saving-temp (size len) init
-	      (lambda (okay? key init)
-		(if (not okay?)
-		    (lose)
-		    (let* ((raw-init (extract-init init))
-			   (v (make type len key)))
-		      ;; Clear out storage
-		      (do ((i (- len 1) (- i 1)))
-			  ((< i 0))
-			(set v i raw-init))
-		      (goto return v))))))))))
-
-; VECTOR-MAKER must be called at load time because the type checker will
-; not accept it.
-
-(let ((maker (vector-maker vm-vector-size make-d-vector d-vector-set! any->)))
-  (define-primitive make-vector-object (fixnum-> any->) maker))
-
-(let ((maker (vector-maker code-vector-size make-b-vector b-vector-set! fixnum->)))
-  (define-primitive make-byte-vector-object (fixnum-> any->) maker))
-  
-(let ((maker (vector-maker vm-string-size make-b-vector vm-string-set! char->)))
-  (define-primitive make-char-vector-object (fixnum-> any->) maker))
+(define-primitive make-vector-object (fixnum-> any->)
+  (lambda (len init)
+    (let* ((type (next-byte))
+	   (lose (lambda (init)
+		   (goto raise-exception3 1 (enter-fixnum type)
+			 (enter-fixnum len) init)))
+	   (size (vm-vector-size len)))
+      (if (not (okay-stob-size? size))
+	  (lose init)
+	  (maybe-ensure-space-saving-temp size init
+            (lambda (okay? key init)
+	      (if (not okay?)
+		  (lose init)
+		  (let ((v (make-d-vector type len key)))
+		    (do ((i (- len 1) (- i 1)))
+			((< i 0))
+		      (d-vector-set! v i init))
+		    (goto return v)))))))))
 
 (define-primitive location-defined? (location->)
   (lambda (loc)
@@ -354,8 +396,12 @@
 	   (set-contents! loc unassigned-marker)))
     (goto return unspecific)))
 
-(define-primitive immutable?      (any->) immutable?      return-boolean)
-(define-primitive make-immutable! (any->) make-immutable! return-unspecific)
+(define-primitive immutable? (any->) immutable? return-boolean)
+
+(define-primitive make-immutable! (any->)
+  (lambda (thing)
+    (make-immutable! thing)
+    (goto return thing)))
 
 
 ; I/O primitives
@@ -469,19 +515,21 @@
 
 (define-primitive write-image (string-> any-> string->)
   (lambda (filename resume-proc comment-string)
-    (let ((port (open-output-file (extract-string filename))))
-      (cond ((null-port? port)
-	     (goto raise-exception2 0 filename resume-proc))
-	    (else
-	     (write-vm-string comment-string port)
-	     (begin-collection)
-	     (let ((resume-proc (trace-value resume-proc)))
-	       (do-gc)
-	       (close-untraced-ports!)
-	       (let ((size (write-image port resume-proc)))
-		 (close-output-port port)
-		 (abort-collection)
-		 (goto return (enter-fixnum size)))))))))
+    (if (not (image-writing-okay?))
+	(goto raise-exception2 0 filename resume-proc)
+	(let ((port (open-output-file (extract-string filename))))
+	  (cond ((null-port? port)
+		 (goto raise-exception2 0 filename resume-proc))
+		(else
+		 (write-vm-string comment-string port)
+		 (begin-collection)
+		 (let ((resume-proc (trace-value resume-proc)))
+		   (do-gc)
+		   (close-untraced-ports!)
+		   (let ((size (write-image port resume-proc)))
+		     (close-output-port port)
+		     (abort-collection)
+		     (goto return (enter-fixnum size))))))))))
 
 (define-primitive collect ()
   (lambda ()
@@ -491,15 +539,15 @@
 
 (define-primitive memory-status (fixnum-> any->)
   (lambda (key other)
-    (cond ((= key memory-status-option/available)
+    (cond ((= key (enum memory-status-option available))
 	   (goto return (enter-fixnum (available))))
-	  ((= key memory-status-option/heap-size)
+	  ((= key (enum memory-status-option heap-size))
 	   (goto return
 		 (enter-fixnum
 		  (bytes->cells (heap-size)))))
-	  ((= key memory-status-option/stack-size)
+	  ((= key (enum memory-status-option stack-size))
 	   (goto return (enter-fixnum (stack-size))))
-	  ((= key memory-status-option/set-minimum-recovered-space!)
+	  ((= key (enum memory-status-option set-minimum-recovered-space!))
 	   (cond ((fixnum? other)
 		  (let ((old *minimum-recovered-space*))
 		    (set! *minimum-recovered-space*
@@ -507,25 +555,25 @@
 		    (goto return (enter-fixnum old))))
 		 (else
 		  (goto raise-exception2 0 (enter-fixnum key) other))))
-	  ((= key memory-status-option/gc-count)
+	  ((= key (enum memory-status-option gc-count))
 	   (goto return (enter-fixnum (gc-count))))
 	  (else
 	   (goto raise-exception2 0 (enter-fixnum key) other)))))
 
 (define-primitive time (fixnum-> any->)
   (lambda (key other)
-    (cond ((= key time-option/ticks-per-second)
+    (cond ((= key (enum time-option ticks-per-second))
 	   (goto return (enter-fixnum (ps-ticks-per-second))))
-	  ((= key time-option/run-time)
+	  ((= key (enum time-option run-time))
 	   (goto return (enter-fixnum (ps-run-time))))
-	  ((= key time-option/real-time)
+	  ((= key (enum time-option real-time))
 	   (goto return (enter-fixnum (ps-real-time))))
 	  (else
 	   (goto raise-exception2 0 (enter-fixnum key) other)))))
                             
 (define-primitive schedule-interrupt (fixnum->)
   (lambda (time)
-    (clear-interrupt! interrupt/alarm)
+    (clear-interrupt! (enum interrupt alarm))
     (goto return (enter-fixnum (ps-schedule-interrupt time)))))
 
 (define external-> (input-type external? no-coercion))
@@ -556,7 +604,7 @@
 	    (else
 	     (set! *nargs* (- *nargs* 1))      ; don't count the procedure
 	     (set! *val* proc)
-	     return-option/external-call)))))  ; return to driver loop
+	     (enum return-option external-call))))))  ; return to driver loop
 
 (define-primitive vm-extension (fixnum-> any->)
   (lambda (key value)
@@ -568,7 +616,7 @@
 (define-primitive vm-return (fixnum-> any->)
   (lambda (key value)
     (set! *val* value)
-    return-option/exit))            ; the VM returns this value
+    (enum return-option exit)))            ; the VM returns this value
 
 (define-primitive get-dynamic-state ()
   (lambda () *dynamic-state*)

@@ -1,30 +1,57 @@
 -*- Mode: Indented-text; -*-
 
-Don't worry if the ".notify" target fails.  Its only purpose is
-to send a message to scheme-48-notifications@martigny.ai.mit.edu,
-so that we can get a rough idea of how much Scheme 48 is being
-used.
+Here are some remarks to complement what's in the INSTALL file.
+
+-----
+
+When running "make", don't worry if the ".notify" target fails.  Its
+only purpose is to send an email message to
+scheme-48-notifications@martigny.ai.mit.edu, so that we can get a
+rough idea of how much Scheme 48 is being used and by whom.  We
+promise not to use your name or email address for any commercial
+purpose.  If you don't want us to know, just do "make -t .notify"
+first. 
      
 -----
 
 Customizing the installation
 
-  0. If you don't believe in configure scripts, or don't have a
-     /bin/sh that can handle it, you can make sysdep.h and Makefile
-     manually from sysdep.h.in and Makefile.in.  The technique is
-     fairly obvious.
+  1. If you don't believe in configure scripts, or don't have a
+     /bin/sh that can handle the configure script, you can make
+     sysdep.h and Makefile manually from sysdep.h.in and Makefile.in.
+     The technique is fairly obvious.  For Makefile, just give
+     reasonable values for all of the variables at the top that are
+     defined as "foo = @foo@", e.g. srcdir=., CC=cc, LIBS=-lm,
+     INSTALL=cp, etc.  For sysdep.h, read the comments.  If your OS
+     is Posix compliant and you don't care whether char-ready? works,
+     you can copy sysdep.h.in to sysdep.h unmodified and everything
+     should work.
 
-  1. If you definitely won't be installing Scheme 48, you should set
+  2. If you definitely won't be installing Scheme 48, you should set
      libdir to the distribution directory (e.g. "make libdir=`pwd`").
      This will make the ,open and ,load-package commands work for the
      library packages defined in more-packages.scm.
 
-  2. If desired, customize the contents of the development environment
+  3. If desired, customize the contents of the development environment
      heap image by editing the definitions of USUAL-COMMANDS and/or
      USUAL-FEATURES in more-packages.scm; see below.
 
-  3. If you're using a DEC MIPS, and want to use the foreign function
+  4. If you're using a DEC MIPS, and want to use the foreign function
      interface, specify LDFLAGS=-N (with e.g. "make LDFLAGS=-N").
+
+  5. To make sure that char-ready? works, do the following:
+     - Configure Makefile and sysdep.h as above
+     - make vm
+     - Run the VM on the initial image, and try these two
+       (char-ready?) tests: (eof to exit)
+           ./scheme48vm -i initial.image
+           (begin (read-char) (char-ready?))
+           (char-ready?)0
+     If either of the two tests gives a warning, then char-ready?
+     doesn't work, and you'll need to go in and hack file unix.c if
+     you want it to.  (Char-ready? isn't essential in order for the
+     Scheme system itself to generally work.)  See the comments for
+     function char_ready_p().
 
 -----
 

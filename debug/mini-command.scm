@@ -3,10 +3,10 @@
 
 ; Miniature command processor.
 
-(define (command-processor arg)
+(define (command-processor args)
   (let ((in (current-input-port))
 	(out (current-output-port))
-	(batch? (equal? arg "batch")))
+	(batch? (member "batch" args)))
     (let loop ()
       ((call-with-current-continuation
 	 (lambda (go)

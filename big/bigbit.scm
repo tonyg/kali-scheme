@@ -59,7 +59,7 @@
 	(adjoin-digit (bitwise-and (op (low-digit m) (low-digit n)) radix-mask)
 		      (recur (high-digits m) (high-digits n))))))
 
-; Same as the above, except that one magnitude is that of negative number.
+; Same as the above, except that one magnitude is that of a negative number.
 
 (define (magnitude-bitwise-binop-neg-pos op m n)
   (magnitude-bitwise-binop-pos-neg op n m))
@@ -68,11 +68,14 @@
   (let recur ((m m) (n n) (carry 1))
     (if (and (zero-magnitude? n) (zero-magnitude? m))
 	(integer->magnitude (op 0 carry))
-	(let ((n-digit (negate-low-digit n carry)))
-	  (adjoin-digit (bitwise-and (op (low-digit m) n-digit) radix-mask)
-			(recur (high-digits m)
-			       (high-digits n)
-			       (if (>= n-digit radix) 1 0)))))))
+	(call-with-values
+	 (lambda ()
+	   (negate-low-digit n carry))
+	 (lambda (n-digit carry)
+	   (adjoin-digit (op (low-digit m) n-digit)
+			 (recur (high-digits m)
+				(high-digits n)
+				carry)))))))
 
 ; Now both M and N are magnitudes of negative numbers.
 
@@ -80,29 +83,38 @@
   (let recur ((m m) (n n) (m-carry 1) (n-carry 1))
     (if (and (zero-magnitude? n) (zero-magnitude? m))
 	(integer->magnitude (op m-carry n-carry))
-	(let ((m-digit (negate-low-digit m m-carry))
-	      (n-digit (negate-low-digit n n-carry)))
-	  (adjoin-digit (bitwise-and (op m-digit n-digit) radix-mask)
-			(recur (high-digits m)
-			       (high-digits n)
-			       (if (>= m-digit radix) 1 0)
-			       (if (>= n-digit radix) 1 0)))))))
+	(call-with-values
+	 (lambda ()
+	   (negate-low-digit m m-carry))
+	 (lambda (m-digit m-carry)
+	   (call-with-values
+	    (lambda ()
+	      (negate-low-digit n n-carry))
+	    (lambda (n-digit n-carry)
+	      (adjoin-digit (op m-digit n-digit)
+			    (recur (high-digits m)
+				   (high-digits n)
+				   m-carry
+				   n-carry)))))))))
 
 (define (negate-low-digit m carry)
-  (+ (bitwise-and (bitwise-not (low-digit m))
-		  radix-mask)
-     carry))
+  (let ((m (+ (bitwise-and (bitwise-not (low-digit m))
+			   radix-mask)
+	      carry)))
+    (if (>= m radix)
+	(values (- m radix) 1)
+	(values m 0))))
 
 (define (negate-magnitude m)
   (let recur ((m m) (carry 1))
     (if (zero-magnitude? m)
 	(integer->magnitude carry)
-	(let ((res (negate-low-digit m carry)))
-	  (if (>= res radix)
-	      (adjoin-digit (- res radix)
-			    (recur (high-digits m) 1))
-	      (adjoin-digit res
-			    (recur (high-digits m) 0)))))))
+	(call-with-values
+	 (lambda ()
+	   (negate-low-digit m carry))
+	 (lambda (next carry)
+	   (adjoin-digit next
+			 (recur (high-digits m) carry)))))))
 
 ; arithmetic-shift
 
@@ -151,23 +163,26 @@
 (define (shift-right-neg-magnitude mag n)
   (negate-magnitude
    (let digit-recur ((mag mag) (n n) (carry 1))
-     (let* ((low (negate-low-digit mag carry))
-	    (next-carry (if (>= low radix) 1 0)))
-       (if (<= n (- 0 log-radix))
-	   (digit-recur (high-digits mag) (+ n log-radix) next-carry)
-	   (let ((mask (- (arithmetic-shift 1 (- 0 n)) 1)))
-	     (let recur ((mag mag) (n n) (carry carry))
-	       (let* ((low (negate-low-digit mag carry))
-		      (carry (if (>= low radix) 1 0))
-		      (high (high-digits mag))
-		      (next (negate-low-digit high carry)))
-		 (adjoin-digit
-		  (bitwise-ior (arithmetic-shift low n)
-			       (arithmetic-shift (bitwise-and mask next)
-						 (+ n log-radix)))
-		  (if (zero-magnitude? high)
-		      (integer->magnitude carry)
-		      (recur high n carry)))))))))))
+     (call-with-values
+      (lambda ()
+	(negate-low-digit mag carry))
+      (lambda (digits carry)
+	(if (<= n (- 0 log-radix))
+	    (digit-recur (high-digits mag) (+ n log-radix) carry)
+	    (let ((mask (- (arithmetic-shift 1 (- 0 n)) 1)))
+	      (let recur ((mag mag) (low digits) (carry carry))
+		(let ((high-digits (high-digits mag)))
+		  (call-with-values
+		   (lambda ()
+		     (negate-low-digit high-digits carry))
+		   (lambda (high carry)
+		     (adjoin-digit
+		      (bitwise-ior (arithmetic-shift low n)
+				   (arithmetic-shift (bitwise-and mask high)
+						     (+ n log-radix)))
+		      (if (zero-magnitude? high-digits)
+			  (integer->magnitude carry)
+			  (recur high-digits high carry))))))))))))))
 
 ;(define (tst)
 ;  (let* ((m (random))

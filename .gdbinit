@@ -4,7 +4,7 @@
 
 #Set a breakpoint at label "raise".
 #Obtain the proper line number using "egrep -n raise: scheme48vm.c".
-break scheme48vm.c:5426
+break scheme48vm.c:4935
 
 display/i $pc
 

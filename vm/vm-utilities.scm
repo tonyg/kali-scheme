@@ -7,6 +7,8 @@
 
 (define high-bits ashr)
 
+(define unsigned-high-bits lshr)
+
 (define (digit? ch)
   (let ((ch (char->ascii ch)))
     (and (>= ch (char->ascii #\0))

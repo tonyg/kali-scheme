@@ -7,6 +7,9 @@
   (open pre-scheme)
   (files vm-utilities)
   (begin
+;    (define-syntax assert
+;      (lambda (exp rename compare)
+;    	0))
     (define (assert x)
       (if (not x)
     	  (error "assertion failed")))

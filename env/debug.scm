@@ -451,7 +451,7 @@ Kind should be one of: names maps files source tabulate"
 	(write-char #\0 port))
     (write r port)))
 
-(define-command-syntax 'time "<exp>" "measure execution time"
+(define-command-syntax 'time "<command>" "measure execution time"
   '(command))
 
 ; Support for stuffing things from Emacs.
@@ -570,6 +570,6 @@ Kind should be one of: names maps files source tabulate"
 
 (define (expand . maybe-exp)
   (let ((exp (if (null? maybe-exp) (focus-object) (car maybe-exp)))
-	(env (environment-for-commands)))
+	(env (package->environment (environment-for-commands))))
     (set-focus-object!
-     (schemify (classify exp (package->environment env))))))
+     (schemify (classify exp env) env))))

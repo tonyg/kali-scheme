@@ -16,17 +16,10 @@
   (loophole :type value-type))
 
 (define procedure
-  (loophole (procedure (some-values :type :type) :type)
+  (loophole (proc (:type :type) :type)
 	    (lambda (dom cod) (procedure-type dom cod #t))))
 
-; Use the definition from the meta-types module
-;(define-syntax proc
-;  (syntax-rules ()
-;    ((proc (?type ...) ?cod)
-;     (procedure (some-values ?type ...) ?cod))))
-
-; Use the definition of the SOME-VALUES macro from the meta-types
-; module
+; Use the definitions of PROC and SOME-VALUES from the meta-types module
 
 
 ; Various base types

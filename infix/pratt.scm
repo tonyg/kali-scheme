@@ -1,12 +1,27 @@
 ; -*- Mode: Scheme; -*-
 ;
 ; A simple Pratt-Parser for SIOD: 2-FEB-90, George Carrette, GJC@PARADIGM.COM
-; Siod version 2.4 may be obtained by anonymous FTP to BU.EDU (128.197.2.6)
-; Get the file users/gjc/siod-v2.4-shar
+; Siod may be obtained by anonymous FTP to world.std.com:pub/gjc.
 ;
-;                   COPYRIGHT (c) 1990 BY                       
-;     PARADIGM ASSOCIATES INCORPORATED, CAMBRIDGE, MASSACHUSETTS.
-;         See the source file SLIB.C for more information. 
+; *                      COPYRIGHT (c) 1988-1994 BY                          *
+; *        PARADIGM ASSOCIATES INCORPORATED, CAMBRIDGE, MASSACHUSETTS.       *
+; *                         ALL RIGHTS RESERVED                              *
+;
+;Permission to use, copy, modify, distribute and sell this software
+;and its documentation for any purpose and without fee is hereby
+;granted, provided that the above copyright notice appear in all copies
+;and that both that copyright notice and this permission notice appear
+;in supporting documentation, and that the name of Paradigm Associates
+;Inc not be used in advertising or publicity pertaining to distribution
+;of the software without specific, written prior permission.
+;
+;PARADIGM DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
+;ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL
+;PARADIGM BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR
+;ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+;WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+;ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
+;SOFTWARE.
 ;
 ; Based on a theory of parsing presented in:                       
 ;                                                                      

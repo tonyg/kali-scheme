@@ -12,6 +12,15 @@
 (define (ashr i n)
   (arithmetic-shift i (- 0 n)))
 
+; What we will get in C.
+(define pre-scheme-integer-size 32)
+
+(define int-mask (- (arithmetic-shift 1 pre-scheme-integer-size) 1))
+
+(define (lshr i n)
+  (if (>= i 0)
+      (arithmetic-shift i (- 0 n))
+      (arithmetic-shift (bitwise-and i int-mask) (- 0 n))))
 
 (define (deallocate x) #f)
 

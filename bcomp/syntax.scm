@@ -1,8 +1,6 @@
 ; Copyright (c) 1993, 1994 Richard Kelsey and Jonathan Rees.  See file COPYING.
 
-
 ; Syntactic stuff: transforms and operators.
-
 
 
 (define usual-operator-type
@@ -99,6 +97,14 @@
 ; --------------------
 ; Nodes
 
+; A node is an annotated expression (or definition or other form).
+; The FORM component of a node is an S-expression of the same form as
+; the S-expression representation of the expression.  E.g. for
+; literals, the form is the literal value; for variables the form is
+; the variable name; for IF expressions the form is a 4-element list
+; (ignored test con alt).  Nodes also have a tag identifying what kind
+; of node it is (literal, variable, if, etc.) and a property list.
+
 (define-record-type node :node
   (really-make-node uid form plist)
   node?
@@ -147,10 +153,15 @@
 ; --------------------
 ; Generated names
 
-; Generated names (more like syntactic closures, actually).
-; The parent is always another name (perhaps generated).
-; The parent chain provides an access path, should one ever be needed.
-; That is: transform = (binding-static (lookup env parent)).
+; Generated names make lexically-scoped macros work.  They're the same
+; as what Alan Bawden and Chris Hanson call "aliases".  The parent
+; field is always another name (perhaps generated).  The parent chain
+; provides an access path to the name's binding, should one ever be
+; needed.  That is: If name M is bound to a transform T that generates
+; name G as an alias for name N, then M is (generated-parent-name G),
+; so we can get the binding of G by accessing the binding of N in T's
+; environment of closure, and we get T by looking up M in the
+; environment in which M is *used*.
 
 (define-record-type generated :generated
   (make-generated symbol token env parent-name)
@@ -161,20 +172,28 @@
   (parent-name generated-parent-name))
 
 (define-record-discloser :generated
-  (lambda (name) (list 'generated (generated-symbol name))))
+  (lambda (name)
+    (list 'generated (generated-symbol name) (generated-uid name))))
 
 (define (generate-name symbol env parent-name)    ;for opt/inline.scm
-  (make-generated symbol #f env parent-name))
+  (make-generated symbol (cons #f #f) env parent-name)) ;foo
+
+(define (generated-uid g)
+  (let ((t (generated-token g)))
+    (or (car t)
+	(let ((uid *generated-uid*))
+	  (set! *generated-uid* (+ *generated-uid* 1))
+	  (set-car! t uid)
+	  uid))))
+
+(define *generated-uid* 0)
 
 (define (name->symbol name)
   (if (symbol? name)
       name
-      (let ((uid *generated-uid*))
-	(set! *generated-uid* (+ *generated-uid* 1))
-	(string->symbol (string-append (symbol->string (generated-symbol name))
-				       "##"
-				       (number->string uid))))))
-(define *generated-uid* 0)
+      (string->symbol (string-append (symbol->string (generated-symbol name))
+				     "##"
+				     (number->string (generated-uid name))))))
 
 (define (name-hash name)
   (cond ((symbol? name)
@@ -295,7 +314,7 @@
 
 
 ; --------------------
-; Bindings: the things that are returned by LOOKUP.
+; Bindings: the things that are usually returned by LOOKUP.
 
 ; Representation is #(type place operator-or-transform-or-#f).
 ; For top-level bindings, place is usually a location.
@@ -307,33 +326,17 @@
 
 (define (set-binding-place! b place) (vector-set! b 1 place))
 
-(define (really-make-binding type place static)
+(define (make-binding type place static)
   (let ((b (make-vector 3 place)))
     (vector-set! b 0 type)
     (vector-set! b 2 static)
     b))
-
-(define (make-binding type-or-static place . static-option)
-  (cond ((not (null? static-option))
-	 (really-make-binding type-or-static place (car static-option)))
-	((operator? type-or-static)
-	 (really-make-binding (operator-type type-or-static)
-			      place type-or-static))
-	((transform? type-or-static)
-	 (really-make-binding (transform-type type-or-static)
-			      place type-or-static))
-	(else
-	 (really-make-binding type-or-static place #f))))
 
 (define (clobber-binding! b type place static)
   (vector-set! b 0 type)
   (if place
       (set-binding-place! b place))
   (vector-set! b 2 static))
-
-(define (binding-transform b)
-  (let ((foo (binding-static b)))
-    (if (transform? foo) foo #f)))
 
 ; Return a binding that's similar to the given one, but has its type
 ; replaced with the given type.
@@ -343,28 +346,28 @@
 	  (and (eq? type undeclared-type) integrate?) ;+++
 	  (not (binding? b)))
       b
-      (really-make-binding (if (eq? type undeclared-type)
-			       (let ((type (binding-type b)))
-				 (if (variable-type? type)
-				     (variable-value-type type)
-				     type))
-			       type)
-			   (binding-place b)
-			   (if integrate?
-			       (binding-static b)
-			       #f))))
+      (make-binding (if (eq? type undeclared-type)
+			(let ((type (binding-type b)))
+			  (if (variable-type? type)
+			      (variable-value-type type)
+			      type))
+			type)
+		    (binding-place b)
+		    (if integrate?
+			(binding-static b)
+			#f))))
 
 ; Return a binding that's similar to the given one, but has any
-; procedure integration or other static information removed.
-; But don't remove static information for macros (or structures,
-; interfaces, etc.)
+; procedure integration or other unnecesary static information
+; removed.  But don't remove static information for macros (or
+; structures, interfaces, etc.)
 
 (define (forget-integration b)
   (if (and (binding-static b)
 	   (subtype? (binding-type b) any-values-type))
-      (really-make-binding (binding-type b)
-			   (binding-place b)
-			   #f)
+      (make-binding (binding-type b)
+		    (binding-place b)
+		    #f)
       b))
 
 ; --------------------
@@ -398,6 +401,7 @@
 	       (classify-call op-node form env))))
 	((literal? form)
 	 (classify-literal form))
+	;; ((qualified? form) ...)
 	(else
 	 (classify (syntax-error "invalid expression" form) env))))
 
@@ -439,14 +443,15 @@
 
 (define operator/name (get-operator 'name 'leaf))
 
-; Expand a macro or in-line procedure application
+; Expand a macro or in-line procedure application.
 
 (define (classify-macro-application t form env-of-use)
   (classify-transform-application
        t form env-of-use
        (lambda () 
 	 (classify (syntax-error "use of macro doesn't match definition"
-				 (schemify form))
+				 (cons (schemify (car form) env-of-use)
+				       (desyntaxify (cdr form))))
 		   env-of-use))))
 
 
@@ -695,19 +700,9 @@
 				      env)))))))
 
 (define (process-syntax form env name env-or-whatever)
-  (let* ((eval+env (force (reflective-tower env)))
-	 (thing ((car eval+env)
-		 ;; Bootstrap kludge to macro expand SYNTAX-RULES
-		 (if (pair? form)
-		     (let ((probe (lookup env (car form))))
-		       (if (and (binding? probe)
-				(binding-transform probe))
-			   ((transform-procedure (binding-transform probe))
-			    form (lambda (x) x) eq?)
-			   form))
-		     form)
-		 (cdr eval+env))))
-    (make-transform thing env-or-whatever syntax-type form name)))
+  (let ((eval+env (force (reflective-tower env))))
+    (make-transform ((car eval+env) form (cdr eval+env))
+		    env-or-whatever syntax-type form name)))
 
 (define (get-funny env name)
   (let ((binding (lookup env name)))
@@ -769,55 +764,17 @@
 					 (cont defs
 					       (append exps forms)
 					       env))
-					(else (body-lossage node))))))
+					(else (body-lossage node env))))))
 	      (else
 	       (cont defs (cons node forms) env))))))
 
-(define (body-lossage node)
+(define (body-lossage node env)
   (syntax-error "definitions and expressions intermixed"
-		(schemify node)))
+		(schemify node env)))
 
 
 (define begin-node? (node-predicate 'begin syntax-type))
 (define define-node? (node-predicate 'define syntax-type))
-
-
-; --------------------
-; Flush nodes in favor of something a little more readable
-
-(define (schemify node)
-  (if (node? node)
-      (or (node-ref node 'schemify)
-	  (let ((form ((operator-table-ref schemifiers (node-operator-id node))
-		       node)))
-	    (node-set! node 'schemify form)
-	    form))
-      (desyntaxify node)))
-
-(define schemifiers
-  (make-operator-table (lambda (node)
-			 (let ((form (node-form node)))
-			   (if (list? form)
-			       (map schemify form)
-			       form)))))
-
-(define (define-schemifier name proc)
-  (operator-define! schemifiers name proc))
-
-(define-schemifier 'name
-  (lambda (node)
-    (desyntaxify (node-form node))))
-
-(define-schemifier 'quote
-  (lambda (node) (list 'quote (cadr (node-form node)))))
-
-(define-schemifier (list 'letrec syntax-type)
-  (lambda (node)
-    (let ((form (node-form node)))
-      `(letrec ,(map (lambda (spec)
-		       `(,(car spec) ,(schemify (cadr spec))))
-		     (cadr form))
-	 ,@(map schemify (cddr form))))))
 
 ; --------------------
 ; Variable types
@@ -837,12 +794,13 @@
 
 (define (compatible-types? have-type want-type)
   (if (variable-type? want-type)
-      (and (variable-type? want-type)
+      (and (variable-type? have-type)
 	   (same-type? (variable-value-type have-type)
 		       (variable-value-type want-type)))
-      (if (variable-type? have-type)
-	  (meet? (variable-value-type have-type)
-		 want-type))))
+      (meet? (if (variable-type? have-type)
+		 (variable-value-type have-type)
+		 have-type)
+	     want-type)))
 
 
 ; Usual type for Scheme variables.

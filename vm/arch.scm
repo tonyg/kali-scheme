@@ -16,7 +16,7 @@
 
 ; Bytecodes: for compiler and interpreter
 
-; instruction specification is 
+; Instruction specification is 
 ; (op . args)
 ; OP may be a name or a list of names
 ; ARGS are
@@ -25,10 +25,10 @@
 ;  index     - a byte indexing into the current template
 ;  offset    - two bytes giving an offset into the current instruction stream
 ;  stob      - a byte specifying a type for a stored object
-;  0 1 2 ... - the number of non-instruction-stream arguments (some instructions
-;              take a variable number of arguments, the first number is the
-;              argument count implemented by the VM)
-; +          - any number of additional arguments are allowed
+;  0 1 2 ... - the number of non-instruction-stream arguments (some
+;              instructions take a variable number of arguments; the first
+;              number is the argument count implemented by the VM)
+;  +         - any number of additional arguments are allowed
 
 (define-syntax define-instruction-set
   (lambda (form rename compare)
@@ -114,9 +114,10 @@
   ((quotient remainder) 2)
   ((floor numerator denominator
      real-part imag-part
-     exp log sin cos tan asin acos atan sqrt
+     exp log sin cos tan asin acos sqrt
      angle magnitude)
    1)
+  (atan 2)
   ((make-polar make-rectangular) 2)
   (bitwise-not 1)
   ((bitwise-and bitwise-ior bitwise-xor) 2)
@@ -127,28 +128,27 @@
   (eof-object? 1)
 
   ;; Data manipulation
-  (make-stored-object byte stob)
-  ((make-vector-object
-     make-byte-vector-object
-     make-char-vector-object)
-   stob 1)	; size
-
   (stored-object-has-type? stob 1)
+  (stored-object-length stob 1)
 
-  ((stored-object-length stored-object-byte-length) stob 1)
+  (make-stored-object byte stob)
+  (stored-object-ref  stob byte 1) ; byte is the offset
+  (stored-object-set! stob byte 2)
 
-  ((stored-object-ref stored-object-set!) stob byte 1)
+  (make-vector-object stob 2)	      ; size + init
+  (stored-object-indexed-ref  stob 2) ; vector + offset
+  (stored-object-indexed-set! stob 3) ; vector + offset + value
 
-  ((stored-object-indexed-ref
-     stored-object-indexed-byte-ref 
-     stored-object-indexed-char-ref)
-   stob 2) ; vector + offset
+  (make-code-vector 2)
+  (code-vector-length 1)
+  (code-vector-ref 2)
+  (code-vector-set! 3)
 
-  ((stored-object-indexed-set!
-     stored-object-indexed-byte-set!
-     stored-object-indexed-char-set!)
-   stob 3) ; vector + offset + value
-
+  (make-string 2)
+  (string-length 1)
+  (string-ref 2)
+  (string-set! 3)
+                     
   (location-defined? 1)
   (set-location-defined?! 2)
   ((immutable? make-immutable!) 1)
@@ -243,7 +243,7 @@
 (define least-b-vector-type (enum stob string))
 
 ; (stob predicate constructor . (accessor modifier)*)
-; If nothing else, the runtime system and the VM need to agree on the
+; If nothing else, the runtime system and the VM need to agree on
 ; which slot of a pair is the car and which is the cdr.
 
 (define stob-data
@@ -252,7 +252,7 @@
     (symbol symbol? make-symbol       ; symbols actually made using op/intern
       (symbol->string #f))
     (location location? make-location
-      (contents set-contents!) (location-id #f))
+      (contents set-contents!) (location-id set-location-id!))
     (closure closure? make-closure
       (closure-template #f) (closure-env #f))
     (weak-pointer weak-pointer? make-weak-pointer

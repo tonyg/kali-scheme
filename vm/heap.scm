@@ -63,59 +63,100 @@
     new))
 
 
+(define *pure-areas*   (unassigned))
+(define *impure-areas* (unassigned))
+(define *pure-sizes*   (unassigned))
+(define *impure-sizes* (unassigned))
+(define *pure-area-count*   0)
+(define *impure-area-count* 0)
+
+(define (register-static-areas pure-count pure-areas pure-sizes
+			       impure-count impure-areas impure-sizes)
+  (set! *pure-area-count* pure-count)
+  (set! *pure-areas* pure-areas)
+  (set! *pure-sizes* pure-sizes)
+  (set! *impure-area-count* impure-count)
+  (set! *impure-areas* impure-areas)
+  (set! *impure-sizes* impure-sizes))
+
+(define (walk-areas proc areas sizes count)
+  (let loop ((i 0))
+    (cond ((>= i count)
+	   #t)
+	  ((proc (vector-ref areas i)
+		 (+ (vector-ref areas i)
+		    (vector-ref sizes i)))
+	   (loop (+ i 1)))
+	  (else
+	   #f))))
+
+(define (walk-pure-areas proc)
+  (walk-areas proc *pure-areas* *pure-sizes* *pure-area-count*))
+
+(define (walk-impure-areas proc)
+  (walk-areas proc *impure-areas* *impure-sizes* *impure-area-count*))
+
+
 
 ; Used to find end of an object
 (define (header-a-units h)
   (bytes->a-units (header-length-in-bytes h)))
 
-(define (walk-heap type proc limit)
-  (let loop ((addr *newspace-begin*))
-    (cond ((addr< addr limit)
-	   (let ((d (fetch addr)))
-	     (cond ((not (header? d))
-		    (write-string "heap is in an inconsistent state."
-		                  (current-output-port))
-		    #f)
-		   ((or (not (= type (header-type d)))
-			(proc (address->stob-descriptor (addr1+ addr))))
-		    (loop (addr1+ (addr+ addr (header-a-units d)))))
-		   (else
-		    #f))))
-	  (else
-	   #t))))
-
-(define stob/symbol (enum stob symbol))
-(define stob/vector (enum stob vector))
+(define (walk-over-type-in-area type proc)
+  (lambda (start end)
+    (let loop ((addr start))
+      (cond ((addr< addr end)
+	     (let ((d (fetch addr)))
+	       (cond ((not (header? d))
+		      (write-string "heap is in an inconsistent state."
+				    (current-output-port))
+		      #f)
+		     ((or (not (= type (header-type d)))
+			  (proc (address->stob-descriptor (addr1+ addr))))
+		      (loop (addr1+ (addr+ addr (header-a-units d)))))
+		     (else
+		      #f))))
+	    (else
+	     #t)))))
 
 (define (walk-over-symbols proc)
-  (let ((start-hp *hp*))
-    (cond ((walk-heap stob/symbol proc start-hp)
+  (let ((proc (walk-over-type-in-area (enum stob symbol) proc))
+	(start-hp *hp*))
+    (cond ((and (proc *newspace-begin* *hp*)
+		(walk-pure-areas proc))
 	   #t)
 	  (else
 	   (set! *hp* start-hp) ; out of space, so undo and give up
 	   #f))))
 
 (define (find-all-xs type)
-  (let ((start-hp *hp*))
+  (let ((proc (walk-over-type-in-area type maybe-push-obj))
+	(start-hp *hp*))
     (store-next! 0)                              ; reserve space for header
-    (cond ((walk-heap type
-		      (lambda (stob)
-			(cond ((available? (cells->a-units 1))
-			       (store-next! stob)
-			       #t)
-			      (else #f)))
-		      start-hp)
+    (cond ((and (proc *newspace-begin* start-hp)
+		(walk-impure-areas proc)
+		(walk-pure-areas proc))
 	   (let ((size (addr- *hp* (addr1+ start-hp))))
-	     (store! start-hp (make-header stob/vector size) )
+	     (store! start-hp (make-header (enum stob vector) size) )
 	     (address->stob-descriptor (addr1+ start-hp))))
 	  (else
 	   (set! *hp* start-hp) ; out of space, so undo and give up
 	   false))))
 
+(define (maybe-push-obj thing)
+  (cond ((available? (cells->a-units 1))
+	 (store-next! thing)
+	 #t)
+	(else #f)))
+
 
 ;;;; Write-image and read-image
 
-(define level 14)
+(define level 15)
+
+(define (image-writing-okay?)
+  (and (= 0 *pure-area-count*)
+       (= 0 *impure-area-count*)))
 
 (define (write-image port restart-proc)
   (write-string "This is a Scheme48 heap image file." port)
@@ -132,6 +173,32 @@
   (write-bytes *hp* (- (addr1+ *hp*) *hp*) port)
   (write-bytes *newspace-begin* (- *hp* *newspace-begin*) port)
   (- *hp* *newspace-begin*))
+
+; Make sure the image file is okay and return the size of the heap it
+; contains.
+
+(define (check-image-header filename)
+  (call-with-input-file filename
+    (lambda (port)
+      (let ((lose (lambda (message)
+		    (let ((out (current-output-port)))
+		      (write-string message out)
+		      (newline out)
+		      -1))))
+	(cond ((null-port? port)
+	       (lose "Can't open heap image file"))
+	      (else
+	       (read-page port) ; read past any user cruft at the beginning of the file
+	       (let* ((old-level          (read-number port))
+		      (old-bytes-per-cell (read-number port))
+		      (old-begin (cells->a-units (read-number port)))
+		      (old-hp    (cells->a-units (read-number port))))
+		 (cond ((not (= old-level level))
+			(lose "format of image is incompatible with this version of system"))
+		       ((not (= old-bytes-per-cell bytes-per-cell))
+			(lose "incompatible bytes-per-cell in image"))
+		       (else
+			(- old-hp old-begin))))))))))
 
 (define (read-image filename startup-space)
   (call-with-input-file filename
@@ -151,18 +218,19 @@
         (if (not (= old-bytes-per-cell bytes-per-cell))
             (error "incompatible bytes-per-cell"
                    old-bytes-per-cell bytes-per-cell))
-        (let* ((delta (- *newspace-begin* old-begin))
+        (let* ((delta (- *hp* old-begin))
                (new-hp (+ old-hp delta))
-               (new-limit *newspace-end*))
+               (new-limit *newspace-end*)
+	       (start *hp*))
           (if (addr>= (+ startup-space new-hp) new-limit)
 	      (error "heap not big enough to restore this image"
 		     new-hp new-limit))
 	  (let ((reverse? (check-image-byte-order port)))
-	    (read-bytes *newspace-begin* (- old-hp old-begin) port)
+	    (read-bytes *hp* (- old-hp old-begin) port)
 	    (if reverse?
-		(reverse-byte-order *newspace-begin* new-hp))
+		(reverse-byte-order start new-hp))
 	    (if (not (= delta 0))
-		(relocate-image delta *newspace-begin* new-hp))
+		(relocate-image delta start new-hp))
 	    (set! *hp* new-hp)
 	    (adjust startup-proc delta)))))))
 

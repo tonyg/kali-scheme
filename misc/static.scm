@@ -133,8 +133,10 @@
 	   (do ((i 0 (+ i 1)))
 	       ((= i len) (write-char #\" port))
 	     (let ((c (vm-string-ref x i)))
-	       (if (or (char=? c #\") (char=? c #\\))
-		   (write-char #\\ port))
+	       (cond ((or (char=? c #\") (char=? c #\\))
+		      (write-char #\\ port))
+		     ((char=? c #\newline)
+		      (display "\\n\\" port)))
 	       (write-char c port)))))
 	(else
 	 (write-char #\{ port)

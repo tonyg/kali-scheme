@@ -2,35 +2,29 @@
 
 ; This is file resume.scm.
 
-; RESUME is the main entry point to the entire system
+; All sizes are in cells
 
-(define (resume filename startup-vector startup-vector-length
-		initial-memory-size initial-stack-size)
-  (create-memory (a-units->cells initial-memory-size) 0)
-  (initialize-heap (memory-begin)
-		   (- (memory-size) (a-units->cells initial-stack-size)))
-  (let* ((resume-space (+ (do ((i 0 (+ i 1))
-			       (s 0 (+ s (vm-string-size
-					  (string-length
-					   (vector-ref startup-vector i))))))
-			      ((>= i startup-vector-length)
-			       s))
-			  (code-vector-size 2)))
-	 (startup-proc (read-image filename
-				   (+ initial-heap-space resume-space))))
-    (initialize-i/o-system)
-    (initialize-stack (+ (memory-begin)
-			 (- (cells->a-units (memory-size)) initial-stack-size))
-		      (a-units->cells initial-stack-size))
-    (initialize-interpreter)
-    (call-startup-procedure startup-proc startup-vector startup-vector-length)))
+(define (required-init-space startup-vector startup-vector-length)
+  (+ (+ (do ((i 0 (+ i 1))
+	     (s 0 (+ s (vm-string-size
+			(string-length
+			 (vector-ref startup-vector i))))))
+	    ((>= i startup-vector-length)
+	     s))
+	(code-vector-size 2))
+     (+ initial-interpreter-heap-space
+	(+ initial-stack-heap-space
+	   initial-i/o-heap-space))))
 
-(define initial-heap-space
-  (+ initial-interpreter-heap-space
-     (+ initial-stack-heap-space
-	initial-i/o-heap-space)))
+(define (initialize-vm memory-begin memory-size stack-begin stack-size)
+  (initialize-heap memory-begin memory-size)
+  (initialize-i/o-system)
+  (initialize-stack stack-begin stack-size)
+  (initialize-interpreter))
 
-(define (call-startup-procedure startup-proc startup-vector startup-vector-length)
+(define (call-startup-procedure startup-proc
+				startup-vector
+				startup-vector-length)
   (let ((vector (vm-make-vector startup-vector-length universal-key)))
     (do ((i 0 (+ i 1)))
 	((>= i startup-vector-length))
@@ -40,20 +34,18 @@
     (push (initial-input-port))
     (push (initial-output-port))
     (let ((code (make-code-vector 2 universal-key)))
-      (code-vector-set! code 0 op/call)
+      (code-vector-set! code 0 (enum op call))
       (code-vector-set! code 1 3)         ; nargs    
       (set! *code-pointer* (address-after-header code)))
     (restart startup-proc)))
-
-(define op/call (enum op call))
 
 (define (restart value)
   (set! *val* value)
   (let loop ()
     (let ((option (interpret)))
-      (cond ((= option return-option/exit)
+      (cond ((= option (enum return-option exit))
 	     *val*)
-	    ((= option return-option/external-call)
+	    ((= option (enum return-option external-call))
 	     (set! *val* (call-external-value             ; type inference hack
 			  (fetch (address-after-header (external-value *val*)))
 			  *nargs*
@@ -70,19 +62,4 @@
    native-call
    native-return
    ))
-
-;----------------------------------------------------------------
-; Entry point for debugging
-
-; Used by RUN
-
-(define (start-vm thunk)
-  (set! *val* thunk)
-  (set! *nargs* 0)
-  (set! *pending-interrupts* 0)
-  (perform-application 0)
-  *val*)
-
-; (define (run x) (start-vm (make-closure (compile-form `(halt ,x) e) 'run)))
-; (define write-instruction (access-scheme48 'write-instruction))
 

@@ -7,11 +7,14 @@
 
 (define length-procedures
   (do ((i (- stob-count 1) (- i 1))
-       (l '() (cons (eval `(lap foo
+       (l '() (cons (eval `(lap *length
                                 (check-nargs= 1)
                                 (pop)
-                                (stored-object-byte-length
+                                (stored-object-length
                                   ,(enumerand->name i stob))
+				(push)
+				(literal '2)
+				(arithmetic-shift)
                                 (return))
                           (interaction-environment))
                     l)))

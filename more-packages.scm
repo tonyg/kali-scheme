@@ -273,7 +273,8 @@
   (open scheme-level-2
         extended-numbers
         methods signals)
-  (files (rts bignum)))
+  (files (rts bignum))
+  (optimize auto-integrate))
 
 (define-structure innums (export )    ;inexact numbers
   (open scheme-level-2
@@ -302,8 +303,10 @@
         extended-numbers
         code-vectors
         methods signals
+	enumerated
         primitives)             ;vm-extension
-  (files (rts floatnum)))
+  (files (rts floatnum))
+  (optimize auto-integrate))
 
 (define-structure define-record-types define-record-types-interface
   (open scheme-level-1 records)
@@ -471,6 +474,14 @@
         low-level)              ; flush-the-symbol-table!, vector-unassigned?
   (files (env traverse)))
 
+; Space analyzer
+
+(define-structure spatial (export space vector-space record-space)
+  (open scheme
+	architecture primitives assembler packages enumerated 
+	features sort locations display-conditions)
+  (files (env space)))
+
 ; Structure & Interpretation compatibility
 
 (define-structure sicp sicp-interface
@@ -489,7 +500,8 @@
 ; Stuff to load into initial.image to make scheme48.image.
 
 (define-structure usual-features (export )  ;No exports
-  (open disclosers
+  (open analysis		;auto-integration
+	disclosers
         command-processor
         debuginfo
         ;; Choose any combination of bignums, ratnums, recnums
@@ -550,6 +562,7 @@
 	    sort
 	    threads
 	    traverse
+	    spatial
 	    big-scheme
 	    ;; From link-packages.scm:
 	    analysis

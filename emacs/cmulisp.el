@@ -135,7 +135,7 @@ mode. Default is whitespace followed by 0 or 1 single-letter :keyword
 (defvar cmulisp-mode-map nil)
 (cond ((not cmulisp-mode-map)
        (setq cmulisp-mode-map
-	     (full-copy-sparse-keymap comint-mode-map))
+	     (copy-keymap comint-mode-map))
        (lisp-mode-commands cmulisp-mode-map)
        (define-key cmulisp-mode-map "\C-x\C-e" 'lisp-eval-last-sexp)
        (define-key cmulisp-mode-map "\C-c\C-l" 'lisp-load-file)

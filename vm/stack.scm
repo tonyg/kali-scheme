@@ -15,6 +15,14 @@
 
 (define *cont*            (unassigned))
 
+; For tracking the reason for copying closures and environments (used for
+; debugging only).
+
+(define-enumeration copy
+  (closure
+   overflow
+   preserve))
+
 ; At the bottom of the stack is a special continuation that is never removed.
 ; When it is invoked it copies the next continuation out of the heap (if there
 ; is any such) and invokes that instead.
@@ -27,15 +35,12 @@
   (set! *cont* false)
   (set! *env* quiescent)
   (push-continuation-on-stack (make-template-containing-ops
-			       op/get-cont-from-heap
-			       op/return)
+			       (enum op get-cont-from-heap)
+			       (enum op return))
 			      (enter-fixnum 0)
 			      0
 			      universal-key)
   (set! *bottom-of-stack* *cont*))
-
-(define op/get-cont-from-heap (enum op get-cont-from-heap))
-(define op/return (enum op return))
 
 ; The amount of heap space required to initialize the stack.
 (define initial-stack-heap-space (op-template-size 2))
@@ -257,7 +262,7 @@
     (do ((i (+ -1 arg-count) (- i 1)))
         ((<= i -1))
       (vm-vector-set! vec i (pop)))
-    (preserve-continuation key copy/overflow)
+    (preserve-continuation key (enum copy overflow))
     (do ((i 0 (+ i 1)))
         ((>= i arg-count))
       (push (vm-vector-ref vec i)))
@@ -274,7 +279,7 @@
 (define current-continuation-size current-stack-size)
 
 (define (current-continuation key)
-  (preserve-continuation key copy/preserve))
+  (preserve-continuation key (enum copy preserve)))
 
 (define (preserve-continuation key reason)
   (preserve-current-env-with-reason key reason)
@@ -343,10 +348,6 @@
 ; Collecting and printing statistics on stack usage
 
 (define collect-statistics? #f)
-
-(define copy/closure 0) ; leave these as there are still references lying around
-(define copy/overflow 1)
-(define copy/preserve 2)
 
 (define *conts* 0)
 (define *conts-slots* 0)
@@ -434,15 +435,15 @@
 (define (add-copy-env-stats env reason)
     (cond ((not collect-statistics?)
 	   (unassigned))
-	  ((= reason copy/closure)
+	  ((= reason (enum copy closure))
 	   (set! *envs-closed* (+ *envs-closed* 1))
 	   (set! *envs-closed-slots*
 		 (+ *envs-closed-slots* (vm-vector-length env))))
-	  ((= reason copy/overflow)
+	  ((= reason (enum copy overflow))
 	   (set! *envs-overflow* (+ *envs-overflow* 1))
 	   (set! *envs-overflow-slots*
 		 (+ *envs-overflow-slots* (vm-vector-length env))))
-	  ((= reason copy/preserve)
+	  ((= reason (enum copy preserve))
 	   (set! *envs-preserved* (+ *envs-preserved* 1))
 	   (set! *envs-preserved-slots*
 		 (+ *envs-preserved-slots* (vm-vector-length env))))))
@@ -450,12 +451,12 @@
 (define (add-preserve-cont-stats new reason)
   (cond ((not collect-statistics?)
 	 (unassigned))
-	((= reason copy/overflow)
+	((= reason (enum copy overflow))
 	 (set! *conts-overflow* (+ *conts-overflow* 1))
 	 (set! *conts-overflow-slots*
 	       (+ *conts-overflow-slots*
 		  (continuation-length new))))
-	((= reason copy/preserve)
+	((= reason (enum copy preserve))
 	 (set! *conts-preserved* (+ *conts-preserved* 1))
 	 (set! *conts-preserved-slots*
 	       (+ *conts-preserved-slots*

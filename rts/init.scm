@@ -15,4 +15,4 @@
 	(initialize-exceptions!
 	 (lambda ()
 	   (initialize-interrupts!)
-	   (entry-point resume-arg)))))))
+	   (entry-point (vector->list resume-arg))))))))

@@ -248,7 +248,7 @@
 ; Once we know that we want something to be inlined, the following things
 ; actually makes use of the fact.  For procedures for which all
 ; arguments can be substituted unconditionally, we make a transform
-; (a macro, really) that performs the subtitution.
+; (a macro, really) that performs the substitution.
 
 (define (make-inline-transform node type p name)
   (let* ((free (free-top-level-variables node))
@@ -274,7 +274,7 @@
 		     free))))
 
 ; This routine is obligated to return an S-expression.
-; It's better not to rely on the constantcy of node id's, so 
+; It's better not to rely on the constancy of node id's, so 
 ; the output language is a sort of quasi-Scheme.  Any form that's a list
 ; has an operator name in its car.
 
@@ -324,7 +324,7 @@
 (define (clean-lookup env name)
   (cdr (assq name env)))		;Must be there.
   
-; I'm aware that this is extremely pedantic.
+; I'm aware that this is pedantic.
 
 (define (unused-name env name)
   (let ((sym (if (generated? name)

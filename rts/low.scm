@@ -81,10 +81,10 @@
 (define (string->symbol string)
   (if (eq? *the-symbol-table* #f)
       (restore-the-symbol-table!))
-  (make-immutable! (intern (if (immutable? string)
-			       string	;+++
-			       (string-copy string))
-			   *the-symbol-table*)))
+  (intern (if (immutable? string)
+	      string			;+++
+	      (make-immutable! (string-copy string)))
+	  *the-symbol-table*))
 
 (define *the-symbol-table* #f)
 

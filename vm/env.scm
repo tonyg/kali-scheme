@@ -22,12 +22,10 @@
 (define (stack-env-space count)
   (+ 2 count))
 
-(define stob/vector (enum stob vector))
-
 (define (pop-args-into-env count key)
   (check-stack-cons (stack-env-space count) key)
   (push *env*)
-  (push (make-header stob/vector (cells->bytes (+ count 1))))
+  (push (make-header (enum stob vector) (cells->bytes (+ count 1))))
   (add-env-stats count)
   (set! *env* (address->stob-descriptor (addr1+ (addr1+ *stack*)))))
 
@@ -37,7 +35,7 @@
   (+ count 2))  ; header + superior environment
 
 (define (pop-args-into-heap-env count key)
-  (let ((stob (make-d-vector stob/vector (+ count 1) key)))
+  (let ((stob (make-d-vector (enum stob vector) (+ count 1) key)))
     (copy-cells! (addr1+ *stack*)
 		 (addr+ (cells->a-units 1)
 			(address-after-header stob))
@@ -58,7 +56,7 @@
 ; environment in a closure.
 
 (define (preserve-current-env key)
-  (preserve-current-env-with-reason key copy/closure))
+  (preserve-current-env-with-reason key (enum copy closure)))
 
 (define (preserve-current-env-with-reason key reason)
   (if (within-stack? *env*)

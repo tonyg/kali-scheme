@@ -12,7 +12,7 @@
 ;		       (if temp temp (or e ...))))))
 
 
-(define-usual-macro 'syntax-rules
+(define-usual-macro 'syntax-rules 1
   (lambda (r c subkeywords . rules)
     ;; Pair of the procedure and list of auxiliary names
     `(,(r 'cons)

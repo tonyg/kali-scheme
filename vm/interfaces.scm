@@ -1,26 +1,17 @@
 
 (define-interface vm-utilities-interface
-  (export adjoin-bits low-bits high-bits assert
+  (export adjoin-bits low-bits high-bits unsigned-high-bits
+	  assert
 	  read-number write-number
 	  vector+length-fill!))
 
 (define-interface vm-architecture-interface
-  (export ;(enum syntax) ;so you don't have to remember to open enumerated
-          enum ;so you don't have to remember to open enumerated
+  (export (enum :syntax) ;so you don't have to remember to open enumerated
 	  bits-used-per-byte
 	  maximum-stack-args
 	  interrupt
 	  interrupt-count
-	  interrupt/alarm
-	  interrupt/keyboard
-	  interrupt/memory-shortage
 	  memory-status-option
-	  memory-status-option-count
-	  memory-status-option/available
-	  memory-status-option/heap-size
-	  memory-status-option/stack-size
-	  memory-status-option/set-minimum-recovered-space!
-	  memory-status-option/gc-count
 	  op
 	  op-count
 	  opcode-arg-specs
@@ -29,9 +20,6 @@
 	  least-b-vector-type
 	  stob-data
 	  time-option
-	  time-option/ticks-per-second
-	  time-option/run-time
-	  time-option/real-time
 	  ))
 
 ; Memory
@@ -72,6 +60,7 @@
 	  header-length-in-bytes header-length-in-cells
 	  immutable-header? make-header-immutable
 	  d-vector-header? b-vector-header?
+	  okay-stob-size?
 
 	  address->stob-descriptor
 	  stob-descriptor->address
@@ -102,24 +91,27 @@
 
 (define-interface heap-interface
   (export initialize-heap
+	  register-static-areas
 
           available? available heap-size
 	  preallocate-space
           
 	  begin-collection
 	  trace-value trace-locations
+	  trace-impure-areas
 	  do-gc
 	  end-collection abort-collection
 	  gc-count
 
-	  write-image read-image
+	  image-writing-okay? write-image
+	  check-image-header read-image
 
 	  walk-over-symbols find-all-xs
 	  ))
 
 (define-interface struct-interface
   (export vm-pair? vm-pair-size vm-cons vm-car vm-set-car! vm-cdr vm-set-cdr!
-	  vm-symbol? vm-symbol-size vm-make-symbol vm-symbol->string
+	  vm-symbol? vm-symbol-size vm-symbol->string
 	  closure? closure-size make-closure closure-template closure-env
 	  location? location-size make-location contents set-contents! location-id
 	  weak-pointer? weak-pointer-size make-weak-pointer weak-pointer-ref
@@ -224,3 +216,20 @@
 
 	  ))
 
+; From Scheme 48
+(define-interface ps-enumerated-interface
+  (export (define-enumeration :syntax)
+	  (enum :syntax)
+	  (enumerand->name :syntax)
+	  (name->enumerand :syntax)))
+
+; What the external world can call
+(define interpreter-interface
+  (export required-init-space
+	  initialize-vm
+	  register-static-areas
+	  call-startup-procedure
+	  check-image-header
+	  read-image
+	  do-gc
+	  note-interrupt!))

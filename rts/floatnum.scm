@@ -3,134 +3,154 @@
 ; Inexact rational arithmetic using hacked-in floating point numbers.
 
 (define-extended-number-type :floatnum (:rational)
-  (make-floatnum code-vec)
+  (make-floatnum datum)
   floatnum?
-  (code-vec floatnum-code-vec))
+  (datum floatnum-datum))
+
+(define (make-float-datum) (make-code-vector 8 0))
+
+(define-enumeration flop
+  (+ - * / = <
+   fixnum->float
+   string->float
+   float->string
+   exp log sin cos tan asin acos atan sqrt
+   floor
+   integer?
+   float->fixnum
+   quotient
+   remainder))
 
 ; Floating point at interrupt level?  Naw!
-(define float-vec (make-vector 4))
+; Actually, if floatnum-datum is open-coded, there won't be any
+; opportunity to get an interrupt in any of the situations where
+; floperate is used.
 
-(define (fixnum->float fix)
-  (let ((res (make-code-vector 8 0)))
-    (vector-set! float-vec 0 6)
-    (vector-set! float-vec 1 fix)
-    (vector-set! float-vec 2 res)
-    (vm-extension 99 float-vec)
-    (make-floatnum res)))
+(define float-vec (make-vector 3 #f))
 
-(define (float&float op float1 float2)
-  (vector-set! float-vec 0 op)
-  (vector-set! float-vec 1 (floatnum-code-vec float1))
-  (vector-set! float-vec 2 (floatnum-code-vec float2))
-  (vm-extension 99 float-vec))
+(define-syntax floperate
+  (syntax-rules ()
+    ((floperate ?which ?x)
+     (vm-extension (+ ?which 100) ?x))
+    ((floperate ?which ?x ?y)
+     (vm-extension (+ ?which 100) (cons ?x ?y)))
+    ((floperate ?which ?x ?y ?z)
+     (begin (vector-set! float-vec 0 ?x)
+	    (vector-set! float-vec 1 ?y)
+	    (vector-set! float-vec 2 ?z)
+	    (vm-extension (+ ?which 100) float-vec)))))
 
 (define (float&float->float op)
   (lambda (a b)
     (let ((float1 (x->float a))
-	  (float2 (x->float b)))
-      (let ((res (make-code-vector 8 0)))
-	(vector-set! float-vec 3 res)
-	(float&float op float1 float2)
-	(make-floatnum res)))))
+	  (float2 (x->float b))
+	  (res (make-float-datum)))
+      (floperate op
+		 (floatnum-datum float1)
+		 (floatnum-datum float2)
+		 res)
+      (make-floatnum res))))
 
 (define (float&float->boolean op)
   (lambda (a b)
     (let ((float1 (x->float a))
 	  (float2 (x->float b)))
-      (= 0 (float&float op float1 float2)))))
+      (floperate op
+		 (floatnum-datum float1)
+		 (floatnum-datum float2)))))
 
-(define (float1 op float)
-  (vector-set! float-vec 0 op)
-  (vector-set! float-vec 1 (floatnum-code-vec float))
-  (vm-extension 99 float-vec))
+(define (float1 op)
+  (lambda (float)
+    (floperate op (floatnum-datum float))))
 
 (define (float->float op)
   (lambda (a)
-    (let* ((float (x->float a))
-	   (res (make-code-vector 8 0)))
-      (vector-set! float-vec 2 res)
-      (float1 op float)
+    (let ((float (x->float a))
+	  (res (make-float-datum)))
+      (floperate op (floatnum-datum float) res)
       (make-floatnum res))))
 
 (define (string->float string)
-  (let ((res (make-code-vector 8 0)))
-    (vector-set! float-vec 0 7)
-    (vector-set! float-vec 1 string)
-    (vector-set! float-vec 2 (string-length string))
-    (vector-set! float-vec 3 res)
-    (vm-extension 99 float-vec)
+  (let ((res (make-float-datum)))
+    (floperate (enum flop string->float) string res)
     (make-floatnum res)))
 
 (define (float->string float)
-  (let ((res (make-string 40 #\space)))
-    (vector-set! float-vec 0 8)
-    (vector-set! float-vec 1 (floatnum-code-vec float))
-    (vector-set! float-vec 2 res)
-    (vm-extension 99 float-vec)
-    (let ((str (substring res 0 (vector-ref float-vec 3))))
-      (let loop ((i 0))
-	(cond ((>= i (string-length str))
-	       (string-append str "."))
-	      ((or (char=? (string-ref str i) #\e)
-		   (char=? (string-ref str i) #\.))
-	       str)
-	      (else
-	       (loop (+ i 1))))))))
+  (let* ((res (make-string 40 #\space))
+	 (len (floperate (enum flop float->string)
+			 (floatnum-datum float)
+			 res))
+	 (str (substring res 0 len)))
+    (let loop ((i 0))
+      (cond ((>= i (string-length str))
+	     (string-append str "."))
+	    ((or (char=? (string-ref str i) #\e)
+		 (char=? (string-ref str i) #\.))
+	     str)
+	    (else
+	     (loop (+ i 1)))))))
 
 (define (x->float x)
   (cond ((floatnum? x) x)
 	((integer? x)
-	 (integer->float (if (exact? x)
-			     x
-			     (inexact->exact x))))
+	 (exact-integer->float (if (exact? x)
+				   x
+				   (inexact->exact x))))
 	((rational? x)
+	 ;; This loses when num or den overflows flonum range
+	 ;; but x doesn't.
 	 (float/ (numerator x) (denominator x)))
 	(else
 	 (error "cannot coerce to a float" x))))
 
-(define integer->float
-  (let ((foo (expt 2 28)))
-    (lambda (x)
-      (if (in-fixnum-range? x)
-	  (fixnum->float x)
-	  (float+ (float* foo (quotient x foo))
-		  (remainder x foo))))))
+; Conversion to/from exact integer
 
-(define in-fixnum-range?
-  (let ((foo (expt 2 28)))
-    (let ((most-positive (+ foo (- foo 1)))
-	  (most-negative (* foo -2)))
-      (lambda (x)
-	(and (<= x most-positive)
-	     (>= x most-negative))))))
+(define (exact-integer->float k)
+  (or (fixnum->float k)
+      (float+ (float* (fixnum->float definitely-a-fixnum)
+		      (quotient k definitely-a-fixnum))
+	      (fixnum->float (remainder k definitely-a-fixnum)))))
 
-(define (floatnum->fixnum float) (float1 20 float))
+(define (fixnum->float k)    ;Returns #f is k is a bignum
+  (let ((res (make-float-datum)))
+    (if (floperate (enum flop fixnum->float) k res)
+	(make-floatnum res)
+	#f)))
 
-(define (integral-floatnum? float) (float1 19 float))
+(define (float->exact-integer x)
+  (or (float->fixnum x)
+      (let ((d (fixnum->float definitely-a-fixnum)))
+	(+ (* definitely-a-fixnum
+	      (float->exact-integer (float-quotient x d)))
+	   (float->fixnum (float-remainder x d))))))
 
-(define float+ (float&float->float 0))
-(define float- (float&float->float 1))
-(define float* (float&float->float 2))
-(define float/ (float&float->float 3))
-(define float-quotient (float&float->float 21))
-(define float-remainder (float&float->float 22))
-(define float= (float&float->boolean 4))
-(define float< (float&float->boolean 5))
+(define definitely-a-fixnum (expt 2 23))    ;Be conservative
 
+(define integral-floatnum? (float1 (enum flop integer?)))
+(define float->fixnum      (float1 (enum flop float->fixnum)))
 
-(define float-exp (float->float 9))
-(define float-log (float->float 10))
-(define float-sin (float->float 11))
-(define float-cos (float->float 12))
-(define float-tan (float->float 13))
-(define float-asin (float->float 14))
-(define float-acos (float->float 15))
-(define float-sqrt (float->float 17))
-(define float-floor (float->float 18))
+(define float+ (float&float->float (enum flop +)))
+(define float- (float&float->float (enum flop -)))
+(define float* (float&float->float (enum flop *)))
+(define float/ (float&float->float (enum flop /)))
+(define float-quotient (float&float->float (enum flop quotient)))
+(define float-remainder (float&float->float (enum flop remainder)))
+(define float-atan (float&float->float (enum flop atan)))
 
-(define float-atan (float&float->float 16))
+(define float= (float&float->boolean (enum flop =)))
+(define float< (float&float->boolean (enum flop <)))
 
-; Temporary hack.  Do ,open floatnum
+(define float-exp (float->float (enum flop exp)))
+(define float-log (float->float (enum flop log)))
+(define float-sin (float->float (enum flop sin)))
+(define float-cos (float->float (enum flop cos)))
+(define float-tan (float->float (enum flop tan)))
+(define float-asin (float->float (enum flop asin)))
+(define float-acos (float->float (enum flop acos)))
+(define float-sqrt (float->float (enum flop sqrt)))
+(define float-floor (float->float (enum flop floor)))
+
+; This lets you do ,open floatnum to get faster invocation
 (begin 
   (define exp float-exp)
   (define log float-log)
@@ -142,66 +162,59 @@
   (define atan float-atan)
   (define sqrt float-sqrt))
 
-(define (float-fraction-length z)
-  (let ((two (integer->float 2)))
-    (do ((z z (float* z two))
+(define (float-fraction-length x)
+  (let ((two (exact-integer->float 2)))
+    (do ((x x (float* x two))
 	 (i 0 (+ i 1)))
-	((integral-floatnum? z) i)
-      (if (> i 1000) (error "I'm bored." z)))))
+	((integral-floatnum? x) i)
+      (if (> i 1000) (error "I'm bored." x)))))
 
-(define (float-denominator z)
-  (expt (integer->float 2) (float-fraction-length z)))
+(define (float-denominator x)
+  (expt (exact-integer->float 2) (float-fraction-length x)))
 
-(define (float-numerator z)
-  (float* z (float-denominator z)))
+(define (float-numerator x)
+  (float* x (float-denominator x)))
 
-(define (float->exact z)
-  (if (integral-floatnum? z)
-      (float->exact-integer z)
-      (let ((q (expt 2 (float-fraction-length z))))
-	(let ((e (/ (float->exact-integer (float* z (integer->float q)))
-		    q)))
-	  (if (exact? e)
-	      e
-	      (call-error "no exact representation"
-			  inexact->exact z))))))
-
-(define float->exact-integer
-  (let ((foo (expt 2 28)))
-    (lambda (x)
-      (if (integral-floatnum? x)
-	  (if (in-fixnum-range? x)
-	      (floatnum->fixnum x)
-	      (+ (* foo (inexact->exact (quotient x foo)))
-		 (inexact->exact (remainder x foo))))
-	  (call-error "invalid argument" float->exact-integer x)))))
+(define (float->exact x)
+  (if (integral-floatnum? x)
+      (float->exact-integer x)		;+++
+      (let ((lose (lambda ()
+		    (call-error "no exact representation"
+				inexact->exact x)))
+	    (q (expt 2 (float-fraction-length x))))
+	(if (exact? q)
+	    (let ((e (/ (float->exact-integer
+			     (float* x (exact-integer->float q)))
+			q)))
+	      (if (exact? e)
+		  e
+		  (lose)))
+	    (lose)))))
 
 
 ; Methods on floatnums
 
-(define-method &integer? ((z :floatnum))
-  (integral-floatnum? z))
+(define-method &integer? ((x :floatnum))
+  (integral-floatnum? x))
 
 (define-method &rational? ((n :floatnum)) #t)
 
-(define-method &exact? ((z :floatnum)) #f)
+(define-method &exact? ((x :floatnum)) #f)
 
-(define-method &inexact->exact ((z :floatnum))
-  (float->exact z))
+(define-method &inexact->exact ((x :floatnum))
+  (float->exact x))
 
-(define-method &exact->inexact ((z :rational))
-  (x->float z))		;Should do this only if the number is within range.
+(define-method &exact->inexact ((x :rational))
+  (x->float x))		;Should do this only if the number is within range.
 
-(define-method &floor ((z :floatnum)) (float-floor z))
+(define-method &floor ((x :floatnum)) (float-floor x))
 
 ; beware infinite regress
-(define-method &numerator ((z :floatnum)) (float-numerator z))
-(define-method &denominator ((z :floatnum)) (float-denominator z))
+(define-method &numerator ((x :floatnum)) (float-numerator x))
+(define-method &denominator ((x :floatnum)) (float-denominator x))
 
 (define (define-floatnum-method mtable proc)
   (define-method mtable ((m :rational) (n :rational)) (proc m n)))
-
-(define :lose :rational)
 
 (define-floatnum-method &+ float+)
 (define-floatnum-method &- float-)
@@ -212,17 +225,18 @@
 (define-floatnum-method &= float=)
 (define-floatnum-method &< float<)
 
-(define-method &numerator ((z :rational)) (float-numerator z))
-(define-method &denominator ((z :rational)) (float-denominator z))
+(define-method &numerator ((x :rational)) (float-numerator x))
+(define-method &denominator ((x :rational)) (float-denominator x))
 
-(define-method &exp ((z :rational)) (float-exp z))
-(define-method &log ((z :rational)) (float-log z))
-(define-method &sqrt ((z :rational)) (float-sqrt z))
-(define-method &sin ((z :rational)) (float-sin z))
-(define-method &cos ((z :rational)) (float-cos z))
-(define-method &tan ((z :rational)) (float-tan z))
-(define-method &acos ((z :rational)) (float-acos z))
-(define-method &atan ((z :rational)) (float-atan z))
+(define-method &exp ((x :rational)) (float-exp x))
+(define-method &log ((x :rational)) (float-log x))
+(define-method &sqrt ((x :rational)) (float-sqrt x))
+(define-method &sin ((x :rational)) (float-sin x))
+(define-method &cos ((x :rational)) (float-cos x))
+(define-method &tan ((x :rational)) (float-tan x))
+(define-method &acos ((x :rational)) (float-acos x))
+
+(define-floatnum-method &atan float-atan)
 
 (define-method &number->string ((n :floatnum) radix)
   (if (= radix 10)

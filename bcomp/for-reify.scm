@@ -1,5 +1,6 @@
 
-; Cf. link/reify.scm
+; Things used by the expression returned by REIFY-STRUCTURES.
+; Cf. link/reify.scm.
 
 (define (operator name type-exp)
   (get-operator name (sexp->type type-exp #t)))
@@ -12,8 +13,11 @@
 			      (vector->list types))))
 
 (define (package names locs get-location uid)
-  (let ((p (make-simple-package '() #f #f))
-	(end (vector-length names)))
+  (let ((end (vector-length names))
+	(p (make-package list list ;(lambda () '())
+			 #f #f "" '()
+			 uid #f)))
+    (set-package-loaded?! p #t)
     (do ((i 0 (+ i 1)))
 	((= i end))
       (let* ((name (vector-ref names i))

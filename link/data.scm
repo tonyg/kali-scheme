@@ -19,7 +19,7 @@
 
 ; Essential constants
 
-(define level          14)
+(define level          15)
 (define little-endian? #t)
 (define bits-per-byte  8)
 (define bytes-per-cell 4)

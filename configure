@@ -453,7 +453,7 @@ fi
 rm -f conftest*
 done
 
-     for func in gettimeofday dlopen socket
+     for func in dlopen gettimeofday ftime nlist select setitimer socket
 do
 trfunc=HAVE_`echo $func | tr '[a-z]' '[A-Z]'`
 echo checking for ${func}
@@ -522,8 +522,7 @@ cat > conftest.c <<EOF
 #include "confdefs.h"
 #include <stdio.h>
 int main() { exit(0); }
-int t() { FILE *foo;
-			       return foo->_cnt; }
+int t() { return stdin->_cnt; }
 EOF
 if eval $compile; then
   rm -rf conftest*

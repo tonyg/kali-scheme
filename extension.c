@@ -1,34 +1,40 @@
 /*Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.*/
 
 
-/* Implementation of the vm-extension opcode */
+/* Implementation of the vm-extension opcode.  This is completetly
+   optional; nothing in the standard system uses these features.
+   If you have ANSI C but not POSIX support, try compiling with -DPOSIX=0.
 
-/* If you want to add new cases to the switch(key) ..., please send
-   mail to scheme-48-request@martigny.ai.mit.edu to obtain a range of
-   unique numbers for your own use.  (Specify how many you need to
-   have.)  This will ensure that these numbers won't be allocated for
-   some different purpose in the future. */
+   If you want to add features, please send mail to
+   scheme-48-request@martigny.ai.mit.edu to obtain a range of unique
+   keys for your own use.  Specify how many cases you will need.  This
+   will ensure that these numbers won't be allocated for some
+   different purpose in a future release of Scheme 48.
 
+   fdopen: POSIX.1
+   getenv: POSIX.1, ANSI C
+   setuid, setgid: POSIX.1
+   popen: POSIX.2
+   floating point: POSIX.1, ANSI C (should we be linking with -lM or -lm?)
+   sprintf: POSIX.1, ANSI C
+   atof: POSIX.1, ANSI C
+
+ */
+
+#ifndef POSIX
+#  define POSIX 2
+#endif
 
 #include <stdio.h>
-#include <fcntl.h>		/* for O_RDWR */
-#include <string.h>
 #include "scheme48.h"
+
+#include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <signal.h>
 #include <unistd.h>		/* setuid & setgid */
 
-#if defined(SOCKET_SUPPORT)
-/* Things for socket library... */
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/wait.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <signal.h>
-#include <errno.h>
-#endif
+/* #include <fcntl.h>		/* for O_RDWR */
 
 #define GREATEST_FIXNUM_VALUE ((1 << 29) - 1)
 #define LEAST_FIXNUM_VALUE (-1 << 29)
@@ -36,64 +42,55 @@
 #define FOR_INPUT 1
 #define FOR_OUTPUT 2
 
+FILE **port_to_stream(scheme_value);
 
-FILE **port_to_stream(scheme_value port)
-{
-  int index;
-  extern FILE **Sopen_portsS;
+typedef struct {
+  char b[sizeof(double)];
+} unaligned_double;
 
-  if (!PORTP(port))
-    return NULL;		/* not a port */
+typedef union {
+  double f;
+  unaligned_double b;
+} float_or_bytes;
 
-  index = port_index(port);
-  if (index < 0)
-    return NULL;		/* port not open */
-
-  return &Sopen_portsS[index];
-}
-
-/* 0 = failure, 1 = success */
-int null_terminate(scheme_value string, char *buffer, long buffer_size)
-{
-  if (!STRINGP(string)) return 0;
-  {
-    size_t len = STRING_LENGTH(string);
-    if (len >= buffer_size) return 0;
-    strncpy(buffer, &STRING_REF(string, 0), len);
-    buffer[len] = '\0';
-    return 1;
-  }
-}
 
 /******************************************/
 
 scheme_value
 extended_vm (long key, scheme_value value)
 {
+  double x, y;
+
   switch (key) {
   
+    /* Cases 0 through 19 are reserved for the mobot system. */
+
   case 0:			/* read jumpers on 68000 board */
-    return 0;
+    return ENTER_FIXNUM(0);
 
 #if defined(SOCKET_SUPPORT)
   case 20:
-    { int s = internet_stream_socket();
+    { extern int internet_stream_socket();
+      int s = internet_stream_socket();
       return (s < 0) ? UNDEFINED : ENTER_FIXNUM(s);
     }
 
   case 21:
-    { int port = socket_bind(EXTRACT_FIXNUM(value), 0);
+    { extern int socket_bind(int, int);
+      int port = socket_bind(EXTRACT_FIXNUM(value), 0);
       return (port < 0) ? UNDEFINED : ENTER_FIXNUM(port);
     }
 
   case 22:
-    { int fd = socket_accept(EXTRACT_FIXNUM(value));
+    { extern int socket_accept(int);
+      int fd = socket_accept(EXTRACT_FIXNUM(value));
       return (fd < 0) ? UNDEFINED : ENTER_FIXNUM(fd);
     }
 
   case 23:
     if (!PAIRP(value)) return UNDEFINED;
-    { char *hostname = &STRING_REF(CAR(value), 0);
+    { extern int socket_connect(char *, int);
+      char *hostname = &STRING_REF(CAR(value), 0);
       long hostname_length = STRING_LENGTH(CAR(value));
       long port = EXTRACT_FIXNUM(CDR(value));
       int fd;
@@ -104,6 +101,7 @@ extended_vm (long key, scheme_value value)
     }
 #endif
 
+#if POSIX
   /* fdopen() support */
   case 24:
   case 25:
@@ -118,14 +116,13 @@ extended_vm (long key, scheme_value value)
       if (new_stream == NULL) return UNDEFINED;
       fclose(*pstream);
       *pstream = new_stream;
-      return SCHTRUE;
+      return UNSPECIFIC;
     }
+#endif /* POSIX */
 
   /* getenv() */
   case 26: {
-#   define GETENV_BUFFER_SIZE 200
     scheme_value env_var, result_buffer;
-    char buffer[GETENV_BUFFER_SIZE];
     char *result;
     size_t result_len;
     
@@ -133,9 +130,7 @@ extended_vm (long key, scheme_value value)
     env_var = CAR(value);
     result_buffer = CDR(value);
     if (!STRINGP(env_var) || !STRINGP(result_buffer)) return UNDEFINED;
-    if (!null_terminate(env_var, buffer, GETENV_BUFFER_SIZE))
-      return UNDEFINED;
-    result = getenv(buffer);
+    result = getenv(&STRING_REF(env_var, 0));
     if (result == NULL)
       return SCHFALSE;
     result_len = strlen(result);
@@ -145,6 +140,7 @@ extended_vm (long key, scheme_value value)
     return ENTER_FIXNUM(result_len);
   }
 
+#if POSIX
   case 27: {
     /* This is intended for use by HTTP scripts... */
     if (!PAIRP(value) || !FIXNUMP(CAR(value)) || !FIXNUMP(CDR(value)))
@@ -155,207 +151,210 @@ extended_vm (long key, scheme_value value)
     else
       return SCHTRUE;
   }
+#endif
 
-  /* popen() support */
+#if POSIX >= 2
+  /* popen() support.  Rather kludgey; there's no pclose(), so
+     zombies will pile up. */
   case 97:
   case 98: {
-#   define POPEN_BUFFER_SIZE 200
     if (!PAIRP(value)) return UNDEFINED;
     { scheme_value port = CAR(value);
       FILE **pstream = port_to_stream(port);
       scheme_value command = CDR(value);
-      char buffer[POPEN_BUFFER_SIZE];
       FILE *new_stream;
-      /* extern FILE *popen(const char *, const char *);  --POSIX stdio.h */
+      struct sigaction action;
 
       if (pstream == NULL) return UNDEFINED;
-      if (!null_terminate(command, buffer, POPEN_BUFFER_SIZE))
-	return UNDEFINED;
 
-      new_stream = popen(buffer, key == 97 ? "r" : "w");
+      action.sa_handler = SIG_IGN;
+      action.sa_flags = 0;
+      sigemptyset(&action.sa_mask);
+      sigaction(SIGPIPE, &action, NULL);
+
+      new_stream = popen(&STRING_REF(command, 0), key == 97 ? "r" : "w");
       if (new_stream == NULL) return UNDEFINED;
       fclose(*pstream);
       *pstream = new_stream;
       return SCHTRUE;
     }
   }
+#endif /* POSIX.2 */
+
 
   /* Floating point */
-  case 99: {
-    extern scheme_value vm_float_op(long, scheme_value);
-    if (!VECTORP(value)) return UNDEFINED;
-    return vm_float_op(EXTRACT_FIXNUM(VECTOR_REF(value, 0)), value);
-  }
+
+#define FLOP 100
+#define FLOP2(i) case FLOP+(i): \
+		   if (!STOBP(value) || STOB_LLENGTH(value) != 2) \
+		     return UNDEFINED;
+#define FLOP3(i) case FLOP+(i): \
+		   if (!STOBP(value) || STOB_LLENGTH(value) != 3) \
+		     return UNDEFINED;
+
+#define get_arg(args,i) STOB_REF(args,(i))
+#define get_string_arg(args,i) (&STRING_REF(get_arg(args,i), 0))
+
+#define get_float_arg(args, i, var) EXTRACT_FLOAT(get_arg(args, i), var)
+#define set_float_arg(args, i, val) SET_FLOAT(get_arg(args, i), val)
+
+#define EXTRACT_FLOAT(stob, var) \
+  { scheme_value temp_ = (stob); \
+    float_or_bytes loser_; \
+    if (!STOBP(temp_)) return UNDEFINED; \
+    loser_.b = *(unaligned_double*)(&STOB_REF(temp_, 0)); \
+    (var) = loser_.f; }
+
+#define SET_FLOAT(stob, val) \
+  { scheme_value temp_ = (stob); \
+    float_or_bytes loser_; \
+    if (!STOBP(temp_)) return UNDEFINED; \
+    loser_.f = (double)(val); \
+    *(unaligned_double*)(&STOB_REF(temp_, 0)) = loser_.b; }
+
+  FLOP3(0) {
+    get_float_arg(value, 0, x);
+    get_float_arg(value, 1, y);
+    set_float_arg(value, 2, x + y);
+    return UNSPECIFIC;}
+  FLOP3(1) {
+    get_float_arg(value, 0, x);
+    get_float_arg(value, 1, y);
+    set_float_arg(value, 2, x - y);
+    return UNSPECIFIC;}
+  FLOP3(2) {
+    get_float_arg(value, 0, x);
+    get_float_arg(value, 1, y);
+    set_float_arg(value, 2, x * y);
+    return UNSPECIFIC;}
+  FLOP3(3) {
+    get_float_arg(value, 0, x);
+    get_float_arg(value, 1, y);
+    if (y == 0.0) return UNDEFINED;
+    set_float_arg(value, 2, x / y);
+    return UNSPECIFIC;}
+  FLOP2(4) {
+    get_float_arg(value, 0, x);
+    get_float_arg(value, 1, y);
+    return ENTER_BOOLEAN(x == y);}
+  FLOP2(5) {
+    get_float_arg(value, 0, x);
+    get_float_arg(value, 1, y);
+    return ENTER_BOOLEAN(x < y);}
+  FLOP2(6) {			/* fixnum->float */
+    scheme_value arg = get_arg(value, 0);
+    if (!FIXNUMP(arg)) return SCHFALSE;
+    set_float_arg(value, 1, EXTRACT_FIXNUM(arg));
+    return SCHTRUE;}
+  FLOP2(7) {			/* string->float */
+    char *str = get_string_arg(value, 0);
+    set_float_arg(value, 1, atof(str));
+    return UNSPECIFIC;}
+  FLOP2(8) {			/* float->string */
+    size_t len;
+    char *str = get_string_arg(value,1);
+    get_float_arg(value, 0, x);
+    sprintf(str, "%g", x);
+    len = strlen(str);
+    if (len > STRING_LENGTH(get_arg(value,1)))
+      /* unlikely but catastrophic */
+      fprintf(stderr, "printing float: output too long: %s\n",
+	      str);
+    return ENTER_FIXNUM(len);}
+
+    /* exp log sin cos tan asin acos atan sqrt */
+
+  FLOP2(9) {
+    get_float_arg(value, 0, x);
+    set_float_arg(value, 1, exp(x));
+    return UNSPECIFIC;}
+  FLOP2(10) {
+    get_float_arg(value, 0, x);
+    set_float_arg(value, 1, log(x));
+    return UNSPECIFIC;}
+  FLOP2(11) {
+    get_float_arg(value, 0, x);
+    set_float_arg(value, 1, sin(x));
+    return UNSPECIFIC;}
+  FLOP2(12) {
+    get_float_arg(value, 0, x);
+    set_float_arg(value, 1, cos(x));
+    return UNSPECIFIC;}
+  FLOP2(13) {
+    get_float_arg(value, 0, x);
+    set_float_arg(value, 1, tan(x));
+    return UNSPECIFIC;}
+  FLOP2(14) {
+    get_float_arg(value, 0, x);
+    set_float_arg(value, 1, asin(x));
+    return UNSPECIFIC;}
+  FLOP2(15) {
+    get_float_arg(value, 0, x);
+    set_float_arg(value, 1, acos(x));
+    return UNSPECIFIC;}
+  FLOP3(16) {			/* atan */
+    get_float_arg(value, 0, y);
+    get_float_arg(value, 1, x);
+    set_float_arg(value, 2, atan2(y, x));
+    return UNSPECIFIC;}
+  FLOP2(17) {
+    get_float_arg(value, 0, x);
+    set_float_arg(value, 1, sqrt(x));
+    return UNSPECIFIC;}
+
+  FLOP2(18) {			/* floor */
+    get_float_arg(value, 0, x);
+    set_float_arg(value, 1, floor(x));
+    return UNSPECIFIC;}
+  case FLOP+19: {		/* integer? */
+    EXTRACT_FLOAT(value, x);
+    return ENTER_BOOLEAN(fmod(x, 1.0) == 0.0); }
+  case FLOP+20: {		/* float->fixnum */
+    EXTRACT_FLOAT(value, x);
+    if (x <= (double)GREATEST_FIXNUM_VALUE
+	&& x >= (double)LEAST_FIXNUM_VALUE)
+      return ENTER_FIXNUM((long)x);
+    else
+      return SCHFALSE;}
+  FLOP3(21) {			/* quotient */
+    double z;
+    get_float_arg(value, 0, x);
+    get_float_arg(value, 1, y);
+    if (fmod(x, 1.0) != 0.0 || fmod(y, 1.0) != 0.0) return UNDEFINED;
+    if (y == 0.0) return UNDEFINED;
+    z = x / y;
+    set_float_arg(value, 2, z < 0.0 ? ceil(z) : floor(z));
+    return UNSPECIFIC;}
+  FLOP3(22) {			/* remainder */
+    get_float_arg(value, 0, x);
+    get_float_arg(value, 1, y);
+    if (fmod(x, 1.0) != 0.0 || fmod(y, 1.0) != 0.0) return UNDEFINED;
+    if (y == 0.0) return UNDEFINED;
+
+    /* "fmod(double x, double y) returns the floating-point remainder
+       (f) of the division of x by y, where f has the same sign as x,
+       such that x=iy+f for some integer i, and |f| < |y|." */
+
+    set_float_arg(value, 2, fmod(x, y));
+    return UNSPECIFIC;}
 
   default:
     return UNDEFINED;
   }
 }
 
-/* stdlib.h declares atof */
 
-#define get_arg(args,i) VECTOR_REF(args,(i)+1)
-#define get_int_arg(args,i) EXTRACT_FIXNUM(get_arg(args,i))
-#define get_string_arg(args,i) (&STRING_REF(get_arg(args,i), 0))
-
-typedef struct {
-  char b[sizeof(double)];
-} unaligned_double;
-
-typedef union {
-  double f;
-  unaligned_double b;
-} float_or_bytes;
-
-#define get_float_arg(args, i, var) \
-  { scheme_value temp_ = get_arg(args,i); \
-    float_or_bytes loser_; \
-    if (!CODE_VECTORP(temp_)) return UNDEFINED; \
-    loser_.b = *(unaligned_double*)(&CODE_VECTOR_REF(temp_, 0)); \
-    (var) = loser_.f; }
-
-#define set_float_arg(args, i, val) \
-  { scheme_value temp_ = get_arg(args,i); \
-    float_or_bytes loser_; \
-    if (!CODE_VECTORP(temp_)) return UNDEFINED; \
-    loser_.f = (double)(val); \
-    *(unaligned_double*)(&CODE_VECTOR_REF(temp_, 0)) = loser_.b; }
-   
-scheme_value
-vm_float_op( long op, scheme_value args )
+FILE **port_to_stream(scheme_value port)
 {
-  double x, y;
+  int index;
+  extern FILE **Sopen_portsS;
 
-  switch (op) {
-  case 0: {
-    get_float_arg(args, 0, x);
-    get_float_arg(args, 1, y);
-    set_float_arg(args, 2, x + y);
-    return 0;}
-  case 1: {
-    get_float_arg(args, 0, x);
-    get_float_arg(args, 1, y);
-    set_float_arg(args, 2, x - y);
-    return 0;}
-  case 2: {
-    get_float_arg(args, 0, x);
-    get_float_arg(args, 1, y);
-    set_float_arg(args, 2, x * y);
-    return 0;}
-  case 3: {
-    get_float_arg(args, 0, x);
-    get_float_arg(args, 1, y);
-    if (y == 0) return UNDEFINED;
-    set_float_arg(args, 2, x / y);
-    return 0;}
-  case 4: {
-    get_float_arg(args, 0, x);
-    get_float_arg(args, 1, y);
-    return (x == y) ? 0 : 4;}
-  case 5: {
-    get_float_arg(args, 0, x);
-    get_float_arg(args, 1, y);
-    return (x < y) ? 0 : 4;}
-  case 6: {          /* integer -> float */
-    scheme_value arg = get_arg(args, 0);
-    if (!FIXNUMP(arg)) return UNDEFINED;
-    set_float_arg(args, 1, EXTRACT_FIXNUM(arg));
-    return 0;}
-  case 7: {          /* string -> float */
-    static char buffer[80];
-    long len =	  get_int_arg(args, 1);
-    strncpy(buffer, get_string_arg(args, 0), len);
-    buffer[len] = '\0';
-    set_float_arg(args, 2, atof(buffer));
-    return 0;}
-  case 8: {
-    size_t len;
-    char *str =   get_string_arg(args,1);
-    get_float_arg(args, 0, x);
-    sprintf(str, "%g", x);
-    len = strlen(str);
-    if (len > STRING_LENGTH(get_arg(args,1))) /* unlikely */
-      fprintf(stderr, "printing float: output too long: %s\n",
-	      str);
-    get_arg(args, 2) = ENTER_FIXNUM(len);
-    return 0;}
+  if (!PORTP(port))
+    return NULL;		/* not a port */
 
-    /* exp log sin cos tan asin acos atan sqrt */
+  index = PORT_INDEX(port);
+  if (index < 0)
+    return NULL;		/* port not open */
 
-  case 9: {
-    get_float_arg(args, 0, x);
-    set_float_arg(args, 1, exp(x));
-    return 0;}
-  case 10: {
-    get_float_arg(args, 0, x);
-    set_float_arg(args, 1, log(x));
-    return 0;}
-  case 11: {
-    get_float_arg(args, 0, x);
-    set_float_arg(args, 1, sin(x));
-    return 0;}
-  case 12: {
-    get_float_arg(args, 0, x);
-    set_float_arg(args, 1, cos(x));
-    return 0;}
-  case 13: {
-    get_float_arg(args, 0, x);
-    set_float_arg(args, 1, tan(x));
-    return 0;}
-  case 14: {
-    get_float_arg(args, 0, x);
-    set_float_arg(args, 1, asin(x));
-    return 0;}
-  case 15: {
-    get_float_arg(args, 0, x);
-    set_float_arg(args, 1, acos(x));
-    return 0;}
-  case 16: {
-    get_float_arg(args, 0, y);
-    get_float_arg(args, 1, x);
-    set_float_arg(args, 2, atan2(y, x));
-    return 0;}
-  case 17: {
-    get_float_arg(args, 0, x);
-    set_float_arg(args, 1, sqrt(x));
-    return 0;}
-  case 18: {
-    get_float_arg(args, 0, x);
-    set_float_arg(args, 1, floor(x));
-    return 0;}
-  case 19: {			/* integer? */
-    get_float_arg(args, 0, x);
-    return (fmod(x, 1.0) == 0.0) ? SCHTRUE : SCHFALSE; }
-  case 20: {			/* inexact->exact */
-    get_float_arg(args, 0, x);
-    if (x <= (double)GREATEST_FIXNUM_VALUE
-	&& x >= (double)LEAST_FIXNUM_VALUE)
-      return ENTER_FIXNUM((long)x);
-    else
-      return UNDEFINED;
-  }
-  case 21: {			/* quotient */
-    double z;
-    get_float_arg(args, 0, x);
-    get_float_arg(args, 1, y);
-    if (fmod(x, 1.0) != 0 || fmod(y, 1.0)) return UNDEFINED;
-    if (y == 0) return UNDEFINED;
-    z = x / y;
-    set_float_arg(args, 2, z < 0 ? ceil(z) : floor(z));
-    return 0;}
-  case 22: {			/* remainder */
-    get_float_arg(args, 0, x);
-    get_float_arg(args, 1, y);
-    if (fmod(x, 1.0) != 0 || fmod(y, 1.0)) return UNDEFINED;
-    if (y == 0) return UNDEFINED;
-
-    /* "fmod(double x, double y) returns the floating-point remainder
-       (f) of the division of x by y, where f has the same sign as x,
-       such that x=iy+f for some integer i, and |f| < |y|." */
-
-    set_float_arg(args, 2, fmod(x, y));
-    return 0;}
-  default:
-    return UNDEFINED;
-  }
+  return &Sopen_portsS[index];
 }

@@ -7,7 +7,7 @@
 ;;;; Compiling primitive procedures and calls to them.
 
 (define (define-compiler-primitive name type compilator closed)
-  (define-compilator (list name type)
+  (define-compilator name type
     (or compilator compile-unknown-call))
   (define-closed-compilator name closed))
 
@@ -16,21 +16,21 @@
 
 (define closed-compilators 
   (make-operator-table (lambda ()
-			 (error "unknown primitive procedure"))))
+                         (error "unknown primitive procedure"))))
 
 (define (define-closed-compilator name proc)
   (operator-define! closed-compilators name proc))
 
 ; (primitive-procedure name)  =>  a procedure
 
-(define-compilator (list 'primitive-procedure syntax-type)
+(define-compilator 'primitive-procedure syntax-type
   (lambda (node cenv depth cont)
     (let ((name (cadr (node-form node))))
       (deliver-value (instruction-with-template
-			  (enum op closure)
-			  ((get-closed-compilator (get-operator name)))
-			  (cont-name cont))
-		     cont))))
+                          (enum op closure)
+                          ((get-closed-compilator (get-operator name)))
+                          (cont-name cont))
+                     cont))))
 
 (define (get-closed-compilator op)
   (operator-lookup closed-compilators op))
@@ -47,20 +47,20 @@
   (lambda (node cenv depth cont)
     (let ((args (cdr (node-form node))))
       (sequentially (if (null? args)
-			empty-segment
-			(push-all-but-last args cenv depth node))
-		    (deliver-value (instruction opcode) cont)))))
+                        empty-segment
+                        (push-all-but-last args cenv depth node))
+                    (deliver-value (instruction opcode) cont)))))
 
 (define (direct-closed-compilator opcode)
   (lambda ()
     (let ((arg-specs (vector-ref opcode-arg-specs opcode)))
       (sequentially (if (pair? arg-specs)
-			(sequentially
-			 (instruction (enum op check-nargs=) (car arg-specs))
-			 (instruction (enum op pop)))
-			(instruction (enum op check-nargs=) 0))
-		    (instruction opcode)
-		    (instruction (enum op return))))))
+                        (sequentially
+                         (instruction (enum op check-nargs=) (car arg-specs))
+                         (instruction (enum op pop)))
+                        (instruction (enum op check-nargs=) 0))
+                    (instruction opcode)
+                    (instruction (enum op return))))))
 
 (define (nargs->domain nargs)
   (do ((nargs nargs (- nargs 1))
@@ -73,26 +73,26 @@
 (do ((opcode 0 (+ opcode 1)))
     ((= opcode op-count))
   (let ((arg-specs (vector-ref opcode-arg-specs opcode))
-	(name (enumerand->name opcode op)))
+        (name (enumerand->name opcode op)))
     (cond ((memq name '(external-call return-from-interrupt return)))
-	  ((null? arg-specs)
-	   (let ((type (proc () value-type)))
-	     (define-compiler-primitive name type
-	       (direct-compilator type opcode)
-	       (direct-closed-compilator opcode))))
-	  ((not (number? (car arg-specs))))
-	  (else
-	   (let ((type (procedure-type (nargs->domain (car arg-specs))
-				       (if (eq? name 'with-continuation)
-					   any-values-type
-					   ;; Return a single value.
-					   value-type)
-				       ;; nonrestrictive - domain might be
-				       ;; specialized later
-				       #t)))
-	     (define-compiler-primitive name type
-	       (direct-compilator type opcode)
-	       (direct-closed-compilator opcode)))))))
+          ((null? arg-specs)
+           (let ((type (proc () value-type)))
+             (define-compiler-primitive name type
+               (direct-compilator type opcode)
+               (direct-closed-compilator opcode))))
+          ((not (number? (car arg-specs))))
+          (else
+           (let ((type (procedure-type (nargs->domain (car arg-specs))
+                                       (if (eq? name 'with-continuation)
+                                           any-values-type
+                                           ;; Return a single value.
+                                           value-type)
+                                       ;; nonrestrictive - domain might be
+                                       ;; specialized later
+                                       #t)))
+             (define-compiler-primitive name type
+               (direct-compilator type opcode)
+               (direct-closed-compilator opcode)))))))
 
 
 ; --------------------
@@ -102,63 +102,70 @@
 (define (define-simple-primitive name type segment)
   (let ((winner? (fixed-arity-procedure-type? type)))
     (let ((nargs (if winner?
-		     (procedure-type-arity type)
-		     (error "n-ary simple primitive?!" name type))))
+                     (procedure-type-arity type)
+                     (error "n-ary simple primitive?!" name type))))
       (define-compiler-primitive name type
-	(simple-compilator segment)
-	(simple-closed-compilator nargs segment)))))
+        (simple-compilator segment)
+        (simple-closed-compilator nargs segment)))))
 
 (define (simple-compilator segment)
   (lambda (node cenv depth cont)
     (let ((args (cdr (node-form node))))
       (sequentially (if (null? args)
-			empty-segment
-			(push-all-but-last args cenv depth node))
-		    (deliver-value segment cont)))))
+                        empty-segment
+                        (push-all-but-last args cenv depth node))
+                    (deliver-value segment cont)))))
 
 (define (simple-closed-compilator nargs segment)
   (lambda ()
     (sequentially (instruction (enum op check-nargs=) nargs)
-		  (instruction (enum op pop))
-		  segment
-		  (instruction (enum op return)))))
+                  (instruction (enum op pop))
+                  segment
+                  (instruction (enum op return)))))
 
 (define (symbol-append . syms)
   (string->symbol (apply string-append
-			 (map symbol->string syms))))
+                         (map symbol->string syms))))
 
+(define (define-stob-predicate name stob-name)
+  (define-simple-primitive name
+    (proc (value-type) boolean-type)
+    (instruction (enum op stored-object-has-type?)
+                 (name->enumerand stob-name stob))))
+
+(define-stob-predicate 'code-vector? 'code-vector)
+(define-stob-predicate 'string? 'string)
 
 ; Define primitives for record-like stored objects (e.g. pairs).
 
 (define (define-data-struct-primitives name predicate maker . slots)
   (let* ((def-prim (lambda (name type op . stuff)
-		     (define-simple-primitive name type
-		       (apply instruction (cons op stuff)))))
-	 (type-byte (name->enumerand name stob))
-	 (type (sexp->type (symbol-append ': name) #t)))
-    (def-prim predicate (proc (value-type) boolean-type)
-			(enum op stored-object-has-type?) type-byte)
+                     (define-simple-primitive name type
+                       (apply instruction (cons op stuff)))))
+         (type-byte (name->enumerand name stob))
+         (type (sexp->type (symbol-append ': name) #t)))
+    (define-stob-predicate predicate name)
     (if (not (eq? maker 'make-symbol))  ; Symbols are made using op/intern.
-	(def-prim maker
-	  (procedure-type (nargs->domain (length slots)) type #t)
-	  (enum op make-stored-object)
-	  (length slots)
-	  type-byte))
+        (def-prim maker
+          (procedure-type (nargs->domain (length slots)) type #t)
+          (enum op make-stored-object)
+          (length slots)
+          type-byte))
     (do ((i 0 (+ i 1))
-	 (slots slots (cdr slots)))
-	((null? slots))
+         (slots slots (cdr slots)))
+        ((null? slots))
       (let ((slot (car slots)))
-	(if (car slot)
-	    (def-prim (car slot)
-	      (proc (type) value-type)
-	      (enum op stored-object-ref) type-byte i))
-	(if (cadr slot)
-	    (def-prim (cadr slot)
-	      (proc (type value-type) unspecific-type)
-	      (enum op stored-object-set!) type-byte i))))))
+        (if (car slot)
+            (def-prim (car slot)
+              (proc (type) value-type)
+              (enum op stored-object-ref) type-byte i))
+        (if (cadr slot)
+            (def-prim (cadr slot)
+              (proc (type value-type) unspecific-type)
+              (enum op stored-object-set!) type-byte i))))))
 
 (for-each (lambda (stuff)
-	    (apply define-data-struct-primitives stuff))
+            (apply define-data-struct-primitives stuff))
           stob-data)
 
 
@@ -166,13 +173,11 @@
 
 (define (define-vector-primitives name element-type make length ref set!)
   (let* ((type-byte (name->enumerand name stob))
-	 (def-prim (lambda (name type op)
-		     (define-simple-primitive name type
-		       (instruction op type-byte))))
-	 (type (sexp->type (symbol-append ': name) #t)))
-    (def-prim (symbol-append name '?)
-      (proc (value-type) boolean-type)
-      (enum op stored-object-has-type?))
+         (def-prim (lambda (name type op)
+                     (define-simple-primitive name type
+                       (instruction op type-byte))))
+         (type (sexp->type (symbol-append ': name) #t)))
+    (define-stob-predicate (symbol-append name '?) name)
     (def-prim (symbol-append 'make- name)
       (proc (exact-integer-type element-type) type)
       make)
@@ -187,31 +192,12 @@
       set!)))
 
 (for-each (lambda (name)
-	    (define-vector-primitives name value-type
-	      (enum op make-vector-object)
-	      (enum op stored-object-length)
-	      (enum op stored-object-indexed-ref)
-	      (enum op stored-object-indexed-set!)))
-	  '(vector record continuation extended-number template))
-
-; There is only one of each of these so far, but there may be more later.
-
-(for-each (lambda (name)
-	    (define-vector-primitives name exact-integer-type
-	      (enum op make-byte-vector-object)
-	      (enum op stored-object-byte-length)
-	      (enum op stored-object-indexed-byte-ref)
-	      (enum op stored-object-indexed-byte-set!)))
-	  '(code-vector))
-
-(for-each (lambda (name)
-	    (define-vector-primitives name char-type
-	      (enum op make-char-vector-object)
-	      (enum op stored-object-byte-length)
-	      (enum op stored-object-indexed-char-ref)
-	      (enum op stored-object-indexed-char-set!)))
-	  '(string))
-
+            (define-vector-primitives name value-type
+              (enum op make-vector-object)
+              (enum op stored-object-length)
+              (enum op stored-object-indexed-ref)
+              (enum op stored-object-indexed-set!)))
+          '(vector record continuation extended-number template))
 
 ; SIGNAL-CONDITION is the same as TRAP.
 
@@ -225,85 +211,85 @@
   ;; (primitive-catch (lambda (cont) ...))
   (lambda (node cenv depth cont)
     (let* ((exp (node-form node))
-	   (args (cdr exp)))
+           (args (cdr exp)))
       (maybe-push-continuation
        (sequentially (instruction (enum op current-cont))
-		     (instruction (enum op push))
-		     ;; If lambda exp, should do compile-lambda-code to
-		     ;; avoid consing closure...
-		     (compile (car args) cenv 1
-			      (fall-through-cont node 1))
-		     (instruction (enum op call) 1))
+                     (instruction (enum op push))
+                     ;; If lambda exp, should do compile-lambda-code to
+                     ;; avoid consing closure...
+                     (compile (car args) cenv 1
+                              (fall-through-cont node 1))
+                     (instruction (enum op call) 1))
        0
        cont)))
   (lambda ()
     (sequentially (instruction (enum op check-nargs=) 1)
-		  (instruction (enum op make-env) 1)  ;Seems unavoidable.
-		  (instruction (enum op current-cont))
-		  (instruction (enum op push))
-		  (instruction (enum op local0) 1)
-		  (instruction (enum op call) 1))))  
+                  (instruction (enum op make-env) 1)  ;Seems unavoidable.
+                  (instruction (enum op current-cont))
+                  (instruction (enum op push))
+                  (instruction (enum op local0) 1)
+                  (instruction (enum op call) 1))))  
 
 ; (call-with-values (lambda () ...producer...)
-;		    (lambda args ...consumer...))
+;                   (lambda args ...consumer...))
 
 (define-compiler-primitive 'call-with-values #f
   (lambda (node cenv depth cont)
     (let ((args (cdr (node-form node))))
       (let ((producer (car args))
-	    (consumer (cadr args)))
-	(maybe-push-continuation
-	 (sequentially (compile consumer cenv 0 (fall-through-cont node 2))
-		       (instruction (enum op push))
-		       (maybe-push-continuation     ; nothing maybe about it
-			(compile-call (classify `(,producer) cenv)
-				      cenv 0
-				      (return-cont #f))
-			1
-			(fall-through-cont #f 0))
-		       ;; Was:
-		       ;; (compile-call (classify `(,producer) cenv)
-		       ;; 	     cenv 1
-		       ;; 	     (fall-through-cont node 1))
-		       (instruction (enum op call-with-values)))
-	 depth
-	 cont))))
+            (consumer (cadr args)))
+        (maybe-push-continuation
+         (sequentially (compile consumer cenv 0 (fall-through-cont node 2))
+                       (instruction (enum op push))
+                       (maybe-push-continuation     ; nothing maybe about it
+                        (compile-call (classify `(,producer) cenv)
+                                      cenv 0
+                                      (return-cont #f))
+                        1
+                        (fall-through-cont #f 0))
+                       ;; Was:
+                       ;; (compile-call (classify `(,producer) cenv)
+                       ;;            cenv 1
+                       ;;            (fall-through-cont node 1))
+                       (instruction (enum op call-with-values)))
+         depth
+         cont))))
   (lambda ()
     ;; producer and consumer on stack
     (let ((label (make-label)))
       (sequentially (instruction (enum op check-nargs=) 2)
-		    (instruction (enum op make-env) 2)
-		    (instruction (enum op local0) 1) ;consumer
-		    (instruction (enum op push))
-		    (instruction-using-label (enum op make-cont) label 1)
-		    (instruction (enum op local0) 2) ;producer
-		    (instruction (enum op call) 0)
-		    (attach-label label
-				  (instruction (enum op call-with-values)))))))
+                    (instruction (enum op make-env) 2)
+                    (instruction (enum op local0) 1) ;consumer
+                    (instruction (enum op push))
+                    (instruction-using-label (enum op make-cont) label 1)
+                    (instruction (enum op local0) 2) ;producer
+                    (instruction (enum op call) 0)
+                    (attach-label label
+                                  (instruction (enum op call-with-values)))))))
 
 
 ; --------------------
 ; Variable-arity primitives
 
 (define (define-n-ary-compiler-primitive name result-type min-nargs
-					 compilator closed)
+                                         compilator closed)
   (define-compiler-primitive name
         (if result-type
-	    (procedure-type any-arguments-type result-type #f)
-	    #f)
+            (procedure-type any-arguments-type result-type #f)
+            #f)
     (if compilator
-	(n-ary-primitive-compilator name min-nargs compilator)
-	compile-unknown-call)
+        (n-ary-primitive-compilator name min-nargs compilator)
+        compile-unknown-call)
     closed))
 
 (define (n-ary-primitive-compilator name min-nargs compilator)
   (lambda (node cenv depth cont)
     (let ((exp (node-form node)))
       (if (>= (length (cdr exp)) min-nargs)
-	  (compilator node cenv depth cont)
-	  (begin (warn "too few arguments to primitive"
-		       (schemify node))
-		 (compile-unknown-call node cenv depth cont))))))
+          (compilator node cenv depth cont)
+          (begin (warn "too few arguments to primitive"
+                       (schemify node cenv))
+                 (compile-unknown-call node cenv depth cont))))))
 
 
 ; APPLY wants to first spread the list, then load the procedure.
@@ -312,24 +298,24 @@
 
 (define-n-ary-compiler-primitive 'apply #f 2
   (lambda (node cenv depth cont)
-    (let ((exp (node-form node)))	; (apply proc arg1 arg2 arg3 rest)
+    (let ((exp (node-form node)))       ; (apply proc arg1 arg2 arg3 rest)
       (let* ((proc+args+rest (cdr exp))
-	     (rest+args			; (rest arg3 arg2 arg1)
-	      (reverse (cdr proc+args+rest)))
-	     (args (cdr rest+args))	; (arg3 arg2 arg1)
-	     (args+proc+rest		; (arg1 arg2 arg3 proc rest)
-	      (reverse (cons (car rest+args)
-			     (cons (car proc+args+rest) args)))))
-	(maybe-push-continuation
+             (rest+args                 ; (rest arg3 arg2 arg1)
+              (reverse (cdr proc+args+rest)))
+             (args (cdr rest+args))     ; (arg3 arg2 arg1)
+             (args+proc+rest            ; (arg1 arg2 arg3 proc rest)
+              (reverse (cons (car rest+args)
+                             (cons (car proc+args+rest) args)))))
+        (maybe-push-continuation
          (sequentially (push-all-but-last args+proc+rest cenv 0 #f)
-		       ;; Operand is number of non-final arguments
-		       (instruction (enum op apply) (length args)))
-	 depth
-	 cont))))
+                       ;; Operand is number of non-final arguments
+                       (instruction (enum op apply) (length args)))
+         depth
+         cont))))
   (lambda ()
     (sequentially (instruction (enum op check-nargs=) 2)
-		  (instruction (enum op pop))
-		  (instruction (enum op apply) 0))))
+                  (instruction (enum op pop))
+                  (instruction (enum op apply) 0))))
 
 
 ; (values value1 value2 ...)
@@ -338,10 +324,10 @@
   (lambda (node cenv depth cont)
     (let ((args (cdr (node-form node))))
       (maybe-push-continuation (sequentially (push-arguments node cenv 0)
-					     (instruction (enum op return-values)
-							  (length args)))
-			       depth
-			       cont)))
+                                             (instruction (enum op return-values)
+                                                          (length args)))
+                               depth
+                               cont)))
   (lambda () (instruction (enum op values))))
 
 
@@ -354,34 +340,34 @@
   (define-n-ary-compiler-primitive 'error error-type 1
     (lambda (node cenv depth cont)
       (let ((exp (node-form node)))
-	(let ((args (cdr exp)))
-	  (sequentially (instruction-with-literal (enum op literal) 'error)
-			(instruction (enum op push))
-			(push-arguments node cenv (+ depth 1))
-			(instruction-with-literal (enum op literal) '())
-			(apply sequentially
-			       (map (lambda (arg) cons-instruction) args))
-			cons-instruction
-			(deliver-value (instruction (enum op trap)) cont)))))
+        (let ((args (cdr exp)))
+          (sequentially (instruction-with-literal (enum op literal) 'error)
+                        (instruction (enum op push))
+                        (push-arguments node cenv (+ depth 1))
+                        (instruction-with-literal (enum op literal) '())
+                        (apply sequentially
+                               (map (lambda (arg) cons-instruction) args))
+                        cons-instruction
+                        (deliver-value (instruction (enum op trap)) cont)))))
     (lambda ()
       (sequentially (instruction (enum op make-rest-list) 0)
-		    (instruction (enum op push))
-		    (instruction-with-literal (enum op literal) 'error)
-		    (instruction (enum op push))
-		    (instruction (enum op stack-ref) 1)
-		    cons-instruction
-		    (instruction (enum op trap))
-		    (instruction (enum op return))))))
+                    (instruction (enum op push))
+                    (instruction-with-literal (enum op literal) 'error)
+                    (instruction (enum op push))
+                    (instruction (enum op stack-ref) 1)
+                    cons-instruction
+                    (instruction (enum op trap))
+                    (instruction (enum op return))))))
 
 
 ; (external-call external-routine arg ...)
 
 (define-n-ary-compiler-primitive 'external-call value-type 1
-  #f					     ;Must set *nargs*
+  #f                                         ;Must set *nargs*
   (lambda ()
     (sequentially (instruction (enum op check-nargs>=) 1)
-		  (instruction (enum op external-call))
-		  (instruction (enum op return)))))
+                  (instruction (enum op external-call))
+                  (instruction (enum op return)))))
 
 
 ; --------------------
@@ -390,9 +376,9 @@
 (define (push-all-but-last args cenv depth source-info)
   (let recur ((args args) (depth depth) (i 1))
     (let ((first-code
-	   (compile (car args) cenv depth (fall-through-cont source-info i))))
+           (compile (car args) cenv depth (fall-through-cont source-info i))))
       (if (null? (cdr args))
-	  first-code
-	  (sequentially first-code
-			(instruction (enum op push))
-			(recur (cdr args) (+ depth 1) (+ i 1)))))))
+          first-code
+          (sequentially first-code
+                        (instruction (enum op push))
+                        (recur (cdr args) (+ depth 1) (+ i 1)))))))

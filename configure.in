@@ -11,14 +11,13 @@ AC_INIT(scheme48vm.c)
      AC_HAVE_LIBRARY(socket, [LIBS="$LIBS -lsocket"])
      AC_CONST
      AC_HAVE_HEADERS(libgen.h sys/timeb.h)
-     AC_HAVE_FUNCS(gettimeofday dlopen socket)
+     AC_HAVE_FUNCS(dlopen gettimeofday ftime nlist select setitimer socket)
      AC_COMPILE_CHECK([n_name], [#include <nlist.h>], 
 				[struct nlist name_list;
 				 name_list.n_name = "foo";],
 				AC_DEFINE(NLIST_HAS_N_NAME))
      AC_COMPILE_CHECK([_cnt], [#include <stdio.h>], 
-			      [FILE *foo;
-			       return foo->_cnt;],
+			      [return stdin->_cnt;],
 			      AC_DEFINE(FILE_HAS__CNT))
      dnl We might want AC_WORDS_BIGENDIAN in the future.
      dnl We might want AC_CHAR_UNSIGNED in the future.

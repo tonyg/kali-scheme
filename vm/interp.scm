@@ -59,8 +59,8 @@
 
 (define (initialize-interpreter)          ;Used only at startup
   (set! *interrupt-template*
-	(make-template-containing-ops op/ignore-values
-				      op/return-from-interrupt)))
+	(make-template-containing-ops (enum op ignore-values)
+				      (enum op return-from-interrupt))))
 
 (define initial-interpreter-heap-space (op-template-size 2))
 
@@ -132,12 +132,13 @@
 (define (collect-saving-temp value)
   (begin-collection)
   (trace-registers)
+  (trace-impure-areas)
   (let ((value (trace-value value)))
     (do-gc)
     (end-collection)
     (close-untraced-ports!)
     (if (not (available? *minimum-recovered-space*))
-	(set-interrupt! interrupt/memory-shortage))
+	(note-interrupt! (enum interrupt memory-shortage)))
     value))
 
 ; INTERPRET is the main instruction dispatch for the interpreter.
@@ -386,12 +387,12 @@
 ; anything else - only one argument was expected so raise an exception.
 
 (define (really-return-values cont nargs)
-  (let ((op (code-vector-ref (template-code (continuation-template cont))
-			     (extract-fixnum (continuation-pc cont)))))
-    (cond ((= op op/ignore-values)
+  (let ((next-op (code-vector-ref (template-code (continuation-template cont))
+				  (extract-fixnum (continuation-pc cont)))))
+    (cond ((= next-op (enum op ignore-values))
 	   (pop-continuation!)
 	   (goto interpret))
-	  ((= op op/call-with-values)
+	  ((= next-op (enum op call-with-values))
 	   (skip-current-continuation!)
 	   (set! *nargs* nargs)
 	   (set! *val* (continuation-ref cont continuation-cells))
@@ -490,7 +491,7 @@
 	   (goto interpret))
 	  ((fixnum? *val*)           ; VM returns here
 	   (set! *val* (extract-fixnum *val*))
-	   return-option/exit)
+	   (enum return-option exit))
 	  (else
 	   (reset-stack-pointer)     ; get a real continuation on the stack
 	   (goto raise-exception1 0 *val*)))))
@@ -689,12 +690,13 @@
 (define (handle-interrupt)
   (let ((key (ensure-stack-space stack-continuation-size ensure-space))
 	(interrupt (get-highest-priority-interrupt!)))
+    (push *val*)       ; may be needed for nargs exception
     (push *template*)
     (push (current-env))
     (push (enter-fixnum *nargs*))
     (push (enter-fixnum *enabled-interrupts*))
     (set-template! *interrupt-template* (enter-fixnum 0))
-    (push-continuation! *code-pointer* (+ *nargs* 4) key)
+    (push-continuation! *code-pointer* (+ *nargs* 5) key)
     (push (enter-fixnum *enabled-interrupts*))
     (set! *nargs* 1)
     (if (not (vm-vector? *interrupt-handlers*))
@@ -710,6 +712,7 @@
   (set! *nargs*              (extract-fixnum (pop)))
   (set-current-env! (pop))
   (set-template!    (pop) 0)
+  (set! *val*       (pop))
   (goto interpret))
 
 (define (get-highest-priority-interrupt!)
@@ -721,7 +724,7 @@
 	     (set! *pending-interrupts* (bitwise-and n (bitwise-not m)))
 	     i)))))
 	 
-(define (set-interrupt! interrupt)
+(define (note-interrupt! interrupt)
   (set! *pending-interrupts*
 	(bitwise-ior *pending-interrupts*
 		     (ashl 1 interrupt))))
@@ -730,9 +733,5 @@
   (set! *pending-interrupts*
 	(bitwise-and *pending-interrupts*
 		     (bitwise-not (ashl 1 interrupt)))))
-
-(define op/ignore-values (enum op ignore-values))
-(define op/call-with-values (enum op call-with-values))
-(define op/return-from-interrupt (enum op return-from-interrupt))
 
 

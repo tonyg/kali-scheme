@@ -1,68 +1,229 @@
-/*Copyright (c) 1993 by Richard Kelsey and Jonathan Rees.  See file COPYING.*/
+/* Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+   See file COPYING. */
 
 /*
-   This module is a collection of quick and dirty hacks written mostly
-   by people who don't know much about writing portable Unix code and
-   don't particularly want to take the time to learn how.  If you have
-   concrete suggestions for improvements, they are quite welcome.
-   Please send them to scheme-48-bugs@martigny.ai.mit.edu.
+   If you have concrete suggestions for improvements, they are quite
+   welcome.  Please send them to scheme-48-bugs@martigny.ai.mit.edu.
 
-   Expanding Unix filenames
-   Unix Sucks
-   Richard Kelsey Wed Jan 17 21:40:26 EST 1990
-   Later modified by others who wish to remain anonymous
-   "ps_" stands for "Pre-Scheme"
+   Non-Posixisms:
+
+   The most annoying thing here is char_ready_p, which is needed for
+   R^nRS and is nonportable in two different ways.  There's no
+   portable (Posix or anything else) way to figure whether a stdio
+   stream has buffered input.  And even if we knew that, there's no
+   portable way to find out whether input would block - select() seems
+   to be a BSD thing, and AT&T's ioctl() doesn't work for arbitrary
+   devices.  If it can't figure out what to do, it just prints a
+   warning and returns #t.
+
+   setitimer(), a Berkeleyism, is used if it's available; otherwise
+   alarm() is used, which only has 1-second resolution.  Timer
+   interrupts are used by the threads apckage but not by the base
+   system.
+
+   gettimeofday() is BSD.  ftime() is Version 7 (!).  The POSIX.1/ANSI
+   C alternative to these is time(), which returns a number of
+   seconds.  There seems to be some disagreement over the number of
+   arguments to gettimeofday().
+
+   nlist() derives from ancient Version 6 and 7 unix, so it's pretty
+   widespread, but everyone wants to phase it out because it's not
+   very abstract.
+
+   Posix/ANSI C things used:
+     feof fopen fprintf perror strlen strncpy etc.
+     time (if gettimeofday and ftime are unavailable)
+
+   Posix things used: (beware, PC and Mac hackers)
+     alarm (if setitimer is unavailable)
+     fileno (but only when select is being used)
+     getenv getpwnam sigaction sysconf
+     times  -- clock() is ANSI but wraps around every 36 minutes
+
+   Other things used (BSD etc.), only when available:
+     ftime (if gettimeofday is unavailable)
+     gettimeofday
+     nlist
+     select
+     setitimer
+
+   <time.h> is ANSI C, but we apparently don't use anything from it
+   that is part of ANSI C.  Under HPUX, the man pages tell one to
+   use it in order to get declarations for the things that under SunOS
+   are declared in <sys/time.h>.  Oh well, it can't hurt, can it?  Oh
+   yeah, this is Unix, of course it can...
 */
 
 #include "sysdep.h"
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <pwd.h>
-
+#include <stdlib.h>		/* for getenv(), etc. (POSIX?/ANSI) */
+#include <string.h>		/* for strncpy(), etc. (POSIX/ANSI) */
+#include <pwd.h>		/* for getpwnam() (POSIX.1) */
+#include <unistd.h>		/* for sysconf() (POSIX.1/.2)*/
+#include <sys/times.h>		/* for times() (POSIX.1) */
+#include <signal.h>		/* for sigaction() (POSIX.1) */
 #include <time.h>
-#include <unistd.h>		/* for sysconf() */
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/times.h>
-#if defined(HAVE_SYS_TIMEB_H)
-#include <sys/timeb.h>
+
+#if defined(HAVE_SETITIMER) || defined(HAVE_GETTIMEOFDAY)
+#  include <sys/time.h>		/* for struct itimerval, ITIMER_REAL (Sun) */
 #endif
 
-#include <signal.h>
-#include <nlist.h>
+#if defined(HAVE_SELECT)
+#  include <sys/types.h>	/* for FD_SET and friends (BSD) */
+#endif
+
+#if defined(HAVE_SYS_TIMEB_H)
+#  include <sys/timeb.h>	/* for ftime() */
+#endif
+
+#if defined(HAVE_NLIST)
+#  include <nlist.h>		/* conforms to "SVID2", whatever that is */
+#endif
+
+
+#define INTERRUPT_ALARM     0	/* Cf. rts/arch.scm */
+#define INTERRUPT_KEYBOARD  1
+
+extern long Spending_interruptsS;
+
+
+/* OS-dependent initialization */
+
+static struct sigaction keyboard_action;
+static struct sigaction alarm_action;
+
+void sysdep_init()
+{
+  static void when_keyboard_interrupt(int, int, struct sigcontext *);
+  static void when_alarm_interrupt(int, int, struct sigcontext *);
+
+  keyboard_action.sa_handler = when_keyboard_interrupt;
+  keyboard_action.sa_flags = 0;
+  sigemptyset(&keyboard_action.sa_mask);
+
+  alarm_action.sa_handler = when_alarm_interrupt;
+  alarm_action.sa_flags = 0;
+  sigemptyset(&alarm_action.sa_mask);
+
+  sigaction(SIGINT, &keyboard_action, NULL);
+}
+
+static void when_keyboard_interrupt(sig, code, scp)
+     int sig, code; 
+     struct sigcontext *scp;
+{
+  Spending_interruptsS |= (1 << INTERRUPT_KEYBOARD);
+  /* The following might be necessary with signal(), but shouldn't be
+     with sigaction() (I think) */
+  /* sigaction(SIGINT, &keyboard_action, NULL); */
+  return;
+}
+
+static void when_alarm_interrupt(sig, code, scp)
+     int sig, code; 
+     struct sigcontext *scp;
+{
+  Spending_interruptsS |= (1 << INTERRUPT_ALARM);
+  return;
+}
+
+/* ---------------------------------------- */
+/* For char-ready? */
+
+int char_ready_p( FILE* stream )
+{
+  fd_set readfds;
+  struct timeval timeout;
+  static int warnedp = 0;
+
+  if (feof(stream))
+    return EOF;
+
+  /* Grossly unportable examination of stdio buffer internals. */
+#if defined(FILE_HAS__CNT)
+  if (stream->_cnt)
+    return 1;
+#elif defined(__linux__)
+  if (stream->_IO_read_ptr < stream->_IO_read_end)
+    return 1;
+#else
+
+  /* Add new cases here AND SEND THEM TO scheme-48@altdorf.ai.mit.edu
+     SO THAT THEY CAN GO INTO THE NEXT RELEASE!  (That means you, Olin.)
+     It's generally pretty easy to figure out what to put here by
+     examining /usr/include/stdio.h.  If the input stream's buffer is
+     nonempty, just return any positive value. */
+  if (!warnedp) {
+    fprintf(stderr, "Warning: incomplete char-ready? implementation.\n");
+    warnedp = 1; }
+  return 1;
+#endif
+
+  /* Nothing in the buffer.  Find out whether a read would block. */
+#if defined(HAVE_SELECT)
+  FD_ZERO(&readfds);
+  FD_SET(fileno(stream), &readfds);
+  timerclear(&timeout);
+
+  /* Under HPUX, select() is declared
+      extern int select(size_t, int *, int *, int *, const struct timeval *);
+     in sys/time.h.  This is probably Posix, but there's no knowing.
+     Under SunOS, the int *'s are fd_set *'s. */
+  return select(FD_SETSIZE,
+#if defined(hpux)
+		(int *)
+#endif
+		&readfds,
+		NULL, NULL, &timeout);
+#else /* No select() - but there will generally be some other way to do this.*/
+  if (!warnedp) {
+    fprintf(stderr, "Warning: incomplete char-ready? implementation.\n");
+    warnedp = 1; }
+  return 1;
+#endif
+}
+
+/* ---------------------------------------- */
+/* For open-xxput-file */
+
+FILE *ps_open(filename, spec)
+  char *filename, *spec;
+{
+# define FILE_NAME_SIZE 256
+  char filename_temp[FILE_NAME_SIZE];
+  char *expanded;
+  extern char *expand_file_name(char *, char *, int);
+
+  expanded = expand_file_name(filename, filename_temp, FILE_NAME_SIZE);
+  if (expanded == NULL)
+    return NULL;
+  return fopen(expanded, spec);
+}
 
 /*
-From: Jim.Rees@umich.edu
-Date: Sun, 26 Dec 93 16:06:08 EST
+   Expanding Unix filenames
+   Unix Sucks
+   Richard Kelsey Wed Jan 17 21:40:26 EST 1990
+   Later modified by others who wish to remain anonymous
+   "ps_" stands for "Pre-Scheme"
 
-In unix.c, the gettimeofday code is wrong.  I didn't think sysV had this
-call.  You've only used the Berkeley version for sgi and netbsd machines,
-but in fact all bsd systems have this call (it was invented at Berkeley).
-I suggest the following fix, which will work on both sysV and bsd machines. 
-If you (or your compiler) are squeamish about passing too many parameters in
-to a system call, you might want to do it differently, but in any case you
-should always use gettimeofday on bsd machines.
- */
-
-#define USER_NAME_SIZE 256
-
-/*
    Expands initial ~ and ~/ in string `name', leaving the result in `buffer'.
    `buffer_len' is the length of `buffer'.
 
    Note: strncpy(x, y, n) copies from y to x.
 */
 
-char *expand_file_name (name, name_len, buffer, buffer_len)
+char *expand_file_name (name, buffer, buffer_len)
   char *name, *buffer;
-  int name_len, buffer_len;
+  int buffer_len;
 {
+# define USER_NAME_SIZE 256
   char *dir, *p, user_name[USER_NAME_SIZE];
   struct passwd *user_data;
   int dir_len, i;
   extern char *getenv();
+  int name_len = strlen(name);
 
   dir = 0;
 
@@ -131,79 +292,25 @@ main(argc, argv)
   char *argv[];
 {
   char buffer[32];
-
-  expand_file_name(argv[1], strlen(argv[1]), buffer, 32);
+  expand_file_name(argv[1], buffer, 32);
   printf("%s\n", buffer);
   return(0);
 }
 */
 
-#define PS_STRING_LENGTH(s)   (strlen(s))
-#define FILENAME_SIZE 256
-#define SPEC_SIZE 16
-
-FILE *ps_open(filename, spec)
-  char *filename, *spec;
-{
-  char filename_temp[FILENAME_SIZE], spec_temp[SPEC_SIZE];
-  char *expanded;
-  int spec_len;
-
-  spec_len = PS_STRING_LENGTH(spec);
-  if (spec_len >= SPEC_SIZE) return((long) NULL);
-
-  expanded = expand_file_name(filename,
-			      (int) PS_STRING_LENGTH(filename),
-			      filename_temp, FILENAME_SIZE);
-  if (expanded == NULL) return((long) NULL);
-  strncpy(spec_temp, spec, spec_len);
-  spec_temp[spec_len] = 0;
-  return fopen(expanded, spec_temp);
-}
-
-/* For char-ready? */
-/* Under HPUX, select() is declared
-    extern int select(size_t, int *, int *, int *, const struct timeval *);
-   in sys/time.h.  Under SunOS, the int *'s are fd_set *'s. */
-
-int char_ready_p( FILE* stream )
-{
-  fd_set readfds;
-  struct timeval timeout;
-
-  if (feof(stream))
-    return EOF;
-
-  /* Grossly unportable examination of stdio buffer internals */
-#if defined(FILE_HAS__CNT)
-  if (stream->_cnt)
-    return stream->_cnt;
-#elif defined(__linux__)
-  if (stream->_IO_read_ptr < stream->_IO_read_end)
-    return(stream->_IO_read_end - stream->_IO_read_ptr);
-#else
-  /* Add your own favorites here. */
-#endif
-
-  FD_ZERO(&readfds);
-  FD_SET(fileno(stream), &readfds);
-  timerclear(&timeout);
-
-  return select(FD_SETSIZE,
-#if defined(hpux)
-		(int *)
-#endif
-		&readfds,
-		NULL, NULL, &timeout);
-}
-
+/* ---------------------------------------- */
 /* Timer functions, for the time instruction.
    gettimeofday() version courtesy Basile Starynkevitch.
 
-   gettimeofday() is a Berkeleyism, and ftime() is an old System 7
-   thing.  The only function that is POSIX.1 / ANSI C compliant is
-   time(), but its resolution is only to the nearest second.  Ugh. */
+   From: Jim.Rees@umich.edu
+   Date: Sun, 26 Dec 93 16:06:08 EST
 
+   In unix.c, the gettimeofday code is wrong.  ...
+   I suggest the following fix, which will work on both sysV and bsd
+   machines.  If you (or your compiler) are squeamish about passing
+   too many parameters in to a system call, you might want to do it
+   differently....
+ */
 
 #define TICKS_PER_SECOND 1000	/* should agree with ps_real_time() */
 
@@ -220,7 +327,7 @@ long ps_real_time()
   gettimeofday(&tv, NULL);
   return ((long)((tv.tv_sec - tv_orig.tv_sec)*TICKS_PER_SECOND
 		 + (tv.tv_usec - tv_orig.tv_usec)/(1000000/TICKS_PER_SECOND)));
-#else /*not HAVE_GETTIMEOFDAY*/
+#elif defined(HAVE_FTIME)
   struct timeb tb;
   static struct timeb tb_origin;
   static int initp = 0;
@@ -231,12 +338,9 @@ long ps_real_time()
   ftime(&tb);
   return((long)((tb.time - tb_origin.time) * TICKS_PER_SECOND
 		+ (tb.millitm / (1000 / TICKS_PER_SECOND))));
+#else
+  return (long)time(NULL) * TICKS_PER_SECOND;
 #endif /*HAVE_GETTIMEOFDAY */
-}
-
-long ps_ticks_per_second()
-{
-  return TICKS_PER_SECOND;
 }
 
 long ps_run_time()
@@ -250,79 +354,44 @@ long ps_run_time()
   return((long)(time_buffer.tms_utime * TICKS_PER_SECOND) / clock_tick);
 }
 
-void when_alarm_interrupt(sig, code, scp)
-     int sig, code; 
-     struct sigcontext *scp;
+long ps_ticks_per_second()
 {
-  extern long Spending_interruptsS;
-  Spending_interruptsS |= 1;         /* 1 = 2 ** interrupt/alarm */
-  return;
+  return TICKS_PER_SECOND;
 }
 
-
-int alarm_handler_set_p = 0;
-
-long ps_schedule_interrupt( long delay )
+long ps_schedule_interrupt(long delay)
 {
-  struct itimerval new, old;
+  sigaction(SIGALRM, &alarm_action, NULL);
 
-/* Under HPUX, this needs to be repeated each time.   --JAR 6/6/93
-  if (alarm_handler_set_p == 0) {
-    signal(SIGALRM, when_alarm_interrupt);
-    alarm_handler_set_p = 1;
+#if defined(HAVE_SETITIMER)
+  { struct itimerval new, old;
+
+    delay = delay * (1000000 / TICKS_PER_SECOND);
+    new.it_value.tv_sec = delay / 1000000;
+    new.it_value.tv_usec = delay % 1000000;
+    new.it_interval.tv_sec = 0;
+    new.it_interval.tv_usec = 0;
+    if (0 == setitimer(ITIMER_REAL, &new, &old))
+      return (old.it_value.tv_usec + 1000000 * old.it_value.tv_sec)
+	/ (1000000 / TICKS_PER_SECOND);
+    else {
+      perror("setitimer");
+      return -1;
+    }
   }
-*/
-  signal(SIGALRM, when_alarm_interrupt);
-  
-  delay = delay * (1000000 / TICKS_PER_SECOND);
-  new.it_value.tv_sec = delay / 1000000;
-  new.it_value.tv_usec = delay % 1000000;
-  new.it_interval.tv_sec = 0;
-  new.it_interval.tv_usec = 0;
-  if (0 == setitimer(ITIMER_REAL, &new, &old))
-    return (old.it_value.tv_usec + 1000000 * old.it_value.tv_sec)
-            / (1000000 / TICKS_PER_SECOND);
-  else {
-    perror("setitimer");
-    /* fprintf(stderr, "call to setitimer failed\n"); */
-    return -1;
-  }
+#else
+  /* Round up to nearest second.  0 means cancel... */
+  return alarm((delay + TICKS_PER_SECOND - 1) / TICKS_PER_SECOND)
+	   * TICKS_PER_SECOND;
+#endif
 }
 
-/* Driver loop for tail-recursive calls */
-
-long TTreturn_value;
-
-long TTrun_machine(proc)
-     long (*proc) (void);
-{
-  while (proc != 0)
-    proc = (long (*) (void)) (*proc)();
-  return TTreturn_value;
-}
-
-
+/* ---------------------------------------- */
 /* 
    lookup_external_name(name, loc):
    - On success, stores location in "loc" and returns 1.
    - On failure, returns 0.
  */
-
-extern char *object_file;   /* specified via a command line argument */
-extern char *reloc_file;    /* dynamic loading will set this */
-
-char
-*get_reloc_file()
-{
-  if (reloc_file != NULL)
-    return(reloc_file);
-  if (object_file != NULL)
-    return(object_file);
-  else {
-    fprintf(stderr, "Object file not specified on command line\n");
-    return(NULL);
-  }
-}
 
 #if !defined(NLIST_HAS_N_NAME)
 #define n_name	n_un.n_name
@@ -334,7 +403,8 @@ lookup_external_name( char *name, long *location )
 #if defined(HAVE_DLOPEN)
   extern int lookup_dlsym(char*, long*);
   return lookup_dlsym(name, location);
-#else /* not HAVE_DLOPEN */
+#elif defined(HAVE_NLIST)
+  extern char *get_reloc_file();
   char *reloc_info_file;
   struct nlist name_list[2];
   int status;
@@ -358,10 +428,43 @@ lookup_external_name( char *name, long *location )
     *location = name_list[0].n_value;
     return 1;
   }
+#else
+  return 0;
 #endif /*! HAVE_DLOPEN */
 }
 
-/* temporary hack until this is added as a PreScheme primitive */
+extern char *object_file;   /* specified via a command line argument */
+extern char *reloc_file;    /* dynamic loading will set this */
+
+char *
+get_reloc_file()
+{
+  if (reloc_file != NULL)
+    return(reloc_file);
+  if (object_file != NULL)
+    return(object_file);
+  else {
+    fprintf(stderr, "Object file not specified on command line\n");
+    return(NULL);
+  }
+}
+
+/* ---------------------------------------- */
+/* Non-unix-specific things. */
+
+/* Driver loop for tail-recursive calls */
+
+long TTreturn_value;
+
+long TTrun_machine(proc)
+     long (*proc) (void);
+{
+  while (proc != 0)
+    proc = (long (*) (void)) (*proc)();
+  return TTreturn_value;
+}
+
+/* Temporary hack until this is added as a Pre-Scheme primitive */
 
 call_external_value( long proc, long nargs, long *args )
 {

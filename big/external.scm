@@ -40,18 +40,15 @@
 ;------------------------------------------------------------
 
 (define (get-external name)
-  (let ((name^@ (if (null-terminated? name)
-		    name
-		    (null-terminate name))))
-    (cond ((table-ref *the-external-table* name^@)
-	   => (lambda (x) x))
-	  (else
-	   (let ((new (maybe-external-lookup
-		       (make-external name^@ (make-code-vector 4 0)))))
-	     (if new
-		 (table-set! *the-external-table* name^@ new)
-		 (warn "External not found" name))
-	     new)))))
+  (cond ((table-ref *the-external-table* name)
+	 => (lambda (x) x))
+	(else
+	 (let ((new (maybe-external-lookup
+		     (make-external name (make-code-vector 4 0)))))
+	   (if new
+	       (table-set! *the-external-table* name new)
+	       (warn "External not found" name))
+	   new))))
 
 (define (maybe-external-lookup external)
   (call-with-current-continuation
@@ -69,13 +66,9 @@
 
 (define op/external-lookup (enum op external-lookup))
 
-(define (null-terminated? string)
-  (and (> (string-length string) 0)
-       (eq? (ascii->char 0)
-	    (string-ref string (- (string-length string) 1)))))
-
 (define (null-terminate str)
-  (string-append str (list->string (list (ascii->char 0)))))
+  ;; No longer necessary
+  (string-append str (string (ascii->char 0))))
 
 ;------------------------------------------------------------
 

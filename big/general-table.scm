@@ -49,7 +49,7 @@
 
 (define (make-assoc pred)
   (if (eq? pred eq?)
-      eq?-assoc
+      eq?-assoc        ;+++
       (lambda (thing alist)
 	(let loop ((alist alist))
 	  (cond ((not alist)
@@ -105,8 +105,8 @@
 (define (make-hash-table-ref assoc hash-function)
   (lambda (table key)
     (let* ((data (table-data table))
-	   (h (modulo (hash-function key)
-		      (vector-length data)))
+	   (h (remainder (hash-function key)
+			 (vector-length data)))
 	   (alist (vector-ref data h))
 	   (probe (assoc key alist)))
       (if probe (vector-ref probe 1) #f))))
@@ -114,8 +114,8 @@
 (define (make-hash-table-set! assoc hash-function)
   (lambda (table key value)
     (let* ((data (table-data table))
-	   (h (modulo (hash-function key)
-		      (vector-length data)))
+	   (h (remainder (hash-function key)
+			 (vector-length data)))
 	   (alist (vector-ref data h))
 	   (probe (assoc key alist)))
       (cond (probe
@@ -188,7 +188,8 @@
 
 (define (default-table-hash-function obj)
   (cond ((symbol? obj) (string-hash (symbol->string obj)))
-	((integer? obj) obj)
+	((integer? obj)
+	 (if (< obj 0) (- -1 obj) obj))
 	((char? obj) (+ 333 (char->integer obj)))
 	((eq? obj #f) 3001)
 	((eq? obj #t) 3003)

@@ -14,6 +14,10 @@ Recent changes are listed in file NEWS.
 
 Known bugs and things to do in the future are listed in TODO.
 
+Send mail to scheme-48-request@altdorf.ai.mit.edu to be put on a
+mailing list for announcements, discussion, bug reports, and bug
+fixes.
+
 -----
 
 The Scheme 48 root directory should contain the following subdirectories:

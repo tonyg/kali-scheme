@@ -37,7 +37,7 @@
 (define-syntax define-extended-number-type
   (syntax-rules ()
     ((define-extended-number-type ?type (?super ...)
-       (?constructor ?arg ...)
+       (?constructor ?arg1 ?arg ...)
        ?predicate
        (?field ?accessor)
        ...)
@@ -46,28 +46,36 @@
 					 (list ?super ...)
 					 '?type))
 	    (define ?constructor
-	      (if (equal? '(?arg ...)
-			  (extended-number-type-field-names ?type))
-		  (let ((k (+ (length '(?field ...)) 1)))
-		    (lambda (?arg ...)
-		      (let ((n (make-extended-number k #f))
-			    (i 1))
-			(extended-number-set! n 0 ?type)
-			(begin (extended-number-set! n i ?arg)
-			       (set! i (+ i 1)))
-			...
-			n)))
-		  (error "ill-formed DEFINE-EXTENDED-NUMBER-TYPE" '?type)))
+	      (let ((args '(?arg1 ?arg ...)))
+		(if (equal? args
+			    (extended-number-type-field-names ?type))
+		    (let ((k (+ (length args) 1)))
+		      (lambda (?arg1 ?arg ...)
+			(let ((n (make-extended-number k #f))
+			      (i 1))
+			  (extended-number-set! n 0 ?type)
+			  (extended-number-set! n 1 ?arg1)
+			  (begin (set! i (+ i 1))
+				 (extended-number-set! n i ?arg))
+			  ...
+			  n)))
+		    (error "ill-formed DEFINE-EXTENDED-NUMBER-TYPE" '?type))))
 	    (define (?predicate x)
 	      (and (extended-number? x)
 		   (eq? (extended-number-type x) ?type)))
-	    (define ?accessor
-	      (let ((i (+ 1 (posq '?field
-				  (extended-number-type-field-names ?type)))))
-		(lambda (n)
-		  (extended-number-ref n i))))
-	    ...))))
+	    (define-extended-number-accessors ?accessor ...)))))
 
+(define-syntax define-extended-number-accessors
+  (syntax-rules ()
+    ((define-extended-number-accessors ?accessor)
+     (define (?accessor n) (extended-number-ref n 1)))
+    ((define-extended-number-accessors ?accessor1 ?accessor2)
+     (begin (define (?accessor1 n) (extended-number-ref n 1))
+	    (define (?accessor2 n) (extended-number-ref n 2))))
+    ((define-extended-number-accessors ?accessor1 ?accessor2 ?accessor3)
+     (begin (define (?accessor1 n) (extended-number-ref n 1))
+	    (define (?accessor2 n) (extended-number-ref n 2))
+	    (define (?accessor3 n) (extended-number-ref n 3))))))
 
 (define-method &type-priority ((t :extended-number-type))
   (extended-number-type-priority t))

@@ -128,7 +128,7 @@
 ; inherited binding.
 
 (define (packages-seeing-location p name loc)
-  (let ((losers '()))
+  (let ((losers (list p)))
     (let recur ((p p))
       (if (and (not (memq p losers))
                (not (table-ref (package-definitions p) name)))
@@ -138,11 +138,12 @@
                      (if (interface-ref (structure-interface struct) name)
                          (walk-population recur (structure-clients struct))))
                    (package-clients p)))))
-    (cons p losers)))
+    losers))
 
 
 (define (set-location-forward! loser new name p)
-  (write `(forward ,loser ,new)) (newline)
+  (if *debug?*
+      (begin (write `(forward ,loser ,new)) (newline)))
   (for-each (lambda (q)
 	      (package-note-caching q name new))
 	    (packages-seeing-location p name loser))
