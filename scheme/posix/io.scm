@@ -305,37 +305,4 @@
 ; 7. Asynchronous Input and Output
 ;
 ; All optional
-;
-;----------------
-; Utilities
 
-(define (vector-for-each proc vector)
-  (do ((i 0 (+ i 1)))
-      ((= i (vector-length vector)))
-    (proc (vector-ref vector i))))
-
-(define (input-port->string port)
-  (let loop ((buffers '()))
-    (let ((buffer (make-string 1024)))
-      (let ((got (read-block buffer 0 1024 port)))
-	(if (or (eof-object? got)
-		(< got 1024))
-	    (apply string-append
-		   (reverse (if (eof-object? got)
-				buffers
-				(cons (substring buffer 0 got) buffers))))
-	    (loop (cons buffer buffers)))))))
-
-; Test for the above, with 1024 replaced by 4.
-;(do ((i 0 (+ i 1)))
-;    ((= i 20))
-;  (let ((s (substring "abcdefghijklmnopqrstuvwxyz" 0 i)))
-;    (if (not (string=? s (output->string (make-string-input-port s))))
-;        (error "missed at" i))))
-
-(define (input-port->list port)
-  (let loop ((list '()))
-    (let ((got (read port)))
-      (if (eof-object? got)
-	  (reverse list)
-	  (loop (cons got list))))))
