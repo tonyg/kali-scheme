@@ -3,36 +3,19 @@
 
 /* Implementation of the vm-extension opcode.  This is completely
    optional; nothing in the standard system uses these features.
-   If you have ANSI C but not POSIX support, try compiling with -DPOSIX=0.
 
    The vm-extension opcode is being phased out.  New code should use the
    external-call opcode to call C procedures.
-
-   floating point: POSIX.1, ANSI C (should we be linking with -lM or -lm?)
-   sprintf: POSIX.1, ANSI C
-   atof: POSIX.1, ANSI C
-
  */
 
-#ifndef POSIX
-#  define POSIX 2
-#endif
-
 #include <stdio.h>
-#include "sysdep.h"
-#include "scheme48.h"
-
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
 #include <signal.h>
-#include <unistd.h>		/* setuid & setgid */
 #include <errno.h>
-#include <netdb.h>		/* gethostbyname */  /* Kali code */
 
-#include <sys/types.h>
-#include <sys/wait.h>
-
+#include "scheme48.h"
 
 #define GREATEST_FIXNUM_VALUE ((1 << 29) - 1)
 #define LEAST_FIXNUM_VALUE (-1 << 29)
