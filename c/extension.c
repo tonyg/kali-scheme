@@ -129,7 +129,7 @@ s48_extended_vm (long key, s48_value value)
     get_float_arg(value, 0, x);
     sprintf(str, "%g", x);
     len = strlen(str);
-    if (len > S48_UNSAFE_STRING_LENGTH(get_arg(value,1)))
+    if (len > (size_t) S48_UNSAFE_STRING_LENGTH(get_arg(value,1)))
       /* unlikely but catastrophic */
       fprintf(stderr, "printing float: output too long: %s\n",
 	      str);
