@@ -448,11 +448,12 @@ DISTFILES = README COPYING INSTALL configure				\
 
 distname = $(RUNNABLE)-1.`cat $(srcdir)/build/minor-version-number`
 
-dist: build/initial.image
+dist: build/initial.image c/scheme48.h
 	distname=$(distname) &&						\
 	distfile=$(distdir)/$$distname.tgz &&				\
 	if [ -d $(distdir) ] &&						\
 	   [ -w $$distfile -o -w $(distdir) ]; then			\
+		cd $(srcdir) &&						\
 		rm -f $$distname &&					\
 		ln -s . $$distname &&					\
 		files='' &&						\
@@ -622,16 +623,17 @@ scheme/debug/mini1.image: $(VM) scheme/debug/mini.image
 
 c/scheme48.h: c/scheme48.h.in scheme/vm/interp/arch.scm 		\
 		scheme/vm/data/data.scm scheme/link/generate-c-header.scm
+	cd $(srcdir) &&							\
 	(echo ',bench';							\
 		echo ',batch';						\
 		echo ',load-package big-scheme';			\
 		echo ',open big-scheme';				\
-		echo ',load $(srcdir)/scheme/link/generate-c-header.scm';	\
+		echo ',load scheme/link/generate-c-header.scm';		\
 		echo "(make-c-header-file \"$@\"			\
-			  \"$(srcdir)/c/scheme48.h.in\"			\
-			  \"$(srcdir)/scheme/vm/interp/arch.scm\"	\
-			  \"$(srcdir)/scheme/vm/data/data.scm\"		\
-			  \"$(srcdir)/scheme/rts/record.scm\")"		\
+			  \"c/scheme48.h.in\"				\
+			  \"scheme/vm/interp/arch.scm\"			\
+			  \"scheme/vm/data/data.scm\"			\
+			  \"scheme/rts/record.scm\")"			\
 	) | $(RUNNABLE)
 
 # An old version of the above for legacy code.
