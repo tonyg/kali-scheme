@@ -527,7 +527,7 @@
 	(receive (before depth label after)
 	    (maybe-push-continuation depth frame cont node)
 	  (sequentially before
-			(push-all-but-last args+rest+proc depth frame #f)
+			(push-all-but-last args+rest+proc depth frame node)
 			;; Operand is number of non-final arguments
 			(using-optional-label (enum op apply)
 					      label
