@@ -544,7 +544,7 @@
   (export current-input-port current-output-port
 	  close-output-port close-input-port
 
-	  read-byte peek-byte write-byte
+	  read-byte peek-byte write-byte byte-ready?
 	  read-char peek-char
 	  char-ready?
 	  write-char
@@ -581,8 +581,13 @@
 	  make-buffered-output-port make-unbuffered-output-port
 
 	  make-port-handler
+	  port-handler-discloser port-handler-close
+	  port-handler-byte port-handler-char port-handler-block
+	  port-handler-ready? port-handler-force
+
 	  make-buffered-input-port-handler
 	  make-buffered-output-port-handler
+	  make-unbuffered-output-port-handler
 	 
 	  ;port-handler-buffer-proc     ; extended-ports
 	  default-buffer-size
