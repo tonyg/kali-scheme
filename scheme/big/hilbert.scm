@@ -19,6 +19,10 @@
   (height hilbert-height set-hilbert-height!)
   (root hilbert-root set-hilbert-root!))
 
+(define-record-discloser :hilbert
+  (lambda (h)
+    '(sparse-vector)))
+
 (define (make-sparse-vector)
   (make-hilbert 1 (make-vector hilbert-node-size #f)))
 
