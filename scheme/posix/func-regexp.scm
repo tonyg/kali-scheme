@@ -847,7 +847,7 @@
 	   (string? string))
       (if (empty-set? exp)
 	  #f
-	  (regexp-match (car (compile-exp exp)) string #f #t #t))
+	  (regexp-match (car (compile-exp exp)) string 0 #f #t #t))
       (call-error "invalid argument" any-match? exp string)))
   
 (define (exact-match? exp string)
@@ -855,7 +855,7 @@
 	   (string? string))
       (if (empty-set? exp)
 	  #f
-	  (let ((matches (regexp-match (car (compile-exp exp)) string #t #t #t)))
+	  (let ((matches (regexp-match (car (compile-exp exp)) string 0 #t #t #t)))
 	    (and matches
 		 (= 0 (match-start (car matches)))
 		 (= (string-length string) (match-end (car matches))))))
@@ -871,7 +871,7 @@
       (let* ((pair (compile-exp exp))
 	     (regexp (car pair))
 	     (match-flags (cdr pair))
-	     (matches (regexp-match regexp string #t #t #t)))
+	     (matches (regexp-match regexp string 0 #t #t #t)))
 	(if matches
 	    (reduce ((list% match (cdr matches))
 		     (list% flag match-flags))
