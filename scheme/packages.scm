@@ -446,7 +446,17 @@
 	    search-trees
 	    sicp
 	    sockets
+
+	    delete-neighbor-duplicates
+	    binary-searches
+	    sorted
+	    list-merge-sort
+	    vector-merge-sort
+	    vector-heap-sort
+	    vector-insertion-sort
+	    sorting
 	    sort
+
 	    sparse-vectors
 	    spatial
 	    strong

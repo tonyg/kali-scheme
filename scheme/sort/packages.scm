@@ -3,7 +3,7 @@
 
 ;;; The general sort package:
 
-(define-structure sort sort-interface
+(define-structure sorting sorting-interface
   (open scheme
 	list-merge-sort
 	vector-heap-sort

@@ -152,7 +152,7 @@
 ;;;
 ;;; vector-delete-neighbor-dups v = [start end] -> vector
 
-(define-interface sort-interface
+(define-interface sorting-interface
   (compound-interface
    sorted-interface
    (export

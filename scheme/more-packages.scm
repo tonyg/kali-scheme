@@ -106,8 +106,15 @@
   (files (big random)))
 
 (define-structure sort (export sort-list sort-list!)
-  (open scheme-level-2)
-  (files (big sort)))
+  (open scheme-level-2
+	vector-heap-sort list-merge-sort)
+  (begin
+    (define (sort-list l obj-<)
+      (let ((v (list->vector l)))
+	(heap-sort! obj-< v)
+	(vector->list v)))
+    (define (sort-list! l obj-<)
+      (list-merge-sort! obj-< l))))
 
 (define-structure pp (export p pretty-print define-indentation)
   (open scheme-level-2

@@ -313,7 +313,7 @@ inst-inc:
 	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(incdir)
 
 inst-misc:
-	for stub in env big opt misc link posix srfi; do		\
+	for stub in env big sort opt misc link posix srfi; do		\
 		for f in $(srcdir)/scheme/$$stub/*.scm; do		\
 			$(INSTALL_DATA) $$f $(LIB)/$$stub || exit 1;	\
 		done;							\
@@ -357,7 +357,7 @@ dirs:
 		echo "$(LIB) not a writable directory" >&2;		 \
 		exit 1;							 \
 	}
-	for dir in rts env big opt misc link posix srfi; do		  \
+	for dir in rts env big sort opt misc link posix srfi; do	  \
 		{ mkdir -p $(LIB)/$$dir && [ -w $(LIB)/$$dir ]; } || {	  \
 			echo "$(LIB)/$$dir not a writable directory" >&2; \
 			exit 1;						  \
@@ -402,7 +402,7 @@ image: $(INITIAL)
 tags:
 	etags scheme/vm/interp/arch.scm scheme/rts/*.scm scheme/bcomp/*.scm \
 	scheme/*.scm scheme/env/*.scm scheme/big/*.scm scheme/link/*.scm \
-	scheme/opt/*.scm scheme/debug/*.scm scheme/misc/*.scm
+	scheme/opt/*.scm scheme/debug/*.scm scheme/misc/*.scm scheme/sort/*.scm
 
 # --------------------
 # Distribution...
