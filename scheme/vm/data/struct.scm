@@ -62,8 +62,8 @@
   (let ((vector (maybe-make-d-vector+gc (enum stob vector)
 					len)))
     (if (false? vector)
-	(error "Out of space, unable to allocate")
-	vector)))
+	(error "Out of space, unable to allocate"))
+    vector))
 
 (define (vm-vector-fill! v val)
   (do ((i 0 (+ i 1)))

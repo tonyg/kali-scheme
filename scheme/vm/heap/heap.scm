@@ -45,7 +45,7 @@
 ;----------------
 
 (define (s48-initialize-heap heap-size image-size image-start)
-  (let* ((minimum-size (* 4 image-size))  ; two semi-spaces, won't totally thrash
+  (let* ((minimum-size (* 4 image-size)) ; two semi-spaces, won't totally thrash
 	 (heap-size (if (< heap-size minimum-size)
 			(begin
 			  (write-error-string "heap size ")
@@ -57,20 +57,20 @@
 			heap-size))
 	 (heap (allocate-memory (cells->a-units heap-size))))
     (if (null-address? heap)
-	(error "unable to allocate heap space")
-	(let ((semisize (cells->a-units (quotient heap-size 2))))
-	  (set! *newspace-begin* heap)
-	  (set! *newspace-end* (address+ *newspace-begin* semisize))
-	  (set! *oldspace-begin* *newspace-end*)
-	  (set! *oldspace-end* (address+ *oldspace-begin* semisize))
-	  (if (address= *oldspace-begin* image-start)
-	      (swap-spaces))
-	  (set! *oldspace-hp* *oldspace-begin*)
-	  (set! *oldspace-limit* *oldspace-end*)
-	  (set! s48-*hp*
-		(address+ *newspace-begin* (cells->a-units image-size)))
-	  (set! s48-*limit* *newspace-end*)
-	  *newspace-begin*))))
+	(error "unable to allocate heap space"))
+    (let ((semisize (cells->a-units (quotient heap-size 2))))
+      (set! *newspace-begin* heap)
+      (set! *newspace-end* (address+ *newspace-begin* semisize))
+      (set! *oldspace-begin* *newspace-end*)
+      (set! *oldspace-end* (address+ *oldspace-begin* semisize))
+      (if (address= *oldspace-begin* image-start)
+	  (swap-spaces))
+      (set! *oldspace-hp* *oldspace-begin*)
+      (set! *oldspace-limit* *oldspace-end*)
+      (set! s48-*hp*
+	    (address+ *newspace-begin* (cells->a-units image-size)))
+      (set! s48-*limit* *newspace-end*)
+      *newspace-begin*)))
 
 ; To write images we need to be able to undo the swapping.
 

@@ -462,11 +462,10 @@
 			(s48-allocate-traced+gc needed)
 			(s48-allocate-untraced+gc needed))))
 	(if (null-address? thing)
-	    (error "insufficient heap space for external allocation")
-	    (begin
-	      (store! thing (make-header type length-in-bytes))
-	      (address->stob-descriptor (address+ thing
-						  (cells->bytes stob-overhead)))))))
+	    (error "insufficient heap space for external allocation"))
+	(store! thing (make-header type length-in-bytes))
+	(address->stob-descriptor (address+ thing
+					    (cells->bytes stob-overhead)))))
 
   ))
 

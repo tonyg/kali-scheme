@@ -384,7 +384,9 @@
 			     (if (= wants total-arg-count)
 				 (begin
 				   (if (not (= 0 list-arg-count))
-				       (push-list list-args list-arg-count))
+				       (begin
+					 (push-list list-args list-arg-count)
+					 (unspecific))) ; avoid type problem
 				   (win skip total-arg-count))
 				 (lose))))
 	      ;; N-ary procedure.
@@ -720,7 +722,9 @@
 	(pop-continuation!)
 	(move-stack-arguments! arg-top stack-nargs)
 	(if (not (= 0 list-arg-count))
-	    (push-list list-args list-arg-count))
+	    (begin
+	      (push-list list-args list-arg-count)
+	      (unspecific))) ; avoid type problem
 	(goto continue bytes-used))
       (goto return-exception stack-nargs list-args)))
 

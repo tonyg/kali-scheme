@@ -382,7 +382,9 @@
 				     (get-error-string status key))))
 	   (port-lose (lambda (reason status port)
 			(if (error? (close-output-port port))
-			    (error-message "Unable to close image file"))
+			    (begin
+			      (error-message "Unable to close image file")
+			      (unspecific))) ; avoid type problem
 			(lose reason status))))
       (receive (port status)
 	  (open-output-file (extract-string filename))

@@ -184,8 +184,9 @@
   (if (and (<= 0 os-index)
 	   (< os-index *number-of-channels*)
 	   (channel? (os-index->channel os-index)))
-      (close-channel! (os-index->channel os-index)))
-  (unspecific))
+      (begin
+	(close-channel! (os-index->channel os-index))
+	(unspecific)))) ; CLOSE-CHANNEL! returns an integer
 
 ; Called to close an OS channel when we have been unable to make the
 ; corresponding Scheme channel.
@@ -209,7 +210,8 @@
   (if (vm-string? id)
       (write-error-string (extract-string id))
       (write-error-integer (extract-fixnum index)))
-  (write-error-newline))
+  (write-error-newline)
+  (unspecific))
 
 ; Return a list of the open channels, for the opcode of the same name.
 ; Not that it's important, but the list has the channels in order of
@@ -351,4 +353,5 @@
 	(write-error-string (extract-string id)))
     (write-error-string " ")
     (write-error-integer (extract-fixnum (channel-os-index channel)))
-    (write-error-newline)))
+    (write-error-newline)
+    (unspecific)))

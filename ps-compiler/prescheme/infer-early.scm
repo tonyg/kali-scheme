@@ -270,25 +270,15 @@
 				(or (not (null? (cdr exps)))
 				    return?)))))))
 
-; It would be nice if we could just try to unify the two arms and return
-; type/unit if we lost, but unification has side-effects.
-
 (define-inference-rule 'if
   (lambda (node depth return?)
-    (let* ((args (cdr (node-form node)))
-	   (true-type (infer-any-type (cadr args) depth return?))
-	   (false-type (infer-any-type (caddr args) depth return?)))
-      (unify! (infer-type (car args) depth) type/boolean node)
-      (cond ((eq? true-type type/null)
-	     false-type)
-	    ((eq? false-type type/null)
-	     true-type)
-	    (else
-	     (unify! true-type false-type node)
-	     (if (or (eq? true-type type/unit)
-		     (eq? false-type type/unit))
-		 type/unit
-		 true-type))))))
+    (let ((args (cdr (node-form node))))
+      (let ((test-type (infer-type (car args) depth))
+	    (true-type (infer-any-type (cadr args) depth return?))
+	    (false-type (infer-any-type (caddr args) depth return?)))
+	(unify! test-type type/boolean node)
+	(unify! true-type false-type node)
+	true-type))))
 
 ; Unions haven't been completely implemented yet.
 ;

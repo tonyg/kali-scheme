@@ -109,9 +109,11 @@
   (lambda (proc table)
     (natural-for-each-while (lambda (index)
 			      (let loop ((entry (hash-table-ref table index)))
-				(if (and (not (vm-eq? entry false))
-					 (proc entry))
-				    (loop (link->value (foo-next entry))))))
+				(cond
+				 ((vm-eq? entry false) #t)
+				 ((not (proc entry)) #f)
+				 (else
+				  (loop (link->value (foo-next entry)))))))
 			    hash-table-slots)))
 
 ; Copy a table, retaining all entries.
@@ -183,16 +185,18 @@
 (define (table-relocator foo-next set-foo-next!)
   (lambda (table delta)
     (if (vm-vector? table)
-	(natural-for-each
-	 (lambda (index)
-	   (let ((bucket (hash-table-ref table index)))
-	     (if (not (false? bucket))
-		 (let ((bucket (+ bucket delta)))
-		   (vm-vector-set! table index (value->link bucket))
-		   (let loop ((entry bucket))
-		     (let ((next (link->value (foo-next entry))))
-		       (if (not (false? next))
-			   (let ((next (+ next delta)))
-			     (set-foo-next! entry (value->link next))
-			     (loop next)))))))))
-	 hash-table-slots))))
+	(begin
+	  (natural-for-each
+	   (lambda (index)
+	     (let ((bucket (hash-table-ref table index)))
+	       (if (not (false? bucket))
+		   (let ((bucket (+ bucket delta)))
+		     (vm-vector-set! table index (value->link bucket))
+		     (let loop ((entry bucket))
+		       (let ((next (link->value (foo-next entry))))
+			 (if (not (false? next))
+			     (let ((next (+ next delta)))
+			       (set-foo-next! entry (value->link next))
+			       (loop next)))))))))
+	   hash-table-slots)
+	  (unspecific))))) ; avoid type problem

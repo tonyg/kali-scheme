@@ -215,9 +215,13 @@
 (define (read-lost message port)
   (error-message message)
   (if (error? *status*)
-      (error-message (error-string *status*)))
+      (begin
+	(error-message (error-string *status*))
+	(unspecific))) ; avoid type problem
   (if (error? (close-input-port port))
-      (error-message "Error closing image file"))
+      (begin
+	(error-message "Error closing image file")
+	(unspecific)))
   -1)
 
 ; ABCD => DCBA

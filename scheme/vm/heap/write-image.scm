@@ -218,7 +218,8 @@
 	       (end (address+ start (header-length-in-a-units header))))
 	  (do ((addr start (address1+ addr)))
 	      ((address= addr end))
-	    (trace-image-value (fetch addr)))))))
+	    (trace-image-value (fetch addr)))
+	  (unspecific)))))
 
 ; The exported binding table does not contain normal pointers.  This does
 ; the appropriate magic for finding the objects it contains.

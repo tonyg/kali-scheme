@@ -239,16 +239,14 @@
 			   (stack-cont-continuation cont))
 	  (check-continuation-contents contents-pointer
 				       code-pointer
-				       mask-size))
-      0)))		; Argh! PreScheme compiler problem.
+				       mask-size)))))
 
 (define (check-locations start end)
   (let loop ((addr start))
     (if (address< addr end)
 	(begin
 	  (check-descriptor (fetch addr))
-	  (loop (address1+ addr)))))
-  0)
+	  (loop (address1+ addr))))))
 
 					; -1 -2        frame size
 (define gc-mask-size-offset -3)		; -3           gc mask size

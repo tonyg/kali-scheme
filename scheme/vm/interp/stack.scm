@@ -458,7 +458,9 @@
 
 (define (maybe-write-template template not-first? out)
   (if not-first?
-      (write-string " <- " out))
+      (begin
+	(write-string " <- " out)
+	(unspecific))) ; avoid type error
   (if (template? template)
       (let ((name (template-name template)))
 	(cond ((fixnum? name)
