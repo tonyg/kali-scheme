@@ -52,6 +52,10 @@
   (let ((c (peek-char in)))
     (cond ((char=? c #\newline) (read-char in) #t)
 	  ((char-whitespace? c) (read-char in) (mini-load in))
+	  ((char=? c #\")
+	   (let ((filename (read in)))
+	     (load filename)
+	     (mini-load in)))
 	  (else
 	   (let ((filename (read-string in char-whitespace?)))
 	     (load filename)
