@@ -27,9 +27,12 @@
 ;  index        - a two byte index into the current template or environment
 ;  small-index  - a one byte index into the current template or environment
 ;  offset       - two bytes giving an offset into the current instruction stream
+;  offset-      - same thing, negative offset
 ;  stob         - a byte specifying a type for a stored object
 ;  env-data     - environment specification with one-byte values
 ;  big-env-data - environment specification with two-byte values
+;  moves-data   - specification of stack shuffle moves
+;  big-moves-data - specification of stack shuffle moves
 ;  0 1 2 ...    - the number of non-instruction-stream arguments (some
 ;                 instructions take a variable number of arguments; the first
 ;                 number is the argument count implemented by the VM)
@@ -74,6 +77,8 @@
   (pop)			         ; pop top of stack into *val*
   (pop-n	  two-bytes)     ; remove the top N values from the stack
 				 ; leaving *val* unchanged
+  (push-n	  two-bytes)     ; allocate space for N values on stack
+				 ; leaving *val* unchanged
   (stack-ref      byte)	         ; index'th element of stack into *val*
   (push+stack-ref byte)	         ; preceded by a push
   (stack-ref+push byte)	         ; followed by a push
@@ -85,6 +90,9 @@
   (push+stack-indirect byte byte) ; preceded by a push
   (stack-indirect+push byte byte) ; followed by a push
   (big-stack-indirect two-bytes two-bytes)
+
+  (stack-shuffle! moves-data)	 ; shuffle stack elements around
+  (big-stack-shuffle! big-moves-data)	 ; shuffle stack elements around with two-byte offsets
 
   (current-cont)	         ; copy *cont* to *val*, use WITH-CONTINUATION
 			         ; to use copied continuation
@@ -117,7 +125,7 @@
 				 ; nargs is needed for interrupt handling
   (jump-if-false offset 1)	 ; boolean in *val*
   (jump          offset)
-  (jump-back     offset)	 ; same, but subtract the offset
+  (jump-back     offset-)	 ; same, but subtract the offset
   (computed-goto byte offset 1)	 ; jump using delta specified by *val*
 				 ; defaults to instruction after deltas (*EXP*)
 

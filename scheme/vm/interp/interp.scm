@@ -566,6 +566,10 @@
   (add-cells-to-stack! (- (code-offset 0)))
   (goto continue 2))
 
+(define-opcode push-n
+  (add-cells-to-stack! (code-offset 0))
+  (goto continue 2))
+
 (define-opcode stack-ref
   (goto continue-with-value
 	(stack-ref (code-byte 0))
@@ -593,6 +597,31 @@
 (define-opcode big-stack-set!
   (stack-set! (code-offset 0) *val*)
   (goto continue 2))
+
+(define-opcode stack-shuffle!
+  (push *val*)
+  (let ((n-moves (code-byte 0)))
+    (do ((move 0 (+ 1 move)))
+	((= move n-moves))
+      (let ((index (+ 1 (* 2 move))))
+	(stack-set! (code-byte (+ 1 index))
+		    (stack-ref (code-byte index)))))
+    (goto continue-with-value
+	  (pop)
+	  (+ 1 (* 2 n-moves)))))
+
+(define-opcode big-stack-shuffle!
+  (push *val*)
+  (let ((n-moves (code-offset 0)))
+    (do ((move 0 (+ 1 move)))
+	((= move n-moves))
+      (let ((index (+ 2 (* 4 move))))
+	(stack-set! (code-offset (+ 2 index))
+		    (stack-ref (code-offset index)))))
+    (goto continue-with-value
+	  (pop)
+	  (+ 2 (* 4 n-moves)))))
+
 
 ;----------------
 ; LAMBDA
@@ -723,8 +752,7 @@
 		  (code-offset 0)))
   (goto interpret *code-pointer*))
 
-; Same thing except the other way.  The bytecode compiler does not make use
-; of this (it compiles all loops as calls).
+; Same thing except the other way.
 
 (define-opcode jump-back
   (set! *code-pointer*
