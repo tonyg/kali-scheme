@@ -322,6 +322,7 @@
 	    defpackage
 	    filenames
 	    flat-environments
+	    frames
 	    inline
 	    meta-types
 	    interfaces
