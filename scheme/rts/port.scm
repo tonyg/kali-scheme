@@ -136,7 +136,13 @@
 ; WRITE-STRING is a front for WRITE-BLOCK.
 
 (define (write-string string port)
-  (write-block string 0 (string-length string) port))
+  (write-block (string->byte-vector string) 0 (string-length string) port))
+
+(define (string->byte-vector string)
+  (let* ((size (string-length string))
+	 (buffer (make-byte-vector size 0)))
+    (copy-bytes! string 0 buffer 0 size)
+    buffer))
 
 ; CHAR-READY? for output ports.
 

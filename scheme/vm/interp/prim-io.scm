@@ -172,13 +172,10 @@
 ; Utilities for the above two opcodes.
 
 (define (buffer? thing)
-  (or (vm-string? thing)
-      (code-vector? thing)))
+  (code-vector? thing))
 
 (define (buffer-length buffer)
-  (if (vm-string? buffer)
-      (vm-string-length buffer)
-      (code-vector-length buffer)))
+  (code-vector-length buffer))
 
 (define (extract-channel channel)
   (extract-fixnum (channel-os-index channel)))
