@@ -128,7 +128,24 @@ s48_run_machine(long (*proc) (void))
 unsigned char *
 ps_error_string(long the_errno)
 {
-  return((unsigned char *)strerror(the_errno));
+  DWORD id = the_errno;
+  /* the VM is responsible for copying this */
+  static char buf[512];
+
+  for (;;)
+    {
+      if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
+			NULL, /* lpSource */
+			(DWORD) id,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			buf, sizeof(buf)-1,
+			NULL)) /* arguments ... */
+	return buf;
+      else
+	/* risky, but we assume some amount of sanity on the side of
+	   the Windows implementors---haha */
+	id = GetLastError();
+    }
 }
 
 /* Getting the length of a file. */
