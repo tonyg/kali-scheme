@@ -21,19 +21,19 @@
 
 (define (exception-continuation? thing)
   (and (continuation? thing)
-       (= 11 (real-continuation-pc thing))
+       (= 13 (real-continuation-pc thing))
        (let ((code (real-continuation-code thing)))
 	 (and (= 1				; one return value
-		 (code-vector-ref code 12))
+		 (code-vector-ref code 14))
 	      (= (enum op return-from-exception)
-		 (code-vector-ref code 13))))))
+		 (code-vector-ref code 15))))))
 
 (define (call-with-values-continuation? thing)
   (and (continuation? thing)
-       (= 11 (real-continuation-pc thing))
+       (= 13 (real-continuation-pc thing))
        (= call-with-values-protocol
 	  (code-vector-ref (real-continuation-code thing)
-			   12))))
+			   14))))
 
 (define (continuation-pc c)
   (if (exception-continuation? c)
