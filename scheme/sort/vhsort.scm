@@ -28,7 +28,8 @@
     (let* ((vi (vector-ref v i))
 	   (first-leaf (quotient (+ start end) 2)) ; Can fixnum overflow.
 	   (final-k (let lp ((k i))
-		      (if (>= k first-leaf) k ; Leaf, so done.
+		      (if (>= k first-leaf)
+			  k ; Leaf, so done.
 			  (let* ((k*2-start (+ k (- k start))) ; Don't overflow.
 				 (child1 (+ 1 k*2-start))
 				 (child2 (+ 2 k*2-start))

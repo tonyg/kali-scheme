@@ -29,7 +29,8 @@
       ((>= i end))
     (let ((val (vector-ref v i)))
       (vector-set! v (let lp ((j i))		; J is the location of the
-		       (if (<= j start) start	; "hole" as it bubbles down.
+		       (if (<= j start)
+			   start	; "hole" as it bubbles down.
 			   (let* ((j-1 (- j 1))
 				  (vj-1 (vector-ref v j-1)))
 			     (cond ((elt< val vj-1)

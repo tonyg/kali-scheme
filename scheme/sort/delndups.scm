@@ -50,7 +50,8 @@
 		   (if (pair? xs)
 		       (let ((x1  (car xs))
 			     (x2+ (cdr xs)))
-			  (if (= x0 x1) (recur x0 x2+) ; Loop, actually.
+			  (if (= x0 x1)
+			      (recur x0 x2+) ; Loop, actually.
 			      (cons x1 (recur x1 x2+))))
 		       xs))))
       lis))
@@ -66,7 +67,8 @@
 		    (if (pair? xs)
 			(let ((x1  (car xs))
 			      (x2+ (cdr xs)))
-			  (if (= x0 x1) (recur x0 x2+)
+			  (if (= x0 x1)
+			      (recur x0 x2+)
 			      (let ((ans-tail (recur x1 x2+)))
 				(if (eq? ans-tail x2+) xs
 				    (cons x1 ans-tail)))))
@@ -169,7 +171,8 @@
 		       (if (< i end)
 			   (let ((y (vector-ref v i))
 				 (nexti (+ i 1)))
-			     (if (elt= x y) (recur x nexti j)
+			     (if (elt= x y)
+				 (recur x nexti j)
 				 (let ((ansvec (recur y nexti (+ j 1))))
 				   (vector-set! ansvec j y)
 				   ansvec)))
@@ -192,16 +195,19 @@
 	 ;; back at index i), we scan until we find the first dup.
 	 (let skip ((j start) (vj (vector-ref v start)))
 	   (let ((j+1 (+ j 1)))
-	     (if (>= j+1 end) end
+	     (if (>= j+1 end)
+		 end
 		 (let ((vj+1 (vector-ref v j+1)))
-		   (if (not (elt= vj vj+1)) (skip j+1 vj+1)
+		   (if (not (elt= vj vj+1))
+		       (skip j+1 vj+1)
 
 		       ;; OK -- j & j+1 are dups, so we're committed to moving
 		       ;; data around. In lp2, v[start,j] is what we've done;
 		       ;; v[k,end) is what we have yet to handle.
 		       (let lp2 ((j j) (vj vj) (k (+ j 2)))
 			 (let lp3 ((k k))
-			   (if (>= k end) (+ j 1) ; Done.
+			   (if (>= k end)
+			       (+ j 1) ; Done.
 			       (let ((vk (vector-ref v k))
 				     (k+1 (+ k 1)))
 				 (if (elt= vj vk)

@@ -91,10 +91,12 @@
 		(y (car b)) (b b))
       (if (elt< y x)
 	  (cons y (let ((b (cdr b)))
-		    (if (pair? b) (recur x a (car b) b)
+		    (if (pair? b)
+			(recur x a (car b) b)
 			a)))
 	  (cons x (let ((a (cdr a)))
-		    (if (pair? a) (recur (car a) a y b)
+		    (if (pair? a)
+			(recur (car a) a y b)
 			b))))))
 
   ;; (grow s ls ls2 u lw) -> [a la unused]
@@ -340,13 +342,15 @@
 	  ;; B starts the answer list.
 	  ((< (car b) (car a))
 	   (let ((next-b (cdr b)))
-	     (if (null? next-b) (set-cdr! b a)
+	     (if (null? next-b)
+		 (set-cdr! b a)
 		 (scan-b b a (car a) next-b (car next-b))))
 	   b)
 
 	  ;; A starts the answer list.
 	  (else (let ((next-a (cdr a)))
-		  (if (null? next-a) (set-cdr! a b)
+		  (if (null? next-a)
+		      (set-cdr! a b)
 		      (scan-a a next-a (car next-a) b (car b))))
 		a))))
 

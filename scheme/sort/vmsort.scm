@@ -4,10 +4,6 @@
 ;;; more copyright information.
 ;;; Olin Shivers 10/98.
 
-;;; NEEDS A FINAL POLISH PASS; NOT READY FOR RELEASE.
-;;; It works fine, but, e.g., the aux functions should be integrated inside
-;;; the main top-level function to hide them.
-
 ;;; Exports:
 ;;; (vector-merge  < v1 v2 [start1 end1 start2 end2])          -> vector
 ;;; (vector-merge! < v v1 v2 [start0 start1 end1 start2 end2]) -> unspecific
@@ -83,7 +79,8 @@
 			      (vblit v1 j i1 end1)))
 			(let ((j (+ j 1)))
 			  (vector-set! v i x)
-			  (if (< j end1) (vblit v2 k i1 end2)
+			  (if (< j end1)
+			      (vblit v2 k i1 end2)
 			      (lp i1 j (vector-ref v1 j) k y))))))))))
 
 
@@ -154,7 +151,8 @@
 		      (vblit v1 j n+1 r1)))
 		(let ((j (+ j 1)))
 		  (vector-set! target n x)
-		  (if (< j r1) (lp n+1 j (vector-ref v1 j) k y)
+		  (if (< j r1)
+		      (lp n+1 j (vector-ref v1 j) k y)
 		      (if (not v2=target?) (vblit v2 k n+1 r2))))))))))
   
 
@@ -164,9 +162,11 @@
   ;; Precondition: l < r.
   (define (getrun v l r)
     (let lp ((i (+ l 1))  (x (vector-ref v l)))
-      (if (>= i r) (- i l)
+      (if (>= i r)
+	  (- i l)
 	  (let ((y (vector-ref v i)))
-	    (if (elt< y x) (- i l)
+	    (if (elt< y x)
+		(- i l)
 		(lp (+ i 1) y))))))
   
   ;; RECUR: Sort V0[L,L+LEN) for some LEN where 0 < WANT <= LEN <= (R-L).
