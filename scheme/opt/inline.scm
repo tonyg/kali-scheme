@@ -87,9 +87,7 @@
 ; I'm aware that this is pedantic.
 
 (define (unused-name env name)
-  (let ((sym (if (generated? name)
-		 (generated-name name)
-		 name)))
+  (let ((sym (name->symbol name)))
     (do ((i 0 (+ i 1))
 	 (name sym
 	       (string->symbol (string-append (symbol->string sym)
