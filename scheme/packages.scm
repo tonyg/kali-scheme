@@ -433,6 +433,7 @@
 	    nondeterminism
 	    package-commands-internal
 	    package-mutation
+            parse-bytecode
 	    placeholders
 	    pp
 	    ;profile
