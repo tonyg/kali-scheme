@@ -6,24 +6,39 @@ scalar values.  More information on Unicode can be found at
 \urlhd{http://www.unicode.org/}{the Unicode web
   site}{\code{http://www.unicode.org/}}.
 
-\section{Character range}
+\section{Characters and their codes}
 
-The R$^5$RS procedures \code{char->integer} and \code{integer->char}
-convert a character to its scalar value and vice versa.  Note that the
-Unicode scalar value range is
+Scheme~48 internally represents characters as Unicode scalar values.
+The \code{unicode} structure contains procedures for converting
+between characters and scalar values:
+%
+\begin{protos}
+\proto{char->scalar-value}{ char}{integer}
+\proto{scalar-value->char}{ integer}{char}
+\proto{scalar-value?}{ integer}{boolean}
+\end{protos}
+%
+\code{Char->scalar-value} returns the scalar value of a character, and
+\code{scalar-value->char} converts in the other direction.
+\code{Scalar-value->char} signals an error if passed an integer that is
+not a scalar value.
+
+Note that the Unicode scalar value range is
 %
 \begin{displaymath}
 \left[0,\#x\mathit{D7FF}\right] \cup \left[\#x\mathit{E000}, \#x\mathit{10FFFF}\right]
 \end{displaymath}
 %
-Scheme~48 signals an error if a program applies \texttt{integer->char}
-to an integer outside of this range.  In particular, this excludes the
-surrogates, which UTF-16 uses to encode scalar values with two 16-bit
-words.  Note also that this representation differs from that of Java,
-which uses UTF-16 code units as the character
-representation---Scheme~48 effectively uses UTF-32, and is thus in
-line with other Scheme implementations and the current Unicode
-proposal for R$^6$RS.
+In particular, this excludes the surrogates, which UTF-16 uses to
+encode scalar values with two 16-bit words.  Note that this
+representation differs from that of Java, which uses UTF-16 code units
+as the character representation---Scheme~48 effectively uses UTF-32,
+and is thus in line with other Scheme implementations and the current
+Unicode proposal for R$^6$RS.
+
+The R$^5$RS procedures \code{char->integer} and \code{integer->char}
+are synonyms for \code{char->scalar-value} and
+\code{scalar-value->char}, respectively.
 
 \section{Character classification and case mappings}
 
