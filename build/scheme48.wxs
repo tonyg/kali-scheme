@@ -168,8 +168,8 @@
 
     <!-- schedule the building of scheme48.image -->
     <InstallExecuteSequence>
-      <Custom Action="build_usual_image" After="InstallFinalize"><![CDATA[InstallMode <> "Remove"]]></Custom>
-      <Custom Action="generate_go" After="InstallFinalize"><![CDATA[InstallMode <> "Remove"]]></Custom>
+      <Custom Action="build_usual_image" After="InstallFinalize"><![CDATA[INSTALLMODE <> "Remove"]]></Custom>
+      <Custom Action="generate_go" After="InstallFinalize"><![CDATA[INSTALLMODE <> "Remove"]]></Custom>
     </InstallExecuteSequence>
 
     <!--
@@ -418,7 +418,7 @@
           <Text>[DlgTitleFont]Re&amp;pair</Text>
         </Control>
         <Control Id="RepairButton" Type="PushButton" X="50" Y="89" Width="38" Height="38" ToolTip="Repair Installation" Icon="yes" FixedSize="yes" IconSize="32" Text="[RepairIcon]">
-          <Publish Property="InstallMode" Value="Repair">1</Publish>
+          <Publish Property="INSTALLMODE" Value="Repair">1</Publish>
           <Publish Property="Progress1" Value="Repairing">1</Publish>
           <Publish Property="Progress2" Value="repaires">1</Publish>
           <Publish Event="NewDialog" Value="VerifyRepairDlg">1</Publish>
@@ -427,7 +427,7 @@
           <Text>[DlgTitleFont]&amp;Remove</Text>
         </Control>
         <Control Id="RemoveButton" Type="PushButton" X="50" Y="138" Width="38" Height="38" ToolTip="Remove Installation" Icon="yes" FixedSize="yes" IconSize="32" Text="[RemoveIcon]">
-          <Publish Property="InstallMode" Value="Remove">1</Publish>
+          <Publish Property="INSTALLMODE" Value="Remove">1</Publish>
           <Publish Property="Progress1" Value="Removing">1</Publish>
           <Publish Property="Progress2" Value="removes">1</Publish>
           <Publish Event="NewDialog" Value="VerifyRemoveDlg">1</Publish>
@@ -558,11 +558,11 @@
         </Control>
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="[BannerBitmap]" />
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="[ButtonText_Back]">
-          <Publish Event="NewDialog" Value="MaintenanceTypeDlg"><![CDATA[InstallMode = "Repair"]]></Publish>
-          <Publish Event="NewDialog" Value="BrowseDlg"><![CDATA[InstallMode = "Typical"]]></Publish>
+          <Publish Event="NewDialog" Value="MaintenanceTypeDlg"><![CDATA[INSTALLMODE = "Repair"]]></Publish>
+          <Publish Event="NewDialog" Value="BrowseDlg"><![CDATA[INSTALLMODE = "Typical"]]></Publish>
         </Control>
         <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>The [Wizard] is ready to begin the [InstallMode] installation</Text>
+          <Text>The [Wizard] is ready to begin the [INSTALLMODE] installation</Text>
         </Control>
         <Control Id="Text" Type="Text" X="25" Y="70" Width="320" Height="20">
           <Text>Click Install to begin the installation. If you want to review or change any of your installation settings, click Back. Click Cancel to exit the wizard.</Text>
@@ -959,7 +959,7 @@
     <Property Id="ButtonText_Browse">Br&amp;owse</Property>
     <Property Id="ButtonText_Next">&amp;Next &gt;</Property>
     <Property Id="ButtonText_Back">&lt; &amp;Back</Property>
-    <Property Id="InstallMode">Typical</Property>
+    <Property Id="INSTALLMODE">Typical</Property>
     <Property Id="Progress2">installs</Property>
     <Property Id="IAgree">No</Property>
     <Property Id="Wizard">Setup Wizard</Property>
