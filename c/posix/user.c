@@ -145,16 +145,22 @@ static s48_value
 enter_user_data(struct passwd *data)
 {
   s48_value sch_data = S48_FALSE;
-  S48_DECLARE_GC_PROTECT(1);
+  s48_value temp = S48_UNSPECIFIC;
+  S48_DECLARE_GC_PROTECT(2);
 
-  S48_GC_PROTECT_1(sch_data);
+  S48_GC_PROTECT_2(sch_data, temp);
 
   sch_data = s48_make_record(posix_user_info_type_binding);
-  S48_UNSAFE_RECORD_SET(sch_data, 0, s48_enter_string(data->pw_name));
-  S48_UNSAFE_RECORD_SET(sch_data, 1, s48_enter_uid(data->pw_uid));
-  S48_UNSAFE_RECORD_SET(sch_data, 2, s48_enter_gid(data->pw_gid));
-  S48_UNSAFE_RECORD_SET(sch_data, 3, s48_enter_string(data->pw_dir));
-  S48_UNSAFE_RECORD_SET(sch_data, 4, s48_enter_string(data->pw_shell));
+  temp = s48_enter_string(data->pw_name);
+  S48_UNSAFE_RECORD_SET(sch_data, 0, temp);
+  temp = s48_enter_uid(data->pw_uid);
+  S48_UNSAFE_RECORD_SET(sch_data, 1, temp);
+  temp = s48_enter_gid(data->pw_gid);
+  S48_UNSAFE_RECORD_SET(sch_data, 2, temp);
+  temp = s48_enter_string(data->pw_dir);
+  S48_UNSAFE_RECORD_SET(sch_data, 3, temp);
+  temp = s48_enter_string(data->pw_shell);
+  S48_UNSAFE_RECORD_SET(sch_data, 4, temp);
   
   S48_GC_UNPROTECT();
   
@@ -166,20 +172,25 @@ enter_group_data(struct group *data)
 {
   s48_value sch_data = S48_FALSE;
   s48_value members = S48_FALSE;
-  S48_DECLARE_GC_PROTECT(2);
+  s48_value temp = S48_UNSPECIFIC;
+  S48_DECLARE_GC_PROTECT(3);
   int length;
   char **names;
 
-  S48_GC_PROTECT_2(sch_data, members);
+  S48_GC_PROTECT_3(sch_data, members, temp);
 
   for(length = 0, names = data->gr_mem; *names != NULL; length++, names++);
   members = s48_make_vector(length, S48_FALSE);
-  for(length = 0, names = data->gr_mem; *names != NULL; length++, names++)
-    S48_UNSAFE_VECTOR_SET(members, length, s48_enter_string(*names));
+  for(length = 0, names = data->gr_mem; *names != NULL; length++, names++) {
+    temp = s48_enter_string(*names);
+    S48_UNSAFE_VECTOR_SET(members, length, temp);
+  }
 
   sch_data = s48_make_record(posix_group_info_type_binding);
-  S48_UNSAFE_RECORD_SET(sch_data, 0, s48_enter_string(data->gr_name));
-  S48_UNSAFE_RECORD_SET(sch_data, 1, s48_enter_gid(data->gr_gid));
+  temp = s48_enter_string(data->gr_name);
+  S48_UNSAFE_RECORD_SET(sch_data, 0, temp);
+  temp = s48_enter_gid(data->gr_gid);
+  S48_UNSAFE_RECORD_SET(sch_data, 1, temp);
   S48_UNSAFE_RECORD_SET(sch_data, 2, members);
   
   S48_GC_UNPROTECT();

@@ -157,9 +157,10 @@ posix_get_groups(void)
   int status, count, i;
   gid_t *grouplist;
   s48_value groups = S48_NULL;
-  S48_DECLARE_GC_PROTECT(1);
+  s48_value temp = S48_UNSPECIFIC;
+  S48_DECLARE_GC_PROTECT(2);
   
-  S48_GC_PROTECT_1(groups);
+  S48_GC_PROTECT_2(groups, temp);
   
   count = getgroups(0, (gid_t *)NULL);
 
@@ -174,8 +175,10 @@ posix_get_groups(void)
     free(grouplist);
     s48_raise_os_error(errno); }
 
-  for(i = count - 1; i > -1; i--)
-    groups = s48_cons(s48_enter_gid(grouplist[i]), groups);
+  for(i = count - 1; i > -1; i--) {
+    temp = s48_enter_gid(grouplist[i]);
+    groups = s48_cons(temp, groups);
+  }
     
   S48_GC_UNPROTECT();
 

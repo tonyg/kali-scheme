@@ -262,20 +262,15 @@ posix_waitpid(void)
     }
     else {
       s48_value sch_pid = lookup_pid(c_pid);
-      S48_DECLARE_GC_PROTECT(1);
-
-      S48_GC_PROTECT_1(sch_pid);
 
       if (sch_pid != S48_FALSE) {
 	if (WIFEXITED(stat))
 	  S48_UNSAFE_RECORD_SET(sch_pid, 1, s48_enter_fixnum(WEXITSTATUS(stat)));
 	else
 	  S48_UNSAFE_RECORD_SET(sch_pid, 2, enter_signal(WTERMSIG(stat)));
-	S48_GC_UNPROTECT();
+
 	return sch_pid;
       }
-      else
-	S48_GC_UNPROTECT();
     }
   }
 }
@@ -432,19 +427,25 @@ int
 s48_os_signal_pending(void)
 {
   int i;
-  s48_value interrupt_list = S48_NULL;
   block_interrupts();
 
   if (next_interrupt == 0) {
     allow_interrupts();
     return FALSE; }
   else {
+    s48_value interrupt_list = S48_NULL;
+    S48_DECLARE_GC_PROTECT(1);
+    
+    S48_GC_PROTECT_1(interrupt_list);
+
     /* turn the queue into a scheme list and preserve the order */
     for (i = next_interrupt; i > 0 ; i--)
       interrupt_list = s48_cons (s48_enter_fixnum (interrupt_queue  [i - 1]),
 				 interrupt_list);
     s48_set_os_signals(interrupt_list);
-		      
+    
+    S48_GC_UNPROTECT();
+
     next_interrupt = 0;
     allow_interrupts();
     return TRUE; }
@@ -557,8 +558,11 @@ posix_initialize_named_signals(void)
 static s48_value
 make_unnamed_signal(s48_value fx_signal)
 {
-  s48_value weak;
+  s48_value weak = S48_UNSPECIFIC;
   s48_value unnamed = s48_make_record(posix_unnamed_signal_type_binding);
+  S48_DECLARE_GC_PROTECT(1);
+
+  S48_GC_PROTECT_1(weak);
 
   S48_UNSAFE_RECORD_SET(unnamed,
 			0,
@@ -570,7 +574,9 @@ make_unnamed_signal(s48_value fx_signal)
   weak = s48_make_weak_pointer(unnamed);
 
   unnamed_signals = s48_cons(weak, unnamed_signals);
-  
+
+  S48_GC_UNPROTECT();
+
   return unnamed;
 }
 
