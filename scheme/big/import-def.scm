@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Two macros:
 ;
@@ -49,7 +49,7 @@
 	  (%lambda (rename 'lambda))
 	  (%call-imported-binding   (rename 'call-imported-binding))
 	  (%lookup-imported-binding (rename 'lookup-imported-binding))
-	  (%binding 		(rename 'binding)))
+	  (%binding 		    (rename 'binding)))
       (let ((external-id (if (null? (cdddr exp))
 			     (list->string (map (lambda (ch)
 						  (if (char=? ch #\-)

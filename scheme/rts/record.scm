@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ;;;; Records
 
@@ -6,11 +6,6 @@
 ; or by a procedure returned by record-constructor.  A record-type is a
 ; record that describes a type of record.  At the end of the file we create
 ; a record type that describes record types.
-
-; Every record has a record type (another record) in the first slot.
-
-(define (record-type r)
-  (record-ref r 0))
 
 ; We number the record types for debugging purposes.
 

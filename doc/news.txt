@@ -2,6 +2,43 @@
 
 Recent changes to Scheme 48.
 
+5/21/01  (version 0.55)
+	 Additions:
+	  The inspector is more efficient in dealing with large vectors, long
+	   lists and circular lists.
+         Bug fixes:
+	  Added an error handler to command-levels.scm to avoid bad interaction
+	   between ,break-on-warnings and the handler-raised undefined-variables
+	   warning.
+	  Fixed endless recursion occuring when loading floatnums after
+	   creating inexact rationals.
+	  Made ,reset throw away the old value stack
+	  build/filenames.scm now loads the interface files so we no longer get
+	   the plethora of "undefined variable" warnings.
+	  The flat-environment optimizer is now idempotent.
+	  Fixed a problem with single-argument receivers as in
+	   (call-with-values ... (lambda (x) ...))
+	  Minor edits to the documentation.
+	  Fixed a problem that occured when (optimize auto-integrate)
+	   was used in the presence of definition-producing macros.
+	  Changes to the socket code to work around an oddity in FreeBSD.
+	  Added the os-{...-}name functions to the Posix interface.
+	  The socket code uses socklen_t instead of ints in the appropriate
+	   places (the configure script defines socklen_t if necessary).
+	   (thanks to Martin Gasbichler).
+	 Changes:
+	  Replaced all uses of FLUID-SET! with fluids bound to cells.
+	  Renamed WRITE-ONE-LINE (which did nothing of the sort) to
+	   LIMIT-OUTPUT; the old name is still there for compatibility.
+	  Added vertical tab (ascii->char 11) to ascii-whitespaces to make
+	   our definition of whitespace the same as POSIX's.
+	  The procedures in the records and records-internal structures are
+	   now in three structures: 'records' has the low-level, vector-like
+	   primitives, 'record-types' has everything relating to the type
+	   records, and 'records-internal' has the leftovers.
+	  Removed many of the uses of STRUCTURE-REF (because the manual
+	   doesn't mention it).
+	  
 3/20/01  (version 0.54)
          Additions:
 	  SET and UNSET commands for modifying switch values. The following
@@ -21,6 +58,8 @@ Recent changes to Scheme 48.
 	   instead.
 	  Removed the .notify rule.
 	 Changes:
+	  Bignums are now handled in C code borrowed from MITScheme (thanks
+	   to Martin Gasbichler).
 	  Replaced ,levels <i> with ,reset <i> and added ,resume <i>.
 	  The command interpreter loads ,OPENed packages without asking.
 	   Do `,set ask-before-loading' to get the old behavior.
@@ -220,7 +259,7 @@ Recent changes to Scheme 48.
 
 8/12/94  (versions 0.38-0.39)
          ,profile <command> prints out profiling information
-         An interrupt is raised after ever GC; the default handler checks
+         An interrupt is raised after every GC; the default handler checks
            to see if some reasonable amount of storage was reclaimed.
          Some of the standard Scheme procedures, including LENGTH, FOR-EACH,
            VECTOR, and ASSQ, are now significantly faster.

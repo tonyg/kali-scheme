@@ -2,120 +2,70 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:23 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:16 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Accessing Scheme data from C</TITLE>
+<TITLE>Scheme 48 Manual -- Dynamic loading</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_49.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_55.html">Compatibility</A> | Next: <A HREF="s48manual_57.html">Calling Scheme functions from C</A>
-<H2>Accessing Scheme data from C</H2>
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_51.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_55.html">Adding external modules to the <TT>Makefile</TT></A> | Next: <A HREF="s48manual_57.html">Compatibility</A>
+<H2>Dynamic loading</H2>
 
-<P>The C header file <CODE>scheme48.h</CODE> provides
- access to Scheme&nbsp;48 data structures
- (for compatibility, the old <CODE>scheme48.h</CODE> file is available
- as <CODE>old-scheme48.h</CODE>).
-The type <CODE>s48_value</CODE> is used for Scheme values.
-When the type of a value is known, such as the integer returned
- by <CODE>vector-length</CODE> or the boolean returned by <CODE>pair?</CODE>,
- the corresponding C procedure returns a C value of the appropriate
- type, and not a <CODE>s48_value</CODE>.
-Predicates return <CODE>1</CODE> for true and <CODE>0</CODE> for false.
-<H3><A NAME="1">Constants</A></H3>
+<P>External code can be loaded into a running Scheme&nbsp;48 process
+ and C object-file bindings can be dereferenced at runtime and
+ their values called
+ (although not all versions of Unix support all of this).
+The required Scheme functions are in the structure <CODE>dynamic-externals</CODE>.
+<UL><LI><CODE>(dynamic-load<I>&nbsp;string</I>)</CODE><A NAME="1">&nbsp;</A>
+</UL>
+<CODE>Dynamic-load</CODE> loads the named file into the current
+ process, raising an exception if the file cannot be found or if dynamic
+ loading is not supported by the operating system.
+The file must have been compiled and linked appropriately.
+For Linux, the following commands compile <CODE>foo.c</CODE> into a
+ file <CODE>foo.so</CODE> that can be loaded dynamically.
+<BLOCKQUOTE><PRE>
+% gcc -c -o foo.o foo.c
+% ld -shared -o foo.so foo.o
+</PRE></BLOCKQUOTE>
+<UL><LI><CODE>(get-external<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>external</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(external?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(external-name<I>&nbsp;external</I>)&nbsp;-&gt;&nbsp;<I>string</I></CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(external-value<I>&nbsp;external</I>)&nbsp;-&gt;&nbsp;<I>byte-vector</I></CODE><A NAME="5">&nbsp;</A>
+</UL>
+These functions give access to values bound in the current process, and
+ are used for retrieving values from dynamically-loaded files.
+<CODE>Get-external</CODE> returns an <I>external</I> object that contains the
+ value of <CODE><I>name</I></CODE>, raising an exception if there is no such
+ value in the current process.
+<CODE>External?</CODE> is the predicate for externals, and
+<CODE>external-name</CODE> and <CODE>external-value</CODE> return the name and
+ value of an external.
+The value is returned as byte vector of length four (on 32-bit
+ architectures).
+The value is that which was extant when <CODE>get-external</CODE> was
+ called.
+The following two functions can be used to update the values of
+ externals.
+<UL><LI><CODE>(lookup-external<I>&nbsp;external</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="6">&nbsp;</A>
+<LI><CODE>(lookup-all-externals<I></I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="7">&nbsp;</A>
+</UL>
+<CODE>Lookup-external</CODE> updates the value of <CODE><I>external</I></CODE> by looking up its
+ name in the current process, returning <CODE>#t</CODE> if the name is bound
+ and <CODE>#f</CODE> if it is not.
+<CODE>Lookup-all-externals</CODE> calls <CODE>lookup-external</CODE> on all extant
+ externals, returning <CODE>#f</CODE> any are unbound.
+<UL><LI><CODE>(call-external<I>&nbsp;external&nbsp;arg<I><sub>0</sub></I>&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="8">&nbsp;</A>
+</UL>
+An external whose value is a C procedure can be called using
+ <CODE>call-external</CODE>.
+See
 
-<P>The following macros denote Scheme constants:
-<UL><LI><CODE>S48_FALSE</CODE> is <CODE>#f</CODE>.
-<LI><CODE>S48_TRUE</CODE> is <CODE>#t</CODE>.
-<LI><CODE>S48_NULL</CODE> is the empty list.
-<LI><CODE>S48_UNSPECIFIC</CODE>] is a value used for functions which have no
-  meaningful return value
- (in Scheme this value returned by the nullary procedure <CODE>unspecific</CODE>
- in the structure <CODE>util</CODE>).
-<LI><CODE>S48_EOF</CODE> is the end-of-file object
- (in Scheme this value is returned by the nullary procedure <CODE>eof-object</CODE>
- in the structure <CODE>i/o-internal</CODE>).
-</UL>
-<H3><A NAME="2">Converting values</A></H3>
-<P>The following functions convert values between Scheme and C
- representations.
-The `extract' ones convert from Scheme to C and the `enter's go the other
- way.
-<UL><LI><CODE>unsigned char s48_extract_char(s48_value)</CODE>
-<LI><CODE>char *    s48_extract_string(s48_value)</CODE>
-<LI><CODE>char *    s48_extract_byte_vector(s48_value)</CODE>
-<LI><CODE>long      s48_extract_integer(s48_value)</CODE>
-<LI><CODE>double    s48_extract_double(s48_value)</CODE>
-<LI><CODE>s48_value s48_enter_char(unsigned char)</CODE>
-<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>s48_value s48_enter_string(char *)</CODE></td> <td align=right>(may GC)</td></tr></table>
-<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>s48_value s48_enter_byte_vector(char *, long)</CODE></td> <td align=right>(may GC)</td></tr></table>
-<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>s48_value s48_enter_integer(long)</CODE></td> <td align=right>(may GC)</td></tr></table>
-<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>s48_value s48_enter_double(double)</CODE></td> <td align=right>(may GC)</td></tr></table>
-</UL>
-<P>The values returned by <CODE>s48_extract_string</CODE> and
- <CODE>s48_extract_byte_vector</CODE> point to the actual
- storage used by the string or byte vector; they are valid only until the next
- <A HREF="s48manual_58.html">garbage collection</A>.
-<P>The second argument to <CODE>s48_enter_byte_vector</CODE> is the length of
- returned byte vector.
-<P><CODE>s48_enter_integer()</CODE> needs to allocate storage when
- its argument is too large to fit in a Scheme&nbsp;48 fixnum.
-In cases where the number is known to fit within a fixnum (currently 30 bits
- including the sign), the following procedures can be used.
-These have the disadvantage of only having a limited range, but
- the advantage of never causing a garbage collection.
-<UL><LI><CODE>long      s48_extract_fixnum(s48_value)</CODE>
-<LI><CODE>s48_value s48_enter_fixnum(long)</CODE>
-<LI><CODE>long      S48_MAX_FIXNUM_VALUE</CODE>
-<LI><CODE>long      S48_MIN_FIXNUM_VALUE</CODE>
-</UL>
-<P>An error is signalled if <CODE>s48_extract_fixnum</CODE>'s argument
- is not a fixnum or if the argument to <CODE>s48_enter_fixnum</CODE> is less than
- <CODE>S48_MIN_FIXNUM_VALUE</CODE> or greater than <CODE>S48_MAX_FIXNUM_VALUE</CODE>
- (<I>-2<sup>29</sup></I> and <I>2<sup>29</sup>-1</I> in the current system).
-<H3><A NAME="3">C versions of Scheme procedures</A></H3>
-<P>The following macros and procedures are C versions of Scheme procedures.
-The names were derived by replacing `<CODE>-</CODE>' with `<CODE>_</CODE>',
- `<CODE>?</CODE>' with `<CODE>p</CODE>', and dropping `<CODE>!</CODE>.
-<UL><LI><CODE>int       S48_EQ_P(s48_value)</CODE>
-<LI><CODE>int       S48_CHAR_P(s48_value)</CODE>
-<LI><CODE>int       S48_INTEGER_P(s48_value)</CODE>
-</UL>
-<UL><LI><CODE>int       S48_PAIR_P(s48_value)</CODE>
-<LI><CODE>s48_value S48_CAR(s48_value)</CODE>
-<LI><CODE>s48_value S48_CDR(s48_value)</CODE>
-<LI><CODE>void      S48_SET_CAR(s48_value, s48_value)</CODE>
-<LI><CODE>void      S48_SET_CDR(s48_value, s48_value)</CODE>
-<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>s48_value s48_cons(s48_value, s48_value)</CODE></td> <td align=right>(may GC)</td></tr></table>
-<LI><CODE>long      s48_length(s48_value)</CODE> 
-</UL>
-<UL><LI><CODE>int       S48_VECTOR_P(s48_value)</CODE> 
-<LI><CODE>long      S48_VECTOR_LENGTH(s48_value)</CODE> 
-<LI><CODE>s48_value S48_VECTOR_REF(s48_value, long)</CODE> 
-<LI><CODE>void      S48_VECTOR_SET(s48_value, long, s48_value)</CODE> 
-<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>s48_value s48_make_vector(long, s48_value)</CODE></td> <td align=right>(may GC)</td></tr></table>
-</UL>
-<UL><LI><CODE>int       S48_STRING_P(s48_value)</CODE> 
-<LI><CODE>long      S48_STRING_LENGTH(s48_value)</CODE> 
-<LI><CODE>char      S48_STRING_REF(s48_value, long)</CODE> 
-<LI><CODE>void      S48_STRING_SET(s48_value, long, char)</CODE> 
-<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>s48_value s48_make_string(long, char)</CODE></td> <td align=right>(may GC)</td></tr></table>
-</UL>
-<UL><LI><CODE>int       S48_SYMBOL_P(s48_value)</CODE> 
-<LI><CODE>s48_value s48_SYMBOL_TO_STRING(s48_value)</CODE> 
-</UL>
-<UL><LI><CODE>int       S48_BYTE_VECTOR_P(s48_value)</CODE> 
-<LI><CODE>long      S48_BYTE_VECTOR_LENGTH(s48_value)</CODE> 
-<LI><CODE>char      S48_BYTE_VECTOR_REF(s48_value, long)</CODE> 
-<LI><CODE>void      S48_BYTE_VECTOR_SET(s48_value, long, int)</CODE> 
-<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>s48_value s48_make_byte_vector(long, int)</CODE></td> <td align=right>(may GC)</td></tr></table>
-</UL>
+the section on <A HREF="s48manual_54.html">calling C functions from Scheme</A>
+for more information.
+<P>In some versions of Unix retrieving a value from the current
+ process may require a non-trivial amount of computation.
+We recommend that a dynamically-loaded file contain a single initialization
+ procedure that creates shared bindings for the values exported by the file.
 <P>
   
-Previous: <A HREF="s48manual_55.html">Compatibility</A> | Next: <A HREF="s48manual_57.html">Calling Scheme functions from C</A></BODY></HTML>
+Previous: <A HREF="s48manual_55.html">Adding external modules to the <TT>Makefile</TT></A> | Next: <A HREF="s48manual_57.html">Compatibility</A></BODY></HTML>

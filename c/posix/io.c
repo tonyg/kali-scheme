@@ -19,7 +19,7 @@
 #include "fd-io.h"
 
 extern void		s48_init_posix_io(void);
-static s48_value	posix_dup(s48_value channel, s48_value mode_change_p),
+static s48_value	posix_dup(s48_value channel, s48_value new_mode),
 			posix_dup2(s48_value channel, s48_value new_fd),
 			posix_pipe(void),
 			posix_close_on_exec_p(s48_value channel),
@@ -67,15 +67,18 @@ s48_init_posix_io(void)
 static s48_value
 posix_dup(s48_value channel, s48_value new_mode)
 {
-  int		new_fd, old_fd;
+  int		new_fd, old_fd, flags;
   long 		status;
+  s48_value	old_mode;
   s48_value 	new_channel;
 
   if (!S48_CHANNEL_P(channel) ||
       S48_CHANNEL_STATUS(channel) == S48_CHANNEL_STATUS_CLOSED)
-    s48_raise_argtype_error(channel);
+    s48_raise_argument_type_error(channel);
   
   old_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
+  old_mode = S48_UNSAFE_CHANNEL_STATUS(channel);
+
   RETRY_OR_RAISE_NEG(new_fd, dup(old_fd));
   
   status = s48_set_channel_os_index(channel, new_fd);
@@ -84,9 +87,12 @@ posix_dup(s48_value channel, s48_value new_mode)
     ps_close_fd(new_fd);		/* retries if interrupted */
     s48_raise_scheme_exception(s48_extract_fixnum(status), 1, channel); }
 
-  new_channel = s48_add_channel((new_mode == S48_FALSE) ?
-				  S48_UNSAFE_CHANNEL_STATUS(channel) :
-				  new_mode,
+  if (new_mode == S48_CHANNEL_STATUS_OUTPUT
+      && old_mode == S48_CHANNEL_STATUS_INPUT) {
+    RETRY_OR_RAISE_NEG(flags, fcntl(new_fd, F_GETFL));
+    RETRY_OR_RAISE_NEG(status, fcntl(new_fd, F_SETFL, flags | O_NONBLOCK)); }
+
+  new_channel = s48_add_channel((new_mode == S48_FALSE) ? old_mode : new_mode,
 				S48_UNSAFE_CHANNEL_ID(channel),
 				old_fd);
 
@@ -118,10 +124,10 @@ posix_dup2(s48_value channel, s48_value new_fd)
 
   if (!S48_CHANNEL_P(channel) ||
       S48_CHANNEL_STATUS(channel) == S48_CHANNEL_STATUS_CLOSED)
-    s48_raise_argtype_error(channel);
+    s48_raise_argument_type_error(channel);
 
   if (!S48_FIXNUM_P(new_fd) || new_fd < 0)
-    s48_raise_argtype_error(new_fd);
+    s48_raise_argument_type_error(new_fd);
 
   old_c_fd = s48_extract_fixnum(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
   new_c_fd = s48_extract_fixnum(new_fd);
@@ -178,6 +184,7 @@ posix_pipe()
     ps_close_fd(fildes[1]);		/* retries if interrupted */
     s48_raise_scheme_exception(s48_extract_fixnum(in_channel), 0); }
 
+  RETRY_OR_RAISE_NEG(status, fcntl(fildes[1], F_SETFL, O_NONBLOCK));
   out_channel = s48_add_channel(S48_CHANNEL_STATUS_OUTPUT, id, fildes[1]);
 
   if (!S48_CHANNEL_P(out_channel)) {
@@ -198,7 +205,7 @@ posix_close_on_exec_p(s48_value channel)
 
   if (!S48_CHANNEL_P(channel) ||
       S48_CHANNEL_STATUS(channel) == S48_CHANNEL_STATUS_CLOSED)
-    s48_raise_argtype_error(channel);
+    s48_raise_argument_type_error(channel);
   
   c_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
 
@@ -215,7 +222,7 @@ posix_set_close_on_exec(s48_value channel, s48_value value)
 
   if (!S48_CHANNEL_P(channel) ||
       S48_CHANNEL_STATUS(channel) == S48_CHANNEL_STATUS_CLOSED)
-    s48_raise_argtype_error(channel);
+    s48_raise_argument_type_error(channel);
 
   c_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
   
@@ -240,7 +247,7 @@ posix_io_flags(s48_value channel, s48_value options)
 
   if (!S48_CHANNEL_P(channel) ||
       S48_CHANNEL_STATUS(channel) == S48_CHANNEL_STATUS_CLOSED)
-    s48_raise_argtype_error(channel);
+    s48_raise_argument_type_error(channel);
 
   c_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
 

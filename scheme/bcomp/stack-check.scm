@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This determines the maximum stack depth needed by a code vector.
 
@@ -170,7 +170,6 @@
 	   (code-vector-ref cv pc))
 	(begin
 	  (code-vector-set! cv (- pc 1) (enum op push-local0))
-	  (code-vector-set! cv pc (code-vector-ref cv (+ pc 1)))
 	  (stack-max cv
 		     (+ pc 2)
 		     (+ depth 1)

@@ -149,6 +149,11 @@ to load a file containing module definitions.
 If no \cvar{command} is given, the \code{config} package becomes the
  execution package for future commands.
 
+\item \code{,user [\cvar{command}]} \\
+    This is similar to the {\tt ,config}.  It
+    moves to or executes a command in the user package (which is the
+    default package when the \hack{} command processor starts).
+
 \end{description}
 
 \section{Debugging commands}
@@ -172,7 +177,7 @@ If no \cvar{command} is given, the \code{config} package becomes the
     going from top to bottom.
 
 \item \code{,run \cvar{exp}}\\
-    Evaluates \cvar{exp}, printing the result(s) and making them
+    Evaluate \cvar{exp}, printing the result(s) and making them
     (or a list of them, if \cvar{exp} returns multiple results)
     the new focus object.
     The \code{,run} command is useful when writing
@@ -231,7 +236,7 @@ They can be set using the \code{,set} and \code{,unset} commands.
     The second argument defaults to \code{on}.
     If the second argument is \code{?} the value of \cvar{switch} is
     is displayed and not changed.
-    Doing \code{,switch ?} will display a list of the switches and
+    Doing \code{,set ?} will display a list of the switches and
     their current values.
 
 \item \code{,unset \cvar{switch}}\\
@@ -246,6 +251,8 @@ The switches are as follows:
     Scheme~48 to exit immediately with a non-zero exit status.  Also,
     the command processor doesn't print prompts.  Batch mode is
     off by default.
+
+% JAR says: disable auto-levels by default??
 
 \item \code{auto-levels}\\
     Enables or disables the automatic pushing of a new command level when
@@ -262,8 +269,8 @@ The switches are as follows:
     With \code{auto-levels} disabled one must issue a
     \code{,push} command immediately
     following an error in order to retain the error continuation for
-    debugging purposes; otherwise the continuation is lost after the
-    next evaluation request.  If you don't know anything about the
+    debugging purposes; otherwise the continuation is lost as soon as
+    the focus object changes.  If you don't know anything about the
     available debugging tools, then levels might as well be disabled.
 
 \item \code{inspect-focus-value}\\
@@ -317,14 +324,16 @@ has more information.
 
 There is a data inspector available via the \code{,inspect} and
  \code{,debug} commands or by setting the \code{inspect-focus-value} switch.
+The inspector is particularly useful with procedures, continuations,
+ and records.
 The command processor can be taken out of inspection mode by
  using the \code{q} command, by unsetting the \code{inspect-focus-value} switch,
- or by going to a command level where the the \code{inspect-focus-value} is not
+ or by going to a command level where the \code{inspect-focus-value} is not
  set.
-When in inspection mode input that begins with
+When in inspection mode, input that begins with
   a letter or digit is read as a command, not as an expression.
 To see the value of a variable or number, do \code{(begin \cvar{exp})}
-  or use the \code{,run \var{exp}} command.
+  or use the \code{,run \cvar{exp}} command.
 
 In inspection mode the command processor prints out a
  menu of selectable components for the current focus object.
@@ -385,9 +394,6 @@ Multiple selection commands (\code{u}, \code{d}, and menu indexes)
 %or an error in the inspector, \code{\#\#} is the last object that was being
 %inspected.
 
-Inspection mode is particularly useful with procedures, continuations,
-and records.
-
 All ordinary commands are available when in inspection mode.
 Similarly, the inspection commands can be used when not in inspection
  mode.
@@ -423,7 +429,7 @@ A command \code{,\cvar{foo}} is executed by applying the value of
  the (suitably parsed) command arguments.
 
 \begin{description}
-\item \code{,exec [\cvar{command}]}
+\item \code{,exec [\cvar{command}]}\\
    Evaluate \cvar{command} in the \code{exec} package.
    For example, use
 \begin{example}
@@ -440,7 +446,8 @@ The required argument types are as follows:
 \item other names and identifiers should be symbols
 \item expressions should be s-expressions
 \item commands (as for \code{,config} and \code{,exec} itself)
- should be lists of the form \code(\cvar{command-name} \cvar{argument} ...)
+ should be lists of the form
+ \code{(\cvar{command-name} \cvar{argument} \cvar{...})}
  where \cvar{command-name} is a symbol.
 \end{itemize}
 
@@ -514,6 +521,9 @@ The file \code{scheme/vm/load-vm.scm} in the source directory contains an
     These commands refer to future compilations only, not to procedures
     that already exist.  To have any effect, they must be done before
     programs are loaded.  The default is to keep all four types.
+% JAR says: ,keep tabulate  - puts debug data in a table that can be
+% independently  flushed (how? -RK) or even written out and re-read later!
+% (how? -RK)
 
 \item \code{,flush}\\
     The flush command with no argument deletes the database of names
@@ -555,6 +565,7 @@ The following commands are useful when debugging multithreaded programs:
     in the first place).
     \cvar{Exp} should evaluate to an integer which is then
     returned to the calling program.
+% JAR says: interaction with ,build ?
 
 %\item \code{,spawn \cvar{exp} [\cvar{name}]}\\
 %    Starts a new thread running \cvar{exp} on next command level down.
@@ -595,8 +606,9 @@ The following commands are useful when debugging multithreaded programs:
 \end{example}
     will cause \code{(load "/usr/gjc/foo.scm")} to have the same effect as
     \code{(load "/zu/gjc/foo.scm")}.
+% JAR says: Useful with the module system!  "virtual directories"
 
-\item \code{,from-file \cvar{filename} \cvar{form} \ldots ,end}\\
+\item \code{,from-file \cvar{filename} \cvar{form} \ldots\ ,end}\\
     This is used by the \code{cmuscheme48} Emacs library to indicate the file
     from which the \cvar{form}s came.  \cvar{Filename} is then used by the
     command processor to determine the package in which the \cvar{form}s

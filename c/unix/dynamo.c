@@ -9,8 +9,11 @@
 #include <unistd.h>
 #include "sysdep.h"
 #include "scheme48.h"
-#include <dlfcn.h>
-
+#if defined(HAVE_DLOPEN)
+ #include <dlfcn.h>
+#else
+#include "fake/dlfcn.h"
+#endif
 
 #if	defined(RTLD_NOW)
 #define	DLOPEN_MODE	RTLD_NOW

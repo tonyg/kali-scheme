@@ -2,18 +2,6 @@
 
 Here are some remarks to complement what's in the INSTALL file.
 
------
-
-When running "make", don't worry if the ".notify" target fails.  Its
-only purpose is to send an email message to
-scheme-48-notifications@martigny.ai.mit.edu, so that we can get a
-rough idea of how much Scheme 48 is being used and by whom.  We
-promise not to use your name or email address for any commercial
-purpose.  If you don't want us to know, just do "make -t .notify"
-first. 
-     
------
-
 Customizing the installation
 
   1. If you don't believe in configure scripts, or don't have a

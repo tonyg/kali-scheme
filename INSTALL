@@ -1,8 +1,37 @@
+A typical installation would proceed as follows: download the .tgz
+file to your /tmp directory, and then issue the following shell
+commands:
+
+  cd /usr/local/src
+  gunzip </tmp/scheme48-0.55.tgz | tar xf -
+  cd scheme48-0.55
+  ./configure
+  make install
+
+Then simply do
+
+  scheme48
+
+to run it.
+
+This assumes that the logged-in user has write access to the
+/usr/local directory tree, and that /usr/local/bin is in the Scheme 48
+user's PATH.  If not, replace "cd /usr/local/src" with "cd DIR" where
+DIR is the directory into which to extract the scheme48 source tree,
+issue the command "make" instead of "make install" to build it, and
+
+  ./go
+
+to run it.
+
+What follows is generic information about the 'configure' script.
+For installation information specific to Scheme 48, see doc/install.txt.
+
+----------------
+
    This is a generic INSTALL file for utilities distributions.
 If this package does not come with, e.g., installable documentation or
 data files, please ignore the references to them below.
-
-   [For information specific to Scheme 48, see doc/install.txt.]
 
    The `configure' shell script attempts to guess correct values for
 various system-dependent variables used during compilation, and

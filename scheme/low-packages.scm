@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Things provided by the byte compiler / VM, together with a few
@@ -18,6 +18,7 @@
 		    (vm-exposure vm-exposure-interface)
 		    (ascii ascii-interface)
 		    (locations locations-interface)
+		    (records records-interface)
 		    (cells cells-interface)
 		    (channels channels-interface)
 		    (ports ports-interface)

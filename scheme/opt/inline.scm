@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Once we know that we want something to be inlined, the following things
 ; actually makes use of the fact.  For procedures for which all
@@ -9,18 +9,21 @@
   (let* ((free (find-node-usages node))
 	 (env (package->environment package))
 	 (qualified-free (map (lambda (name)
-				(name->qualified name env))
+				(cons name
+				      (name->qualified name env)))
 			      free)))
-    (let ((form (clean-node node (map cons free qualified-free)))
-	  (aux-names (map (lambda (name)
-			    (do ((name name (qualified-parent-name name)))
+    (let ((form (clean-node node '()))
+	  (aux-names (map (lambda (pair)
+			    (do ((name (cdr pair) (qualified-parent-name name)))
 				((not (qualified? name))
 				 name)))
 			  qualified-free)))
       (make-transform (inline-transform form aux-names)
 		      package		;env ?
 		      type
-		      `(inline-transform ',form ',aux-names)
+		      `(inline-transform ',(remove-bindings form
+							    qualified-free)
+					 ',aux-names)
 		      name))))
 
 ; This routine is obligated to return an S-expression.
@@ -48,7 +51,7 @@
 	 (let ((args (cdr (node-form node))))
 	   `(loophole ,(type->sexp (car args) #t)
 		      ,(clean-node (cadr args) env))))
-	;; LETREC had better not occur, since we ain't prepared for it
+	;; LETREC had better not occur, since we are not prepared for it
 	((pair? (node-form node))
 	 (cons (operator-name (node-operator node))
 	       (map (lambda (subnode)
@@ -76,10 +79,10 @@
 ; node itself.
 
 (define (clean-lookup env node)
-  (cdr (assq (if (binding? (node-ref node 'binding))
-		 (node-form node)
-		 node)
-	     env)))
+  (let ((binding (node-ref node 'binding))) 
+    (if (binding? binding)
+	`(package-name ,(node-form node) ,binding)
+	(cdr (assq node env)))))
   
 ; I'm aware that this is pedantic.
 
@@ -95,6 +98,30 @@
 		  (not (eq? name (cdr pair))))
 		env)
 	 name))))
+
+; We need to remove the binding records from the form that will be used for
+; reification.  A better alternative might be for packages to provide dumpable
+; names as stand-ins for bound generated names.  The problem is that packages
+; use EQ? tables for names and the linker does not preserve EQ-ness for
+; generated names.  Instead, we remember the path and do the lookup that way.
+; This doesn't work if the generated name is itself bound.
+;  If the environment in the generated name were the package itself, instead
+; of its environment wrapper, the linker could probably do the right thing
+; with all package-level generated names.
+
+(define (remove-bindings form free)
+  (let label ((form form))
+    (if (pair? form)
+	(case (car form)
+	  ((package-name)
+	   (cdr (assq (cadr form) free))) ; just the name
+	  ((quote) form)
+	  ((lambda)
+	   `(lambda ,(cadr form)
+	      ,(label (caddr form))))
+	  (else
+	   (map label form)))
+	form)))
 
 ;----------------
 ; ST stands for substitution template (cf. MAKE-SUBSTITUTION-TEMPLATE)
@@ -151,6 +178,10 @@
 	   (case (car st)
 	     ((quote)
 	      (make-node (get-operator 'quote) st))
+	     ((package-name)
+	      (let ((node (make-node operator/name (cadr st))))
+		(node-set! node 'binding (caddr st))
+		node))
 	     ((call)
 	      (make-node (get-operator 'call)
 			 (map label (cdr st))))

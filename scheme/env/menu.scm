@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This breaks abstractions left and right.
 
@@ -30,7 +30,7 @@
 (define (present-more-menu)
   (let* ((menu (current-menu))
 	 (position (menu-position)))
-    (if (> (length menu)
+    (if (> (menu-length menu)
 	   (+ *menu-limit* position))
 	(begin
 	  (set-menu-position! (- (+ position
@@ -40,60 +40,105 @@
 	(write-line "There is no more." (command-output)))))
 
 ;----------------
-; A menu is a list of lists (<name-or-#f> <thing>).
+; These two are used by the inspector.
 
-(define (menu-length)
-  (length (current-menu)))
+(define (current-menu-length)
+  (menu-length (current-menu)))
 
-(define (menu-ref n)
-  (cadr (list-ref (current-menu) n)))
+(define (current-menu-ref n)
+  (cadar (menu-refs (current-menu) n 1)))
+
+; The menu ADT has two functions, length and refs.  A menu is a list
+; (<length> <refs-function>)
+
+(define (menu-length menu)
+  (car menu))
+
+; Return a list of the next COUNT items starting from N, where each items is
+; a list (<name-or-#f> <thing>).  The returned list may be shorter than N if
+; there aren't N possible items, or longer, for no reason at all.
+
+(define (menu-refs menu n count)
+  ((cadr menu) n count))
+
+(define (list->menu items)
+  (list (length items)
+	(lambda (i count)
+	  (list-tail items i))))
+
+(define (long-list->menu contents length)
+  (list length
+	(lambda (start count)
+	  (do ((i 0 (+ i 1))
+	       (contents (list-tail contents start) (cdr contents))
+	       (r '() (cons (list #f (car contents)) r)))
+	      ((or (= i count)
+		   (null? contents))
+	       (reverse r))))))
+
+(define (indexed->menu thing length ref)
+  (list length
+	(lambda (start count)
+	  (do ((i 0 (+ i 1))
+	       (r '() (cons (list #f (ref thing (+ start i))) r)))
+	      ((or (= i count)
+		   (= (+ i start) length))
+	       (reverse r))))))
 
 ; Get a menu for THING.  We know about a fixed set of types.
 
 (define (prepare-menu thing)
-  (cond ((list? thing)
-         (map (lambda (x)
-		(list #f x))
-              thing))
-
-        ((pair? thing)
-         `((car ,(car thing)) (cdr ,(cdr thing))))
-
-        ((vector? thing)
-         (prepare-menu (vector->list thing)))
-
-        ((closure? thing)
-         (prepare-environment-menu
-              (closure-env thing)
-              (debug-data-env-shape (template-debug-data
-				      (closure-template thing))
-				    0)))
-
+  (cond ((vector? thing)
+	 (indexed->menu thing (vector-length thing) vector-ref))
 	((template? thing)
-	 (prepare-menu (template->list thing)))
-
-        ((continuation? thing)
-         (prepare-continuation-menu thing))
-
-        ((record? thing)
-         (prepare-record-menu thing))
-
-        ((location? thing)
-         `((id ,(location-id thing))
-           (contents ,(contents thing))))
-
-        ((cell? thing)
-         `((ref ,(cell-ref thing))))
-
-	((weak-pointer? thing)
-	 `((ref ,(weak-pointer-ref thing))))
-
-        (else '())))
-
-(define (template->list template)
-  (do ((i (- (template-length template) 1) (- i 1))
-       (r '() (cons (template-ref template i) r)))
-      ((< i 0) r)))
+	 (indexed->menu thing (template-length thing) template-ref))
+	((pair? thing)
+	 (let ((length (careful-length thing)))
+	   (if (eq? length 'improper)
+	       (list->menu `((car ,(car thing)) (cdr ,(cdr thing))))
+	       (long-list->menu thing
+				(if (eq? length 'circular)
+				    9999999
+				    length)))))
+	(else
+	 (list->menu
+	  (cond ((closure? thing)
+		 (prepare-environment-menu
+		  (closure-env thing)
+		  (debug-data-env-shape (template-debug-data
+					 (closure-template thing))
+					0)))
+		
+		((continuation? thing)
+		 (prepare-continuation-menu thing))
+		
+		((record? thing)
+		 (prepare-record-menu thing))
+		
+		((location? thing)
+		 `((id ,(location-id thing))
+		   (contents ,(contents thing))))
+		
+		((cell? thing)
+		 `((ref ,(cell-ref thing))))
+		
+		((weak-pointer? thing)
+		 `((ref ,(weak-pointer-ref thing))))
+		
+		(else '()))))))
+	
+(define (careful-length list)
+  (let loop ((fast list) (len 0) (slow list) (move-slow? #f))
+    (cond ((eq? '() fast)
+	   len)
+	  ((not (pair? fast))
+	   'improper)
+	  ((not move-slow?)
+	   (loop (cdr fast) (+ len 1) slow #t))
+	  ((eq? fast slow)
+	   'circular)
+	  (else
+	   (loop (cdr fast) (+ len 1) (cdr slow) #f)))))
 
 ; Continuation menus have the both the saved operand stack and the
 ; save environment, for which names may be available.
@@ -166,17 +211,17 @@
 (define (display-menu menu start port)
   (newline port)
   (maybe-display-source (focus-object) #f)
-  (let ((menu (list-tail menu start))
+  (let ((items (menu-refs menu start (+ *menu-limit* 1)))
 	(limit (+ start *menu-limit*)))
-    (let loop ((i start) (menu menu))
+    (let loop ((i start) (items items))
       (with-limited-output
        (lambda ()
-	 (cond ((null? menu))
+	 (cond ((null? items))
 	       ((and (>= i limit)
-		     (not (null? (cdr menu))))
+		     (not (null? items)))
 		(display " [m] more..." port) (newline port))
 	       (else
-		(let ((item (car menu)))
+		(let ((item (car items)))
 		  (display " [" port)
 		  (write i port)
 		  (if (car item)
@@ -187,7 +232,7 @@
 		   (value->expression (cadr item))
 		   port)
 		  (newline port)
-		  (loop (+ i 1) (cdr menu))))))))))
+		  (loop (+ i 1) (cdr items))))))))))
 
 ; Exception continuations don't have source, so we get the source from
 ; the next continuation if it is from the same procedure invocation.

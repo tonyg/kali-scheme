@@ -97,6 +97,11 @@
   ((address? type/address) (positive-integer? type/integer))
   type/unit)
 
+(define-primitive flonum-ref ((address? type/address)) type/float)
+(define-primitive flonum-set!
+  ((address? type/address) (floatnum? type/float))
+  type/unit)
+
 (define-primitive char-pointer->string
   ((address? type/address)
    (positive-integer? type/integer))

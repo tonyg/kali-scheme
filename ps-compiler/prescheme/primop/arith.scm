@@ -1,6 +1,5 @@
 ; Copyright (c) 1993-2000 by Richard Kelsey.  See file COPYING.
 
-
 (define (put-literal-first call)
   (if (and (not (literal-node? (call-arg call 0)))
 	   (literal-node? (call-arg call 1)))
@@ -9,35 +8,42 @@
 	(attach call 0 arg0)
 	(attach call 1 arg1))))
 
-(define (simplify-add call)
-  (simplify-args call 0)
-  (put-literal-first call)
-  ((pattern-simplifier
-    ((+ '0 x) x)
-    ((+ 'a 'b) '(+ a b))
-    ((+ 'a (+ 'b x)) (+ x '(+ a b)))
-    ((+ 'a (- x 'b)) (+ x '(- a b)))  ; no overflow in Scheme, but what
-    ((+ 'a (- 'b x)) (- '(+ a b) x))  ; about PreScheme?  Could check the
-    ((+ (+ 'a x) (+ 'b y)) (+ '(+ a b) (+ x y)))
-    ((+ x (+ 'a y)) (+ 'a (+ x y))))
-   call))                             ; result of the literal.  Maybe these
-                                      ; should be left out. 
+(define-syntax addition-simplifier
+  (syntax-rules ()
+    ((addition-simplifier + - zero)
+     (lambda (call)
+       (simplify-args call 0)
+       (put-literal-first call)
+       ((pattern-simplifier
+	 ((+ 'zero x) x)
+	 ((+ 'a 'b) '(+ a b))
+	 ((+ 'a (+ 'b x)) (+ x '(+ a b)))
+	 ((+ 'a (- x 'b)) (+ x '(- a b)))  ; no overflow in Scheme, but what
+	 ((+ 'a (- 'b x)) (- '(+ a b) x))  ; about PreScheme?  Could check the
+	 ((+ (+ 'a x) (+ 'b y)) (+ '(+ a b) (+ x y)))
+	 ((+ x (+ 'a y)) (+ 'a (+ x y))))  ; result of the literal.  Maybe these
+	call)))))                          ; should be left out. 
 
-(define-scheme-primop + #f type/integer simplify-add)
+(define-scheme-primop   + #f type/integer (addition-simplifier   +   -   0))
+(define-scheme-primop fl+ #f type/float   (addition-simplifier fl+ fl- 0.0))
 
-(define (simplify-subtract call)
-  (simplify-args call 0)
-  ((pattern-simplifier
-    ((- 'a 'b) '(- a b))
-    ((- x 'a) (+ '(- 0 a) x))
-    ((- 'a (+ 'b x)) (- '(- a b) x))   ; more overflow problems
-    ((- 'a (- 'b x)) (+ x '(- a b)))
-    ((- x (+ 'a y)) (+ '(- 0 a) (- x y)))
-;    ((- (+ 'a x) y) (+ 'a (- x y)))  hmm - need to come up with a normal form
-    ((- (+ 'a x) (+ 'b y)) (- (+ '(- a b) x) y)))
-   call))
-
-(define-scheme-primop - #f type/integer simplify-subtract)
+(define-syntax subtraction-simplifier
+  (syntax-rules ()
+    ((subtraction-simplifier + - zero)
+     (lambda (call)
+       (simplify-args call 0)
+       ((pattern-simplifier
+	 ((- 'a 'b) '(- a b))
+	 ((- x 'a) (+ '(- zero a) x))
+	 ((- 'a (+ 'b x)) (- '(- a b) x))   ; more overflow problems
+	 ((- 'a (- 'b x)) (+ x '(- a b)))
+	 ((- x (+ 'a y)) (+ '(- zero a) (- x y)))
+	 ;    ((- (+ 'a x) y) (+ 'a (- x y))) need to come up with a normal form
+	 ((- (+ 'a x) (+ 'b y)) (- (+ '(- a b) x) y)))
+	call)))))
+       
+(define-scheme-primop   - #f type/integer (subtraction-simplifier +     -   0))
+(define-scheme-primop fl- #f type/float   (subtraction-simplifier fl+ fl- 0.0))
 
 ; This should check for multiply by powers of 2 (other constants can be
 ; done later).
@@ -59,24 +65,6 @@
 	   ((* 'a (* 'b x)) (* x '(* a b))))
 	  call))))
 
-(define-scheme-primop *      #f type/integer simplify-multiply)
-(define-scheme-primop small* #f type/integer simplify-multiply)
-
-(define (simplify-quotient call)
-  (simplify-args call 0)
-  (cond ;((power-of-two-literal (call-arg call 1))
-	; => (lambda (i)
-	;      (set-call-primop! call (get-prescheme-primop 'ashr))
-	;      (replace (call-arg call 1) (make-literal-node i type/unknown))))
-	(else
-	 ((pattern-simplifier
-	   ((quotient x '0) '((lambda ()
-				(error "program divides by zero"))))
-	   ((quotient x '1) x)
-	   ((quotient '0 x) '0)
-	   ((quotient 'a 'b) '(quotient a b)))
-	  call))))
-
 (define (power-of-two-literal node)
   (if (not (literal-node? node))
       #f
@@ -89,7 +77,37 @@
 		((odd? v)
 		 (if (= v 1) i #f)))))))
 
-(define-scheme-primop quotient  exception type/integer simplify-quotient)
+(define simplify-float-multiply
+  (pattern-simplifier
+   ((fl* '0.0 x) '0.0)
+   ((fl* '1.0 x) x)
+   ((fl* 'a 'b) '(fl* a b))
+   ((fl* 'a (fl* x 'b)) (fl* x '(fl* a b)))
+   ((fl* 'a (fl* 'b x)) (fl* x '(fl* a b)))))
+
+(define-scheme-primop      * #f type/integer simplify-multiply)
+(define-scheme-primop small* #f type/integer simplify-multiply)
+(define-scheme-primop    fl* #f type/integer simplify-float-multiply)
+
+(define-syntax quotient-simplifier
+  (syntax-rules ()
+    ((subtraction-simplifier zero one op)
+     (lambda (call)
+       (simplify-args call 0)
+       ((pattern-simplifier
+	 ((quotient x 'zero) '((lambda ()
+				 (error "program divides by zero"))))
+	 ((quotient x 'one) x)
+	 ((quotient 'zero x) 'one)
+	 ((quotient 'a 'b) '(op a b)))
+	call)))))
+
+(define-scheme-primop quotient  exception type/integer
+  (quotient-simplifier 1 0 quotient))
+
+(define-scheme-primop fl/       exception type/float
+  (quotient-simplifier 1.0 0.0 /))
+
 (define-scheme-primop remainder exception type/integer)
 
 (define (simplify-ashl call)
@@ -169,24 +187,30 @@
 (define-scheme-primop bitwise-xor #f type/integer simplify-bitwise-xor)
 (define-scheme-primop bitwise-not #f type/integer simplify-bitwise-not)
 
-(define (simplify-= call)
-  (simplify-args call 0)
-  (put-literal-first call)
-  ((pattern-simplifier
-    ((= 'a 'b) '(= a b))
-    ((= 'a (+ 'b c)) (= '(- a b) c))   ; will these ever be used?
-    ((= 'a (- 'b c)) (= '(- b a) c)))
-   call))
+(define-syntax simplify-=
+  (syntax-rules ()
+    ((simplify-= = op + -)
+     (lambda (call)
+       (simplify-args call 0)
+       (put-literal-first call)
+       ((pattern-simplifier
+	 ((= 'a 'b) '(op a b))
+	 ((= 'a (+ 'b c)) (= '(- a b) c))   ; will these ever be used?
+	 ((= 'a (- 'b c)) (= '(- b a) c)))
+	call)))))
 
-(define (simplify-< call)
-  (simplify-args call 0)
-  ((pattern-simplifier
-    ((< 'a 'b) '(< a b))
-    ((< 'a (+ 'b c)) (< '(- a b) c))   ; will these ever be used?
-    ((< (+ 'b c) 'a) (< c '(- a b)))
-    ((< 'a (- 'b c)) (< c '(- b a)))
-    ((< (- 'b c) 'a) (< '(- b a) c)))
-   call))
+(define-syntax simplify-<
+  (syntax-rules ()
+    ((simplify-< < op + -)
+     (lambda (call)
+       (simplify-args call 0)
+       ((pattern-simplifier
+	 ((< 'a 'b) '(op a b))
+	 ((< 'a (+ 'b c)) (< '(- a b) c))   ; will these ever be used?
+	 ((< (+ 'b c) 'a) (< c '(- a b)))
+	 ((< 'a (- 'b c)) (< c '(- b a)))
+	 ((< (- 'b c) 'a) (< '(- b a) c)))
+	call)))))
 
 (define (simplify-char=? call)
   (simplify-args call 0)
@@ -211,8 +235,10 @@
   (lambda (call)
     type/boolean))
 
-(define-scheme-primop =      #f bool-type simplify-=)
-(define-scheme-primop <      #f bool-type simplify-<)
+(define-scheme-primop =      #f bool-type (simplify-= = = + -))
+(define-scheme-primop fl=    #f bool-type (simplify-= fl= = fl+ fl-))
+(define-scheme-primop <      #f bool-type (simplify-< < < + -))
+(define-scheme-primop fl<    #f bool-type (simplify-< fl< < fl+ fl-))
 (define-scheme-primop char=? #f bool-type simplify-char=?)
 (define-scheme-primop char<? #f bool-type simplify-char<?)
 

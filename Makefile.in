@@ -92,7 +92,7 @@ VM = scheme48vm
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
 OBJS =	c/scheme48vm.o c/scheme48heap.o \
 	c/scheme48read-image.o c/scheme48write-image.o \
-	c/extension.o c/external.o bignum.o
+	c/extension.o c/external.o c/bignum.o
 FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
 		c/fake/sys-select.h
 
@@ -422,7 +422,8 @@ build/linker.image: $(linker-files) scheme/alt/init-defpackage.scm
 	(echo ',batch';						\
 		echo ',bench on';				\
 		echo ',open signals handle features';		\
-		echo ',open bitwise ascii code-vectors record';	\
+		echo ',open bitwise ascii code-vectors';	\
+		echo ',open cells record-types';		\
 		echo ',load $(linker-files)';			\
 		echo ',load scheme/alt/init-defpackage.scm';	\
 		echo ',dump build/linker.image'			\

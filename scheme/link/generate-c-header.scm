@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; [This is a kludge.  Richard is loathe to include it in the
 ; distribution.  But now the system itself uses it, so we're stuck.]
@@ -111,7 +111,7 @@
 	       "long __stob_set_i = (i); "
 	       "s48_value __stob_set_v = (v); "
 	       "if (S48_STOB_IMMUTABLEP(__stob_set_x)) "
-	       "s48_raise_argtype_error(__stob_set_x); "
+	       "s48_raise_argument_type_error(__stob_set_x); "
 	       "else { "
 	       "S48_WRITE_BARRIER((__stob_set_x), "
 	       "(char *) (&S48_STOB_REF((__stob_set_x), (__stob_set_i))),"
@@ -126,7 +126,7 @@
 	       "long __stob_set_i = (i); "
 	       "char __stob_set_v = (v); "
 	       "if (S48_STOB_IMMUTABLEP(__stob_set_x)) "
-	       "s48_raise_argtype_error(__stob_set_x); "
+	       "s48_raise_argument_type_error(__stob_set_x); "
 	       "else "
 	       "*(&S48_STOB_BYTE_REF((__stob_set_x), (__stob_set_i))) = (__stob_set_v); "
 	       "} while (0)"))

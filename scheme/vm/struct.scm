@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file struct.scm.
 
@@ -160,6 +160,21 @@
 ;(define bignum?       (stob-predicate (enum stob bignum)))
 (define ratnum?       (stob-predicate (enum stob ratnum)))
 (define double?       (stob-predicate (enum stob double)))
+
+; Doubles
+
+(define (extract-double double)
+  (fetch-flonum (address-after-header double)))
+
+(define double-bytes 8)
+
+(define double-size
+  (+ stob-overhead (bytes->cells double-bytes)))
+
+(define (enter-double value key)
+  (let ((double (make-b-vector (enum stob double) double-bytes key)))
+    (store-flonum! (address-after-header double) value)
+    double))
 
 ; Hashing
 

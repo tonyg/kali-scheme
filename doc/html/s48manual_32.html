@@ -2,7 +2,7 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:13 2001 -->
 <HEAD>
 <TITLE>Scheme 48 Manual -- Command processor support</TITLE>
 
@@ -37,7 +37,10 @@ that move the command processor between different packages.
 <P>Commands are introduced by a comma (<TT>,</TT>) and end at the end of
 line.  The command processor's prompt consists of the name of the
 current package followed by a greater-than (<TT>&gt;</TT>).
-<DL><DT><B></B><DD><CODE>,config</CODE> <BR>The <TT>,config</TT> command sets the command processor's current
+<DL><DT><B></B><DD><CODE>,open <CODE><I>struct-name</I></CODE><I><sup>*</sup></I></CODE> <BR>The <TT>,open</TT> command opens a new structure in the current
+    package, as if the package's definition's <TT>open</TT> clause
+    had listed <CODE><I>struct-name</I></CODE>.
+<DT><B></B><DD><CODE>,config</CODE> <BR>The <TT>,config</TT> command sets the command processor's current
     package to be the current configuration package.  Forms entered at
     this point are interpreted as being configuration language forms,
     not Scheme forms.
@@ -83,10 +86,8 @@ In this example the command processor starts in a package called
 <DT><B></B><DD><CODE>,user [<CODE><I>command</I></CODE>]</CODE> <BR>This is similar to the <TT>,config</TT> and <TT>,in</TT> commands.  It
     moves to or executes a command in the user package (which is the
     default package when the Scheme&nbsp;48 command processor starts).
-<DT><B></B><DD><CODE>,for-syntax [<CODE><I>command</I></CODE>]</CODE> <BR>This is similar to the <TT>,config</TT> and <TT>,in</TT> commands.  It
-    moves to or executes a command in the current package's "package
-    for syntax," which is the package in which the forms <I>f</I> in
-    <TT>(define-syntax <CODE><I>name</I></CODE> <CODE><I>f</I></CODE>)</TT> are evaluated.
+<DT><B></B><DD><CODE>,user-package-is <CODE><I>name</I></CODE></CODE> <BR>The <TT>,user-package-is</TT> command designates a new user
+    package for use by the <TT>,user</TT> command.
 <DT><B></B><DD><CODE>,load-package <CODE><I>struct-name</I></CODE></CODE> <BR>The <TT>,load-package</TT> command ensures that the specified structure's
     underlying package's program has been loaded.  This 
     consists of (1) recursively ensuring that the packages of any
@@ -96,20 +97,21 @@ In this example the command processor starts in a package called
     is most useful if the program comes from a file or files, when
     it will update the package's bindings after mutations to its
     source file.
-<DT><B></B><DD><CODE>,load <CODE><I>filespec</I></CODE> <I>...</I></CODE> <BR>The <TT>,load</TT> command executes forms from the specified file or
+<DT><B></B><DD><CODE>,load <CODE><I>filespec</I></CODE> ...</CODE> <BR>The <TT>,load</TT> command executes forms from the specified file or
     files in the current package.  <TT>,load <CODE><I>filespec</I></CODE></TT> is similar
     to <TT>(load "<CODE><I>filespec</I></CODE>")</TT>
     except that the name <TT>load</TT> needn't be bound in the current
     package to Scheme's <TT>load</TT> procedure.
-<DT><B></B><DD><CODE>,new-package</CODE> <BR>The <TT>,new-package</TT> command creates a new package in which only
-    the standard Scheme bindings are visible and moves the command
+<DT><B></B><DD><CODE>,for-syntax [<CODE><I>command</I></CODE>]</CODE> <BR>This is similar to the <TT>,config</TT> and <TT>,in</TT> commands.  It
+    moves to or executes a command in the current package's "package
+    for syntax," which is the package in which the forms <I>f</I> in
+    <TT>(define-syntax <CODE><I>name</I></CODE> <CODE><I>f</I></CODE>)</TT> are evaluated.
+<DT><B></B><DD><CODE>,new-package</CODE> <BR>The <TT>,new-package</TT> command creates a new package, in which only
+    the standard Scheme bindings are visible, and moves the command
     processor to it.
 <DT><B></B><DD><CODE>,structure <CODE><I>name</I></CODE> <CODE><I>interface</I></CODE></CODE> <BR>The <TT>,structure</TT> command defines <CODE><I>name</I></CODE> in the
     configuration package to be a structure with interface
     <CODE><I>interface</I></CODE> based on the current package.
-<DT><B></B><DD><CODE>,open <CODE><I>struct-name</I></CODE><I><sup>*</sup></I></CODE> <BR>The <TT>,open</TT> command opens a new structure in the current
-    package, as if the package's definition's <TT>open</TT> clause
-    had listed <CODE><I>struct-name</I></CODE>.
 </DL>
 <P>
   

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The value of $NOTE-FILE-PACKAGE is called whenever a file is loaded into
 ; a package.  env/debug.scm uses this to associate packages with files so
@@ -7,15 +7,15 @@
 ; Is there any point in having this be a fluid?
 
 (define $note-file-package
-  (make-fluid (lambda (filename package)
-		(values))))
+  (make-fluid (make-cell (lambda (filename package)
+			   (values)))))
 
 (define (read-forms pathname package)
   (let* ((filename (namestring pathname #f *scheme-file-type*))
 	 (truename (translate filename)))
     (call-with-input-file truename
       (lambda (port)
-	((fluid $note-file-package) filename package)
+	((fluid-cell-ref $note-file-package) filename package)
 	(let ((o-port (current-noise-port)))
 	  (display truename o-port)
 	  (force-output o-port)

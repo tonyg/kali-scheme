@@ -2,276 +2,53 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:24 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:17 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Files and directories</TITLE>
+<TITLE>Scheme 48 Manual -- Users and groups</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_62.html">Access to POSIX</A><BR>Previous: <A HREF="s48manual_67.html">OS and machine identification</A> | Next: <A HREF="s48manual_69.html">Time</A>
-<H2>Files and directories</H2>
-<P>These procedures are in structures <CODE>posix-files</CODE> and <CODE>posix</CODE>.
-<H3><A NAME="1">Directory streams</A></H3>
-<P>Directory streams are like input ports, with each read operation
- returning the next name in the directory.
-<UL><LI><CODE>(open-directory-stream<I>&nbsp;name</I>)&nbsp;-&gt;&nbsp;<I>directory</I></CODE><A NAME="2">&nbsp;</A>
-<LI><CODE>(directory-stream?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="3">&nbsp;</A>
-<LI><CODE>(read-directory-stream<I>&nbsp;directory</I>)&nbsp;-&gt;&nbsp;<I>name&nbsp;or&nbsp;<CODE>#f</CODE></I></CODE><A NAME="4">&nbsp;</A>
-<LI><CODE>(close-directory-stream<I>&nbsp;directory</I>)</CODE><A NAME="5">&nbsp;</A>
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_64.html">Access to POSIX</A><BR>Previous: <A HREF="s48manual_67.html">Process environment</A> | Next: <A HREF="s48manual_69.html">OS and machine identification</A>
+<H2>Users and groups</H2>
+<P><CODE><I>User-id</I></CODE>s and <CODE><I>group-id</I></CODE>s are boxed integers representing
+ Unix users and groups.
+The procedures in this section are in structures <CODE>posix-users</CODE> and
+ <CODE>posix</CODE>.
+<UL><LI><CODE>(user-id?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(user-id=?<I>&nbsp;user-id0&nbsp;user-id1</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(user-id-&gt;integer<I>&nbsp;user-id</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(integer-&gt;user-id<I>&nbsp;integer</I>)&nbsp;-&gt;&nbsp;<I>user-id</I></CODE><A NAME="4">&nbsp;</A>
 </UL>
-<CODE>Open-directory-stream</CODE> opens a new directory stream.
-<CODE>Directory-stream?</CODE> is a predicate that recognizes directory streams.
-<CODE>Read-directory-stream</CODE> returns the next name in the directory or
- <CODE>#f</CODE> if all names have been read.
-<CODE>Close-directory-stream</CODE> closes a directory stream.
-<UL><LI><CODE>(list-directory<I>&nbsp;name</I>)&nbsp;-&gt;&nbsp;<I>list&nbsp;of&nbsp;strings</I></CODE><A NAME="6">&nbsp;</A>
+<UL><LI><CODE>(group-id?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(group-id=?<I>&nbsp;group-id0&nbsp;group-id1</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="6">&nbsp;</A>
+<LI><CODE>(group-id-&gt;integer<I>&nbsp;group-id</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="7">&nbsp;</A>
+<LI><CODE>(integer-&gt;group-id<I>&nbsp;integer</I>)&nbsp;-&gt;&nbsp;<I>group-id</I></CODE><A NAME="8">&nbsp;</A>
 </UL>
-This is the obvious utility; it returns a list of the names in directory
- <CODE><I>name</I></CODE>.
-<H3><A NAME="7">Working directory</A></H3>
-<UL><LI><CODE>(working-directory<I></I>)&nbsp;-&gt;&nbsp;<I>string</I></CODE><A NAME="8">&nbsp;</A>
-<LI><CODE>(set-working-directory!<I>&nbsp;string</I>)</CODE><A NAME="9">&nbsp;</A>
+User-ids and group-ids have their own
+ own predicates and comparison, boxing, and unboxing functions.
+<UL><LI><CODE>(user-id-&gt;user-info<I>&nbsp;user-id</I>)&nbsp;-&gt;&nbsp;<I>user-info</I></CODE><A NAME="9">&nbsp;</A>
+<LI><CODE>(name-&gt;user-info<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>user-info</I></CODE><A NAME="10">&nbsp;</A>
 </UL>
-These return and set the working directory.
-<H3><A NAME="10">File creation and removal</A></H3>
-<UL><LI><CODE>(open-file<I>&nbsp;path&nbsp;file-options</I>)&nbsp;-&gt;&nbsp;<I>port</I></CODE><A NAME="11">&nbsp;</A>
-<LI><CODE>(open-file<I>&nbsp;path&nbsp;file-options&nbsp;file-mode</I>)&nbsp;-&gt;&nbsp;<I>port</I></CODE><A NAME="12">&nbsp;</A>
+These return the user info for a user identified by user-id or name.
+<UL><LI><CODE>(user-info?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;boolean</I></CODE><A NAME="11">&nbsp;</A>
+<LI><CODE>(user-info-name<I>&nbsp;user-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;string</I></CODE><A NAME="12">&nbsp;</A>
+<LI><CODE>(user-info-id<I>&nbsp;user-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;user-id</I></CODE><A NAME="13">&nbsp;</A>
+<LI><CODE>(user-info-group<I>&nbsp;user-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;group-id</I></CODE><A NAME="14">&nbsp;</A>
+<LI><CODE>(user-info-home-directory<I>&nbsp;user-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;string</I></CODE><A NAME="15">&nbsp;</A>
+<LI><CODE>(user-info-shell<I>&nbsp;user-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;string</I></CODE><A NAME="16">&nbsp;</A>
 </UL>
-<CODE>Open-file</CODE> opens a port to the file named by string <CODE><I>path</I></CODE>.
-The <CODE><I>file-options</I></CODE> argument determines various aspects of the 
- returned port.
-The optional <CODE><I>file-mode</I></CODE> argument is used only if the file to be opened
- does not already exist.
-The returned port is an input port if <CODE><I>file-options</I></CODE> includes
- <CODE>read-only</CODE>; otherwise it returns an output port.
-<CODE>Dup-switching-mode</CODE> can be used to open an input port for
- output ports opened with the <CODE>read/write</CODE> option.
-<UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>(file-options <CODE><I>file-option-name</I></CODE> ...)&nbsp;-&gt;&nbsp;<I>file-options</I></CODE></td> <td align=right>syntax</td></tr></table>
-<LI><CODE>(file-options-on?<I>&nbsp;file-options&nbsp;file-options</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="13">&nbsp;</A>
+A <CODE>user-info</CODE> contains information about a user.
+Available are the user's name, id, group, home directory, and shell.
+<UL><LI><CODE>(group-id-&gt;group-info<I>&nbsp;group-id</I>)&nbsp;-&gt;&nbsp;<I>group-info</I></CODE><A NAME="17">&nbsp;</A>
+<LI><CODE>(name-&gt;group-info<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>group-info</I></CODE><A NAME="18">&nbsp;</A>
 </UL>
-The syntax <CODE>file-options</CODE> returns a file-option with the
- indicated options set.
-<CODE>File-options-on?</CODE> returns true if its first argument includes all of
- the options listed in the second argument.
-The following file options may be used with <CODE>open-file</CODE>.
-<BLOCKQUOTE><CENTER>
-<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
-
- </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>create</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> create file if it does not already exist; a file-mode argument
- is required with this option </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-</TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>exclusive</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> an error will be raised if this option and <CODE>create</CODE>
- are both set and the file already exists </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-</TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>no-controlling-tty</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> if <CODE><I>path</I></CODE> is a terminal device this option
- causes the terminal to not become the controlling terminal of the process</TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-</TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>truncate</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> file is truncated </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-</TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>append</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> writes are appended to existing contents </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-</TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>nonblocking</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> read and write operations do not block </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-</TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>read-only</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> port may not be written </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-</TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>read-write</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> file descriptor may be read or written </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-</TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>write-only</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> port may not be read
-</TD></TR></TABLE>
-
-</CENTER></BLOCKQUOTE>
-<P>Only one of the last three options may be used.
-<P>The <CODE>append</CODE> and <CODE>nonblocking</CODE> options and the read/write nature of
- the port can be read using <CODE>i/o-flags</CODE>.
-The <CODE>append</CODE> and <CODE>nonblocking</CODE> options can be set
- using <CODE>set-i/o-flags!</CODE>.
-<P>Care should be exercised when using output ports which do not have
- the nonblocking option set.
-Ordinary Scheme&nbsp;48 output ports have the nonblocking option set to
- prevent write operations from causing the Scheme process to block.
-<UL><LI><CODE>(set-file-creation-mask!<I>&nbsp;file-mode</I>)</CODE><A NAME="14">&nbsp;</A>
+These return the group info for a group identified by group-id or name.
+<UL><LI><CODE>(group-info?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;boolean</I></CODE><A NAME="19">&nbsp;</A>
+<LI><CODE>(group-info-name<I>&nbsp;group-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;string</I></CODE><A NAME="20">&nbsp;</A>
+<LI><CODE>(group-info-id<I>&nbsp;group-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;group-id</I></CODE><A NAME="21">&nbsp;</A>
+<LI><CODE>(group-info-members<I>&nbsp;group-info</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;user-ids</I></CODE><A NAME="22">&nbsp;</A>
 </UL>
-Sets the file creation mask to be <CODE><I>file-mode</I></CODE>.
-Bits set in <CODE><I>file-mode</I></CODE> are cleared in the modes of any files or
- directories created by the current process.
-<UL><LI><CODE>(link<I>&nbsp;existing&nbsp;new</I>)</CODE><A NAME="15">&nbsp;</A>
-</UL>
-<CODE>Link</CODE> makes path <CODE><I>new</I></CODE> be a new link to the file
- pointed to by path <CODE><I>existing</I></CODE>.
-<UL><LI><CODE>(make-directory<I>&nbsp;name&nbsp;file-mode</I>)</CODE><A NAME="16">&nbsp;</A>
-<LI><CODE>(make-fifo<I>&nbsp;file-mode</I>)</CODE><A NAME="17">&nbsp;</A>
-</UL>
-These two procedures make new directories and fifo files.
-<UL><LI><CODE>(unlink<I>&nbsp;path</I>)</CODE><A NAME="18">&nbsp;</A>
-<LI><CODE>(remove-directory<I>&nbsp;path</I>)</CODE><A NAME="19">&nbsp;</A>
-<LI><CODE>(rename<I>&nbsp;old-path&nbsp;new-path</I>)</CODE><A NAME="20">&nbsp;</A>
-</UL>
-<CODE>Unlink</CODE> removes the link indicated by <CODE><I>path</I></CODE>.
-<CODE>Remove-directory</CODE> removes the indicated (empty) directory.
-<CODE>Rename</CODE> moves the file pointed to by <CODE><I>old-path</I></CODE> to the
- location pointed to by <CODE><I>new-path</I></CODE>.
-Any other links to the file remain unchanged.
-<UL><LI><CODE>(accessible?<I>&nbsp;path&nbsp;access-mode&nbsp;.&nbsp;more-modes</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="21">&nbsp;</A>
-<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>(access-mode <CODE><I>mode-name</I></CODE>)&nbsp;-&gt;&nbsp;<I>access-mode</I></CODE></td> <td align=right>syntax</td></tr></table>
-</UL>
-<CODE>Accessible?</CODE> returns true if <CODE><I>path</I></CODE> is a file that
- can be accessed in the listed mode.
-If more than one mode is specified <CODE>accessible?</CODE> returns true
- if all of the specified modes are permitted.
-The <CODE><I>mode-name</I></CODE>s are: <CODE>read</CODE>, <CODE>write</CODE>, <CODE>execute</CODE>,
- <CODE>exists</CODE>.
-<H3><A NAME="22">File information</A></H3>
-<UL><LI><CODE>(get-file-info<I>&nbsp;name</I>)&nbsp;-&gt;&nbsp;<I>file-info</I></CODE><A NAME="23">&nbsp;</A>
-<LI><CODE>(get-file/link-info<I>&nbsp;name</I>)&nbsp;-&gt;&nbsp;<I>file-info</I></CODE><A NAME="24">&nbsp;</A>
-<LI><CODE>(get-port-info<I>&nbsp;fd-port</I>)&nbsp;-&gt;&nbsp;<I>file-info</I></CODE><A NAME="25">&nbsp;</A>
-</UL>
-<CODE>Get-file-info</CODE> and <CODE>get-file/link-info</CODE> both return
- a file info record for the named file.
-<CODE>Get-file-info</CODE> follows symbolic links while <CODE>get-file/link-info</CODE>
- does not.
-<CODE>Get-port-info</CODE> returns a file info record for the file
- which <CODE><I>port</I></CODE> reads from or writes to.
-An error is raised if <CODE><I>fd-port</I></CODE> does not read from or write to a
- file descriptor.
-<UL><LI><CODE>(file-info?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="26">&nbsp;</A>
-<LI><CODE>(file-info-name<I>&nbsp;file-info</I>)&nbsp;-&gt;&nbsp;<I>string</I></CODE><A NAME="27">&nbsp;</A>
-</UL>
-<CODE>File-info?</CODE> is a predicate for file-info records.
-<CODE>File-info-name</CODE> is the name which was used to get <CODE>file-info</CODE>,
- either as passed to <CODE>get-file-info</CODE> or <CODE>get-file/link-info</CODE>,
- or used to open the port passed to <CODE>get-port-info</CODE>.
-<UL><LI><CODE>(file-info-type<I>&nbsp;file-info</I>)&nbsp;-&gt;&nbsp;<I>file-type</I></CODE><A NAME="28">&nbsp;</A>
-<LI><CODE>(file-type?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="29">&nbsp;</A>
-<LI><CODE>(file-type-name<I>&nbsp;file-type</I>)&nbsp;-&gt;&nbsp;<I>symbol</I></CODE><A NAME="30">&nbsp;</A>
-<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>(file-type <CODE><I>type</I></CODE>)&nbsp;-&gt;&nbsp;<I>file-type</I></CODE></td> <td align=right>syntax</td></tr></table>
-</UL>
-<CODE>File-info-type</CODE> returns the type of the file, as a file-type object
-File types may be compared using <CODE>eq?</CODE>.
-The valid file types are:
-<BLOCKQUOTE><CENTER>
-<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
-
- <CODE>regular</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>directory</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>character-device</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>block-device</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>fifo</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>symbolic-link</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>socket</CODE> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>other</CODE>
-</TD></TR></TABLE>
-
-</CENTER></BLOCKQUOTE>
-<P><CODE>Symbolic-link</CODE> and <CODE>socket</CODE> are not required by POSIX.
-<UL><LI><CODE>(file-info-device<I>&nbsp;file-info</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="31">&nbsp;</A>
-<LI><CODE>(file-info-inode<I>&nbsp;file-info</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="32">&nbsp;</A>
-</UL>
-The device and inode numbers uniquely determine a file.
-<UL><LI><CODE>(file-info-link-count<I>&nbsp;file-info</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="33">&nbsp;</A>
-<LI><CODE>(file-info-size<I>&nbsp;file-info</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="34">&nbsp;</A>
-</UL>
-These return the number of links to a file and the file size in bytes.
-The size is only meaningful for regular files.
-<UL><LI><CODE>(file-info-owner<I>&nbsp;file-info</I>)&nbsp;-&gt;&nbsp;<I>user-id</I></CODE><A NAME="35">&nbsp;</A>
-<LI><CODE>(file-info-group<I>&nbsp;file-info</I>)&nbsp;-&gt;&nbsp;<I>group-id</I></CODE><A NAME="36">&nbsp;</A>
-<LI><CODE>(file-info-mode<I>&nbsp;file-info</I>)&nbsp;-&gt;&nbsp;<I>file-mode</I></CODE><A NAME="37">&nbsp;</A>
-</UL>
-These return the owner, group, and access mode of a file.
-<UL><LI><CODE>(file-info-last-access<I>&nbsp;file-info</I>)&nbsp;-&gt;&nbsp;<I>time</I></CODE><A NAME="38">&nbsp;</A>
-<LI><CODE>(file-info-last-modification<I>&nbsp;file-info</I>)&nbsp;-&gt;&nbsp;<I>time</I></CODE><A NAME="39">&nbsp;</A>
-<LI><CODE>(file-info-last-info-change<I>&nbsp;file-info</I>)&nbsp;-&gt;&nbsp;<I>time</I></CODE><A NAME="40">&nbsp;</A>
-</UL>
-These return the time the file was last read, modified, or had its
- status modified
-<H3><A NAME="41">File modes</A></H3>
-<P>A file mode is a boxed integer representing a file protection mask.
-<UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>(file-mode permission-name ...)&nbsp;-&gt;&nbsp;<I>file-mode</I></CODE></td> <td align=right>syntax</td></tr></table>
-<LI><CODE>(file-mode?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="42">&nbsp;</A>
-<LI><CODE>(file-mode+<I>&nbsp;file-mode&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>file-mode</I></CODE><A NAME="43">&nbsp;</A>
-<LI><CODE>(file-mode-<I>&nbsp;file-mode0&nbsp;file-mode1</I>)&nbsp;-&gt;&nbsp;<I>file-mode</I></CODE><A NAME="44">&nbsp;</A>
-</UL>
-<CODE>File-mode</CODE> is syntax for creating file modes.
-The mode-names are listed below.
-<CODE>File-mode?</CODE> is a predicate for file modes.
-<CODE>File-mode+</CODE> returns a mode that contains all of permissions of
- its arguments.
-<CODE>File-mode-</CODE> returns a mode that has all of the permissions of
- <CODE><I>file-mode0</I></CODE> that are not in <CODE><I>file-mode1</I></CODE>.
-<UL><LI><CODE>(file-mode=?<I>&nbsp;file-mode0&nbsp;file-mode1</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="45">&nbsp;</A>
-<LI><CODE>(file-mode&lt;=?<I>&nbsp;file-mode0&nbsp;file-mode1</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="46">&nbsp;</A>
-<LI><CODE>(file-mode&gt;=?<I>&nbsp;file-mode0&nbsp;file-mode1</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="47">&nbsp;</A>
-</UL>
-<CODE>File-mode=?</CODE> returns true if the two modes are exactly the same.
-<CODE>File-mode&lt;=?</CODE> returns true if <CODE><I>file-mode0</I></CODE> has a subset
- of the permissions of <CODE><I>file-mode1</I></CODE>.
-<CODE>File-mode&gt;=?</CODE> is <CODE>file-mode&lt;=?</CODE> with the arguments reversed.
-<UL><LI><CODE>(file-mode-&gt;integer<I>&nbsp;file-mode</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="48">&nbsp;</A>
-<LI><CODE>(integer-&gt;file-mode<I>&nbsp;integer</I>)&nbsp;-&gt;&nbsp;<I>file-mode</I></CODE><A NAME="49">&nbsp;</A>
-</UL>
-<CODE>Integer-&gt;file-mode</CODE> and <CODE>file-mode-&gt;integer</CODE> translate file modes
- to and from the classic Unix file mode masks.
-These may not be the masks actually used by the underlying OS).
-<BLOCKQUOTE><CENTER>
-<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
-
-Permission name </TD><TD COLSPAN="1" ALIGN="LEFT"> Bit mask </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>set-uid</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o4000</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> set user id when executing </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>set-gid</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o2000</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> set group id when executing </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>owner-read</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0400</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> read by owner </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>owner-write</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0200</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> write by owner </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>owner-exec</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0100</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> execute (or search) by owner </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>group-read</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0040</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> read by group </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>group-write</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0020</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> write by group </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>group-exec</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0010</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> execute (or search) by group </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>other-read</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0004</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> read by others </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>other-write</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0002</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> write by others </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>other-exec</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0001</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> execute (or search) by others </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-</TD></TR></TABLE>
-
-</CENTER></BLOCKQUOTE>
-<BLOCKQUOTE><CENTER>
-<TABLE><TR><TD COLSPAN="3" ALIGN="LEFT">
-
-Names for sets of permissions </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>owner</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0700</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> read, write, and execute by owner </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>group</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0070</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> read, write, and execute by group </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>other</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0007</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> read, write, and execute by others </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>read</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0444</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> read by anyone </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>write</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0222</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> write by anyone </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>exec</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0111</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> execute by anyone </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>all</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>#o0777</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> anything by anyone
-</TD></TR></TABLE>
-
-</CENTER></BLOCKQUOTE>
+A <CODE>group-info</CODE> contains information about a group.
+Available are the group's name, id, and a list of members.
 <P>
   
-Previous: <A HREF="s48manual_67.html">OS and machine identification</A> | Next: <A HREF="s48manual_69.html">Time</A></BODY></HTML>
+Previous: <A HREF="s48manual_67.html">Process environment</A> | Next: <A HREF="s48manual_69.html">OS and machine identification</A></BODY></HTML>

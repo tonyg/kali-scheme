@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; These are the four entry points (cf. rts/eval.scm):
@@ -19,7 +19,7 @@
 
 (define (eval-from-file forms package filename)
   (if filename
-      ((fluid $note-file-package)
+      ((fluid-cell-ref $note-file-package)
         filename package))
   (compile-and-run forms package filename))
 

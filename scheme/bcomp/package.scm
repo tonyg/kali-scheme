@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Structures 'n' packages.
@@ -167,7 +167,8 @@
 	       (make-name-table)	;definitions
 	       #f			;undefineds
 	       #f			;undefined-but-assigned
-	       (fluid $get-location)	;procedure for making new locations
+	       (fluid-cell-ref $get-location)
+					;procedure for making new locations
 	       (make-name-table)	;bindings cached in templates
 	       (make-population)	;structures
 	       unstable?		;unstable (suitable for EVAL)?
@@ -415,7 +416,7 @@
 		 (cons (name->symbol name) (package-uid package))))
     (make-undefined-location uid)))
 
-(define $get-location (make-fluid make-new-location))
+(define $get-location (make-fluid (make-cell make-new-location)))
 
 (define *location-uid* 5000)  ; 1510 in initial system as of 1/22/94
 

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 (define-structures ((prescheme prescheme-interface)
 		    (ps-memory ps-memory-interface)
@@ -9,16 +9,41 @@
 						external-constant-enum-name
 						external-constant-name
 						external-constant-c-string)))
-  (open scheme code-vectors bitwise ascii primitives signals enumerated
-	structure-refs
+  (open (modify scheme (rename (open-input-file   scheme:open-input-file)
+			       (open-output-file  scheme:open-output-file)
+			       (close-input-port  scheme:close-input-port)
+			       (close-output-port scheme:close-output-port)
+			       (read-char         scheme:read-char)
+			       (peek-char         scheme:peek-char)))
+	code-vectors bitwise ascii primitives signals enumerated
 	define-record-types
 	bigbit)   ; make sure that bignum bitwise operations are loaded
-  (access scheme)
   (optimize auto-integrate)
   (begin
     ; What we will get in C on many machines
     (define pre-scheme-integer-size 32))
   (files ps-defenum prescheme memory))
+
+(define-structure ps-record-types (export define-record-type)
+  (open scheme (modify define-record-types (prefix s48:)))
+  (begin
+    (define-syntax define-record-type
+      (syntax-rules ()
+	((define-record-type name type-name
+	   constructor
+	   (field type more ...) ...)
+	 (s48:define-record-type name type-name
+	   constructor
+	   (field more ...) ...))))))
+
+(define-structure ps-flonums ps-flonums-interface
+  (open scheme)
+  (optimize auto-integrate)
+  (begin
+    (define fl+ +) (define fl- -) (define fl* *) (define fl/ /)
+    (define fl= =)
+    (define fl< <) (define fl> >)
+    (define fl<= <=) (define fl>= >=)))
 
 ;(define-structure byte-vectors byte-vector-interface
 ;  (open scheme code-vectors)

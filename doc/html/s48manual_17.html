@@ -2,7 +2,7 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:20 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:13 2001 -->
 <HEAD>
 <TITLE>Scheme 48 Manual -- Switches</TITLE>
 
@@ -16,7 +16,7 @@ They can be set using the <CODE>,set</CODE> and <CODE>,unset</CODE> commands.
     The second argument defaults to <CODE>on</CODE>.
     If the second argument is <CODE>?</CODE> the value of <CODE><I>switch</I></CODE> is
     is displayed and not changed.
-    Doing <CODE>,switch ?</CODE> will display a list of the switches and
+    Doing <CODE>,set ?</CODE> will display a list of the switches and
     their current values.
 <DT><B></B><DD><CODE>,unset <CODE><I>switch</I></CODE></CODE><BR><CODE>,unset <CODE><I>switch</I></CODE></CODE> is the same as
     <CODE>,set <CODE><I>switch</I></CODE> off</CODE>.
@@ -39,8 +39,8 @@ They can be set using the <CODE>,set</CODE> and <CODE>,unset</CODE> commands.
     With <CODE>auto-levels</CODE> disabled one must issue a
     <CODE>,push</CODE> command immediately
     following an error in order to retain the error continuation for
-    debugging purposes; otherwise the continuation is lost after the
-    next evaluation request.  If you don't know anything about the
+    debugging purposes; otherwise the continuation is lost as soon as
+    the focus object changes.  If you don't know anything about the
     available debugging tools, then levels might as well be disabled.
 <DT><B></B><DD><CODE>inspect-focus-value</CODE><BR>Enable or disable `inspection' mode, which is used for inspecting
     data structures and continuations.

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Server interface
 ;   (open-socket [socket-number]) -> socket
@@ -106,15 +106,22 @@
      (values (input-channel+closer->port in close-socket-input-channel)
 	     (output-channel+closer->port out close-socket-output-channel)))))
 
+; FreeBSD's connect() behaves oddly.  If you get told to wait, wait for select()
+; to signal the all-clear, and then try to connect again, you get an `already
+; connected' error.  To handle this we pass in a RETRY? flag.  If RETRY? is
+; true the `already connected' error is ignored.
+
 (define (socket-client-channels host-name port-number)
   (let ((channel (new-socket #f #f)))
-    (let loop ()
+    (let loop ((retry? #t))
       (disable-interrupts!)
-      (let ((output-channel (real-socket-connect channel host-name port-number)))
+      (let ((output-channel (real-socket-connect channel
+						 host-name
+						 port-number
+						 retry?)))
 	(cond ((channel? output-channel)
 	       (enable-interrupts!)
 	       (values channel output-channel))
-	      ; This should never happen.
 	      ((eq? output-channel #t)
 	       (error "client socket already connected" host-name port-number))
 	      (else
@@ -123,7 +130,7 @@
 		 (with-new-proposal (lose)
 		   (maybe-commit-and-wait-for-condvar condvar))
 		 (enable-interrupts!)
-		 (loop))))))))
+		 (loop #t))))))))
 
 ;----------------
 ; UDP stuff
@@ -199,7 +206,10 @@
 (import-lambda-definition socket-number (socket) "s48_socket_number")
 (import-lambda-definition real-socket-listen (socket) "s48_listen")
 (import-lambda-definition real-socket-accept (socket) "s48_accept")
-(import-lambda-definition real-socket-connect (socket machine port-number)
+(import-lambda-definition real-socket-connect (socket
+					       machine
+					       port-number
+					       retry?)
 			  "s48_connect")
 (import-lambda-definition dup-socket-channel (socket)
 			  "s48_dup_socket_channel")

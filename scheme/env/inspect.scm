@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; A dirty little inspector.
 ; Look and feel shamelessly plagiarized from the Lucid Lisp inspector.
@@ -75,8 +75,8 @@
   (if (integer? name)
       (begin
 	(if (and (>= name 0)
-		 (< name (menu-length)))
-	    (new-selection (menu-ref name))
+		 (< name (current-menu-length)))
+	    (new-selection (current-menu-ref name))
 	    (write-line "Invalid choice." (command-output))))
       (case name
 	((u)

@@ -56,9 +56,13 @@ mumblefoo x
 The usual definition of the \code{s48} or \code{scheme48} command is actually a
  shell script that starts up the Scheme~48 virtual machine with a
  \code{-i \cvar{imagefile}}
-specifying the development environment heap image (and an obsolete
+specifying the development environment heap image and a
  \code{-o \cvar{vm-executable}} specifying the location of the virtual-machine
- executable).
+ executable (the executable is needed for loading external code on some
+ versions of Unix; see section~\ref{dynamic-externals}
+ \link*{for more information}
+ [for more information]
+ {dynamic-externals}).
 The file \code{go} in the Scheme~48 installation source directory is an example
  of such a shell script.
 
@@ -94,13 +98,13 @@ The Emacs function \code{run-scheme} can then be used to start a process
  running the program \code{scheme48} in a new buffer.
 To make the \code{autoload} and \code{(require \ldots)} forms work, you will
 also need
-to put the directory containing cmuscheme and related files in your
+to put the directory containing \code{cmuscheme} and related files in your
 emacs load-path:
 \begin{example}
 (setq load-path
   (append load-path '("\cvar{scheme-48-directory}/emacs")))
 \end{example}
-For further documentation see \code{emacs/cmuscheme48.el} and
+Further documentation can be found in the files \code{emacs/cmuscheme48.el} and
 \code{emacs/comint.el}.
 
 \section{Performance}
@@ -150,6 +154,8 @@ For detailed information, including a description of the module
  configuration language, see 
 \link*{the module chapter}[chapter~\Ref]{chapter:modules}.
 
+% JAR says: this paragraph is muddy.
+
 A {\em module} is an isolated namespace, with visibility of bindings
  controlled by module descriptions written in a special
  configuration language.
@@ -160,7 +166,7 @@ A {\em structure} is a subset of the bindings in a package.
 Only by being included in a structure can a binding be
  made visible in other packages.
 A structure has two parts, the package whose bindings are being exported
- and the set of names which are to be exported.
+ and the set of names that are to be exported.
 This set of names is called an {\em interface}.
 A module then has three parts:
 \begin{itemize}
@@ -180,7 +186,9 @@ The \code{open} clause lists structures whose bindings are visible
  within the module.
 The \code{begin} clause contains source code.
 \begin{example}
-(define-structure cells (export make-cell cell-ref cell-set!)
+(define-structure cells (export make-cell
+                                cell-ref
+                                cell-set!)
   (open scheme)
   (begin (define (make-cell x)
            (cons 'cell x))
@@ -192,7 +200,9 @@ Cells could also have been implemented using the
 \link*{record facility}[record facility described in section~\Ref]{records}
  and available in structure \code{define-record-type}.
 \begin{example}
-(define-structure cells (export make-cell cell-ref cell-set!)
+(define-structure cells (export make-cell
+                                cell-ref
+                                cell-set!)
   (open scheme define-record-types)
   (begin (define-record-type cell :cell
            (make-cell value)
@@ -249,13 +259,14 @@ invoked" is innocuous.  Feel free to ignore it.
 See also the package system documentation, in
  \link*{the module chapter}[chapter~\Ref]{chapter:modules}.
 
-Many of these utilities are documented in later chapters.
-Unfortunately, some are not.  They are
-listed, however, in files \code{scheme/rts-packages.scm},
-\code{scheme/comp-packages.scm}, \code{env-packages.scm}, and
-\code{more-packages.scm} in the distribution directory, and the bindings they
-export are listed in \code{scheme/interfaces.scm} and
-\code{more-interfaces.scm}.
+Not all of the the libraries available in Scheme~48 are described in this
+ manual.
+All are listed in files \code{rts-packages.scm},
+ \code{comp-packages.scm}, \code{env-packages.scm}, and
+ \code{more-packages.scm} in the \code{scheme} directory of the distribution,
+ and the bindings they
+ export are listed in \code{interfaces.scm} and
+ \code{more-interfaces.scm} in the same directory.
 
 %architecture
 %    Information about the virtual machine.  E.g.

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 (define-structures ((scheme-level-1 scheme-level-1-interface)
@@ -15,9 +15,9 @@
 
 ; "Level 2"
 
-(define-structures ((records records-interface)
+(define-structures ((record-types record-types-interface)
 		    (records-internal records-internal-interface))
-  (open scheme-level-1 signals
+  (open scheme-level-1 records signals
 	primitives)
   (files (rts record))
   (optimize auto-integrate))
@@ -32,7 +32,9 @@
 (define-structures ((define-record-types define-record-types-interface)
 		    (define-sync-record-types
 		      (export (define-synchronized-record-type :syntax))))
-  (open scheme-level-1 records records-internal loopholes
+  (open scheme-level-1
+	records record-types records-internal
+	loopholes
 	low-proposals	;provisional-checked-record-{ref|set!}
 	primitives)	;unspecific
   (files (rts jar-defrecord)))
@@ -41,7 +43,7 @@
 		    (meta-methods meta-methods-interface))
   (open scheme-level-1
 	define-record-types
-	records records-internal
+	records record-types records-internal
 	bitwise util primitives
 	signals)
   (files (rts method))
@@ -53,7 +55,7 @@
 
 (define-structures ((fluids fluids-interface)
 		    (fluids-internal fluids-internal-interface))
-  (open scheme-level-1 define-record-types primitives)
+  (open scheme-level-1 define-record-types primitives cells)
   (files (rts fluid))
   (optimize auto-integrate))
 
@@ -116,9 +118,8 @@
 	signals
 	architecture		; channel-opening options
 	debug-messages		; for error messages
-	util			; unspecific
-	structure-refs)
-  (access primitives)	; add-finalizer
+	(subset util		(unspecific))
+	(subset primitives	(add-finalizer!)))
   (files (rts channel-port)))
 
 (define-structure conditions conditions-interface
@@ -130,9 +131,8 @@
 	number-i/o
 	i/o				;output-port-option, write-string
 	methods				;disclose
-	structure-refs)
-  (access channels			;channel? channel-id
-	  code-vectors)			;code-vector?
+	(subset channels	(channel? channel-id))
+	(subset code-vectors	(code-vector?)))
   (files (rts write)))
 	 
 (define-structure reading reading-interface
@@ -205,7 +205,7 @@
 (define-structures ((exceptions exceptions-interface)
 		    (handle handle-interface))
   (open scheme-level-1
-	signals fluids
+	signals fluids cells
 	conditions	  ;make-exception, etc.
 	primitives	  ;set-exception-handlers!, etc.
 	wind		  ;CWCC
@@ -249,8 +249,10 @@
 	architecture            ;time-option
 	session-data
 	debug-messages
-	structure-refs)
-  (access primitives)           ;time current-thread set-current-thread! etc.
+	(subset primitives	(find-all-records
+				 current-thread set-current-thread!
+				 unspecific
+				 time)))
   (optimize auto-integrate)
   (files (rts thread) (rts sleep)))
 
@@ -270,20 +272,25 @@
 					 spawn-on-root
 					 scheme-exit-now
 					 call-when-deadlocked!)
-  (open scheme-level-1 threads threads-internal scheduler structure-refs
+  (open scheme-level-1 threads threads-internal scheduler
 	session-data
-	signals        		;error
-	handle			;with-handler
-	i/o			;current-error-port
 	conditions		;warning?, error?
 	writing			;display
 	debug-messages		;for debugging
-	i/o-internal		;output-port-forcer, output-forcer-id
-	fluids-internal         ;get-dynamic-env
-	interrupts              ;with-interrupts-inhibited
-	wind                    ;call-with-current-continuation
-	channel-i/o)		;waiting-for-i/o?
-  (access primitives)		;unspecific, wait
+	(subset i/o		(current-error-port newline))
+	(subset signals		(error))
+	(subset handle		(with-handler))
+	(subset i/o-internal	(output-port-forcers output-forcer-id))
+	(subset fluids-internal (get-dynamic-env))
+	(subset interrupts      (with-interrupts-inhibited
+				 all-interrupts
+				 set-enabled-interrupts!))
+	(subset wind            (call-with-current-continuation))
+	(subset channel-i/o	(waiting-for-i/o?
+				 initialize-channel-i/o!
+				 abort-unwanted-i/o!))
+	(modify primitives      (rename (wait primitive-wait))
+		                (expose wait unspecific)))
   (files (rts root-scheduler)))
 
 (define-structure enum-case (export (enum-case :syntax))

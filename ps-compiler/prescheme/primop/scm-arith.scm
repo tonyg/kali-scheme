@@ -9,14 +9,29 @@
 	    args)
   type/integer)
 
+(define (arith-float-op-rule args node depth return?)
+  (for-each (lambda (arg)
+	      (unify! (infer-type arg depth) type/float node))
+	    args)
+  type/float)
+
 (define (arith-comparison-rule args node depth return?)
   (arith-op-rule args node depth return?)
+  type/boolean)
+
+(define (float-comparison-rule args node depth return?)
+  (arith-float-op-rule args node depth return?)
   type/boolean)
 
 (define (integer-binop-rule args node depth return?)
   (check-arg-type args 0 type/integer depth node)
   (check-arg-type args 1 type/integer depth node)
   type/integer)
+
+(define (float-binop-rule args node depth return?)
+  (check-arg-type args 0 type/float depth node)
+  (check-arg-type args 1 type/float depth node)
+  type/float)
 
 (define (integer-monop-rule args node depth return?)
   (check-arg-type args 0 type/integer depth node)
@@ -39,6 +54,16 @@
 		       (make-literal-node (get-prescheme-primop '+))
 		       type))))
 
+(define-complex-primitive (fl+ . real?) +
+  arith-float-op-rule
+  (lambda (x y) (+ x y))
+  (lambda (args type)
+    (if (null? args)
+	(make-literal-node 0.0 type/float)
+	(n-ary->binary args
+		       (make-literal-node (get-prescheme-primop 'fl+))
+		       type))))
+
 (define-complex-primitive (* . integer?) *
   arith-op-rule
   (lambda (x y) (* x y))
@@ -49,31 +74,58 @@
 		       (make-literal-node (get-prescheme-primop '*))
 		       type))))
 
-(define-complex-primitive (- integer? . integer?)
+(define-complex-primitive (fl* . real?) *
+  arith-float-op-rule
+  (lambda (x y) (* x y))
+  (lambda (args type)
+    (if (null? args)
+	(make-literal-node 1.0)
+	(n-ary->binary args
+		       (make-literal-node (get-prescheme-primop 'fl*))
+		       type))))
+
+(define (subtract-action name)
   (lambda args
     (if (or (null? (cdr args))
 	    (null? (cddr args)))
 	(apply - args)
-	(user-error "error while evaluating: type error ~A" (cons '- args))))
-  (lambda (args node depth return?)
+	(user-error "error while evaluating: type error ~A" (cons name args)))))
+
+(define (subtract-checker type name)
+  (lambda (args node depth return)
     (case (length args)
       ((1)
-       (check-arg-type args 0 type/integer depth node)
-       type/integer)
+       (check-arg-type args 0 type depth node)
+       type)
       ((2)
-       (check-arg-type args 0 type/integer depth node)
-       (check-arg-type args 1 type/integer depth node)
-       type/integer)
+       (check-arg-type args 0 type depth node)
+       (check-arg-type args 1 type depth node)
+       type)
       (else
-       (user-error "wrong number of arguments to - in ~S" (schemify node)))))
-  (lambda (x y) (- x y))
+       (user-error "wrong number of arguments to ~S in ~S"
+		   name
+		   (schemify node))))))
+
+(define (subtract-maker name zero)
   (lambda (args type)
-    (let ((primop (get-prescheme-primop '-)))
+    (let ((primop (get-prescheme-primop name)))
       (if (null? (cdr args))
 	  (make-primop-call-node primop
-				 (list (make-literal-node 0) (car args))
+				 (list (make-literal-node zero) (car args))
 				 type)
 	  (make-primop-call-node primop args type)))))
+
+(define-complex-primitive (- integer? . integer?)
+  (subtract-action '-)
+  (subtract-checker type/integer '-)
+  (lambda (x y) (- x y))
+  (subtract-maker '- 0))
+
+(define-complex-primitive (fl- real? . real?)
+  (subtract-action '-)
+  (subtract-checker type/float 'fl-)
+  (lambda (x y) (fl- x y))
+  (subtract-maker 'fl- 0.0))
 
 (define (n-ary->binary args proc type)
   (let loop ((args args))
@@ -86,15 +138,17 @@
 
 (define-syntax define-binary-primitive
   (syntax-rules ()
-    ((define-binary-primitive id type-reconstruct)
-     (define-complex-primitive (id integer? integer?) id
+    ((define-binary-primitive id op predicate type-reconstruct)
+     (define-complex-primitive (id predicate predicate) op
        type-reconstruct
        (lambda (x y) (id x y))
        (lambda (args type)
 	 (make-primop-call-node (get-prescheme-primop 'id) args type))))))
 
-(define-binary-primitive = arith-comparison-rule)
-(define-binary-primitive < arith-comparison-rule)
+(define-binary-primitive =   = integer? arith-comparison-rule)
+(define-binary-primitive <   < integer? arith-comparison-rule)
+(define-binary-primitive fl= = real?    float-comparison-rule)
+(define-binary-primitive fl< < real?    float-comparison-rule)
 
 (define-semi-primitive (>  integer? integer?) >
   arith-comparison-rule
@@ -108,9 +162,22 @@
   arith-comparison-rule
   (lambda (x y) (not (< x y))))
 
-(define-binary-primitive quotient  integer-binop-rule)
-(define-binary-primitive remainder integer-binop-rule)
-(define-binary-primitive modulo    integer-binop-rule)
+(define-semi-primitive (fl>  real? real?) >
+  float-comparison-rule
+  (lambda (x y) (fl< y x)))
+
+(define-semi-primitive (<= real? real?) <=
+  float-comparison-rule
+  (lambda (x y) (not (fl< y x))))
+
+(define-semi-primitive (>= real? real?) >=
+  float-comparison-rule
+  (lambda (x y) (not (fl< x y))))
+
+(define-binary-primitive quotient  quotient  integer? integer-binop-rule)
+(define-binary-primitive fl/       /         real?    float-binop-rule)
+(define-binary-primitive remainder remainder integer? integer-binop-rule)
+(define-binary-primitive modulo    modulo    integer? integer-binop-rule)
 
 (define-primitive bitwise-and
   ((integer? type/integer) (integer? type/integer))

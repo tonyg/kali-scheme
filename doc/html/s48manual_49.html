@@ -2,38 +2,223 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:23 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:15 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Mixing Scheme 48 and C</TITLE>
+<TITLE>Scheme 48 Manual -- Regular expressions</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | Previous Chapter: <A HREF="s48manual_35.html">Libraries</A> | Next Chapter: <A HREF="s48manual_62.html">Access to POSIX</A><BR>Previous: <A HREF="s48manual_48.html">SRFIs</A> | Next: <A HREF="s48manual_50.html">Available facilities</A>
-<H1>Mixing Scheme 48 and C <BR><FONT SIZE=+1>Mike Sperber and Richard Kelsey</FONT></H1>
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_48.html">Macros for writing loops</A> | Next: <A HREF="s48manual_50.html">SRFIs</A>
+<H2>Regular expressions</H2>
 
+<P>This section describes a functional interface for building regular
+ expressions and matching them against strings.
+The matching is done using the POSIX regular expression package.
+Regular expressions are in the structure <CODE>regexp</CODE>.
+<P>A regular expression is either a character set, which matches any character
+in the set, or a composite expression containing one or more subexpressions.
+A regular expression can be matched against a string to determine success
+or failure, and to determine the substrings matched by particular subexpressions.
+<H3><A NAME="1">Character sets</A></H3>
+<P>Character sets may be defined using a list of characters and strings,
+using a range or ranges of characters, or by using set operations on
+existing character sets.
+<UL><LI><CODE>(set<I>&nbsp;character-or-string&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(range<I>&nbsp;low-char&nbsp;high-char</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(ranges<I>&nbsp;low-char&nbsp;high-char&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(ascii-range<I>&nbsp;low-char&nbsp;high-char</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(ascii-ranges<I>&nbsp;low-char&nbsp;high-char&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="6">&nbsp;</A>
+</UL>
+<CODE>Set</CODE> returns a set that contains the character arguments and the
+characters in any string arguments.  <CODE>Range</CODE> returns a character
+set that contain all characters between <CODE><I>low-char</I></CODE> and <CODE><I>high-char</I></CODE>,
+inclusive.  <CODE>Ranges</CODE> returns a set that contains all characters in
+the given ranges.  <CODE>Range</CODE> and <CODE>ranges</CODE> use the ordering induced by
+<CODE>char-&gt;integer</CODE>.  <CODE>Ascii-range</CODE> and <CODE>ascii-ranges</CODE> use the
+ ASCII ordering.
+It is an error for a <CODE><I>high-char</I></CODE> to be less than the preceding
+ <CODE><I>low-char</I></CODE> in the appropriate ordering.
+<UL><LI><CODE>(negate<I>&nbsp;char-set</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="7">&nbsp;</A>
+<LI><CODE>(intersection<I>&nbsp;char-set&nbsp;char-set</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="8">&nbsp;</A>
+<LI><CODE>(union<I>&nbsp;char-set&nbsp;char-set</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="9">&nbsp;</A>
+<LI><CODE>(subtract<I>&nbsp;char-set&nbsp;char-set</I>)&nbsp;-&gt;&nbsp;<I>char-set</I></CODE><A NAME="10">&nbsp;</A>
+</UL>
+These perform the indicated operations on character sets.
+<P>The following character sets are predefined:
+<BLOCKQUOTE><CENTER>
+<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
 
-<P>This chapter describes an interface for calling C functions
- from Scheme, calling Scheme functions from C, and allocating
- storage in the Scheme heap.
-These facilities are designed to link
- existing C libraries into Scheme&nbsp;48 in order to use them from Scheme.
-To this end, Scheme&nbsp;48 manages stub functions in C that
- negotiate between the calling conventions of Scheme and C and the
- memory allocation policies of both worlds.
-No stub generator is available yet, but writing stubs is a straightforward task.
-<MENU>
-<LI><A HREF="s48manual_50.html">Available facilities</A>
-<LI><A HREF="s48manual_51.html">Shared bindings</A>
-<LI><A HREF="s48manual_52.html">Calling C functions from Scheme</A>
-<LI><A HREF="s48manual_53.html">Adding external modules to the <TT>Makefile</TT></A>
-<LI><A HREF="s48manual_54.html">Dynamic loading</A>
-<LI><A HREF="s48manual_55.html">Compatibility</A>
-<LI><A HREF="s48manual_56.html">Accessing Scheme data from C</A>
-<LI><A HREF="s48manual_57.html">Calling Scheme functions from C</A>
-<LI><A HREF="s48manual_58.html">Interacting with the Scheme heap</A>
-<LI><A HREF="s48manual_59.html">Using Scheme records in C code</A>
-<LI><A HREF="s48manual_60.html">Raising exceptions from external code</A>
-<LI><A HREF="s48manual_61.html">Unsafe functions and macros</A>
-</MENU>
+<CODE>lower-case</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">   <CODE>(set "abcdefghijklmnopqrstuvwxyz")</CODE> </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>upper-case</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">   <CODE>(set "ABCDEFGHIJKLMNOPQRSTUVWXYZ")</CODE> </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>alphabetic</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">   <CODE>(union lower-case upper-case)</CODE> </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>numeric</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">      <CODE>(set "0123456789")</CODE> </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>alphanumeric</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> <CODE>(union alphabetic numeric)</CODE> </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>punctuation</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">
+ <CODE>(set "</CODE><CODE>!\"#$%&amp;'()*+,-./:;&lt;=&gt;?@[\\]^_`{|}~</CODE><CODE>")</CODE> </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>graphic</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">      <CODE>(union alphanumeric punctuation)</CODE> </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>printing</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">     <CODE>(union graphic (set #</CODE><CODE>\</CODE><CODE>space))</CODE> </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>control</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">      <CODE>(negate printing)</CODE> </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>blank</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">
+      <CODE>(set #</CODE><CODE>\</CODE><CODE>space (ascii-&gt;char 9))</CODE> ; 9 is tab </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>whitespace</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">
+      <CODE>(union (set #</CODE><CODE>\</CODE><CODE>space) (ascii-range 9 13))</CODE> </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>hexdigit</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">     <CODE>(set "0123456789abcdefABCDEF")</CODE> </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+</TD></TR></TABLE>
+
+</CENTER></BLOCKQUOTE>
+The above are taken from the default locale in POSIX.
+The characters in <CODE>whitespace</CODE> are <CODE><I>space</I></CODE>, <CODE><I>tab</I></CODE>,
+ <CODE><I>newline</I></CODE> (= <CODE><I>line&nbsp;feed</I></CODE>), <CODE><I>vertical&nbsp;tab</I></CODE>, <CODE><I>form&nbsp;feed</I></CODE>, and
+ <CODE><I>carriage&nbsp;return</I></CODE>.
+<H3><A NAME="11">Anchoring</A></H3>
+<UL><LI><CODE>(string-start<I></I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="12">&nbsp;</A>
+<LI><CODE>(string-end<I></I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="13">&nbsp;</A>
+</UL>
+<CODE>String-start</CODE> returns a regular expression that matches the beginning
+ of the string being matched against; string-end returns one that matches
+ the end.
+<H3><A NAME="14">Composite expressions</A></H3>
+<UL><LI><CODE>(sequence<I>&nbsp;reg-exp&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="15">&nbsp;</A>
+<LI><CODE>(one-of<I>&nbsp;reg-exp&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="16">&nbsp;</A>
+</UL>
+<CODE>Sequence</CODE> matches the concatenation of its arguments, <CODE>one-of</CODE> matches
+any one of its arguments.
+<UL><LI><CODE>(text<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="17">&nbsp;</A>
+</UL>
+<CODE>Text</CODE> returns a regular expression that matches the characters in
+ <CODE><I>string</I></CODE>, in order.
+<UL><LI><CODE>(repeat<I>&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="18">&nbsp;</A>
+<LI><CODE>(repeat<I>&nbsp;count&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="19">&nbsp;</A>
+<LI><CODE>(repeat<I>&nbsp;min&nbsp;max&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="20">&nbsp;</A>
+</UL>
+<CODE>Repeat</CODE> returns a regular expression that matches zero or more
+occurences of its <CODE><I>reg-exp</I></CODE> argument.  With no count the result
+will match any number of times (<CODE><I>reg-exp</I></CODE>*).  With a single
+count the returned expression will match
+ <CODE><I>reg-exp</I></CODE> exactly that number of times.
+The final case will match from <CODE><I>min</I></CODE> to <CODE><I>max</I></CODE>
+ repetitions, inclusive.
+<CODE><I>Max</I></CODE> may be <CODE>#f</CODE>, in which case there
+ is no maximum number of matches.
+<CODE><I>Count</I></CODE> and <CODE><I>min</I></CODE> should be exact, non-negative integers;
+ <CODE><I>max</I></CODE> should either be an exact non-negative integer or <CODE>#f</CODE>.
+<H3><A NAME="21">Case sensitivity</A></H3>
+<P>Regular expressions are normally case-sensitive.
+<UL><LI><CODE>(ignore-case<I>&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="22">&nbsp;</A>
+<LI><CODE>(use-case<I>&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="23">&nbsp;</A>
+</UL>
+The value returned by
+ <CODE>ignore-case</CODE> is identical its argument except that case will be
+ ignored when matching.
+The value returned by <CODE>use-case</CODE> is protected
+ from future applications of <CODE>ignore-case</CODE>.
+The expressions returned
+ by <CODE>use-case</CODE> and <CODE>ignore-case</CODE> are unaffected by later uses of the
+ these procedures.
+By way of example, the following matches <CODE>"ab"</CODE> but not <CODE>"aB"</CODE>,
+ <CODE>"Ab"</CODE>, or <CODE>"AB"</CODE>.
+<BLOCKQUOTE><PRE>
+<CODE>(text "ab")</CODE>
+</PRE></BLOCKQUOTE>
+while
+<BLOCKQUOTE><PRE>
+<CODE>(ignore-case (test "ab"))</CODE>
+</PRE></BLOCKQUOTE>
+matches <CODE>"ab"</CODE>, <CODE>"aB"</CODE>,
+ <CODE>"Ab"</CODE>, and <CODE>"AB"</CODE> and
+<BLOCKQUOTE><PRE>
+(ignore-case (sequence (text "a")
+                       (use-case (text "b"))))
+</PRE></BLOCKQUOTE>
+matches <CODE>"ab"</CODE> and <CODE>"Ab"</CODE> but not <CODE>"aB"</CODE> or <CODE>"AB"</CODE>.
+<H3><A NAME="24">Submatches and matching</A></H3>
+<P>A subexpression within a larger expression can be marked as a submatch.
+When an expression is matched against a string, the success or failure
+of each submatch within that expression is reported, as well as the
+location of the substring matched be each successful submatch.
+<UL><LI><CODE>(submatch<I>&nbsp;key&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="25">&nbsp;</A>
+<LI><CODE>(no-submatches<I>&nbsp;reg-exp</I>)&nbsp;-&gt;&nbsp;<I>reg-exp</I></CODE><A NAME="26">&nbsp;</A>
+</UL>
+<CODE>Submatch</CODE> returns a regular expression that matches its argument and
+ causes the result of matching its argument to be reported by the <CODE>match</CODE>
+ procedure.
+<CODE><I>Key</I></CODE> is used to indicate the result of this particular submatch 
+ in the alist of successful submatches returned by <CODE>match</CODE>.
+ Any value may be used as a <CODE><I>key</I></CODE>.
+<CODE>No-submatches</CODE> returns an expression identical to its
+ argument, except that all submatches have been elided.
+<UL><LI><CODE>(any-match?<I>&nbsp;reg-exp&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="27">&nbsp;</A>
+<LI><CODE>(exact-match?<I>&nbsp;reg-exp&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="28">&nbsp;</A>
+<LI><CODE>(match<I>&nbsp;reg-exp&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>match&nbsp;or&nbsp;<TT>&nbsp;#f</TT></I></CODE><A NAME="29">&nbsp;</A>
+<LI><CODE>(match-start<I>&nbsp;match</I>)&nbsp;-&gt;&nbsp;<I>index</I></CODE><A NAME="30">&nbsp;</A>
+<LI><CODE>(match-end<I>&nbsp;match</I>)&nbsp;-&gt;&nbsp;<I>index</I></CODE><A NAME="31">&nbsp;</A>
+<LI><CODE>(match-submatches<I>&nbsp;match</I>)&nbsp;-&gt;&nbsp;<I>alist</I></CODE><A NAME="32">&nbsp;</A>
+</UL>
+<CODE>Any-match?</CODE> returns <CODE>#t</CODE> if <CODE><I>string</I></CODE> matches <CODE><I>reg-exp</I></CODE> or
+ contains a substring that does, and <CODE>#f</CODE> otherwise.
+<CODE>Exact-match?</CODE> returns <CODE>#t</CODE> if <CODE><I>string</I></CODE> matches
+ <CODE><I>reg-exp</I></CODE> and <CODE>#f</CODE> otherwise.
+<P><CODE>Match</CODE> returns <CODE>#f</CODE> if <CODE><I>reg-exp</I></CODE> does not match <CODE><I>string</I></CODE>
+ and a match record if it does match.
+A match record contains three values: the beginning and end of the substring
+ that matched
+ the pattern and an a-list of submatch keys and corresponding match records
+ for any submatches that also matched.
+<CODE>Match-start</CODE> returns the index of
+ the first character in the matching substring and <CODE>match-end</CODE> gives index
+ of the first character after the matching substring.
+<CODE>Match-submatches</CODE> returns an alist of submatch keys and match records.
+Only the top match record returned by <CODE>match</CODE> has a submatch alist.
+<P>Matching occurs according to POSIX.
+The match returned is the one with the lowest starting index in <CODE><I>string</I></CODE>.
+If there is more than one such match, the longest is returned.
+Within that match the longest possible submatches are returned.
+<P>All three matching procedures cache a compiled version of <CODE><I>reg-exp</I></CODE>.
+Subsequent calls with the same <CODE><I>reg-exp</I></CODE> will be more efficient.
+<P>The C interface to the POSIX regular expression code uses ASCII <CODE>nul</CODE>
+ as an end-of-string marker.
+The matching procedures will ignore any characters following an
+ embedded ASCII <CODE>nul</CODE>s in <CODE><I>string</I></CODE>.
+<BLOCKQUOTE><PRE>
+(define pattern (text "abc"))
+(any-match? pattern "abc")         <CODE>-&gt;</CODE> #t
+(any-match? pattern "abx")         <CODE>-&gt;</CODE> #f
+(any-match? pattern "xxabcxx")     <CODE>-&gt;</CODE> #t
+
+(exact-match? pattern "abc")       <CODE>-&gt;</CODE> #t
+(exact-match? pattern "abx")       <CODE>-&gt;</CODE> #f
+(exact-match? pattern "xxabcxx")   <CODE>-&gt;</CODE> #f
+
+(match pattern "abc")              <CODE>-&gt;</CODE> (#{match 0 3})
+(match pattern "abx")              <CODE>-&gt;</CODE> #f
+(match pattern "xxabcxx")          <CODE>-&gt;</CODE> (#{match 2 5})
+
+(let ((x (match (sequence (text "ab")
+                          (submatch 'foo (text "cd"))
+                          (text "ef"))
+                "xxxabcdefxx")))
+  (list x (match-submatches x)))
+  <CODE>-&gt;</CODE> (#{match 3 9} ((foo . #{match 5 7}))
+
+(match-submatches
+  (match (sequence
+           (set "a")
+           (one-of (submatch 'foo (text "bc"))
+                   (submatch 'bar (text "BC"))))
+         "xxxaBCd"))
+  <CODE>-&gt;</CODE> ((bar . #{match 4 6}))
+</PRE></BLOCKQUOTE>
 <P>
   
-Previous: <A HREF="s48manual_48.html">SRFIs</A> | Next: <A HREF="s48manual_50.html">Available facilities</A></BODY></HTML>
+Previous: <A HREF="s48manual_48.html">Macros for writing loops</A> | Next: <A HREF="s48manual_50.html">SRFIs</A></BODY></HTML>

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Alternate implementations of the low-structures.
 ; Cf. low-structures-interface in ../packages.scm and ../alt-structures.scm.
@@ -26,3 +26,10 @@
   (files primitives
 	 weak
 	 contin))
+
+(define-structure code-quote (export (code-quote :syntax))
+  (open scheme-level-2)
+  (begin
+    (define-syntax code-quote
+      (lambda (e r c)
+	`(,(r 'quote) ,(cadr e))))))

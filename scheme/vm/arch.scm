@@ -1,11 +1,11 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file arch.scm.
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 20")
+(define architecture-version "Vanilla 21")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -73,8 +73,8 @@
   (make-flat-env  env-data)      ; make new environment from env-data
   (make-big-flat-env big-env-data) ; same, but with two-byte size and offsets
   (push 1)		         ; push *val* onto stack
-  ((local0-push push-local0)	 ; common combination
-		  byte junk 1)
+  (local0-push    byte junk 1)   ; common combination
+  (push-local0    junk byte 1)   ; another common combination	 
   (pop)			         ; pop top of stack into *val*
   (stack-ref      byte)	         ; index'th element of stack into *val*
   (stack-set!     byte 1)        ; *val* to index'th element of stack

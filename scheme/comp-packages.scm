@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Various data structures used by the compiler, module system, etc.
 
@@ -112,7 +112,7 @@
 	define-record-types
 	tables
 	fluids
-	records			;for debug-flags randomness
+	record-types		;for debug-flags randomness
 	features)		;make-immutable!
   (files (bcomp ddata)
 	 (bcomp state))
@@ -128,7 +128,7 @@
 ; Compiler back end
 
 (define-structure segments segments-interface
-  (open scheme-level-2 util tables fluids signals
+  (open scheme-level-2 util tables fluids signals cells
 	define-record-types
 	code-vectors
 	templates
@@ -188,7 +188,7 @@
 
 (define-structure reading-forms (export read-forms $note-file-package)
   (open scheme-level-2
-	fluids filenames
+	fluids filenames cells
 	features		;current-noise-port force-output
 	)
   (files (bcomp read-form)))
@@ -220,7 +220,7 @@
 		    (packages-internal packages-internal-interface)
 		    (undefined undefined-interface))
   (open scheme-level-2
-	define-record-types tables fluids signals
+	define-record-types tables fluids signals cells
 	util features locations weak
         meta-types interfaces
 	names bindings

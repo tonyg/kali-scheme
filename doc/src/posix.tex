@@ -48,7 +48,7 @@ They are in the structures \code{posix-process} and \code{posix}.
 \label{processes}
 
 \begin{protos}
-\proto{fork}{}{process-id or \code{\#f}}
+\proto{fork}{}{process-id or {\tt \#f}}
 \protonoresult{fork-and-forget}{ thunk}
 % Handler versions?
 \end{protos}
@@ -67,7 +67,7 @@ They are in the structures \code{posix-process} and \code{posix}.
 \proto{integer->process-id}{ integer}{process-id}
 \end{protos}
 \noindent
-A \cvar{process-id} is a boxed integer.
+%A \cvar{process-id} is a  around the actual integer id.
 \code{Process-id?} is a predicate for process-ids,
 \code{process-id=?} compares two to see if they are the same,
  and \code{process-id-uid} returns the actual Unix id.
@@ -75,8 +75,8 @@ A \cvar{process-id} is a boxed integer.
  convert process ids to and from integers.
 
 \begin{protos}
-\proto{process-id-exit-status}{ process-id}{integer or \code{\#f}}
-\proto{process-id-terminating-signal}{ process-id}{signal or \code{\#f}}
+\proto{process-id-exit-status}{ process-id}{integer or {\tt \#f}}
+\proto{process-id-terminating-signal}{ process-id}{signal or {\tt \#f}}
 \protonoresult{wait-for-child-process}{ process-id}
 \end{protos}
 \noindent
@@ -147,10 +147,10 @@ Not all named signals are available from all OS's and
  there may be multiple names for a single OS signal number.
 
 \begin{protos}
-\proto{name->signal}{ symbol}{signal or \code{\#f}}
+\proto{name->signal}{ symbol}{signal or {\tt \#f}}
 \proto{integer->signal}{ integer}{signal}
 \proto{signal?}{ x}{boolean}
-\proto{signal-name}{ signal}{symbol or \code{\#f}}
+\proto{signal-name}{ signal}{symbol or {\tt \#f}}
 \proto{signal-os-number}{ signal}{integer}
 \proto{signal=?}{ signal0 signal1}{boolean}
 \end{protos}
@@ -194,10 +194,12 @@ The following lists the names of the POSIX signals.
 \end{center}
 
 \subsection{Other signals}
-The following lists the names of the non-POSIX that the system is currently
- aware of.
+The following lists the names of the non-POSIX signals that the system is
+ currently aware of.
 \begin{center}
-\begin{tabular}{ll}
+\W\begin{tabular}{ll}
+\T\setlongtables
+\T\begin{longtable}{ll}
 \code{trap  } & trace or breakpoint trap \\
 \code{iot   } & IOT trap - a synonym for ABRT \\
 \code{emt   } & \\
@@ -216,7 +218,8 @@ The following lists the names of the non-POSIX that the system is currently
 \code{lost  } & File lock lost \\
 \code{winch } & Window resize signal		(4.3 BSD, Sun) \\
 \code{unused} & Unused signal \\
-\end{tabular}
+\W\end{tabular}
+\T\end{longtable}
 \end{center}
 
 \subsection{Sending signals}
@@ -242,7 +245,7 @@ When the Scheme process receives a signal that signal is added to the
 \proto{signal-queue?}{ x}{boolean}
 \proto{signal-queue-monitored-signals}{ signal-queue}{list of signals}
 \proto{dequeue-signal!}{ signal-queue}{signal}
-\proto{maybe-dequeue-signal!}{ queue-queue}{signal or \code{\#f}}
+\proto{maybe-dequeue-signal!}{ queue-queue}{signal or {\tt \#f}}
 \end{protos}
 \noindent
 \code{Make-signal-queue} returns a new signal-queue that will monitor
@@ -255,6 +258,18 @@ When the Scheme process receives a signal that signal is added to the
 If \cvar{signal-queue}'s queue of signals is empty \code{dequeue-signal!}
  blocks until an appropriate signal is received.
 \code{Maybe-dequeue-signal!} does not block; it returns \code{\#f} instead.
+
+There is a bug in the current system that causes an erroneous deadlock
+ error if threads are blocked waiting for signals and no other threads
+ are available to run.
+A work around is to create a thread that sleeps for a long time, which
+ prevents any deadlock errors (including real ones):
+\begin{example}
+> ,open threads
+> (spawn (lambda ()
+           ; Sleep for a year
+           (sleep (* 1000 60 60 24 365))))
+\end{example}
 
 \begin{protos}
 \protonoresult{add-signal-queue-signal!}{ signal-queue signal}
@@ -315,7 +330,7 @@ The effective values may be set, but not the original ones.
 \subsection{Environment variables}
 
 \begin{protos}
-\proto{lookup-environment-variable}{ string}{string or \code{\#f}}
+\proto{lookup-environment-variable}{ string}{string or {\tt \#f}}
 \proto{environment-alist}{}{alist}
 \end{protos}
 \noindent
@@ -414,7 +429,7 @@ Directory streams are like input ports, with each read operation
 \begin{protos}
 \proto{open-directory-stream}{ name}{directory}
 \proto{directory-stream?}{ x}{boolean}
-\proto{read-directory-stream}{ directory}{name or \code{\#f}}
+\proto{read-directory-stream}{ directory}{name or {\tt \#f}}
 \protonoresult{close-directory-stream}{ directory}
 \end{protos}
 \noindent
@@ -486,18 +501,34 @@ The following file options may be used with \code{open-file}.
  & \code{write-only} & port may not be read
 \end{tabular}
 \end{center}
-
 \noindent Only one of the last three options may be used.
+
+For example
+\begin{example}
+(open-file "some-file.txt"
+           (file-options create write-only)
+           (file-mode read owner-write))
+\end{example}
+ returns an output port that writes to a newly-created file that can be
+ read by anyone and written only by the owner.
+Once the file exists,
+\begin{example}
+(open-file "some-file.txt"
+           (file-options append write-only))
+\end{example}
+will open an output port that appends to the file.
 
 The \code{append} and \code{nonblocking} options and the read/write nature of
  the port can be read using \code{i/o-flags}.
 The \code{append} and \code{nonblocking} options can be set
  using \code{set-i/o-flags!}.
 
-Care should be exercised when using output ports which do not have
- the nonblocking option set.
-Ordinary Scheme~48 output ports have the nonblocking option set to
- prevent write operations from causing the Scheme process to block.
+To keep port operations from blocking the Scheme~48 process, output
+ ports are set to be nonblocking at the time of creation (input ports
+ are managed using \code{select()}).
+You can use \code{set-i/o-flags!} to make an output port blocking, for
+ example just before a fork, but care should be exercised.
+The Scheme~48 runtime code may get confused if an I/O operation blocks.
 
 \begin{protos}
 \protonoresult{set-file-creation-mask!}{ file-mode}
@@ -513,6 +544,7 @@ Bits set in \cvar{file-mode} are cleared in the modes of any files or
 \noindent
 \code{Link} makes path \cvar{new} be a new link to the file
  pointed to by path \cvar{existing}.
+The two paths must be in the same file system.
 
 % 5.4 Special File Creation
 
@@ -534,7 +566,8 @@ These two procedures make new directories and fifo files.
 \code{Unlink} removes the link indicated by \cvar{path}.
 \code{Remove-directory} removes the indicated (empty) directory.
 \code{Rename} moves the file pointed to by \cvar{old-path} to the
- location pointed to by \cvar{new-path}.
+ location pointed to by \cvar{new-path} (the two paths must be in
+ the same file system).
 Any other links to the file remain unchanged.
 
 % 5.6.3 (out of POSIX order)
@@ -677,7 +710,7 @@ The mode-names are listed below.
 \noindent
 \code{Integer->file-mode} and \code{file-mode->integer} translate file modes
  to and from the classic Unix file mode masks.
-These may not be the masks actually used by the underlying OS).
+These may not be the masks used by the underlying OS.
 
 \begin{center}
 \begin{tabular}{lll}
@@ -789,13 +822,15 @@ These procedures are in structures \code{posix-i/o} and \code{posix}.
 % 6.2 File descriptor manipulation.
 
 A {\em file descriptor} port (or \cvar{fd-port})
- is a port that directly reads to or writes from an OS file descriptor.
+ is a port that reads to or writes from an OS file descriptor.
 Fd-ports are returned by \code{open-input-file}, \code{open-output-file},
  \code{open-file}, \code{open-pipe}, and other procedures.
+% Richard says: add an example of a non-fd port once the extended ports
+% are described in the manual.
 
 \begin{protos}
 \proto{fd-port?}{ port}{boolean}
-\proto{port->fd}{ port}{\#f or integer}
+\proto{port->fd}{ port}{integer or {\tt \#f}}
 \end{protos}
 \noindent
 \code{Fd-port?} returns true if its argument is an fd-port.
@@ -809,9 +844,9 @@ Fd-ports are returned by \code{open-input-file}, \code{open-output-file},
 \code{Remap-file-descriptors} reassigns file descriptors to ports.
 The \cvar{fd-specs} indicate which port is to be mapped to each
  file descriptor: the first gets file descriptor \code{0}, the second gets
- \code{1}.
+ \code{1}, and so forth.
 A \cvar{fd-spec} is either a port that reads from or writes to
- a a file descriptor,
+ a file descriptor,
  or \code{\#f}, with \code{\#f} indicating that the corresponding file
  descriptor is not used.
 Any open ports not listed are marked `close-on-exec'.
@@ -895,13 +930,13 @@ Only the \code{append} and \code{nonblocking} can be written.
 %\subsection{Terminals}
 
 \begin{protos}
-\proto{is-a-terminal?}{ port}{boolean}
-\proto{terminal-name}{ port}{string}
+\proto{port-is-a-terminal?}{ port}{boolean}
+\proto{port-terminal-name}{ port}{string}
 \end{protos}
 \noindent
-\code{Is-a-terminal?} returns true if \cvar{port} has an underlying
+\code{Port-is-a-terminal?} returns true if \cvar{port} has an underlying
  file descriptor that is associated with a terminal.
-For such ports \code{terminal-name} returns the name of the
+For such ports \code{port-terminal-name} returns the name of the
  terminal, for all others it returns \code{\#f}.
 
 % 6. File Synchronization
@@ -920,7 +955,7 @@ The procedures in this section provide access to POSIX regular expression
  matching.
 The regular expression syntax and semantics are far too complex to
  be described here.
-Because the C interface use zero bytes for marking the ends of strings,
+Because the C interface uses zero bytes for marking the ends of strings,
  patterns and strings that contain zero bytes will not work correctly.
 
 These procedures are in structures \code{posix-regexps} and \code{posix}.
@@ -1005,8 +1040,9 @@ C procedure & Scheme procedure(s) \\
 \code{dup}&\code{dup, dup-switching-mode}\\
 \code{dup2}&\code{dup2}\\
 \code{exec[l|v][e|p|$\epsilon$]}
- &\code{exec, exec-with-environment, exec-file,} \\
- &\code{\ \ exec-file-with-environment, exec-with-alias}\\
+ &\code{exec, exec-with-environment,} \\
+ &\code{\ \ exec-file, exec-file-with-environment,} \\
+ &\code{\ \ exec-with-alias}\\
 \code{\_exit}&\code{exit}\\
 \code{fcntl}&\code{io-flags, set-io-flags!,}\\
  &\code{\ \ close-on-exec, set-close-on-exec!}\\
@@ -1014,7 +1050,8 @@ C procedure & Scheme procedure(s) \\
 \code{fstat}&\code{get-port-info}\\
 \code{getcwd}&\code{working-directory}\\
 \code{getegid}&\code{get-effective-group-id}\\
-\code{getenv}&\code{lookup-environment-variable, environment-alist}\\
+\code{getenv}&\code{lookup-environment-variable,} \\
+ &\code{\ \ environment-alist}\\
 \code{geteuid}&\code{get-effective-user-id}\\
 \code{getgid}&\code{get-group-id}\\
 \code{getgroups}&\code{get-groups}\\
@@ -1040,8 +1077,9 @@ C procedure & Scheme procedure(s) \\
 \code{time}&\code{current-time}\\
 \code{ttyname}&\code{port-terminal-name}\\
 \code{umask}&\code{set-file-creation-mask!}\\
-\code{uname}&\code{os-name, os-node-name, os-release-name,}\\
- &\code{\ \ os-version-name, machine-name}\\
+\code{uname}&\code{os-name, os-node-name,} \\
+ &\code{\ \ os-release-name, os-version-name,} \\
+ &\code{\ \ machine-name}\\
 \code{unlink}&\code{unlink}\\
 \code{waitpid}&\code{wait-for-child-process}\\
 \code{write}&\code{write-char, write-block}\\

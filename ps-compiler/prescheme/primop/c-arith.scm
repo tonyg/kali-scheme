@@ -10,6 +10,11 @@
 (define-c-arith-binop-generator * "*")
 (define-c-arith-binop-generator quotient  "/")
 
+(define-c-arith-binop-generator fl+ "+")
+(define-c-arith-binop-generator fl- "-")
+(define-c-arith-binop-generator fl* "*")
+(define-c-arith-binop-generator fl/ "/")
+
 (define-c-generator small* #t
   (lambda (call port indent)
     (format port "PS_SMALL_MULTIPLY(")
@@ -69,6 +74,8 @@
 
 (define-c-comp-binop-generator =      "==")
 (define-c-comp-binop-generator <      "<" )
+(define-c-comp-binop-generator fl=    "==")
+(define-c-comp-binop-generator fl<    "<" )
 (define-c-comp-binop-generator char=? "==")
 (define-c-comp-binop-generator char<? "<" )
 

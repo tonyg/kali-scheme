@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Stuff in Pre-Scheme that is not in Scheme.
@@ -19,7 +19,10 @@
       (arithmetic-shift (bitwise-and i int-mask) (- 0 n))))
 
 (define (deallocate x) #f)
-(define (null-pointer? x) (not x))
+(define the-null-pointer (list 'null-pointer))
+(define (null-pointer? x) (eq? x the-null-pointer))
+(define (null-pointer)
+  the-null-pointer)
 
 (define-external-enumeration errors
   (no-errors
@@ -34,56 +37,53 @@
   ; (symbol->string (enumerand->name status errors)))
 
 (define (open-input-file name)
-  (let ((port ((structure-ref scheme open-input-file) name)))
+  (let ((port (scheme:open-input-file name)))
     (values port
 	    (if port
 		(enum errors no-errors)
 		(enum errors file-not-found)))))
 
 (define (open-output-file name)
-  (let ((port ((structure-ref scheme open-output-file) name)))
+  (let ((port (scheme:open-output-file name)))
     (values port
 	    (if port
 		(enum errors no-errors)
 		(enum errors file-not-found)))))
 
 (define (close-input-port port)
-  ((structure-ref scheme close-input-port) port)
+  (scheme:close-input-port port)
   (enum errors no-errors))
 
 (define (close-output-port port)
-  ((structure-ref scheme close-output-port) port)
+  (scheme:close-output-port port)
   (enum errors no-errors))
 
 (define (read-char port)
-  (let ((ch (s-read-char port)))
+  (let ((ch (scheme:read-char port)))
     (if (eof-object? ch)
 	(values (ascii->char 0) #t (enum errors no-errors))
 	(values ch #f (enum errors no-errors)))))
 
 (define (peek-char port)
-  (let ((ch (s-peek-char port)))
+  (let ((ch (scheme:peek-char port)))
     (if (eof-object? ch)
 	(values (ascii->char 0) #t (enum errors no-errors))
 	(values ch #f (enum errors no-errors)))))
 
-(define s-read-char (structure-ref scheme read-char))
-(define s-peek-char (structure-ref scheme peek-char))
-
 (define (read-integer port)
   (eat-whitespace! port)
-  (let ((neg? (let ((x (s-peek-char port)))
+  (let ((neg? (let ((x (scheme:peek-char port)))
 		(if (eof-object? x)
 		    #f
 		    (case x
-		      ((#\+) (s-read-char port) #f)
-		      ((#\-) (s-read-char port) #t)
+		      ((#\+) (scheme:read-char port) #f)
+		      ((#\-) (scheme:read-char port) #t)
 		      (else #f))))))
     (let loop ((n 0) (any? #f))
-      (let ((x (s-peek-char port)))
+      (let ((x (scheme:peek-char port)))
 	(cond ((and (char? x)
 		    (char-numeric? x))
-	       (s-read-char port)
+	       (scheme:read-char port)
 	       (loop (+ (* n 10)
 			(- (char->integer x)
 			   (char->integer #\0)))
@@ -96,8 +96,8 @@
 	       (values 0 #f (enum errors parse-error))))))))
 
 (define (eat-whitespace! port)
-  (cond ((char-whitespace? (s-peek-char port))
-	 (s-read-char port)
+  (cond ((char-whitespace? (scheme:peek-char port))
+	 (scheme:read-char port)
 	 (eat-whitespace! port))))
 
 (define (write-x string port)

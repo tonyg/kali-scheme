@@ -2,96 +2,36 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:23 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:15 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Shared bindings</TITLE>
+<TITLE>Scheme 48 Manual -- Mixing Scheme 48 and C</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_49.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_50.html">Available facilities</A> | Next: <A HREF="s48manual_52.html">Calling C functions from Scheme</A>
-<H2>Shared bindings</H2>
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | Previous Chapter: <A HREF="s48manual_35.html">Libraries</A> | Next Chapter: <A HREF="s48manual_64.html">Access to POSIX</A><BR>Previous: <A HREF="s48manual_50.html">SRFIs</A> | Next: <A HREF="s48manual_52.html">Available facilities</A>
+<H1>Mixing Scheme 48 and C <BR><FONT SIZE=+1>Mike Sperber and Richard Kelsey</FONT></H1>
 
-<P>Shared bindings are the means by which named values are shared between Scheme
- code and C code.
-There are two separate tables of shared bindings, one for values defined in
- Scheme and accessed from C and the other for values going the other way.
-Shared bindings actually bind names to cells, to allow a name to be looked
- up before it has been assigned.
-This is necessary because C initialization code may be run before or after
- the corresponding Scheme code, depending on whether the Scheme code is in
- the resumed image or is run in the current session.
-<H3><A NAME="1">Exporting Scheme values to C</A></H3>
-<UL><LI><CODE>(define-exported-binding<I>&nbsp;name&nbsp;value</I>)&nbsp;-&gt;&nbsp;<I>shared-binding</I></CODE><A NAME="2">&nbsp;</A>
-</UL>
-<UL><LI><CODE>s48_value s48_get_imported_binding(char *name)</CODE>
-<LI><CODE>s48_value S48_SHARED_BINDING_REF(s48_value shared_binding)</CODE>
-</UL>
-<P><CODE>Define-exported-binding</CODE> makes <CODE><I>value</I></CODE> available to C code
- under as <CODE><I>name</I></CODE> which must be a <CODE><I>string</I></CODE>, creating a new shared
- binding if necessary.
-The C function <CODE>s48_get_imported_binding</CODE> returns the shared binding
- defined for <CODE>name</CODE>, again creating it if necessary.
-The C macro <CODE>S48_SHARED_BINDING_REF</CODE> dereferences a shared binding,
- returning its current value.
-<H3><A NAME="3">Exporting C values to Scheme</A></H3>
-<UL><LI><CODE>void s48_define_exported_binding(char *name, s48_value value)</CODE>
-</UL>
-<UL><LI><CODE>(lookup-imported-binding<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>shared-binding</I></CODE><A NAME="4">&nbsp;</A>
-<LI><CODE>(shared-binding-ref<I>&nbsp;shared-binding</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="5">&nbsp;</A>
-</UL>
-<P>These are used to define shared bindings from C and to access them
- from Scheme.
-Again, if a name is looked up before it has been defined, a new binding is
- created for it.
-<P>The common case of exporting a C function to Scheme can be done using
- the macro <CODE>S48_EXPORT_FUNCTION(<EM>name</EM>)</CODE>.
-This expands into
-<P><CODE>s48_define_exported_binding("<CODE><I>name</I></CODE>", s48_enter_pointer(<CODE><I>name</I></CODE>))</CODE>
-<P>which boxes the function into a Scheme byte vector and then
- exports it.
-Note that <CODE>s48_enter_pointer</CODE> allocates space in the Scheme heap
- and might trigger a 
- <A HREF="s48manual_58.html">garbage collection</A>.
-<UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>(import-definition <CODE><I>name</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
-<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>(import-definition <CODE><I>name&nbsp;c-name</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
-</UL>
-These macros simplify importing definitions from C to Scheme.
-They expand into
-<P><CODE>(define <CODE><I>name</I></CODE> (lookup-imported-binding <CODE><I>c-name</I></CODE>))</CODE>
-<P>where <CODE><I>c-name</I></CODE> is as supplied for the second form.
-For the first form <CODE><I>c-name</I></CODE> is derived from <CODE><I>name</I></CODE> by
- replacing `<CODE>-</CODE>' with `<CODE>_</CODE>' and converting letters to lowercase.
-For example, <CODE>(import-definition my-foo)</CODE> expands into
-<P><CODE>(define my-foo (lookup-imported-binding "my_foo"))</CODE>
-<H3><A NAME="more-shared-bindings">Complete shared binding interface</A></H3>
 
-<P>There are a number of other Scheme functions related to shared bindings;
- these are in the structure <CODE>shared-bindings</CODE>.
-<UL><LI><CODE>(shared-binding?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="7">&nbsp;</A>
-<LI><CODE>(shared-binding-name<I>&nbsp;shared-binding</I>)&nbsp;-&gt;&nbsp;<I>string</I></CODE><A NAME="8">&nbsp;</A>
-<LI><CODE>(shared-binding-is-import?<I>&nbsp;shared-binding</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="9">&nbsp;</A>
-<LI><CODE>(shared-binding-set!<I>&nbsp;shared-binding&nbsp;value</I>)</CODE><A NAME="10">&nbsp;</A>
-<LI><CODE>(define-imported-binding<I>&nbsp;string&nbsp;value</I>)</CODE><A NAME="11">&nbsp;</A>
-<LI><CODE>(lookup-exported-binding<I>&nbsp;string</I>)</CODE><A NAME="12">&nbsp;</A>
-<LI><CODE>(undefine-imported-binding<I>&nbsp;string</I>)</CODE><A NAME="13">&nbsp;</A>
-<LI><CODE>(undefine-exported-binding<I>&nbsp;string</I>)</CODE><A NAME="14">&nbsp;</A>
-</UL>
-<P><CODE>Shared-binding?</CODE> is the predicate for shared-bindings.
-<CODE>Shared-binding-name</CODE> returns the name of a binding.
-<CODE>Shared-binding-is-import?</CODE> is true if the binding was defined from C.
-<CODE>Shared-binding-set!</CODE> changes the value of a binding.
-<CODE>Define-imported-binding</CODE> and <CODE>lookup-exported-binding</CODE> are
- Scheme versions of <CODE>s48_define_exported_binding</CODE>
- and <CODE>s48_lookup_imported_binding</CODE>.
-The two <CODE>undefine-</CODE> procedures remove bindings from the two tables.
-They do nothing if the name is not found in the table.
-<P>The following C macros correspond to the Scheme functions above.
-<UL><LI><CODE>int       S48_SHARED_BINDING_P(x)</CODE>
-<LI><CODE>int       S48_SHARED_BINDING_IS_IMPORT_P(s48_value s_b)</CODE>
-<LI><CODE>s48_value S48_SHARED_BINDING_NAME(s48_value s_b)</CODE>
-<LI><CODE>void      S48_SHARED_BINDING_SET(s48_value s_b, s48_value value)</CODE>
-</UL>
+<P>This chapter describes an interface for calling C functions
+ from Scheme, calling Scheme functions from C, and allocating
+ storage in the Scheme heap..
+Scheme&nbsp;48 manages stub functions in C that
+ negotiate between the calling conventions of Scheme and C and the
+ memory allocation policies of both worlds.
+No stub generator is available yet, but writing stubs is a straightforward task.
+<MENU>
+<LI><A HREF="s48manual_52.html">Available facilities</A>
+<LI><A HREF="s48manual_53.html">Shared bindings</A>
+<LI><A HREF="s48manual_54.html">Calling C functions from Scheme</A>
+<LI><A HREF="s48manual_55.html">Adding external modules to the <TT>Makefile</TT></A>
+<LI><A HREF="s48manual_56.html">Dynamic loading</A>
+<LI><A HREF="s48manual_57.html">Compatibility</A>
+<LI><A HREF="s48manual_58.html">Accessing Scheme data from C</A>
+<LI><A HREF="s48manual_59.html">Calling Scheme functions from C</A>
+<LI><A HREF="s48manual_60.html">Interacting with the Scheme heap</A>
+<LI><A HREF="s48manual_61.html">Using Scheme records in C code</A>
+<LI><A HREF="s48manual_62.html">Raising exceptions from external code</A>
+<LI><A HREF="s48manual_63.html">Unsafe functions and macros</A>
+</MENU>
 <P>
   
-Previous: <A HREF="s48manual_50.html">Available facilities</A> | Next: <A HREF="s48manual_52.html">Calling C functions from Scheme</A></BODY></HTML>
+Previous: <A HREF="s48manual_50.html">SRFIs</A> | Next: <A HREF="s48manual_52.html">Available facilities</A></BODY></HTML>

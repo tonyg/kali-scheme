@@ -15,7 +15,9 @@ typedef long	s48_value;
 
 /* Misc stuff */
 
-#define S48_EQ(v1, v2) ((v1) == (v2))
+#define S48_EQ_P(v1, v2) ((v1) == (v2))
+/* Superceded name for the above definition, retained for compatibility. */
+#define S48_EQ(v1, v2) ((v1) == (v2)) 
 
 #define S48_MAX_FIXNUM_VALUE ((1 << 29) - 1)
 #define S48_MIN_FIXNUM_VALUE (-1 << 29)
@@ -179,27 +181,46 @@ extern void *		s48_value_pointer(s48_value);
 /* Exceptions */
 
 extern void s48_raise_scheme_exception(long type, long nargs, ...);
-extern void s48_raise_argtype_error(s48_value value);
-extern void s48_raise_argnumber_error(s48_value value,
-				  s48_value min, s48_value max);
+extern void s48_raise_argument_type_error(s48_value value);
+extern void s48_raise_argument_number_error(s48_value value,
+				            s48_value min,
+					    s48_value max);
 extern void s48_raise_range_error(s48_value value,
-			      s48_value min, s48_value max);
+			          s48_value min,
+			          s48_value max);
 extern void s48_raise_closed_channel_error();
 extern void s48_raise_os_error(int the_errno);
 extern void s48_raise_string_os_error(char *reason);
 extern void s48_raise_out_of_memory_error();
 
+/* Old names retained for compatibility; use the versions with 'ument_'
+   after the '_arg'. */
+
+extern void s48_raise_argument_type_error(s48_value value);
+extern void s48_raise_argument_number_error(s48_value value,
+				            s48_value min,
+					    s48_value max);
+
 /* Type checking */
 
-#define S48_CHECK_PAIR(v) do { if (!S48_PAIR_P(v)) s48_raise_argtype_error(v); } while (0)
-#define S48_CHECK_FIXNUM(v) do { if (!S48_FIXNUM_P(v)) s48_raise_argtype_error(v); } while (0)
-#define S48_CHECK_STRING(v) do { if (!S48_STRING_P(v)) s48_raise_argtype_error(v); } while (0)
-#define S48_CHECK_CHANNEL(v) do { if (!S48_CHANNEL_P(v)) s48_raise_argtype_error(v); } while (0)
-#define S48_CHECK_RECORD(v) do { if (!S48_RECORD_P(v)) s48_raise_argtype_error(v); } while (0)
-#define S48_CHECK_VALUE(v) do { if (!S48_BYTE_VECTOR_P(v)) s48_raise_argtype_error(v); } while (0)
-#define S48_CHECK_EXPORT_BINDING(v) do { if (!S48_EXPORT_BINDING_P(v)) s48_raise_argtype_error(v); } while (0)
+#define S48_CHECK_PAIR(v) do { if (!S48_PAIR_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_FIXNUM(v) do { if (!S48_FIXNUM_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_STRING(v) do { if (!S48_STRING_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_CHANNEL(v) do { if (!S48_CHANNEL_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_RECORD(v) do { if (!S48_RECORD_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_VALUE(v) do { if (!S48_BYTE_VECTOR_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_EXPORT_BINDING(v) do { if (!S48_EXPORT_BINDING_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_BOOLEAN(v)					\
+  do { s48_value s48_temp = (v);				\
+       if (s48_temp != S48_TRUE && s48_temp != S48_FALSE)	\
+           s48_raise_argument_type_error(v); } while (0)
 
 #define S48_VALUE_P(v) (S48_BYTE_VECTOR_P(v))
+
+#define S48_TRUE_P(v) ((v) == S48_TRUE)
+#define S48_FALSE_P(v) ((v) == S48_FALSE)
+#define S48_EXTRACT_BOOLEAN(v) ((v) != S48_FALSE)
+#define S48_ENTER_BOOLEAN(v) ((v) ? S48_TRUE : S48_FALSE)
 
 extern void s48_check_record_type(s48_value record, s48_value type_binding);
 
@@ -241,8 +262,8 @@ extern void s48_check_record_type(s48_value record, s48_value type_binding);
 #define S48_ADDRESS_AFTER_HEADER(x, type) ((type *)((x) - S48_STOB_TAG))
 #define S48_STOB_REF(x, i) (S48_ADDRESS_AFTER_HEADER(x, s48_value)[i])
 #define S48_STOB_BYTE_REF(x, i) (((char *)S48_ADDRESS_AFTER_HEADER(x, s48_value))[i])
-#define S48_STOB_SET(x, i, v) do { s48_value __stob_set_x = (x); long __stob_set_i = (i); s48_value __stob_set_v = (v); if (S48_STOB_IMMUTABLEP(__stob_set_x)) s48_raise_argtype_error(__stob_set_x); else { S48_WRITE_BARRIER((__stob_set_x), (char *) (&S48_STOB_REF((__stob_set_x), (__stob_set_i))),(__stob_set_v)); *(&S48_STOB_REF((__stob_set_x), (__stob_set_i))) = (__stob_set_v); } } while (0)
-#define S48_STOB_BYTE_SET(x, i, v) do { s48_value __stob_set_x = (x); long __stob_set_i = (i); char __stob_set_v = (v); if (S48_STOB_IMMUTABLEP(__stob_set_x)) s48_raise_argtype_error(__stob_set_x); else *(&S48_STOB_BYTE_REF((__stob_set_x), (__stob_set_i))) = (__stob_set_v); } while (0)
+#define S48_STOB_SET(x, i, v) do { s48_value __stob_set_x = (x); long __stob_set_i = (i); s48_value __stob_set_v = (v); if (S48_STOB_IMMUTABLEP(__stob_set_x)) s48_raise_argument_type_error(__stob_set_x); else { S48_WRITE_BARRIER((__stob_set_x), (char *) (&S48_STOB_REF((__stob_set_x), (__stob_set_i))),(__stob_set_v)); *(&S48_STOB_REF((__stob_set_x), (__stob_set_i))) = (__stob_set_v); } } while (0)
+#define S48_STOB_BYTE_SET(x, i, v) do { s48_value __stob_set_x = (x); long __stob_set_i = (i); char __stob_set_v = (v); if (S48_STOB_IMMUTABLEP(__stob_set_x)) s48_raise_argument_type_error(__stob_set_x); else *(&S48_STOB_BYTE_REF((__stob_set_x), (__stob_set_i))) = (__stob_set_v); } while (0)
 #define S48_STOB_TYPE(x)   ((S48_STOB_HEADER(x)>>2)&31)
 #define S48_STOB_HEADER(x) (S48_STOB_REF((x),-1))
 #define S48_STOB_ADDRESS(x) (&(S48_STOB_HEADER(x)))

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Packages for the programming environment: the command processor, inspector,
 ; and disassembler and assembler.
@@ -8,7 +8,7 @@
 (define-structures ((command-processor command-processor-interface)
 		    (command (export command-processor)))
   (open scheme ;;-level-2     ; eval, interaction-environment
-	tables fluids
+	tables fluids cells
 	conditions
 	handle
 	command-levels
@@ -26,9 +26,10 @@
 	fluids-internal         ; get-dynamic-env, set-dynamic-env!
 	nodes			; for ## kludge
 	signals
+	debug-messages		; for debugging
 
 	(subset root-scheduler   (scheme-exit-now))
-	(subset threads          (thread?))
+	(subset threads          (thread? thread-uid))
 	(subset threads-internal (thread-continuation))
 	(subset continuations    (continuation?)))
 
@@ -46,6 +47,8 @@
 	threads threads-internal
 	scheduler
 	interrupts
+	handle
+	display-conditions	; display-condition
 	weak
 	debug-messages		; for debugging
 	signals			; error
@@ -183,6 +186,8 @@
 	command-state
 	menus			; write-carefully, with-limited-output
         fluids
+        tables
+	weak
         signals                 ; make-condition
         util                    ; filter
         evaluation              ; eval-from-file, eval
@@ -197,18 +202,18 @@
         architecture            ; op/global, etc.
         interrupts              ; all-interrupts, set-enabled-interrupts!
         vm-exposure             ; fluid-let suppression kludge - fix later
-        exceptions              ; continuation-preview
-        tables
-        nodes		        ; schemify for ,expand command
-        reading-forms           ; $note-file-package
+        (subset exceptions      (continuation-preview))
+        (subset nodes		(schemify))
+        (subset reading-forms   ($note-file-package))
+	(subset handle		(with-handler))
 	debug-data		;  yucko
 	debug-data-internal	;  yucko
-	handle			; with-handler
-        primitives              ; memory-status
-        structure-refs)
-  (access primitives            ; want to both use and shadow collect and time
-          filenames             ;  and translate
-	  syntactic)		;  and expand
+	(modify filenames       (prefix filenames:)
+		                (expose translate))
+	(modify syntactic       (prefix syntactic:)
+		                (expose expand-form))
+        (modify primitives      (prefix primitives:)
+		                (expose collect time memory-status)))
   (files (env debug)))
 
 (define-structure menus menus-interface
@@ -230,7 +235,7 @@
         templates
         continuations
         records
-	records-internal
+	record-types
         low-level               ; vector-unassigned?
         locations
 	cells
@@ -263,7 +268,7 @@
 ; Package and interface mutation.
 
 (define-structure package-mutation package-mutation-interface
-  (open scheme-level-2
+  (open scheme-level-2 cells
         shadowing               ; shadow-location!
         packages
         interfaces

@@ -124,7 +124,9 @@
 
 (define-scheme-primop uninitialized-value type/null)
 (define-scheme-primop null-pointer?       type/boolean)
-(define-scheme-primop null-pointer        type/boolean) ; type can't be right
+(define-polymorphic-scheme-primop null-pointer
+  (lambda (call)
+    (literal-value (call-arg call 0))))
 
 (define-scheme-primop eq? type/boolean)  ; should have a simplifier
 

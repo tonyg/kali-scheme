@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This is file memory.scm.
@@ -79,8 +79,11 @@
 
 (define fetch word-ref)
 (define fetch-byte unsigned-byte-ref)
+(define fetch-flonum flonum-ref)
 (define store! word-set!)
 (define store-byte! unsigned-byte-set!)
+(define store-flonum! flonum-set!)
+
 
 (define fetch-string char-pointer->string)
 (define fetch-nul-terminated-string char-pointer->nul-terminated-string)

@@ -2,7 +2,7 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:13 2001 -->
 <HEAD>
 <TITLE>Scheme 48 Manual -- Introduction</TITLE>
 
@@ -27,10 +27,8 @@ set of names whose bindings are exported is the structure's <EM>interface</EM>.
 <P>A module imports bindings from other modules by either <EM>opening</EM>
 or <EM>accessing</EM> some structures that are built on other packages.
 When a structure is opened, all of its exported bindings are visible
-in the client package.  On the other hand, bindings from an accessed
-structure require explicitly qualified references written with the
-<TT>structure-ref</TT> operator.
-<P>For example:
+in the client package.
+For example:
 <BLOCKQUOTE><PRE>
 (define-structure foo (export a c cons)
   (open scheme)

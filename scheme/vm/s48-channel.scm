@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Implementation of OS channels in Scheme.
 ;
@@ -52,35 +52,35 @@
   (port->channel (current-output-port)))
 
 (define (current-error-channel)
-  (port->channel ((structure-ref i/o current-error-port))))
+  (port->channel (current-error-port)))
 
 ; These just open or close the appropriate port and coerce it to a channel.
 
 (define (open-input-file-channel filename)
   (receive (port status)
-      ((structure-ref prescheme open-input-file) filename)
-    (if (eq? status (enum (structure-ref prescheme errors) no-errors))
+      (prescheme:open-input-file filename)
+    (if (eq? status (enum prescheme:errors no-errors))
 	(values (port->channel port) status)
 	(values #f status))))
 
 (define (open-output-file-channel filename)
   (receive (port status)
-      ((structure-ref prescheme open-output-file) filename)
-    (if (eq? status (enum (structure-ref prescheme errors) no-errors))
+      (prescheme:open-output-file filename)
+    (if (eq? status (enum prescheme:errors no-errors))
 	(values (port->channel port) status)
 	(values #f status))))
 
 (define (close-input-channel channel)
-  ((structure-ref prescheme close-input-port) (channel->port channel)))
+  (prescheme:close-input-port (channel->port channel)))
 
 (define (close-output-channel channel)
-  ((structure-ref prescheme close-output-port) (channel->port channel)))
+  (prescheme:close-output-port (channel->port channel)))
 
 (define (channel-ready? channel read?)
   (values (if read?
 	      (char-ready? (channel->port channel))
 	      #t)
-	  (enum (structure-ref prescheme errors) no-errors)))
+	  (enum prescheme:errors no-errors)))
 
 ;----------------
 ; Non-blocking I/O (implemented using CHAR-READY?)
@@ -97,9 +97,9 @@
 	   (values count eof? #f status)))
 	(wait?
 	 (set! *pending-channels* (cons channel *pending-channels*))
-	 (values 0 #f #t (enum (structure-ref prescheme errors) no-errors)))
+	 (values 0 #f #t (enum prescheme:errors no-errors)))
 	(else
-	 (values 0 #f #f (enum (structure-ref prescheme errors) no-errors)))))
+	 (values 0 #f #f (enum prescheme:errors no-errors)))))
 
 (define (channel-write-block channel start count)
   (values count #f (write-block (channel->port channel) start count)))

@@ -93,13 +93,15 @@ AC_INIT(c/scheme48vm.c)
      AC_CHECK_LIB(elf, main)
      S48_POSIX_LIBC
      AC_CONST
+     AC_CHECK_TYPE(socklen_t, unsigned int)
      AC_RETSIGTYPE
      AC_CHECK_HEADERS(libgen.h sys/timeb.h posix/time.h)
      AC_CHECK_HEADERS(sys/select.h)
      AC_CHECK_FUNCS(gettimeofday ftime nlist select setitimer sigaction)
-     AC_CHECK_FUNC(dlopen, AC_DEFINE(HAVE_DLOPEN),
-			   AC_CHECK_FUNC(nlist, [LIBOBJS="$LIBOBJS c/fake/libdl1.o],
-						[LIBOBJS="$LIBOBJS c/fake/libdl2.o]))
+     AC_CHECK_FUNC(dlopen,
+                   AC_DEFINE(HAVE_DLOPEN),
+     		   AC_CHECK_FUNC(nlist, [LIBOBJS="$LIBOBJS c/fake/libdl1.o"],
+					[LIBOBJS="$LIBOBJS c/fake/libdl2.o"]))
      AC_CHECK_FUNCS(socket chroot)
      AC_CHECK_FUNC(strerror, AC_DEFINE(HAVE_STRERROR),
 			      [LIBOBJS="$LIBOBJS c/fake/strerror.o"])

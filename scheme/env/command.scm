@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Interpreting commands.
 
@@ -56,8 +56,9 @@
 ; captured by CALL/CC, display the condition and start reading commands.
 
 (define (real-command-loop)
-  (let-fluids $note-undefined #f    ;useful
-	      $command-results #f
+  (let ((results-cell (make-cell #f)))
+    (let-fluids $note-undefined #f    ;useful
+		$command-results results-cell
       (lambda ()
 	(display-command-level-condition
 	  (command-level-condition (command-level)))
@@ -65,19 +66,19 @@
 	  (let ((command (read-command-carefully (command-prompt)
 						 (form-preferred?)
 						 (command-input))))
-	    (set-fluid! $command-results #f)
+	    (cell-set! results-cell #f)
 	    (execute-command command)
-	    (let ((results (fluid $command-results)))
+	    (let ((results (cell-ref results-cell)))
 	      (if results
 		  (show-command-results results)))
-	    (command-loop))))))
+	    (command-loop)))))))
 
 ; For saving the results returned by a command.
 
 (define $command-results (make-fluid #f))
 
 (define (set-command-results! results . maybe-set-focus-object?)
-  (set-fluid! $command-results results)
+  (fluid-cell-set! $command-results results)
   (if (or (null? maybe-set-focus-object?)
 	  (car maybe-set-focus-object?))
       (case (length results)
@@ -130,7 +131,8 @@
 
 ; Condition handler.
 ; For warnings and notes we go stop the current level or continue, for
-; errors and interrupts we stop the level or exit.
+; errors and interrupts we stop the level or exit.  We always continue for
+; warnings on the command level thread to avoid circularity problems.
 
 (define (command-loop-condition-handler c next-handler)
   (cond ((or (warning? c)
@@ -171,9 +173,6 @@
 	(else
 	 (display "Back to " (command-output))))
   (restart-command-level level))
-
-(define-condition-type 'note '())
-(define note? (condition-predicate 'note))
 
 ; The prompt is "level-number environment-id-string> " or just
 ; "environment-id-string> " at top level.  The id-string is empty for the
@@ -521,7 +520,7 @@
                (display info port)))
     (display "." port)
     (newline port)
-    (write-line "Copyright (c) 1993-1999 by Richard Kelsey and Jonathan Rees."
+    (write-line "Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees."
 		port)
     (write-line "Please report bugs to scheme-48-bugs@martigny.ai.mit.edu."
                 port)

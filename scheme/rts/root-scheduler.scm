@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The root scheduler.
 ;
@@ -111,11 +111,6 @@
 	      (set-enabled-interrupts! all-interrupts)
 	      #f))))))
 
-(define one-day-of-milliseconds (* 1000		; milliseconds in a second
-				   60		; seconds in a minute
-				   60		; minutes in an hour
-				   24))		; hours in a day
-
 ; A mess because a fixnum's worth of milliseconds is only a few days.
 ; The VM's WAIT procedure takes its maximum-wait argument in either
 ; milliseconds or minutes.
@@ -128,9 +123,19 @@
 	   ((< time-until-wakeup one-day-of-milliseconds)
 	    (values time-until-wakeup #f))
 	   (else
-	    (values (quotient time-until-wakeup 60000)
+	    (values (min (quotient time-until-wakeup
+				   one-minute-of-milliseconds)
+			 one-year-of-minutes)	; stick with fixnums
 		    #t))))
-   (structure-ref primitives wait)))
+   primitive-wait))
+
+(define one-minute-of-milliseconds (* 1000 60))
+
+(define one-day-of-milliseconds (* one-minute-of-milliseconds
+				   60		; minutes in an hour
+				   24))		; hours in a day
+
+(define one-year-of-minutes (* 60 24 365))
 
 (define deadlock-handler (make-session-data-slot! #f))
 
@@ -147,5 +152,3 @@
 	  (else
 	   (for-each spawn-on-root thunks)
 	   #t))))
-	 
-(define unspecific (structure-ref primitives unspecific))

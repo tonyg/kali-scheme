@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Additional port types
 
@@ -180,8 +180,6 @@
 			      0
 			      (string-length string))))
 
-(define copy-bytes! (structure-ref primitives copy-bytes!))
-
 ;----------------
 ; String output ports
 
@@ -281,7 +279,7 @@
 ; Call PROC on a port that will transfer COUNT characters to PORT and
 ; then quit.
 
-(define (write-one-line port count proc)
+(define (limit-output port count proc)
   (call-with-current-continuation
     (lambda (quit)
       (proc (char-sink->output-port
@@ -290,6 +288,9 @@
 	       (set! count (- count 1))
 	       (if (<= count 0)
 		   (quit #f))))))))
+
+; Old name.
+(define write-one-line limit-output)
 
 ;----------------
 ; Input ports from single character producers

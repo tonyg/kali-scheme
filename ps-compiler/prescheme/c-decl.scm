@@ -136,6 +136,7 @@
 	  '((boolean "char")
 	    (char    "char")
 	    (integer "long")
+	    (float   "double")
 	    (address "char *")
 	    (input-port "FILE *")
 	    (output-port "FILE *")

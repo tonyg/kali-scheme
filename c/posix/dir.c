@@ -143,7 +143,7 @@ posix_readdir(s48_value svdir)
 
   dpp = S48_EXTRACT_VALUE_POINTER(svdir, DIR *);
   if (*dpp == (DIR *)NULL)
-    s48_raise_argtype_error(svdir);	/* not really correct error */
+    s48_raise_argument_type_error(svdir);	/* not really correct error */
   do {
     errno = 0;
     RETRY_NULL(dep, readdir(*dpp));
@@ -238,6 +238,9 @@ posix_open(s48_value path, s48_value options, s48_value mode)
   
   c_options = s48_extract_file_options(options);
   c_path = S48_UNSAFE_EXTRACT_STRING(path);
+
+  if (O_WRONLY & c_options)
+    c_options |= O_NONBLOCK;
 
   if (mode == S48_FALSE)
     RETRY_OR_RAISE_NEG(fd, open(c_path, c_options));

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ;;;; Raising and handling conditions
@@ -43,29 +43,29 @@
 	(apply handler args)))))
 
 ; Raising and handling conditions.
-; (fluid $condition-handlers) is a list of handler procedures.
+; (fluid $condition-handlers) is a cell containing a list of handler procedures.
 ; Each handler takes two arguments: the condition to be handled, and
 ; a thunk that can be called if the handler decides to decline handling
 ; the condition.  The continuation to a call to a handler is that
 ; of the call to signal-condition.
 
 (define (really-signal-condition condition)
-  (let loop ((hs (fluid $condition-handlers)))
+  (let loop ((hs (fluid-cell-ref $condition-handlers)))
     ((car hs) condition (lambda () (loop (cdr hs))))))
 
 (define (with-handler h thunk)
   (let-fluid $condition-handlers
-      (cons h (fluid $condition-handlers))
+      (make-cell (cons h (fluid-cell-ref $condition-handlers)))
     thunk))
 
 (define $condition-handlers
-  (make-fluid #f))
+  (make-fluid (make-cell #f)))
 
 (define (initialize-exceptions! thunk)
   (call-with-current-continuation
     (lambda (k)
-      (set-fluid! $condition-handlers
-		  (list (last-resort-condition-handler k)))
+      (fluid-cell-set! $condition-handlers
+		       (list (last-resort-condition-handler k)))
       (set-exception-handlers! exception-handlers)
       (thunk))))
 

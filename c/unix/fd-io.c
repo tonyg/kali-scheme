@@ -12,7 +12,7 @@
 #include "c-mods.h"
 #include "scheme48vm.h"
 #include "event.h"
-
+#include "unix.h"
 
 /* Non-blocking I/O on file descriptors.
 
@@ -207,4 +207,26 @@ ps_abort_fd_op(long fd_as_long)
 	            fd);
   return 0;      /* because we do not actually do any I/O in parallel the
 		    status is always zero: no characters transfered. */
+}
+
+/*
+ * This checks that fd's destined for output channels are marked
+ * as nonblocking.  Stdout and stderr are a special case because
+ * we do not want to screw up the shell, if we were invoked from
+ * one.
+ */
+
+s48_value
+s48_add_channel(s48_value mode, s48_value id, long fd)
+{
+  if (mode == S48_CHANNEL_STATUS_OUTPUT
+      && fd != 1
+      && fd != 2) {
+    int flags;
+    RETRY_OR_RAISE_NEG(flags, fcntl(fd, F_GETFL));
+    if ((flags & O_NONBLOCK) == 0)
+      fprintf(stderr,
+        "Warning: output channel file descriptor %d is not non-blocking\n",
+	      fd); }
+  return s48_really_add_channel(mode, id, fd);
 }

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; All regular expressions are records of the following type.
 ;
@@ -894,8 +894,6 @@
 					      (regexp-option submatches)))))
 	(set-regexp-compiled! exp (cons regexp match-flags))
 	(cons regexp match-flags))))
-
-(define make-posix-regexp (structure-ref posix-regexps make-regexp))
 
 ;----------------
 ; A handy debugging function.  In theory this returns as S-expression that

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; The barest skeleton of a test suite.
@@ -208,13 +208,13 @@
 		     (close-output-port out))))))
 	(list r c s)))
 
-(test "write-one-line" string=? "(1 2 3 4 5"
+(test "limit-output" string=? "(1 2 3 4 5"
       (call-with-string-output-port
        (lambda (out)
-	 (write-one-line out
-			 10
-			 (lambda (out)
-			   (display '(1 2 3 4 5 6) out))))))
+	 (limit-output out
+		       10
+		       (lambda (out)
+			 (display '(1 2 3 4 5 6) out))))))
 
 (test "destructure" eq? 'a (destructure (((x (y) z) '(b (a) c))) y))
 
@@ -384,6 +384,38 @@
 		 (test "float" eq? #f (= 1/3 xthird))
 		 (test "exact<->inexact" = third (exact->inexact xthird)))))
 
+(in 'foo '(run (let ((arg0 '(1.0 1.0 2.0)) (arg1 '(2.0 1.0 1.0)))
+		 (test "float-comparisons"
+		       equal?
+		       (list (map = arg0 arg1)
+			     (map < arg0 arg1)
+			     (map > arg0 arg1)
+			     (map <= arg0 arg1)
+			     (map >= arg0 arg1))
+		       '((#f #t #f)
+			 (#t #f #f)
+			 (#f #f #t)
+			 (#t #t #f)
+			 (#f #t #t))))))
+
+(in 'foo '(run (test "float-ops"
+                     equal?
+                     (list (+ 2.0 3.0) (- 1.0 2.0) (* 2.0 3.0) (/ 1.0 2.0))
+                     '(5.0 -1.0 6.0 0.5))))
+
+(in 'foo '(run (let ((arg0 '(1 1 2)) (arg1 '(2 1 1)))
+		 (test "integer-comparisons"
+		       equal?
+		       (list (map = arg0 arg1)
+			     (map < arg0 arg1)
+			     (map > arg0 arg1)
+			     (map <= arg0 arg1)
+			     (map >= arg0 arg1))
+		       '((#f #t #f)
+			 (#t #f #f)
+			 (#f #f #t)
+			 (#t #t #f)
+			 (#f #t #t))))))
 
 ; All done.
 

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Interfaces for packages that can get loaded after the initial.image
@@ -103,8 +103,8 @@
 (define-interface menus-interface
   (export present-menu
 	  present-more-menu
-	  menu-length
-	  menu-ref
+	  current-menu-length
+	  current-menu-ref
 	  
 	  selection-command?
 
@@ -293,17 +293,6 @@
 	  &number->string
 	  &really-string->number))
 
-(define-interface bignums-interface  ;Things used by bigbit
-  (export integer->bignum bignum-magnitude bignum-sign
-	  zero-magnitude?
-	  integer->magnitude
-	  adjoin-digit
-	  low-digit high-digits
-	  make-integer
-	  zero-magnitude
-	  radix log-radix
-	  integer-negate integer- integer=))
-
 (define-interface time-interface
   (export real-time
 	  run-time))
@@ -344,9 +333,12 @@
 	  make-string-input-port
 	  make-string-output-port
 	  string-output-port-output
-	  call-with-string-output-port		; denigrated
-	  write-one-line
-	  current-row current-column fresh-line))
+	  limit-output
+	  current-row current-column fresh-line
+
+	  call-with-string-output-port		; deprecated
+	  write-one-line))			; deprecated
+
 
 (define-interface arrays-interface
   (export make-array		; <initial-value> <bound1> ...
@@ -453,7 +445,7 @@
 ; Olin's encyclopedic list SRFI.
 
 (define-interface srfi-1-interface
-  (export xcons tree-copy make-list list-tabulate cons* list-copy 
+  (export xcons make-list list-tabulate cons* list-copy 
 	  proper-list? circular-list? dotted-list? not-pair? null-list? list=
 	  circular-list length+
 	  iota

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; The byte code compiler's assembly phase.
@@ -313,19 +313,22 @@
 		    (lambda (astate)
 		      (let* ((pc-before (astate-pc astate))
 			     (env-maps
-			      (emit-with-environment-maps! astate segment)))
-			(set-fluid! $environment-maps
-				    (cons (vector pc-before
-						  (astate-pc astate)
-						  (list->vector vars)
-						  env-maps)
-					  (fluid $environment-maps))))))
+			      (emit-with-environment-maps! astate segment))
+			     (cell (fluid $environment-maps)))
+			(if cell
+			    (cell-set! cell
+				       (cons (vector pc-before
+						     (astate-pc astate)
+						     (list->vector vars)
+						     env-maps)
+					     (cell-ref cell)))))))
       segment))
 
 (define (emit-with-environment-maps! astate segment)
-  (let-fluid $environment-maps '()
-    (lambda ()
-      (emit-segment! astate segment)
-      (fluid $environment-maps))))
+  (let ((cell (make-cell '())))
+    (let-fluid $environment-maps cell
+      (lambda ()
+	(emit-segment! astate segment)))
+    (cell-ref cell)))
 
-(define $environment-maps (make-fluid '()))
+(define $environment-maps (make-fluid #f))

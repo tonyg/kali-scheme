@@ -2,170 +2,66 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:24 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:16 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Signals</TITLE>
+<TITLE>Scheme 48 Manual -- Access to POSIX</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_62.html">Access to POSIX</A><BR>Previous: <A HREF="s48manual_63.html">Process primitives</A> | Next: <A HREF="s48manual_65.html">Process environment</A>
-<H2>Signals</H2>
-<P>There are two varieties of signals available, <EM>named</EM> and <EM>anonymous</EM>.
-A named signal is one for which we have a symbolic name, such as <CODE>kill</CODE>
- or <CODE>pipe</CODE>.  
-Anonymous signals, for which we only have the current operating system's
- signal number, have no meaning in other operating systems.
-Named signals preserve their meaning in image files.
-Not all named signals are available from all OS's and
- there may be multiple names for a single OS signal number.
-<UL><LI><CODE>(name-&gt;signal<I>&nbsp;symbol</I>)&nbsp;-&gt;&nbsp;<I>signal&nbsp;or&nbsp;<CODE>#f</CODE></I></CODE><A NAME="1">&nbsp;</A>
-<LI><CODE>(integer-&gt;signal<I>&nbsp;integer</I>)&nbsp;-&gt;&nbsp;<I>signal</I></CODE><A NAME="2">&nbsp;</A>
-<LI><CODE>(signal?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="3">&nbsp;</A>
-<LI><CODE>(signal-name<I>&nbsp;signal</I>)&nbsp;-&gt;&nbsp;<I>symbol&nbsp;or&nbsp;<CODE>#f</CODE></I></CODE><A NAME="4">&nbsp;</A>
-<LI><CODE>(signal-os-number<I>&nbsp;signal</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="5">&nbsp;</A>
-<LI><CODE>(signal=?<I>&nbsp;signal0&nbsp;signal1</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="6">&nbsp;</A>
-</UL>
-<CODE>Name-&gt;signal</CODE> returns a (named) signal or <CODE>#f</CODE> if the
- the signal <CODE><I>name</I></CODE> is not supported by the operating system.
-The signal returned by <CODE>integer-&gt;signal</CODE> is a named signal if
- <CODE><I>integer</I></CODE> corresponds to a named signal in the current operating
- system; otherwise it returns an anonymous signal.
-<CODE>Signal-name</CODE> returns a symbol if <CODE><I>signal</I></CODE> is named and
- <CODE>#f</CODE> if it is anonymous. 
-<CODE>Signal=?</CODE> returns <CODE>#t</CODE> if <CODE><I>signal0</I></CODE> and <CODE><I>signal1</I></CODE>
- have the same operating system number and <CODE>#f</CODE> if they do not.
-<H3><A NAME="7">POSIX signals</A></H3>
-The following lists the names of the POSIX signals.
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | Previous Chapter: <A HREF="s48manual_51.html">Mixing Scheme 48 and C</A> | Next Chapter: <A HREF="s48manual_75.html">ASCII character encoding</A><BR>Previous: <A HREF="s48manual_63.html">Unsafe functions and macros</A> | Next: <A HREF="s48manual_65.html">Process primitives</A>
+<H1>Access to POSIX</H1>
+<P>This chapter describes Scheme&nbsp;48's interface to the POSIX C calls
+ <A HREF="s48manual_76.html#POSIX">[1]</A>.
+Scheme versions of most of the functions in POSIX are provided.
+Both the interface and implementation are new and are likely to
+ change in future releases.
+Section&nbsp;<A HREF="s48manual_74.html">*</A> lists which Scheme functions
+ call which C functions.
+<P>Scheme&nbsp;48's POSIX interface will likely change significantly in the
+ future.
+The implementation is new and may have significant bugs.
+<P>The POSIX bindings are available in several structures:
 <BLOCKQUOTE><CENTER>
 <TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
 
-<CODE>abrt</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> abort - abnormal termination (as by abort()) </TD></TR>
+ <CODE>posix-processes</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> fork, exec, and friends </TD></TR>
 <TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>alrm</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> alarm - timeout signal (as by alarm()) </TD></TR>
+<CODE>posix-process-data</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> information about processes </TD></TR>
 <TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>fpe </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> floating point exception </TD></TR>
+<CODE>posix-files</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> files and directories </TD></TR>
 <TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>hup </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> hangup - hangup on controlling terminal or death of
-  controlling process </TD></TR>
+<CODE>posix-i/o</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> operations on ports </TD></TR>
 <TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>ill </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> illegal instruction </TD></TR>
+<CODE>posix-time</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> time functions </TD></TR>
 <TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>int </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> interrupt - interaction attention </TD></TR>
+<CODE>posix-users</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> users and groups </TD></TR>
 <TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>kill</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> kill - termination signal, cannot be caught or ignored </TD></TR>
+<CODE>posix-regexps</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> regular expression matching </TD></TR>
 <TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>pipe</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> pipe - write on a pipe with no readers </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>quit</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> quit - interaction termination </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>segv</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> segmentation violation - invalid memory reference </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>term</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> termination - termination signal </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>usr1</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> user1 - for use by applications </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>usr2</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> user2 - for use by applications </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>chld</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> child - child process stopped or terminated </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>cont</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> continue - continue if stopped </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>stop</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> stop - cannot be caught or ignored </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>tstp</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> interactive stop </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>ttin</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> read from control terminal attempted by background process </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>ttou</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> write to control terminal attempted by background process </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>bus </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> bus error - access to undefined portion of memory </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>posix</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> all of the above
 </TD></TR></TABLE>
 
 </CENTER></BLOCKQUOTE>
-<H3><A NAME="8">Other signals</A></H3>
-The following lists the names of the non-POSIX that the system is currently
- aware of.
-<BLOCKQUOTE><CENTER>
-<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
-
-<CODE>trap  </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> trace or breakpoint trap </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>iot   </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> IOT trap - a synonym for ABRT </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>emt   </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>sys   </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> bad argument to routine	(SVID) </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>stkflt</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> stack fault on coprocessor </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>urg   </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> urgent condition on socket	(4.2 BSD) </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>io    </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> I/O now possible		(4.2 BSD) </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>poll  </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> A synonym for SIGIO		(System V) </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>cld   </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> A synonym for SIGCHLD </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>xcpu  </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> CPU time limit exceeded	(4.2 BSD) </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>xfsz  </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> File size limit exceeded	(4.2 BSD) </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>vtalrm</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> Virtual alarm clock		(4.2 BSD) </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>prof  </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> Profile alarm clock </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>pwr   </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> Power failure			(System V) </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>info  </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> A synonym for SIGPWR </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>lost  </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> File lock lost </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>winch </CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> Window resize signal		(4.3 BSD, Sun) </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>unused</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> Unused signal </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-</TD></TR></TABLE>
-
-</CENTER></BLOCKQUOTE>
-<H3><A NAME="9">Sending signals</A></H3>
-<UL><LI><CODE>(signal-process<I>&nbsp;process-id&nbsp;signal</I>)</CODE><A NAME="10">&nbsp;</A>
-</UL>
-Send <CODE><I>signal</I></CODE> to the process corresponding to <CODE><I>process-id</I></CODE>.
-<H3><A NAME="11">Receiving signals</A></H3>
-<P>Signals received by the Scheme process can be obtained via one or more
- signal-queues.
-Each signal queue has a list of monitored signals and a queue of
- received signals that have yet to be read from the signal-queue.
-When the Scheme process receives a signal that signal is added to the
- received-signal queues of all signal-queues which are currently monitoring
- that particular signal.
-<UL><LI><CODE>(make-signal-queue<I>&nbsp;signals</I>)&nbsp;-&gt;&nbsp;<I>signal-queue</I></CODE><A NAME="12">&nbsp;</A>
-<LI><CODE>(signal-queue?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="13">&nbsp;</A>
-<LI><CODE>(signal-queue-monitored-signals<I>&nbsp;signal-queue</I>)&nbsp;-&gt;&nbsp;<I>list&nbsp;of&nbsp;signals</I></CODE><A NAME="14">&nbsp;</A>
-<LI><CODE>(dequeue-signal!<I>&nbsp;signal-queue</I>)&nbsp;-&gt;&nbsp;<I>signal</I></CODE><A NAME="15">&nbsp;</A>
-<LI><CODE>(maybe-dequeue-signal!<I>&nbsp;queue-queue</I>)&nbsp;-&gt;&nbsp;<I>signal&nbsp;or&nbsp;<CODE>#f</CODE></I></CODE><A NAME="16">&nbsp;</A>
-</UL>
-<CODE>Make-signal-queue</CODE> returns a new signal-queue that will monitor
- the signals in the list <CODE><I>signals</I></CODE>.
-<CODE>Signal-queue?</CODE> is a predicate for signal queues.
-<CODE>Signal-queue-monitored-signals</CODE> returns a list of the signals
- currently monitored by <CODE><I>signal-queue</I></CODE>.
-<CODE>Dequeue-signal!</CODE> and <CODE>maybe-dequeue-signal</CODE> both return
- the next received-but-unread signal from <CODE><I>signal-queue</I></CODE>.
-If <CODE><I>signal-queue</I></CODE>'s queue of signals is empty <CODE>dequeue-signal!</CODE>
- blocks until an appropriate signal is received.
-<CODE>Maybe-dequeue-signal!</CODE> does not block; it returns <CODE>#f</CODE> instead.
-<UL><LI><CODE>(add-signal-queue-signal!<I>&nbsp;signal-queue&nbsp;signal</I>)</CODE><A NAME="17">&nbsp;</A>
-<LI><CODE>(remove-signal-queue-signal!<I>&nbsp;signal-queue&nbsp;signal</I>)</CODE><A NAME="18">&nbsp;</A>
-</UL>
-These two procedures can be used to add or remove signals from a
- signal-queue's list of monitored signals.
-When a signal is removed from a signal-queue's list of monitored signals
- any occurances of the signal are removed from that signal-queue's pending
- signals.
-In other words, <CODE>dequeue-signal!</CODE> and <CODE>maybe-dequeue-signal!</CODE>
- will only return signals that are currently on the signal-queue's list
- of signals.
+<P>Scheme&nbsp;48's POSIX interface differs from
+ Scsh's <A HREF="s48manual_76.html#10">[10]</A><A HREF="s48manual_76.html#11">[11]</A> in several ways.
+The interface here lacks Scsh's high-level constructs and utilities,
+ such as the process notation, <CODE>awk</CODE> procedure, and parsing
+ utilities.
+Scheme&nbsp;48 uses distinct types for some values that Scsh leaves
+ as symbols or unboxed integers; these include file types, file modes,
+ and user and group ids.
+Many of the names and other interface details are different, as well.
+<MENU>
+<LI><A HREF="s48manual_65.html">Process primitives</A>
+<LI><A HREF="s48manual_66.html">Signals</A>
+<LI><A HREF="s48manual_67.html">Process environment</A>
+<LI><A HREF="s48manual_68.html">Users and groups</A>
+<LI><A HREF="s48manual_69.html">OS and machine identification</A>
+<LI><A HREF="s48manual_70.html">Files and directories</A>
+<LI><A HREF="s48manual_71.html">Time</A>
+<LI><A HREF="s48manual_72.html">I/O</A>
+<LI><A HREF="s48manual_73.html">Regular expressions</A>
+<LI><A HREF="s48manual_74.html">C to Scheme correspondence</A>
+</MENU>
 <P>
   
-Previous: <A HREF="s48manual_63.html">Process primitives</A> | Next: <A HREF="s48manual_65.html">Process environment</A></BODY></HTML>
+Previous: <A HREF="s48manual_63.html">Unsafe functions and macros</A> | Next: <A HREF="s48manual_65.html">Process primitives</A></BODY></HTML>

@@ -55,7 +55,7 @@ extern void		s48_initialize_shared_registersB(long, long, long, long);
 /* manipulating channels */
 extern void		s48_close_channel(long);
 extern s48_value	s48_set_channel_os_index(s48_value, long);
-extern s48_value	s48_add_channel(s48_value, s48_value, long);
+extern s48_value	s48_really_add_channel(s48_value, s48_value, long);
 
 /* external allocation and GC roots */
 extern s48_value	s48_allocate_stob(long type, long size);

@@ -1,6 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
-
-
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Accessing packages
 
@@ -50,21 +48,20 @@
 
 ; Interaction environment
 
-(define $interaction-environment (make-fluid #f))
+(define $interaction-environment (make-fluid (make-cell #f)))
 
 (define (interaction-environment)
-  (fluid $interaction-environment))
+  (fluid-cell-ref $interaction-environment))
 
 (define (set-interaction-environment! p)
   (if (package? p)
-      (set-fluid! $interaction-environment p)
+      (fluid-cell-set! $interaction-environment p)
       (call-error "invalid package" set-interaction-environment! p)))
 
 (define (with-interaction-environment p thunk)
   (if (package? p)
-      (let-fluid $interaction-environment p thunk)
+      (let-fluid $interaction-environment (make-cell p) thunk)
       (call-error "invalid package" with-interaction-environment p)))
-
 
 ; Scheme report environment.  Should be read-only; fix later.
 

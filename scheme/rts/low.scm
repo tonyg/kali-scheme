@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Low-level things that rely on the fact that we're running under the
@@ -14,8 +14,9 @@
 (define (integer->char n) (ascii->char (- n 1000)))
 
 (define ascii-limit 256)		;for reader
-(define ascii-whitespaces '(32 10 9 12 13)) ;space linefeed tab page return
-
+; space, horizontal tab, line feed (= newline), vertical tab, form feed, and
+; carriage return
+(define ascii-whitespaces '(32 9 10 11 12 13))
 
 ; Procedures and closures are two different abstractions.  Procedures
 ; are created by LAMBDA and invoked with procedure call; those are
@@ -98,6 +99,10 @@
   (and (port? port)
        (= 2 (bitwise-and 2 (port-status port)))))
 
+; Every record has a record type (another record) in the first slot.
+
+(define (record-type r)
+  (record-ref r 0))
 
 ; code-vectors == byte-vectors
 ; These are functions so that they will be inlined.

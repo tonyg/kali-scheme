@@ -173,8 +173,8 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
  trace_image_value_return_0:
   table_13X = trace_image_value0_return_value;
   arg0K0 = 0;
-  goto L3967;}
- L3967: {
+  goto L3966;}
+ L3966: {
   i_14X = arg0K0;
   if ((1024 == i_14X)) {
     merged_arg0K0 = resume_proc_0X;
@@ -183,28 +183,28 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
    trace_image_value_return_1:
     resume_proc_15X = trace_image_value0_return_value;
     arg1K0 = (Sto_beginS);
-    goto L3985;}
+    goto L3984;}
   else {
     foo_link_16X = *((long *) ((((char *) (-3 + table_13X))) + (((i_14X)<<2))));
     arg0K0 = foo_link_16X;
     arg0K1 = 1;
-    goto L3400;}}
- L3985: {
+    goto L3399;}}
+ L3984: {
   start_17X = arg1K0;
   end_18X = ShpS;
   arg1K0 = start_17X;
   arg1K1 = (ShpS);
-  goto L2855;}
- L3400: {
+  goto L2854;}
+ L3399: {
   foo_link_19X = arg0K0;
   done_link_20X = arg0K1;
   if ((0 == (3 & foo_link_19X))) {
     arg0K0 = (3 + (-4 & foo_link_19X));
-    goto L3402;}
+    goto L3401;}
   else {
     arg0K0 = foo_link_19X;
-    goto L3402;}}
- L2855: {
+    goto L3401;}}
+ L2854: {
   addr_21X = arg1K0;
   frontier_22X = arg1K1;
   if ((addr_21X < end_18X)) {
@@ -213,11 +213,11 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
     if ((2 == (3 & thing_23X))) {
       if ((2 == (3 & thing_23X))) {
         if (((31 & (((thing_23X)>>2))) < 17)) {
-          goto L2876;}
+          goto L2875;}
         else {
-          goto L2881;}}
+          goto L2880;}}
       else {
-        goto L2876;}}
+        goto L2875;}}
     else {
       merged_arg0K0 = thing_23X;
       gc_recordP_return_tag = 0;
@@ -240,32 +240,32 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
             *((long *) addr_21X) = (*((long *) ((((char *) (-3 + thing_23X))) + 4)));
             arg1K0 = addr_21X;
             arg1K1 = frontier_22X;
-            goto L2855;}
+            goto L2854;}
           else {
-            goto L2897;}}
+            goto L2896;}}
         else {
-          goto L2897;}}
+          goto L2896;}}
       else {
-        goto L2897;}}}
+        goto L2896;}}}
   else {
     ShpS = frontier_22X;
     if (((ShpS) < (Sto_endS))) {
       if ((end_18X < (ShpS))) {
         arg1K0 = end_18X;
-        goto L3985;}
+        goto L3984;}
       else {
-        goto L2065;}}
+        goto L2064;}}
     else {
       ps_error("Image writing error: ran out of space in new heap", 0);
-      goto L2065;}}}
- L3402: {
+      goto L2064;}}}
+ L3401: {
   foo_28X = arg0K0;
   if ((1 == foo_28X)) {
     addr_29X = (((char *) (-3 + table_13X))) + (((i_14X)<<2));
     S48_WRITE_BARRIER(table_13X, addr_29X, done_link_20X);
     *((long *) addr_29X) = done_link_20X;
     arg0K0 = (1 + i_14X);
-    goto L3967;}
+    goto L3966;}
   else {
     merged_arg0K0 = foo_28X;
     trace_image_value_return_tag = 2;
@@ -279,29 +279,29 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
     if ((3 == (3 & new_foo_30X))) {
       arg0K0 = next_link_31X;
       arg0K1 = (-4 & new_foo_30X);
-      goto L3400;}
+      goto L3399;}
     else {
       arg0K0 = next_link_31X;
       arg0K1 = new_foo_30X;
-      goto L3400;}}}
- L2876: {
+      goto L3399;}}}
+ L2875: {
   if ((1078 == thing_23X)) {
-    goto L2881;}
+    goto L2880;}
   else {
     arg1K0 = next_24X;
     arg1K1 = frontier_22X;
-    goto L2855;}}
- L2881: {
+    goto L2854;}}
+ L2880: {
   arg1K0 = (next_24X + (-4 & (3 + ((long)(((unsigned long)thing_23X)>>8)))));
   arg1K1 = frontier_22X;
-  goto L2855;}
- L2897: {
+  goto L2854;}
+ L2896: {
   if ((3 == (3 & thing_23X))) {
     a_33X = ((char *) (-3 + thing_23X));
     if ((a_33X < (Sfrom_beginS))) {
       arg1K0 = next_24X;
       arg1K1 = frontier_22X;
-      goto L2855;}
+      goto L2854;}
     else {
       if ((a_33X < (Sfrom_endS))) {
         merged_arg0K0 = thing_23X;
@@ -314,19 +314,19 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
         *((long *) addr_21X) = new_thing_34X;
         arg1K0 = next_24X;
         arg1K1 = frontier_35X;
-        goto L2855;}
+        goto L2854;}
       else {
         arg1K0 = next_24X;
         arg1K1 = frontier_22X;
-        goto L2855;}}}
+        goto L2854;}}}
   else {
     arg1K0 = next_24X;
     arg1K1 = frontier_22X;
-    goto L2855;}}
- L2065: {
+    goto L2854;}}
+ L2064: {
   arg1K0 = (Sto_beginS);
-  goto L2069;}
- L2069: {
+  goto L2068;}
+ L2068: {
   addr_36X = arg1K0;
   if ((addr_36X < (ShpS))) {
     header_37X = *((long *) addr_36X);
@@ -337,38 +337,38 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
           a_39X = ((char *) (-3 + contents_38X));
           if ((a_39X < (Sfrom_beginS))) {
             arg0K0 = 1;
-            goto L2112;}
+            goto L2111;}
           else {
             if ((a_39X < (Sfrom_endS))) {
               if ((3 == (3 & (*((long *) ((((char *) (-3 + contents_38X))) + -4)))))) {
                 arg0K0 = (*((long *) ((((char *) (-3 + contents_38X))) + -4)));
-                goto L2112;}
+                goto L2111;}
               else {
                 arg0K0 = 1;
-                goto L2112;}}
+                goto L2111;}}
             else {
               arg0K0 = 1;
-              goto L2112;}}}
+              goto L2111;}}}
         else {
           arg0K0 = 1;
-          goto L2112;}}
+          goto L2111;}}
       else {
-        goto L2120;}}
+        goto L2119;}}
     else {
-      goto L2120;}}
+      goto L2119;}}
   else {
     count_40X = s48_channel_count();
     channels_41X = s48_channels();
     arg0K0 = 0;
-    goto L3671;}}
- L2112: {
+    goto L3670;}}
+ L2111: {
   x2_42X = arg0K0;
   *((long *) (addr_36X + 4)) = x2_42X;
-  goto L2120;}
- L2120: {
+  goto L2119;}
+ L2119: {
   arg1K0 = (addr_36X + (4 + (-4 & (3 + ((long)(((unsigned long)header_37X)>>8))))));
-  goto L2069;}
- L3671: {
+  goto L2068;}
+ L3670: {
   i_43X = arg0K0;
   if ((i_43X == count_40X)) {
     table_44X = s48_symbol_table();
@@ -378,27 +378,27 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
    trace_image_value_return_3:
     table_45X = trace_image_value0_return_value;
     arg0K0 = 0;
-    goto L4010;}
+    goto L4009;}
   else {
     channel_46X = *(channels_41X + i_43X);
     if ((1 == channel_46X)) {
-      goto L3699;}
+      goto L3698;}
     else {
       if ((3 == (3 & channel_46X))) {
         if ((3 == (3 & channel_46X))) {
           a_47X = ((char *) (-3 + channel_46X));
           if ((a_47X < (Sto_beginS))) {
-            goto L3722;}
+            goto L3721;}
           else {
             if ((a_47X < (ShpS))) {
-              goto L3692;}
+              goto L3691;}
             else {
-              goto L3722;}}}
+              goto L3721;}}}
         else {
-          goto L3722;}}
+          goto L3721;}}
       else {
-        goto L3692;}}}}
- L4010: {
+        goto L3691;}}}}
+ L4009: {
   i_48X = arg0K0;
   if ((1024 == i_48X)) {
     imported_bindings_49X = s48_imported_bindings();
@@ -408,21 +408,21 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
    trace_image_value_return_4:
     table_50X = trace_image_value0_return_value;
     arg0K0 = 0;
-    goto L4031;}
+    goto L4030;}
   else {
     foo_link_51X = *((long *) ((((char *) (-3 + table_45X))) + (((i_48X)<<2))));
     arg0K0 = foo_link_51X;
     arg0K1 = 1;
-    goto L3282;}}
- L3699: {
+    goto L3281;}}
+ L3698: {
   arg0K0 = (1 + i_43X);
-  goto L3671;}
- L3722: {
+  goto L3670;}
+ L3721: {
   if ((3 == (3 & (*((long *) ((((char *) (-3 + channel_46X))) + -4)))))) {
-    goto L3692;}
+    goto L3691;}
   else {
-    goto L3699;}}
- L3692: {
+    goto L3698;}}
+ L3691: {
   merged_arg0K0 = channel_46X;
   trace_image_value_return_tag = 5;
   goto trace_image_value;
@@ -432,30 +432,30 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
   id_53X = *((long *) ((((char *) (-3 + channel_52X))) + 4));
   if ((0 == (3 & id_53X))) {
     ps_write_integer((((id_53X)>>2)), (stderr));
-    goto L1779;}
+    goto L1778;}
   else {
     ps_write_string((((char *)(((char *) (-3 + id_53X))))), (stderr));
-    goto L1779;}}
- L4031: {
+    goto L1778;}}
+ L4030: {
   i_54X = arg0K0;
   if ((1024 == i_54X)) {
     arg0K0 = 0;
-    goto L2349;}
+    goto L2348;}
   else {
     foo_link_55X = *((long *) ((((char *) (-3 + table_50X))) + (((i_54X)<<2))));
     arg0K0 = foo_link_55X;
     arg0K1 = 1;
-    goto L3163;}}
- L3282: {
+    goto L3162;}}
+ L3281: {
   foo_link_56X = arg0K0;
   okay_link_57X = arg0K1;
   if ((0 == (3 & foo_link_56X))) {
     arg0K0 = (3 + (-4 & foo_link_56X));
-    goto L3284;}
+    goto L3283;}
   else {
     arg0K0 = foo_link_56X;
-    goto L3284;}}
- L1779: {
+    goto L3283;}}
+ L1778: {
   { long ignoreXX;
   PS_WRITE_CHAR(10, (stderr), ignoreXX) }
   addr_58X = ((char *) (-3 + channel_52X));
@@ -464,56 +464,56 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
   addr_59X = (((char *) (-3 + channel_52X))) + 8;
   S48_WRITE_BARRIER(channel_52X, addr_59X, -4);
   *((long *) addr_59X) = -4;
-  goto L3699;}
- L2349: {
+  goto L3698;}
+ L2348: {
   i_60X = arg0K0;
   if ((1024 == i_60X)) {
     start_hp_61X = ShpS;
     *((long *) (ShpS)) = 0;
     end_62X = ShpS;
     arg1K0 = (Sto_beginS);
-    goto L2463;}
+    goto L2462;}
   else {
     link_63X = *((long *) ((((char *) (-3 + table_50X))) + (((i_60X)<<2))));
     if ((0 == (3 & link_63X))) {
       arg0K0 = (3 + (-4 & link_63X));
-      goto L2323;}
+      goto L2322;}
     else {
       arg0K0 = link_63X;
-      goto L2323;}}}
- L3163: {
+      goto L2322;}}}
+ L3162: {
   foo_link_64X = arg0K0;
   okay_link_65X = arg0K1;
   if ((0 == (3 & foo_link_64X))) {
     arg0K0 = (3 + (-4 & foo_link_64X));
-    goto L3165;}
+    goto L3164;}
   else {
     arg0K0 = foo_link_64X;
-    goto L3165;}}
- L3284: {
+    goto L3164;}}
+ L3283: {
   foo_66X = arg0K0;
   if ((1 == foo_66X)) {
     addr_67X = (((char *) (-3 + table_45X))) + (((i_48X)<<2));
     S48_WRITE_BARRIER(table_45X, addr_67X, okay_link_57X);
     *((long *) addr_67X) = okay_link_57X;
     arg0K0 = (1 + i_48X);
-    goto L4010;}
+    goto L4009;}
   else {
     if ((3 == (3 & foo_66X))) {
       if ((3 == (3 & foo_66X))) {
         a_68X = ((char *) (-3 + foo_66X));
         if ((a_68X < (Sto_beginS))) {
-          goto L3325;}
+          goto L3324;}
         else {
           if ((a_68X < (ShpS))) {
-            goto L3293;}
+            goto L3292;}
           else {
-            goto L3325;}}}
+            goto L3324;}}}
       else {
-        goto L3325;}}
+        goto L3324;}}
     else {
-      goto L3293;}}}
- L2463: {
+      goto L3292;}}}
+ L2462: {
   addr_69X = arg1K0;
   if ((addr_69X < end_62X)) {
     header_70X = *((long *) addr_69X);
@@ -529,33 +529,33 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
                 *((long *) (ShpS)) = record_72X;
                 ShpS = ((ShpS) + 4);
                 arg1K0 = next_71X;
-                goto L2463;}
+                goto L2462;}
               else {
-                goto L4062;}}
+                goto L4061;}}
             else {
               arg1K0 = next_71X;
-              goto L2463;}}
+              goto L2462;}}
           else {
             arg1K0 = next_71X;
-            goto L2463;}}
+            goto L2462;}}
         else {
           arg1K0 = next_71X;
-          goto L2463;}}
+          goto L2462;}}
       else {
         arg1K0 = next_71X;
-        goto L2463;}}
+        goto L2462;}}
     else {
       ps_write_string("new image is not in a consistent state", (stderr));
-      goto L4062;}}
+      goto L4061;}}
   else {
     *((long *) start_hp_61X) = (10 + (((((ShpS) - (start_hp_61X + 4)))<<8)));
     arg0K0 = (3 + (((long) (start_hp_61X + 4))));
-    goto L3923;}}
- L2323: {
+    goto L3922;}}
+ L2322: {
   entry_74X = arg0K0;
   if ((1 == entry_74X)) {
     arg0K0 = (1 + i_60X);
-    goto L2349;}
+    goto L2348;}
   else {
     addr_75X = (((char *) (-3 + entry_74X))) + 8;
     S48_WRITE_BARRIER(entry_74X, addr_75X, 529);
@@ -563,41 +563,41 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
     link_76X = *((long *) ((((char *) (-3 + entry_74X))) + 12));
     if ((0 == (3 & link_76X))) {
       arg0K0 = (3 + (-4 & link_76X));
-      goto L2323;}
+      goto L2322;}
     else {
       arg0K0 = link_76X;
-      goto L2323;}}}
- L3165: {
+      goto L2322;}}}
+ L3164: {
   foo_77X = arg0K0;
   if ((1 == foo_77X)) {
     addr_78X = (((char *) (-3 + table_50X))) + (((i_54X)<<2));
     S48_WRITE_BARRIER(table_50X, addr_78X, okay_link_65X);
     *((long *) addr_78X) = okay_link_65X;
     arg0K0 = (1 + i_54X);
-    goto L4031;}
+    goto L4030;}
   else {
     if ((3 == (3 & foo_77X))) {
       if ((3 == (3 & foo_77X))) {
         a_79X = ((char *) (-3 + foo_77X));
         if ((a_79X < (Sto_beginS))) {
-          goto L3206;}
+          goto L3205;}
         else {
           if ((a_79X < (ShpS))) {
-            goto L3174;}
+            goto L3173;}
           else {
-            goto L3206;}}}
+            goto L3205;}}}
       else {
-        goto L3206;}}
+        goto L3205;}}
     else {
-      goto L3174;}}}
- L3325: {
+      goto L3173;}}}
+ L3324: {
   if ((3 == (3 & (*((long *) ((((char *) (-3 + foo_66X))) + -4)))))) {
-    goto L3293;}
+    goto L3292;}
   else {
     arg0K0 = (*((long *) ((((char *) (-3 + foo_66X))) + 4)));
     arg0K1 = okay_link_57X;
-    goto L3282;}}
- L3293: {
+    goto L3281;}}
+ L3292: {
   merged_arg0K0 = foo_66X;
   trace_image_value_return_tag = 6;
   goto trace_image_value;
@@ -610,36 +610,36 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
   if ((3 == (3 & new_foo_80X))) {
     arg0K0 = next_link_81X;
     arg0K1 = (-4 & new_foo_80X);
-    goto L3282;}
+    goto L3281;}
   else {
     arg0K0 = next_link_81X;
     arg0K1 = new_foo_80X;
-    goto L3282;}}
- L4062: {
+    goto L3281;}}
+ L4061: {
   ShpS = start_hp_61X;
   arg0K0 = 1;
-  goto L3923;}
- L3923: {
+  goto L3922;}
+ L3922: {
   resumer_records_83X = arg0K0;
   if ((1 == resumer_records_83X)) {
     arg1K0 = (Sfrom_beginS);
-    goto L4076;}
+    goto L4075;}
   else {
     SstatusS = NO_ERRORS;
     if (((SstatusS) == NO_ERRORS)) {
       PS_WRITE_CHAR(10, port_2X, v_84X)
       SstatusS = v_84X;
-      goto L1114;}
+      goto L1113;}
     else {
-      goto L1114;}}}
- L3206: {
+      goto L1113;}}}
+ L3205: {
   if ((3 == (3 & (*((long *) ((((char *) (-3 + foo_77X))) + -4)))))) {
-    goto L3174;}
+    goto L3173;}
   else {
     arg0K0 = (*((long *) ((((char *) (-3 + foo_77X))) + 12)));
     arg0K1 = okay_link_65X;
-    goto L3163;}}
- L3174: {
+    goto L3162;}}
+ L3173: {
   merged_arg0K0 = foo_77X;
   trace_image_value_return_tag = 7;
   goto trace_image_value;
@@ -652,209 +652,209 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
   if ((3 == (3 & new_foo_85X))) {
     arg0K0 = next_link_86X;
     arg0K1 = (-4 & new_foo_85X);
-    goto L3163;}
+    goto L3162;}
   else {
     arg0K0 = next_link_86X;
     arg0K1 = new_foo_85X;
-    goto L3163;}}
- L4076: {
+    goto L3162;}}
+ L4075: {
   addr_88X = arg1K0;
   if ((addr_88X < (Sfrom_endS))) {
     d_89X = *((long *) addr_88X);
     if ((2 == (3 & d_89X))) {
       arg0K0 = d_89X;
-      goto L4082;}
+      goto L4081;}
     else {
       h_90X = *((long *) ((((char *) (-3 + d_89X))) + -4));
       *((long *) addr_88X) = h_90X;
       arg0K0 = h_90X;
-      goto L4082;}}
+      goto L4081;}}
   else {
     return ENOMEM;}}
- L1114: {
+ L1113: {
   if (((SstatusS) == NO_ERRORS)) {
     PS_WRITE_CHAR(12, port_2X, v_91X)
     SstatusS = v_91X;
-    goto L1123;}
+    goto L1122;}
   else {
-    goto L1123;}}
- L4082: {
+    goto L1122;}}
+ L4081: {
   h_92X = arg0K0;
   arg1K0 = (addr_88X + (4 + (-4 & (3 + ((long)(((unsigned long)h_92X)>>8))))));
-  goto L4076;}
- L1123: {
+  goto L4075;}
+ L1122: {
   if (((SstatusS) == NO_ERRORS)) {
     PS_WRITE_CHAR(10, port_2X, v_93X)
     SstatusS = v_93X;
-    goto L1132;}
+    goto L1131;}
   else {
-    goto L1132;}}
- L1132: {
+    goto L1131;}}
+ L1131: {
   if (((SstatusS) == NO_ERRORS)) {
-    SstatusS = (ps_write_string("Vanilla 20", port_2X));
-    goto L1139;}
+    SstatusS = (ps_write_string("Vanilla 21", port_2X));
+    goto L1138;}
   else {
-    goto L1139;}}
- L1139: {
+    goto L1138;}}
+ L1138: {
   if (((SstatusS) == NO_ERRORS)) {
     PS_WRITE_CHAR(10, port_2X, v_94X)
     SstatusS = v_94X;
-    goto L1148;}
+    goto L1147;}
   else {
-    goto L1148;}}
- L1148: {
+    goto L1147;}}
+ L1147: {
   if (((SstatusS) == NO_ERRORS)) {
     SstatusS = (ps_write_integer(4, port_2X));
-    goto L1218;}
+    goto L1217;}
   else {
-    goto L1218;}}
- L1218: {
+    goto L1217;}}
+ L1217: {
   if (((SstatusS) == NO_ERRORS)) {
     PS_WRITE_CHAR(10, port_2X, v_95X)
     SstatusS = v_95X;
-    goto L1150;}
+    goto L1149;}
   else {
-    goto L1150;}}
- L1150: {
+    goto L1149;}}
+ L1149: {
   v_96X = Sto_beginS;
   if (((SstatusS) == NO_ERRORS)) {
     SstatusS = (ps_write_integer(((((((long) v_96X)))>>2)), port_2X));
-    goto L1238;}
+    goto L1237;}
   else {
-    goto L1238;}}
- L1238: {
+    goto L1237;}}
+ L1237: {
   if (((SstatusS) == NO_ERRORS)) {
     PS_WRITE_CHAR(10, port_2X, v_97X)
     SstatusS = v_97X;
-    goto L1156;}
+    goto L1155;}
   else {
-    goto L1156;}}
- L1156: {
+    goto L1155;}}
+ L1155: {
   v_98X = ShpS;
   if (((SstatusS) == NO_ERRORS)) {
     SstatusS = (ps_write_integer(((((((long) v_98X)))>>2)), port_2X));
-    goto L1258;}
+    goto L1257;}
   else {
-    goto L1258;}}
- L1258: {
+    goto L1257;}}
+ L1257: {
   if (((SstatusS) == NO_ERRORS)) {
     PS_WRITE_CHAR(10, port_2X, v_99X)
     SstatusS = v_99X;
-    goto L1162;}
+    goto L1161;}
   else {
-    goto L1162;}}
- L1162: {
+    goto L1161;}}
+ L1161: {
   if (((SstatusS) == NO_ERRORS)) {
     SstatusS = (ps_write_integer(table_45X, port_2X));
-    goto L1273;}
+    goto L1272;}
   else {
-    goto L1273;}}
- L1273: {
+    goto L1272;}}
+ L1272: {
   if (((SstatusS) == NO_ERRORS)) {
     PS_WRITE_CHAR(10, port_2X, v_100X)
     SstatusS = v_100X;
-    goto L1164;}
+    goto L1163;}
   else {
-    goto L1164;}}
- L1164: {
+    goto L1163;}}
+ L1163: {
   if (((SstatusS) == NO_ERRORS)) {
     SstatusS = (ps_write_integer(table_50X, port_2X));
-    goto L1288;}
+    goto L1287;}
   else {
-    goto L1288;}}
- L1288: {
+    goto L1287;}}
+ L1287: {
   if (((SstatusS) == NO_ERRORS)) {
     PS_WRITE_CHAR(10, port_2X, v_101X)
     SstatusS = v_101X;
-    goto L1166;}
+    goto L1165;}
   else {
-    goto L1166;}}
- L1166: {
+    goto L1165;}}
+ L1165: {
   if (((SstatusS) == NO_ERRORS)) {
     SstatusS = (ps_write_integer(table_13X, port_2X));
-    goto L1303;}
+    goto L1302;}
   else {
-    goto L1303;}}
- L1303: {
+    goto L1302;}}
+ L1302: {
   if (((SstatusS) == NO_ERRORS)) {
     PS_WRITE_CHAR(10, port_2X, v_102X)
     SstatusS = v_102X;
-    goto L1168;}
+    goto L1167;}
   else {
-    goto L1168;}}
- L1168: {
+    goto L1167;}}
+ L1167: {
   if (((SstatusS) == NO_ERRORS)) {
     SstatusS = (ps_write_integer(resumer_records_83X, port_2X));
-    goto L1318;}
+    goto L1317;}
   else {
-    goto L1318;}}
- L1318: {
+    goto L1317;}}
+ L1317: {
   if (((SstatusS) == NO_ERRORS)) {
     PS_WRITE_CHAR(10, port_2X, v_103X)
     SstatusS = v_103X;
-    goto L1170;}
+    goto L1169;}
   else {
-    goto L1170;}}
- L1170: {
+    goto L1169;}}
+ L1169: {
   if (((SstatusS) == NO_ERRORS)) {
     SstatusS = (ps_write_integer(resume_proc_15X, port_2X));
-    goto L1333;}
+    goto L1332;}
   else {
-    goto L1333;}}
- L1333: {
+    goto L1332;}}
+ L1332: {
   if (((SstatusS) == NO_ERRORS)) {
     PS_WRITE_CHAR(10, port_2X, v_104X)
     SstatusS = v_104X;
-    goto L1172;}
+    goto L1171;}
   else {
-    goto L1172;}}
- L1172: {
+    goto L1171;}}
+ L1171: {
   if (((SstatusS) == NO_ERRORS)) {
     PS_WRITE_CHAR(12, port_2X, v_105X)
     SstatusS = v_105X;
-    goto L1181;}
+    goto L1180;}
   else {
-    goto L1181;}}
- L1181: {
+    goto L1180;}}
+ L1180: {
   *((long *) (ShpS)) = 1;
   if (((SstatusS) == NO_ERRORS)) {
     SstatusS = (ps_write_block(port_2X, ((char *) (ShpS)), (((ShpS) + 4) - (ShpS))));
-    goto L1200;}
+    goto L1199;}
   else {
-    goto L1200;}}
- L1200: {
+    goto L1199;}}
+ L1199: {
   if (((SstatusS) == NO_ERRORS)) {
     SstatusS = (ps_write_block(port_2X, ((char *) (Sto_beginS)), ((ShpS) - (Sto_beginS))));
-    goto L1213;}
+    goto L1212;}
   else {
-    goto L1213;}}
- L1213: {
+    goto L1212;}}
+ L1212: {
   status_106X = SstatusS;
   arg1K0 = (Sfrom_beginS);
-  goto L4098;}
- L4098: {
+  goto L4097;}
+ L4097: {
   addr_107X = arg1K0;
   if ((addr_107X < (Sfrom_endS))) {
     d_108X = *((long *) addr_107X);
     if ((2 == (3 & d_108X))) {
       arg0K0 = d_108X;
-      goto L4104;}
+      goto L4103;}
     else {
       h_109X = *((long *) ((((char *) (-3 + d_108X))) + -4));
       *((long *) addr_107X) = h_109X;
       arg0K0 = h_109X;
-      goto L4104;}}
+      goto L4103;}}
   else {
     return status_106X;}}
- L4104: {
+ L4103: {
   h_110X = arg0K0;
   arg1K0 = (addr_107X + (4 + (-4 & (3 + ((long)(((unsigned long)h_110X)>>8))))));
-  goto L4098;}
+  goto L4097;}
  trace_image_value: {
   stob_7X = merged_arg0K0;{
   arg0K0 = stob_111X;
-  goto L4197;}
- L4197: {
+  goto L4196;}
+ L4196: {
   stob_111X = arg0K0;
   merged_arg0K0 = stob_7X;
   gc_recordP_return_tag = 2;
@@ -875,14 +875,14 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
         goto note_undumpableB;
        note_undumpableB_return_1:
         arg0K0 = (*((long *) ((((char *) (-3 + stob_7X))) + 4)));
-        goto L4197;}
+        goto L4196;}
       else {
-        goto L3804;}}
+        goto L3803;}}
     else {
-      goto L3804;}}
+      goto L3803;}}
   else {
-    goto L3804;}}
- L3804: {
+    goto L3803;}}
+ L3803: {
   if ((3 == (3 & stob_7X))) {
     a_115X = ((char *) (-3 + stob_7X));
     if ((a_115X < (Sfrom_beginS))) {
@@ -924,10 +924,10 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
     vector_118X = Sundumpable_recordsS;
     len_119X = (((3 + ((long)(((unsigned long)(*((long *) ((((char *) (-3 + vector_118X))) + -4))))>>8))))>>2);
     arg0K0 = 0;
-    goto L2721;}
+    goto L2720;}
   else {
     goto note_undumpableB_return;}}
- L2721: {
+ L2720: {
   i_120X = arg0K0;
   if ((i_120X == len_119X)) {
     x_121X = Sundumpable_recordsS;
@@ -941,7 +941,7 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
       goto note_undumpableB_return;}
     else {
       arg0K0 = (1 + i_120X);
-      goto L2721;}}}
+      goto L2720;}}}
  note_undumpableB_return:
   switch (note_undumpableB_return_tag) {
   case 0: goto note_undumpableB_return_0;
@@ -990,11 +990,11 @@ long s48_write_image(long resume_proc_0X, long undumpables_1X, FILE * port_2X)
     new_126X = 3 + (((long) data_addr_125X));
     new_frontier_127X = data_addr_125X + (-4 & (3 + ((long)(((unsigned long)h_124X)>>8))));
     if ((new_frontier_127X < (Sto_endS))) {
-      goto L1994;}
+      goto L1993;}
     else {
       ps_error("ran out of memory while writing image", 0);
-      goto L1994;}}}
- L1994: {
+      goto L1993;}}}
+ L1993: {
   *((long *) ((((char *) (-3 + thing_3X))) + -4)) = new_126X;
   *((long *) frontier_4X) = h_124X;
   memcpy((void *)data_addr_125X, (void *)(((char *) (-3 + thing_3X))),((long)(((unsigned long)h_124X)>>8)));

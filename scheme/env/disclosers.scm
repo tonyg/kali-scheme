@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; --------------------
@@ -225,7 +225,7 @@
 			     '(values)))
 		      (else
 		       (list 'error
-			     "returning several values when only one is expected"
+			     "returning wrong number of values"
 			     (error-form 'values args))))))))
   (define-exception-discloser (enum op return) disc)
   (define-exception-discloser (enum op values) disc)

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Nondeterminism, Prolog, or whatever you want to call it.  This is
 ; depth-first search implemented using call/cc.
@@ -6,19 +6,20 @@
 ; The fluid variable $FAIL is bound to a thunk to be called in case of failure.
 
 (define $fail
-  (make-fluid (lambda ()
-		(error "call to FAIL outside WITH-NONDETERMINISM"))))
+  (make-fluid (make-cell
+	       (lambda ()
+		 (error "call to FAIL outside WITH-NONDETERMINISM")))))
 
 (define (with-nondeterminism thunk)
   (let-fluid $fail
-	     (lambda ()
-	       (error "nondeterminism ran out of choices"))
+	     (make-cell (lambda ()
+			  (error "nondeterminism ran out of choices")))
 	     thunk))
 
 ; Call the current failure function.
 
 (define (fail)
-  ((fluid $fail)))
+  ((fluid-cell-ref $fail)))
 
 ; For the alternation operator, Icon's a | b or McCarthy's (amb a b),
 ; we write (either a b).
@@ -36,13 +37,13 @@
 ; 3. Call THUNK1.
 
 (define (%either thunk1 thunk2)
-  (let ((save (fluid $fail)))
+  (let ((save (fluid-cell-ref $fail)))
     ((call-with-current-continuation
        (lambda (k)
-	 (set-fluid! $fail
-		     (lambda ()
-		       (set-fluid! $fail save)
-		       (k thunk2)))
+	 (fluid-cell-set! $fail
+			  (lambda ()
+			    (fluid-cell-set! $fail save)
+			    (k thunk2)))
 	 thunk1)))))
 
 ; (one-value x) is Prolog's CUT operator.  X is allowed to return only once.
@@ -52,10 +53,10 @@
     ((one-value x) (%one-value (lambda () x)))))
 
 (define (%one-value thunk)
-  (let ((save (fluid $fail)))
+  (let ((save (fluid-cell-ref $fail)))
     (call-with-values thunk
 		      (lambda args
-			(set-fluid! $fail save)
+			(fluid-cell-set! $fail save)
 			(apply values args)))))
 
 ; (all-values a) returns a list of all the possible values of the

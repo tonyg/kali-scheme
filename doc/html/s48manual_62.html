@@ -2,66 +2,59 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:24 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:16 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Access to POSIX</TITLE>
+<TITLE>Scheme 48 Manual -- Raising exceptions from external code</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | Previous Chapter: <A HREF="s48manual_49.html">Mixing Scheme 48 and C</A> | Next Chapter: <A HREF="s48manual_73.html">References</A><BR>Previous: <A HREF="s48manual_61.html">Unsafe functions and macros</A> | Next: <A HREF="s48manual_63.html">Process primitives</A>
-<H1>Access to POSIX</H1>
-<P>This chapter describes Scheme&nbsp;48's interface to the POSIX C calls
- <A HREF="s48manual_73.html#POSIX">[1]</A>.
-Scheme versions of most of the functions in POSIX are provided.
-Both the interface and implementation are new and are likely to
- change in future releases.
-Section&nbsp;<A HREF="s48manual_72.html">*</A> lists which Scheme functions
- call which C functions.
-<P>Scheme&nbsp;48's POSIX interface will likely change significantly in the
- future.
-The implementation is new and may have significant bugs.
-<P>The POSIX bindings are available in several structures:
-<BLOCKQUOTE><CENTER>
-<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_51.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_61.html">Using Scheme records in C code</A> | Next: <A HREF="s48manual_63.html">Unsafe functions and macros</A>
+<H2>Raising exceptions from external code</H2>
 
- <CODE>posix-processes</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> fork, exec, and friends </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix-process-data</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> information about processes </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix-files</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> files and directories </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix-i/o</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> operations on ports </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix-time</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> time functions </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix-users</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> users and groups </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix-regexps</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> regular expression matching </TD></TR>
-<TR><TD COLSPAN="1" ALIGN="LEFT">
-<CODE>posix</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> all of the above
-</TD></TR></TABLE>
-
-</CENTER></BLOCKQUOTE>
-<P>Scheme&nbsp;48's POSIX interface differs from
- Scsh's <A HREF="s48manual_73.html#10">[10]</A><A HREF="s48manual_73.html#11">[11]</A> in several ways.
-The interface here lacks Scsh's high-level constructs and utilities,
- such as the process notation, <CODE>awk</CODE> procedure, and parsing
- utilities.
-Scheme&nbsp;48 uses distinct types for some values that Scsh leaves
- as symbols or unboxed integers; these include file types, file modes,
- and user and group ids.
-Many of the names and other interface details are different, as well.
-<MENU>
-<LI><A HREF="s48manual_63.html">Process primitives</A>
-<LI><A HREF="s48manual_64.html">Signals</A>
-<LI><A HREF="s48manual_65.html">Process environment</A>
-<LI><A HREF="s48manual_66.html">Users and groups</A>
-<LI><A HREF="s48manual_67.html">OS and machine identification</A>
-<LI><A HREF="s48manual_68.html">Files and directories</A>
-<LI><A HREF="s48manual_69.html">Time</A>
-<LI><A HREF="s48manual_70.html">I/O</A>
-<LI><A HREF="s48manual_71.html">Regular expressions</A>
-<LI><A HREF="s48manual_72.html">C to Scheme correspondence</A>
-</MENU>
+<P>The following macros explicitly raise certain errors, immediately
+ returning to Scheme&nbsp;48.
+Raising an exception performs all
+ necessary clean-up actions to properly return to Scheme&nbsp;48, including
+ adjusting the stack of protected variables.
+<UL><LI><CODE>s48_raise_scheme_exception(int type, int nargs, ...)</CODE>
+</UL>
+<P><CODE>s48_raise_scheme_exception</CODE> is the base procedure for
+ raising exceptions.
+<CODE>type</CODE> is the type of exception, and should be one of the
+ <CODE>S48_EXCEPTION_</CODE>...constants defined in <CODE>scheme48arch.h</CODE>.
+<CODE>nargs</CODE> is the number of additional values to be included in the
+ exception; these follow the <CODE>nargs</CODE> argument and should all have
+ type <CODE>s48_value</CODE>.
+<CODE>s48_raise_scheme_exception</CODE> never returns.
+<P>The following procedures are available for raising particular
+ types of exceptions.
+Like <CODE>s48_raise_scheme_exception</CODE> these never return.
+<UL><LI><CODE>s48_raise_argument_type_error(scheme_value)</CODE>
+<LI><CODE>s48_raise_argument_number_error(int nargs, int min, int max)</CODE>
+<LI><CODE>s48_raise_range_error(long value, long min, long max)</CODE>
+<LI><CODE>s48_raise_closed_channel_error()</CODE>
+<LI><CODE>s48_raise_os_error(int errno)</CODE>
+<LI><CODE>s48_raise_out_of_memory_error()</CODE>
+</UL>
+<P>An argument type error indicates that the given value is of the wrong
+ type.
+An argument number error is raised when the number of arguments, <CODE>nargs</CODE>,
+ should be, but isn't, between <CODE>min</CODE> and <CODE>max</CODE>, inclusive.
+Similarly, a range error indicates that <CODE>value</CODE> is not between
+ between <CODE>min</CODE> and <CODE>max</CODE>, inclusive.
+<P>The following macros raise argument type errors if their argument does not
+ have the required type.
+<CODE>S48_CHECK_BOOLEAN</CODE> raises an error if its argument is neither
+ <CODE>#t</CODE> or <CODE>#f</CODE>.
+<UL><LI><CODE>void S48_CHECK_BOOLEAN(s48_value)</CODE>
+<LI><CODE>void S48_CHECK_SYMBOL(s48_value)</CODE>
+<LI><CODE>void S48_CHECK_PAIR(s48_value)</CODE>
+<LI><CODE>void S48_CHECK_STRING(s48_value)</CODE>
+<LI><CODE>void S48_CHECK_INTEGER(s48_value)</CODE>
+<LI><CODE>void S48_CHECK_CHANNEL(s48_value)</CODE>
+<LI><CODE>void S48_CHECK_BYTE_VECTOR(s48_value)</CODE>
+<LI><CODE>void S48_CHECK_RECORD(s48_value)</CODE>
+<LI><CODE>void S48_CHECK_SHARED_BINDING(s48_value)</CODE>
+</UL>
 <P>
   
-Previous: <A HREF="s48manual_61.html">Unsafe functions and macros</A> | Next: <A HREF="s48manual_63.html">Process primitives</A></BODY></HTML>
+Previous: <A HREF="s48manual_61.html">Using Scheme records in C code</A> | Next: <A HREF="s48manual_63.html">Unsafe functions and macros</A></BODY></HTML>

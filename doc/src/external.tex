@@ -39,10 +39,8 @@
 
 This chapter describes an interface for calling C functions
  from Scheme, calling Scheme functions from C, and allocating
- storage in the Scheme heap.
-These facilities are designed to link
- existing C libraries into Scheme~48 in order to use them from Scheme.
-To this end, Scheme~48 manages stub functions in C that
+ storage in the Scheme heap..
+Scheme~48 manages stub functions in C that
  negotiate between the calling conventions of Scheme and C and the
  memory allocation policies of both worlds.
 No stub generator is available yet, but writing stubs is a straightforward task.
@@ -109,6 +107,20 @@ All of the C functions and macros described have prototypes or definitions
  in the file \code{c/scheme48.h}.
 The C type for Scheme values is defined there to be \code{s48\_value}.
 
+\subsection{Garbage collection}
+
+Scheme~48 uses a copying garbage collector.
+The collector must be able to locate all references
+ to objects allocated in the Scheme~48 heap in order to ensure that
+ storage is not reclaimed prematurely and to update references to objects
+ moved by the collector.
+The garbage collector may run whenever an object is allocated in the heap.
+C variables whose values are Scheme~48 objects and which are live across
+ heap allocation calls need to be registered with
+ the
+\link{garbage collector}
+[garbage collector.  See section~\Ref{} for more information]{gc}.
+
 \section{Shared bindings}
 \label{sec:shared-bindings}
 
@@ -144,7 +156,7 @@ The C macro \code{S48\_SHARED\_BINDING\_REF} dereferences a shared binding,
 \subsection{Exporting C values to Scheme}
 
 \begin{protos}
-\cproto{void s48\_define\_exported\_binding(char *name, s48\_value value)}
+\cproto{void s48\_define\_exported\_binding(char *name, s48\_value v)}
 \end{protos}
 
 \begin{protos}
@@ -158,11 +170,12 @@ Again, if a name is looked up before it has been defined, a new binding is
  created for it.
 
 The common case of exporting a C function to Scheme can be done using
- the macro \code{S48\_EXPORT\_FUNCTION(\emph{name})}.
+ the macro \code{S48\_EXPORT\_FUNCTION(\cvar{name})}.
 This expands into
-
-\code{s48\_define\_exported\_binding("\cvar{name}", %
- s48\_enter\_pointer(\cvar{name}))}
+\begin{example}
+s48\_define\_exported\_binding("\cvar{name}",
+                               s48\_enter\_pointer(\cvar{name}))
+\end{example}
 
 \noindent which boxes the function into a Scheme byte vector and then
  exports it.
@@ -219,7 +232,7 @@ The following C macros correspond to the Scheme functions above.
 \cproto{int\ \ \ \ \ \ \ S48\_SHARED\_BINDING\_P(x)}
 \cproto{int\ \ \ \ \ \ \ S48\_SHARED\_BINDING\_IS\_IMPORT\_P(s48\_value s\_b)}
 \cproto{s48\_value S48\_SHARED\_BINDING\_NAME(s48\_value s\_b)}
-\cproto{void\ \ \ \ \ \ S48\_SHARED\_BINDING\_SET(s48\_value s\_b, s48\_value value)}
+\cproto{void\ \ \ \ \ \ S48\_SHARED\_BINDING\_SET(s48\_value s\_b, s48\_value v)}
 \end{protos}
 
 \section{Calling C functions from Scheme}
@@ -250,6 +263,8 @@ The \cvar{name} argument is used only for printing error messages.
 
 For all of these, the C function is passed the \cvar{arg$_i$} values
  and the value returned is that returned by C procedure.
+No automatic representation conversion occurs for either arguments or
+ return values.
 Up to twelve arguments may be passed.
 There is no method supplied for returning multiple values to
  Scheme from C (or vice versa) (mainly because C does not have multiple return
@@ -355,7 +370,7 @@ The following two functions can be used to update the values of
 \proto{lookup-all-externals}{}{boolean}
 \end{protos}
 \noindent
-\code{Lookup-external} updates the value of \cvar{external} by looking its
+\code{Lookup-external} updates the value of \cvar{external} by looking up its
  name in the current process, returning \code{\#t} if the name is bound
  and \code{\#f} if it is not.
 \code{Lookup-all-externals} calls \code{lookup-external} on all extant
@@ -379,7 +394,9 @@ We recommend that a dynamically-loaded file contain a single initialization
 
 \section{Compatibility}
 
-Scheme~48's old \code{external-call} function is still available in the structure
+% JAR says: give version number (I would if I knew what it was -RK)
+Scheme~48's old \code{external-call} function is still available in the
+ structure
  \code{externals}, which now also includes \code{external-name} and
  \code{external-value}.
 The old \code{scheme48.h} file has been renamed \code{old-scheme48.h}.
@@ -388,9 +405,7 @@ The old \code{scheme48.h} file has been renamed \code{old-scheme48.h}.
 \label{sec:scheme-data}
 
 The C header file \code{scheme48.h} provides
- access to Scheme~48 data structures
- (for compatibility, the old \code{scheme48.h} file is available
- as \code{old-scheme48.h}).
+ access to Scheme~48 data structures.
 The type \code{s48\_value} is used for Scheme values.
 When the type of a value is known, such as the integer returned
  by \code{vector-length} or the boolean returned by \code{pair?},
@@ -407,28 +422,30 @@ The following macros denote Scheme constants:
 \item \code{S48\_FALSE} is \verb|#f|.
 \item \code{S48\_TRUE} is \verb|#t|.
 \item \code{S48\_NULL} is the empty list.
-\item \code{S48\_UNSPECIFIC}] is a value used for functions which have no
+\item \code{S48\_UNSPECIFIC} is a value used for functions which have no
   meaningful return value
- (in Scheme this value returned by the nullary procedure \code{unspecific}
+ (in Scheme~48 this value returned by the nullary procedure \code{unspecific}
  in the structure \code{util}).
 \item \code{S48\_EOF} is the end-of-file object
- (in Scheme this value is returned by the nullary procedure \code{eof-object}
+ (in Scheme~48 this value is returned by the nullary procedure \code{eof-object}
  in the structure \code{i/o-internal}).
 \end{itemize}
 
 \subsection{Converting values}
 
-The following functions convert values between Scheme and C
+The following macros and functions convert values between Scheme and C
  representations.
 The `extract' ones convert from Scheme to C and the `enter's go the other
  way.
 
 \begin{protos}
+\cproto{int \ \ \ \ \ \ S48\_EXTRACT\_BOOLEAN(s48\_value)}
 \cproto{unsigned char s48\_extract\_char(s48\_value)}
 \cproto{char * \ \ \ s48\_extract\_string(s48\_value)}
 \cproto{char * \ \ \ s48\_extract\_byte\_vector(s48\_value)}
 \cproto{long \ \ \ \ \ s48\_extract\_integer(s48\_value)}
 \cproto{double \ \ \ s48\_extract\_double(s48\_value)}
+\cproto{s48\_value S48\_ENTER\_BOOLEAN(int)}
 \cproto{s48\_value s48\_enter\_char(unsigned char)}
 \cgcproto{s48\_value s48\_enter\_string(char *)}
 \cgcproto{s48\_value s48\_enter\_byte\_vector(char *, long)}
@@ -436,13 +453,19 @@ The `extract' ones convert from Scheme to C and the `enter's go the other
 \cgcproto{s48\_value s48\_enter\_double(double)}
 \end{protos}
 
-\noindent{}The values returned by \code{s48\_extract\_string} and
- \code{s48\_extract\_byte\_vector} point to the actual
- storage used by the string or byte vector; they are valid only until the next
+\noindent{}\code{S48\_EXTRACT\_BOOLEAN} is false if its argument is
+ \code{\#f} and true otherwise.
+ \code{S48\_ENTER\_BOOLEAN} is \code{\#f} if its argument is zero
+  and \code{\#t} otherwise.
+
+ \code{s48\_extract\_string} and \code{s48\_extract\_byte\_vector} return
+ pointers to the actual
+ storage used by the string or byte vector.
+ These pointers are valid only until the next
  \link{garbage collection}[; see Section~\ref{gc}]{gc}.
 
 The second argument to \code{s48\_enter\_byte\_vector} is the length of
- returned byte vector.
+ byte vector.
 
 \code{s48\_enter\_integer()} needs to allocate storage when
  its argument is too large to fit in a Scheme~48 fixnum.
@@ -450,8 +473,19 @@ In cases where the number is known to fit within a fixnum (currently 30 bits
  including the sign), the following procedures can be used.
 These have the disadvantage of only having a limited range, but
  the advantage of never causing a garbage collection.
+\code{S48\_FIXNUM\_P} is a macro that true if its argument is a fixnum
+ and false otherwise.
 
 \begin{protos}
+\cproto{int \ \ \ \ \ \ S48\_TRUE\_P(s48\_value)}
+\cproto{int \ \ \ \ \ \ S48\_FALSE\_P(s48\_value)}
+\end{protos}
+
+\noindent \code{S48\_TRUE\_P} is true if its argument is \code{S48\_TRUE}
+ and \code{S48\_FALSE\_P} is true if its argument is \code{S48\_FALSE}.
+
+\begin{protos}
+\cproto{int \ \ \ \ \ \ S48\_FIXNUM\_P(s48\_value)}
 \cproto{long \ \ \ \ \ s48\_extract\_fixnum(s48\_value)}
 \cproto{s48\_value s48\_enter\_fixnum(long)}
 \cproto{long \ \ \ \ \ S48\_MAX\_FIXNUM\_VALUE}
@@ -467,12 +501,11 @@ These have the disadvantage of only having a limited range, but
 
 The following macros and procedures are C versions of Scheme procedures.
 The names were derived by replacing `\code{-}' with `\code{\_}',
- `\code{?}' with `\code{p}', and dropping `\code{!}.
+ `\code{?}' with `\code{\_P}', and dropping `\code{!}.
 
 \begin{protos}
-\cproto{int \ \ \ \ \ \ S48\_EQ\_P(s48\_value)}
+\cproto{int \ \ \ \ \ \ S48\_EQ\_P(s48\_value, s48\_VALUE)}
 \cproto{int \ \ \ \ \ \ S48\_CHAR\_P(s48\_value)}
-\cproto{int \ \ \ \ \ \ S48\_INTEGER\_P(s48\_value)}
 \end{protos}
 \begin{protos}
 \cproto{int \ \ \ \ \ \ S48\_PAIR\_P(s48\_value)}
@@ -516,11 +549,11 @@ External code that has been called from Scheme can call back to Scheme
  procedures using the following function.
 
 \begin{protos}
-\cproto{scheme\_value s48\_call\_scheme(s48\_value proc, long nargs, \ldots)}
+\cproto{scheme\_value s48\_call\_scheme(s48\_value p, long nargs, \ldots)}
 \end{protos}
-\noindent{}This calls the Scheme procedure \code{proc} on \code{nargs}
+\noindent{}This calls the Scheme procedure \code{p} on \code{nargs}
  arguments, which are passed as additional arguments to \code{s48\_call\_scheme}.
-There may be at most ten arguments.
+There may be at most twelve arguments.
 The value returned by the Scheme procedure is returned by the C procedure.
 Invoking any Scheme procedure may potentially cause a garbage collection.
 
@@ -590,13 +623,15 @@ A set of macros are used to manage the registration of local variables with the
 
 \code{S48\_DECLARE\_GC\_PROTECT($n$)}, where  $1\leq n\leq 9$, allocates
  storage for registering $n$ variables.
-At most one use of \code{S48\_DECLARE\_GC\_PROTECT} may occur in a block.
+% JAR says: what is a block?  (How to describe it? -RK)
+At most one use of \code{S48\_DECLARE\_GC\_PROTECT} may occur in a
+ block.
 \code{S48\_GC\_PROTECT\_$n$($v_1$, $\ldots$, $v_n$)} registers the
  $n$ variables (l-values) with the garbage collector.
 It must be within scope of a \code{S48\_DECLARE\_GC\_PROTECT($n$)}
  and be before any code which can cause a GC.
 \code{S48\_GC\_UNPROTECT} removes the block's protected variables from
- the garbage collectors list.
+ the garbage collector's list.
 It must be called at the end of the block after 
   any code which may cause a garbage collection.
 Omitting any of the three may cause serious and
@@ -640,7 +675,7 @@ The following macros can be used to create and access embedded C objects.
  \cvar{type}, and \code{S48\_EXTRACT\_VALUE\_POINTER} returns a pointer
  to the contents of the byte vector.
 The value returned by \code{S48\_EXTRACT\_VALUE\_POINTER} is valid only until
- the next \link{garbage collection}[(see Section~\ref{gc})]{gc}.
+ the next garbage collection.
 
 \code{S48\_SET\_VALUE} stores \code{value} into the byte vector.
 
@@ -667,7 +702,7 @@ The Scheme~48 heap is written into a file in a machine-independent and
 The procedures described above may be used to create objects in the
  Scheme heap that contain information specific to the current
  machine, operating system, or process.
-A heap image containing such objects may not work correctly on
+A heap image containing such objects may not work correctly
  when resumed.
 
 To address this problem, a record type may be given a `resumer'
@@ -730,7 +765,8 @@ For example, given the following record-type definition
 \end{example}
 \code{Thing} records can then be made in C:
 \begin{example}
-static scheme_value thing_record_type_binding = SCHFALSE;
+static scheme_value
+  thing_record_type_binding = SCHFALSE;
 
 void initialize_things(void)
 \{
@@ -788,7 +824,7 @@ Like \code{s48\_raise\_scheme\_exception} these never return.
 \begin{protos}
 \cproto{s48\_raise\_argument\_type\_error(scheme\_value)}
 \cproto{s48\_raise\_argument\_number\_error(int nargs, int min, int max)}
-\cproto{s48\_raise\_index\_range\_error(long value, long min, long max)}
+\cproto{s48\_raise\_range\_error(long value, long min, long max)}
 \cproto{s48\_raise\_closed\_channel\_error()}
 \cproto{s48\_raise\_os\_error(int errno)}
 \cproto{s48\_raise\_out\_of\_memory\_error()}
@@ -798,13 +834,16 @@ Like \code{s48\_raise\_scheme\_exception} these never return.
  type.
 An argument number error is raised when the number of arguments, \code{nargs},
  should be, but isn't, between \code{min} and \code{max}, inclusive.
-Similarly, and index range error is raised when \code{value} is not between
+Similarly, a range error indicates that \code{value} is not between
  between \code{min} and \code{max}, inclusive.
 
 The following macros raise argument type errors if their argument does not
  have the required type.
+\code{S48\_CHECK\_BOOLEAN} raises an error if its argument is neither
+ \code{\#t} or \code{\#f}.
 
 \begin{protos}
+\cproto{void S48\_CHECK\_BOOLEAN(s48\_value)}
 \cproto{void S48\_CHECK\_SYMBOL(s48\_value)}
 \cproto{void S48\_CHECK\_PAIR(s48\_value)}
 \cproto{void S48\_CHECK\_STRING(s48\_value)}

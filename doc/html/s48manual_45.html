@@ -2,63 +2,72 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:22 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:14 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Sockets</TITLE>
+<TITLE>Scheme 48 Manual -- Port extensions</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_44.html">Fluid bindings</A> | Next: <A HREF="s48manual_46.html">Macros for writing loops</A>
-<H2>Sockets</H2>
-<P>Structure <CODE>sockets</CODE> provides access to sockets for interprocess
- communication.
-<UL><LI><CODE>(open-socket<I></I>)&nbsp;-&gt;&nbsp;<I>socket</I></CODE><A NAME="1">&nbsp;</A>
-<LI><CODE>(open-socket<I>&nbsp;port-number</I>)&nbsp;-&gt;&nbsp;<I>socket</I></CODE><A NAME="2">&nbsp;</A>
-<LI><CODE>(socket-port-number<I>&nbsp;socket</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="3">&nbsp;</A>
-<LI><CODE>(close-socket<I>&nbsp;socket</I>)</CODE><A NAME="4">&nbsp;</A>
-<LI><CODE>(socket-accept<I>&nbsp;socket</I>)&nbsp;-&gt;&nbsp;<I>input-port&nbsp;output-port</I></CODE><A NAME="5">&nbsp;</A>
-<LI><CODE>(get-host-name<I></I>)&nbsp;-&gt;&nbsp;<I>string</I></CODE><A NAME="6">&nbsp;</A>
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_44.html">Hash tables</A> | Next: <A HREF="s48manual_46.html">Fluid bindings</A>
+<H2>Port extensions</H2>
+<P>These procedures are in structure <CODE>extended-ports</CODE>.
+<UL><LI><CODE>(make-string-input-port<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>input-port</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(make-string-output-port<I></I>)&nbsp;-&gt;&nbsp;<I>output-port</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(string-output-port-output<I>&nbsp;string-output-port</I>)&nbsp;-&gt;&nbsp;<I>string</I></CODE><A NAME="3">&nbsp;</A>
 </UL>
-<CODE>Open-socket</CODE> creates a new socket.
-If no <CODE><I>port-number</I></CODE> is supplied the system picks one at random.
-<CODE>Socket-port-number</CODE> returns a socket's port number.
-<CODE>Close-socket</CODE> closes a socket, preventing any further connections.
-<CODE>Socket-accept</CODE> accepts a single connection on <CODE><I>socket</I></CODE>, returning
- an input port and an output port for communicating with the client.
-If no client is waiting <CODE>socket-accept</CODE> blocks until one appears.
-<CODE>Get-host-name</CODE> returns the network name of the machine.
-<UL><LI><CODE>(socket-client<I>&nbsp;host-name&nbsp;port-number</I>)&nbsp;-&gt;&nbsp;<I>input-port&nbsp;output-port</I></CODE><A NAME="7">&nbsp;</A>
-</UL>
-<CODE>Socket-client</CODE> connects to the server at <CODE><I>port-number</I></CODE> on
- the machine named <CODE><I>host-name</I></CODE>.
-<CODE>Socket-client</CODE> blocks until the server accepts the connection.
-<P>The following simple example shows a server and client for a centralized UID
- service.
+<CODE>Make-string-input-port</CODE> returns an input port that
+ that reads characters from the supplied string.  An end-of-file
+ object is returned if the user reads past the end of the string.
+<CODE>Make-string-output-port</CODE> returns an output port that saves
+ the characters written to it.
+These are then returned as a string by <CODE>string-output-port-output</CODE>.
 <BLOCKQUOTE><PRE>
-(define (id-server)
-  (let ((socket (open-socket)))
-    (display "Waiting on port ")
-    (display (socket-port-number socket))
-    (newline)
-    (let loop ((next-id 0))
-      (call-with-values
-        (lambda ()
-          (socket-accept socket))
-        (lambda (in out)
-          (display next-id out)
-          (close-input-port in)
-          (close-output-port out)
-          (loop (+ next-id 1)))))))
-         
-(define (get-id machine port-number)
-  (call-with-values
-    (lambda ()
-      (socket-client machine port-number))
-    (lambda (in out)
-      (let ((id (read in)))
-        (close-input-port in)
-        (close-output-port out)
-        id))))
+(read (make-string-input-port "(a b)"))
+    <CODE>-&gt;</CODE> '(a b)
+
+(let ((p (make-string-output-port)))
+  (write '(a b) p)
+  (let ((s (string-output-port-output p)))
+    (display "c" p)
+    (list s (string-output-port-output p))))
+    <CODE>-&gt;</CODE> '("(a b)" "(a b)c")
+</PRE></BLOCKQUOTE>
+<UL><LI><CODE>(limit-output<I>&nbsp;output-port&nbsp;n&nbsp;procedure</I>)</CODE><A NAME="4">&nbsp;</A>
+</UL>
+<I>Procedure</I> is called on an output port.
+Output written to that port is copied to <I>output-port</I> until <I>n</I>
+ characters have been written, at which point <CODE>limit-output</CODE> returns.
+If <I>procedure</I> returns before writing <I>n</I> characters, then
+ <CODE>limit-output</CODE> also returns at that time, regardless of how many
+ characters have been written.
+<UL><LI><CODE>(make-tracking-input-port<I>&nbsp;input-port</I>)&nbsp;-&gt;&nbsp;<I>input-port</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(make-tracking-output-port<I>&nbsp;output-port</I>)&nbsp;-&gt;&nbsp;<I>output-port</I></CODE><A NAME="6">&nbsp;</A>
+<LI><CODE>(current-row<I>&nbsp;port</I>)&nbsp;-&gt;&nbsp;<I>integer&nbsp;or&nbsp;<TT>&nbsp;#f</TT></I></CODE><A NAME="7">&nbsp;</A>
+<LI><CODE>(current-column<I>&nbsp;port</I>)&nbsp;-&gt;&nbsp;<I>integer&nbsp;or&nbsp;<TT>&nbsp;#f</TT></I></CODE><A NAME="8">&nbsp;</A>
+<LI><CODE>(fresh-line<I>&nbsp;output-port</I>)</CODE><A NAME="9">&nbsp;</A>
+</UL>
+<CODE>Make-tracking-input-port</CODE> and <CODE>make-tracking-output-port</CODE>
+ return ports that keep track of the current row and column and
+ are otherwise identical to their arguments.
+Closing a tracking port does not close the underlying port.
+<CODE>Current-row</CODE> and <CODE>current-column</CODE> return
+  <I>port</I>'s current read or write location.
+They return <CODE>#f</CODE> if <I>port</I> does not keep track of its location.
+<CODE>Fresh-line</CODE> writes a newline character to <I>output-port</I> if
+ <CODE>(current-row <CODE><I>port</I></CODE>)</CODE> is not 0.
+<BLOCKQUOTE><PRE>
+(define p (open-output-port "/tmp/temp"))
+(list (current-row p) (current-column p))
+    <CODE>-&gt;</CODE> '(0 0)
+(display "012" p)
+(list (current-row p) (current-column p))
+    <CODE>-&gt;</CODE> '(0 3)
+(fresh-line p)
+(list (current-row p) (current-column p))
+    <CODE>-&gt;</CODE> '(1 0)
+(fresh-line p)
+(list (current-row p) (current-column p))
+    <CODE>-&gt;</CODE> '(1 0)
 </PRE></BLOCKQUOTE>
 <P>
   
-Previous: <A HREF="s48manual_44.html">Fluid bindings</A> | Next: <A HREF="s48manual_46.html">Macros for writing loops</A></BODY></HTML>
+Previous: <A HREF="s48manual_44.html">Hash tables</A> | Next: <A HREF="s48manual_46.html">Fluid bindings</A></BODY></HTML>

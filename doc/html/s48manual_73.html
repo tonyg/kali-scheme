@@ -2,72 +2,69 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:25 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:18 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- References</TITLE>
+<TITLE>Scheme 48 Manual -- Regular expressions</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | Previous Chapter: <A HREF="s48manual_62.html">Access to POSIX</A> | Next Chapter: <A HREF="s48manual_74.html">Index</A><BR>Previous: <A HREF="s48manual_72.html">C to Scheme correspondence</A> | Next: <A HREF="s48manual_74.html">Index</A>
-<H1>References</H1>
-<DL>
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_64.html">Access to POSIX</A><BR>Previous: <A HREF="s48manual_72.html">I/O</A> | Next: <A HREF="s48manual_74.html">C to Scheme correspondence</A>
+<H2>Regular expressions</H2>
+The procedures in this section provide access to POSIX regular expression
+ matching.
+The regular expression syntax and semantics are far too complex to
+ be described here.
+Because the C interface uses zero bytes for marking the ends of strings,
+ patterns and strings that contain zero bytes will not work correctly.
+<P>These procedures are in structures <CODE>posix-regexps</CODE> and <CODE>posix</CODE>.
+<P>An abstract data type for creating POSIX regular expressions is
+ described in section&nbsp;<A HREF="s48manual_49.html">*</A>.
+<UL><LI><CODE>(make-regexp<I>&nbsp;string&nbsp;.&nbsp;regexp-options</I>)&nbsp;-&gt;&nbsp;<I>regexp</I></CODE><A NAME="1">&nbsp;</A>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(regexp-option <CODE><I>option-name</I></CODE>)&nbsp;-&gt;&nbsp;<I>regexp-option</I></CODE></td> <td align=right>syntax</td></tr></table>
+</UL>
+<CODE>Make-regexp</CODE> makes a new regular expression, using <CODE><I>string</I></CODE>
+ as the pattern.
+The possible option names are:
+<BLOCKQUOTE><CENTER>
+<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
 
-<DT><B><A NAME="POSIX">&nbsp;</A>[1]</B><DD>
-Information technology - Portable Operating System Interface (POSIX).
-ISO/IEC 9945-1 ANSI/IEEE Std 1003.1.
-2nd Ed., 1996.
-<DT><B><A NAME="2">&nbsp;</A>[2]</B><DD>
-William Clinger and Jonathan&nbsp;Rees.
-Macros that work.
-<EM>Principles of Programming Languages</EM>, January 1991.
-<DT><B><A NAME="3">&nbsp;</A>[3]</B><DD>
-William Clinger and Jonathan&nbsp;Rees (editors).
-Revised<I><sup>4</sup></I> report on the algorithmic language Scheme.
-<EM>LISP Pointers</EM> IV(3):1-55, July-September 1991.
-<DT><B><A NAME="4">&nbsp;</A>[4]</B><DD>
-Pavel Curtis and James Rauen.
-A module system for Scheme.
-<EM>ACM Conference on Lisp and Functional Programming,</EM>
-pages 13-19, 1990.
-<DT><B><A NAME="5">&nbsp;</A>[5]</B><DD>
-Richard&nbsp;Kelsey and Jonathan&nbsp;Rees.
-A Tractable Scheme Implementation.
-<EM>Lisp and Symbolic Computation</EM> 7:315-335 1994.
-<DT><B><A NAME="R5RS">&nbsp;</A>[6]</B><DD>
-Richard Kelsey, Will Clinger, Jonathan Rees (editors).
-Revised<I><sup>5</sup></I> Report on the Algorithmic Language Scheme.
-<EM>Higher-Order and Symbolic Computation,</EM> Vol. 11, No. 1,
- September, 1998.
-and <EM>ACM SIGPLAN Notices</EM>, Vol. 33, No. 9, October, 1998.
-<DT><B><A NAME="7">&nbsp;</A>[7]</B><DD>
-David MacQueen.
-Modules for Standard ML.
-<EM>ACM Conference on Lisp and Functional Programming,</EM>
-1984.
-<DT><B><A NAME="8">&nbsp;</A>[8]</B><DD>
-Jonathan Rees and Bruce Donald.
-Program mobile robots in Scheme.
-<EM>International Conference on Robotics and
-Automation,</EM> IEEE, 1992. 
-<DT><B><A NAME="9">&nbsp;</A>[9]</B><DD>
-Mark A.&nbsp;Sheldon and David K.&nbsp;Gifford.
-Static dependent types for first-class modules.
-<EM>ACM Conference on Lisp and Functional Programming,</EM>
-pages 20-29, 1990.
-<DT><B><A NAME="10">&nbsp;</A>[10]</B><DD>
-Olin Shivers and Brian D.&nbsp;Calrstrom.
-Scsh Reference Manual, scsh release 0.4.
-MIT Laboratory for Computer Science
-Also available at URL http://swissnet.ai.mit.edu/scsh/.
-<DT><B><A NAME="11">&nbsp;</A>[11]</B><DD>
-Olin Shivers.
-A universal scripting framework, 
- or Lambda: the ultimate "little language".
-<EM>Concurrency and Parallelism, Programming, Networking, and
- Security,</EM> pages 254-265, Springer 1996.
-Joxan Jaffar and Roland H.&nbsp;C.&nbsp;Yap, editors.
-</DL>
+<CODE>extended</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> use the extended patterns </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>ignore-case</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> ignore case when matching </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>submatches</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> report submatches </TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>newline</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> treat newlines specially 
+</TD></TR></TABLE>
 
-
+</CENTER></BLOCKQUOTE>
+<P>The regular expression is not compiled until it matched against a string,
+ so any errors in the pattern string will not be reported until that
+ point.
+<UL><LI><CODE>(regexp?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="2">&nbsp;</A>
+</UL>
+This is a predicate for regular expressions.
+<UL><LI><CODE>(regexp-match<I>&nbsp;regexp&nbsp;string&nbsp;submatches?&nbsp;starts-line?&nbsp;ends-line?</I>)</CODE><A NAME="3">&nbsp;</A>
+<BR><CODE>    -&gt;&nbsp;<I>boolean or list of matches</I></CODE>
+<LI><CODE>(match?<I>&nbsp;x</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(match-start<I>&nbsp;match</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(match-end<I>&nbsp;match</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="6">&nbsp;</A>
+</UL>
+<CODE>Regexp-match</CODE> matches the regular expression against the characters
+ in <CODE><I>string</I></CODE>.
+If the string does not match the regular expression, <CODE>regexp-match</CODE>
+ returns <CODE>#f</CODE>.
+If the string does match, then a list of match records is returned
+ if <CODE><I>submatches?</I></CODE> is true, or <CODE>#t</CODE> is returned if it is not.
+Each match record contains the index of the character at the beginning
+ of the match and one more than the index of the character at the end.
+The first match record gives the location of the substring that matched
+ <CODE><I>regexp</I></CODE>.
+If the pattern in <CODE><I>regexp</I></CODE> contained submatches, then the results
+ of these are returned in order, with a match records reporting submatches
+ that succeeded and <CODE>#f</CODE> in place of those that did not.
+<P><CODE><I>Starts-line?</I></CODE> should be true if <CODE><I>string</I></CODE> starts at the beginning
+ of a line and <CODE><I>ends-line?</I></CODE> should be true if it ends one.
 <P>
   
-Previous: <A HREF="s48manual_72.html">C to Scheme correspondence</A> | Next: <A HREF="s48manual_74.html">Index</A></BODY></HTML>
+Previous: <A HREF="s48manual_72.html">I/O</A> | Next: <A HREF="s48manual_74.html">C to Scheme correspondence</A></BODY></HTML>

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 (define-interface posix-files-interface
   (export directory-stream?
@@ -191,7 +191,7 @@
 	  dup
 	  dup-switching-mode
 	  dup2
-	  remap-file-descriptors
+	  remap-file-descriptors!
 	  close-all-but
 	  
 	  close-on-exec?
@@ -271,11 +271,9 @@
   (open scheme define-record-types mvlet ascii signals
 	bitwise bigbit
 	reduce
-	posix-regexps
+	(modify posix-regexps (rename (make-regexp make-posix-regexp)))
 	posix-regexps-internal
-	util			;every
-	structure-refs)
-  (access posix-regexps)	; we need to do some renaming
+	util)			;every
   (optimize auto-integrate)
   (files func-regexp))
 
@@ -284,6 +282,7 @@
 (define-structure posix (compound-interface
 			  (interface-of posix-processes)
 			  (interface-of posix-process-data)
+			  (interface-of posix-platform-names)
 			  (interface-of posix-files)
 			  (interface-of posix-i/o)
 			  (interface-of posix-time)
@@ -291,6 +290,7 @@
 			  (interface-of posix-regexps))
   (open posix-processes
 	posix-process-data
+	posix-platform-names
 	posix-files
 	posix-i/o
 	posix-time

@@ -42,14 +42,18 @@ Performance:
       for optimizing the interpreter's switch (*pc++); perhaps we
       could lift some of it.  (Range check isn't necessary.)
     Floating point support in VM.
-    Bignum support in VM: use MIT Scheme bignums or GNU Multiple
-      Precision Arithmetic Library (Torbjorn Granlund <tege@sics.se>).
     Faster bignum printer (e.g. the one Richard wrote - but it would be
       nice if it were an option tied to bignums, not built in to the
       initial image).
     Ratnum multiplication and division might be made more efficient by
       taking cross-GCD's.
     Native code compiler...
+
+Compiler bugs / features:
+    Inliner is buggy: if (lambda (x) (f) x) is in-lined the call to
+      F fill occur before the argument is evaluated.
+    It would be nice if macro's and inliner's sources were saved only
+      if we are going to be doing doing any reificiation.
 
 Big Scheme bugs / features:
     It would be nice to be able to simulate control-C interrupts on
@@ -119,6 +123,8 @@ Cleanup:
     Figure out a better way to implement ##.
     Be consistent about "filename" versus "file-name".
   Compiler / linker / module system:
+    The fluids $losers and $package-losers in env/pedit.scm are never
+      bound.  Could they be replaced with cells?
     The "reflective tower" isn't really a reflective tower, it's a
       syntactic tower.  Rename it.
     The scanner (file loader) should operate on streams, not lists.

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file write.scm.
 
@@ -111,11 +111,11 @@
 	((eof-object? obj) (write-string "#{End-of-file}" port))
 	((vector? obj) (write-vector obj port recur))
 	((procedure? obj) (write-string "#{Procedure}" port))
-	(((structure-ref code-vectors code-vector?) obj)
+	((code-vector? obj)
 	 (write-string "#{Byte-vector}" port))
-	(((structure-ref channels channel?) obj)
+	((channel? obj)
 	 (write-string "#{Channel " port)
-	 (display ((structure-ref channels channel-id) obj) port)
+	 (display (channel-id obj) port)
 	 (write-string "}" port))
 	((eq? obj (if #f #f)) (write-string "#{Unspecific}" port))
 	(else

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Command levels for the command processor
 ;
@@ -9,7 +9,7 @@
 ; A command level also has the condition that caused the level to be pushed,
 ; if any.
 
-;----------------
+;----------------------------------------------------------------
 ; Command levels
 
 (define-record-type command-level :command-level
@@ -96,7 +96,7 @@
 		(set-command-level-threads! level (make-weak-pointer es))
 		es))))))
 
-;----------------
+;----------------------------------------------------------------
 ; Entry point
 
 ; Starting the command processor.  This arranges for an interrupt if the heap
@@ -106,39 +106,40 @@
 (define (start-command-levels resume-args context
 			      start-thunk repl-thunk
 			      condition inspector-state
-			      input-port output-port error-output-port)
+			      input-port output-port error-port)
   ;(debug-message "[Starting levels]")
   (notify-on-interrupts (current-thread))
-  (let ((dynamic-env (get-dynamic-env)))
-    (let-fluids $command-level-thread? #t
-		$user-session
-		(make-user-session (current-thread)
-				   (or context (make-user-context))
-				   repl-thunk
-				   input-port
-				   output-port
-				   error-output-port
-				   resume-args	; focus values
-				   #f		; exit status
-				   (and (pair? resume-args)
-					(equal? (car resume-args) "batch")))
-
+  (let ((dynamic-env (get-dynamic-env))
+	(session (make-user-session (current-thread)
+				    (or context (make-user-context))
+				    repl-thunk
+				    input-port
+				    output-port
+				    error-port
+				    resume-args	; focus values
+				    #f		; exit status
+				    (and (pair? resume-args)
+					 (equal? (car resume-args) "batch")))))
+    (with-handler command-levels-condition-handler
       (lambda ()
-	;(debug-message "[start-thunk]")
-	(start-thunk)
-	(let ((thunk (really-push-command-level condition
-						inspector-state
-						dynamic-env
-						'())))
-	  (ignore-further-interrupts)
-	  thunk)))))
+	(let-fluids $command-level-thread? #t
+		    $user-session session
+	  (lambda ()
+	    ;(debug-message "[start-thunk]")
+	    (start-thunk)
+	    (let ((thunk (really-push-command-level condition
+						    inspector-state
+						    dynamic-env
+						    '())))
+	      (ignore-further-interrupts)
+	      thunk)))))))
 
 ; A fluid to tell us when we are in the command level thread (used to
 ; avoid sending upcalls to whomever is running us).
 
 (define $command-level-thread? (make-fluid #f))
 
-(define (command-level-thread?)
+(define (on-command-level-thread?)
   (fluid $command-level-thread?))
 
 (define $user-session (make-fluid #f))
@@ -176,11 +177,24 @@
   (call-before-heap-overflow! (lambda stuff #f))
   (call-when-deadlocked! #f))
 
-; The number of milliseconds per timeslice in the command interpreter
-; scheduler.  Should be elsewhere?
+; Handler for the command-levels thread.  Warnings and notes are printed,
+; errors cause an exit.  This handler is used to catch errors before they
+; go to the 
 
-(define command-quantum 200)
+(define (command-levels-condition-handler c next-handler)
+  (cond ((or (warning? c)
+	     (note? c))
+	 (force-output (current-output-port))   ; keep synchronous
+	 (display-condition c (current-error-port))
+	 (unspecific))				; proceed
+        ((error? c)
+	 (force-output (current-output-port))	; keep synchronous
+	 (display-condition c (current-error-port))
+	 (scheme-exit-now 1))
+        (else                           
+         (next-handler))))
 
+;----------------------------------------------------------------
 ; Grab the current continuation, then make a command level and run it.
 ;
 ; The double-paren around the CWCC is because it returns a continuation which
@@ -190,7 +204,6 @@
 ; out?
 
 (define (really-push-command-level condition inspecting? dynamic-env levels)
-  ;(debug-message "[pushing command level]")
   ((call-with-current-continuation
      (lambda (throw)
        (let ((level (make-command-level condition
@@ -203,7 +216,7 @@
 	     (dynamic-wind
 	      (lambda ()
 		(if (command-level-terminated? level)
-		    (error "can't throw back into a command level" level)))
+		    (error "trying to throw back into a command level" level)))
 	      (lambda ()
 		(run-command-level level #f))
 	      (lambda ()
@@ -245,7 +258,7 @@
     (dynamic-wind
      (lambda ()
        (if *out?*
-	   (error "can't throw back into a command level" level)))
+	   (error "trying to throw back into a command level" level)))
      (lambda ()
        (run-command-level level #t))
      (lambda ()
@@ -279,6 +292,11 @@
 			       (command-level-event-handler level terminating?)
 			       command-level-upcall-handler
 			       (command-level-wait level terminating?))))
+
+; The number of milliseconds per timeslice in the command interpreter
+; scheduler.  Should be elsewhere?
+
+(define command-quantum 200)
 
 ; Handling events.
 ; SPAWNED and RUNNABLE events require putting the job on the correct queue.
@@ -350,7 +368,7 @@
     ((command-level-throw top-level)
        (lambda () (lambda () status)))))
 
-;----------------
+;----------------------------------------------------------------
 ; Upcalls
 
 ; The tokens are records which have contain the upcall procedure.
@@ -381,7 +399,7 @@
        (let ((token (make-upcall (lambda (args ...) . body)
 				 'id)))
 	 (lambda (args ...)
-	   (if (command-level-thread?)
+	   (if (on-command-level-thread?)
 	       ((upcall-procedure token) args ...)
 	       (upcall token args ...))))))))
 
@@ -471,7 +489,7 @@
    level
    (lambda ()
      (really-push-command-level (command-level-condition   level)
-				(command-level-value-stack level)
+				#f		; drop the old value stack
 				(command-level-dynamic-env level)
 				(command-level-levels      level)))))
 
@@ -500,14 +518,10 @@
 
 (define (kill-paused-thread! level)
   (let ((paused (command-level-paused-thread level)))
-    (if (not paused)
-	(error "level has no paused thread" level))
-    (if (eq? paused (command-level-repl-thread level))
-	(spawn-repl-thread! level))
-    (interrupt-thread paused terminate-current-thread)
-;		      (lambda ignore
-;			(terminate-current-thread)))
-    ;(enqueue-thread! (command-level-queue level) paused)
-    (set-command-level-paused-thread! level #f)))
-
-
+    (if paused
+	(begin
+	  (if (eq? paused (command-level-repl-thread level))
+	      (spawn-repl-thread! level))
+	  (interrupt-thread paused terminate-current-thread)
+	  (set-command-level-paused-thread! level #f))
+	(warn "level has no paused thread" level))))

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Transmogrify code to produce flat lexical environments.
 ;
@@ -9,7 +9,7 @@
 (set-optimizer! 'flat-environments
   (lambda (forms package)
     (map (lambda (form)
-           (flatten-form (force form)))
+           (flatten-form (force-node form)))
          forms)))
 
 (define (flatten-form node)
@@ -61,45 +61,42 @@
 
 (define-flattener 'lambda
   (lambda (node free)
-    (flatten-lambda node free #t)))
+    (flatten-lambda node caddr free #t)))
 
-(define (flatten-lambda node free closure?)
+(define-flattener 'flat-lambda
+  (lambda (node free)
+    (flatten-lambda node cadddr free #t)))
+
+(define (flatten-lambda node get-body free closure?)
   (let ((exp (node-form node))
 	(my-free (install-new-set!)))
-    (let ((body (convert-lambda-body node my-free)))
+    (let* ((formals (cadr exp))
+	   (body (convert-lambda-body formals (get-body exp) my-free)))
       (install-set! free)
       (set-union! free my-free)
       (if closure?
 	  (make-node operator/flat-lambda
 		     (list 'flat-lambda
-			   (cadr exp)
+			   formals
 			   (set->list my-free)
 			   body))
-	  (make-similar-node node
-			     (list (car exp)
-				   (cadr exp)
-				   body))))))
-	  
-(define-flattener 'flat-lambda
-  (lambda (node free)
-    (for-each (lambda (name)
-		(set-add-element! free name))
-	      (caddr (node-form node)))
-    node))
-
+	  (make-node operator/lambda
+		     (list 'lambda
+			   formals
+			   body))))))
+  
 ; Flatten the body and make cells for any SET! variables.
 
-(define (convert-lambda-body node free)
-  (let* ((exp (node-form node))
-	 (var-nodes (normalize-formals (cadr exp)))
-	 (body (flatten-node (caddr exp) free)))
+(define (convert-lambda-body formals body free)
+  (let* ((var-nodes (normalize-formals formals))
+	 (body (flatten-node body free)))
     (set-difference! free var-nodes)
     (add-cells body var-nodes)))
 
 (define (add-cells exp vars)
   (do ((vars vars (cdr vars))
        (cells '() (if (assigned? (car vars))
-		      (cons (make-cell (car vars)) cells)
+		      (cons (make-make-cell (car vars)) cells)
 		      cells)))
       ((null? vars)
        (if (null? cells)
@@ -138,9 +135,12 @@
     (let ((proc (car (node-form node)))
 	  (args (cdr (node-form node))))
       (make-similar-node node
-			 (cons (if (lambda-node? proc)
-				   (flatten-lambda proc free #f)
-				   (flatten-node proc free))
+			 (cons (cond ((lambda-node? proc)
+				      (flatten-lambda proc caddr free #f))
+				     ((flat-lambda-node? proc)
+				      (flatten-lambda proc cadddr free #f))
+				     (else
+				      (flatten-node proc free)))
 			       (flatten-list args free))))))
 
 (define-flattener 'loophole
@@ -155,17 +155,27 @@
 
 (define-flattener 'letrec
   (lambda (node free)
-    (let ((form (node-form node)))
-      (let ((vars (map car (cadr form)))
-	    (vals (map cadr (cadr form)))
-	    (body (caddr form)))
-	(cond ((null? vars)
-	       (flatten-node body free))			;+++
-	      ((and (every lambda-node? vals)
-		    (not (any assigned? vars)))
-	       (flatten-pure-letrec vars vals body free))	;+++
-	      (else
-	       (flatten-impure-letrec vars vals body free)))))))
+    (flatten-letrec node caddr free)))
+
+(define-flattener 'pure-letrec
+  (lambda (node free)
+    (flatten-letrec node cadddr free)))
+
+(define (flatten-letrec node get-body free)
+  (let ((form (node-form node)))
+    (let ((vars (map car (cadr form)))
+	  (vals (map cadr (cadr form)))
+	  (body (get-body form)))
+      (cond ((null? vars)
+	     (flatten-node body free))			;+++
+	    ((and (every (lambda (node)
+			   (or (lambda-node? node)
+			       (flat-lambda-node? node)))
+			 vals)
+		  (not (any assigned? vars)))
+	     (flatten-pure-letrec vars vals body free))	;+++
+	    (else
+	     (flatten-impure-letrec vars vals body free))))))
 
 (define (flatten-pure-letrec vars vals body free)
   (let* ((vals-free (install-new-set!))
@@ -246,7 +256,7 @@
 
 (define-set-marker 'flat-lambda
   (lambda (node)
-    (values)))
+    (mark-set-variables! (cadddr (node-form node)))))
 
 (define-set-marker 'set!
   (lambda (node)
@@ -266,16 +276,23 @@
 
 (define-set-marker 'letrec
   (lambda (node)
-    (let ((form (node-form node)))
-      (for-each (lambda (spec)
-		  (mark-set-variables! (cadr spec)))
-		(cadr form))
-      (mark-set-variables! (caddr form)))))
+    (mark-letrec-sets node caddr)))
+
+(define-set-marker 'pure-letrec
+  (lambda (node)
+    (mark-letrec-sets node cadddr)))
+
+(define (mark-letrec-sets node get-body)
+  (let ((form (node-form node)))
+    (for-each (lambda (spec)
+		(mark-set-variables! (cadr spec)))
+	      (cadr form))
+    (mark-set-variables! (get-body form))))
 
 ;----------------
 ; Cell manipulation calls.
 
-(define (make-cell var)
+(define (make-make-cell var)
   (make-node operator/set!
 	     (list 'set!
 		   var
@@ -311,8 +328,9 @@
 (define operator/unassigned  (get-operator 'unassigned))
 (define operator/set!        (get-operator 'set!))
 
-(define define-node? (node-predicate 'define))
-(define lambda-node? (node-predicate 'lambda))
+(define define-node?      (node-predicate 'define))
+(define lambda-node?      (node-predicate 'lambda))
+(define flat-lambda-node? (node-predicate 'flat-lambda))
 
 ; We get loaded before these are defined, so we have to delay the lookups.
 

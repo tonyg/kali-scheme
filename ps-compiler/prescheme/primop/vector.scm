@@ -69,9 +69,11 @@
 (define-scheme-primop memory-equal?       type/boolean)
 (define-scheme-primop byte-ref      read  type/integer)
 (define-scheme-primop word-ref      read  type/integer)
+(define-scheme-primop flonum-ref    read  type/float)
 
 (define-nonsimple-scheme-primop byte-set! write)
 (define-nonsimple-scheme-primop word-set! write)
+(define-nonsimple-scheme-primop flonum-set! write)
 
 ; We delete the length argument because we don't need it.  This is allowable
 ; because trivial calls can't have WRITE side effects.

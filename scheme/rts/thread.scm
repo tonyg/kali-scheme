@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Threads.
 
@@ -125,7 +125,7 @@
 	     (loop (+ i 1)))))))
 
 (define (all-threads)
-  ((structure-ref primitives find-all-records) :thread))
+  (find-all-records :thread))
 
 ; Add EVENT to THREAD's event queue.
 ; Called with interrupts disabled.
@@ -203,10 +203,6 @@
 	(set-thread-queue! thread #f))))
 
 ;----------------
-
-(define current-thread (structure-ref primitives current-thread))
-(define set-current-thread! (structure-ref primitives set-current-thread!))
-
 ; Return values for RUN.
 
 (define-enumeration event-type
@@ -532,7 +528,7 @@
     (really-schedule-event thread event)
     (maybe-suspend)
     (set-enabled-interrupts! interrupts)
-    ((structure-ref primitives unspecific))))
+    (unspecific)))
 
 ; Resume running the highest thread which has both a current task and a
 ; waiting event.  If there are none such the current thread can continue.
@@ -676,12 +672,12 @@
 ; This clock is reset whenever we request an interrupt.
 
 (define (interrupt-timer-time)
-  ((structure-ref primitives time) (enum time-option cheap-time) #f))
+  (time (enum time-option cheap-time) #f))
 
 ; Used for waking sleepers
 
 (define (real-time)
-  ((structure-ref primitives time) (enum time-option real-time) #f))
+  (time (enum time-option real-time) #f))
 
 ; Install our own handler for timer interrupts and then start running threads.
 

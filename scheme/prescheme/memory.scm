@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; An implementation of Pre-Scheme's memory interface that can detect some
@@ -157,6 +157,17 @@
       (code-vector-set! vector (+ byte-address 3)
 			(bitwise-and 255 value)))))
 
+; With the right access to the flonum bits we could actually make these
+; work.  Something to do later.
+
+(define (flonum-ref address)
+  (if #t					; work around type checker bug
+      (error "call to FLONUM-REF" address)))
+
+(define (flonum-set! address value)
+  (if #t					; work around type checker bug
+      (error "call to FLONUM-SET!" address value)))
+
 ; Block I/O procedures.
 
 (define (write-block port address count)
@@ -173,7 +184,7 @@
   (let ((address (address-index address)))
     (cond ((not (char-ready? port))
 	   (values 0 #f (enum errors no-errors)))
-	  ((eof-object? (s-peek-char port))
+	  ((eof-object? (scheme:peek-char port))
 	   (values 0 #t (enum errors no-errors)))
 	  (else
 	   (let ((vector (address->vector address))
@@ -182,7 +193,7 @@
 	       (if (or (= i count)
 		       (not (char-ready? port)))
 		   (values i #f (enum errors no-errors))
-		   (let ((c (s-read-char port)))
+		   (let ((c (scheme:read-char port)))
 		     (cond ((eof-object? c)
 			    (values i #f (enum errors no-errors)))
 			   (else

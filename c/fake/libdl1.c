@@ -5,10 +5,17 @@
  * (whose name is pointed to by object_file).
  */
 #include "sysdep.h"
+#include <stdlib.h>
 #include <nlist.h>
 
 #ifdef	USCORE
 #include <string.h>
+#endif
+
+#if defined(HAVE_DLOPEN)
+#include <dlfcn.h>
+#else
+#include "../fake/dlfcn.h"
 #endif
 
 #if	! defined(NLIST_HAS_N_NAME)
@@ -53,7 +60,6 @@ dlsym(void *lib, char *name)
 {
 	struct nlist	names[2];
 	int		status;
-	extern char	*s48_object_file;
 #ifdef	USCORE
 	int		len;
 	char		*tmp,
@@ -64,7 +70,7 @@ dlsym(void *lib, char *name)
 		lasterror = "Bad library pointer passed to dlsym()";
 		return (NULL);
 	}
-	if (object_file == NULL) {
+	if (s48_object_file == NULL) {
 		lasterror = "I don't know the name of my executable";
 		return (NULL);
 	}
@@ -87,7 +93,7 @@ dlsym(void *lib, char *name)
 	names[0].n_value = 0;		/* for Linux */
 	names[0].n_type = 0;		/* for Linux */
 	names[1].n_name = NULL;
-	status = nlist(object_file, names);
+	status = nlist(s48_object_file, names);
 #ifdef	USCORE
 	if (tmp != buff)
 		free((void *)tmp);

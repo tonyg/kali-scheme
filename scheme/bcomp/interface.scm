@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Interfaces
 ;
@@ -248,15 +248,16 @@
 		  (else
 		   prefix)))))
 
-; We make a new ALIST with the exposed names and with package names are looked up
-; in the current state.  Then we start again with no hidden names and no default.
+; We make a new ALIST with the exposed names and with package names are looked
+; up in the current state.  Then we start again with no hidden names and no
+; default.
 
 (define (process-expose args alist hidden default)	     
   (values (let loop ((args args) (new-alist '()))
 	    (if (null? args)
 		(reverse new-alist)
 		(let* ((name (car args))
-		       (pname (lookup name alist hidden default)))
+		       (pname (interface-lookup name alist hidden default)))
 		  (loop (cdr args)
 			(if pname
 			    (cons (cons name pname)
@@ -303,7 +304,7 @@
 ;   - Otherwise, check that NAME begins with the default and return the
 ;     suffix after the default.
 
-(define (lookup name alist hidden default)
+(define (interface-lookup name alist hidden default)
   (cond ((memq name hidden)
 	 #f)
 	((assq name alist)
@@ -324,7 +325,7 @@
 
 (define (make-lookup alist hidden default interface)
   (lambda (name)
-    (let ((alias (lookup name alist hidden default)))
+    (let ((alias (interface-lookup name alist hidden default)))
       (if alias
 	  (interface-ref interface alias)
 	  (values #f #f)))))

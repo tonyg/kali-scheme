@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Commands for debugging.
 
@@ -366,9 +366,9 @@ Kind should be one of: names maps files source tabulate"
 
 (define (collect)
   (let ((port (command-output))
-	(before (memory-status memory-status-option/available #f)))
-    ((structure-ref primitives collect))
-    (let ((after (memory-status memory-status-option/available #f)))
+	(before (available-memory)))
+    (primitives:collect)
+    (let ((after (available-memory)))
       (display "Before: " port)
       (write before port)
       (display " words free in semispace")
@@ -378,7 +378,9 @@ Kind should be one of: names maps files source tabulate"
       (display " words free in semispace")
       (newline))))
 
-(define memory-status-option/available (enum memory-status-option available))
+(define (available-memory)
+  (primitives:memory-status (enum memory-status-option available)
+			    #f))
 
 (define-command-syntax 'collect "" "invoke the garbage collector" '())
 
@@ -528,10 +530,10 @@ Kind should be one of: names maps files source tabulate"
 ; Copied from rts/time.scm to avoid a dependency.
 
 (define (real-time)
-  ((structure-ref primitives time) (enum time-option real-time) #f))
+  (primitives:time (enum time-option real-time) #f))
 
 (define (run-time)
-  ((structure-ref primitives time) (enum time-option run-time) #f))
+  (primitives:time (enum time-option run-time) #f))
 
 (define-command-syntax 'time "<command>" "measure execution time"
   '(command))
@@ -595,7 +597,7 @@ Kind should be one of: names maps files source tabulate"
 
 (define (note-file-environment! filename env)
   (if (maybe-user-context)
-      (let* ((translated ((structure-ref filenames translate) filename))
+      (let* ((translated (filenames:translate filename))
 	     (envs (file-environments))
 	     (probe (or (assoc filename envs) ;What to do?
 			(assoc translated envs))))
@@ -633,7 +635,7 @@ Kind should be one of: names maps files source tabulate"
 	(weak-pointer-ref (cdr probe))
 	#f)))
 
-(set-fluid! $note-file-package note-file-environment!)
+(fluid-cell-set! $note-file-package note-file-environment!)
 
 (define-command-syntax 'forget "<filename>"
   "forget file/package association"
@@ -669,5 +671,5 @@ Kind should be one of: names maps files source tabulate"
 		 (car maybe-exp)))
 	(env (package->environment (environment-for-commands))))
     (set-command-results!
-     (list (schemify ((structure-ref syntactic expand-form) exp env)
+     (list (schemify (syntactic:expand-form exp env)
 		     env)))))

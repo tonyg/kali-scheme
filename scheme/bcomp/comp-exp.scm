@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Compiling expressions.
 
@@ -227,7 +227,7 @@
 	   (maybe-push-continuation
 	    (sequentially 
 	     (push-all-with-names args formals level 0)
-	     (compile-lambda-code formals body level (cont-name cont)))
+	     (compile-lambda-code formals body level (cont-name cont) #f))
 	    depth
 	    cont)))))
 
@@ -331,7 +331,11 @@
 			      (instruction (enum op unassigned))
 			      (instruction (enum op push))))
 			  specs))
-	      (compile-lambda-code (map car specs) body level (cont-name cont)))
+	      (compile-lambda-code (map car specs)
+				   body
+				   level
+				   (cont-name cont)
+				   #f))
 	    depth
 	    cont)))))
 

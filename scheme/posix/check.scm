@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; A test suite for the POSIX interface.
 
@@ -141,7 +141,7 @@
 	(set-working-directory! directory-name)
 	(working-directory)))
 
-(test "i/o-flags" equal? '(#f #f #f #f #f #f #f #t)
+(test "i/o-flags" equal? '(#f #f #t #f #f #f #f #t)
       (let* ((out (open-file "file0"
 			     (file-options create write-only)
 			     (integer->file-mode #o700)))

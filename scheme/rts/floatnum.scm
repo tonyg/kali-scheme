@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Inexact rational arithmetic using hacked-in floating point numbers.
 
@@ -207,9 +207,6 @@
 (define-floatnum-method &remainder float-remainder)
 (define-floatnum-method &= float=)
 (define-floatnum-method &< float<)
-
-(define-method &numerator ((x :rational)) (float-numerator x))
-(define-method &denominator ((x :rational)) (float-denominator x))
 
 (define-method &exp ((x :rational)) (float-exp x))
 (define-method &log ((x :rational)) (float-log x))

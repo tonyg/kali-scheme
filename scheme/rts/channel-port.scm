@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Ports built on OS channels.
 
@@ -204,8 +204,7 @@
 						0
 						buffer-size)))
 	   (periodically-force-output! port)
-	   ((structure-ref primitives add-finalizer!) port
-						      force-output-if-open)
+	   (add-finalizer! port force-output-if-open)
 	   port))))
 	     
 ;----------------

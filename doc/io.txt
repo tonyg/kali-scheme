@@ -1,4 +1,7 @@
 
+[This is somewhat out of date.  It predates the switch to using optimistic
+ concurrency for mutual exclusion. -RK 5/21/01]
+
 There are two types of I/O objects in Scheme 48, channels and ports.
 Channels are the raw, unbuffered ports of the operating system.  The
 only I/O operations the VM supports for channels are block reads and

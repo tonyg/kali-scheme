@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 (define-structures ((vm-utilities vm-utilities-interface))
@@ -20,9 +20,12 @@
 
 (define-structures ((channel-io channel-interface)
 		    (events event-interface))
-  (open scheme big-scheme ps-memory structure-refs ports)
-  (access prescheme
-	  i/o)         ; current-error-port
+  (open scheme big-scheme ps-memory ports
+	(subset i/o		(current-error-port))
+	(modify prescheme	(prefix prescheme:)
+		                (expose open-input-file open-output-file
+					close-input-port close-output-port
+					errors)))
   (files s48-channel))
 
 ; The number of usable bits in a small integer.

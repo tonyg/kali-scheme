@@ -2,7 +2,7 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:20 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:13 2001 -->
 <HEAD>
 <TITLE>Scheme 48 Manual -- Inspection mode</TITLE>
 
@@ -12,14 +12,16 @@
 
 <P>There is a data inspector available via the <CODE>,inspect</CODE> and
  <CODE>,debug</CODE> commands or by setting the <CODE>inspect-focus-value</CODE> switch.
+The inspector is particularly useful with procedures, continuations,
+ and records.
 The command processor can be taken out of inspection mode by
  using the <CODE>q</CODE> command, by unsetting the <CODE>inspect-focus-value</CODE> switch,
- or by going to a command level where the the <CODE>inspect-focus-value</CODE> is not
+ or by going to a command level where the <CODE>inspect-focus-value</CODE> is not
  set.
-When in inspection mode input that begins with
+When in inspection mode, input that begins with
   a letter or digit is read as a command, not as an expression.
 To see the value of a variable or number, do <CODE>(begin <CODE><I>exp</I></CODE>)</CODE>
-  or use the <CODE>,run <I>exp</I></CODE> command.
+  or use the <CODE>,run <CODE><I>exp</I></CODE></CODE> command.
 <P>In inspection mode the command processor prints out a
  menu of selectable components for the current focus object.
 To inspect a particular component, just type the corresponding number in
@@ -60,8 +62,6 @@ You can pop the stack, reverting to the previous object, with
 </UL>
 <P>Multiple selection commands (<CODE>u</CODE>, <CODE>d</CODE>, and menu indexes)
  may be put on a single line.
-<P>Inspection mode is particularly useful with procedures, continuations,
-and records.
 <P>All ordinary commands are available when in inspection mode.
 Similarly, the inspection commands can be used when not in inspection
  mode.

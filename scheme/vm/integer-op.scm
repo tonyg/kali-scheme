@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Integer-only primitive operations
 
@@ -143,36 +143,59 @@
 		 (goto return integer-val)
 		 (raise-exception wrong-type-argument 0 arg ...))))))))
 
-(define-fixnum-or-integer (+ x y) 
-  (enter-integer (+ (extract-fixnum x) 
-		    (extract-fixnum y))
-		 (ensure-space long-as-integer-size))
-  (integer-add x y))
+(define-syntax define-fixnum-or-integer-or-float
+  (syntax-rules ()
+    ((define-fixnum-or-integer (opcode arg) fixnum-val integer-val float-val)
+     (define-fixnum-or-integer (opcode arg) (any->)
+       fixnum-val integer-val float-val))
+    ((define-fixnum-or-integer-or-float (opcode arg0 arg1)
+       fixnum-val integer-val float-val)
+     (define-fixnum-or-integer-or-float (opcode arg0 arg1)
+       (any-> any->)
+       fixnum-val integer-val float-val))
+    ((define-fixnum-or-integer-or-float (opcode arg ...) specs
+       fixnum-val integer-val float-val)
+     (define-primitive opcode specs
+       (lambda (arg ...)
+	 (cond ((and (fixnum? arg) ...)
+		(goto return fixnum-val))
+	       ((and (integer? arg) ...)
+		(goto return integer-val))
+	       ((and (double? arg) ...)
+		(goto return float-val))
+	       (else
+		(raise-exception wrong-type-argument 0 arg ...))))))))
 
-(define-fixnum-or-integer (- x y) 
+(define-fixnum-or-integer-or-float (+ x y) 
+  (enter-integer (+ (extract-fixnum x) 
+                    (extract-fixnum y))
+                 (ensure-space long-as-integer-size))
+  (integer-add x y)
+  (flonum-add x y))
+
+(define-fixnum-or-integer-or-float (- x y) 
   (enter-integer (- (extract-fixnum x) 
 		    (extract-fixnum y))
 		 (ensure-space long-as-integer-size))
-  (integer-subtract x y))
+  (integer-subtract x y)
+  (flonum-subtract x y))
 
 (define (return-integer x)
   (goto return (enter-integer x (ensure-space long-as-integer-size))))
 
-(define-syntax define-binop
-  (syntax-rules ()
-    ((define-binop opcode fixnum-op integer-op)
-     (define-primitive opcode (any-> any->)
-       (lambda (x y)
-	 (cond ((and (fixnum? x) (fixnum? y))
-		(goto fixnum-op x y 
-		      return-integer
-		      (lambda (x y) (goto return (integer-op x y)))))
-	       ((and (integer? x) (integer? y))
-		(goto return (integer-op x y)))
-	       (else
-		(binary-lose x y))))))))
-
-(define-binop * multiply-carefully integer-multiply)
+(define-primitive * (any-> any->)
+  (lambda (x y)
+    (cond ((and (fixnum? x) (fixnum? y))
+	   (goto multiply-carefully x y 
+		 return-integer
+		 (lambda (x y)
+		   (goto return (integer-multiply x y)))))
+	  ((and (integer? x) (integer? y))
+	   (goto return (integer-multiply x y)))
+	  ((and (double? x) (double? y))
+	   (goto return (flonum-multiply x y)))
+	  (else
+	   (binary-lose x y)))))
 
 ;----------------------------------------------------------------
 ; division and friends
@@ -196,6 +219,11 @@
 		       (= (enter-fixnum 0) rem))
 		  (goto return quot)
 		  (binary-lose x y)))))
+	  ((and (double? x) (double? y))
+	   (let ((result (flonum-divide x y)))
+	     (if (false? result)
+		 (binary-lose x y)
+		 (goto return result))))
 	  (else
 	   (binary-lose x y)))))
 
@@ -228,16 +256,17 @@
 
 (define-syntax define-comparison
   (syntax-rules ()
-    ((define-comparison op fixnum integer)
-     (define-fixnum-or-integer (op x y)
+    ((define-comparison op fixnum integer float)
+     (define-fixnum-or-integer-or-float (op x y)
        (enter-boolean (fixnum x y))
-       (enter-boolean (integer x y))))))
+       (enter-boolean (integer x y))
+       (enter-boolean (float x y))))))
 
-(define-comparison =  fixnum=  integer=)     
-(define-comparison <  fixnum<  integer<)     
-(define-comparison >  fixnum>  integer>)     
-(define-comparison <= fixnum<= integer<=)     
-(define-comparison >= fixnum>= integer>=)     
+(define-comparison =  fixnum=  integer=  flonum=)     
+(define-comparison <  fixnum<  integer<  flonum<)     
+(define-comparison >  fixnum>  integer>  flonum>)     
+(define-comparison <= fixnum<= integer<= flonum<=)     
+(define-comparison >= fixnum>= integer>= flonum>=)     
 
 ;----------------------------------------------------------------
 ; bitwise operations

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This is file cprim.scm.
@@ -394,7 +394,9 @@
 		      (compile-call-with-values-producer producer level)
 		      0
 		      (accept-values-cont #f 0))
-                    (compile-lambda (unflatten-form consumer) level #f))
+                    (compile-continuation-lambda (unflatten-form consumer)
+						 level
+						 #f))
       (sequentially (compile consumer level 0 (fall-through-cont node 2))
 		    (instruction (enum op push))
 		    (maybe-push-continuation     ; nothing maybe about it

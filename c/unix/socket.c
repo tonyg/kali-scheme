@@ -5,6 +5,8 @@
  * An interface to Unix sockets.
  */
 
+#define _XOPEN_SOURCE_EXTENDED
+#include "sysdep.h"
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -34,7 +36,8 @@ static s48_value	s48_socket(s48_value udp_p, s48_value input_p),
 			s48_accept(s48_value socket_channel),
 			s48_connect(s48_value socket_channel,
 				    s48_value machine,
-				    s48_value port),
+				    s48_value port,
+				    s48_value retry_p),
                         s48_dup_socket_channel(s48_value socket_fd),
 			s48_close_socket_half(s48_value socket_channel,
 					      s48_value input_p),
@@ -174,8 +177,8 @@ static s48_value
 s48_socket_number(s48_value channel)
 {
   int			socket_fd,
-			len,
 			status;
+  socklen_t		len;
   struct sockaddr_in	address;
 
   S48_CHECK_CHANNEL(channel);
@@ -224,8 +227,8 @@ s48_accept(s48_value channel)
 {
   int			socket_fd,
    			connect_fd,
-			len,
 			status;
+  socklen_t		len;
   struct sockaddr_in	address;
   s48_value		input_channel,
 			output_channel;
@@ -285,7 +288,10 @@ s48_accept(s48_value channel)
  */
 
 static s48_value
-s48_connect(s48_value channel, s48_value machine, s48_value port)
+s48_connect(s48_value channel,
+	    s48_value machine,
+	    s48_value port,
+	    s48_value retry_p)
 {
   int			socket_fd,
     			port_number;
@@ -323,9 +329,16 @@ s48_connect(s48_value channel, s48_value machine, s48_value port)
   /*
    * Try the connection.  If it works we make an output channel and return it.
    * The original socket channel will be used as the input channel.
+   *
+   * FreeBSD's connect() behaves oddly.  If you get told to wait, wait for
+   * select() to signal the all-clear, and then try to connect again, you
+   * get an `already connected' (EISCONN) error.  To handle this we pass in
+   * a retry_p flag.  If retry_p is  true the `already connected' error is
+   * ignored.
    */
 
-  if (connect(socket_fd, (struct sockaddr *)&address, sizeof(address)) >= 0) {
+  if (connect(socket_fd, (struct sockaddr *)&address, sizeof(address)) >= 0
+      || ((errno == EISCONN) && (retry_p == S48_TRUE))) {
     S48_STOB_SET(channel, S48_CHANNEL_STATUS_OFFSET, S48_CHANNEL_STATUS_INPUT);
     
     return dup_socket_channel(socket_fd); }
@@ -468,7 +481,7 @@ s48_udp_receive(s48_value channel, s48_value buffer)
 {
   int			socket_fd;
   struct sockaddr_in	from;
-  int			from_len = sizeof(struct sockaddr_in);
+  socklen_t		from_len = sizeof(struct sockaddr_in);
   int			count;
 
   S48_CHECK_CHANNEL(channel);
@@ -480,7 +493,7 @@ s48_udp_receive(s48_value channel, s48_value buffer)
 		   S48_UNSAFE_EXTRACT_VALUE_POINTER(buffer, void *),
 		   S48_UNSAFE_BYTE_VECTOR_LENGTH(buffer),
 		   0,
-		   &from,
+		   (struct sockaddr*)&from,
 		   &from_len);
   
   if (0 <= count)
@@ -527,7 +540,7 @@ s48_udp_send(s48_value channel,
 		S48_UNSAFE_EXTRACT_VALUE_POINTER(buffer, void *),
 		S48_UNSAFE_EXTRACT_FIXNUM(count),
 		0,
-		&to,
+		(struct sockaddr *)&to,
 		sizeof(struct sockaddr_in));
   
   if (0 <= sent)

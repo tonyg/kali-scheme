@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Calls from Section 6 of POSIX.
@@ -75,10 +75,10 @@
 
 ; A higher-level interface for DUP and DUP2.
 ;
-; (remap-file-descriptors . ports&channels)
+; (remap-file-descriptors! . ports&channels)
 ;
 ; PORTS&CHANNELS gives the desired locations of the file descriptors associated
-; with the ports and channels.  (REMAP-FILE-DESCRIPTORS P1 #F P2) moves P1's
+; with the ports and channels.  (REMAP-FILE-DESCRIPTORS! P1 #F P2) moves P1's
 ; file descriptor to 0 and P2's to 2.  All other channels are closed.  The same
 ; file descriptor may be moved to multiple locations.
 ;
@@ -92,8 +92,8 @@
 ; Finally, any channels which were not mentioned in PORTS&CHANNELS are
 ; marked close-on-exec.
 
-(define (remap-file-descriptors . ports&channels)
-  (let ((channels (maybe-xs->channels ports&channels)))
+(define (remap-file-descriptors! . ports&channels)
+  (let ((channels (maybe-xs->channels ports&channels #t)))
     (if channels
 	(call-with-values    
 	 (lambda ()
@@ -110,10 +110,10 @@
 				   (not (vector-ref channels index)))
 			       (set-close-on-exec?! channel #t))))
 		       (open-channels-list)))))
-	(call-error remap-file-descriptors ports&channels))))
+	(call-error remap-file-descriptors! ports&channels))))
 
 (define (close-all-but . ports&channels)
-  (let ((channels (maybe-xs->channels ports&channels)))
+  (let ((channels (maybe-xs->channels ports&channels #f)))
     (if channels
 	(for-each (lambda (channel)
 		    (if (not (memq channel channels))
@@ -142,7 +142,7 @@
 	  ((and false-okay?
 		(not (car todo)))
 	   (loop (cdr todo)
-		 (cons #f todo)))
+		 (cons #f res)))
 	  ((maybe-x->channel (car todo))
 	   => (lambda (channel)
 		(loop (cdr todo)

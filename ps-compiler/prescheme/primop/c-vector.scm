@@ -64,7 +64,7 @@
 (define-c-generator make-record #f
   (lambda (call port indent)
     (let ((type (get-record-type (literal-value (call-arg call 0)))))
-      (write-c-coercion type port)
+      (write-c-coercion (make-pointer-type type) port)
       (format port "malloc(sizeof(struct ")
       (write-c-identifier (record-type-name type) port)
       (format port "))"))))
@@ -173,6 +173,10 @@
   (lambda (call port indent)
     (generate-c-memory-ref "long" (call-arg call 0) port)))
 
+(define-c-generator flonum-ref #t
+  (lambda (call port indent)
+    (generate-c-memory-ref "double" (call-arg call 0) port)))
+
 (define (generate-c-memory-ref type pointer port)
   (format port "*((~A *) " type)
   (c-value pointer port)
@@ -189,6 +193,14 @@
 (define-c-generator word-set! #t
   (lambda (call port indent)
     (generate-c-memory-set! "long"
+			    (call-arg call 1)
+			    (call-arg call 2)
+			    port
+			    indent)))
+
+(define-c-generator flonum-set! #t
+  (lambda (call port indent)
+    (generate-c-memory-set! "double"
 			    (call-arg call 1)
 			    (call-arg call 2)
 			    port

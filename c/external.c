@@ -465,9 +465,24 @@ s48_raise_scheme_exception(long why, long nargs, ...)
 /* Specific exceptions */
 
 void
+s48_raise_argument_type_error(s48_value value) {
+  s48_raise_scheme_exception(S48_EXCEPTION_WRONG_TYPE_ARGUMENT, 1, value);
+}
+
+/* Superceded name for preceding function, retained for compatibility. */
+
+void
 s48_raise_argtype_error(s48_value value) {
   s48_raise_scheme_exception(S48_EXCEPTION_WRONG_TYPE_ARGUMENT, 1, value);
 }
+
+void
+s48_raise_argument_number_error(s48_value value, s48_value min, s48_value max) {
+  s48_raise_scheme_exception(S48_EXCEPTION_WRONG_NUMBER_OF_ARGUMENTS,
+			     3, value, min, max);
+}
+
+/* Superceded name for preceding function, retained for compatibility. */
 
 void
 s48_raise_argnumber_error(s48_value value, s48_value min, s48_value max) {
@@ -521,7 +536,7 @@ long
 s48_stob_length(s48_value thing, int type)
 {
   if (!(S48_STOB_P(thing) && (S48_STOB_TYPE(thing) == type)))
-    s48_raise_argtype_error(thing);
+    s48_raise_argument_type_error(thing);
   
   return S48_STOB_DESCRIPTOR_LENGTH(thing);
 }
@@ -530,7 +545,7 @@ long
 s48_stob_byte_length(s48_value thing, int type)
 {
   if (!(S48_STOB_P(thing) && (S48_STOB_TYPE(thing) == type)))
-    s48_raise_argtype_error(thing);
+    s48_raise_argument_type_error(thing);
 
   if (type == S48_STOBTYPE_STRING)
     return S48_STOB_BYTE_LENGTH(thing) - 1;
@@ -544,7 +559,7 @@ s48_stob_ref(s48_value thing, int type, long offset)
   long length;
 
   if (!(S48_STOB_P(thing) && (S48_STOB_TYPE(thing) == type)))
-    s48_raise_argtype_error(thing);
+    s48_raise_argument_type_error(thing);
 
   length = S48_STOB_DESCRIPTOR_LENGTH(thing);
 
@@ -564,7 +579,7 @@ s48_stob_set(s48_value thing, int type, long offset, s48_value value)
   if (!(S48_STOB_P(thing) &&
 	(S48_STOB_TYPE(thing) == type) &&
 	!S48_STOB_IMMUTABLEP(thing)))
-    s48_raise_argtype_error(thing);
+    s48_raise_argument_type_error(thing);
   
   length = S48_STOB_DESCRIPTOR_LENGTH(thing);
 
@@ -582,7 +597,7 @@ s48_stob_byte_ref(s48_value thing, int type, long offset)
   long length;
 
   if (!(S48_STOB_P(thing) && (S48_STOB_TYPE(thing) == type)))
-    s48_raise_argtype_error(thing);
+    s48_raise_argument_type_error(thing);
   
   length = (type == S48_STOBTYPE_STRING) ?
            S48_STOB_BYTE_LENGTH(thing) - 1 :
@@ -602,7 +617,7 @@ s48_stob_byte_set(s48_value thing, int type, long offset, char value)
   long length;
 
   if (!(S48_STOB_P(thing) && (S48_STOB_TYPE(thing) == type)))
-    s48_raise_argtype_error(thing);
+    s48_raise_argument_type_error(thing);
   
   length = (type == S48_STOBTYPE_STRING) ?
            S48_STOB_BYTE_LENGTH(thing) - 1 :
@@ -637,7 +652,7 @@ s48_value
 s48_enter_fixnum(long value)
 {
   if (value < S48_MIN_FIXNUM_VALUE || S48_MAX_FIXNUM_VALUE < value)
-    s48_raise_argtype_error(s48_enter_integer(value));
+    s48_raise_argument_type_error(s48_enter_integer(value));
 
   return S48_UNSAFE_ENTER_FIXNUM(value);
 }
@@ -646,7 +661,7 @@ long
 s48_extract_fixnum(s48_value value)
 {
   if (! S48_FIXNUM_P(value))
-    s48_raise_argtype_error(value);
+    s48_raise_argument_type_error(value);
   
   return S48_UNSAFE_EXTRACT_FIXNUM(value);
 }
@@ -659,16 +674,16 @@ long
 s48_extract_integer(s48_value value)
 {
   if (S48_FIXNUM_P(value))
-    return S48_UNSAFE_EXTRACT_FIXNUM (value);
+    return S48_UNSAFE_EXTRACT_FIXNUM(value);
 
   if (S48_BIGNUM_P(value)){
-    bignum_type bignum = S48_ADDRESS_AFTER_HEADER (value, long);
+    bignum_type bignum = S48_ADDRESS_AFTER_HEADER(value, long);
     
     if (! s48_bignum_fits_in_word_p(bignum, 32, 1))
-      s48_raise_argtype_error (value);
-    else return s48_bignum_to_long (bignum);
+      s48_raise_argument_type_error (value);
+    else return s48_bignum_to_long(bignum);
   }
-  else s48_raise_argtype_error(value);
+  else s48_raise_argument_type_error(value);
 }
 
 /*
@@ -690,7 +705,7 @@ double
 s48_extract_double(s48_value s48_double)
 {
   if (! S48_DOUBLE_P(s48_double))
-    s48_raise_argtype_error(s48_double);
+    s48_raise_argument_type_error(s48_double);
   
   return S48_UNSAFE_EXTRACT_DOUBLE(s48_double);
 }
@@ -710,7 +725,7 @@ unsigned char
 s48_extract_char(s48_value a_char)
 {
   if (! S48_CHAR_P(a_char))
-    s48_raise_argtype_error(a_char);
+    s48_raise_argument_type_error(a_char);
   
   return S48_UNSAFE_EXTRACT_CHAR(a_char);
 }
@@ -889,7 +904,7 @@ s48_check_record_type(s48_value record, s48_value type_binding)
   if ((! S48_RECORD_P(record)) ||
       (S48_UNSAFE_SHARED_BINDING_REF(type_binding) !=
        S48_UNSAFE_RECORD_REF(record, -1)))
-    s48_raise_argtype_error(record);
+    s48_raise_argument_type_error(record);
 }    
 
 long

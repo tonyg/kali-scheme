@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Hash table package that allows for different hash and comparison functions.
@@ -250,8 +250,6 @@
   (if (number? key)
       (eqv?-assoc key alist)
       (assq key alist)))
-
-; (define string-hash (structure-ref features string-hash))
 
 (define (symbol-hash symbol)
   (string-hash (symbol->string symbol)))

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Additional packages are in s48-package-defs.scm (for loading into
 ; Scheme 48) and ps-package-defs.scm (for compiling as Pre-Scheme).
@@ -76,6 +76,7 @@
 	fixnum-arithmetic
 	vm-architecture
 	bignum-arithmetic
+	flonum-arithmetic
 	integer-arithmetic)
   (files integer-op))
 
@@ -346,7 +347,6 @@
 	external
 	struct
 	ps-receive
-	interpreter-gc
 	interpreter-internal
 	data
 	system-spec
@@ -363,6 +363,20 @@
 	struct
 	data)
   (files integer))
+
+(define-structure flonum-arithmetic (export flonum-add
+					    flonum-subtract
+					    flonum-multiply
+					    flonum-divide
+					    flonum= flonum< flonum>
+					    flonum<= flonum>=)
+  (open prescheme 
+	ps-memory
+	ps-flonums
+	gc-util
+	data		; false
+	struct)
+  (files flonum-arith))
 
 (define-structure string-tables string-table-interface
   (open prescheme vm-utilities vm-architecture

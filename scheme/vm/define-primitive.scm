@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; These are hacked to ensure that all calls to INPUT-TYPE-PREDICATE and
 ; INPUT-TYPE-COERCION are evaluated at load time (because they don't

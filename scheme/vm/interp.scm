@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ;Need to fix the byte-code compiler to make jump etc. offsets from the
 ;beginning of the instruction.
@@ -260,9 +260,7 @@
 (define (uuo)
   (raise-exception unimplemented-instruction 0))
 
-(define opcode-dispatch (make-vector op-count))
-
-(vector+length-fill! opcode-dispatch op-count uuo)
+(define opcode-dispatch (make-vector op-count uuo))
 
 (define-syntax define-opcode
   (syntax-rules ()

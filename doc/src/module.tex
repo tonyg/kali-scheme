@@ -16,18 +16,17 @@
 \chapter{Module system}
 \label{chapter:modules}
 
-This chapter describes the module system used in Scheme~48.
+This chapter describes Scheme~48's module system.
 The module system is unique in the extent to which it
 supports both static linking and rapid turnaround during program
 development.  The design was influenced by Standard ML
 modules\cite{MacQueen:Modules} and by the module system for Scheme
 Xerox\cite{Curtis-Rauen:Modules}.  It has also been shaped by the
-needs of \hack{}, a virtual-machine-based Scheme implementation
-designed to run both on workstations and on relatively small (less
-than 1 Mbyte) embedded controllers.
+needs of \hack{}, which is designed to run both on workstations and
+on relatively small (less than 1 Mbyte) embedded controllers.
 
 Except where noted, everything described here is implemented in
-\hack{}, and exercised by the \hack{} implementation and a few
+\hack{}, and exercised by the \hack{} implementation and some
 application programs.
 
 Unlike the Common Lisp package system, the module system described
@@ -61,9 +60,10 @@ interface}.
 A module imports bindings from other modules by either {\em opening}
 or {\em accessing} some structures that are built on other packages.
 When a structure is opened, all of its exported bindings are visible
-in the client package.  On the other hand, bindings from an accessed
-structure require explicitly qualified references written with the
-{\tt structure-ref} operator.
+in the client package.
+%On the other hand, bindings from an accessed
+%structure require explicitly qualified references written with the
+%{\tt structure-ref} operator.
 
 For example:
 \begin{example}
@@ -153,17 +153,16 @@ structure's underlying package can be seen via that structure in other
 packages.
 
 An {\tt open} clause specifies which structures will be opened up for
-use inside the new package.  At least one structure must be specified or
-else it will be impossible to write any useful programs inside the
-package, since {\tt define}, {\tt lambda}, {\tt cons}, {\tt
-structure-ref}, etc.\ will be unavailable.  Typical packages to list
-in the {\tt open} clause are {\tt scheme}, which exports all bindings
-appropriate to Revised$^5$ Scheme, and {\tt structure-refs}, which
-exports the {\tt structure-ref} operator (see below).  For building
-structures that export structures, there is a {\tt defpackage} package
-that exports the operators of the configuration language.  Many other
-structures, such as record and hash table facilities, are also
-available in the \hack{} implementation.
+ use inside the new package.
+At least one structure must be specified or else it will be impossible to
+ write any useful programs inside the package, since {\tt define},
+ {\tt lambda}, {\tt cons}, etc.\ will be unavailable.
+Packages typically include {\tt scheme}, which exports all bindings
+ appropriate to Revised$^5$ Scheme, in an {\tt open} clause.
+For building structures that export structures, there is a {\tt defpackage}
+ package that exports the operators of the configuration language.
+Many other structures, such as record and hash table facilities, are also
+ available in the \hack{} implementation.
 
 The \codemainindex{modify}, \codemainindex{subset}, and
  \codemainindex{prefix} forms produce new
@@ -202,19 +201,21 @@ The modifiers are applied from right to left.  Thus
 \end{example}
  makes \code{car} available as \code{foo/bus}..
 
-An {\tt access} clause specifies which bindings of names to structures
-will be visible inside the package body for use in {\tt structure-ref}
-forms.  {\tt structure-\ok{}ref} has the following syntax:
-\begin{tabbing}
-\qquad \syn{expression} \goesto{}~
-   \tt(structure-ref \syn{struct-name} \syn{name})
-\end{tabbing}
-The \syn{struct-name} must be the name of an {\tt access}ed structure,
-and \syn{name} must be something that the structure exports.  Only
-structures listed in an {\tt access} clause are valid in a {\tt
-structure-ref}.  If a package accesses any structures, it should
-probably open the {\tt structure-refs} structure so that the {\tt
-structure-ref} operator itself will be available.
+% Use modify instead of structure-ref.
+%
+%An {\tt access} clause specifies which bindings of names to structures
+%will be visible inside the package body for use in {\tt structure-ref}
+%forms.  {\tt structure-\ok{}ref} has the following syntax:
+%\begin{tabbing}
+%\qquad \syn{expression} \goesto{}~
+%   \tt(structure-ref \syn{struct-name} \syn{name})
+%\end{tabbing}
+%The \syn{struct-name} must be the name of an {\tt access}ed structure,
+%and \syn{name} must be something that the structure exports.  Only
+%structures listed in an {\tt access} clause are valid in a {\tt
+%structure-ref}.  If a package accesses any structures, it should
+%probably open the {\tt structure-refs} structure so that the {\tt
+%structure-ref} operator itself will be available.
 
 The package's body is specified by {\tt begin} and/or {\tt files}
 clauses.  {\tt begin} and {\tt files} have the same semantics, except
@@ -226,7 +227,7 @@ practice, we always use {\tt files} in preference to {\tt begin}; {\tt
 begin} exists mainly for expository purposes.
 
 A name's imported binding may be lexically overridden or {\em shadowed}
-by simply defining the name using a defining form such as {\tt define}
+by defining the name using a defining form such as {\tt define}
 or {\tt define-\ok{}syntax}.  This will create a new binding without having
 any effect on the binding in the opened package.  For example, one can
 do {\tt(define car 'chevy)} without affecting the binding of the name
@@ -265,17 +266,18 @@ files} list.
 
 An interface can be thought of as the type of a structure.  In its
 basic form it is just a list of variable names, written {\tt(export
-\cvar{name} \etc)}.  However, in place of
-a name one may write {\code (\cvar{name} \cvar{type})}, indicating the type
-of \cvar{name}'s binding.  Currently the type field is ignored, except
-that exported macros must be indicated with type {\tt :syntax}.
+\cvar{name} \ldots)}.  However, in place of
+a name one may write {\tt (\cvar{name} \cvar{type})}, indicating the type
+of \cvar{name}'s binding.
+The type field is optional, except
+ that exported macros must be indicated with type {\tt :syntax}.
 
 Interfaces may be either anonymous, as in the example in the
 introduction, or they may be given names by a {\tt define-interface}
 form, for example
 \begin{example}
 (define-interface foo-interface (export a c cons))
-(define-structure foo foo-interface \etc)
+(define-structure foo foo-interface \ldots)
 \end{example}
 In principle, interfaces needn't ever be named.  If an interface
 had to be given at the point of a structure's use as well as at the
@@ -306,7 +308,7 @@ union of two or more component interfaces.  For example,
   (compound-interface foo-interface (export mumble)))
 \end{example}
 defines {\tt bar-interface} to be {\tt foo-interface} with the name
-{\tt mumble} added.
+{\tt mumble} ad\-ded.
 
 
 \section{Macros}
@@ -340,13 +342,14 @@ If you must know, figure it out from the following grammar.
 \begin{tabbing}
 \qquad
    \syn{definition} \=\goesto{}~
-      \tt(d\=efine-module (\syn{name} \arbno{(\syn{name} \syn{interface})}) \\
+      \tt(d\=\tt efine-module (\syn{name} \arbno{(\syn{name} \syn{interface})}) \\
        \>  \>\arbno{\syn{definition}} \\
        \>  \>\syn{name}\tt) \\
         \>\altz{}~ \tt(define \syn{name}
                         (\syn{name} \arbno{\syn{name}}))
 \end{tabbing}
-
+% JAR says: Different instantiations of of a module may see different
+% definitions of macros and inlines.
 
 \section{Compiling and linking}
 
@@ -474,6 +477,11 @@ line.  The command processor's prompt consists of the name of the
 current package followed by a greater-than ({\tt>}).
 
 \begin{description}
+\item \code{,open \arbno{\cvar{struct-name}}} \\
+    The {\tt,open} command opens a new structure in the current
+    package, as if the package's definition's {\tt open} clause
+    had listed \cvar{struct-name}.
+
 \item \code{,config} \\
     The {\tt,config} command sets the command processor's current
     package to be the current configuration package.  Forms entered at
@@ -535,11 +543,9 @@ foo> a
     moves to or executes a command in the user package (which is the
     default package when the \hack{} command processor starts).
 
-\item \code{,for-syntax [\cvar{command}]} \\
-    This is similar to the {\tt ,config} and {\tt ,in} commands.  It
-    moves to or executes a command in the current package's ``package
-    for syntax,'' which is the package in which the forms $f$ in
-    {\tt (define-syntax \cvar{name} \cvar{f})} are evaluated.
+\item \code{,user-package-is \cvar{name}} \\
+    The {\tt,user-package-is} command designates a new user
+    package for use by the {\tt,user} command.
 
 \item \code{,load-package \cvar{struct-name}} \\
     The {\tt,load-package} command ensures that the specified structure's
@@ -560,27 +566,28 @@ foo> a
     it will update the package's bindings after mutations to its
     source file.
 
-\item \code{,load \cvar{filespec} \etc} \\
+\item \code{,load \cvar{filespec} \ldots} \\
     The {\tt,load} command executes forms from the specified file or
     files in the current package.  {\tt,load \cvar{filespec}} is similar
     to {\tt(load "\cvar{filespec}")}
     except that the name {\tt load} needn't be bound in the current
     package to Scheme's {\tt load} procedure.
 
+\item \code{,for-syntax [\cvar{command}]} \\
+    This is similar to the {\tt ,config} and {\tt ,in} commands.  It
+    moves to or executes a command in the current package's ``package
+    for syntax,'' which is the package in which the forms $f$ in
+    {\tt (define-syntax \cvar{name} \cvar{f})} are evaluated.
+
 \item \code{,new-package} \\
-    The {\tt,new-package} command creates a new package in which only
-    the standard Scheme bindings are visible and moves the command
+    The {\tt,new-package} command creates a new package, in which only
+    the standard Scheme bindings are visible, and moves the command
     processor to it.
 
 \item \code{,structure \cvar{name} \cvar{interface}} \\
     The {\tt ,structure} command defines \cvar{name} in the
     configuration package to be a structure with interface
     \cvar{interface} based on the current package.
-
-\item \code{,open \arbno{\cvar{struct-name}}} \\
-    The {\tt,open} command opens a new structure in the current
-    package, as if the package's definition's {\tt open} clause
-    had listed \cvar{struct-name}.
 
 \end{description}
 
@@ -606,9 +613,10 @@ configuration package opens the following structures:
 \end{itemize}
 Note that it does not open {\tt scheme}.
 
-You can define other configuration packages by simply making a package
- that opens {\tt module-system} and, optionally, {\tt built-in-\ok{}structures},
-{\tt more-\ok{}structures}, or other structures that
+You can define additional configuration packages by making a package
+ that opens {\tt module-\ok{}system} and, optionally,
+ {\tt built-in-\ok{}structures},
+ {\tt more-\ok{}structures}, or other structures that
  export structures and interfaces.
 
 For example:
@@ -629,12 +637,15 @@ The problem is that every environment in which
  \code{define-structure} is defined must also have a way to
  create ``reflective towers'' (a misnomer; a better name would be
  ``syntactic towers'').
+% JAR says: fix this?
 A new reflective tower is required whenever a new environment is created for
  compiling the source code in the package associated with a new structure.
 The environment's tower is used at compile time for
  evaluating the \cvar{macro-source} in
- \code{(define-syntax \cvar{name} \cvar{macro-source})},
- \code{(let-syntax ((\cvar{name} \cvar{macro-source}) \ldots) \cvar{body})},
+\begin{example}
+(define-syntax \cvar{name} \cvar{macro-source})
+(let-syntax ((\cvar{name} \cvar{macro-source}) \cvar{...}) \cvar{body})
+\end{example}
  and so forth.
 It is a ``tower'' because that environment, in turn, has to say what environment
  to use if \code{macro-source} itself contains a use of \code{let-syntax}.
@@ -648,10 +659,10 @@ The following example uses \code{export-reflective-tower} and
  configuration environment.
 
 \begin{example}
-> ,config ,structure towers (export-reflective-tower-maker)
+> ,config ,structure t (export-reflective-tower-maker)
 > ,config (define-structure foo (export)
             (open module-system
-                  towers
+                  t
                   built-in-structures
                   more-structures))
 \end{example}
@@ -708,7 +719,7 @@ do not generally show up within module bodies, an individual module
 may be understood by someone who is not familiar with the module
 system.  This is a great aid to code presentation and portability.  If
 a few simple conditions are met (no name conflicts between packages,
-no use of {\tt structure-ref}, and use of {\tt files} in preference to
+and use of {\tt files} in preference to
 {\tt begin}), then a multi-module program can be loaded into a Scheme
 implementation that does not support the module system.  The \hack{}
 static linker satisfies these conditions, and can therefore run in

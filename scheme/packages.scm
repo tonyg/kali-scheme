@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Meta-modules: the big picture.
@@ -40,6 +40,7 @@
 			     (code-vectors code-vectors-interface)
 			     (features features-interface)
 			     (records records-interface)
+			     (record-types record-types-interface)
 			     (signals signals-interface))
 	   ;; Assumes use of FLATLOAD.  The implementations of these
 	   ;; structures will become available via some miracle, e.g.
@@ -228,16 +229,14 @@
 	    signals)
 	   :structure)))
 
-; Of the features-structures, only records isn't also
-; a low-structure.
-
 (define-interface low-structures-interface
   (export ((ascii
 	    bitwise
 	    byte-vectors
+	    cells
 	    code-vectors
 	    features
-	    ;; records  - lose
+	    records
 	    signals
 	    cells
 	    channels
@@ -272,12 +271,12 @@
 	    locks
 	    proposals
 	    queues
+	    record-types
 	    scheduler
 	    scheme-level-1
 	    scheme-level-2
 	    templates
 	    threads
-	    threads-internal
 	    util
 	    weak)
 	   :structure)))
@@ -304,6 +303,7 @@
 	    records-internal
 	    root-scheduler
 	    session-data
+	    threads-internal
 	    usual-resumer
 	    ;; silly
 	    ;; structure-refs

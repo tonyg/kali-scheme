@@ -2,57 +2,313 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:23 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:15 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- SRFIs</TITLE>
+<TITLE>Scheme 48 Manual -- Macros for writing loops</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_47.html">Regular expressions</A> | Next: <A HREF="s48manual_49.html">Mixing Scheme 48 and C</A>
-<H2>SRFIs</H2>
-<P>`SRFI' stands for `Scheme Request For Implementation'.
-An SRFI is a description of an extension to standard Scheme.
-Draft and final SRFI documents, a FAQ, and other information about SRFIs
- can be found at the
-<A HREF="http://srfi.schemers.org">SRFI web site</A>.
-<P>Scheme&nbsp;48 includes implementations of the following (final) SRFIs:
-<UL><LI>SRFI 1 - List Library
-<LI>SRFI 2 - <CODE>and-let*</CODE>
-<LI>SRFI 5 - <CODE>let</CODE> with signatures and rest arguments
-<LI>SRFI 6 - Basic string ports
-<LI>SRFI 7 - Program configuration
-<LI>SRFI 8 - <CODE>receive</CODE>
-<LI>SRFI 9 - Defining record types
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_47.html">Sockets</A> | Next: <A HREF="s48manual_49.html">Regular expressions</A>
+<H2>Macros for writing loops</H2>
+<CODE>Iterate</CODE> and <CODE>reduce</CODE> are extensions of named-<CODE>let</CODE> for
+ writing loops that walk down one or more sequences,
+ such as the elements of a list or vector, the
+ characters read from a port, or an arithmetic series.
+Additional sequences can be defined by the user.
+<CODE>Iterate</CODE> and <CODE>reduce</CODE> are in structure <CODE>reduce</CODE>.
+<H3><A NAME="1"><TT>Iterate</TT></A></H3>
+<P>The syntax of <CODE>iterate</CODE> is:
+<BLOCKQUOTE><PRE>
+  (iterate <CODE><I>loop-name</I></CODE>
+           ((<CODE><I>sequence-type</I></CODE> <CODE><I>element-variable</I></CODE> <CODE><I>sequence-data</I></CODE> ...)
+            ...)
+           ((<CODE><I>state-variable</I></CODE> <CODE><I>initial-value</I></CODE>)
+            ...)
+    <CODE><I>body-expression</I></CODE>
+    [<CODE><I>final-expression</I></CODE>])
+</PRE></BLOCKQUOTE>
+<P><CODE>Iterate</CODE> steps the <CODE><I>element-variable</I></CODE>s in parallel through the
+ sequences, while each <CODE><I>state-variable</I></CODE> has the corresponding
+ <CODE><I>initial-value</I></CODE> for the first iteration and have later values
+ supplied by <CODE><I>body-expression</I></CODE>. 
+If any sequence has reached its limit the value of the <CODE>iterate</CODE>
+ expression is
+ the value of <CODE><I>final-expression</I></CODE>, if present, or the current values of
+ the <CODE><I>state-variable</I></CODE>s, returned as multiple values.
+If no sequence has reached
+ its limit, <CODE><I>body-expression</I></CODE> is evaluated and either calls <CODE><I>loop-name</I></CODE> with
+ new values for the <CODE><I>state-variable</I></CODE>s, or returns some other value(s).
+<P>The <CODE><I>loop-name</I></CODE> and the <CODE><I>state-variable</I></CODE>s and <CODE><I>initial-value</I></CODE>s behave
+exactly as in named-<CODE>let</CODE>.  The named-<CODE>let</CODE> expression
+<BLOCKQUOTE><PRE>
+  (let loop-name ((state-variable initial-value) ...)
+    body ...)
+</PRE></BLOCKQUOTE>
+is equivalent to an <CODE>iterate</CODE> expression with no sequences
+ (and with an explicit
+ <CODE>let</CODE> wrapped around the body expressions to take care of any
+ internal <CODE>define</CODE>s):
+<BLOCKQUOTE><PRE>
+  (iterate loop-name
+           ()
+           ((state-variable initial-value) ...)
+    (let () body ...))
+</PRE></BLOCKQUOTE>
+<P>The <CODE><I>sequence-type</I></CODE>s are keywords (they are actually macros of a particular
+ form; it is easy to add additional types of sequences).
+Examples are <CODE>list*</CODE> which walks down the elements of a list and
+ <CODE>vector*</CODE> which does the same for vectors.
+For each iteration, each <CODE><I>element-variable</I></CODE> is bound to the next
+ element of the sequence.
+The <CODE><I>sequence-data</I></CODE> gives the actual list or vector or whatever.
+<P>If there is a <CODE><I>final-expression</I></CODE>, it is evaluated when the end of one or more
+ sequences is reached.
+If the <CODE><I>body-expression</I></CODE> does not call <CODE><I>loop-name</I></CODE> the
+ <CODE><I>final-expression</I></CODE> is not evaluated.
+The <CODE><I>state-variable</I></CODE>s are visible in
+ <CODE><I>final-expression</I></CODE> but the <CODE><I>sequence-variable</I></CODE>s are not.  
+<P>The <CODE><I>body-expression</I></CODE> and the <CODE><I>final-expression</I></CODE> are in tail-position within
+ the <CODE>iterate</CODE>.
+Unlike named-<CODE>let</CODE>, the behavior of a non-tail-recursive call to
+ <CODE><I>loop-name</I></CODE> is unspecified (because iterating down a sequence may involve side
+ effects, such as reading characters from a port).
+<H3><A NAME="2"><TT>Reduce</TT></A></H3>
+<P>If an <CODE>iterate</CODE> expression is not meant to terminate before a sequence
+ has reached its end,
+ <CODE><I>body-expression</I></CODE> will always end with a tail call to <CODE><I>loop-name</I></CODE>.
+<CODE>Reduce</CODE> is a macro that makes this common case explicit.
+The syntax of <CODE>reduce</CODE> is
+ the same as that of <CODE>iterate</CODE>, except that there is no <CODE><I>loop-name</I></CODE>.
+The <CODE><I>body-expression</I></CODE> returns new values of the <CODE><I>state-variable</I></CODE>s
+ instead of passing them to <CODE><I>loop-name</I></CODE>.
+Thus <CODE><I>body-expression</I></CODE> must return as many values as there are state
+ variables.
+By special dispensation, if there are
+ no state variables then <CODE><I>body-expression</I></CODE> may return any number of values,
+ all of which are ignored.
+<P>The syntax of <CODE>reduce</CODE> is:
+<BLOCKQUOTE><PRE>
+  (reduce ((<CODE><I>sequence-type</I></CODE> <CODE><I>element-variable</I></CODE> <CODE><I>sequence-data</I></CODE> ...)
+            ...)
+           ((<CODE><I>state-variable</I></CODE> <CODE><I>initial-value</I></CODE>)
+            ...)
+    <CODE><I>body-expression</I></CODE>
+    [<CODE><I>final-expression</I></CODE>])
+</PRE></BLOCKQUOTE>
+<P>The value(s) returned by an instance of <CODE>reduce</CODE> is the value(s) returned
+ by the <CODE><I>final-expression</I></CODE>, if present, or the current value(s) of the state
+variables when the end of one or more sequences is reached.
+<P>A <CODE>reduce</CODE> expression can be rewritten as an equivalent <CODE>iterate</CODE>
+ expression by adding a <CODE><I>loop-var</I></CODE> and a wrapper for the
+ <CODE><I>body-expression</I></CODE> that calls the <CODE><I>loop-var</I></CODE>.
+<BLOCKQUOTE><PRE>
+(iterate loop
+         ((<CODE><I>sequence-type</I></CODE> <CODE><I>element-variable</I></CODE> <CODE><I>sequence-data</I></CODE> ...)
+          ...)
+         ((<CODE><I>state-variable</I></CODE> <CODE><I>initial-value</I></CODE>)
+          ...)
+  (call-with-values (lambda ()
+                      <CODE><I>body-expression</I></CODE>)
+                    loop)
+  [<CODE><I>final-expression</I></CODE>])
+</PRE></BLOCKQUOTE>
+<H3><A NAME="3">Sequence types</A></H3>
+<P>The predefined sequence types are:
+<UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(list* <CODE><I>elt-var</I></CODE> <CODE><I>list</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(vector* <CODE><I>elt-var</I></CODE> <CODE><I>vector</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(string* <CODE><I>elt-var</I></CODE> <CODE><I>string</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(count* <CODE><I>elt-var</I></CODE> <CODE><I>start</I></CODE> [<CODE><I>end</I></CODE> [<CODE><I>step</I></CODE>]])</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(input* <CODE><I>elt-var</I></CODE> <CODE><I>input-port</I></CODE> <CODE><I>read-procedure</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(stream* <CODE><I>elt-var</I></CODE> <CODE><I>procedure</I></CODE> <CODE><I>initial-data</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
 </UL>
-Documentation on these can be found at the web site mentioned above.
-<P>The SRFI bindings can be accessed either by opening the appropriate structure
- (the structure <CODE>srfi-</CODE><CODE><I>n</I></CODE> contains SRFI <CODE><I>n</I></CODE>)
- or by loading structure <CODE>srfi-7</CODE> and then using
- the <CODE>,load-srfi-7-program</CODE> command to load an SRFI 7-style program.
-The syntax for the command is
+<P>For lists, vectors, and strings the element variable is bound to the
+ successive elements of the list or vector, or the characters in the
+ string.
+<P>For <CODE>count*</CODE> the element variable is bound to the elements of the sequence
 <BLOCKQUOTE><PRE>
-<CODE>,load-srfi-7-program <CODE><I>name</I></CODE> <CODE><I>filename</I></CODE></CODE>
+ <CODE><I>start</I></CODE>, <CODE><I>start</I></CODE> + <CODE><I>step</I></CODE>, <CODE><I>start</I></CODE> + 2<CODE><I>step</I></CODE>, ..., <CODE><I>end</I></CODE>
 </PRE></BLOCKQUOTE>
-This creates a new structure and associated package, binds the structure
- to <CODE><I>name</I></CODE> in the configuration package, and then loads the program
- found in <CODE><I>filename</I></CODE> into the package.
-<P>As an example, if the file <CODE>test.scm</CODE> contains
+inclusive of <CODE><I>start</I></CODE> and exclusive of <CODE><I>end</I></CODE>.
+The default <CODE><I>step</I></CODE> is 1.
+The sequence does not terminate if no <CODE><I>end</I></CODE> is given or if there
+ is no <I>N &gt; 0</I> such that <CODE><I>end</I></CODE> = <CODE><I>start</I></CODE> + N<CODE><I>step</I></CODE>
+ (<CODE>=</CODE> is used to test for termination).
+For example, <CODE>(count* i 0 -1)</CODE> doesn't terminate
+ because it begins past the <CODE><I>end</I></CODE> value and <CODE>(count* i 0 1 2)</CODE> doesn't
+ terminate because it skips over the <CODE><I>end</I></CODE> value.
+<P>For <CODE>input*</CODE> the elements are the results of successive applications
+ of <CODE><I>read-procedure</I></CODE> to <CODE><I>input-port</I></CODE>.
+The sequence ends when <CODE><I>read-procedure</I></CODE> returns an end-of-file object.
+<P>For a stream, the <CODE><I>procedure</I></CODE> takes the current data value as an argument
+ and returns two values, the next value of the sequence and a new data value.
+If the new data is <CODE>#f</CODE> then the previous element was the last
+ one.  For example,
 <BLOCKQUOTE><PRE>
-(program (code (define x 10)))
+  (list* elt my-list)
 </PRE></BLOCKQUOTE>
-this program can be loaded as follows:
+is the same as
 <BLOCKQUOTE><PRE>
-&gt; ,load-package srfi-7
-&gt; ,load-srfi-7-program test test.scm
-[test]
-&gt; ,in test
-test&gt; x
-10
-test&gt; 
+  (stream* elt list-&gt;stream my-list)
 </PRE></BLOCKQUOTE>
-
-
-
-
+where <CODE>list-&gt;stream</CODE> is
+<BLOCKQUOTE><PRE>
+  (lambda (list)
+    (if (null? list)
+        (values 'ignored #f)
+        (values (car list) (cdr list))))
+</PRE></BLOCKQUOTE>
+<H3><A NAME="4">Synchronous sequences</A></H3>
+<P>When using the sequence types described above, a loop terminates when any of
+its sequences reaches its end.  To help detect bugs it is useful to have
+sequence types that check to see if two or more sequences end on the same
+iteration.  For this purpose there is second set of sequence types called
+synchronous sequences.  These are identical to the ones listed above except
+that they cause an error to be signalled if a loop is terminated by a
+synchronous sequence and some other synchronous sequence did not reach its
+end on the same iteration.
+<P>Sequences are checked for termination in order, from left to right, and
+if a loop is terminated by a non-synchronous sequence no further checking
+is done.
+<P>The synchronous sequences are:
+<UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(list% <CODE><I>elt-var</I></CODE> <CODE><I>list</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(vector% <CODE><I>elt-var</I></CODE> <CODE><I>vector</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(string% <CODE><I>elt-var</I></CODE> <CODE><I>string</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(count% <CODE><I>elt-var</I></CODE> <CODE><I>start</I></CODE> <CODE><I>end</I></CODE> [<CODE><I>step</I></CODE>])</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(input% <CODE><I>elt-var</I></CODE> <CODE><I>input-port</I></CODE> <CODE><I>read-procedure</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(stream% <CODE><I>elt-var</I></CODE> <CODE><I>procedure</I></CODE> <CODE><I>initial-data</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
+</UL>
+<P>Note that the synchronous <CODE>count%</CODE> must have an <CODE><I>end</I></CODE>, unlike the
+ nonsynchronous <CODE>count%</CODE>.
+<H3><A NAME="5">Examples</A></H3>
+<P>Gathering the indexes of list elements that answer true to some
+predicate.
+<BLOCKQUOTE><PRE>
+(lambda (my-list predicate)
+  (reduce ((list* elt my-list)
+           (count* i 0))
+          ((hits '()))
+    (if (predicate elt)
+        (cons i hits)
+        hits)
+    (reverse hits))
+</PRE></BLOCKQUOTE>
+<P>Looking for the index of an element of a list.
+<BLOCKQUOTE><PRE>
+(lambda (my-list predicate)
+  (iterate loop
+           ((list* elt my-list)
+            (count* i 0))
+           ()                                ; no state
+    (if (predicate elt)
+        i
+        (loop))))
+</PRE></BLOCKQUOTE>
+<P>Reading one line.
+<BLOCKQUOTE><PRE>
+(define (read-line port)
+  (iterate loop
+           ((input* c port read-char))
+           ((chars '()))
+    (if (char=? c #<CODE>\</CODE>newline)
+        (list-&gt;string (reverse chars))
+        (loop (cons c chars)))
+    (if (null? chars)
+        (eof-object)
+        ; no newline at end of file
+        (list-&gt;string (reverse chars)))))
+</PRE></BLOCKQUOTE>
+<P>Counting the lines in a file.  We can't use <CODE>count*</CODE> because we
+need the value of the count after the loop has finished.
+<BLOCKQUOTE><PRE>
+(define (line-count name)
+  (call-with-input-file name
+    (lambda (in)
+      (reduce ((input* l in read-line))
+              ((i 0))
+        (+ i 1)))))
+</PRE></BLOCKQUOTE>
+<H3><A NAME="6">Defining sequence types</A></H3>
+<P>The sequence types are object-oriented macros similar to enumerations.
+A non-synchronous sequence macro needs to supply three values:
+ <CODE>#f</CODE> to indicate that it isn't synchronous, a list of state variables
+ and their initializers, and the code for one iteration.
+The first
+ two methods are CPS'ed: they take another macro and argument to
+ which to pass their result.
+The <CODE>synchronized?</CODE> method gets no additional arguments.
+The <CODE>state-vars</CODE> method is passed a list of names which
+ will be bound to the arguments to the sequence.
+The final method, for the step, is passed the list of names bound to
+ the arguments and the list of state variables.
+In addition there is
+ a variable to be bound to the next element of the sequence, the
+ body expression for the loop, and an expression for terminating the
+ loop.
+<P>The definition of <CODE>list*</CODE> is
+<BLOCKQUOTE><PRE>
+(define-syntax list*
+  (syntax-rules (synchronized? state-vars step)
+    ((list* synchronized? (next more))
+     (next #f more))
+    ((list* state-vars (start-list) (next more))
+     (next ((list-var start-list)) more))
+    ((list* step (start-list) (list-var)
+            value-var loop-body final-exp)
+     (if (null? list-var)
+         final-exp
+         (let ((value-var (car list-var))
+               (list-var (cdr list-var)))
+           loop-body)))))
+</PRE></BLOCKQUOTE>
+<P>Synchronized sequences are the same, except that they need to
+ provide a termination test to be used when some other synchronized
+ method terminates the loop.
+<BLOCKQUOTE><PRE>
+(define-syntax list%
+  (syntax-rules (sync done)
+    ((list% sync (next more))
+     (next #t more))
+    ((list% done (start-list) (list-var))
+     (null? list-var))
+    ((list% stuff ...)
+     (list* stuff ...))))
+</PRE></BLOCKQUOTE>
+<H3><A NAME="7">Expanded code</A></H3>
+<P>The expansion of 
+<BLOCKQUOTE><PRE>
+  (reduce ((list* x '(1 2 3)))
+          ((r '()))
+    (cons x r))
+</PRE></BLOCKQUOTE>
+is
+<BLOCKQUOTE><PRE>
+  (let ((final (lambda (r) (values r)))
+        (list '(1 2 3))
+        (r '()))
+    (let loop ((list list) (r r))
+      (if (null? list)
+          (final r)
+          (let ((x (car list))
+                (list (cdr list)))
+            (let ((continue (lambda (r)
+                              (loop list r))))
+              (continue (cons x r)))))))
+</PRE></BLOCKQUOTE>
+<P>The only inefficiencies in this code are the <CODE>final</CODE> and <CODE>continue</CODE>
+ procedures, both of which could be substituted in-line.
+The macro expander could do the substitution for <CODE>continue</CODE> when there
+ is no explicit proceed variable, as in this case, but not in general.
 <P>
   
-Previous: <A HREF="s48manual_47.html">Regular expressions</A> | Next: <A HREF="s48manual_49.html">Mixing Scheme 48 and C</A></BODY></HTML>
+Previous: <A HREF="s48manual_47.html">Sockets</A> | Next: <A HREF="s48manual_49.html">Regular expressions</A></BODY></HTML>

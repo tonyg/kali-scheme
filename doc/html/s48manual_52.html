@@ -2,61 +2,68 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:23 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:15 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Calling C functions from Scheme</TITLE>
+<TITLE>Scheme 48 Manual -- Available facilities</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_49.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_51.html">Shared bindings</A> | Next: <A HREF="s48manual_53.html">Adding external modules to the <TT>Makefile</TT></A>
-<H2>Calling C functions from Scheme</H2>
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_51.html">Mixing Scheme 48 and C</A><BR>Previous: <A HREF="s48manual_51.html">Mixing Scheme 48 and C</A> | Next: <A HREF="s48manual_53.html">Shared bindings</A>
+<H2>Available facilities</H2>
 
-<P>There are three different ways to call C functions from Scheme, depending on
- how the C function was obtained.
-<UL><LI><CODE>(call-imported-binding<I>&nbsp;binding&nbsp;arg<I><sub>0</sub></I>&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="1">&nbsp;</A>
-<LI><CODE>(call-external<I>&nbsp;external&nbsp;arg<I><sub>0</sub></I>&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="2">&nbsp;</A>
-<LI><CODE>(call-external-value<I>&nbsp;value&nbsp;name&nbsp;arg<I><sub>0</sub></I>&nbsp;...</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="3">&nbsp;</A>
+<P>The following facilities are available for interfacing between
+ Scheme&nbsp;48 and C:
+<UL><LI>Scheme code can call C functions.
+<LI>The external interface provides full introspection for all
+  Scheme objects.  External code may inspect, modify, and allocate
+  Scheme objects arbitrarily.
+<LI>External code may raise exceptions back to Scheme&nbsp;48 to
+  signal errors.
+<LI>External code may call back into Scheme.  Scheme&nbsp;48
+  correctly unrolls the process stack on non-local exits.
+<LI>External modules may register bindings of names to values with a 
+  central registry accessible from
+  Scheme.  Conversely, Scheme code can register shared
+  bindings for access by C code.
 </UL>
-Each of these applies its first argument, a C function, to the rest of
- the arguments.
-For <CODE>call-imported-binding</CODE> the function argument must be an
- imported binding.
-For <CODE>call-external</CODE> the function argument must be an external
- bound in the current process
- (see
+<H3><A NAME="1">Scheme structures</A></H3>
+<P>The structure <CODE>external-calls</CODE> has 
+ most of the Scheme functions described here.
+The others are in 
+ <CODE>dynamic-externals</CODE>, which has the functions for dynamic loading and
+ name lookup from
 
-the section on <A HREF="s48manual_54.html">Dynamic Loading</A>).
-For <CODE>call-external-value</CODE> <CODE><I>value</I></CODE> must be a byte vector
- whose contents is a pointer to a C function and <CODE><I>name</I></CODE> should be
- a string naming the function.
-The <CODE><I>name</I></CODE> argument is used only for printing error messages.
-<P>For all of these, the C function is passed the <CODE><I>arg<I><sub>i</sub></I></I></CODE> values
- and the value returned is that returned by C procedure.
-Up to twelve arguments may be passed.
-There is no method supplied for returning multiple values to
- Scheme from C (or vice versa) (mainly because C does not have multiple return
- values).
-<P>Keyboard interrupts that occur during a call to a C function are ignored
- until the function returns to Scheme (this is clearly a
- problem; we are working on a solution).
-<UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>(import-lambda-definition <CODE><I>name</I></CODE> (<CODE><I>formal</I></CODE> ...))</CODE></td> <td align=right>syntax</td></tr></table>
-<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
-<tr> <td><CODE>(import-lambda-definition <CODE><I>name</I></CODE> (<CODE><I>formal</I></CODE> ...) <CODE><I>c-name</I></CODE>)</CODE></td> <td align=right>syntax</td></tr></table>
-</UL>
-These macros simplify importing functions from C.
-They define <CODE><I>name</I></CODE> to be a function with the given formals that
- applies those formals to the corresponding C binding.
-<CODE><I>C-name</I></CODE>, if supplied, should be a string.
-These expand into
-<BLOCKQUOTE><PRE>
-(define temp (lookup-imported-binding <CODE><I>c-name</I></CODE>))
-(define <CODE><I>name</I></CODE>
-  (lambda (<CODE><I>formal</I></CODE> ...)
-    (external-apply temp <CODE><I>formal</I></CODE> ...)))
-</PRE></BLOCKQUOTE>
-<P>
-If <CODE><I>c-name</I></CODE> is not supplied, it is derived from <CODE><I>name</I></CODE> by converting
- all letters to lowercase and replacing `<CODE>-</CODE>' with `<CODE>_</CODE>'.
+the section on <A HREF="s48manual_56.html">Dynamic Loading</A>,
+ and <CODE>shared-bindings</CODE>, which has the additional shared-binding functions
+ described in
+
+the section on the <A HREF="s48manual_53.html#more-shared-bindings">complete shared-binding interface</A>.
+<H3><A NAME="2">C naming conventions</A></H3>
+<P>The names of all of Scheme&nbsp;48's visible C bindings begin 
+ with `<CODE>s48_</CODE>' (for procedures and variables) or 
+ `<CODE>S48_</CODE>' (for macros).
+Whenever a C name is derived from a Scheme identifier, we
+ replace `<CODE>-</CODE>' with `<CODE>_</CODE>' and convert letters to lowercase
+ for procedures and uppercase for macros.
+A final `<CODE>?</CODE>'  converted to `<CODE>_p</CODE>' (`<CODE>_P</CODE>' in C macro names).
+A final `<CODE>!</CODE>' is dropped.
+Thus the C macro for Scheme's <CODE>pair?</CODE> is <CODE>S48_PAIR_P</CODE> and
+ the one for <CODE>set-car!</CODE> is <CODE>S48_SET_CAR</CODE>.
+Procedures and macros that do not check the types of their arguments
+ have `<CODE>unsafe</CODE>' in their names.
+<P>All of the C functions and macros described have prototypes or definitions
+ in the file <CODE>c/scheme48.h</CODE>.
+The C type for Scheme values is defined there to be <CODE>s48_value</CODE>.
+<H3><A NAME="3">Garbage collection</A></H3>
+<P>Scheme&nbsp;48 uses a copying garbage collector.
+The collector must be able to locate all references
+ to objects allocated in the Scheme&nbsp;48 heap in order to ensure that
+ storage is not reclaimed prematurely and to update references to objects
+ moved by the collector.
+The garbage collector may run whenever an object is allocated in the heap.
+C variables whose values are Scheme&nbsp;48 objects and which are live across
+ heap allocation calls need to be registered with
+ the
+<A HREF="s48manual_60.html">garbage collector</A>.
 <P>
   
-Previous: <A HREF="s48manual_51.html">Shared bindings</A> | Next: <A HREF="s48manual_53.html">Adding external modules to the <TT>Makefile</TT></A></BODY></HTML>
+Previous: <A HREF="s48manual_51.html">Mixing Scheme 48 and C</A> | Next: <A HREF="s48manual_53.html">Shared bindings</A></BODY></HTML>

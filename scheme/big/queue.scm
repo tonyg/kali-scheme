@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Queues
 ; Richard's code with Jonathan's names.
@@ -8,7 +8,8 @@
 ;      add-to-queue!	    enqueue!
 ;      remove-from-queue!   dequeue!
 ;
-; Now using optimistic concurrency.
+; Now using optimistic concurrency.  We really need two sets of procedures to
+; allow those who don't care to avoid the cost of the concurrency checks.
 
 (define-synchronized-record-type queue :queue
   (really-make-queue uid head tail)
@@ -109,6 +110,19 @@
     (map (lambda (x) x)
 	 (queue-head q))))
 
+(define (list->queue list)
+  (if (null? list)
+      (make-queue)
+      (let ((head (cons (car list) '())))
+	(let loop ((rest (cdr list)) (tail head))
+	  (if (null? rest)
+	      (really-make-queue (next-uid) head tail)
+	      (begin
+		(let ((next (cons (car rest) '())))
+		  (set-cdr! tail next)
+		  (loop (cdr rest) next))))))))
+
 (define (queue-length q)
   (ensure-atomicity
     (length (queue-head q))))
+

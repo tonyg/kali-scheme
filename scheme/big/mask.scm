@@ -1,9 +1,9 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Boxed bit-masks.
 
 ; Mask-type operations
-;  (make-mask-type name thing? thing->int int->thing size) -> mask-type
+;  (make-mask-type name thing? int->thing thing->int size) -> mask-type
 ;  (mask-type? x) -> boolean
 ;
 ; Internal operations

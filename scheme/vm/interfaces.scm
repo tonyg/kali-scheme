@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 (define-interface vm-utilities-interface
   (export adjoin-bits low-bits high-bits unsigned-high-bits
@@ -66,8 +66,8 @@
 
 	  null-address null-address?
 
-	  fetch fetch-byte
-	  store! store-byte!
+	  fetch fetch-byte fetch-flonum
+	  store! store-byte! store-flonum!
 
 	  fetch-string fetch-nul-terminated-string
 
@@ -319,6 +319,8 @@
 	  extended-number-length
 	  extended-number-ref extended-number-set!
 
+	  double? enter-double extract-double double-size
+
 	  make-bignum bignum? bignum-length bignum-size
 
 	  continuation? continuation-size make-continuation continuation-length
@@ -344,7 +346,7 @@
 	  enter-string enter-string+gc extract-string
 	  vm-string=? vm-string-hash
 
-	  bignum? ratnum? double?
+	  ratnum?
 
 	  ensure-space
 	  ))
@@ -353,7 +355,7 @@
   (export initialize-i/o-system+gc
 
 	  make-registered-channel
-	  s48-add-channel
+	  s48-really-add-channel
 	  s48-close-channel
 	  s48-set-channel-os-index
 	  s48-channels
@@ -663,7 +665,7 @@
 
 	  ; for C code that wants to manipulate channels
 	  s48-close-channel
-	  s48-add-channel
+	  s48-really-add-channel
 	  s48-set-channel-os-index
 
  	  ; bignums

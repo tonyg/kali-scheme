@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Packages involved in building the initial system.
@@ -8,8 +8,8 @@
 
 (define-structure environments environments-interface
   (open scheme-level-2
-	packages bindings meta-types
-	fluids
+	packages bindings meta-types 
+	fluids cells
 	locations	; contents location-assigned?
 	signals)	; error
   (files (rts env)))

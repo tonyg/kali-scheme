@@ -2,7 +2,7 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:20 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:12 2001 -->
 <HEAD>
 <TITLE>Scheme 48 Manual -- Module system</TITLE>
 
@@ -24,7 +24,7 @@ A <EM>structure</EM> is a subset of the bindings in a package.
 Only by being included in a structure can a binding be
  made visible in other packages.
 A structure has two parts, the package whose bindings are being exported
- and the set of names which are to be exported.
+ and the set of names that are to be exported.
 This set of names is called an <EM>interface</EM>.
 A module then has three parts:
 <UL><LI>a set of structures whose bindings are to be visible within the module
@@ -42,7 +42,9 @@ The <CODE>open</CODE> clause lists structures whose bindings are visible
  within the module.
 The <CODE>begin</CODE> clause contains source code.
 <BLOCKQUOTE><PRE>
-(define-structure cells (export make-cell cell-ref cell-set!)
+(define-structure cells (export make-cell
+                                cell-ref
+                                cell-set!)
   (open scheme)
   (begin (define (make-cell x)
            (cons 'cell x))
@@ -50,10 +52,12 @@ The <CODE>begin</CODE> clause contains source code.
          (define cell-set! set-cdr!)))
 </PRE></BLOCKQUOTE>
 <P>Cells could also have been implemented using the
-<A HREF="s48manual_41.html">record facility</A>
+<A HREF="s48manual_42.html">record facility</A>
  and available in structure <CODE>define-record-type</CODE>.
 <BLOCKQUOTE><PRE>
-(define-structure cells (export make-cell cell-ref cell-set!)
+(define-structure cells (export make-cell
+                                cell-ref
+                                cell-set!)
   (open scheme define-record-types)
   (begin (define-record-type cell :cell
            (make-cell value)

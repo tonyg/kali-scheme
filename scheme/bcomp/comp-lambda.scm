@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Compiling LAMBDA.  This is easy, except for the flat environments.
 
@@ -17,7 +17,19 @@
                           ; *env* for environment
        cont))))
 
+; The CONTINUATION? bit is there because lambda's that are compiled as the
+; receiving argument to CALL-WITH-VALUES get invoked in a nonstandard way.
+; If they are passed a single argument it is in the *VAL* register and not
+; on the stack.  So in that case the code has to push the value before 
+; making the environment.
+
 (define (compile-lambda exp level body-name)
+  (really-compile-lambda exp level body-name #f))
+
+(define (compile-continuation-lambda exp level body-name)
+  (really-compile-lambda exp level body-name #t))
+
+(define (really-compile-lambda exp level body-name continuation?)
   (let* ((formals (cadr exp))
 	 (nargs (number-of-required-args formals))
 	 (fast-protocol? (and (<= nargs maximum-stack-args)
@@ -36,23 +48,32 @@
 	   (else
 	    (error "compiler bug: too many formals"
 		   (schemify exp))))
-     (compile-lambda-code formals (caddr exp) level body-name))))
-
+     (compile-lambda-code formals (caddr exp) level body-name continuation?))))
+  
 ; name isn't the name of the procedure, it's the name to be given to
 ; the value that the procedure will return.
-
-(define (compile-lambda-code formals body level name)
+;
+; See above for an explanation of the use of the CONTINUATION? bit.
+  
+(define (compile-lambda-code formals body level name continuation?)
   (if (null? formals)		;+++ Don't make null environment
       (compile body level 0 (return-cont name))
       ;; (if (node-ref node 'no-inferior-lambdas) ...)
       (sequentially
-       (let* ((nargs (number-of-required-args formals))
-	      (nargs (if (n-ary? formals)
-			 (+ nargs 1)
-			 nargs)))
-	 (instruction (enum op make-env)
-		      (high-byte nargs)
-		      (low-byte nargs)))
+       (let* ((plain-nargs (number-of-required-args formals))
+	      (is-n-ary? (n-ary? formals))
+	      (nargs (if is-n-ary?
+			 (+ plain-nargs 1)
+			 plain-nargs)))
+	 (sequentially
+	  (if (and continuation?
+		   (= plain-nargs 1)
+		   (not is-n-ary?))
+	      (instruction (enum op push))
+ 	      empty-segment)
+	  (instruction (enum op make-env)
+		       (high-byte nargs)
+ 		       (low-byte nargs))))
        (let ((vars (normalize-formals formals))
 	     (level (+ level 1)))
 	 (set-lexical-offsets! (reverse vars) level)

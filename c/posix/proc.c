@@ -368,7 +368,7 @@ enter_string_array(s48_value strings)
     s48_value string = S48_UNSAFE_CAR(strings);
     if (! S48_STRING_P(string)) {
       free(result);
-      s48_raise_argtype_error(string); }
+      s48_raise_argument_type_error(string); }
     result[i] = S48_UNSAFE_EXTRACT_STRING(string); }
   result[length] = NULL;
 
@@ -530,7 +530,7 @@ posix_initialize_named_signals(void)
   named_signals = S48_SHARED_BINDING_REF(posix_signals_vector_binding);
 
   if(! S48_VECTOR_P(named_signals))
-    s48_raise_argtype_error(named_signals);
+    s48_raise_argument_type_error(named_signals);
     
   length = S48_UNSAFE_VECTOR_LENGTH(named_signals);
 
@@ -622,7 +622,7 @@ extract_signal(s48_value sch_signal)
   s48_value type;
 
   if (! S48_RECORD_P(sch_signal))
-    s48_raise_argtype_error(sch_signal);
+    s48_raise_argument_type_error(sch_signal);
 
   type = S48_UNSAFE_RECORD_TYPE(sch_signal);
 
@@ -632,39 +632,15 @@ extract_signal(s48_value sch_signal)
 	&& signal_map[canonical] != -1)
       return signal_map[canonical];
     else
-      s48_raise_argtype_error(sch_signal); }
+      s48_raise_argument_type_error(sch_signal); }
 
   else if (type ==
 	   S48_UNSAFE_SHARED_BINDING_REF(posix_unnamed_signal_type_binding))
     return s48_extract_fixnum(S48_UNSAFE_RECORD_REF(sch_signal, 1));
 
   else
-    s48_raise_argtype_error(sch_signal);
+    s48_raise_argument_type_error(sch_signal);
 }
-
-/*
- * The sigaction man page says you can't set handlers for SIGKILL and SIGSTOP.
- * We need a queue of signals received in order to pass them up to Scheme in
- * the same order.  Use a circular buffer?  We also need a map of the signals
- * that have been requested, in order to detect multiple requests (or we could
- * just check the existing handler).
- *
- * It looks like we will need N different handlers, as the handler is not
- * passed the signal.  We need to save the old handlers as well.
- * No, that is not going to work.  The Linux include files seem to say that
- * there are 1024 (!) signal bits.
- * 
- * We could produce some N handlers and then use them for (up to) N requested
- * signals.
- *
- * The sigaction man page can be read as inferring that the siginfo option
- * is POSIX (in that it doesn't say that it isn't, and does say so for other,
- * similar, features).  Of course, I could just wait until I get home and
- * check the manual and/or ask Henry.  If only I had a cell phone.
- *
- * Why does unix/event.c not install handlers if the current action is
- * SIG_IGN (ignore)?
- */
 
 /*
  * Queue the interrupt.  For SIGINT and SIGALRM we call the event-system's
@@ -672,10 +648,8 @@ extract_signal(s48_value sch_signal)
  */
 
 static void
-generic_interrupt_catcher(int ign0, siginfo_t *info, void *ign1)
+generic_interrupt_catcher(int signum)
 {
-  int		signum = info->si_signo;
-
   queue_interrupt(signum);
 
   switch (signum) {
@@ -703,7 +677,7 @@ struct sigaction *saved_actions[MAX_SIGNAL + 1] = {NULL};
 
 /*
  * If there is a saved action then our handler is already in place and
- * we need to nothing.  Otherwise we save the current action and install
+ * we need do nothing.  Otherwise we save the current action and install
  * our own.
  */
 
@@ -720,9 +694,9 @@ posix_request_interrupts(s48_value sch_signum)
     if (old == NULL)
       s48_raise_out_of_memory_error();
 
-    sa.sa_sigaction = generic_interrupt_catcher;
+    sa.sa_sigaction = (void(*)) generic_interrupt_catcher;
     sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_SIGINFO;
+    sa.sa_flags = 0;
 
     if (sigaction(signum, &sa, old) != 0) {
       free(old);

@@ -2,7 +2,6 @@
 
 ; Generate filenames.make from *-packages.scm.
 
-
 ; Define DEFINE-STRUCTURE and friends
 (for-each load
 	  '("scheme/bcomp/module-language.scm"
@@ -10,14 +9,28 @@
 	    "scheme/alt/config.scm"
 	    "scheme/env/flatload.scm"))
 
-(load-configuration "scheme/packages.scm")  
+; The following bogus structures are required in order to load
+; scheme/more-interfaces.scm.
+(define ascii      (structure (make-simple-interface 'ascii      '())))
+(define bitwise    (structure (make-simple-interface 'bitwise    '())))
+(define enumerated (structure (make-simple-interface 'enumerated '())))
+(define tables     (structure (make-simple-interface 'tables     '())))
+(define cells      (structure (make-simple-interface 'cells      '())))
+
+; The following loads are unnecessary; they only serve to suppress
+; annoying "undefined" warnings for interfaces.
+(for-each load
+	  '("scheme/interfaces.scm"
+	    "scheme/more-interfaces.scm"))
+
+(load-configuration "scheme/packages.scm")
 
 ; The following defines are unnecessary; they only serve to suppress
 ; annoying "undefined" warnings for some forward references.
 (define methods 0) 
 (define tables 0) 
 
-(flatload linker-structures)		 
+(flatload linker-structures)
 
 (define q-f (all-file-names link-config)) 
 

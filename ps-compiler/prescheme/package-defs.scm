@@ -108,6 +108,7 @@
 	record-types
 	prescheme ps-memory
 	ps-types external-constants external-values
+	floatnums		;floatnum?
 	locations
 	eval-node)  ; closure?  (to keep them from being made immutable)
   (access variable)   ; variable-name
@@ -173,7 +174,7 @@
 	interfaces packages environments usual-macros
 	defpackage types ;for making interfaces
         reflective-tower-maker
-	fluids
+	fluids cells
 	expand-define-record-type
 	scan-package	 ;collect-packages
 	bindings         ;binding? binding-place

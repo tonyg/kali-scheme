@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file fluid.scm.
 
@@ -74,6 +74,8 @@
   (let ((probe (assq f (get-dynamic-env))))
     (if probe (cdr probe) (fluid-top-level-value f))))
 
+; Deprecated.
+
 (define (set-fluid! f val)
   (let ((probe (assq f (get-dynamic-env))))
     (if probe (set-cdr! probe val) (set-fluid-top-level-value! f val))))
@@ -88,6 +90,14 @@
 	(with-dynamic-env env (car args))
 	(loop (cddr args)
 	      (cons (cons (car args) (cadr args)) env)))))
+
+; Handy utilities.
+
+(define (fluid-cell-ref f)
+  (cell-ref (fluid f)))
+
+(define (fluid-cell-set! f value)
+  (cell-set! (fluid f) value))
 
 ; Initialize
 

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; An implementation of Pre-Scheme's memory interface that can detect some
 ; stray reads and writes.  It has numerous limitiations:
@@ -160,7 +160,7 @@
 (define (read-block port address count)
   (cond ((not (char-ready? port))
 	 (values 0 #f (enum errors no-errors)))
-	((eof-object? (s-peek-char port))
+	((eof-object? (scheme:peek-char port))
 	 (values 0 #t (enum errors no-errors)))
 	(else
 	 (let ((vector (address->vector address))
@@ -169,7 +169,7 @@
 	     (if (or (= i count)
 		     (not (char-ready? port)))
 		 (values i #f (enum errors no-errors))
-		 (let ((c (s-read-char port)))
+		 (let ((c (scheme:read-char port)))
 		   (cond ((eof-object? c)
 			  (values i #f (enum errors no-errors)))
 			 (else

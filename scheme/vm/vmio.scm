@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file vmio.scm.
 
@@ -109,7 +109,7 @@
 ; Called from outside the VM.  It's up to the caller to be GC-safe.
 ; Returns FALSE if anything goes wrong.
 
-(define (s48-add-channel mode id os-index)
+(define (s48-really-add-channel mode id os-index)
   (receive (channel status)
       (make-registered-channel (extract-fixnum mode)
 			       id

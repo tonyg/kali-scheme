@@ -2,70 +2,58 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:22 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:14 2001 -->
 <HEAD>
-<TITLE>Scheme 48 Manual -- Fluid bindings</TITLE>
+<TITLE>Scheme 48 Manual -- Hash tables</TITLE>
 
 </HEAD><BODY BGCOLOR="#ffffff">
-<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_43.html">Hash tables</A> | Next: <A HREF="s48manual_45.html">Sockets</A>
-<H2>Fluid bindings</H2>
-<P>These procedures implement dynamic binding and are in structure <CODE>fluids</CODE>.
-A <CODE><I>fluid</I></CODE> is a cell whose value can be bound dynamically.
-Each fluid has a top-level value that is used when the fluid
- is unbound in the current dynamic environment.
-<UL><LI><CODE>(make-fluid<I>&nbsp;value</I>)&nbsp;-&gt;&nbsp;<I>fluid</I></CODE><A NAME="1">&nbsp;</A>
-<LI><CODE>(fluid<I>&nbsp;fluid</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="2">&nbsp;</A>
-<LI><CODE>(let-fluid<I>&nbsp;fluid&nbsp;value&nbsp;thunk</I>)&nbsp;-&gt;&nbsp;<I>value(s)</I></CODE><A NAME="3">&nbsp;</A>
-<LI><CODE>(let-fluids<I>&nbsp;fluid<I><sub>0</sub></I>&nbsp;value<I><sub>0</sub></I>&nbsp;fluid<I><sub>1</sub></I>&nbsp;value<I><sub>1</sub></I>&nbsp;...&nbsp;thunk</I>)&nbsp;-&gt;&nbsp;<I>value(s)</I></CODE><A NAME="4">&nbsp;</A>
-<LI><CODE>(set-fluid!<I>&nbsp;fluid&nbsp;value</I>)</CODE><A NAME="5">&nbsp;</A>
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_43.html">Finite record types</A> | Next: <A HREF="s48manual_45.html">Port extensions</A>
+<H2>Hash tables</H2>
+<P>These are generic hash tables, and are in the structure <CODE>tables</CODE>.
+Strictly speaking they are more maps than tables, as every table has a
+ value for every possible key (for that type of table).
+All but a finite number of those values are <CODE>#f</CODE>.
+<UL><LI><CODE>(make-table<I></I>)&nbsp;-&gt;&nbsp;<I>table</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(make-symbol-table<I></I>)&nbsp;-&gt;&nbsp;<I>symbol-table</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(make-string-table<I></I>)&nbsp;-&gt;&nbsp;<I>string-table</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(make-integer-table<I></I>)&nbsp;-&gt;&nbsp;<I>integer-table</I></CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(make-table-maker<I>&nbsp;compare-proc&nbsp;hash-proc</I>)&nbsp;-&gt;&nbsp;<I>procedure</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(make-table-immutable!<I>&nbsp;table</I>)</CODE><A NAME="6">&nbsp;</A>
 </UL>
-<CODE>Make-fluid</CODE> returns a new fluid with <CODE><I>value</I></CODE> as its initial
- top-level value.
-<CODE>Fluid</CODE> returns <CODE>fluid</CODE>'s current value.
-<CODE>Let-fluid</CODE> calls <CODE>thunk</CODE>, with <CODE><I>fluid</I></CODE> bound to <CODE><I>value</I></CODE>
- until <CODE>thunk</CODE> returns.
-Using a continuation to throw out of the call to <CODE>thunk</CODE> causes
- <CODE><I>fluid</I></CODE> to revert to its original value, while throwing back
- in causes <CODE><I>fluid</I></CODE> to be rebound to <CODE><I>value</I></CODE>.
-<CODE>Let-fluid</CODE> returns the value(s) returned by <CODE><I>thunk</I></CODE>.
-<CODE>Let-fluids</CODE> is identical to <CODE>let-fluid</CODE> except that it binds
- an arbitrary number of fluids to new values.
-<CODE>Set-fluid!</CODE> sets <CODE>fluid</CODE>'s value to be <CODE><I>value</I></CODE>.
-Only the innermost binding of <CODE>fluid</CODE> is affected.
-<BLOCKQUOTE><PRE>
-(let* ((f (make-fluid 'a))
-       (v0 (fluid f))
-       (v1 (let-fluid f 'b
-             (lambda ()
-               (fluid f))))
-       (v2 (fluid f))
-       (v3 (let-fluid f 'b
-             (lambda ()
-               (set-fluid! f 'c)
-               (fluid f))))
-       (v4 (fluid f)))
-  (list v0 v1 v2 v3 v4))
-  <CODE>-&gt;</CODE> '(a b a c a)
-</PRE></BLOCKQUOTE>
-<BLOCKQUOTE><PRE>
-(let ((f (make-fluid 'a))
-      (path '())
-      (c #f))
-  (let ((add (lambda ()
-               (set! path (cons (fluid f) path)))))
-    (add)
-    (let-fluid f 'b
-      (lambda ()
-        (call-with-current-continuation
-          (lambda (c0)
-            (set! c c0)))
-        (add)))
-    (add)
-    (if (&lt; (length path) 5)
-        (c)
-        (reverse path))))
-  <CODE>-&gt;</CODE> '(a b a b a)
-</PRE></BLOCKQUOTE>
+The first four functions listed make various kinds of tables.
+<CODE>Make-table</CODE> returns a table whose keys may be symbols, integer,
+ characters, booleans, or the empty list (these are also the values
+ that may be used in <CODE>case</CODE> expressions).
+As with <CODE>case</CODE>, comparison is done using <CODE>eqv?</CODE>.
+The comparison procedures used in symbol, string, and integer tables are
+ <CODE>eq?</CODE>, <CODE>string=?</CODE>, and <CODE>=</CODE>.
+<P><CODE>Make-table-maker</CODE> takes two procedures as arguments and returns
+ a nullary table-making procedure.
+<CODE><I>Compare-proc</I></CODE> should be a two-argument equality predicate.
+<CODE><I>Hash-proc</I></CODE> should be a one argument procedure that takes a key
+ and returns a non-negative integer hash value.
+If <CODE>(<CODE><I>compare-proc</I></CODE> <CODE><I>x</I></CODE> <CODE><I>y</I></CODE>)</CODE> returns true,
+ then <CODE>(= (<CODE><I>hash-proc</I></CODE> <CODE><I>x</I></CODE>) (<CODE><I>hash-proc</I></CODE> <CODE><I>y</I></CODE>))</CODE>
+ must also return true.
+For example, <CODE>make-integer-table</CODE> could be defined
+ as <CODE>(make-table-maker = abs)</CODE>.
+<P><CODE>Make-table-immutable!</CODE> prohibits future modification to its argument.
+<UL><LI><CODE>(table?<I>&nbsp;value</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="7">&nbsp;</A>
+<LI><CODE>(table-ref<I>&nbsp;table&nbsp;key</I>)&nbsp;-&gt;&nbsp;<I>value&nbsp;or&nbsp;<TT>&nbsp;#f</TT></I></CODE><A NAME="8">&nbsp;</A>
+<LI><CODE>(table-set!<I>&nbsp;table&nbsp;key&nbsp;value</I>)</CODE><A NAME="9">&nbsp;</A>
+<LI><CODE>(table-walk<I>&nbsp;procedure&nbsp;table</I>)</CODE><A NAME="10">&nbsp;</A>
+</UL>
+<CODE>Table?</CODE> is the predicate for tables.
+<CODE>Table-ref</CODE> and <CODE>table-set!</CODE> access and modify the value of <CODE><I>key</I></CODE>
+ in <CODE><I>table</I></CODE>.
+<CODE>Table-walk</CODE> applies <CODE><I>procedure</I></CODE>, which must accept two arguments,
+ to every associated key and non-<CODE>#f</CODE> value in <CODE>table</CODE>.
+<UL><LI><CODE>(default-hash-function<I>&nbsp;value</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="11">&nbsp;</A>
+<LI><CODE>(string-hash<I>&nbsp;string</I>)&nbsp;-&gt;&nbsp;<I>integer</I></CODE><A NAME="12">&nbsp;</A>
+</UL>
+<CODE>Default-hash-function</CODE> is the hash function used in the tables
+ returned by <CODE>make-table</CODE>, and <CODE>string-hash</CODE> it the one used
+ by <CODE>make-string-table</CODE>.
 <P>
   
-Previous: <A HREF="s48manual_43.html">Hash tables</A> | Next: <A HREF="s48manual_45.html">Sockets</A></BODY></HTML>
+Previous: <A HREF="s48manual_43.html">Finite record types</A> | Next: <A HREF="s48manual_45.html">Port extensions</A></BODY></HTML>

@@ -1,16 +1,28 @@
+;;; SRFI-1 list-processing library 			-*- Scheme -*-
+;;; Reference implementation
+;;;
 ;;; Copyright (c) 1998, 1999 by Olin Shivers. You may do as you please with
 ;;; this code as long as you do not remove this copyright notice or
 ;;; hold me liable for its use. Please send bug reports to shivers@ai.mit.edu.
+;;;     -Olin
 
 ; Changes made for Scheme 48
 ;
-; - I changed the indentation wherever I had to read the code.
 ; - CHECK-ARG is defined as a macro that does nothing.
-; - %CDRS and friends have been replaced with more Scheme-48-friendly code.
+; - replaced the one use of LET-OPTIONAL
+; - added definition of :OPTIONAL
 
 (define-syntax check-arg
   (syntax-rules ()
     ((check-arg stuff ...) #f)))
+
+(define (:optional maybe-value default)
+  (cond ((null? maybe-value)
+	 default)
+	((null? (cdr maybe-value))
+	 (car maybe-value))
+	(else
+	 (error "too many arguments passed to :optional" maybe-value))))
 
 ;;; This is a library of list- and pair-processing functions. I wrote it after
 ;;; carefully considering the functions provided by the libraries found in
@@ -231,11 +243,7 @@
 ;;; Make a list of length LEN.
 
 (define (make-list len . maybe-elt)
-  (check-arg (lambda (n)
-	       (and (integer? n)
-		    (>= n 0)))
-	     len
-	     make-list)
+  (check-arg (lambda (n) (and (integer? n) (>= n 0))) len make-list)
   (let ((elt (cond ((null? maybe-elt) #f) ; Default value
 		   ((null? (cdr maybe-elt)) (car maybe-elt))
 		   (else (error "Too many arguments to MAKE-LIST"
@@ -281,7 +289,15 @@
 (define (iota count . maybe-start+step)
   (check-arg integer? count iota)
   (if (< count 0) (error "Negative step count" iota count))
-  (let-optionals maybe-start+step ((start 0) (step 1))
+;  (let-optionals maybe-start+step ((start 0) (step 1)) ...)
+  (receive (start step)
+      (case (length maybe-start+step)
+	((0) (values 0 1))
+	((2) (values (car maybe-start+step)
+		     (cadr maybe-start+step)))
+	(else
+	 (error "wrong number of arguments to IOTA"
+		(cons count maybe-start+step))))
     (check-arg number? start iota)
     (check-arg number? step iota)
     (let ((last-val (+ start (* (- count 1) step))))
@@ -391,12 +407,11 @@
 ;;; This is a legal definition which is fast and sloppy:
 ;;;     (define null-list? not-pair?)
 ;;; but we'll provide a more careful one:
-
 (define (null-list? l)
   (cond ((pair? l) #f)
 	((null? l) #t)
-	(else
-	 (error "null-pair?: argument out of domain" l))))
+	(else (error "null-list?: argument out of domain" l))))
+           
 
 (define (list= = . lists)
   (or (null? lists) ; special case
@@ -732,128 +747,60 @@
 
 ;;; Return (map cdr lists). 
 ;;; However, if any element of LISTS is empty, just abort and return '().
-
-;(define (%cdrs lists)
-;  (call-with-current-continuation
-;    (lambda (abort)
-;      (let recur ((lists lists))
-;        (if (pair? lists)
-;            (let ((lis (car lists)))
-;              (if (null-list? lis)
-;                  (abort '())
-;                  (cons (cdr lis)
-;                        (recur (cdr lists)))))
-;            '())))))
-
-; Scheme 48 version - reversing the result list is faster and more space-
-; efficient for the common case where LISTS is short.
-
 (define (%cdrs lists)
-  (let loop ((lists lists) (res '()))
-    (if (pair? lists)
-	(if (null-list? (car lists))
-	    '()
-	    (loop (cdr lists)
-		  (cons (cdar lists)
-			res)))
-	(reverse res))))
+  (call-with-current-continuation
+    (lambda (abort)
+      (let recur ((lists lists))
+	(if (pair? lists)
+	    (let ((lis (car lists)))
+	      (if (null-list? lis) (abort '())
+		  (cons (cdr lis) (recur (cdr lists)))))
+	    '())))))
 
 (define (%cars+ lists last-elt)	; (append! (map car lists) (list last-elt))
   (let recur ((lists lists))
-    (if (pair? lists)
-	(cons (caar lists)
-	      (recur (cdr lists)))
-	(list last-elt))))
+    (if (pair? lists) (cons (caar lists) (recur (cdr lists))) (list last-elt))))
 
 ;;; LISTS is a (not very long) non-empty list of lists.
 ;;; Return two lists: the cars & the cdrs of the lists.
 ;;; However, if any of the lists is empty, just abort and return [() ()].
 
-;(define (%cars+cdrs lists)
-;  (call-with-current-continuation
-;    (lambda (abort)
-;      (let recur ((lists lists))
-;        (if (pair? lists)
-;            (receive (list other-lists)
-;                (car+cdr lists)
-;              (if (null-list? list)
-;                  (abort '() '()) ; LIST is empty -- bail out
-;                  (receive (a d)
-;                      (car+cdr list)
-;                    (receive (cars cdrs)
-;                        (recur other-lists)
-;                      (values (cons a cars)
-;                              (cons d cdrs))))))
-;            (values '() '()))))))
+(define (%cars+cdrs lists)
+  (call-with-current-continuation
+    (lambda (abort)
+      (let recur ((lists lists))
+        (if (pair? lists)
+	    (receive (list other-lists) (car+cdr lists)
+	      (if (null-list? list) (abort '() '()) ; LIST is empty -- bail out
+		  (receive (a d) (car+cdr list)
+		    (receive (cars cdrs) (recur other-lists)
+		      (values (cons a cars) (cons d cdrs))))))
+	    (values '() '()))))))
 
 ;;; Like %CARS+CDRS, but we pass in a final elt tacked onto the end of the
 ;;; cars list. What a hack.
-
-;(define (%cars+cdrs+ lists cars-final)
-;  (call-with-current-continuation
-;    (lambda (abort)
-;      (let recur ((lists lists))
-;        (if (pair? lists)
-;            (receive (list other-lists)
-;                (car+cdr lists)
-;              (if (null-list? list)
-;                  (abort '() '()) ; LIST is empty -- bail out
-;                  (receive (a d)
-;                      (car+cdr list)
-;                    (receive (cars cdrs)
-;                        (recur other-lists)
-;                      (values (cons a cars)
-;                              (cons d cdrs))))))
-;            (values (list cars-final) '()))))))
-
-; For Scheme 48 we use one function and a stub.  The caller of %cars+cdrs+ has to
-; pass a list intead of just a final element.
-
-(define (%cars+cdrs lists)
-  (%cars+cdrs+ lists '()))
-  
-(define (%cars+cdrs+ lists cars-end)
-  (let loop ((lists lists) (cars cars-end) (cdrs '()))
-    (let recur ((lists lists))
-      (if (pair? lists)
-	  (let ((list (car lists))
-		(other-lists (cdr lists)))
-	    (if (null-list? list)
-		(values '() '())
-		(loop (cdr lists)
-		      (cons (car list) cars)
-		      (cons (cdr list) cdrs))))
-	  (values (reverse cars)
-		  (reverse cdrs))))))
+(define (%cars+cdrs+ lists cars-final)
+  (call-with-current-continuation
+    (lambda (abort)
+      (let recur ((lists lists))
+        (if (pair? lists)
+	    (receive (list other-lists) (car+cdr lists)
+	      (if (null-list? list) (abort '() '()) ; LIST is empty -- bail out
+		  (receive (a d) (car+cdr list)
+		    (receive (cars cdrs) (recur other-lists)
+		      (values (cons a cars) (cons d cdrs))))))
+	    (values (list cars-final) '()))))))
 
 ;;; Like %CARS+CDRS, but blow up if any list is empty.
-
-;(define (%cars+cdrs/no-test lists)
-;  (let recur ((lists lists))
-;    (if (pair? lists)
-;        (receive (list other-lists)
-;            (car+cdr lists)
-;          (receive (a d)
-;              (car+cdr list)
-;            (receive (cars cdrs)
-;                (recur other-lists)
-;              (values (cons a cars)
-;                      (cons d cdrs)))))
-;        (values '() '()))))
-
-; Changed in Scheme 48 just for symmetry with our changed %CARS+CDRS.
-
 (define (%cars+cdrs/no-test lists)
-  (let loop ((lists lists) (cars '()) (cdrs '()))
-    (let recur ((lists lists))
-      (if (pair? lists)
-	  (let ((list (car lists))
-		(other-lists (cdr lists)))
-	    (loop (cdr lists)
-		  (cons (car list) cars)
-		  (cons (cdr list) cdrs)))
-	  (values (reverse cars)
-		  (reverse cdrs))))))
+  (let recur ((lists lists))
+    (if (pair? lists)
+	(receive (list other-lists) (car+cdr lists)
+	  (receive (a d) (car+cdr list)
+	    (receive (cars cdrs) (recur other-lists)
+	      (values (cons a cars) (cons d cdrs)))))
+	(values '() '()))))
+
 
 ;;; count
 ;;;;;;;;;
@@ -911,7 +858,7 @@
   (check-arg procedure? kons fold)
   (if (pair? lists)
       (let lp ((lists (cons lis1 lists)) (ans knil))	; N-ary case
-	(receive (cars+ans cdrs) (%cars+cdrs+ lists (list ans))
+	(receive (cars+ans cdrs) (%cars+cdrs+ lists ans)
 	  (if (null? cars+ans) ans ; Done.
 	      (lp cdrs (apply kons cars+ans)))))
 	    
@@ -1027,16 +974,12 @@
   (if (pair? lists)
       (let lp ((lis1 lis1) (lists lists))
 	(if (not (null-list? lis1))
-	    (receive (heads tails)
-		(%cars+cdrs/no-test lists)
-	      (set-car! lis1
-			(apply f (car lis1) heads))
+	    (receive (heads tails) (%cars+cdrs/no-test lists)
+	      (set-car! lis1 (apply f (car lis1) heads))
 	      (lp (cdr lis1) tails))))
 
       ;; Fast path.
-      (pair-for-each (lambda (pair)
-		       (set-car! pair (f (car pair))))
-		     lis1))
+      (pair-for-each (lambda (pair) (set-car! pair (f (car pair)))) lis1))
   lis1)
 
 
@@ -1047,21 +990,16 @@
       (let recur ((lists (cons lis1 lists)))
 	(receive (cars cdrs) (%cars+cdrs lists)
 	  (if (pair? cars)
-	      (cond ((apply f cars)
-		     => (lambda (x)
-			  (cons x (recur cdrs))))
-		    (else
-		     (recur cdrs))) ; Tail call in this arm.
+	      (cond ((apply f cars) => (lambda (x) (cons x (recur cdrs))))
+		    (else (recur cdrs))) ; Tail call in this arm.
 	      '())))
 	    
       ;; Fast path.
       (let recur ((lis lis1))
 	(if (null-list? lis) lis
 	    (let ((tail (recur (cdr lis))))
-	      (cond ((f (car lis))
-		     => (lambda (x) (cons x tail)))
-		    (else
-		     tail)))))))
+	      (cond ((f (car lis)) => (lambda (x) (cons x tail)))
+		    (else tail)))))))
 
 
 ;;; Map F across lists, guaranteeing to go left-to-right.
@@ -1072,8 +1010,7 @@
   (check-arg procedure? f map-in-order)
   (if (pair? lists)
       (let recur ((lists (cons lis1 lists)))
-	(receive (cars cdrs)
-	    (%cars+cdrs lists)
+	(receive (cars cdrs) (%cars+cdrs lists)
 	  (if (pair? cars)
 	      (let ((x (apply f cars)))		; Do head first,
 		(cons x (recur cdrs)))		; then tail.
@@ -1224,8 +1161,7 @@
 
 (define (partition! pred lis)
   (check-arg procedure? pred partition!)
-  (if (null-list? lis)
-      (values lis lis)
+  (if (null-list? lis) (values lis lis)
 
       ;; This pair of loops zips down contiguous in & out runs of the
       ;; list, splicing the runs together. The invariants are
@@ -1268,15 +1204,10 @@
 
 
 ;;; Inline us, please.
-(define (remove  pred l)
-  (filter  (lambda (x)
-	     (not (pred x)))
-	   l))
+(define (remove  pred l) (filter  (lambda (x) (not (pred x))) l))
+(define (remove! pred l) (filter! (lambda (x) (not (pred x))) l))
 
-(define (remove! pred l)
-  (filter! (lambda (x)
-	     (not (pred x)))
-	   l))
+
 
 ;;; Here's the taxonomy for the DELETE/ASSOC/MEMBER functions.
 ;;; (I don't actually think these are the world's most important
@@ -1334,7 +1265,7 @@
 		 (new-tail (recur (delete x tail elt=))))
 	    (if (eq? tail new-tail) lis (cons x new-tail)))))))
 
-(define (delete-duplicates! lis maybe-=)
+(define (delete-duplicates! lis . maybe-=)
   (let ((elt= (:optional maybe-= equal?)))
     (check-arg procedure? elt= delete-duplicates!)
     (let recur ((lis lis))

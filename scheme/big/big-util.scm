@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 (define (concatenate-symbol . stuff)
   (string->symbol
@@ -13,13 +13,10 @@
 
 (define (error format-string . args)
   (if #t       ; work around a bug in the type system
-      ((structure-ref signals error)
-       (apply format (cons #f (cons format-string args)))))
-  )
+      (rts-error (apply format (cons #f (cons format-string args))))))
 
 (define (breakpoint format-string . args)
-  ((structure-ref debugging breakpoint) 
-   (apply format (cons #f (cons format-string args)))))
+  (rts-breakpoint (apply format (cons #f (cons format-string args)))))
 
 (define (atom? x)
   (not (pair? x)))
@@ -190,7 +187,7 @@
 (define (copy-string string)
   (let* ((length (string-length string))
 	 (new (make-string length #\?)))
-    ((structure-ref primitives copy-bytes!) string 0 new 0 length)
+    (copy-bytes! string 0 new 0 length)
     new))
 
 (define (string->immutable-string string)

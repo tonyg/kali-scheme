@@ -166,7 +166,7 @@
   (and (positive-integer? x)
        (<= x 256)))
 
-(define-complex-primitive (make-vector positive-integer? . any?) make-vector
+(define-complex-primitive (make-vector positive-integer? any?) make-vector
   (lambda (args node depth return?)
     (let ((uvar (make-uvar 'v depth)))
       (make-nonpolymorphic! uvar)
@@ -238,10 +238,12 @@
 (define-complex-primitive (null-pointer) (lambda () #f)
   (lambda (args node depth return?)
     (make-pointer-type (make-uvar 'null depth)))
-  (lambda ()
-    (null-pointer))
+  (lambda (type)
+    (null-pointer type))
   (lambda (args type)
-    (make-primop-call-node (get-prescheme-primop 'null-pointer) args type)))
+    (make-primop-call-node (get-prescheme-primop 'null-pointer)
+			   (list (make-literal-node type))
+			   type)))
 
 ;----------------------------------------------------------------
 ; I/O

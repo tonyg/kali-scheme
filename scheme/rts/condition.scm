@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This is file condition.scm.
@@ -70,6 +70,11 @@
 (define-condition-type 'syntax-error '(warning))
 (define syntax-error? (condition-predicate 'syntax-error))
 
+
+; Notes
+
+(define-condition-type 'note '())
+(define note? (condition-predicate 'note))
 
 ; Interrupts
 

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Some interfaces.  Order of presentation is a bit random.
@@ -118,6 +118,15 @@
 	  make-cell
 	  cell-ref
 	  cell-set!))
+
+(define-interface records-interface
+  (export make-record
+	  record
+	  record?
+	  record-type
+	  record-length
+	  record-ref
+	  record-set!))
 
 (define-interface locations-interface
   (export location?
@@ -369,7 +378,12 @@
 
 ; Level 2 consists of harder things built on level 1.
 
-(define-interface records-interface
+(define-interface records-internal-interface
+  (export :record-type
+	  disclose-record
+	  initialize-records!))
+
+(define-interface record-types-interface
   (export make-record-type
 	  record-constructor
 	  record-accessor
@@ -380,17 +394,6 @@
 	  record-type?
 	  record-type-field-names
 	  record-type-name))
-
-(define-interface records-internal-interface
-  (export record
-	  record?
-	  record-type
-	  record-length
-	  record-ref
-	  record-set!
-	  :record-type
-	  disclose-record
-	  initialize-records!))
 
 (define-interface define-record-types-interface
   (export (define-record-type :syntax)
@@ -452,7 +455,11 @@
 	  let-fluid
 	  let-fluids
 	  fluid
-	  set-fluid!))
+	  
+	  fluid-cell-ref
+	  fluid-cell-set!
+
+	  set-fluid!))		; deprecated
 
 (define-interface fluids-internal-interface
   (export initialize-dynamic-state!
@@ -472,7 +479,7 @@
 (define :enumeration :syntax)
 
 (define-interface signals-interface
-  (export error warn syntax-error call-error
+  (export error warn syntax-error call-error note
 	  signal signal-condition
 	  make-condition))
 
@@ -483,7 +490,7 @@
   (export define-condition-type
 	  condition-predicate
 	  condition-stuff condition-type
-	  error? warning? syntax-error? call-error? read-error?
+	  error? warning? note? syntax-error? call-error? read-error?
 	  interrupt?
 
 	  ;; Do these belong here?... not really.
@@ -640,7 +647,7 @@
 
 (define-interface queues-interface
   (export make-queue enqueue! dequeue! queue-empty? empty-queue!
-	  queue? queue->list queue-length delete-from-queue!))
+	  queue? queue->list list->queue queue-length delete-from-queue!))
 
 (define-interface exceptions-interface
   (export define-exception-handler

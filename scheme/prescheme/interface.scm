@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 (define-interface prescheme-interface
   (export ((if begin lambda letrec quote set!
@@ -38,6 +38,7 @@
 	  string-ref string-set!
 
 	  deallocate
+	  null-pointer
 	  null-pointer?
 
 	  values call-with-values
@@ -69,6 +70,7 @@
 
 	  unsigned-byte-ref unsigned-byte-set!
 	  word-ref word-set!
+	  flonum-ref flonum-set!
 
 	  address?
 	  null-address null-address?
@@ -82,6 +84,9 @@
 	  char-pointer->string char-pointer->nul-terminated-string
 
 	  read-block write-block))
+
+(define-interface ps-flonums-interface
+  (export fl+ fl- fl* fl/ fl= fl< fl> fl<= fl>=))
 
 (define-interface ps-receive-interface
   (export receive))

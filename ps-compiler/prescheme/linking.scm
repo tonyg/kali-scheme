@@ -23,14 +23,15 @@
     (environment-define! config 'prescheme prescheme)
     (environment-define! config 'ps-memory ps-memory)
     (environment-define! config 'ps-receive ps-receive)
+    (environment-define! config 'ps-flonums ps-flonums)
     (environment-define! config 'ps-record-types ps-record-types)
     (environment-define! config 'structure-refs structure-refs)
     (environment-define! config ':syntax (structure-ref meta-types syntax-type))
     (set-reflective-tower-maker! config (get-reflective-tower-maker old-config))
     (let-fluids (structure-ref packages-internal $get-location)
-		get-variable
+		(make-cell get-variable)
 		(structure-ref reading-forms $note-file-package)
-		(lambda (filename package) (values))
+		(make-cell (lambda (filename package) (values)))
       (lambda () 
 	(for-each (lambda (file)
 		    (load file config))
@@ -150,7 +151,8 @@
 			       (get-operator id syntax-type)))
 	    '(if begin lambda letrec quote set!
 		 define define-syntax let-syntax
-		 goto type-case real-external)))  ; special for Prescheme
+		 ; the rest are special for Prescheme
+		 goto type-case real-external)))
 
 ; Add the usual macros.
 
@@ -224,6 +226,11 @@
   (make-structure base-package
 		  (lambda () (get-interface 'ps-memory-interface)) 
 		  'ps-memory))
+
+(define ps-flonums
+  (make-structure base-package
+		  (lambda () (get-interface 'ps-flonums-interface)) 
+		  'ps-flonums))
 
 (define ps-receive
   (make-structure base-package

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; More and more packages.  Some of these get loaded into the initial
@@ -13,7 +13,8 @@
         command-processor
         debuginfo
         ;; Choose any combination of bignums, ratnums, recnums
-	bignums ratnums recnums
+	;; bignums		; now in the VM
+	ratnums recnums
 	;; Choose either innums, floatnums, or neither
 	innums			;Silly inexact numbers
         ;; floatnums		;Still don't print correctly
@@ -35,13 +36,6 @@
 	util
         number-i/o)
   (files (rts xnum)))
-
-(define-structure bignums bignums-interface
-  (open scheme-level-2
-        extended-numbers
-        methods signals)
-  (files (rts bignum))
-  (optimize auto-integrate))
 
 (define-structure innums (export )    ;inexact numbers
   (open scheme-level-2
@@ -79,7 +73,12 @@
 
 (define-structure time time-interface
   (open scheme-level-1 primitives architecture enumerated)
-  (files (rts time)))
+  (begin
+    (define (real-time)
+      (time (enum time-option real-time) #f))
+
+    (define (run-time)
+      (time (enum time-option run-time) #f))))
 
 (define-structure placeholders placeholder-interface
   (open scheme-level-1 define-record-types
@@ -107,19 +106,6 @@
         methods)               ;disclose
   (files (big pp)))
 
-; Bitwise logical operators on bignums.
-
-(define-structure bigbit (export )  ;No exports
-  (open scheme-level-2
-	bignums
-	methods
-        extended-numbers
-        ;; exceptions
-	;; architecture
-        bitwise
-	signals)
-  (files (big bigbit)))
-
 (define-structure formats (export format)
   (open scheme-level-2 ascii signals
 	extended-ports)
@@ -129,12 +115,10 @@
   (open scheme-level-2 define-record-types ascii byte-vectors
 	ports
 	i/o i/o-internal
-	;records
 	proposals
-	structure-refs
 	util			; unspecific
-	signals)
-  (access primitives)     ; copy-bytes!
+	signals
+	(subset primitives	(copy-bytes!)))
   (files (big more-port)))
 
 (define-structure destructuring (export (destructure :syntax))
@@ -169,7 +153,7 @@
   (files (big receive)))
 
 (define-structure defrecord defrecord-interface
-  (open scheme-level-1 records loopholes
+  (open scheme-level-1 records record-types loopholes
 	primitives)			; unspecific, low-level record ops
   (files (big defrecord)))
 
@@ -188,10 +172,11 @@
   (open scheme-level-2
 	formats
 	features		; immutable? make-immutable!
-        structure-refs)         ; structure-ref
-  (access signals               ; error
-          debugging		; breakpoint
-	  primitives)		; copy-bytes!
+	(modify signals		(rename (error rts-error))
+		                (expose error))
+	(modify debugging	(rename (breakpoint rts-breakpoint))
+		                (expose breakpoint))
+	(subset primitives	(copy-bytes!)))
   (files (big big-util)))
 
 (define-structure big-scheme big-scheme-interface
@@ -203,10 +188,8 @@
 	enumerated
         bitwise
         ascii
-        bigbit
 	big-util
         tables
-	;defrecord
         destructuring
         receiving))
 
@@ -229,8 +212,8 @@
 	placeholders
 	shared-bindings
 	byte-vectors
-	bitwise bigbit		;for {enter|extract}_integer() helpers
-	(subset records			(define-record-resumer))
+	;bitwise		;for {enter|extract}_integer() helpers
+	(subset record-types		(define-record-resumer))
 	(subset records-internal	(:record-type)))
   (files (big import-def)
 	 (big callback)))
@@ -244,38 +227,13 @@
 	external-calls)
   (files (big external)))
 
-; Externals - this is obsolete; use external-calls and dynamic-externals
-; instead.
-
-(define-structure externals (compound-interface
-			       dynamic-externals-interface
-			       (export external-call
-				       null-terminate))
-  (open scheme-level-2 structure-refs
-	dynamic-externals)
-  (access external-calls)
-  (begin
-   ; We fake the old external-call primitive using the new one and a
-   ; a C helper procedure from c/unix/dynamo.c.
-
-    (define (external-call proc . args)
-      (let ((args (apply vector args)))
-	(old-external-call (external-value proc) args)))
-    
-    ((structure-ref external-calls import-lambda-definition)
-       old-external-call (proc args)
-       "s48_old_external_call")
-
-    ; All strings are now null terminated.
-    (define (null-terminate string) string)))
-
 ; Rudimentary object dump and restore
 
 (define-structure dump/restore dump/restore-interface
   (open scheme-level-1
         number-i/o
         tables
-        records
+        records record-types
         signals                 ;error
         locations               ;make-undefined-location
         closures
@@ -389,9 +347,46 @@
 					 ((either one-value all-values) :syntax)
 					 fail)
   (open scheme-level-2
-	fluids
+	fluids cells
 	(subset signals (error)))
   (files (big either)))
+
+;----------------
+; Obsolete packages
+
+; Bignums and bitwise logical operators on bignums.  These are now handled
+; by the VM.   These packages are here to keep from breaking scripts that
+; load them.  They will be removed in a later release.
+
+(define-structure bignums (export)
+  (open scheme-level-2))
+
+(define-structure bigbit (export)
+  (open scheme-level-2))
+
+; Externals - this is obsolete; use external-calls and dynamic-externals
+; instead.
+
+(define-structure externals (compound-interface
+			       dynamic-externals-interface
+			       (export external-call
+				       null-terminate))
+  (open scheme-level-2 dynamic-externals
+	(subset external-calls (import-lambda-definition)))
+  (begin
+   ; We fake the old external-call primitive using the new one and a
+   ; a C helper procedure from c/unix/dynamo.c.
+
+    (define (external-call proc . args)
+      (let ((args (apply vector args)))
+	(old-external-call (external-value proc) args)))
+    
+    (import-lambda-definition old-external-call
+			      (proc args)
+			      "s48_old_external_call")
+
+    ; All strings are now null terminated.
+    (define (null-terminate string) string)))
 
 ;----------------
 ; SRFI packages
@@ -402,7 +397,8 @@
 
 (define-structure srfi-1 srfi-1-interface
   (open scheme-level-2
-	receiving)
+	receiving
+	(subset signals (error)))
   (files (srfi srfi-1)))
 
 (define-structure srfi-2 (export (and-let* :syntax))
@@ -414,7 +410,7 @@
 ; SRFI-4 - needs hacks to the reader
 
 (define-structure srfi-5 (export (let :syntax))
-  (open (modify scheme-level-2 (drop let)))
+  (open (modify scheme-level-2 (hide let)))
   (files (srfi srfi-5)))
 
 (define-structure srfi-6 (export open-input-string

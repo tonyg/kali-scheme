@@ -2,7 +2,7 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:13 2001 -->
 <HEAD>
 <TITLE>Scheme 48 Manual -- Configuration packages</TITLE>
 
@@ -25,9 +25,10 @@ configuration package opens the following structures:
       at the end of the file <CODE>scheme/more-packages.scm</CODE>.
 </UL>
 Note that it does not open <TT>scheme</TT>.
-<P>You can define other configuration packages by simply making a package
- that opens <TT>module-system</TT> and, optionally, <TT>built-in-structures</TT>,
-<TT>more-structures</TT>, or other structures that
+<P>You can define additional configuration packages by making a package
+ that opens <TT>module-system</TT> and, optionally,
+ <TT>built-in-structures</TT>,
+ <TT>more-structures</TT>, or other structures that
  export structures and interfaces.
 <P>For example:
 <BLOCKQUOTE><PRE>
@@ -50,9 +51,11 @@ A new reflective tower is required whenever a new environment is created for
  compiling the source code in the package associated with a new structure.
 The environment's tower is used at compile time for
  evaluating the <CODE><I>macro-source</I></CODE> in
- <CODE>(define-syntax <CODE><I>name</I></CODE> <CODE><I>macro-source</I></CODE>)</CODE>,
- <CODE>(let-syntax ((<CODE><I>name</I></CODE> <CODE><I>macro-source</I></CODE>) ...) <CODE><I>body</I></CODE>)</CODE>,
- and so forth.
+<BLOCKQUOTE><PRE>
+(define-syntax <CODE><I>name</I></CODE> <CODE><I>macro-source</I></CODE>)
+(let-syntax ((<CODE><I>name</I></CODE> <CODE><I>macro-source</I></CODE>) <CODE><I>...</I></CODE>) <CODE><I>body</I></CODE>)
+</PRE></BLOCKQUOTE>
+and so forth.
 It is a "tower" because that environment, in turn, has to say what environment
  to use if <CODE>macro-source</CODE> itself contains a use of <CODE>let-syntax</CODE>.
 <P>The simplest way to provide a tower maker is to pass on the one used by
@@ -63,10 +66,10 @@ The following example uses <CODE>export-reflective-tower</CODE> and
  the <CODE>,structure</CODE> command to obtain a tower maker and create a new
  configuration environment.
 <BLOCKQUOTE><PRE>
-&gt; ,config ,structure towers (export-reflective-tower-maker)
+&gt; ,config ,structure t (export-reflective-tower-maker)
 &gt; ,config (define-structure foo (export)
             (open module-system
-                  towers
+                  t
                   built-in-structures
                   more-structures))
 </PRE></BLOCKQUOTE>

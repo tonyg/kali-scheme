@@ -1,5 +1,4 @@
-; Copyright (c) 1993-2000 by Richard Kelsey and Jonathan Rees. See file COPYING.
-
+; Copyright (c) 1993-2001 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Package / structure / interface mutation operations.
 
@@ -63,8 +62,6 @@
 	       (table-set! (package-undefined-but-assigneds p) name #f)
 	       (set-location-forward! aloc new name p)))
     new))
-
-(define (note . rest) (apply signal 'note rest))
 
 (define (get-new-location-non-shadowing p name)
   (let* ((uloc (table-ref (package-undefineds p) name))
@@ -159,7 +156,7 @@
   (shadow-location! loser '() #f new))
 
 
-(set-fluid! $get-location get-new-location-carefully)  ;foo
+(fluid-cell-set! $get-location get-new-location-carefully)  ;foo
 
 
 (define (copy-location-info! from to)
@@ -175,11 +172,14 @@
     (cond ((or (structure? loser)
                (interface? loser))
 	   ;; (write `(loser: ,loser)) (newline)
-           (set-fluid! $losers (cons loser (fluid $losers))))))
+	   (let ((cell (fluid $losers)))
+	     (cell-set! cell
+			(cons loser
+			      (cell-ref cell)))))))
   #f)
 
-(define $losers (make-fluid '()))
-(define $package-losers (make-fluid '()))
+(define $losers (make-fluid (make-cell '())))
+(define $package-losers (make-fluid (make-cell '())))
 
 (define (package-system-sentinel)
   (drain $losers verify-loser)
@@ -195,19 +195,21 @@
 	 (walk-population verify-loser (structure-clients loser)))
 	((package? loser)
 	 (reinitialize-package! loser)
-	 (let ((losers (fluid $package-losers)))
+	 (let* ((cell (fluid $package-losers))
+		(losers (cell-ref cell)))
 	   (if (not (memq loser losers))
-	       (set-fluid! $package-losers
-			   (cons loser losers)))))))
+	       (cell-set! cell
+			  (cons loser losers)))))))
 
 (define (drain flu check)
-  (let loop ()
-    (let ((losers (fluid flu)))
-      (if (not (null? losers))
-	  (let ((loser (car losers)))
-	    (set-fluid! flu (cdr losers))
-	    (check loser)
-	    (loop))))))
+  (let ((cell (fluid flu)))
+    (let loop ()
+      (let ((losers (cell-ref cell)))
+	(if (not (null? losers))
+	    (let ((loser (car losers)))
+	      (cell-set! cell (cdr losers))
+	      (check loser)
+	      (loop)))))))
 
 (define *debug?* #f)
 

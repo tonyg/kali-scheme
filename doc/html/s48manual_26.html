@@ -2,7 +2,7 @@
 <HTML>
 <!-- HTML file produced from file: manual.tex --
  -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
- -- on Emacs 20.4.1, Tue Mar 20 05:57:21 2001 -->
+ -- on Emacs 20.4.1, Mon May 21 10:43:13 2001 -->
 <HEAD>
 <TITLE>Scheme 48 Manual -- The configuration language</TITLE>
 
@@ -81,16 +81,16 @@ Each structure has an interface that specifies which bindings in the
 structure's underlying package can be seen via that structure in other
 packages.
 <P>An <TT>open</TT> clause specifies which structures will be opened up for
-use inside the new package.  At least one structure must be specified or
-else it will be impossible to write any useful programs inside the
-package, since <TT>define</TT>, <TT>lambda</TT>, <TT>cons</TT>, <TT>structure-ref</TT>, etc. will be unavailable.  Typical packages to list
-in the <TT>open</TT> clause are <TT>scheme</TT>, which exports all bindings
-appropriate to Revised<I><sup>5</sup></I> Scheme, and <TT>structure-refs</TT>, which
-exports the <TT>structure-ref</TT> operator (see below).  For building
-structures that export structures, there is a <TT>defpackage</TT> package
-that exports the operators of the configuration language.  Many other
-structures, such as record and hash table facilities, are also
-available in the Scheme&nbsp;48 implementation.
+ use inside the new package.
+At least one structure must be specified or else it will be impossible to
+ write any useful programs inside the package, since <TT>define</TT>,
+ <TT>lambda</TT>, <TT>cons</TT>, etc. will be unavailable.
+Packages typically include <TT>scheme</TT>, which exports all bindings
+ appropriate to Revised<I><sup>5</sup></I> Scheme, in an <TT>open</TT> clause.
+For building structures that export structures, there is a <TT>defpackage</TT>
+ package that exports the operators of the configuration language.
+Many other structures, such as record and hash table facilities, are also
+ available in the Scheme&nbsp;48 implementation.
 <P>The <A NAME="3">&nbsp;</A><CODE>modify</CODE>, <A NAME="4">&nbsp;</A><CODE>subset</CODE>, and
  <A NAME="5">&nbsp;</A><CODE>prefix</CODE> forms produce new
  views on existing structures by renaming or hiding exported names.
@@ -126,19 +126,6 @@ The modifiers are applied from right to left.  Thus
 (modify scheme (prefix foo/) (rename (car bus))))
 </PRE></BLOCKQUOTE>
 makes <CODE>car</CODE> available as <CODE>foo/bus</CODE>..
-<P>An <TT>access</TT> clause specifies which bindings of names to structures
-will be visible inside the package body for use in <TT>structure-ref</TT>
-forms.  <TT>structure-ref</TT> has the following syntax:
-<TABLE CELLSPACING="1" CELLPADDING="0"><TR>
-<TD NOWRAP COLSPAN="99" ALIGN="LEFT">
-      <I>&lt;</I>expression<I>&gt;</I> <CODE>-&gt;</CODE>&nbsp;
-   <TT>(structure-ref <I>&lt;</I>struct-name<I>&gt;</I> <I>&lt;</I>name<I>&gt;</I>)
-</TT></TD></TR></TABLE>
-
-The <I>&lt;</I>struct-name<I>&gt;</I> must be the name of an <TT>access</TT>ed structure,
-and <I>&lt;</I>name<I>&gt;</I> must be something that the structure exports.  Only
-structures listed in an <TT>access</TT> clause are valid in a <TT>structure-ref</TT>.  If a package accesses any structures, it should
-probably open the <TT>structure-refs</TT> structure so that the <TT>structure-ref</TT> operator itself will be available.
 <P>The package's body is specified by <TT>begin</TT> and/or <TT>files</TT>
 clauses.  <TT>begin</TT> and <TT>files</TT> have the same semantics, except
 that for <TT>begin</TT> the text is given directly in the package
@@ -147,7 +134,7 @@ file system.  The body consists of a Scheme program, that is, a
 sequence of definitions and expressions to be evaluated in order.  In
 practice, we always use <TT>files</TT> in preference to <TT>begin</TT>; <TT>begin</TT> exists mainly for expository purposes.
 <P>A name's imported binding may be lexically overridden or <EM>shadowed</EM>
-by simply defining the name using a defining form such as <TT>define</TT>
+by defining the name using a defining form such as <TT>define</TT>
 or <TT>define-syntax</TT>.  This will create a new binding without having
 any effect on the binding in the opened package.  For example, one can
 do <TT>(define car 'chevy)</TT> without affecting the binding of the name
