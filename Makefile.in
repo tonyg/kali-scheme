@@ -89,10 +89,12 @@ START_LINKER = echo ',batch' && echo ',bench on'
 IMAGE = scheme48.image
 INITIAL = $(srcdir)/build/initial.image
 VM = scheme48vm
+LIBSCHEME48 = c/libscheme48.a
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
 OBJS =	c/scheme48vm.o c/scheme48heap.o \
 	c/scheme48read-image.o c/scheme48write-image.o \
-	c/extension.o c/external.o c/bignum.o
+	c/extension.o c/external.o c/bignum.o c/init.o
+
 FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
 		c/fake/sys-select.h
 
@@ -107,7 +109,7 @@ CONFIG_FILES = scheme/interfaces.scm scheme/packages.scm \
 
 # The following is the first rule and therefore the "make" command's
 # default target.
-enough: $(VM) $(IMAGE) go
+enough: $(VM) $(LIBSCHEME48) $(IMAGE) go
 
 # --------------------
 # External code to include in the VM
@@ -195,6 +197,19 @@ $(VM): c/main.o $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
 		$(LIBOBJS) $(LIBS)					\
 		$(EXTERNAL_OBJECTS) $(EXTERNAL_LD_FLAGS) &&		\
 	rm -f /tmp/s48_external_$$$$.c
+
+$(LIBSCHEME48): $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
+	$(RM) $@								\
+	rm -f /tmp/s48_external_$$$$.c &&				\
+	$(srcdir)/build/build-external-modules /tmp/s48_external_$$$$.c		\
+		$(EXTERNAL_INITIALIZERS) &&				\
+	$(CC) -c $(CFLAGS) -o  /tmp/s48_external_$$$$.o			\
+			/tmp/s48_external_$$$$.c &&			\
+	ar cq $@ $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)	\
+		/tmp/s48_external_$$$$.o &&				\
+	ranlib $@ &&					\
+	rm -f /tmp/s48_external_$$$$.c
+
 
 c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
 	$(CC) -c $(CFLAGS) -o $@ \

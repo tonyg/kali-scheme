@@ -384,6 +384,12 @@
 	(subset signals (error)))
   (files (big either)))
 
+(define-structure libscheme48 (export dump-libscheme48-image)
+  (open scheme
+ 	(subset escapes (with-continuation))
+	build)
+  (files (big libscheme48)))
+
 ;----------------
 ; Obsolete packages
 

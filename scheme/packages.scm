@@ -483,6 +483,8 @@
 	    srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	    srfi-31 srfi-37
 	    srfi-42
+
+            libscheme48
 	    )
 	   :structure)
 	  ((define-signature define-package) :syntax)))
