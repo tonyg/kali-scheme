@@ -43,10 +43,11 @@ s48_provide_asm_values(s48_value asm_vector)
   extern long s48_Sstack_limitS;
   extern long s48_ShpS;
   extern long s48_SlimitS;
+  extern char* ScontS;
   /* The order of the vector has to match the enumatation asm-external in 
      s48-compiler/assembler/asm-externals.scm */
   /* 0 *val*        */
-  /* 1 *cont*       */
+  S48_VECTOR_SET(asm_vector, 1, s48_enter_fixnum((long) &ScontS));
   /* 2 *stack*      */
   S48_VECTOR_SET(asm_vector, 3, s48_enter_fixnum((long) &s48_Sstack_limitS));
   S48_VECTOR_SET(asm_vector, 4, s48_enter_fixnum((long) &s48_stack_gc));
