@@ -357,12 +357,12 @@
                   (export traverse-depth-first traverse-breadth-first trail
                           set-leaf-predicate! usual-leaf-predicate)
   (open scheme-level-2
-        primitives              ; ?
+	primitives
         queues tables
         bitwise locations closures code-vectors
-        disclosers              ; foo
         features                ; string-hash
-        low-level)              ; flush-the-symbol-table!, vector-unassigned?
+        low-level               ; vector-unassigned?
+	more-types loopholes)
   (files (env traverse)))
 
 ; Reinitializing upon image resumption

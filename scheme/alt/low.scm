@@ -7,8 +7,6 @@
 
 (define (vector-unassigned? v i) #f)
 
-(define (flush-the-symbol-table!) #f)
-
 (define maybe-open-input-file open-input-file)
 (define maybe-open-output-file open-output-file)
 
