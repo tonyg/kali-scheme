@@ -102,3 +102,13 @@
 	  (if template
 	      (template-info template)
 	      '?))))
+
+(define (continuation-preview c)
+  (if (continuation? c)
+      (cons (cons (let ((template (continuation-template c)))
+		    (if template
+			(template-info template)
+			'?))
+		  (continuation-pc c))
+	    (continuation-preview (continuation-cont c)))
+      '()))

@@ -74,16 +74,6 @@
 		    " <- "))
 	      (continuation-preview c))))
 
-(define (continuation-preview c)
-  (if (continuation? c)
-      (cons (cons (let ((template (continuation-template c)))
-		    (if template
-			(template-info template)
-			'?))
-		  (continuation-pc c))
-	    (continuation-preview (continuation-cont c)))
-      '()))
-
 ; ERROR is a compiler primitive, but if it weren't, it could be
 ; defined as follows:
 

@@ -248,6 +248,7 @@
   (files (rts vm-exception)))
 
 (define-structures ((exceptions exceptions-interface)
+		    (exceptions-internal exceptions-internal-interface)
 		    (handle handle-interface))
   (open scheme-level-1
 	signals fluids cells
@@ -392,7 +393,7 @@
 	channel-ports    ;{in,out}put-channel->port
 	session-data     ;initialize-session-data!
 	fluids-internal	 ;initialize-dynamic-state!
-	exceptions	 ;initialize-exceptions!
+	exceptions-internal
 	vm-exceptions
 	interrupts	 ;initialize-interrupts!
 	records-internal ;initialize-records!

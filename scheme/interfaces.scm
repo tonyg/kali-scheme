@@ -657,9 +657,10 @@
 (define-interface exceptions-interface
   (export with-exception-handler
 	  raise
-	  (guard :syntax)
-	  initialize-exceptions!
-	  continuation-preview))	;env/debug.scm
+	  (guard :syntax)))
+
+(define-interface exceptions-internal-interface
+  (export initialize-exceptions!))
 
 (define-interface vm-exceptions-interface
   (export define-vm-exception-handler
@@ -739,7 +740,9 @@
 	  :continuation
 
 	  vm-exception-continuation?
-	  vm-exception-continuation-exception))
+	  vm-exception-continuation-exception
+
+	  continuation-preview)) ; env/debug.scm
 
 (define-interface templates-interface
   (export make-template

@@ -202,11 +202,10 @@
         packages                ; flush-location-names, package-integrate?
         packages-internal       ; [set-]package-integrate?[!], flush-location-names
 	undefined		; noting-undefined-variables
-        continuations           ; continuation-template
+        continuations           ; continuation-template, continuation-preview
         architecture            ; op/global, etc.
         interrupts              ; all-interrupts, set-enabled-interrupts!
         vm-exposure             ; fluid-let suppression kludge - fix later
-        (subset exceptions      (continuation-preview))
         (subset nodes		(schemify))
         (subset reading-forms   ($note-file-package))
 	(subset handle		(with-handler))
