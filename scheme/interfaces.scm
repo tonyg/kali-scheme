@@ -984,6 +984,8 @@
 	  stack-set!-instruction
 	  stack-indirect-instruction
 	  integer-literal-instruction
+	  push+stack-ref-instruction
+	  push+stack-indirect-instruction
 	  push-instruction))
 
 (define-interface frames-interface
