@@ -275,7 +275,7 @@
     (if (node? binding)
 	binding
 	(let ((node (make-node operator/name name)))
-	  (node-set! node 'binding binding)
+	  (node-set! node 'binding (or binding 'unbound))
 	  node))))
 
 ; Expand a macro.  EXPAND may either be expand or expand-head.
@@ -316,7 +316,7 @@
 (define (define-expander name proc)
   (operator-define! expanders name syntax-type proc))
 
-; These are not expressions.
+; Definitions are not expressions.
 
 (define-expander 'define
   (lambda (op op-node exp env)
@@ -330,8 +330,9 @@
 	(make-node op (list op (desyntaxify (cadr exp))))
 	(expand (syntax-error "invalid expression" exp) env))))
 
-; Same as regular quote, except that we don't remove the name annotations.
-; This is used when writing macro-defining macros, to preserve hygiene.
+; Don't evaluate, but don't remove generated names either.  This is
+; used when writing macro-defining macros.  Once we have avoided the
+; use of DESYNTAXIFY it is safe to replace this with regular QUOTE.
 
 (define-expander 'code-quote
   (lambda (op op-node exp env)

@@ -2,6 +2,12 @@
 
 Recent changes to Scheme 48.
 
+7/22/98  (version 0.52)
+         Bug fixes:
+	  Fixed problems with unbound variables in SET! and the inliner.
+	  Made macro expansion a bit less eager; this should reduce the amount
+           of heap space needed for compilation.
+
 6/29/98  (version 0.51)
 	 Incompatible changes:
           BIG-SCHEME no longer exports its version of DEFINE-RECORD-TYPE (but

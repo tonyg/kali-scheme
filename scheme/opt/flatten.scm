@@ -5,18 +5,20 @@
 
 ; Hook into the byte code compiler.
 
-(set-optimizer! 'flat-environments
-  (lambda (stuff p)
-;    (display "Making flat environments... ")
-;    (force-output (current-output-port))
-    (let ((stuff (map (lambda (filename+nodes)
-			(let ((filename (car filename+nodes))
-			      (nodes (cdr filename+nodes)))
-			  (cons filename
-				(map flatten-form nodes))))
-		      stuff)))
-;      (newline)
-      stuff)))
+; This code is not up-to-date.
+
+;(set-optimizer! 'flat-environments
+;  (lambda (stuff p)
+;;    (display "Making flat environments... ")
+;;    (force-output (current-output-port))
+;    (let ((stuff (map (lambda (filename+nodes)
+;                        (let ((filename (car filename+nodes))
+;                              (nodes (cdr filename+nodes)))
+;                          (cons filename
+;                                (map flatten-form nodes))))
+;                      stuff)))
+;;      (newline)
+;      stuff)))
 
 (define (flatten-form node)
   (if (define-node? node)

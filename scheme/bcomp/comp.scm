@@ -15,9 +15,9 @@
 	    (if (null? (cdr forms))
 		(compile-form (car forms) (return-cont #f))
 		(sequentially 
-		 (compile-form (car forms) an-ignore-values-cont)
-		 ;; Cf. compile-begin
-		 (recur (cdr forms)))))))
+		  (compile-form (car forms) an-ignore-values-cont)
+		  ;; Cf. compile-begin
+		  (recur (cdr forms)))))))
     name
     #f					;pc-in-segment = #f
     debug-data))
@@ -25,9 +25,10 @@
 ; Compile a single top-level form, returning a segment.
 
 (define (compile-form node cont)
-  (if (define-node? node)
-      (compile-definition node cont)
-      (compile-expression node 0 cont)))
+  (let ((node (force-node node)))
+    (if (define-node? node)
+	(compile-definition node cont)
+	(compile-expression node 0 cont))))
 
 (define define-node? (node-predicate 'define syntax-type))
 

@@ -21,9 +21,9 @@
 		    (channels channels-interface)
 		    (ports ports-interface)
 		    (signals signals-interface)
-		    (code-quote (export code-quote))
 		    (user-messages (export user-message))
 		    (silly (export reverse-list->string))
+		    (code-quote (export (code-quote :syntax)))
 		    (structure-refs (export (structure-ref :syntax))))
   (define-all-operators)		; Primitive Scheme, in the LSC paper
   (usual-transforms and cond do let let* or)

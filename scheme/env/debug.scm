@@ -568,4 +568,5 @@ Kind should be one of: names maps files source tabulate"
 		 (car maybe-exp)))
 	(env (package->environment (environment-for-commands))))
     (set-focus-object!
-     (schemify ((structure-ref syntactic expand) exp env) env))))
+     (schemify ((structure-ref syntactic expand) exp env)
+	       env))))

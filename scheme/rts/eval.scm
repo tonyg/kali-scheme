@@ -48,7 +48,7 @@
 					 (package->environment package))
 		  (package->environment package)))
 	 (template (compile-forms (map (lambda (form)
-					 (expand-form form env))
+					 (lambda () (expand-form form env)))
 				       (scan-forms forms env))
 				  maybe-filename
 				  #f)))

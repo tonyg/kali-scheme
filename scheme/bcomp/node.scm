@@ -133,3 +133,10 @@
   (if (equal? form (node-form node))
       node
       (make-node (node-operator node) form)))
+
+; Top-level nodes are often delayed.
+
+(define (force-node node)
+  (if (node? node)
+      node
+      (force node)))

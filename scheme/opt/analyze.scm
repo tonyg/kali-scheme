@@ -11,7 +11,7 @@
     (let ((out (current-noise-port)))
       (newline out)
       (display "Analyzing... " out) (force-output out)
-      (let* ((forms (find-usages forms package))
+      (let* ((forms (find-usages (map force-node forms) package))
 	     (names (analyze-forms forms package)))
 	(cond ((not (null? names))
 	       (newline out)
@@ -110,11 +110,15 @@
 
 
 ; Main dispatch for analyzer
+; The name node analyzer needs the node; all others can get by with the
+; expression.
 
 (define (simple? node ret?)
   ((operator-table-ref analyzers (node-operator-id node))
-   (node-form node)
-   ret?))
+     (if (name-node? node)
+	 node
+	 (node-form node))
+     ret?))
 
 (define (simple-list? exp-list)
   (if (null? exp-list)
@@ -148,11 +152,16 @@
   (lambda (exp ret?)
     #t))
 
+; It's too awkward to try to inline references to unbound variables.
+; By special dispensation, this one analyzer receives the node instead of the
+; expression.  It needs the node to look up the binding record.
+
 (define-analyzer 'name
-  (lambda (exp ret?)
+  (lambda (node ret?)
     ;; (if (node-ref node 'usage) #t 'empty)
     ;;   ... (not (generated? exp)) ugh ...
-    #t))
+    (not (eq? (node-ref node 'binding)
+	      'unbound))))
 
 (define-analyzer 'quote
   (lambda (exp ret?)
@@ -172,10 +181,13 @@
 
 ; SET! loses because we might move a variable reference past a SET! on the
 ; variable.  This can't happen if the SET! is the last thing done.
+; It's too awkward to try to inline references to unbound variables.
 
 (define-analyzer 'set!
   (lambda (exp ret?)
     (and ret?
+	 (not (eq? (node-ref (cadr exp) 'binding)
+		   'unbound))
 	 (simple? (caddr exp) no-ret))))
 
 (define-analyzer 'loophole

@@ -114,7 +114,8 @@
       (sequentially
        (compile (caddr exp) level depth (named-cont name))
        (deliver-value
-	(if (pair? (binding-place binding))
+	(if (and (binding? binding)
+		 (pair? (binding-place binding)))
 	    (let ((level+over (binding-place binding)))
 	      (instruction (enum op set-local!)
 			   (- level (car level+over))
@@ -160,9 +161,9 @@
 	      (if (null? (cdr exp-list))
 		  (compile (car exp-list) level depth cont)
 		  (sequentially
-		   (compile (car exp-list) level depth
-			    (ignore-values-cont dummy i))
-		   (loop (cdr exp-list) (+ i 1))))))))))
+		    (compile (car exp-list) level depth
+			     (ignore-values-cont dummy i))
+		    (loop (cdr exp-list) (+ i 1))))))))))
 
 ; Compile a call
 
@@ -527,6 +528,8 @@
       (node-form node)))  ; = (lookup level (node-form node))
 
 ; --------------------
+; Utilities
+
 ; Produce something for source code that contains a compile-time error.
 
 (define (generate-trap cont . stuff)

@@ -44,7 +44,7 @@
 	  (fold (lambda (scanned+env expanded)
 		  (let ((env (car scanned+env)))
 		    (fold (lambda (form expanded)
-			    (cons (expand-form form env)
+			    (cons (lambda () (expand-form form env))
 				  expanded))
 			  (cdr scanned+env)
 			  expanded)))

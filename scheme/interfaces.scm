@@ -815,7 +815,7 @@
 	  node-predicate
 
 	  make-similar-node
-
+	  force-node
 	  schemify
 
 	  get-operator
