@@ -248,7 +248,7 @@
 		(let ((m (string->integer (substring s 0 slash) radix))
 		      (n (string->integer (substring s (+ slash 1) len)
 					  radix)))
-		  (if (and m n)
+		  (if (and m n (not (zero? n)))
 		      (set-exactness (/ m n) xact?)
 		      #f))))
 	  ((string-position #\# s)
