@@ -23,7 +23,8 @@
 (for-each load
 	  '("scheme/interfaces.scm"
 	    "scheme/vm/shared-interfaces.scm"
-	    "scheme/more-interfaces.scm"))
+	    "scheme/more-interfaces.scm"
+	    "scheme/sort/interfaces.scm"))
 
 (load-configuration "scheme/packages.scm")
 

@@ -276,6 +276,7 @@ c/fake/strerror.o: c/fake/strerror.h
 $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 		scheme/link-packages.scm scheme/env-packages.scm \
 		scheme/more-packages.scm \
+		scheme/sort/interfaces.scm scheme/sort/packages.scm \
 		scheme/posix/packages.scm scheme/srfi/packages.scm \
 		$(usual-files) build/initial.debug build/build-usual-image
 	$(srcdir)/build/build-usual-image $(srcdir) "`(cd $(srcdir) && echo $$PWD)`/scheme" '$(IMAGE)' './$(VM)' \
@@ -484,13 +485,15 @@ inc:
 PACKAGES=scheme/packages.scm scheme/rts-packages.scm scheme/alt-packages.scm \
 	 scheme/comp-packages.scm scheme/initial-packages.scm \
 	 scheme/link-packages.scm scheme/env-packages.scm \
-	 scheme/more-packages.scm \
+	 scheme/sort/packages.scm scheme/more-packages.scm \
 	 build/filenames.scm
 
-build/filenames.make: $(PACKAGES)
+$(srcdir)/build/filenames.make: $(PACKAGES)
 	$(MAKE) $(VM) PACKAGES=
-	./$(VM) -i $(srcdir)/$(INITIAL) -a batch <build/filenames.scm
-# or:	$(RUNNABLE) -a batch <build/filenames.scm
+	cd $(srcdir) && \
+	$(RUNNABLE) -a batch <build/filenames.scm
+# or:	./$(VM) -i $(srcdir)/$(INITIAL) -a batch <build/filenames.scm
+
 
 # --------------------
 # Static linker

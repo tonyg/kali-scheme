@@ -196,6 +196,8 @@
 				compiler-structures))
   (files ;; more-interfaces, when not flatloading
          env-packages
+	 ;; (sort interfaces), when not flatloading
+	 (sort packages)
 	 more-packages))
 
 
