@@ -202,22 +202,12 @@ There are three different ways to call C functions from Scheme, depending on
 
 \begin{protos}
 \proto{call-imported-binding}{ binding arg$_0$ \ldots}{value}
-\proto{call-external}{ external arg$_0$ \ldots}{value}
-\proto{call-external-value}{ value name arg$_0$ \ldots}{value}
 \end{protos}
 \noindent
 Each of these applies its first argument, a C function, to the rest of
  the arguments.
 For \code{call-imported-binding} the function argument must be an
  imported binding.
-For \code{call-external} the function argument must be an external
- bound in the current process
- (see
-section~\ref{dynamic-externals}).
-For \code{call-external-value} \cvar{value} must be a byte vector
- whose contents is a pointer to a C function and \cvar{name} should be
- a string naming the function.
-The \cvar{name} argument is used only for printing error messages.
 
 For all of these, the C function is passed the \cvar{arg$_i$} values
  and the value returned is that returned by C procedure.
@@ -255,99 +245,78 @@ These expand into
 If \cvar{c-name} is not supplied, it is derived from \cvar{name} by converting
  all letters to lowercase and replacing `\code{-}' with `\code{\_}'.
 
-\section{Adding external modules to the {\tt Makefile}}
-\label{sec:external-modules}
-
-Getting access to C bindings from Scheme requires that the C code be
- compiled and linked in with the Scheme~48 virtual machine and that the
- relevant shared bindings be created.
-The Scheme~48 makefile has rules for compiling and linking external code
- and for specifying initialization functions that should be called on
- startup.
-There are three \code{Makefile} variables that control which external modules are
- included in the executable for the virtual machine (\code{scheme48vm}).
-\code{EXTERNAL\_OBJECTS} lists the object files to be included in
- \code{scheme48vm},
-\code{EXTERNAL\_FLAGS} is a list of \code{ld} flags to be used when
- creating \code{scheme48vm}, and
- \code{EXTERNAL\_INITIALIZERS} is a list of C procedures to be called
- on startup.
-The procedures listed in \code{EXTERNAL\_INITIALIZERS} should take no
- arguments and have a return type of \code{void}.
-After changing the definitions of any of these variables you should
- do \code{make scheme48vm} to rebuild the virtual machine.
-
 \section{Dynamic loading}
 \label{dynamic-externals}
 
-External code can be loaded into a running Scheme~48 process
- and C object-file bindings can be dereferenced at runtime and
- their values called
- (although not all versions of Unix support all of this).
-The required Scheme functions are in the structure \code{dynamic-externals}.
+External code can be loaded into a running Scheme~48---at least on
+most variants of Unix and on Windows.  The required Scheme functions
+are in the structure \code{load-dynamic-externals}.
 
+To be suitable for dynamic loading, the externals code must reside in
+a shared object.  The shared object must define two functions:
+%
 \begin{protos}
-\protonoresult{dynamic-load}{ string}{}
+  \cproto{void s48\_on\_load(void)}
+  \cproto{void s48\_on\_reload(void)}
 \end{protos}
-\noindent
-\code{Dynamic-load} loads the named file into the current
- process, raising an exception if the file cannot be found or if dynamic
- loading is not supported by the operating system.
-The file must have been compiled and linked appropriately.
-For Linux, the following commands compile \code{foo.c} into a
- file \code{foo.so} that can be loaded dynamically.
+%
+The \code{s48\_on\_load} is run upon loading the shared objects.  It
+typically contains invocations of \code{S48\_EXPORT\_FUNCTION} to
+make the functionality defined by the shared object known to
+Scheme~48.  Scheme~48 calls \code{s48\_on\_reload} when it loads the
+shared object for the second time, or some new version thereof.  (More
+on that later.)  Most of the time, \code{s48\_on\_reload} will simply
+call \code{s48\_on\_load}.
+
+For Linux, the following commands compile \code{foo.c} into a file
+\code{foo.so} that can be loaded dynamically.
 \begin{example}
 \% gcc -c -o foo.o foo.c
 \% ld -shared -o foo.so foo.o
 \end{example}
+%
+The following procedures provide the basic functionality for loading
+shared objects containing dynamic externals:
+%
+\begin{protos}
+\proto{load-dynamic-externals}{ string plete?
+  rrepeat? rresume?}{dynamic-externals}
+\proto{unload-dynamic-externals}{ string}{ dynamic-externals}
+\protonoresult{reload-dynamic-externals}{ string}
+\end{protos}
+%
+\code{Load-dynamic-externals} loads the
+named shared objects.  The \cvar{plete?} argument determines whether
+Scheme~48 appends the OS-specific suffix (typically \code{.so} for
+Unix, and \code{.dll} for Windows) to the name.  The \cvar{rrepeat?}
+argument determines how \code{load-dynamic-externals} behaves if it is
+called again with the same argument: If this is true, it reloads the
+shared object (and calls its \code{s48\_on\_reload} function),
+otherwise, it will not do anything.  The \cvar{rresume?}  argument
+determines if an image subsequently dumped will try to load the shared
+object again automatically.  (The shared objects will be loaded before
+any record resumers run.)  \code{Load-dynamic-externals} returns a
+handle identifying the shared object just loaded.
+
+\code{Unload-dynamic-externals} unloads the shared object associated
+with the handle passed as its argument.  Note that this invalidates
+all external bindings associated with the shared object; referring to
+any of them will probably crash the program.
+
+\code{Reload-dynamic-externals} will reload the shared object named by
+its argument and call its \code{s48\_on\_reload} function.
 
 \begin{protos}
-\proto{get-external}{ string}{external}
-\proto{external?}{ x}{boolean}
-\proto{external-name}{ external}{string}
-\proto{external-value}{ external}{byte-vector}
+\proto{import-dynamic-externals}{ string}{dynamic-externals}  
 \end{protos}
-\noindent
-These functions give access to values bound in the current process, and
- are used for retrieving values from dynamically-loaded files.
-\code{Get-external} returns an \var{external} object that contains the
- value of \cvar{name}, raising an exception if there is no such
- value in the current process.
-\code{External?} is the predicate for externals, and
-\code{external-name} and \code{external-value} return the name and
- value of an external.
-The value is returned as byte vector of length four (on 32-bit
- architectures).
-The value is that which was extant when \code{get-external} was
- called.
-The following two functions can be used to update the values of
- externals.
-
-\begin{protos}
-\proto{lookup-external}{ external}{boolean}
-\proto{lookup-all-externals}{}{boolean}
-\end{protos}
-\noindent
-\code{Lookup-external} updates the value of \cvar{external} by looking up its
- name in the current process, returning \code{\#t} if the name is bound
- and \code{\#f} if it is not.
-\code{Lookup-all-externals} calls \code{lookup-external} on all extant
- externals, returning \code{\#f} any are unbound.
-
-\begin{protos}
-\proto{call-external}{ external arg$_0$ \ldots}{value}
-\end{protos}
-\noindent
-An external whose value is a C procedure can be called using
- \code{call-external}.
-See
-section~\ref{sec:external-call}
-for more information.
-
-In some versions of Unix retrieving a value from the current
- process may require a non-trivial amount of computation.
-We recommend that a dynamically-loaded file contain a single initialization
- procedure that creates shared bindings for the values exported by the file.
+%
+This procedure represents the expected most usage for loading
+dynamic-externals.  It is best explained by its definition:
+%
+\begin{example}
+(define (import-dynamic-externals name)
+  (load-dynamic-externals name #t #f #t))
+\end{example}
 
 \section{Compatibility}
 
@@ -357,6 +326,10 @@ Scheme~48's old \code{external-call} function is still available in the
  \code{externals}, which now also includes \code{external-name} and
  \code{external-value}.
 The old \code{scheme48.h} file has been renamed \code{old-scheme48.h}.
+
+Also, the old code for loading external code dynamically is still
+available in the \code{dynamic-externals} structure, but will
+probably disappear in a future release.
 
 \section{Accessing Scheme data from C}
 \label{sec:scheme-data}
