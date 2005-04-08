@@ -1414,21 +1414,20 @@
 
     ;; The search loop. TJ & PJ are redundant state.
     (let lp ((ti t-start) (pi 0)
-	     (tj (- t-end t-start))	; (- tlen ti) -- how many chars left.
-	     (pj plen))			; (- plen pi) -- how many chars left.
+	     (tj (- t-end t-start)) ; (- tlen ti) -- how many chars left.
+	     (pj plen))		 ; (- plen pi) -- how many chars left.
 
-      (if (= pi plen) (- ti plen)			; Win.
-	  
-	  (and (<= pj tj)				; Lose.
-		 
-	       (if (c= (string-ref text ti)		; Search.
+      (if (= pi plen)
+	  (- ti plen)			; Win.
+	  (and (<= pj tj)		; Lose.
+	       (if (c= (string-ref text ti) ; Search.
 		       (string-ref pattern (+ p-start pi)))
-		   (lp (+ 1 ti) (+ 1 pi) (- tj 1) (- pj 1))	; Advance.
+		   (lp (+ 1 ti) (+ 1 pi) (- tj 1) (- pj 1)) ; Advance.
 		   
-		   (let ((pi (vector-ref rv pi)))		; Retreat.
+		   (let ((pi (vector-ref rv pi))) ; Retreat.
 		     (if (= pi -1)
-			 (lp (+ ti 1)  0   (- tj 1)  plen)	; Punt.
-			 (lp ti        pi  tj        (- plen pi))))))))))
+			 (lp (+ ti 1) 0  (- tj 1) plen) ; Punt.
+			 (lp ti       pi tj       (- plen pi))))))))))
 
 ;;; (make-kmp-restart-vector pattern [c= start end]) -> integer-vector
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1474,26 +1473,23 @@
 	    ;; K = I + START -- it is the corresponding index into PATTERN.
 	    (let lp1 ((i 0) (j -1) (k start))	
 	      (if (< i rvlen-1)
+		  ;; lp2 invariant:
+		  ;;   pat[(k-j) .. k-1] matches pat[start .. start+j-1]
+		  ;;   or j = -1.
+		  (let lp2 ((j j))
+		    (cond ((= j -1)
+			   (let ((i1 (+ 1 i)))
+			     (if (not (c= (string-ref pattern (+ k 1)) c0))
+				 (vector-set! rv i1 0))
+			     (lp1 i1 0 (+ k 1))))
+			  ;; pat[(k-j) .. k] matches pat[start..start+j].
+			  ((c= (string-ref pattern k) (string-ref pattern (+ j start)))
+			   (let* ((i1 (+ 1 i))
+				  (j1 (+ 1 j)))
+			     (vector-set! rv i1 j1)
+			     (lp1 i1 j1 (+ k 1))))
 
-		  (let ((ck (string-ref pattern k)))
-		    ;; lp2 invariant:
-		    ;;   pat[(k-j) .. k-1] matches pat[start .. start+j-1]
-		    ;;   or j = -1.
-		    (let lp2 ((j j))
-
-		      (cond ((= j -1)
-			     (let ((i1 (+ i 1)))
-			       (vector-set! rv i1 (if (c= ck c0) -1 0))
-			       (lp1 i1 0 (+ k 1))))
-
-			    ;; pat[(k-j) .. k] matches pat[start..start+j].
-			    ((c= ck (string-ref pattern (+ j start)))
-			     (let* ((i1 (+ 1 i))
-				    (j1 (+ 1 j)))
-			       (vector-set! rv i1 j1)
-			       (lp1 i1 j1 (+ k 1))))
-
-			    (else (lp2 (vector-ref rv j))))))))))
+			  (else (lp2 (vector-ref rv j)))))))))
       rv)))
 
 
