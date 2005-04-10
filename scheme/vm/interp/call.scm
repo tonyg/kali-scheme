@@ -206,7 +206,7 @@
 ; is not done in-line.  The stack for the inner call to APPLY will be
 ; [(<list-procedure> (1 2 3)), 1, 2], whereas for
 ; (APPLY APPLY LIST 1 '(2 (3))) the stack will be
-; [<list-procedure>, 1, (2 (3)), 3, 4].
+; [<list-procedure>, 1, (2 (3)), 2, 4].
 ;
 ; We grab the counts and the procedure and copy the rest of the stack arguments
 ; down to make us properly tail-recursive.  Then we get the true stack-arg count
@@ -216,7 +216,7 @@
   (let* ((nargs (extract-fixnum (pop)))
 	 (stack-nargs (extract-fixnum (pop))))
     (set! *val* (stack-ref stack-nargs))	; proc in *VAL*
-    (move-args-above-cont! nargs)
+    (move-args-above-cont! stack-nargs)
     (receive (okay? stack-arg-count list-args list-arg-count)
 	(get-closed-apply-args nargs stack-nargs)
       (if okay?
