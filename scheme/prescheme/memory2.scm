@@ -158,24 +158,24 @@
     (values count (enum errors no-errors))))
 
 (define (read-block port address count)
-  (cond ((not (char-ready? port))
+  (cond ((not (byte-ready? port))
 	 (values 0 #f (enum errors no-errors)))
-	((eof-object? (scheme:peek-char port))
+	((eof-object? (peek-byte port))
 	 (values 0 #t (enum errors no-errors)))
 	(else
 	 (let ((vector (address->vector address))
 	       (byte-address (address->vector-index address)))
 	   (let loop ((i 0))
 	     (if (or (= i count)
-		     (not (char-ready? port)))
+		     (not (byte-ready? port)))
 		 (values i #f (enum errors no-errors))
-		 (let ((c (scheme:read-char port)))
-		   (cond ((eof-object? c)
+		 (let ((b (read-byte port)))
+		   (cond ((eof-object? b)
 			  (values i #f (enum errors no-errors)))
 			 (else
 			  (code-vector-set! vector
 					    (+ i byte-address)
-					    (char->ascii c))
+					    b)
 			  (loop (+ i 1)))))))))))
 
 (define (copy-memory! from to count)

@@ -15,6 +15,7 @@
 			       (close-output-port scheme:close-output-port)
 			       (read-char         scheme:read-char)
 			       (peek-char         scheme:peek-char)))
+	(subset i/o (byte-ready? read-byte peek-byte write-byte))
 	code-vectors bitwise ascii primitives signals enumerated
 	define-record-types
 	bigbit)   ; make sure that bignum bitwise operations are loaded

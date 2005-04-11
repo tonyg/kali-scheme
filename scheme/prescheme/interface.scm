@@ -5,7 +5,7 @@
 	       define define-syntax let-syntax letrec-syntax
 	       and cond case do let let* or
 	       quasiquote
-	       ;syntax-rules
+	       syntax-rules
 	       ) :syntax)  ; no delay
 	  
 	  (goto :syntax)
