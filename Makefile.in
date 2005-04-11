@@ -548,6 +548,7 @@ LOAD_DEBUG = \
 	 $(START_LINKER); \
 	 echo \(load-configuration \"scheme/interfaces.scm\"\); \
 	 echo \(load-configuration \"scheme/packages.scm\"\); \
+	 echo \(load-configuration \"scheme/vm/shared-interfaces.scm\"\); \
 	 echo \(flatload debug-structures\)
 
 scheme/debug/tiny.image: scheme/debug/tiny-packages.scm \
@@ -569,7 +570,7 @@ scheme/debug/low-test.image: scheme/debug/low-test-packages.scm \
 scheme/debug/little.image: $(CONFIG_FILES) scheme/debug-packages.scm
 	cd $(srcdir) &&					\
 	($(LOAD_DEBUG); echo \(link-little-system\))	\
-	| time $(LINKER_RUNNABLE)
+	| $(LINKER_RUNNABLE)
 
 scheme/debug/mini.image: $(CONFIG_FILES)
 	cd $(srcdir) &&					\

@@ -60,6 +60,9 @@
 	((not (define-syntax-node? node))
 	 (run node env))))
 
+(define define-node? (node-predicate 'define syntax-type))
+(define define-syntax-node? (node-predicate 'define-syntax syntax-type))
+
 ; Main dispatch for a single expression.
 
 (define (run node env)
@@ -259,23 +262,5 @@
 	(else
 	 (bind-var (car names) (car args)
 		   (bind-vars (cdr names) (cdr args) env)))))
-
-
-; LOAD
-
-(define (load filename . package-option)
-  (load-into filename (if (null? package-option)
-			  (interaction-environment)
-			  (car package-option))))
-
-(define (load-into filename package)
-  (eval-nodes (read-forms filename package #f)
-	      (package->environment package)
-	      filename))
-
-
-(define (eval-from-file forms package file)	;Scheme 48 internal thing
-  (eval-forms forms package file))
-
 
 ; (scan-structures (list s) (lambda (p) #t) (lambda (stuff) #f))

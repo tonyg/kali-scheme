@@ -5,7 +5,7 @@
 ; This prints `Hello' three times and then the first command argument, if any,
 ; and finally reads a line from standard input and prints it to standard output.
 
-(define (start arg in in-encoding out out-encoding error-out error-out-encoding)
+(define (start arg in in-encoding out out-encoding error-out error-out-encoding resumer-records)
   (call-with-values
     (lambda ()
       (values "H" "e" "ll" "o" " "))
@@ -39,9 +39,10 @@
 	(loop more))))
   (if (vector? arg)
       (if (< 0 (vector-length arg))
-	  (write-string (vector-ref arg 0) out)))
+	  (write-byte-vector (vector-ref arg 0) out)))
   (newline out)
 
+  (write-string "=" out) (newline out)
   (bool-test (= 1 1) "(= 1 1)" #t out)
   (bool-test (= 1 2) "(= 1 2)" #f out)
   (bool-test (= 1 1 1) "(= 1 1 1)" #t out)
@@ -50,6 +51,7 @@
   (bool-test (= 1 1 1 1) "(= 1 1 1 1)" #t out)
   (bool-test (= 1 1 2 3) "(= 1 1 2 3)" #f out)
   (bool-test (= 1 1 1 3) "(= 1 1 1 3)" #f out)
+  (write-string "==" out) (newline out)
   ((lambda (=)
      (bool-test (= 1 1) "(= 1 1)" #t out)
      (bool-test (= 1 2) "(= 1 2)" #f out)
@@ -61,11 +63,13 @@
      (bool-test (= 1 1 2 3) "(= 1 1 2 3)" #f out)
      (bool-test (= 1 1 1 3) "(= 1 1 1 3)" #f out))
    =)
+  (write-string "<" out) (newline out)
   (bool-test (< 1 1) "(< 1 1)" #f out)
   (bool-test (< 1 2) "(< 1 2)" #t out)
   (bool-test (< 1 1 1) "(< 1 1 1)" #f out)
   (bool-test (< 1 2 3) "(< 1 2 3)" #t out)
   (bool-test (< 1 2 2) "(< 1 2 2)" #f out)
+  (write-string "<<" out) (newline out)
   ((lambda (<)
      (bool-test (< 1 1) "(< 1 1)" #f out)
      (bool-test (< 1 2) "(< 1 2)" #t out)
@@ -73,6 +77,7 @@
      (bool-test (< 1 2 3) "(< 1 2 3)" #t out)
      (bool-test (< 1 2 2) "(< 1 2 2)" #f out))
    <)
+  (write-string "<=" out) (newline out)
   (bool-test (<= 1 1) "(<= 1 1)" #t out)
   (bool-test (<= 1 2) "(<= 1 2)" #t out)
   (bool-test (<= 2 1) "(<= 2 1)" #f out)
@@ -80,6 +85,7 @@
   (bool-test (<= 1 2 3) "(<= 1 2 3)" #t out)
   (bool-test (<= 1 2 2) "(<= 1 2 2)" #t out)
   (bool-test (<= 1 2 1) "(<= 1 2 1)" #f out)
+  (write-string "<=<=" out) (newline out)
   ((lambda (<=)
      (bool-test (<= 1 1) "(<= 1 1)" #t out)
      (bool-test (<= 1 2) "(<= 1 2)" #t out)
@@ -89,11 +95,13 @@
      (bool-test (<= 1 2 2) "(<= 1 2 2)" #t out)
      (bool-test (<= 1 2 1) "(<= 1 2 1)" #f out))
    <=)
+  (write-string ">" out) (newline out)
   (bool-test (> 1 1) "(> 1 1)" #f out)
   (bool-test (> 2 1) "(> 2 1)" #t out)
   (bool-test (> 1 1 1) "(> 1 1 1)" #f out)
   (bool-test (> 3 2 1) "(> 3 2 1)" #t out)
   (bool-test (> 2 1 1) "(> 2 1 1)" #f out)
+  (write-string ">>" out) (newline out)
   ((lambda (>)
      (bool-test (> 1 1) "(> 1 1)" #f out)
      (bool-test (> 2 1) "(> 2 1)" #t out)
@@ -101,6 +109,7 @@
      (bool-test (> 3 2 1) "(> 3 2 1)" #t out)
      (bool-test (> 2 1 1) "(> 2 1 1)" #f out))
    >)
+  (write-string ">=" out) (newline out)
   (bool-test (>= 1 1) "(>= 1 1)" #t out)
   (bool-test (>= 2 1) "(>= 2 1)" #t out)
   (bool-test (>= 1 2) "(>= 1 2)" #f out)
@@ -108,6 +117,7 @@
   (bool-test (>= 3 2 1) "(>= 3 2 1)" #t out)
   (bool-test (>= 2 1 1) "(>= 2 1 1)" #t out)
   (bool-test (>= 2 1 2) "(>= 2 1 2)" #f out)
+  (write-string ">=>=" out) (newline out)
   ((lambda (>=)
      (bool-test (>= 1 1) "(>= 1 1)" #t out)
      (bool-test (>= 2 1) "(>= 2 1)" #t out)
@@ -127,20 +137,20 @@
    make-vector)
   (arith-test (string-length (make-string 3)) "make-string0" 3 out)
   (arith-test (string-length (make-string 3 #\a)) "make-string1" 3 out)
-  (arith-test (- (char->ascii (string-ref (make-string 3) 2))
-		 (char->ascii #\?))
+  (arith-test (- (char->scalar-value (string-ref (make-string 3) 2))
+		 (char->scalar-value #\?))
 	      "make-string2" 0 out)
-  (arith-test (- (char->ascii (string-ref (make-string 3 #\a) 2))
-		 (char->ascii #\a))
+  (arith-test (- (char->scalar-value (string-ref (make-string 3 #\a) 2))
+		 (char->scalar-value #\a))
 	      "make-string3" 0 out)
   ((lambda (make-string)
      (arith-test (string-length (make-string 3)) "make-string4" 3 out)
      (arith-test (string-length (make-string 3 #\a)) "make-string5" 3 out)
-     (arith-test (- (char->ascii (string-ref (make-string 3) 2))
-		    (char->ascii #\?))
+     (arith-test (- (char->scalar-value (string-ref (make-string 3) 2))
+		    (char->scalar-value #\?))
 		 "make-string6" 0 out)
-     (arith-test (- (char->ascii (string-ref (make-string 3 #\a) 2))
-		    (char->ascii #\a))
+     (arith-test (- (char->scalar-value (string-ref (make-string 3 #\a) 2))
+		    (char->scalar-value #\a))
 		 "make-string7" 0 out))
    make-string)
   (arith-test (apply + '()) "(apply + '())" 0 out)
@@ -160,6 +170,8 @@
 	      "(apply apply (list + '(1 2 3)))" 6 out)
   (arith-test (apply apply (list + 1 2 '(3)))
 	      "(apply apply (list + 1 2 '(3)))" 6 out)
+  (arith-test (apply + (apply apply list 1 '(2 (3))))
+	      "(apply + (apply apply list 1 '(2 (3))))" 6 out)
   (arith-test (apply apply (list + 1 2 3 '()))
 	      "(apply apply (list + 1 2 3 '()))" 6 out)
   (arith-test (apply apply + 1 '(2 3 ())) "(apply apply + 1 '(2 3 ())" 6 out)
@@ -245,7 +257,10 @@
 	 
 (define (arith-test n s a out)
   (if (= n a)
-      #t
+      (begin
+	(write-string "Success: " out)
+	(write-string s out)
+	(newline out))
       (begin
 	(write-string "Failure: " out)
 	(write-string s out)
@@ -266,10 +281,29 @@
 	(newline out))))
 
 (define (write-string string . channel-option)  ; test n-ary procedures
-  (channel-maybe-write (car channel-option)
-		       string
+  (write-byte-vector (string->byte-vector string)
+		     (car channel-option)))
+
+(define (write-byte-vector bytes channel)
+  (channel-maybe-write channel
+		       bytes
 		       0
-		       (string-length string)))
+		       (byte-vector-length bytes)))
+
+(define (string->byte-vector string)
+  ((lambda (size)
+     ((lambda (bytes)
+	(letrec ((loop
+		  (lambda (i)
+		    (if (< i size)
+			(begin
+			  (byte-vector-set! bytes i
+					    (char->scalar-value (string-ref string i)))
+			  (loop (+ 1 i)))))))
+	  (loop 0)
+	  bytes))
+      (make-byte-vector size 0)))
+   (string-length string)))
 
 (define (newline channel)
   (write-string "
@@ -284,29 +318,32 @@
 			     ((lambda (len)
 				(if len
 				    ((lambda (string)
-				       (copy-string! buffer string len)
+				       (copy-bytes-to-string! buffer string len)
 				       string)
 				     (make-string len #\space))
 				    (loop (+ have got))))
 			      (has-newline buffer have got))))
 		       (channel-maybe-read in buffer have (- 80 have) #f)))))
        (loop 0)))
-   (make-string 80 #\space)))
+   (make-byte-vector 80 (char->scalar-value #\space))))
 
-(define (has-newline string start count)
+(define (has-newline bytes start count)
   (letrec ((loop (lambda (i)
 		   (if (= i count)
 		       #f
 		       (if (char=? #\newline
-				   (string-ref string (+ start i)))
+				   (scalar-value->char
+				    (byte-vector-ref bytes (+ start i))))
 			   (+ start i)
 			   (loop (+ i 1)))))))
     (loop 0)))
 
-(define (copy-string! from to count)
+(define (copy-bytes-to-string! from to count)
   (letrec ((loop (lambda (i)
 		   (if (< i count)
 		       (begin
-			 (string-set! to i (string-ref from i))
+			 (string-set! to i
+				      (scalar-value->char (byte-vector-ref from i)))
 			 (loop (+ i 1)))))))
     (loop 0)))
+

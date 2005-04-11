@@ -96,10 +96,16 @@
 
 (define-structure run evaluation-interface
   (open scheme-level-2
+	tables
 	packages        	;package-uid package->environment link!
 	compiler-envs		;bind-source-filename
 	reading-forms		;read-forms $note-file-package
 	syntactic		;scan-forms expand-forms
+	locations
+	nodes
+	bindings
+	meta-types
+	mini-environments
 	simple-signals
 	fluids)
   (files (debug run)))
@@ -137,8 +143,7 @@
 (define-structure test-bignum (export test-all print-results)
   (open scheme
 	i/o
-	bitwise
-	bigbit)
+	bitwise)
   (begin 
 
     (define *tests* '())
