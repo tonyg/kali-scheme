@@ -427,8 +427,8 @@
 	 (offset (get-offset code (- end-pc 5)))
          (template (get-offset code (- end-pc 7)))
 	 (mask-bytes
-	  (let lp ((the-pc (+ pc 3)))
-	    (if (> the-pc (+ pc 2 gc-mask-size))
+	  (let lp ((the-pc (+ pc 2)))
+	    (if (>= the-pc (+ pc 2 gc-mask-size))
 		'()
 		(cons (code-vector-ref code the-pc)
 		      (lp (+ the-pc 1)))))))
