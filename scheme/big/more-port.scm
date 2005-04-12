@@ -191,7 +191,7 @@
   (let* ((string-size (string-length string))
 	 (encoding-size (string-encoding-length/utf-8 string 0 string-size))
 	 (buffer (make-byte-vector encoding-size 0)))
-    (encode-string/utf-8 string 0 string-size buffer 0)
+    (encode-string/utf-8 string 0 string-size buffer 0 encoding-size)
     (make-byte-vector-input-port-internal buffer)))
 
 ;----------------
