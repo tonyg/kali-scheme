@@ -116,9 +116,9 @@
   (open scheme-level-2
 	unicode
 	bitwise byte-vectors
-	(subset signals (call-error))
+	conditions exceptions
+	finite-types
 	(subset silly (reverse-list->string)))
-  (optimize auto-integrate)
   (files (big encoding)))
 
 (define-structure text-codec-utils text-codec-utils-interface
@@ -166,7 +166,8 @@
 	util				; unspecific
 	signals
 	(subset primitives      (copy-bytes! write-byte))
-	encodings)
+	encodings
+	(subset text-codecs (utf-8-codec)))
   (files (big more-port)))
 
 (define-structure destructuring (export (destructure :syntax))
