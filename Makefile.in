@@ -414,16 +414,22 @@ tags:
 # Distribution...
 
 # DISTFILES should include all sources.
-DISTFILES = README COPYING INSTALL configure				\
+DISTFILES = README COPYING.rtf COPYING INSTALL configure		\
 		acconfig.h configure.in Makefile.in 			\
+		scheme48.dsp scheme48.dsw				\
 		mkinstalldirs install-sh				\
-		doc/*.ps doc/*.txt doc/html/*.html doc/scheme48.man	\
+		doc/*.ps doc/*.pdf doc/*.txt 				\
+		doc/html/*.html doc/html/*.css doc/html/*.gif 		\
 		doc/src/*.tex doc/src/*.sty doc/src/*.scm		\
-		emacs/README build/*-version-number build/*.exec	\
+		doc/scheme48.man					\
+		emacs/README 						\
+		build/*.scm build/*-version-number build/*.exec		\
 		build/*.lisp build/build-usual-image build/filenames.make \
-		build/filenames.scm build/initial.debug			\
-		build/initial.image build/initial.scm			\
+		build/initial.debug build/initial.image			\
 		build/build-external-modules				\
+		build/*.bat build/*.sh build/*.txt build/*.rc		\
+		build/dummy build/*.wxs build/*.wxi			\
+		build/*.bmp build/*.ico build/*.tif			\
 		c/*.[ch] c/*/*.[ch] c/scheme48.h.in			\
 		emacs/*.el gdbinit					\
 		scheme/*.scm scheme/*/*.scm scheme/vm/*/*.scm		\
