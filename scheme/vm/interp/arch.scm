@@ -420,6 +420,13 @@
 (define continuation-code-index 1)
 (define continuation-cont-index 2)
 
+; Offsets in the CONT-DATA instruction
+					; -1 -2        frame size
+(define gc-mask-size-offset -3)		; -3           gc mask size
+					; -4 -5        offset
+                                        ; -6 -7        template
+(define gc-mask-offset      -8)         ; -8 ...       mask
+
 ; The number of additional values that the VM adds to exception continuations.
 (define exception-continuation-cells 5)
 

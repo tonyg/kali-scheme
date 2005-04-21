@@ -142,12 +142,6 @@
 (define continuation-registers-size
   (cells->a-units continuation-cells))
 
-					; -1 -2        frame size
-(define gc-mask-size-offset -3)		; -3           gc mask size
-					; -4 -5        offset
-                                        ; -6 -7        template
-(define gc-mask-offset      -8)         ; -8 ...       mask
-
 ; Exported for use by the stack code.
 
 (define (s48-trace-continuation-contents! contents-pointer

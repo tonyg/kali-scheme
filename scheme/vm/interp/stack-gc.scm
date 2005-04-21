@@ -248,12 +248,6 @@
 	  (check-descriptor (fetch addr))
 	  (loop (address1+ addr))))))
 
-					; -1 -2        frame size
-(define gc-mask-size-offset -3)		; -3           gc mask size
-					; -4 -5        offset
-                                        ; -6 -7        template
-(define gc-mask-offset      -8)         ; -8 ...       mask
-
 (define (check-continuation-contents contents-pointer code-pointer mask-size)
   (let ((mask-pointer (address+ code-pointer (+ gc-mask-offset 1))))
     (let byte-loop ((mask-ptr (address- mask-pointer mask-size))

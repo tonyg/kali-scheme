@@ -42,6 +42,9 @@
 	  continuation-cont-index
 	  continuation-pc-index
 	  continuation-code-index
+
+	  gc-mask-size-offset
+	  gc-mask-offset
 	  
           exception-continuation-cells
 	  exception-cont-size-index
