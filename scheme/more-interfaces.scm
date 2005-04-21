@@ -383,15 +383,21 @@
 (define-interface encodings-interface
   (export char-encoding-length/utf-8
 	  string-encoding-length/utf-8
+	  (encoding-status :syntax)
+	  encoding-status?
 	  encode-char/utf-8
 	  encode-string/utf-8
+	  string->utf-8-n
 	  string->utf-8
 
-	  bytes-char-encoding-length/utf-8
-	  bytes-string-length/utf-8
+	  (decoding-status :syntax)
+	  decoding-status?
+	  &decoding-error decoding-error? decoding-error-encoding-name
+
+	  bytes-string-size/utf-8
 	  decode-char/utf-8
 	  decode-string/utf-8
-	  utf-8->string))
+	  utf-8->string utf-8->string-n))
 
 (define-interface text-codec-utils-interface
   (export guess-port-text-codec-according-to-bom
