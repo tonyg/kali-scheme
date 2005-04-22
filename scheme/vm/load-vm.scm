@@ -80,6 +80,7 @@
 (load "shared-interfaces.scm")
 (load "s48-package-defs.scm")
 (load "package-defs.scm")
+(load "twospace-gc-package-defs.scm")
 (load-package 'destructuring)  ; used in FOR-SYNTAX clause
 (load-package 'bigbit)
 (load-package 'vm)
