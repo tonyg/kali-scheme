@@ -27,6 +27,8 @@
 (define *finalizer-alist*)	; list of (<thing> . <procedure>) pairs
 (define *finalize-these*)	; list of such pairs that should be executed
 
+(define *gc-in-trouble?* #f)	; says whether the GC is running out of space
+
 ; Interrupts
 
 (define *enabled-interrupts*)	; bitmask of enabled interrupts
@@ -137,12 +139,15 @@
     (trace-channel-names s48-trace-value)))
 
 (add-post-gc-cleanup!
-  (lambda ()
+  (lambda (major? in-trouble?)
     (set-code-pointer! *last-code-called* *saved-pc*)
     (set! *last-code-pointer-resumed* *code-pointer*)
     (partition-finalizer-alist!)
     (close-untraced-channels! s48-extant? s48-trace-value)
-    (note-interrupt! (enum interrupt post-gc))))
+    (set! *gc-in-trouble?* in-trouble?)
+    (note-interrupt! (if major?
+			 (enum interrupt post-major-gc)
+			 (enum interrupt post-minor-gc)))))
 
 ;----------------
 ; Dealing with the list of finalizers.

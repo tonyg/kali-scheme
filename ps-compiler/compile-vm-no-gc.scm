@@ -11,7 +11,7 @@
 	     "../scheme/vm/shared-interfaces.scm"
 	     "../scheme/vm/ps-package-defs.scm"
 	     "../scheme/vm/package-defs.scm"
-	     "../scheme/vm/alt-gc-package-defs.scm"
+	     "../scheme/vm/alt-gc-package-defs.scm" ;; For the type-checker
 	     "../scheme/vm/alt-image-package-defs.scm")
 	   's48-init
 	   "../scheme/vm/scheme48vm.c"

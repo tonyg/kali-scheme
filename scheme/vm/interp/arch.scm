@@ -210,7 +210,10 @@
   (channel-ready? 1)
   (channel-abort 1)             ; stop channel operation
   (open-channels-list)		; return a list of the open channels
-  
+
+  ;; weak-pointers
+  (make-weak-pointer 1)
+
   ;; Optimistic concurrency
   (current-proposal)
   (set-current-proposal! 1)
@@ -278,7 +281,10 @@
 (define-enumeration interrupt
   (alarm           ; order matters - higher priority first
    keyboard
-   post-gc         ; handler is passed a list of finalizers
+
+   ;; "Major" means the collector made a maximal effort to reclaim
+   ;; memory; everything else is "minor".
+   post-minor-gc post-major-gc ; handler is passed a list of finalizers
    i/o-completion  ; handler is passed channel, error flag and status
    os-signal
    ))
@@ -462,6 +468,7 @@
 (define-enumeration memory-status-option
   (available
    heap-size
+   max-heap-size
    stack-size
    gc-count
    expand-heap!
@@ -524,7 +531,7 @@
 (define stob-data
   '((pair pair? cons
       (car set-car!) (cdr set-cdr!))
-    (symbol symbol? #f       ; RTS calls op/string->symbol
+    (symbol symbol? #f       ; RTS calls op/intern/string->symbol
       (symbol->string))
     (location location? make-location
       (location-id set-location-id!)
@@ -533,7 +540,7 @@
       (cell-ref cell-set!))
     (closure closure? make-closure
       (closure-template set-closure-template!) (closure-env set-closure-env!))
-    (weak-pointer weak-pointer? make-weak-pointer
+    (weak-pointer weak-pointer? #f ; make-weak-pointer is an op
       (weak-pointer-ref))
     (shared-binding shared-binding? make-shared-binding
       (shared-binding-name)

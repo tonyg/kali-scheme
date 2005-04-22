@@ -6,7 +6,7 @@
 ; Create and install a vector of interrupt handlers.  We want this to happen
 ; as early as possible.  All but the post-gc and keyboard interrupts raise a
 ; VM exception by default.  We exit when a keyboard interrupt occurs. The default
-; post-gc handler is defined below.
+; post-gc handlers are defined below.
 
 (define (initialize-interrupts! spawn-on-root thunk)
   (primitive-cwcc
@@ -19,8 +19,11 @@
 		       (lambda stuff
 			 (apply signal (cons 'interrupt (cons i stuff))))))
 	(vector-set! handlers
-		     (enum interrupt post-gc)
-		     (post-gc-handler spawn-on-root))
+		     (enum interrupt post-major-gc)
+		     (post-gc-handler #t spawn-on-root))
+	(vector-set! handlers
+		     (enum interrupt post-minor-gc)
+		     (post-gc-handler #f spawn-on-root))
 	(vector-set! handlers
 		     (enum interrupt keyboard)
 		     (lambda args
@@ -80,39 +83,26 @@
   (if (not (memq thunk *post-gc-procedures*))
       (set! *post-gc-procedures* (cons thunk *post-gc-procedures*))))
 
-(define (post-gc-handler spawn-on-root)
-  (lambda (finalizer-list enabled-interrupts)
-    (let ((space (memory-status (enum memory-status-option available) 0)))
-      (if (> (session-data-ref required-post-gc-space)
-	     space)
-	  (spawn-on-root
-	   (lambda ()
-	     ((session-data-ref space-shortage-handler)
-	      (session-data-ref required-post-gc-space)
-	      space)))))
+(define (post-gc-handler major? spawn-on-root)
+  (lambda (finalizer-list enabled-interrupts in-trouble?)
+    (if in-trouble?
+	(spawn-on-root
+	 (lambda ()
+	   ((session-data-ref space-shortage-handler)))))
     (spawn-on-root
      (lambda ()
        (for-each (lambda (p)
 		   ((cdr p) (car p)))
 		 finalizer-list)
-       (for-each (lambda (thunk)
-		   (thunk))
-		 *post-gc-procedures*))
+       (if major?
+	   (for-each (lambda (thunk)
+		       (thunk))
+		     *post-gc-procedures*)))
      'post-gc-handler)
     (set-enabled-interrupts! enabled-interrupts)))
-
-; Notifying someone if an insufficient amount of memory is reclaimed by
-; a garbage collection.  The amount defaults to 10% of the heap.
-
-(define required-post-gc-space (make-session-data-slot! 0))
 
 (define space-shortage-handler
   (make-session-data-slot! (lambda (required space) #f)))
 
-(define (call-before-heap-overflow! handler . maybe-required-space)
-  (session-data-set! required-post-gc-space
-		     (if (null? maybe-required-space)
-			 (quotient (memory-status (enum memory-status-option heap-size) 0)
-				   10)
-			 (car maybe-required-space)))
+(define (call-before-heap-overflow! handler . maybe-required-space-percentage)
   (session-data-set! space-shortage-handler handler))

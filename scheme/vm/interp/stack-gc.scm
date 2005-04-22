@@ -214,12 +214,15 @@
 ;----------------------------------------------------------------
 ; Temporary code to check that the stack is okay.
 
-(define *oldspace-begin*)
-(define *oldspace-end*)
-
 (define (check-stack)
-  (set! *oldspace-begin* (address->integer (s48-oldspace-begin)))
-  (set! *oldspace-end*   (address->integer (s48-oldspace-end)))
+  (let lp ((index *stack*))
+    (if (address< index
+		  (address+ *stack*
+			    (cells->a-units (operands-on-stack))))
+	(begin
+	  (check-descriptor (fetch index))
+	  (lp (address1+ index)))))
+
   (let loop ((cont *cont*))
     (if (not (address= cont *bottom-of-stack*))
 	(loop (check-continuation cont)))))
@@ -268,11 +271,12 @@
      1))
 
 (define (check-descriptor x)
-  (if (cond ((header? x) #t)
-	    ((stob? x)
-	     (let ((address (remove-stob-tag x)))
-	       (and (<= *oldspace-begin* address)
-		    (<= address *oldspace-end*))))
-	    (else #f))
-      (error "bad descriptor in stack" x)))
+  (if (or (header? x)
+	  (and (stob? x)
+	       (not (s48-stob-in-heap? x))))
+      (begin
+	(write-string "bad descriptor in stack" (current-error-port))
+	(write-integer x (current-error-port))
+	(write-integer (fetch (integer->address 0)) (current-error-port))
+        (unspecific))))
 

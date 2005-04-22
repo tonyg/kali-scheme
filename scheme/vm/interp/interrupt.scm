@@ -96,7 +96,8 @@
 ;
 ; For alarm interrupts the interrupted template is passed to the handler
 ;  for use by code profilers.
-; For gc interrupts we push the list of things to be finalized.
+; For gc interrupts we push the list of things to be finalized,
+; the interrupt mask, and whether the GC is running out of space.
 ; For i/o-completion we push the channel and its status.
 ; For i/o-error we push the channel and the error code.
 
@@ -106,11 +107,13 @@
 	 (set! *interrupted-template* false)
 	 (push (enter-fixnum *enabled-interrupts*))
 	 2)
-	((eq? pending-interrupt (enum interrupt post-gc))
+	((or (eq? pending-interrupt (enum interrupt post-major-gc))
+	     (eq? pending-interrupt (enum interrupt post-minor-gc)))
 	 (push *finalize-these*)
 	 (set! *finalize-these* null)
 	 (push (enter-fixnum *enabled-interrupts*))
-	 2)
+	 (push (enter-boolean *gc-in-trouble?*))
+	 3)
 	((eq? pending-interrupt (enum interrupt i/o-completion))
 	 ;; we don't know which one it is for each individual channel
 	 (let ((channel (dequeue-channel!)))

@@ -10,16 +10,17 @@
 (define *gc-count* 0)
 (define (s48-gc-count) *gc-count*)
 
-(define (s48-collect)
-  (set! *from-begin* (s48-heap-begin))
+(define (s48-collect force-major?)
+  (set! *from-begin* (heap-begin))
   (set! *from-end* (heap-limit))
   (swap-spaces)
-  (set-heap-pointer! (s48-heap-begin))
+  (set-heap-pointer! (heap-begin))
   (set! *weak-pointer-hp* null-address)
-  (s48-gc-root)			; trace the interpreter's roots
+  (s48-gc-root)			       ; trace the interpreter's roots
   (do-gc)
   (clean-weak-pointers)
-  (s48-post-gc-cleanup)		; interpreter's post-gc clean up
+  (s48-post-gc-cleanup #t ; it's always a major collection
+		       (in-trouble?))
   (set! *gc-count* (+ *gc-count* 1)))
 
 (define *from-begin*)
@@ -40,7 +41,7 @@
 ; the scanning pointer catches up with the heap pointer.
 
 (define (do-gc)
-  (let loop ((start (s48-heap-begin)))
+  (let loop ((start (heap-begin)))
     (let ((end (heap-pointer)))
       (s48-trace-locations! start end)
       (cond ((< (s48-available) 0)
@@ -67,8 +68,10 @@
 			      frontier))
 		       ((continuation-header? thing)
 			(let ((size (header-length-in-a-units thing)))
+			  (set-heap-pointer! frontier)
+			  (trace-continuation next size)
 			  (loop (address+ next size)
-				(trace-continuation next size frontier))))
+				(heap-pointer))))
 		       (else
 			(loop next frontier))))
 		((in-oldspace? thing)
@@ -114,75 +117,6 @@
   (or (not (stob? thing))
       (not (in-oldspace? thing))
       (stob? (stob-header thing))))
-
-;----------------
-; Continuations
-
-(define (trace-continuation contents-pointer size frontier)
-  (set-heap-pointer! frontier)
-  (let* ((code (continuation-code contents-pointer))
-	 (pc   (continuation-pc       contents-pointer))
-	 (code-pointer (address+ (address-after-header code)
-				 (extract-fixnum pc)))
-	 (mask-size (fetch-byte (address+ code-pointer gc-mask-size-offset))))
-    (if (= mask-size 0)
-	(s48-trace-locations! contents-pointer
-			      (address+ contents-pointer size))
-	(let ((data-pointer (address+ contents-pointer
-				      continuation-registers-size)))
-	  (s48-trace-locations! contents-pointer data-pointer)
-	  (s48-trace-continuation-contents! data-pointer
-					    code-pointer
-					    mask-size)))
-    (heap-pointer)))
-
-; The extra values added when a continuation is moved to the heap are not
-; included in the continuation's mask.
-
-(define continuation-registers-size
-  (cells->a-units continuation-cells))
-
-; Exported for use by the stack code.
-
-(define (s48-trace-continuation-contents! contents-pointer
-					  code-pointer
-					  mask-size)
-  (let ((mask-pointer (address+ code-pointer (+ gc-mask-offset 1))))
-    (let byte-loop ((mask-ptr (address- mask-pointer mask-size))
-		    (trace-ptr contents-pointer))
-      (if (not (address= mask-ptr mask-pointer))
-	  (let bit-loop ((mask (fetch-byte mask-ptr)) (ptr trace-ptr))
-	    (if (= mask 0)
-		(byte-loop (address+ mask-ptr 1)
-			   (address+ trace-ptr (cells->a-units 8)))
-		(begin
-		  (if (odd? mask)
-		      (store! ptr (s48-trace-value (fetch ptr))))
-		  (bit-loop (arithmetic-shift-right mask 1)
-			    (address1+ ptr)))))))))
-  
-(define (odd? x)
-  (= (bitwise-and x 1)
-     1))
-
-(define (continuation-code contents-pointer)
-  (fetch (address+ contents-pointer
-		   (cells->a-units continuation-code-index))))
-
-(define (continuation-pc contents-pointer)
-  (fetch (address+ contents-pointer
-		   (cells->a-units continuation-pc-index))))
-
-(define (continuation-header? x)
-  (= (header-type x)
-     (enum stob continuation)))
-
-(define (stob-is-template? x)
-  (let ((header (stob-header x)))
-    (if (header? header)
-	(= (header-type header)
-	   (enum stob template))
-	(stob-is-template? header))))
 
 ;----------------
 ; Weak pointers

@@ -11,7 +11,7 @@
     (define s48-gc-root
       (external "s48_gc_root" (=> () null)))
     (define s48-post-gc-cleanup
-      (external "s48_post_gc_cleanup" (=> () null)))))
+      (external "s48_post_gc_cleanup" (=> (boolean boolean) null)))))
 
 (define-structure symbols (export s48-symbol-table)
   (open prescheme)

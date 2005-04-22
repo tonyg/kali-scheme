@@ -180,23 +180,22 @@
 	       (loop (foo-next foo)
 		     okay-link)))))))
 
-; Add DELTA to all hidden pointers.
+(define (relocate-table table relocate foo-next set-foo-next!)
+  (if (vm-vector? table)
+      (begin
+	(natural-for-each
+	 (lambda (index)
+	   (let ((bucket (hash-table-ref table index)))
+	     (if (not (false? bucket))
+		 (let ((bucket (relocate bucket)))
+		   (vm-vector-set! table index (value->link bucket))
+		   (let loop ((entry bucket))
+		     (let ((next (link->value (foo-next entry))))
+		       (if (not (false? next))
+			   (let ((next (relocate next)))
+			     (set-foo-next! entry (value->link next))
+			     (loop next)))))))))
+	 hash-table-slots)
+	(unspecific))))
 
-(define (table-relocator foo-next set-foo-next!)
-  (lambda (table delta)
-    (if (vm-vector? table)
-	(begin
-	  (natural-for-each
-	   (lambda (index)
-	     (let ((bucket (hash-table-ref table index)))
-	       (if (not (false? bucket))
-		   (let ((bucket (+ bucket delta)))
-		     (vm-vector-set! table index (value->link bucket))
-		     (let loop ((entry bucket))
-		       (let ((next (link->value (foo-next entry))))
-			 (if (not (false? next))
-			     (let ((next (+ next delta)))
-			       (set-foo-next! entry (value->link next))
-			       (loop next)))))))))
-	   hash-table-slots)
-	  (unspecific))))) ; avoid type problem
+

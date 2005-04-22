@@ -10,7 +10,7 @@
 
 (define-record-type image-location :image-location
   (really-make-image-location new-descriptor next)
-  (new-descriptor integer image-location-new-descriptor)
+  (new-descriptor integer image-location-new-descriptor set-image-location-new-descriptor!)
   (next           integer image-location-next set-image-location-next!))
 
 (define (make-image-location new-descriptor)

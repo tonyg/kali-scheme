@@ -9,6 +9,13 @@
 	  error?
 	  write-error-string write-error-integer write-error-newline
 	  error-message
+
+	  ;; needed in portable-read-image and measurements
+	  write-out-string
+	  write-out-integer
+	  write-out-newline
+	  display-message  ;with newline
+	  display-integer  ;with newline
 	  ))
 
 ; Memory
@@ -64,19 +71,25 @@
 	  valid-index?
 	  	
 	  immutable? make-immutable! make-mutable!
+	  make-weak-pointer
 	  ))
 
 (define-interface allocation-interface
   (export s48-make-available+gc
 	  s48-allocate-small
+	  s48-allocate-weak+gc
 	  s48-allocate-traced+gc
 	  s48-allocate-untraced+gc
 	  s48-allocate-stob
+	  
+	  s48-forbid-gc!
+	  s48-allow-gc!
           ))
 
 (define-interface heap-interface
   (export s48-available
 	  s48-heap-size
+	  s48-max-heap-size
 
 	  s48-gather-objects
 
@@ -85,26 +98,14 @@
 
 	  s48-write-barrier
 
-	  ; for write-image
-	  s48-heap-pointer
-	  s48-oldspace-begin
-	  s48-oldspace-end
-	  s48-heap-begin
-
-	  s48-*hp*	; to keep these from being `static' in C, as
-	  s48-*limit*	; references are introduced elsewhere via a C macro
-
 	  ; for debugging
 	  s48-check-heap
+	  s48-stob-in-heap?
 	  ))
 
+
 (define heap-gc-util-interface
-  (export swap-spaces
-	  heap-limit
-	  set-heap-pointer!
-	  heap-pointer
-	  walk-impure-areas
-	  allocate
+  (export walk-impure-areas
 	  bytes-available?))
 
 (define-interface gc-roots-interface
@@ -161,41 +162,16 @@
 	  s48-unregister-gc-root!
 	  s48-reset-external-roots!))
 
-(define-interface read-image-interface
-  (export s48-read-image
-
-	  s48-relocate-all
-	  s48-reverse-byte-order!
-
-	  s48-startup-procedure
-	  s48-initial-symbols
-	  s48-initial-imported-bindings
-	  s48-initial-exported-bindings
-	  s48-resumer-records
-
-	  s48-initialization-complete!
-	  s48-initializing-gc-root
-
-	  s48-set-image-values!))
-
-(define-interface image-gc-interface
-  (export begin-making-image
-	  trace-image-value
-	  make-image
-	  restore-heap
-
-	  image-start
-	  image-pointer
-
-	  make-image-symbol-table
-	  copy-exported-bindings
-	  clean-imported-bindings
-	  mark-image-channels-closed!
-	  find-resumer-records))
-
 (define-interface heap-init-interface
-  (export s48-initialize-heap
-	  s48-register-static-areas))
+  (export s48-register-static-areas
+
+	  ;; two-space/BIBOP
+	  s48-initialize-heap
+
+	  ;;BIBOP
+	  s48-initialize-image-areas
+	  s48-check-heap-size!
+	  ))
 
 (define-interface string-table-interface
   (export hash-table-size
@@ -207,8 +183,8 @@
 	  table-walker table-while-walker
 	  table-tracer
 	  table-cleaner
-	  table-relocator
 
+	  relocate-table
 	  value->link
 	  link->value))
 
@@ -674,4 +650,161 @@
 	  s48-enter-string-latin-1
 	  s48-copy-string-to-scheme-string-latin-1
 	  s48-copy-scheme-string-to-string-latin-1
+	  ))
+
+; Reading and writing images
+
+(define-interface read-image-interface
+  (export s48-read-image
+
+	  s48-startup-procedure
+	  s48-initial-symbols
+	  s48-initial-imported-bindings
+	  s48-initial-exported-bindings
+	  s48-resumer-records
+
+	  s48-initialization-complete!
+	  s48-initializing-gc-root
+
+	  s48-set-image-values!
+	  ))
+
+(define-interface write-image-interface
+  (export s48-write-image))
+
+(define-interface write-image-gc-specific-interface
+  (export deallocate-areas
+	  write-header
+	  begin-making-image/gc-specific
+	  allocate-new-image-object
+	  finalize-new-image-object
+	  write-image-areas
+	  image-alloc
+	  adjust-descriptors!
+	  note-traced-last-stob!))
+
+(define-interface read-image-gc-specific-interface
+  (export really-read-image
+	  initialize-image-areas!))
+
+(define-interface read-image-portable-interface
+  (export really-read-image-portable))
+
+; This is used by WRITE-IMAGE and READ-IMAGE-PORTABLE
+(define-interface image-table-interface
+  (export make-image-location
+          image-location-new-descriptor
+	  set-image-location-new-descriptor!
+          image-location-next
+          set-image-location-next!
+
+          make-table
+	  deallocate-table
+	  break-table!
+	  table-okay?
+          table-set!
+          table-ref
+	  
+	  table-find   ;; debugging
+	  table-keys
+	  table-values
+	  table-count
+	  table-size
+))
+
+(define-interface image-util-interface
+  (export (area-type-size :syntax)
+	  (image-format :syntax)
+	  valid-image-format?))
+
+(define-interface read-image-util-interface
+  (export init-read-image!
+	  set-status!
+	  get-status
+	  is-eof?
+	  (read-check :syntax)
+	  got-error?
+	  image-read-block
+	  read-lost
+	  read-page
+	  read-newline
+	  read-this-character
+	  reverse-descriptor-byte-order!
+	  reverse-byte-order!
+	  adjust
+	  relocate-image
+	  alloc-space
+	  relocate-symbol-table-two-space!
+	  relocate-binding-table-two-space!
+
+	  set-startup-procedure!
+	  get-startup-procedure
+	  set-symbols!
+	  get-symbols
+	  set-imported-bindings!
+	  get-imported-bindings
+	  set-exported-bindings!
+	  get-exported-bindings
+	  set-resumer-records!
+	  get-resumer-records
+
+	  set-img-start-addr!
+	  get-img-start-addr
+	  set-img-end-addr!
+	  get-img-end-addr
+	  set-img-heap-size!
+	  get-img-heap-size
+
+	  set-small-img-start-addr!
+	  get-small-img-start-addr
+	  set-small-img-hp-addr!
+	  get-small-img-hp-addr
+	  set-small-img-end-addr!
+	  get-small-img-end-addr
+	  set-small-img-heap-size!
+	  get-small-img-heap-size
+
+	  set-large-img-start-addr!
+	  get-large-img-start-addr
+	  set-large-img-hp-addr!
+	  get-large-img-hp-addr
+	  set-large-img-end-addr!
+	  get-large-img-end-addr
+	  set-large-img-heap-size!
+	  get-large-img-heap-size
+
+	  set-weaks-img-start-addr!
+	  get-weaks-img-start-addr
+	  set-weaks-img-hp-addr!
+	  get-weaks-img-hp-addr
+	  set-weaks-img-end-addr!
+	  get-weaks-img-end-addr
+	  set-weaks-img-heap-size!
+	  get-weaks-img-heap-size
+	  ))
+
+(define-interface read-image-util-gc-specific-interface
+  (export get-small-start-addr
+	  get-large-start-addr
+	  get-weaks-start-addr))
+
+(define-interface write-image-util-interface
+  (export write-page
+	  (write-check :syntax)
+	  write-header-integer
+	  image-write-init
+	  image-write-terminate
+	  image-write-status
+	  write-descriptor
+	  write-image-block
+	  empty-image-buffer!))
+
+; for debugging
+; To activate/deactivate it, the flag 'debug-mode?' must be set in
+; debugging.scm
+(define-interface debugging-interface
+  (export debug      ;; strings
+          debug-int  ;; integers
+          debug-line ;; "--------"
+	  debug-mode?
 	  ))

@@ -28,7 +28,7 @@
 			      s48-extant?
 			      s48-trace-value)))
   (add-post-gc-cleanup!
-   (lambda ()
+   (lambda (major? in-trouble?)
      (set! *the-symbol-table* (cleaner *the-symbol-table*)))))
 
 ; For the image writer.
@@ -50,7 +50,7 @@
   (let ((symbols (let ((maybe (s48-find-all (enum stob symbol))))
 		   (if (eq? maybe false)
 		       (begin
-			 (s48-collect)
+			 (s48-collect #t)
 			 (let ((maybe (s48-find-all (enum stob symbol))))
 			   (if (eq? maybe false)
 			       (error "insufficient heap space to build symbol table"))

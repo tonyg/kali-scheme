@@ -35,6 +35,8 @@
 
 ;----------------
 
+; stderr
+
 (define (error? status)
   (not (eq? status (enum errors no-errors))))
 
@@ -50,3 +52,23 @@
 (define (error-message string)
   (write-error-string string)
   (write-error-newline))
+
+; stdout
+
+(define (write-out-string string)
+  (write-string string (current-output-port)))
+
+(define (write-out-integer integer)
+  (write-integer integer (current-output-port)))
+
+(define (write-out-newline)
+  (write-char #\newline (current-output-port)))
+
+(define (display-message str)
+  (write-out-string str)
+  (write-out-newline))
+
+(define (display-integer int)
+  (write-out-integer int)
+  (write-out-newline))
+

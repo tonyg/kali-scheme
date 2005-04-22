@@ -28,17 +28,32 @@ Type the command
 .I ,help
 to receive a list of available commands.
 .PP
-The
+The meaning of the
 .B \-h
-option causes 
+option depends on the type of garbage collector that was chosen at
+configuration time.  If
 .IR heapsize
-words to be allocated for both semispaces of the copying garbage
-collector.  One word is four bytes.  Cons cells are currently 3 words,
+is a positive number, it specifies
+the number of words that can be live at any given time.
+One word is four bytes.  Cons cells are currently 3 words,
 so if you want to make sure you can allocate, say, a million cons
 cells, you should specify
 .B \-h
-6000000 (actually a little more, to account for the initial heap
+3000000 (actually a little more, to account for the initial heap
 image and breathing room).
+.PP
+If you specify a
+maximum smaller than the memory needed to load the image file, the
+maximum is increased accordingly and a message is written to the
+console.
+.PP
+For the BIBOP garbage collector, 
+.IR heapsize
+may be 0.  This means the heap will
+possibly keep growing until your system runs out of memory. Because of
+this risk, a warning message is written to the console if you specify
+.B -h
+0.
 .PP
 The 
 .I ,dump

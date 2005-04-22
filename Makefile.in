@@ -7,7 +7,7 @@ SHELL = /bin/sh
 srcdir = @srcdir@
 VPATH = @srcdir@
 CC = @CC@
-DEFS = @DEFS@
+DEFS = @DEFS@ -D__COMPILING_SCHEME48_ITSELF__
 LIBS = @LIBS@
 CFLAGS = @CFLAGS@
 CPPFLAGS =
@@ -17,6 +17,8 @@ INSTALL_DATA = @INSTALL_DATA@
 
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
+
+GC_OBJS = @GC_OBJS@
 
 prefix = @prefix@
 exec_prefix = @exec_prefix@
@@ -37,7 +39,7 @@ mandir = $(prefix)/man/man$(manext)
 #   LDFLAGS = -N
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(DEFS) -I ./c -I$(srcdir)/c $(CFLAGS) -o $@ $<
+	$(CC) -c $(CPPFLAGS) $(DEFS) -I ./c -I$(srcdir)/c -I$(srcdir)/c/bibop $(CFLAGS) -o $@ $<
 
 # You might want to change RUNNABLE to "s48"
 RUNNABLE = scheme48
@@ -96,13 +98,14 @@ INITIAL = $(srcdir)/build/initial.image
 VM = scheme48vm
 LIBSCHEME48 = c/libscheme48.a
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
-OBJS =	c/scheme48vm.o c/scheme48heap.o \
-	c/scheme48read-image.o c/scheme48write-image.o \
+OBJS =	c/scheme48vm.o \
 	c/extension.o c/free.o c/double_to_string.o \
 	c/external.o c/bignum.o c/init.o
 
 FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
 		c/fake/sys-select.h
+
+SCHEME48HS = c/scheme48.h c/scheme48write-barrier.h
 
 # Sources:
 
@@ -140,14 +143,14 @@ posix_dir = c/posix
 
 $(posix_dir)/user.o     $(posix_dir)/regexp.o	\
 $(posix_dir)/proc-env.o $(posix_dir)/io.o:	\
-	c/scheme48.h c/c-mods.h $(posix_dir)/posix.h
+	$(SCHEME48HS) c/c-mods.h $(posix_dir)/posix.h
 
 $(posix_dir)/proc.o:	\
-	c/scheme48.h c/c-mods.h \
+	$(SCHEME48HS) c/c-mods.h \
 	c/event.h $(posix_dir)/posix.h $(posix_dir)/s48_signals.h
 
 $(posix_dir)/dir.o:	\
-  c/scheme48.h c/scheme48heap.h c/c-mods.h \
+  $(SCHEME48HS) c/scheme48heap.h c/c-mods.h \
   c/event.h c/fd-io.h $(posix_dir)/posix.h
 
 POSIX_OBJECTS = $(posix_dir)/user.o     $(posix_dir)/regexp.o	\
@@ -162,7 +165,7 @@ POSIX_INITIALIZERS = 	s48_init_posix_dir	s48_init_posix_user	\
 
 # Socket rules
 
-c/unix/socket.o: c/scheme48.h c/fd-io.h c/event.h
+c/unix/socket.o: $(SCHEME48HS) c/fd-io.h c/event.h
 
 SOCKET_OBJECTS = c/unix/socket.o
 SOCKET_LD_FLAGS =
@@ -172,7 +175,7 @@ SOCKET_INITIALIZERS = 	s48_init_socket
 
 # Dynamic linking rules
 
-c/unix/dynlink.o: c/scheme48.h
+c/unix/dynlink.o: $(SCHEME48HS)
 
 DYNLINK_OBJECTS = c/unix/dynlink.o
 # configure adds -ldl or -mld to the regular libraries
@@ -189,7 +192,7 @@ SYSEXITS_INITIALIZERS = s48_init_sysexits
 
 # Lookup rules (this is just for compatibility with old code)
 
-c/unix/dynamo.o: c/scheme48.h
+c/unix/dynamo.o: $(SCHEME48HS)
 
 LOOKUP_OBJECTS = c/unix/dynamo.o
 LOOKUP_INITIALIZERS = 	s48_init_external_lookup
@@ -207,6 +210,53 @@ ASM_INITIALIZERS =
 
 # End of native-code glue rules
 
+# Two-space copier objects
+
+GC_TWOSPACE_OBJS = c/scheme48-twospace-heap.o
+
+c/scheme48-twospace-heap.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
+			c/scheme48vm-prelude.h c/c-mods.h \
+			c/event.h c/io.h c/fd-io.h
+
+# The BIBOP Garbage Collector
+GC_BIBOP_OBJS =  c/scheme48-bibop-heap.o \
+	c/bibop/page_alloc.o c/bibop/memory_map.o c/bibop/areas.o \
+	c/bibop/generation_gc.o c/bibop/find_all.o c/bibop/check_heap.o \
+	c/bibop/utils.o c/bibop/area_roots.o c/bibop/remset.o
+
+bibop: $(GC_BIBOP_OBJS)
+
+c/scheme48-bibop-heap.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
+			c/scheme48vm-prelude.h c/scheme48write-barrier.h \
+			c/bibop/bibop.h \
+			c/c-mods.h c/event.h c/io.h c/fd-io.h
+
+c/bibop/page_alloc.o: c/bibop/page_alloc.h c/bibop/page_constants.h            \
+	c/bibop/memory.h
+c/bibop/memory_map.o: c/bibop/memory_map.h c/bibop/utils.h                     \
+	c/bibop/page_constants.h
+c/bibop/areas.o: c/bibop/areas.h c/bibop/page_constants.h c/bibop/utils.h      \
+	c/bibop/memory_map.h c/bibop/area_roots.h c/bibop/gc_config.h          \
+	c/bibop/remset.h
+c/bibop/generation_gc.o: c/bibop/generation_gc.h c/bibop/page_constants.h      \
+	c/bibop/areas.h c/bibop/memory.h c/bibop/data.h c/bibop/utils.h        \
+	c/bibop/memory_map.h c/bibop/check_heap.h c/bibop/area_roots.h         \
+	c/bibop/measure.h c/bibop/measure.ci 				       \
+	c/bibop/gc_config.h c/bibop/remset.h
+c/bibop/find_all.o: c/bibop/find_all.h c/bibop/generation_gc.h c/bibop/areas.h \
+	c/bibop/data.h c/bibop/memory.h
+c/bibop/check_heap.o: c/bibop/check_heap.h c/scheme48.h c/bibop/generation_gc.h\
+	c/bibop/utils.h c/bibop/data.h c/bibop/memory.h c/bibop/memory_map.h
+c/bibop/area_roots.o: c/bibop/area_roots.h c/bibop/areas.h c/bibop/memory.h    \
+	c/bibop/memory_map.h c/bibop/measure.h c/bibop/gc_config.h             \
+	c/bibop/remset.h
+c/bibop/remset.o: c/bibop/remset.h c/bibop/memory.h c/scheme48.h \
+	c/bibop/utils.h c/bibop/data.h c/bibop/generation_gc.h \
+	c/bibop/gc_config.h
+
+# End of BIBOP GC rules
+
+
 # SRFI rules
 
 SRFI_OBJECTS = c/srfi-27.o
@@ -217,24 +267,25 @@ SRFI_INITIALIZERS = s48_init_srfi_27
 # End of external rules
 # --------------------
 
-$(VM): c/main.o $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
+$(VM): c/main.o $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
 	rm -f /tmp/s48_external_$$$$.c &&				\
 	$(srcdir)/build/build-external-modules /tmp/s48_external_$$$$.c	\
 		$(EXTERNAL_INITIALIZERS) &&				\
-	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/main.o $(OBJS) $(UNIX_OBJS)	\
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/main.o 			\
+		$(OBJS) $(GC_OBJS) $(UNIX_OBJS)				\
 		/tmp/s48_external_$$$$.c				\
 		$(LIBOBJS) $(LIBS)					\
 		$(EXTERNAL_OBJECTS) $(EXTERNAL_LD_FLAGS) &&		\
 	rm -f /tmp/s48_external_$$$$.c
 
-$(LIBSCHEME48): $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
+$(LIBSCHEME48): $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
 	rm -f $@;							\
 	rm -f /tmp/s48_external_$$$$.c;					\
 	$(srcdir)/build/build-external-modules /tmp/s48_external_$$$$.c	\
 		$(EXTERNAL_INITIALIZERS) &&				\
 	$(CC) -c $(CFLAGS) -o  /tmp/s48_external_$$$$.o			\
 			/tmp/s48_external_$$$$.c &&			\
-	ar cq $@ $(OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)	\
+	ar cq $@ $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)	\
 		/tmp/s48_external_$$$$.o &&				\
 	ranlib $@ &&					\
 	rm -f /tmp/s48_external_$$$$.c
@@ -247,23 +298,17 @@ c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
 		-DDEFAULT_IMAGE_NAME=\"$(LIB)/$(IMAGE)\" \
 		$(CPPFLAGS) $(DEFS) $(srcdir)/c/main.c
 
-c/scheme48vm.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
-			c/scheme48image.h c/bignum.h c/event.h \
-			c/io.h c/fd-io.h \
-			c/scheme48vm-prelude.h c/c-mods.h
-c/scheme48heap.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
-			c/scheme48vm-prelude.h c/c-mods.h \
-			c/event.h c/io.h c/fd-io.h
+c/scheme48vm.o: c/prescheme.h c/scheme48vm.h \
+		c/scheme48write-barrier.h c/scheme48heap.h \
+		c/scheme48image.h c/bignum.h c/event.h \
+		c/io.h c/fd-io.h \
+		c/scheme48vm-prelude.h c/c-mods.h
 
-c/scheme48read-image.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
-			c/scheme48vm-prelude.h c/c-mods.h
-c/scheme48write-image.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
-			c/scheme48vm-prelude.h c/c-mods.h
-c/bignum.o: c/bignum.h c/bignumint.h c/scheme48.h
-c/extension.o: c/sysdep.h $(FAKEHS) c/scheme48.h c/scheme48vm.h
+c/bignum.o: c/bignum.h c/bignumint.h $(SCHEME48HS)
+c/extension.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS) c/scheme48vm.h
 c/free.o: c/sysdep.h
-c/external.o: c/sysdep.h $(FAKEHS) c/scheme48.h c/c-mods.h
-c/unix/sysexits.o: c/sysdep.h $(FAKEHS) c/scheme48.h
+c/external.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS) c/c-mods.h
+c/unix/sysexits.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS)
 c/unix/event.o: c/sysdep.h $(FAKEHS) c/c-mods.h \
 			c/scheme48vm.h c/scheme48heap.h \
 			c/event.h c/fd-io.h \
@@ -375,7 +420,7 @@ configure: configure.in
 
 clean:
 	-rm -f $(VM) script-interpreter					\
-		*.o c/unix/*.o c/posix/*.o c/*.o c/fake/*.o		\
+		*.o c/unix/*.o c/posix/*.o c/*.o c/fake/*.o c/bibop/*.o\
 		TAGS $(IMAGE)						\
 		build/*.tmp $(MANPAGE) build/linker.image		\
 		scheme/debug/*.image scheme/debug/*.debug config.cache	\
@@ -664,20 +709,50 @@ c/old-scheme48.h: scheme/vm/interp/arch.scm scheme/vm/data/data.scm \
 			  \"$(srcdir)/scheme/vm/data/data.scm\")"   	\
 	) | $(RUNNABLE)
 
-# Generate vm (scheme48vm.c and scheme48heap.c) from VM sources.
+# Generate VM and GC from VM sources.
 # Never called automatically.  Do not use unless you are sure you
 # know what you are doing.
 # Afterwards, you should probably make c/scheme48.h.
-i-know-what-i-am-doing:
-	cd $(srcdir)/ps-compiler &&						     \
+
+i-know-what-i-am-doing: compile-vm compile-twospace-gc compile-bibop-gc
+
+# compiles VM without GC
+
+compile-vm:
+	cd ps-compiler &&						     \
 	(echo ',batch';							     \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
 		echo ',exec ,load load-ps-compiler.scm';		     \
 		echo ',exec ,load compile-vm-no-gc.scm';		     \
-		echo ',exec ,load compile-gc.scm';			     \
 		echo ',exit'						     \
 	) | $(RUNNABLE) -h 8000000 &&					     \
-		mv ../scheme/vm/scheme48vm.c ../scheme/vm/scheme48heap.c     \
-		   ../scheme/vm/scheme48write-image.c			     \
-		   ../scheme/vm/scheme48read-image.c ../c
+		mv ../scheme/vm/scheme48vm.c ../c
+
+
+# compiles the two-space copier GC
+
+compile-twospace-gc:
+	cd ps-compiler &&						     \
+	(echo ',batch';							     \
+		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
+		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
+		echo ',exec ,load load-ps-compiler.scm';		     \
+		echo ',exec ,load compile-twospace-gc.scm';		     \
+		echo ',exit'						     \
+	) | $(RUNNABLE) -h 8000000 &&					     \
+		mv ../scheme/vm/scheme48-twospace-heap.c ../c
+
+# compiles the BIBOP GC
+
+compile-bibop-gc:
+	cd ps-compiler &&						     \
+	(echo ',batch';							     \
+		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
+		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
+		echo ',exec ,load load-ps-compiler.scm';		     \
+		echo ',exec ,load compile-bibop-gc.scm';		     \
+		echo ',exit'						     \
+	) | $(RUNNABLE) -h 8000000 &&					     \
+		mv ../scheme/vm/scheme48-bibop-heap.c ../c
+

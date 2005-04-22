@@ -119,7 +119,10 @@
     (cons
      ,(proc (value-type value-type) pair-type))
     (intern
-     ,(proc (string-type) symbol-type))))
+     ,(proc (string-type) symbol-type))
+    (make-weak-pointer
+     ,(proc (value-type) value-type))))
+
 
 ; Can't do I/O until the meta-types interface exports input-port-type and
 ; output-port-type.

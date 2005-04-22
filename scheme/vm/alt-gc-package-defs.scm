@@ -11,20 +11,25 @@
       (external "s48_make_availableAgc" (=> (integer) null)))
     (define s48-allocate-small
       (external "s48_allocate_small" (=> (integer) address)))
+    (define s48-allocate-weak+gc
+      (external "s48_allocate_weakAgc" (=> (integer) address)))
     (define s48-allocate-traced+gc
       (external "s48_allocate_tracedAgc" (=> (integer) address)))
     (define s48-allocate-untraced+gc
-      (external "s48_allocate_untracedAgc" (=> (integer) address)))))
+      (external "s48_allocate_untracedAgc" (=> (integer) address)))
+    (define s48-allocate-untraced-unmovable+gc
+      (external "s48_allocate_untraced_unmovableAgc" (=> (integer) address)))
+    ))
 
 (define-structure heap heap-interface
   (open prescheme)
   (begin
     (define s48-available
       (external "s48_available" (=> () integer)))
-    (define s48-available?
-      (external "AVAILABLEp" (=> (integer) boolean))) ; macro
     (define s48-heap-size
       (external "s48_heap_size" (=> () integer)))
+    (define s48-max-heap-size
+      (external "s48_max_heap_size" (=> () integer)))
     (define s48-gather-objects
       (external "s48_gather_objects" (=> ((=> (integer) boolean)
 					  (=> ((=> (integer) boolean)) boolean))
@@ -35,24 +40,17 @@
       (external "s48_find_all_records" (=> (integer) integer)))
     (define s48-write-barrier
       (external "S48_WRITE_BARRIER" (=> (integer address integer) null)))
-    (define s48-*hp*
-      (external "s48_ShpS" integer))
-    (define s48-*limit*
-      (external "s48_SlimitS" integer))
-    (define s48-oldspace-begin
-      (external "s48_oldspace_begin" (=> () address)))
-    (define s48-oldspace-end
-      (external "s48_oldspace_end" (=> () address)))
-    (define s48-heap-begin
-      (external "s48_heap_begin" (=> () address)))
-    (define s48-heap-pointer
-      (external "s48_heap_pointer" (=> () address)))))
+
+    (define s48-stob-in-heap?
+      (external "s48_stob_in_heapP" (=> (integer) boolean)))
+    ))
+
 
 (define-structure gc gc-interface
   (open prescheme)
   (begin
     (define s48-collect
-      (external "s48_collect" (=> () null)))
+      (external "s48_collect" (=> (boolean) null)))
     (define s48-trace-value
       (external "s48_trace_value" (=> (integer) integer)))
     (define s48-trace-locations!
@@ -65,11 +63,6 @@
     (define s48-extant?
       (external "s48_extantP" (=> (integer) boolean)))
     (define s48-gc-count
-      (external "s48_gc_count" (=> () integer)))))
-
-(define-structure heap-init (export s48-initialize-heap)
-  (open prescheme)
-  (begin
-    (define s48-initialize-heap
-      (external "s48_initialize_heap" (=> (integer integer address) address)))))
+      (external "s48_gc_count" (=> () integer)))
+    ))
 

@@ -69,7 +69,7 @@ extern psbool		s48_release_gc_roots_baseB(char *);
 S48_EXTERN char *	s48_register_gc_rootB(char *);
 S48_EXTERN void		s48_unregister_gc_rootB(char *);
 extern void		s48_reset_external_rootsB(void);
-extern void		s48_post_gc_cleanup(void);
+extern void		s48_post_gc_cleanup(psbool, psbool);
 
 /* for native code */
 extern void		s48_copy_stack_into_heap();

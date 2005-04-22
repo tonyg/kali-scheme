@@ -12,7 +12,7 @@
     (define s48-write-image
       (external "s48_write_image" (=> (integer integer output-port) integer)))
     (define s48-read-image
-      (external "s48_read_image" (=> (integer) integer)))
+      (external "s48_read_image" (=> (integer integer) integer)))
 
     (define s48-startup-procedure
       (external "s48_startup_procedure" (=> () integer)))
@@ -25,8 +25,16 @@
     (define s48-resumer-records
       (external "s48_resumer_records" (=> () integer)))
 
+    (define s48-relocate-all
+      (external "s48_relocate_all" (=> (integer address address integer integer integer) null)))
+
     (define s48-initialization-complete!
       (external "s48_initialization_completeB" (=> () null)))
     (define s48-initializing-gc-root
-      (external "s48_initializing_gc_root" (=> () null)))))
+      (external "s48_initializing_gc_root" (=> () null)))
+
+    ;; For debugging
+    (define get-all-globals
+      (external "get_all_globals" (=> () null)))
+))
 

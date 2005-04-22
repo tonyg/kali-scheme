@@ -186,7 +186,7 @@
    (lambda stuff
      (schedule-event thread
 		     (enum event-type interrupt)
-		     (enum interrupt post-gc))))
+		     (enum interrupt post-major-gc))))
   (call-when-deadlocked!
    (lambda stuff
      (schedule-event thread

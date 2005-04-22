@@ -31,16 +31,17 @@
 ; but these are mostly taken care by the image-writing utilities.
 
 (define (s48-write-image resume-proc undumpables port)
-  (begin-making-image (integer->address image-start-address) undumpables)
+  (begin-making-image undumpables)
   (if (image-write-init port)
       (let ((resume-proc (trace-image-value resume-proc)))
 	(trace-exported-bindings (s48-exported-bindings))
 	(make-image)
 	(cond ((table-okay? *stob-table*)
-	       (write-header resume-proc port)
-	       (write-descriptor false)		; for endianess check
+	       (write-header *resumer-records* resume-proc image-descriptor port)
+	       (write-descriptor false)	; for endianess check
 	       (write-image)
 	       (empty-image-buffer!)
+	       (deallocate-areas)
 	       (deallocate-table *stob-table*)
 	       (image-write-terminate)
 	       (image-write-status))
@@ -49,26 +50,6 @@
 	       (image-write-terminate)
 	       (enum errors out-of-memory))))
       (enum errors out-of-memory)))
-
-(define (write-header resume-proc port)    
-  (write-check (write-char #\newline port))
-  (write-page)
-  (write-check (write-char #\newline port))
-  (write-check (write-string architecture-version port))
-  (write-check (write-char #\newline port))
-  (write-header-integer bytes-per-cell)
-  (write-header-integer (a-units->cells image-start-address))
-  (write-header-integer (a-units->cells (+ image-start-address (image-size))))
-  (write-header-integer (image-descriptor (s48-symbol-table)))
-  (write-header-integer (image-descriptor (s48-imported-bindings)))
-  (write-header-integer (image-descriptor (s48-exported-bindings)))
-  (write-header-integer *resumer-records*)
-  (write-header-integer resume-proc)
-  (write-page))
-
-; Later this will be something sensible.
-
-(define image-start-address 0)
 
 ; The interface to the GC consists of the following, listed in the order in
 ; which they are called.
@@ -95,33 +76,23 @@
 ;   Write out all the objects in the stob table and then the symbol and
 ;   imported/exported tables and finally the resumer records.
 
-(define (begin-making-image start-address undumpable)
+(define (begin-making-image undumpable)
   (set! *stob-table*  (make-table))
   (set! *first-stob*  false)
   (set! *last-stob*   (null-pointer))
-  (set! *image-begin* start-address)
-  (set! *image-hp*    start-address)
   (set! *undumpable-records* undumpable)
   (set! *undumpable-count* 0)
-  (set! *resumer-count* 0))
+  (set! *resumer-count* 0)
+
+  (begin-making-image/gc-specific))
 
 (define *stob-table*)		; Table mapping stobs to image-location records.
 (define *first-stob*)		; The beginning and end of the list
 (define *last-stob*)		;  of image-location records.
-(define *image-begin*)		; Starting address.
-(define *image-hp*)		; Current ending address.
 (define *resumer-count*)	; Number of resumer records found so far.
 (define *resumer-records*)	; Vector of resumer records created in image.
 (define *undumpable-records*)   ; Vector passed to us for undumpable records.
 (define *undumpable-count*)	; How many we have found so far.
-
-(define (image-size)
-  (address-difference *image-hp* *image-begin*))
-
-(define (image-alloc length-in-a-units)
-  (let ((data-addr (address+ *image-hp* (cells->a-units stob-overhead))))
-    (set! *image-hp* (address+ data-addr length-in-a-units))
-    (address->stob-descriptor data-addr)))
 
 ; Is THING in the image.
 
@@ -148,7 +119,7 @@
 ; the table so that THING will not be traced again and so that references to
 ; it will be written out as the alias.
 
-(define (trace-undumpable thing)	      
+(define (trace-undumpable thing)
   (note-undumpable! thing)
   (let* ((alias (undumpable-alias thing))
 	 (new-alias (trace-image-value alias))
@@ -162,9 +133,8 @@
 ; for it.
 
 (define (add-new-image-object stob)
-  (let* ((new-descriptor (image-alloc
-			   (header-length-in-a-units (stob-header stob))))
-	 (new (make-image-location new-descriptor)))
+  (receive (new-descriptor new)
+      (allocate-new-image-object stob)
     (if (null-pointer? new)
 	(break-table! *stob-table*)
 	(begin
@@ -175,7 +145,8 @@
 	  (set-image-location-next! new false)
 	  (table-set! *stob-table* stob new)
 	  (if (resumer-record? stob)
-	      (set! *resumer-count* (+ *resumer-count* 1)))))
+	      (set! *resumer-count* (+ *resumer-count* 1)))
+	  (finalize-new-image-object stob)))
     new-descriptor))
 
 ; Return the value of THING in the image.  If there has been an error the
@@ -203,12 +174,15 @@
 	  (if (stob? next)
 	      (loop next)))))
   (let ((last *last-stob*))
+    (note-traced-last-stob!)
     (trace-image-value (s48-symbol-table))
     (trace-image-value (s48-imported-bindings))
     (trace-image-value (s48-exported-bindings))
     (set-image-location-next! last false))
+  
   (set! *resumer-records*
-	(image-alloc (cells->a-units *resumer-count*))))
+	(image-alloc (enum area-type-size small) (cells->a-units *resumer-count*)))
+  (adjust-descriptors! *stob-table*))
 
 (define (trace-contents stob)
   (let ((header (stob-header stob)))
@@ -236,13 +210,7 @@
 ; MAKE-IMAGE.
 
 (define (write-image)
-  (let loop ((stob *first-stob*))
-    (if (stob? stob)
-	(let ((location (table-ref *stob-table* stob)))
-	  (if (null-pointer? location)
-	      (error "traced stob has no image-table entry"))
-	  (write-stob stob)
-	  (loop (image-location-next location)))))
+  (write-image-areas *first-stob* *stob-table* write-stob)
   (write-symbol-table (s48-symbol-table))
   (write-shared-table (s48-imported-bindings))
   (write-shared-table (s48-exported-bindings))
@@ -267,7 +235,7 @@
 	   (if (b-vector-header? header)
 	       (write-image-block start (header-length-in-a-units header))
 	       (write-descriptors start (header-length-in-cells header)))))))
-	       
+
 (define (write-descriptors start cells)
   (let ((end (address+ start (cells->a-units cells))))
     (do ((addr start (address1+ addr)))
@@ -429,4 +397,8 @@
 (define weak-pointer-header
   (make-header (enum stob weak-pointer)
 	       (cells->bytes (- weak-pointer-size 1))))
+
+
+
+
 

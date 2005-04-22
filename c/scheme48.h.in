@@ -1,11 +1,6 @@
 /* Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 /* 
  * For building and linking DLLs on Windows, we need to mark functions
  * the DLL calls in Scheme 48 and vice versa explicitly---and differently
@@ -29,8 +24,6 @@ extern "C"
 #endif
 
 #define S48_EXTERN extern S48_EXTERN_ADD_ONS
-
-#include "scheme48write-barrier.h"
 
 typedef long	s48_value;
 
@@ -266,7 +259,4 @@ S48_EXTERN void s48_check_record_type(s48_value record, s48_value type_binding);
 				    S48_SHARED_BINDING_NAME(binding));	\
   } while(0)
 
-#ifdef __cplusplus
-/* closing brace for extern "C" */
-}
-#endif
+

@@ -90,6 +90,15 @@
 	false
 	(initialize-stob addr type len))))
 
+(define (make-weak-pointer init weak-pointer-size)
+  (let* ((addr (s48-allocate-weak+gc (cells->bytes weak-pointer-size)))
+	 (weak-pointer (initialize-stob addr 
+					(enum stob weak-pointer) 
+					(cells->bytes (- weak-pointer-size 1)))))
+    (d-vector-init! weak-pointer 0 init)
+    weak-pointer))
+
+
 ; Add the header to a stob and add the tag to the address.
 
 (define (initialize-stob addr type len)

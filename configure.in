@@ -1,5 +1,25 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
+dnl
+define(S48_PICK_GC, [dnl
+AC_ARG_ENABLE([gc],
+[AC_HELP_STRING([--enable-gc=GC],
+                [choose garbage collector (twospace, bibop), default is twospace])],
+              [dnl
+                case $enableval in
+                  twospace )
+			AC_DEFINE([S48_GC_TWOSPACE], 1, [Define if building with two-space GC.])
+			GC_OBJS='${GC_TWOSPACE_OBJS}' ;;
+                  bibop )
+			AC_DEFINE([S48_GC_BIBOP], 1, [Define if building with BIBOP GC.])
+			GC_OBJS='${GC_BIBOP_OBJS}' ;;
+                  * ) AC_MSG_ERROR([Invalid argument to --enable-gc]) ;;
+		esac
+	      ],
+	      [AC_DEFINE([S48_GC_TWOSPACE], 1, [Define if building with two-space GC.])
+	       GC_OBJS='$(GC_TWOSPACE_OBJS)'])dnl
+])dnl
+dnl
 dnl We might want AC_WORDS_BIGENDIAN in the future.
 dnl We might want AC_CHAR_UNSIGNED in the future.
 dnl
@@ -40,6 +60,18 @@ define(S48_RDYNAMIC, [dnl
 		[AC_MSG_RESULT(yes)
 			LDFLAGS="$LDFLAGS -rdynamic"])
 ])dnl
+dnl
+define(S48_INLINE, [dnl
+AC_MSG_CHECKING([for inline keyword])
+AC_COMPILE_IFELSE([#include <stdio.h>
+
+inline void f(void)
+{
+  printf("inlined");
+}], [AC_MSG_RESULT([yes])
+     AC_DEFINE([HAVE_INLINE], [1], [Define if the C compiler supports the inline keyword])],
+    [AC_MSG_RESULT([no])])
+])
 dnl
 define(S48_IEEE_ENDIANNESS, [dnl
 AC_MSG_CHECKING([IEEE floating-point endianness])
@@ -96,11 +128,14 @@ define(S48_CREATE_BUILD_DIRS, [dnl
 dnl
 AC_INIT(c/prescheme.h)
      AC_CONFIG_HEADER(c/sysdep.h)
+     AC_CONFIG_HEADER(c/scheme48write-barrier.h)
+     S48_PICK_GC
      S48_CREATE_BUILD_DIRS
      S48_PROG_CC
      AC_ISC_POSIX
      dnl set the cross-compile flag before we try anything.
      AC_TRY_RUN([int main() { return 0;}], [], [], [true])
+     S48_INLINE
      AC_PROG_INSTALL
      AC_CHECK_LIB(m, main)
      AC_CHECK_LIB(dl, main)
@@ -190,4 +225,7 @@ fail
      S48_IEEE_ENDIANNESS
      AC_SUBST(CFLAGS)
      AC_SUBST(LDFLAGS)
+     AC_SUBST(GC_OBJS)
+     AC_SUBST(S48_GC_TWOSPACE)
+     AC_SUBST(S48_GC_BIBOP)
 AC_OUTPUT(Makefile)

@@ -23,11 +23,14 @@
 (define-shared-primitive-data-type closure #f #f)
 (define-shared-primitive-data-type location)
 (define-shared-primitive-data-type cell)
+
 (define-shared-primitive-data-type weak-pointer)
+
 (define-shared-primitive-data-type shared-binding #f #f
   #f
   ()
   (shared-binding-next set-shared-binding-next!))	; hidden from RTS
+
 (define-shared-primitive-data-type port)
 (define-shared-primitive-data-type channel #f #f
   make-channel                           		; hidden from RTS

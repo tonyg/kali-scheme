@@ -17,21 +17,13 @@
 (define *oldspace-begin*)
 (define *oldspace-end*)
 
-; For the image code
+(define *new-heap-start-addr* null-address)
 
-(define (s48-heap-begin)
+(define (heap-begin)
   *newspace-begin*)
 
-(define (s48-heap-pointer)
-  s48-*hp*)
-
-(define (s48-oldspace-begin)
-  *oldspace-begin*)
-
-(define (s48-oldspace-end)
-  *oldspace-end*)
-
-; For the GC
+(define (get-new-heap-start-addr)
+  *new-heap-start-addr*)
 
 (define (heap-pointer)
   s48-*hp*)
@@ -44,33 +36,43 @@
 
 ;----------------
 
-(define (s48-initialize-heap heap-size image-size image-start)
-  (let* ((minimum-size (* 4 image-size)) ; two semi-spaces, won't totally thrash
-	 (heap-size (if (< heap-size minimum-size)
+(define (s48-initialize-heap max-heap-size image-start-address image-size)
+  (let* ((minimum-size (* 4 image-size))
+	 (heap-size (if (< max-heap-size minimum-size)
 			(begin
-			  (write-error-string "heap size ")
-			  (write-error-integer heap-size)
+			  (write-error-string "Heap size ")
+			  (write-error-integer max-heap-size)
 			  (write-error-string " is too small, using ")
 			  (write-error-integer minimum-size)
+			  (write-error-string " cells")
 			  (write-error-newline)
 			  minimum-size)
-			heap-size))
-	 (heap (allocate-memory (cells->a-units heap-size))))
+			max-heap-size))
+	 (heap (allocate-memory (* 2 (cells->a-units heap-size)))))
+	  
     (if (null-address? heap)
 	(error "unable to allocate heap space"))
-    (let ((semisize (cells->a-units (quotient heap-size 2))))
+    (let ((semisize (cells->a-units heap-size)))
       (set! *newspace-begin* heap)
       (set! *newspace-end* (address+ *newspace-begin* semisize))
       (set! *oldspace-begin* *newspace-end*)
       (set! *oldspace-end* (address+ *oldspace-begin* semisize))
-      (if (address= *oldspace-begin* image-start)
+		
+      (if (address= *oldspace-begin* image-start-address)
 	  (swap-spaces))
+		
       (set! *oldspace-hp* *oldspace-begin*)
       (set! *oldspace-limit* *oldspace-end*)
-      (set! s48-*hp*
-	    (address+ *newspace-begin* (cells->a-units image-size)))
+		
+      (set! s48-*hp* *newspace-begin*)
       (set! s48-*limit* *newspace-end*)
-      *newspace-begin*)))
+      (set! *new-heap-start-addr* *newspace-begin*))))
+
+
+; The check is already done in S48-INITIALIZE-HEAP
+; This is only for the PreScheme compiler
+(define (s48-check-heap-size!)
+  (unspecific))
 
 ; To write images we need to be able to undo the swapping.
 
@@ -100,6 +102,15 @@
 
 (define (s48-heap-size)
   (address-difference *newspace-end* *newspace-begin*))
+
+; check if we're running out of space
+(define (in-trouble?)
+  (< (s48-available)
+     (quotient (s48-max-heap-size) 10)))
+
+; it's the same here
+(define (s48-max-heap-size)
+  (bytes->cells (address-difference *newspace-end* *newspace-begin*)))
 
 (define (store-next! descriptor)
   (store! s48-*hp* descriptor)
@@ -326,6 +337,12 @@
 	   (check-lost "Heap-check: stob has no header."))
 	  (else
 	   #t))))
+
+(define s48-stob-in-heap? check-stob)
+
+(define (s48-initialize-image-areas s l w)
+  (= s 0) (= l 0) (= w 0) ; for the typechecker
+  (unspecific))
 
 (define (check-lost message)
   (write-string message (current-error-port))

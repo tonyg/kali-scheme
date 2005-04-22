@@ -164,7 +164,9 @@
 	(cond ((not (false? vector))
 	       (goto return vector))
 	      (first?
-	       (s48-collect)
+	       ;; if the result vector couldn't be created force a
+	       ;; major collection and try again once.
+	       (s48-collect #t)
 	       (loop #f))
 	      (else
 	       (raise-exception heap-overflow 0)))))))

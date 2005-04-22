@@ -31,7 +31,6 @@ Programming environment:
     Export the VM's preview displayer as a procedure for debugging.
 
 Performance:
-    Generational GC.
     More compact representation for debugging data?
     Leaf procedure compilation (RK's rts/no-leaf-env.scm): if no
       continuations or lambdas, skip the make-env and access locals
@@ -82,7 +81,6 @@ Module system features:
       segment.scm).
 
 VM:
-    Heaps that can grow larger.
     Add a test to configure.in that can determine whether ld -A works.
       If both it and dlopen() work, then both kinds of dynamic loading
       should be made available.

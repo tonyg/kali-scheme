@@ -9,7 +9,7 @@
   (initialize-memory)
   (call-with-output-file file
     (lambda (port)
-      (let ((start (transport start-proc))  ; transport the start-proc
+      (let ((start (transport start-proc)) ; transport the start-proc
 	    (false (transport #f)))
 	(display id-string port)
 	(newline port)
@@ -17,14 +17,17 @@
 	(newline port)
 	(display architecture-version port)
 	(newline port)
+        (display "0" port)		; image format; must be synchronized with
+					; IMAGE-FORMAT in image-util.scm
+        (newline port)
 	(boot-write-number bytes-per-cell        port)
-	(boot-write-number 0                     port)   ; newspace begin
+	(boot-write-number 0                     port) ; newspace begin
 	(boot-write-number (a-units->cells *hp*) port)
-	(boot-write-number false                 port)   ; symbol table
-	(boot-write-number false                 port)   ; imported bindings
-	(boot-write-number false                 port)   ; exported bindings
-	(boot-write-number false                 port)   ; resumer records
-	(boot-write-number start                 port)   ; start-proc
+	(boot-write-number false                 port) ; symbol table
+	(boot-write-number false                 port) ; imported bindings
+	(boot-write-number false                 port) ; exported bindings
+	(boot-write-number false                 port) ; resumer records
+	(boot-write-number start                 port) ; start-proc
 	(write-page port)
 	(write-descriptor 1 port)	; endianness indicator
 	(write-heap port))))		; write out the heap

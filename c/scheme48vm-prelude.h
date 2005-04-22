@@ -30,21 +30,6 @@ extern s48_value	s48_extended_vm(long, s48_value),
 extern long		s48_call_native_procedure(long, long),
 			s48_invoke_native_continuation(long, long);
 
-/*
- * The following are hand-written macro versions of procedures
- * in scheme48heap.c.
- */
-
-#define	AVAILABLEp(cells)	(s48_ShpS + ((cells)<<2) < s48_SlimitS)
-
-static char	*_HHallocate_temp;
-
-#define	ALLOCATE_SPACE(type, len)		\
-		(_HHallocate_temp = s48_ShpS,	\
-			s48_ShpS += ((len)+3) & ~3,	\
-			_HHallocate_temp)
-
-
 #define	GET_PROPOSAL_LOCK()	((void)0)
 #define	RELEASE_PROPOSAL_LOCK()	((void)0)
 #define SHARED_REF(x)		(x)

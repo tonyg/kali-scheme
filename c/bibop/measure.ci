@@ -1,0 +1,707 @@
+/* Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees.
+   See file COPYING. */
+
+/* This file needs to be included from generation_gc.c, because for
+   reasons of simplicity we use static variables from there directly
+   here. */
+
+/* Not really sure if this is true:
+
+   MEASURE_GC was an old flag by Norbert, which activated writing out
+   several files with Sexps, containing the size of the heap, the
+   areas, and some timing information. Most (all?) of it is actually
+   stripped off here with "#if 0".
+
+   S48_MEASURE_GC_TIME is the newer flag by Christos, used to write
+   out gnuplot files with detailed timing informations and size
+   informations that are taking out of the same variables as
+   MEASURE_GC did.
+
+   DISPLAY_MEASURE_GC additionally prints out some infos to stdout
+   about what's going on with the measurement.
+
+   This should be made less confusing and working properly.
+
+   -- David
+*/
+
+FILE* datafile;
+
+/* controlled by s48_collect: */
+void start_measure() {
+  datafile = fopen("MEASURE-GC", "a");
+  fprintf(datafile, " ( ");
+}
+
+void stop_measure() {
+  fprintf(datafile, " ) \n \n");
+  fclose(datafile);
+}
+
+static unsigned long count_collection = 0;
+
+/* write-barrier and inter-generational-pointer */
+static unsigned int count_wb = 0;
+static unsigned int count_gc_wb = 0;
+static unsigned int count_igp = 0;
+static unsigned int count_gc_igp = 0;
+
+
+/* visited and passed areas from trace_areas_roots */
+
+static unsigned long  count_areas_roots_visited = 0;
+static unsigned long  count_areas_roots_passed = 0;
+
+/* the heap usage and size */
+
+static unsigned long count_heap_size = 0;
+static unsigned long count_heap_usage = 0;
+
+
+static unsigned long old_heap_size = 0;
+
+unsigned long get_wbarrier() {
+  return count_wb;
+}
+
+unsigned long get_gc_wbarrier() {
+  return count_gc_wb;
+}
+
+unsigned long get_igen() {
+  return count_igp;
+}
+
+unsigned long get_gc_igen() {
+  return count_gc_igp;
+}
+
+
+int write_area_size(int size, int gens[]){
+  int i;
+
+  fprintf(datafile, " (areasize ");
+
+  /* the creation space: */
+  fprintf(datafile, " %d ", gens[size]);
+  
+  for(i = 0; i < size; i++){
+
+    /* the generations: */
+    fprintf(datafile, " %d ", gens[i]);
+  }
+  fprintf(datafile, " ) ");
+
+  return 0;
+}
+
+
+
+/* mark_cons ratio */
+int write_mc_ratio() {
+  double r = ((double) count_heap_usage) / 
+    ((double) (count_heap_size - count_heap_usage));
+  fprintf(datafile, " (mcratio ");
+  fprintf(datafile, " %f", r);
+  fprintf(datafile, " ) ");
+
+  return 0;
+}
+
+int write_heap_usage_size(){
+  fprintf(datafile, " (heap ");
+  fprintf(datafile, " %d ", count_heap_size);
+  fprintf(datafile, " %d ", count_heap_usage);
+  fprintf(datafile, " ) ");
+
+  return 0;
+}
+
+/*sum of write-barrier calls and created inter-generational-pointer*/
+int write_wb_igp(){
+  fprintf(datafile, " (wb ");
+  fprintf(datafile, " %d", count_wb);
+  fprintf(datafile, " %d", count_igp);
+  fprintf(datafile, " ) ");
+  return 0;
+}
+  
+/* which generation is collected */
+int write_minor_major_gc(int n){
+  fprintf(datafile, " (gens ");
+  fprintf(datafile, " %d ", n); /* collect the first n gens */
+  fprintf(datafile, " %d ", count_collection); /* collection number */
+  fprintf(datafile, " ) ");
+
+  return 0;
+}
+
+/* ratio of vistied/passed areas in trace_areas_roots */
+int write_areas_roots_ratio(){
+  double ratio = ((((double) count_areas_roots_passed)  / 
+		   ((double) count_areas_roots_visited)) * 100);
+  fprintf(datafile, " (arearoots ");
+  fprintf(datafile, " %f ", ratio);
+  fprintf(datafile, " ) ");
+  return 0;
+}
+
+
+/* -- the "#ifdef" functions: -- */
+
+
+/* writing some data just before the collection:*/
+
+
+/************************************************************************
+called in: <file>::<function>
+./c/bibop/generation_gc.c::s48_collect
+*************************************************************************/
+void measure_gc_start(int c){
+  count_collection++;
+
+  if (old_heap_size < count_heap_size){
+      old_heap_size = count_heap_size;
+  }
+
+  start_measure();  /* opens fileport */
+  write_minor_major_gc(c);
+  write_heap_usage_size();
+  
+  /* small and large area numbers are invoked in s48_collect*/
+}
+
+/* next gc (in generation n) is triggerd and finished */
+/************************************************************************
+called in: <file>::<function>
+./c/bibop/generation_gc.c::s48_collect
+*************************************************************************/
+void measure_gc_end() {
+  write_mc_ratio();
+  write_heap_usage_size();
+  write_wb_igp();
+  write_areas_roots_ratio();
+  stop_measure();  /* closes fileport */
+}
+
+
+/************************************************************************
+called in: ./c/bibop/area_roots.c::s48_write_barrier
+*************************************************************************/
+void measure_write_barrier(char flag) {
+  if (flag){
+    /* so we have a inter-gen-pointer..*/
+    count_igp++;
+  }
+  count_wb++;
+}
+
+/************************************************************************
+called in:./c/bibop/area_roots.c::s48_write_internal_barrier
+*************************************************************************/
+void measure_gc_write_barrier() {
+    /* when we call this we have a new inter-gen-pointer..*/
+    count_gc_igp++;
+    count_gc_wb++;
+}
+
+
+/* number of small/large areas per generation */
+/************************************************************************
+called in: <file>::<function>
+./c/bibop/generation_gc.c::get_area_objects
+*************************************************************************/
+void measure_small_areas(int size, int small[]){
+
+  write_area_size(size, small);
+}
+
+/************************************************************************
+called in: <file>::<function>
+./c/bibop/generation_gc.c::get_area_objects
+*************************************************************************/
+void measure_large_areas(int size, int large[]){
+
+  write_area_size(size, large);
+}
+
+/* get the data from trace_areas_roots() */
+/************************************************************************
+called in: <file>::<function>
+./c/bibop/area_roots.c::s48_trace_areas_roots
+*************************************************************************/
+void measure_areas_roots(unsigned long visited, unsigned long passed){
+  count_areas_roots_visited += visited;
+  count_areas_roots_passed += passed;
+}
+
+/************************************************************************
+called in: <file>::<function>
+./c/bibop/generation_gc.c::s48_collect
+*************************************************************************/
+void measure_heap_size(unsigned long size){
+  count_heap_size = size;
+}
+
+/************************************************************************
+called in: ./c/bibop/generation_gc.c::s48_collect
+*************************************************************************/
+void measure_heap_usage(unsigned long usage){
+  count_heap_usage = usage;
+}
+
+/************************************************************************
+called in: ./c/bibop/generation_gc.c::s48_collect
+*************************************************************************/
+void  clear_measurement(){
+
+  count_wb = 0;
+  count_igp = 0;
+  count_areas_roots_passed = 0;
+  count_areas_roots_visited = 0;
+
+  count_gc_wb = 0;
+  count_gc_igp = 0;
+
+}
+
+unsigned long get_areas_size(Area* areas) {
+  unsigned long size = 0;
+  FOR_ALL_AREAS(areas,
+		size += (area->frontier - area->start));
+  return size;
+}  
+
+typedef struct {
+  unsigned long gen_small_current;  /* generation small area current */
+  unsigned long gen_small_other;    /* generation small area other */
+  unsigned long gen_large_current;  /* generation large area current */
+  unsigned long gen_large_other;    /* generation large area other */
+  unsigned long gen_weaks_current;  /* generation weaks area current */
+  unsigned long gen_weaks_other;    /* generation weaks area other */
+} GenImg;
+
+typedef struct {
+  unsigned long gc_nr;           /* collection number */
+  unsigned long cs_small_below;  /* creation space small below area */
+  unsigned long cs_small_above;  /* creation space small above area */
+  unsigned long cs_large;        /* creation space large area */
+  unsigned long cs_weaks;        /* creation space weaks area */
+  unsigned long wbarrier;        /* write barrier calls */
+  unsigned long igen;            /* intergenerational pointers (old->young) */
+  unsigned long gc_wbarrier;     /* internal write barrier calls */
+  unsigned long gc_igen;         /* internal intergenerational pointers (old->young) */
+
+  /* Generations */
+  GenImg genImgs[S48_GENERATIONS_COUNT];
+} HeapImg;
+
+void takeHeapImg(HeapImg* hi) {
+  int i;
+  
+  hi->gc_nr          = s48_gc_count();
+  hi->cs_small_below = get_areas_size(creation_space.small_below);
+  hi->cs_small_above = get_areas_size(creation_space.small_above);
+  hi->cs_large       = get_areas_size(creation_space.large);
+  hi->cs_weaks       = get_areas_size(creation_space.weaks);
+  hi->wbarrier       = get_wbarrier();      /* measure.h */
+  hi->gc_wbarrier    = get_gc_wbarrier();   /* measure.h */
+  hi->igen           = get_igen();          /* measure.h */
+  hi->gc_igen        = get_gc_igen();       /* measure.h */
+  
+  for (i = 0; i < S48_GENERATIONS_COUNT; i++) {
+    hi->genImgs[i].gen_small_current =
+      get_areas_size(generations[i].current_space->small_area);
+    hi->genImgs[i].gen_small_other   =
+      get_areas_size(generations[i].other_space->small_area);
+    hi->genImgs[i].gen_large_current =
+      get_areas_size(generations[i].current_space->large_area);
+    hi->genImgs[i].gen_large_other   =
+      get_areas_size(generations[i].other_space->large_area);
+    hi->genImgs[i].gen_weaks_current =
+      get_areas_size(generations[i].current_space->weaks_area);
+    hi->genImgs[i].gen_weaks_other   =
+      get_areas_size(generations[i].other_space->weaks_area);
+  }
+}
+
+#if (DISPLAY_MEASURE_GC)
+
+void display_string(char* message) {
+  fprintf(stdout, message);
+}
+
+void display_string_x(char* message, int times) {
+  while (times > 0) {
+    display_string(message);
+    times--;
+  }
+}
+
+void display_number(int digits, long number) {
+  fprintf(stdout, " %0*d", digits, number);
+}
+
+void display_double(int digits, double n) {
+  fprintf(stdout, " %0*.*f", digits, 3, n);
+}
+
+void newline() {
+  fprintf(stdout, "\n");
+}
+
+void space() {
+  fprintf(stdout, " ");
+}
+
+void dis_string(char* message) {
+  display_string(message);
+  newline();
+}
+
+void dis_string_x(char* message, int times) {
+  display_string_x(message, times);
+  newline();
+}
+
+void dis_number(int digits, long n) {
+  display_number(digits, n);
+  newline();
+}
+
+void dis_double(int digits, double n) {
+  display_double(digits, n);
+  newline();
+}
+
+void display_comparison(long new, long old) {
+  if (new == old) {
+    display_string("  ");
+  }
+  else if (new > old) {
+    display_string(" +");
+  }
+  else display_string(" -");
+}
+
+void write_vm_options(FILE* f) {
+    fprintf(f, 
+	    "VM (scheme48) Compiled with these Options\n"
+	    "-----------------------------------------\n"
+	    "S48_MEASURE_GC_TIME: %02d\n"
+	    "MEASURE_GC: %02d\n"
+	    "DISPLAY_MEASURE_GC: %02d\n"
+	    "S48_GENERATIONS_COUNT: %03d\n"
+	    "S48_CREATION_SPACE_SIZE: %03d\n"
+	    "S48_DEFAULT_WATER_MARK: %03d\n"
+	    "S48_ADJUST_WATER_MARK: %02d\n"
+	    "S48_SMALL_OBJECT_LIMIT: %05d\n"
+	    "S48_MINIMUM_SMALL_AREA_SIZE: %03d\n"
+	    "S48_MAXIMUM_SMALL_AREA_SIZE: %03d\n"
+	    "S48_MAXIMUM_LARGE_CREATION_SPACE_SIZE: %05d\n"
+	    "S48_MINIMUM_WEAK_AREA_SIZE: %05d\n"
+	    "S48_MAXIMUM_WEAK_AREA_SIZE: %05d\n"
+	    "S48_COLLECTION_THRESHOLD: %05d\n"
+	    "S48_LOG_CARD_SIZE: %03d\n"
+	    "S48_DIRTY_VECTOR_METHOD: %02d\n"
+	    "S48_WRITE_BARRIER_COMPLEXITY: %02d\n"
+	    "S48_USE_CARD_GENERATION_INDEXING: %02d\n"
+	    "S48_USE_GENERATION_INDEXING: %02d\n"
+	    "S48_USE_REMEMBERED_SETS: %02d\n",
+	    S48_MEASURE_GC_TIME,
+	    MEASURE_GC,
+	    DISPLAY_MEASURE_GC,
+	    S48_GENERATIONS_COUNT,
+	    S48_CREATION_SPACE_SIZE,
+	    S48_DEFAULT_WATER_MARK,
+	    S48_ADJUST_WATER_MARK,
+	    S48_SMALL_OBJECT_LIMIT,
+	    S48_MINIMUM_SMALL_AREA_SIZE,
+	    S48_MAXIMUM_SMALL_AREA_SIZE,
+	    S48_MAXIMUM_LARGE_CREATION_SPACE_SIZE,
+	    S48_MINIMUM_WEAK_AREA_SIZE,
+	    S48_MAXIMUM_WEAK_AREA_SIZE,
+	    S48_COLLECTION_THRESHOLD,
+	    S48_LOG_CARD_SIZE,
+	    S48_DIRTY_VECTOR_METHOD,
+	    S48_WRITE_BARRIER_COMPLEXITY,
+	    S48_USE_CARD_GENERATION_INDEXING,
+	    S48_USE_GENERATION_INDEXING,
+	    S48_USE_REMEMBERED_SETS);
+
+#if (S48_USE_REMEMBERED_SETS)
+    fprintf(f, 
+	    "S48_REMEMBERED_SET_SIZE: %05d\n"
+	    "S48_REMEMBERED_SET_TYPE: %02d\n"
+	    "S48_UNIQUE_REMEMBERED_SET: %02d\n",
+	    S48_REMEMBERED_SET_SIZE,
+	    S48_REMEMBERED_SET_TYPE,
+	    S48_UNIQUE_REMEMBERED_SET);
+	
+#endif /* #if (S48_USE_REMEMBERED_SETS) */
+    
+    fprintf(f,
+	    "S48_USE_RDM: %02d\n",
+	    S48_USE_RDM);
+
+#if (S48_USE_RDM)
+    fprintf(f,
+	    "S48_RDM_MAX_SIZE: %05d\n"
+	    "S48_RDM_INITIAL_THRESHOLD: %05d\n"
+	    "S48_RDM_MIN_THRESHOLD: %05d",
+	    S48_RDM_MAX_SIZE,
+	    S48_RDM_INITIAL_THRESHOLD,
+	    S48_RDM_MIN_THRESHOLD);
+#endif /* #if (S48_USE_RDM) */
+
+    fprintf(f, "\n\n");
+}
+
+void display_vm_options() {
+  write_vm_options(stdout);
+}
+
+#endif
+
+
+FILE* file;
+
+static unsigned long gc_nr = 0;
+
+static double gc_time = 0;
+static double gc_runtime = 0;
+static unsigned long total_gc_time_in_usec = 0;
+static double gc_average_time = 0;
+
+static unsigned long heap_size_before = 0;
+static unsigned long heap_size_after = 0;
+static unsigned long max_heap = 0;
+
+static unsigned long s48_heap_size_before = 0;
+static unsigned long s48_heap_size_after = 0;
+
+static HeapImg heap_img_before;
+static HeapImg heap_img_after;
+
+static unsigned long all_surviving_obj = 0;
+static unsigned long first_time_flag = 0;
+
+void fprint_cs_data(FILE* f, HeapImg* img_before, HeapImg* img_after) { 
+  fprintf(f, "%8i %8i %8i %8i %8i %8i %8i %8i ",
+	  heap_img_before.cs_small_below,           /* 9 */
+	  heap_img_after.cs_small_below,            /* 10 */
+	  heap_img_before.cs_small_above,           /* 11 */
+	  heap_img_after.cs_small_above,            /* 12 */
+	  heap_img_before.cs_large,                 /* 13 */
+	  heap_img_after.cs_large,                  /* 14 */
+	  heap_img_before.cs_weaks,                 /* 15 */
+	  heap_img_after.cs_weaks                   /* 16 */
+	  );
+}
+
+/* wi_data = write barrier & intergenerational pointers */
+void fprint_wi_data(FILE* f, HeapImg* img_before, HeapImg* img_after) { 
+  fprintf(f, "%8i %8i %8i %8i",
+	  heap_img_before.wbarrier,                 /* 17 */
+	  heap_img_after.gc_wbarrier,               /* 18 */
+	  heap_img_before.igen,                     /* 19 */
+	  heap_img_after.gc_igen                    /* 20 */
+	  );
+}
+
+void fprint_gen_data(FILE* f, HeapImg* img_before, HeapImg* img_after) {
+  int i;
+
+  /* Line Order: 20 + ( X * i+1)
+     example:
+     Line Order of: img_after->genImgs[1].gen_large_current [ 6 ]
+     Is: 20 + ( 6 * 1+1) = 32
+  */ 
+  
+  for (i = 0; i < S48_GENERATIONS_COUNT; i++) {
+    fprintf(f, "%8i %8i %8i %8i %8i %8i %8i %8i %8i %8i %8i %8i ", /* X */
+	    img_before->genImgs[i].gen_small_current,  /* 1  */
+	    img_after->genImgs[i].gen_small_current,   /* 2  */
+	    img_before->genImgs[i].gen_small_other,    /* 3  */
+	    img_after->genImgs[i].gen_small_other,     /* 4  */
+	    img_before->genImgs[i].gen_large_current,  /* 5  */
+	    img_after->genImgs[i].gen_large_current,   /* 6  */
+	    img_before->genImgs[i].gen_large_other,    /* 7  */
+	    img_after->genImgs[i].gen_large_other,     /* 8  */
+	    img_before->genImgs[i].gen_weaks_current,  /* 9  */
+	    img_after->genImgs[i].gen_weaks_current,   /* 10  */
+	    img_before->genImgs[i].gen_weaks_other,    /* 11  */
+	    img_after->genImgs[i].gen_weaks_other      /* 12 */
+	    );
+  }
+}
+
+void fprint_all_data (FILE* f, HeapImg* img_before, HeapImg* img_after){
+
+  /* Creation Space */
+  fprint_cs_data(f, img_before, img_after);
+
+  /* Write Barrier & InterGen Pointers */
+  fprint_wi_data(f, img_before, img_after);
+
+  /* Generations */
+  fprint_gen_data(f, img_before, img_after);
+}
+
+
+int get_small_objects(int gen){
+  int number = 0;
+  /* little cheat to get to the creation_space*/
+  if(gen == S48_GENERATIONS_COUNT){
+    FOR_ALL_AREAS(creation_space.small_below, number += 1);
+    FOR_ALL_AREAS(creation_space.small_above, number += 1);
+  }else{
+    FOR_ALL_AREAS(generations[gen].current_space->small_area, number += 1);
+  }
+  return number;
+}
+
+int get_large_objects(int gen){
+  int number = 0;
+  if(gen == S48_GENERATIONS_COUNT){
+    FOR_ALL_AREAS(creation_space.large, number += 1);
+  }else{
+    FOR_ALL_AREAS(generations[gen].current_space->large_area, number +=1);
+  }
+  return number;
+}
+
+void get_area_objects(){
+  int small[S48_GENERATIONS_COUNT+1];
+  int large[S48_GENERATIONS_COUNT+1];
+  int i;
+  for (i = 0; i <= S48_GENERATIONS_COUNT; i++){
+    small[i] = get_small_objects(i);
+    large[i] = get_large_objects(i);
+  }
+  measure_small_areas(S48_GENERATIONS_COUNT, small);
+  measure_large_areas(S48_GENERATIONS_COUNT, large);
+}
+
+
+long time_swap;
+struct timeval t1;
+struct timeval t2;
+struct timeval t3;
+
+void measure_before_collection(int c) {
+#if 0
+  measure_gc_start(c);
+  all_surviving_obj = 0;
+  get_area_objects();
+  measure_heap_size(s48_heap_size());
+  measure_heap_usage(s48_heap_live_size());
+#endif
+
+  /* catch the actual heap status */
+  takeHeapImg(&heap_img_before);
+  heap_size_before = s48_heap_size();
+  s48_heap_size_before = s48_heap_live_size();
+  
+  /* catch the time before ...  */
+  gettimeofday(&t1, 0);
+}
+
+void measure_after_collection(int c) {
+  gettimeofday(&t2, 0);
+
+  t3.tv_sec = (t2.tv_sec - t1.tv_sec);
+  time_swap = t2.tv_usec - t1.tv_usec;
+  if (time_swap < 0) {
+    time_swap = 1000000 + time_swap;
+    t3.tv_sec -= 1;
+  }
+  t3.tv_usec = time_swap;
+
+  /* save some values after collection */
+  gc_nr = s48_gc_count();
+  total_gc_time_in_usec += t3.tv_usec;
+  gc_time =  t3.tv_usec / 1000000.0;
+  gc_runtime = total_gc_time_in_usec / 1000000.0;
+  gc_average_time = total_gc_time_in_usec / ( 1000000.0 * gc_nr) ;
+
+  takeHeapImg(&heap_img_after);
+  heap_size_after = s48_heap_size();
+  s48_heap_size_after = s48_heap_live_size();
+
+  max_heap = int_max(max_heap, int_max(heap_size_before, heap_size_after)); 
+
+#if 0
+  measure_heap_size(s48_heap_size());
+  measure_heap_usage(s48_heap_live_size());
+  measure_gc_end();  /* This will null wb and igp counters */
+#endif
+
+#if 0
+  file = fopen("MEASURE-GC-TIME", "a");
+  fprintf(file, "( %d ", t3.tv_sec);
+  fprintf(file, " %d )", t3.tv_usec);
+  fclose(file);
+#endif
+
+  file = fopen("MEASURE_GC_RESULT_TEMP", "w"); /* w : to overwrite */
+  fprintf(file, "%5i %5i %6.3f %6.3f %6.3f %8i %8i %8i ", 
+	  gc_nr,                                    /* 1 */
+	  c,                                        /* 2 up to collected gen */
+	  gc_time,                                  /* 3 */
+	  gc_runtime,                               /* 4 */
+          gc_average_time,                          /* 5 */
+	  heap_size_before,                         /* 6 */
+	  heap_size_after,                          /* 7 */
+	  max_heap                                  /* 8 */
+	  );
+  fprint_all_data(file, &heap_img_before, &heap_img_after);
+  fprintf(file, "\n");  /*newline */
+  fclose(file);
+
+  /* Save all results in an extra file (not to overwrite) */
+  system("cat MEASURE_GC_RESULT_TEMP >> MEASURE_ALL_GC_RESULT"); /* unistd.h */
+
+#if (DISPLAY_MEASURE_GC)
+  /*Print config-options once */
+  if (first_time_flag == 0) {
+    first_time_flag = 1;
+    display_vm_options();
+    newline();
+    dis_string("gc_nr gen_nr gc_time gc_runtime gc_durchschnitt");
+    dis_string_x("-", 40);
+  }
+  
+  display_number(5, s48_gc_count() );
+  display_double(5, gc_time );
+  display_double(7, gc_runtime );
+  display_double(5, gc_average_time );
+
+  /* up to collected generations */
+  display_number(2, c );
+
+  /* the whole heap */
+  display_number(8, heap_size_before);
+  display_number(8, heap_size_after);
+  display_comparison(heap_size_after, heap_size_before);
+
+  /* the used heap */
+  display_number(8, s48_heap_size_before);
+  display_number(8, s48_heap_size_after);
+  display_comparison(s48_heap_size_after, s48_heap_size_before);
+
+  /* % relationship between the whole and the used heap */
+  display_double(5, (s48_heap_size_after * 100.0 ) / heap_size_after);
+
+  newline();
+  /*dis_string_x("-", 65); */
+  /*newline(); */
+
+  /*  s48_check_heap(0);*/
+
+  /* Initializes static variables: count_igp, count_wb, count_gc_igp,
+     count_gc_wb (measure.h) */
+    clear_measurement(); 
+#endif
+
+}

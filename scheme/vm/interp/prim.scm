@@ -243,6 +243,12 @@
     (make-mutable! thing)
     (goto return thing)))
 
+(define-primitive make-weak-pointer (any->)
+  (lambda (init)
+    (let ((weak-pointer (make-weak-pointer init weak-pointer-size)))
+      (goto continue-with-value
+	    weak-pointer
+	    0))))
 ;----------------
 ; Misc
 
@@ -265,7 +271,9 @@
 	(cond ((not (false? vector))
 	       (goto return vector))
 	      (first?
-	       (s48-collect)
+	       ;; if the result vector couldn't be created force a
+	       ;; major collection and try again once.
+	       (s48-collect #t)
 	       (loop #f))
 	      (else
 	       (raise-exception heap-overflow 0 (enter-fixnum type))))))))
@@ -278,15 +286,16 @@
 	       (goto return vector))
 	      (first?
 	       (save-temp0! type)
-	       (s48-collect)
+	       (s48-collect #t)
 	       (loop #f (recover-temp0!)))
 	      (else
 	       (raise-exception heap-overflow 0 type)))))))
 
 (define-primitive collect ()
   (lambda ()
+    ;; does a major collection in any case
     (set! *val* unspecific-value)
-    (s48-collect)
+    (s48-collect #t)
     (goto continue 0)))
 
 (define-consing-primitive add-finalizer! (any-> any->)
@@ -316,6 +325,8 @@
        (goto return-fixnum (s48-available)))
       ((heap-size)
        (goto return-fixnum (bytes->cells (s48-heap-size))))
+      ((max-heap-size)
+       (goto return-fixnum (s48-max-heap-size)))
       ((stack-size)
        (goto return-fixnum (stack-size)))
       ((gc-count)

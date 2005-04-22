@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Yu"stdafx.h" /FD /c
-# ADD CPP /nologo /W3 /GX /O2 /I "c" /D "NDEBUG" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "__COMPILING_SCHEME48_ITSELF__" /FD /c
+# ADD CPP /nologo /W3 /GX /O2 /I "c" /I "c/bibop" /D "NDEBUG" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "__COMPILING_SCHEME48_ITSELF__" /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /fo"scheme48.res" /d "NDEBUG"
 BSC32=bscmake.exe
@@ -66,7 +66,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Yu"stdafx.h" /FD /GZ /c
-# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "c" /D "_DEBUG" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "__COMPILING_SCHEME48_ITSELF__" /FR /FD /GZ /c
+# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "c" /I "c/bibop" /D "_DEBUG" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "__COMPILING_SCHEME48_ITSELF__" /FR /FD /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /fo"scheme48.res" /d "_DEBUG"
 BSC32=bscmake.exe
@@ -87,7 +87,19 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
+SOURCE=.\c\bibop\area_roots.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\areas.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\c\bignum.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\check_heap.c
 # End Source File
 # Begin Source File
 
@@ -115,7 +127,15 @@ SOURCE=".\c\win32\fd-io.c"
 # End Source File
 # Begin Source File
 
+SOURCE=.\c\bibop\find_all.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\c\free.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\generation_gc.c
 # End Source File
 # Begin Source File
 
@@ -139,7 +159,23 @@ SOURCE=.\c\main.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\c\bibop\memory_map.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\c\win32\misc.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\page_alloc.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\remset.c
+# End Source File
+# Begin Source File
+
+SOURCE=".\c\scheme48-bibop-heap.c"
 # End Source File
 # Begin Source File
 
@@ -147,24 +183,28 @@ SOURCE=.\build\scheme48.rc
 # End Source File
 # Begin Source File
 
-SOURCE=.\c\scheme48heap.c
-# End Source File
-# Begin Source File
-
-SOURCE=".\c\scheme48read-image.c"
-# End Source File
-# Begin Source File
-
 SOURCE=.\c\scheme48vm.c
 # End Source File
 # Begin Source File
 
-SOURCE=".\c\scheme48write-image.c"
+SOURCE=.\c\bibop\utils.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
+# Begin Source File
+
+SOURCE=.\c\bibop\area_roots.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\areas.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\bibop.h
+# End Source File
 # Begin Source File
 
 SOURCE=.\c\bignum.h
@@ -179,6 +219,14 @@ SOURCE=".\c\c-mods.h"
 # End Source File
 # Begin Source File
 
+SOURCE=.\c\bibop\check_heap.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\data.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\c\event.h
 # End Source File
 # Begin Source File
@@ -187,11 +235,51 @@ SOURCE=".\c\fd-io.h"
 # End Source File
 # Begin Source File
 
+SOURCE=.\c\bibop\find_all.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\gc_config.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\generation_gc.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\c\io.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\c\bibop\measure.ci
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\measure.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\memory.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\memory_map.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\page_alloc.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\page_constants.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\c\prescheme.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\remset.h
 # End Source File
 # Begin Source File
 
@@ -216,6 +304,10 @@ SOURCE=.\c\scheme48vm.h
 # Begin Source File
 
 SOURCE=".\c\scheme48write-barrier.h"
+# End Source File
+# Begin Source File
+
+SOURCE=.\c\bibop\utils.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"
