@@ -719,7 +719,7 @@ i-know-what-i-am-doing: compile-vm compile-twospace-gc compile-bibop-gc
 # compiles VM without GC
 
 compile-vm:
-	cd ps-compiler &&						     \
+	cd $(srcdir)/ps-compiler &&					     \
 	(echo ',batch';							     \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
@@ -733,7 +733,7 @@ compile-vm:
 # compiles the two-space copier GC
 
 compile-twospace-gc:
-	cd ps-compiler &&						     \
+	cd $(srcdir)/ps-compiler &&					     \
 	(echo ',batch';							     \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
@@ -746,7 +746,7 @@ compile-twospace-gc:
 # compiles the BIBOP GC
 
 compile-bibop-gc:
-	cd ps-compiler &&						     \
+	cd $(srcdir)/ps-compiler &&					     \
 	(echo ',batch';							     \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \

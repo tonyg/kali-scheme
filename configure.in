@@ -121,6 +121,7 @@ define(S48_USCORE, [dnl
 ])dnl
 dnl
 define(S48_CREATE_BUILD_DIRS, [dnl
+        mkdir -p c/bibop
         mkdir -p c/unix
         mkdir -p c/posix
         mkdir -p c/fake
