@@ -576,12 +576,15 @@ A \code{gc-protection-mismatch} exception is raised if, when a C
 Global variables may also be registered with the garbage collector.
 
 \begin{protos}
-\cproto{void S48\_GC\_PROTECT\_GLOBAL(\cvar{value})}
+\cproto{void * S48\_GC\_PROTECT\_GLOBAL(\cvar{value})}
+\cproto{void S48\_GC\_UNPROTECT\_GLOBAL(void * handle)}
 \end{protos}
 
 \noindent{}\code{S48\_GC\_PROTECT\_GLOBAL} permanently registers the
-  variable \cvar{value} (an l-value) with the garbage collector.
-There is no way to unregister the variable.
+variable \cvar{value} (an l-value of type \code{s48\_value}) with the
+garbage collector.  It returns a handle pointer for use as an argument
+to \code{S48\_GC\_UNPROTECT\_GLOBAL}, which unregisters the variable
+again.
 
 \subsection{Keeping C data structures in the Scheme heap}
 \label{sec:external-data}
