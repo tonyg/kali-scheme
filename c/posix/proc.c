@@ -592,7 +592,7 @@ extract_signal(s48_value sch_signal)
 
   if (type == S48_UNSAFE_SHARED_BINDING_REF(posix_named_signal_type_binding)) {
     int canonical = s48_extract_fixnum(S48_UNSAFE_RECORD_REF(sch_signal, 1));
-    if ((0 <= canonical < signal_map_size)
+    if ((0 <= canonical) && (canonical < signal_map_size)
 	&& signal_map[canonical] != -1)
       return signal_map[canonical];
     else
@@ -659,7 +659,7 @@ posix_request_interrupts(s48_value sch_signum)
       s48_raise_out_of_memory_error();
 
     sa.sa_handler = generic_interrupt_catcher;
-    sigemptyset(&sa.sa_mask);
+    sigfillset(&sa.sa_mask);
     sa.sa_flags = 0;
 
     if (sigaction(signum, &sa, old) != 0) {
