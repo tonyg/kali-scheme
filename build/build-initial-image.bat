@@ -1,6 +1,6 @@
 @echo off
 
-set runnable=%~1
+set runnable="%~1"
 
 call build\filenames.bat
 

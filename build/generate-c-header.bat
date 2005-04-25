@@ -1,6 +1,6 @@
 @echo off
 
-set runnable=%~1
+set runnable="%~1"
 
 echo ,bench > generate-c-header.input
 echo ,batch >> generate-c-header.input
