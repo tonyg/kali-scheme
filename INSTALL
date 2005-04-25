@@ -1,3 +1,8 @@
+Scheme 48 installation instructions for Unix
+--------------------------------------------
+
+(for notes on Windows installation, check WINDOWS.txt)
+
 A typical installation would proceed as follows: download the .tgz
 file to your /tmp directory, and then issue the following shell
 commands:
