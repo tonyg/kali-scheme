@@ -1,0 +1,98 @@
+Scheme 48 Windows port
+----------------------
+Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
+
+Starting with version 1.3, Scheme 48 has a native Windows port, which
+works on Windows NT 4.0 and above (including Windows 2000 and XP, but
+not Windows 95, Windows 98, or Windows ME).  At this time, the port is
+considered experimental.
+
+Specifically, the following caveats apply to the Windows port:
+
+o I/O is always binary; the I/O system doesn't perform any kind of
+  automatic CR/LF conversion.
+o UDP sockets don't work.  (But TCP sockets do.)
+o The "old-style" interface to loading external code dynamically
+  doesn't work.  (But the new interface works---see doc\news.txt and
+  the documentation.)
+o The Posix libraries don't work (and probably never will, at least
+  not in the current form).
+
+Installing Scheme 48 from the installer
+---------------------------------------
+
+To install Scheme 48, download the .msi file and double-click on it.
+This requires Windows Installer version 2.0 or greater to work.
+
+Building Scheme 48 from source
+------------------------------
+
+The Scheme 48 developers build the VM using Microsoft Visual C++
+6.0SP6.  To build the VM, load the scheme48.dsw workspace file into
+Visual C++, choose a configuration ("Win32 Debug" or "Win32 Release")
+and build.  You'll need to have run build\generate-c-header.bat
+previously---see below.  To generate the standard Scheme 48 image,
+you'll need to run build\build-usual-image.bat---also described below.
+
+You can then start Scheme 48 by saying
+
+scheme48vm -i scheme48.image
+
+(The installer creates a suitable front-end batch file for this
+incantation.)
+
+A number of batch files are supposed to do the jobs of the various
+other make targets in the Unix Makefile.  To run them, you should be
+sitting in a shell in the root of the Scheme 48 hierarchy.  Note that,
+for all except build-usual-image.bat you'll need to have a working
+Scheme 48 available your machine:
+
+build\generate-c-header.bat
+  This generates the c\scheme48.h header file needed for compiling
+  various VM extensions.
+
+  It requires a command-line argument specifying how to start up a
+  Scheme 48 REPL.
+
+  Example:
+
+  build\generate-c-header.bat "C:\Program Files\Scheme 48\Scheme 48 1.3\scheme48"
+
+build\build-usual-image.bat
+  This generates the default scheme48.image from build\initial.image.
+
+  It requires five command-line arguments:
+
+  - the root directory of the Scheme 48 sources
+    *with a trailing backslash*
+  - the full path of the installed scheme/ subdirectory of the Scheme
+    48 sources
+  - the name of the image file to be generated
+  - the name of the VM executable
+  - the filename of the initial image
+
+  Example (supposing the Scheme 48 root directory sits at c:\scheme48)
+
+  build\build-usual-image ".\" c:\scheme48\ "C:\Program Files\Scheme 48\Scheme 48 1.3\scheme" scheme48vm.exe build\initial.image
+
+build\build-initial-image.bat
+  This builds build\initial.image from source.
+
+  It requires a command-line argument specifying how to start up a
+  Scheme 48 REPL.
+
+  Before running it, you need to generate build\filenames.bat via
+
+  <Scheme 48> -a batch < build\filenames.scm
+  where <Scheme 48> starts up a Scheme 48 REPL, for example
+  "C:\Program Files\Scheme 48\Scheme 48 1.3\scheme48" -a batch < build\filenames.scm
+
+  build\build-initial-image.bat "C:\Program Files\Scheme 48\Scheme 48 1.3\scheme48"
+
+build\i-know-what-i-am-doing.bat
+  This builds the VM C sources from Scheme.
+
+  It requires a command-line argument specifying how to start up a
+  Scheme 48 REPL.
+
+  build\i-know-what-i-am-doing.bat "C:\Program Files\Scheme 48\Scheme 48 1.3\scheme48"
