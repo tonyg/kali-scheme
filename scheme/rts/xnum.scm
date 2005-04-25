@@ -125,6 +125,8 @@
 (define-opcode-extension inexact->exact &inexact->exact)
 (define-opcode-extension real-part      &real-part)
 (define-opcode-extension imag-part      &imag-part)
+(define-opcode-extension angle          &angle)
+(define-opcode-extension magnitude      &magnitude)
 
 (define-opcode-extension floor          &floor)
 (define-opcode-extension numerator      &numerator)
@@ -171,6 +173,21 @@
 
 (define-method &imag-part ((x :real))
   (if (exact? x) 0 (exact->inexact 0)))
+
+(define-method &magnitude ((x :real))
+  (abs x))
+
+(define pi (delay (* 2 (asin 1)))) ; can't compute at build time
+
+(define-method &angle ((x :real))
+  (cond
+   ((positive? x)
+    (if (exact? x)
+	0
+	(exact->inexact 0)))
+   ((negative? x) (force pi))
+   ((exact? x)    (call-error "invalid argument to angle" angle x))
+   (else x)))
 
 (define-method &floor ((n :integer)) n)
 

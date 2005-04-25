@@ -63,6 +63,15 @@
 (define-method &real-part ((z :recnum)) (recnum-real-part z))
 (define-method &imag-part ((z :recnum)) (recnum-imag-part z))
 
+(define-method &magnitude ((z :recnum))
+  (let ((r (recnum-real-part z))
+	(i (recnum-imag-part z)))
+    (sqrt (+ (* r r) (* i i)))))
+
+(define-method &angle ((z :recnum))
+  (atan (recnum-imag-part z)
+	(recnum-real-part z)))
+
 ; Methods on complexes in terms of real-part and imag-part
 
 (define-method &exact? ((z :recnum))
