@@ -223,6 +223,7 @@
 (define-method &cos   ((x :rational)) (float-cos   x))
 (define-method &tan   ((x :rational)) (float-tan   x))
 (define-method &acos  ((x :rational)) (float-acos  x))
+(define-method &asin  ((x :rational)) (float-asin  x))
 (define-method &atan1 ((x :rational)) (float-atan1 x))
 
 (define-method &number->string ((n :double) radix)
