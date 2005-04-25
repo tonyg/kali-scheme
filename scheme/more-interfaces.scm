@@ -286,6 +286,8 @@
 	  &inexact->exact
 	  &real-part
 	  &imag-part
+	  &magnitude
+	  &angle
 	  &floor
 	  &numerator
 	  &denominator
