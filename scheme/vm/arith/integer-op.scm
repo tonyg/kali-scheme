@@ -94,7 +94,7 @@
 (define-integer-only (numerator   n) n)
 (define-integer-only (denominator n) (enter-fixnum 1))
 
-(define-primitive angle (any->)
+(define-primitive angle (vm-integer->)
   (lambda (n)
     (if (if (fixnum? n)
 	    (fixnum>= n (enter-fixnum 0))
