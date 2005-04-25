@@ -118,7 +118,7 @@ CONFIG_FILES = scheme/interfaces.scm scheme/packages.scm \
 
 # The following is the first rule and therefore the "make" command's
 # default target.
-enough: $(VM) $(LIBSCHEME48) $(IMAGE) script-interpreter go
+enough: vm $(LIBSCHEME48) $(IMAGE) script-interpreter go
 
 # --------------------
 # External code to include in the VM
@@ -440,14 +440,14 @@ check:	$(VM) $(IMAGE) scheme/debug/check.scm
 
 # --------------------
 # Rules from here on down are not essential for the basic installation
-# procedure, and are not expected to work when srcdir is not the
-# distribution directory.
+# procedure.
 
-all: vm linker
-	$(MAKE) image
+all: vm image $(LIBSCHEME48) script-interpreter go
+libscheme48: $(LIBSCHEME48)
 vm: $(VM)
 image: $(INITIAL)
 	$(MAKE) $(IMAGE)
+test: check
 
 tags:
 	etags scheme/vm/interp/arch.scm scheme/rts/*.scm scheme/bcomp/*.scm \
