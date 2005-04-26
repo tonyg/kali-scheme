@@ -106,7 +106,7 @@
   (lambda (x)
     (if (fixnum? x)
 	(goto return-integer (abs (extract-fixnum x)))
-	(goto return (integer-abs x))))))
+	(goto return (integer-abs x)))))
 
 ; These all just raise an exception and let the run-time system do the work.
 
