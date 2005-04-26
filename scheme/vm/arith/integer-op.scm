@@ -97,7 +97,7 @@
 (define-primitive angle (vm-integer->)
   (lambda (n)
     (if (if (fixnum? n)
-	    (fixnum>= n (enter-fixnum 0))
+	    (fixnum> n (enter-fixnum 0))
 	    (bignum-nonnegative? n))
 	(goto return (enter-fixnum 0))
 	(unary-lose n))))
