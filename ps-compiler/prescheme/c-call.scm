@@ -158,7 +158,7 @@
 ; identifiers.  Luckily C is case-sensitive and Scheme is not.
 
 (define char-translations
-  (let* ((count number-of-char-codes)
+  (let* ((count ascii-limit)
          (string (make-string count)))
     (do ((i '0 (+ i '1)))
         ((>= i count))

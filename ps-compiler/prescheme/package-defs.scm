@@ -289,7 +289,7 @@
 
 (define-structures ((c (export write-c-file hoist-nested-procedures))
 		    (c-internal c-internal-interface))
-  (open scheme big-scheme comp-util strongly-connected node forms
+  (open scheme ascii big-scheme comp-util strongly-connected node forms
 	defrecord
 	ps-primops ps-c-primops
 	ps-types type-variables
@@ -302,7 +302,6 @@
 	external-values
 	external-constants
 	eval-node)         ; unspecific?
-  (begin (define number-of-char-codes 256))  ; should be somewhere else
   (files c
 	 c-decl
 	 c-call
