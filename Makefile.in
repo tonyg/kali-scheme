@@ -459,8 +459,8 @@ tags:
 # Distribution...
 
 # DISTFILES should include all sources.
-DISTFILES = README COPYING.rtf COPYING INSTALL configure		\
-		acconfig.h configure.in Makefile.in 			\
+DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
+		configure acconfig.h configure.in Makefile.in 		\
 		scheme48.dsp scheme48.dsw				\
 		mkinstalldirs install-sh				\
 		doc/*.ps doc/*.pdf doc/*.txt 				\
