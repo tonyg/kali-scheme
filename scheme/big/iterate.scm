@@ -36,7 +36,7 @@
 
     ; Weird degenerate case with no iteration variables.
     ((iterate loop () ((state-var init) ...) body final)
-     (let ((state-var init) ...) final))
+     (let loop ((state-var init) ...) body))
 
     ; All there
     ((iterate loop
