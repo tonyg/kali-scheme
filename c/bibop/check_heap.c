@@ -30,15 +30,28 @@ static void error_found(char* message) {
   }
 }
 
+static void try_describe_area_at(s48_address addr) {
+  Area* a = s48_memory_map_ref(addr);
+  fprintf(stderr, "Area containing 0x%X", addr);
+  if (a != NULL) {
+    fprintf(stderr, "\n  0x%X-[0x%X]-0x%X\n", a->start, a->frontier, a->end);
+    fprintf(stderr, "  generation: %d\n", a->generation_index);
+    fprintf(stderr, "  type: %d\n", a->area_type_size);
+    fprintf(stderr, "  %s last in chain\n", a->next ? "not" : "");
+  }
+  else
+    fprintf(stderr, " could not be found\n");
+}
+
 static void check_area(s48_address start, s48_address end) {
   s48_address addr = start;
   while (addr < end) {
     long header = *((long*)addr);
     if (!S48_HEADER_P(header)) {
       char s[512];
+      try_describe_area_at(addr);
       sprintf(s, "corrupted header 0x%X at 0x%X!", header, addr);
       error_found(s);
-      free(s);
       addr = S48_ADDRESS_INC(addr);
     } else {
       s48_address next = addr + S48_STOB_OVERHEAD_IN_A_UNITS
@@ -55,12 +68,10 @@ static void check_area(s48_address start, s48_address end) {
 	    sprintf(s, "content value 0x%X at 0x%X is a header!",
 		    v, this_addr);
 	    error_found(s);
-	    free(s);
 	  } else if ( S48_STOB_P(v) && (!s48_stob_in_heapP(v)) ) {
 	    char s[512];
 	    sprintf(s, "stob value 0x%X in object of type %d at 0x%X pointing outside the heap!", v, S48_HEADER_TYPE(header), this_addr);
 	    error_found(s);
-	    free(s);
 	  }
 	}
       }
