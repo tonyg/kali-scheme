@@ -1386,7 +1386,9 @@ void s48_make_availableAgc(long len_in_bytes) {
        next collections: if we are above it already, and are allowed
        to collect some garbage, then do it. */
 
-    else if (gc_forbid_count == 0) {
+    else {
+
+      if (gc_forbid_count == 0) {
       /* FPage 4 */
 
 #if (BIBOP_LOG)
@@ -1412,7 +1414,7 @@ void s48_make_availableAgc(long len_in_bytes) {
 
 #endif
 
-      s48_collect(FALSE);
+        s48_collect(FALSE);
 
 #if (BIBOP_LOG)
       /* save the current size after the collection */
@@ -1430,20 +1432,28 @@ void s48_make_availableAgc(long len_in_bytes) {
 
       s48_bibop_log("");
 #endif
-    }
-    /* otherwise just use the first generation to allocate space, and
-       allocate new areas as needed. */
-    else {
-      /* FPage 3 */
-      creation_space.small = generations[0].current_space->small_area;
-      if (AREA_REMAINING(creation_space.small) < len_in_bytes) {
-	Area* new_area = s48_allocate_area(S48_MINIMUM_SMALL_AREA_SIZE,
-					   S48_MAXIMUM_SMALL_AREA_SIZE, 
-					   0, 
-					   AREA_TYPE_SIZE_SMALL);
-	new_area->next = creation_space.small;
-	generations[0].current_space->small_area = new_area;
-	creation_space.small = new_area;
+      }
+
+      /* if a gc is not allowed, or if after the collection, the
+	 creation-space is still too small, just use the first
+	 generation to allocate space, and allocate a new area if
+	 needed. */
+      if ((gc_forbid_count != 0) ||
+	  (AREA_REMAINING(creation_space.small) < len_in_bytes)) {
+	/* FPage 3 */
+	creation_space.small = generations[0].current_space->small_area;
+	if (AREA_REMAINING(creation_space.small) < len_in_bytes) {
+	  Area* new_area =
+	    s48_allocate_area(int_max(S48_MINIMUM_SMALL_AREA_SIZE,
+				      BYTES_TO_PAGES(len_in_bytes)),
+			      int_max(S48_MAXIMUM_SMALL_AREA_SIZE,
+				      BYTES_TO_PAGES(len_in_bytes)),
+			      0, 
+			      AREA_TYPE_SIZE_SMALL);
+	  new_area->next = generations[0].current_space->small_area;
+	  generations[0].current_space->small_area = new_area;
+	  creation_space.small = new_area;
+	}
       }
     }
   }
@@ -1456,11 +1466,12 @@ void s48_make_availableAgc(long len_in_bytes) {
 s48_address s48_allocate_small(long len_in_bytes) {
   s48_address result;
   /* catch misuse of this function */
-  assert(len_in_bytes <= S48_SMALL_OBJECT_LIMIT);
+  /*assert(len_in_bytes <= S48_SMALL_OBJECT_LIMIT);*/
 
   result = creation_space.small->frontier;
   creation_space.small->frontier += S48_BYTES_TO_A_UNITS(len_in_bytes);
-  
+  assert(creation_space.small->frontier <= creation_space.small->end);
+
   return result;
 }
 
