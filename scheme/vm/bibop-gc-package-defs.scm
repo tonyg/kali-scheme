@@ -177,7 +177,8 @@
     
     ;; defined in generation_gc.c and used by the dumper
     (define s48-initialize-image-areas
-      (external "s48_initialize_image_areas" (=> (integer integer integer) null)))
+      (external "s48_initialize_image_areas"
+		(=> (integer integer integer integer integer integer) null)))
     
     (define s48-check-heap-size!
       (external "s48_check_heap_sizeB" (=> () null)))

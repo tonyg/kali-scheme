@@ -340,8 +340,9 @@
 
 (define s48-stob-in-heap? check-stob)
 
-(define (s48-initialize-image-areas s l w)
+(define (s48-initialize-image-areas s sd l ld w wd)
   (= s 0) (= l 0) (= w 0) ; for the typechecker
+  (= sd 0) (= ld 0) (= wd 0) ; for the typechecker
   (unspecific))
 
 (define (check-lost message)

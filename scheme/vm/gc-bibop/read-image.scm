@@ -120,8 +120,14 @@
 
 (define (initialize-image-areas!)
   (s48-initialize-image-areas (get-small-img-whole-size)
+			      (address-difference (get-small-img-hp-addr)
+						  (get-small-img-start-addr))
 			      (get-large-img-whole-size)
-			      (get-weaks-img-whole-size)))
+			      (address-difference (get-large-img-hp-addr)
+						  (get-large-img-start-addr))
+			      (get-weaks-img-whole-size)
+			      (address-difference (get-weaks-img-hp-addr)
+						  (get-weaks-img-start-addr))))
 
 ; debugging
 

@@ -11,7 +11,7 @@ extern void	s48_allow_gcB(void);
 
 /* heap-init interface */
 extern void	s48_initialize_heap(long, char *, long);
-extern void     s48_initialize_image_areas(long, long, long);
+extern void     s48_initialize_image_areas(long, long, long, long, long, long);
 extern void	s48_register_static_areas(long, char **, long *,
 					  long, char **, long *);
 

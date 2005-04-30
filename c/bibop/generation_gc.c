@@ -1611,9 +1611,10 @@ void s48_walk_heap(void (*do_part)(s48_address, s48_address)) {
    generation */
 
  
-/***************************************************************************************/ 
- void  s48_initialize_image_areas(long small_bytes, long large_bytes, long weaks_bytes) {
-/***************************************************************************************/
+/*****************************************************************************/
+void s48_initialize_image_areas(long small_bytes, long small_hp_d,
+				long large_bytes, long large_hp_d,
+				long weaks_bytes, long weaks_hp_d) {
    
    s48_address start;
    s48_address small_end;
@@ -1655,19 +1656,19 @@ void s48_walk_heap(void (*do_part)(s48_address, s48_address)) {
    
    small_img = s48_make_area(start, small_end, start, S48_GENERATIONS_COUNT - 1,
 			     AREA_TYPE_SIZE_SMALL);
-   small_img->frontier+= small_bytes;
+   small_img->frontier += small_hp_d;
    small_img->action = GC_ACTION_IGNORE;
    generations[S48_GENERATIONS_COUNT - 1].current_space->small_area = small_img;
    
    large_img = s48_make_area(small_end, large_end, small_end,
 			     S48_GENERATIONS_COUNT - 1, AREA_TYPE_SIZE_LARGE);
-   large_img->frontier+= large_bytes;
+   large_img->frontier += large_hp_d;
    large_img->action = GC_ACTION_IGNORE;
    generations[S48_GENERATIONS_COUNT - 1].current_space->large_area = large_img;
    
    weaks_img = s48_make_area(large_end, end, large_end, S48_GENERATIONS_COUNT - 1,
 			     AREA_TYPE_SIZE_WEAKS);
-   weaks_img->frontier+= weaks_bytes;
+   weaks_img->frontier += weaks_hp_d;
    weaks_img->action = GC_ACTION_IGNORE;
    generations[S48_GENERATIONS_COUNT - 1].current_space->weaks_area = weaks_img;
    

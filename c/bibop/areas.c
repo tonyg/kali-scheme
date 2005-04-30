@@ -141,7 +141,7 @@ void s48_allocate_image_area(long bytes, s48_address* start, s48_address* end) {
   
   s48_address memory;
   
-  memory = (s48_address)malloc(bytes);
+  memory = (s48_address)malloc(bytes + BYTES_PER_PAGE);
   
   if (memory == NULL) s48_gc_error("s48_allocate_image_area: out of memory\n");
   
