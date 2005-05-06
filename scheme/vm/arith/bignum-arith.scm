@@ -98,10 +98,12 @@
 	(if div-by-zero?
 	    (values #t
 		    (enter-fixnum 0)   ;just to have a descriptor
-		    (enter-fixnum 0))
+		    (enter-fixnum 0)
+		    (external-bignum->integer x) (external-bignum->integer y))
 	    (values #f
 		    (external-bignum->integer quot)
-		    (external-bignum->integer rem)))))))
+		    (external-bignum->integer rem)
+		    (external-bignum->integer x) (external-bignum->integer y)))))))
 
 (define (shift-space x n)
   (receive (x-size extra)

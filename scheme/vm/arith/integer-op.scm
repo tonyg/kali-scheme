@@ -225,7 +225,7 @@
 	   (call-with-values
 	    (lambda ()
 	      (integer-divide x y))
-	    (lambda (div-by-zero? quot rem)
+	    (lambda (div-by-zero? quot rem x y)
 	      (if (and (not div-by-zero?)
 		       (fixnum? rem)
 		       (= (enter-fixnum 0) rem))
