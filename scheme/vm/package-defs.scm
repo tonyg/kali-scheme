@@ -106,8 +106,7 @@
       (vm-string-length s))
 
     (define (s48-allocate-string len)
-      (vm-make-string len
-		      (ensure-space (vm-string-size len))))
+      (vm-make-string+gc len))
 
     (define (s48-enter-string-latin-1 s)
       (enter-string+gc s))

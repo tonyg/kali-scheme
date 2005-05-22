@@ -111,10 +111,18 @@
 (define (code-vector-size len)
   (+ stob-overhead (bytes->cells len)))
 
+; for small strings only
 (define (vm-make-string length key)
   (make-b-vector (enum stob string)
 		 (scalar-value-units->bytes length)
 		 key))
+
+(define (vm-make-string+gc length)
+  (let ((string (maybe-make-b-vector+gc (enum stob string)
+					(scalar-value-units->bytes length))))
+    (if (false? string)
+	(error "Out of space, unable to allocate"))
+    string))
 
 (define vm-string? (stob-predicate (enum stob string)))
 
@@ -148,18 +156,18 @@
 (define (vm-string-size length)
   (+ stob-overhead (bytes->cells (scalar-value-units->bytes length))))
 
-; Two calls for converting external (C, Latin-1) strings to S48 strings.
+; Converting external (C, Latin-1) strings to S48 strings.
 
+; for small strings only
 (define (enter-string string key)
-  (really-enter-string string (string-length string) key))
+  (let* ((len (string-length string))
+	 (v (vm-make-string len key)))
+    (copy-string-to-vm-string/latin-1! string len v)
+    v))
 
 (define (enter-string+gc string)
-  (let* ((z (string-length string))
-	 (key (ensure-space (vm-string-size z))))
-    (really-enter-string string z key)))
-
-(define (really-enter-string string len key)
-  (let ((v (vm-make-string len key)))
+  (let* ((len (string-length string))
+	 (v (vm-make-string+gc len)))
     (copy-string-to-vm-string/latin-1! string len v)
     v))
 

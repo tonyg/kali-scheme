@@ -252,7 +252,8 @@
 	  template-ref template-set!
 	  template-code template-byte-code template-name
 
-	  vm-string? vm-string-size vm-make-string vm-string-length
+	  vm-make-string vm-make-string+gc
+	  vm-string? vm-string-size vm-string-length
 	  vm-string-ref vm-string-set!
 	  enter-string enter-string+gc extract-low-string
 	  vm-string=? vm-string-hash
