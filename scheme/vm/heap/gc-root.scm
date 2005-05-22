@@ -80,7 +80,7 @@
 (define *permanent-external-roots* null-address)
 
 (define (s48-register-gc-root! loc-addr)
-  (let ((frame (allocate-memory (cells->bytes 2))))
+  (let ((frame (allocate-memory (cells->bytes 3))))
     (if (null-address? frame)
 	(error "out of memory registering a global root"))
     ;; NEXT
