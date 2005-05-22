@@ -472,11 +472,11 @@ DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
 		build/*.lisp build/build-usual-image build/filenames.make \
 		build/initial.debug build/initial.image			\
 		build/build-external-modules				\
-		build/*.bat build/*.sh build/*.txt build/*.rc		\
+		build/*.bat build/*.sh build/*.rc			\
 		build/dummy build/*.wxs build/*.wxi			\
-		build/*.bmp build/*.ico build/*.tif			\
-		c/*.[ch] c/*/*.[ch]i?					\
-		c/scheme48.h.in	scheme48write-barrier.h.in		\
+		build/*.bmp build/*.ico					\
+		c/*.[ch] c/*/*.[ch] c/*/*.ci				\
+		c/scheme48.h.in	c/scheme48write-barrier.h.in		\
 		emacs/*.el gdbinit					\
 		scheme/*.scm scheme/*/*.scm scheme/vm/*/*.scm		\
 		ps-compiler/minor-version-number			\
