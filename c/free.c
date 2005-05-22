@@ -282,7 +282,7 @@ int sub_big(x, y, z) Bignum *x, *y, *z; {
   for (; i > 0; i--) *zp++ = *xp++;
   if (b) return 1;
   zl = xl;
-  while (*--zp == 0) zl--;
+  while ((zl > 0) && (*--zp == 0)) zl--;
   z->l = zl;
   return 0;
 }
