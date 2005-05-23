@@ -531,6 +531,7 @@
     (set! *val* (vm-vector-ref handlers opcode))
     (if (not (closure? *val*))
 	(lose "exception handler is not a closure"))
+    ;; We add 2, one for the opcode, one for the exception itself
     (goto call-exception-handler (+ nargs 2) opcode)))
 
 ;----------------
