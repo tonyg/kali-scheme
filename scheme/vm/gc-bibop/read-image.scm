@@ -51,11 +51,16 @@
 		     (reverse-byte-order! (s48-get-new-weaks-start-addr) weaks-new-hp)))
 		    
 	       ;; here we have to adjust along the new sizes of the areas
+
+	       ;; TODO: the adjustment must depend on where the
+	       ;; addresses point to (small, large, weaks). If the
+	       ;; delta's differ, it won't work like it is, so for now
+	       ;; we make sure they are equal
+	       (if (not (and (= small-delta large-delta)
+			     (= large-delta weaks-delta)))
+		   (error "Bug: Cannot load image, because the deltas of all parts aren't equal. Notify the authors."))
 	       (if (not (= small-delta 0))
 		   (begin
-			  
-		     ;; debugging
-		     ;;(notify-small-delta)
 
 		     (set-startup-procedure! (adjust (get-startup-procedure) small-delta))
 		     (set-symbols!           (adjust (get-symbols) small-delta))

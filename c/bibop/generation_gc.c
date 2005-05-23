@@ -972,7 +972,8 @@ static psbool do_collect(psbool force_major, psbool emergency) {
 /* forward declarations */
 
 inline static void mark_large(Area* area, Space* to_space);
-inline static Area* allocate_small_area(Space* space);
+inline static Area* allocate_small_area(Space* space,
+					unsigned int size_in_bytes);
 inline static Area* allocate_weak_area(Space* space);
 inline static Area* allocate_large_area(Space* space,
 					unsigned int size_in_bytes);
@@ -1115,15 +1116,15 @@ void s48_internal_trace_locationsB(Area* maybe_area, s48_address start,
  copy_small: { /* parameter: copy_to_space, copy_header, copy_thing */
    /* get the current Area of the copy_space, means target_space */
    Area* area = copy_to_space->small_area;
-   if ((int) (S48_HEADER_LENGTH_IN_A_UNITS(copy_header)
-	      + S48_STOB_OVERHEAD_IN_A_UNITS)
-       < AREA_REMAINING(area))
+   unsigned int size_in_bytes = (S48_HEADER_LENGTH_IN_A_UNITS(copy_header)
+				 + S48_STOB_OVERHEAD_IN_A_UNITS);
+   if (size_in_bytes <= AREA_REMAINING(area))
      
      /* If the object passes then this is the copy_area ...*/
      copy_area = area;
    else
      /*  otherwise, allocate a small area in this space */    
-     copy_area = allocate_small_area(copy_to_space);
+     copy_area = allocate_small_area(copy_to_space, size_in_bytes);
    goto copy_object;
  }
 
@@ -1187,7 +1188,11 @@ void s48_internal_trace_locationsB(Area* maybe_area, s48_address start,
    /* first the header at the frontier location */
    *((s48_value*)frontier) = copy_header;
 
-   /* and then the data (thing addresss after header) at he the data_addr location */
+   /* and then the data (thing addresss after header) at the data_addr
+      location */
+   assert(AREA_REMAINING(copy_area) >= (S48_HEADER_LENGTH_IN_BYTES(copy_header)
+					+ S48_STOB_OVERHEAD_IN_BYTES));
+	  
    memcpy((void*)data_addr, S48_ADDRESS_AFTER_HEADER(copy_thing, void),
 	  S48_HEADER_LENGTH_IN_BYTES(copy_header));
 
@@ -1237,9 +1242,12 @@ void s48_trace_stob_contentsB(s48_value stob) {
 
 /* creating new areas during gc */
 
-inline static Area* allocate_small_area(Space* space) {
-  Area* area = s48_allocate_area(S48_MINIMUM_SMALL_AREA_SIZE,
-				 S48_MAXIMUM_SMALL_AREA_SIZE,
+inline static Area* allocate_small_area(Space* space,
+					unsigned int size_in_bytes) {
+  Area* area = s48_allocate_area(int_max(S48_MINIMUM_SMALL_AREA_SIZE,
+					 BYTES_TO_PAGES(size_in_bytes)),
+				 int_max(S48_MAXIMUM_SMALL_AREA_SIZE,
+					 BYTES_TO_PAGES(size_in_bytes)),
 				 (unsigned char)space->generation_index,
 				 AREA_TYPE_SIZE_SMALL);
   area->action = GC_ACTION_IGNORE;
@@ -1652,39 +1660,40 @@ void s48_initialize_image_areas(long small_bytes, long small_hp_d,
    s48_set_new_weaks_start_addrB(large_end);
    
    
-   /*Split this block and assign it to the last generation's areas */
-   
-   small_img = s48_make_area(start, small_end, start, S48_GENERATIONS_COUNT - 1,
-			     AREA_TYPE_SIZE_SMALL);
-   small_img->frontier += small_hp_d;
+   /* Split this block and assign it to the last generation's areas */
+   small_img = s48_make_area(start, small_end, start,
+			     S48_GENERATIONS_COUNT - 1, AREA_TYPE_SIZE_SMALL);
+   small_img->frontier += S48_BYTES_TO_A_UNITS(small_hp_d);
    small_img->action = GC_ACTION_IGNORE;
-   generations[S48_GENERATIONS_COUNT - 1].current_space->small_area = small_img;
+   generations[S48_GENERATIONS_COUNT - 1].current_space->small_area =
+     small_img;
    
    large_img = s48_make_area(small_end, large_end, small_end,
 			     S48_GENERATIONS_COUNT - 1, AREA_TYPE_SIZE_LARGE);
-   large_img->frontier += large_hp_d;
+   large_img->frontier += S48_BYTES_TO_A_UNITS(large_hp_d);
    large_img->action = GC_ACTION_IGNORE;
-   generations[S48_GENERATIONS_COUNT - 1].current_space->large_area = large_img;
+   generations[S48_GENERATIONS_COUNT - 1].current_space->large_area =
+     large_img;
    
-   weaks_img = s48_make_area(large_end, end, large_end, S48_GENERATIONS_COUNT - 1,
-			     AREA_TYPE_SIZE_WEAKS);
-   weaks_img->frontier += weaks_hp_d;
+   weaks_img = s48_make_area(large_end, end, large_end,
+			     S48_GENERATIONS_COUNT - 1, AREA_TYPE_SIZE_WEAKS);
+   weaks_img->frontier += S48_BYTES_TO_A_UNITS(weaks_hp_d);
    weaks_img->action = GC_ACTION_IGNORE;
-   generations[S48_GENERATIONS_COUNT - 1].current_space->weaks_area = weaks_img;
-   
+   generations[S48_GENERATIONS_COUNT - 1].current_space->weaks_area =
+     weaks_img;
    
    /* Put the areas into all memory-map cells that are covered by
       it. */
-   for (i = 0; i < small_bytes; i++) {
-     s48_memory_map_setB(start + i, small_img);
+   for (i = 0; i < BYTES_TO_PAGES(small_bytes); i++) {
+     s48_memory_map_setB(ADD_PAGES(start, i), small_img);
    }
    
-   for (i = 0; i < large_bytes; i++) {
-     s48_memory_map_setB(small_end + i, large_img);
+   for (i = 0; i < BYTES_TO_PAGES(large_bytes); i++) {
+     s48_memory_map_setB(ADD_PAGES(small_end, i), large_img);
    }
    
-   for (i = 0; i < weaks_bytes; i++) {
-     s48_memory_map_setB(large_end + i, weaks_img);
+   for (i = 0; i < BYTES_TO_PAGES(weaks_bytes); i++) {
+     s48_memory_map_setB(ADD_PAGES(large_end, i), weaks_img);
    }
    
    
