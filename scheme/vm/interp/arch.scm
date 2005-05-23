@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 32")
+(define architecture-version "Vanilla 33")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -183,6 +183,8 @@
   ; If the byte = 0 then do not log in the current proposal
   (stored-object-indexed-ref  stob index 2)	; vector + offset
   (stored-object-indexed-set! stob index 3)	; vector + offset + value
+
+  (make-double)
 
   (make-byte-vector 2)
   (byte-vector-length 1)

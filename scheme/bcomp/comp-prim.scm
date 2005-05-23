@@ -201,11 +201,7 @@
   (define-compiler-primitive 'make-double (proc () :double)
     (lambda (node depth frame cont)
       (deliver-value
-        (sequentially
-	  (stack-indirect-instruction (template-offset frame depth)
-				      (literal->index frame 0))
-	  (instruction (enum op push))		; leaves value in *val*
-	  (instruction (enum op make-stored-object) 2 (enum stob double)))
+       (instruction (enum op make-double))
 	cont))
     (cons 0
 	  (lambda (frame)

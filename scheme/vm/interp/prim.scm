@@ -116,6 +116,21 @@
 	  (raise-exception wrong-type-argument 1
 			   (enter-fixnum type) len init)))))
 
+; Doubles
+
+(define-primitive make-double ()
+  (lambda ()
+    (let* ((len 8)			; IEEE 754 double precision
+	   (new (maybe-make-b-vector+gc (enum stob double) len)))
+      (if (false? new)
+	  (raise-exception heap-overflow 0
+			   (enter-fixnum (enum stob double)))
+	  (begin
+;	    (do ((i (- len 1) (- i 1)))
+;		((< i 0))
+;	      (b-vector-set! new i 0))
+	    (goto return new))))))
+
 ; Strings and byte vectors
 
 (define-primitive string-length
