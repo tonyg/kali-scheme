@@ -331,7 +331,7 @@
 
 ; assumes INFOS are sorted
 
-(define (make-consecutive-info-source source default proc)
+(define (make-consecutive-info-source source make-default proc)
   (let ((next-info #f)
 	(last-code-point -1))
     (lambda ()
@@ -340,13 +340,13 @@
 	(if (< last-code-point (code-point-info-code-point info))
 	    (begin
 	      (set! next-info info)
-	      default)
+	      (proc (make-default last-code-point)))
 	    (begin
 	      (set! next-info #f)
 	      ;; scalar values only
 	      (if (eq? (code-point-info-general-category info)
 		       (general-category surrogate))
-		  default
+		  (proc (make-default last-code-point))
 		  (proc info)))))
 
       (set! last-code-point (+ 1 last-code-point))
@@ -371,7 +371,12 @@
 	    (compute-compact-table
 	     (make-consecutive-info-source
 	      (expanded-code-point-info-source infos)
-	      0
+	      (lambda (code-point)
+		(make-code-point-info code-point
+				      "<unassigned>"
+				      (general-category unassigned)
+				      #f #f #f #f #f #f #f #f #f
+				      code-point code-point code-point))
 	      (lambda (info)
 		(code-point-info->case+general-category-encoding
 		 info
