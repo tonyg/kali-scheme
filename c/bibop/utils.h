@@ -47,8 +47,13 @@ extern void write_line(FILE* f, long num);
 extern void s48_bibop_log(const char* message, ...);
 #endif
 
-inline int int_min(int a, int b);
-inline int int_max(int a, int b);
+inline static int int_min(int a, int b) {
+  return (a < b) ? a : b;
+}
+
+inline static int int_max(int a, int b) {
+  return (a > b) ? a : b;
+}
 
 #ifndef FALSE
 #define FALSE (0 == 1)

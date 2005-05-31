@@ -17,14 +17,6 @@ void s48_gc_error(const char* message, ...) {
   exit(-1);
 }
 
-inline int int_min(int a, int b) {
-  return (a < b) ? a : b;
-}
-
-inline int int_max(int a, int b) {
-  return (a > b) ? a : b;
-}
-
 #if (BIBOP_LOG)
 void s48_bibop_log(const char* message, ...) {
   FILE* prot;
