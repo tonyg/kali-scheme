@@ -168,7 +168,7 @@
 				 (structure-ref meta-types syntax-type)
 				 `(usual-transform ',name)
 				 name)))
-	    '(and cond do let let* or quasiquote syntax-rules))) ; delay
+	    '(and cond do let let* or quasiquote))) ; delay
 
 ; Plus whatever primitives are wanted.
 
@@ -199,6 +199,7 @@
 (import-syntax! 'enumerated 'enumerand->name)
 (import-syntax! 'prescheme  'errors)
 (import-syntax! 'prescheme  'define-external-enumeration)
+(import-syntax! 'scheme     'syntax-rules)
 
 ; define still more syntax
 
