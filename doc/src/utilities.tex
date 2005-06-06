@@ -714,9 +714,9 @@ we can define sets of colors:
 
 \begin{example}
 > (enum-set->list (color-set red blue))
-(#{Color red} #{Color blue})
+(#\ob{}Color red\cb{} #\ob{}Color blue\cb{})
 > (enum-set->list (enum-set-negation (color-set red blue)))
-(#{Color green})
+(#\ob{}Color green\cb{})
 > (enum-set-member? (color-set red blue) (color blue))
 #t
 \end{example}
