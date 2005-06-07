@@ -1,0 +1,2524 @@
+
+% Still to do:
+%  destructure
+%  format (?)
+
+\chapter{Libraries}
+
+Use the
+\link*{\code{,open} command}
+[\code{,open} command (section~\Ref{})]{module-command-guide}
+ or
+\link*{the module language}
+[the module language (chapter~\Ref)]{module-guide}
+ to open the structures described below.
+
+\section{General utilities}
+\label{big-util}
+
+%% These are missing:
+%%        copy-string
+%%        string->immutable-string
+%%        error
+%%        breakpoint
+
+These are in the \code{big-util} structure.
+
+\begin{protos}
+\proto{atom?}{ value}{boolean}
+\end{protos}
+%
+\code{(atom? \var{x})} is the same as \code{(not (pair? \var{x}))}.
+
+\begin{protos}
+\proto{null-list?}{ list}{boolean}
+\end{protos}
+%
+Returns true for the empty list, false for a pair, and signals an
+error otherwise.
+
+\begin{protos}
+\proto{neq?}{ value value}{boolean}
+\end{protos}
+\code{(neq? \var{x} \var{y})} is the same as \code{(not (eq? \var{x}
+\var{y}))}.
+
+\begin{protos}
+\proto{n=}{ number number}{boolean}
+\end{protos}
+\code{(n= \var{x} \var{y})} is the same as \code{(not (= \var{x}
+  \var{y}))}.
+
+\begin{protos}
+\proto{identity}{ value}{value}
+\proto{no-op}{ value}{value}
+\end{protos}
+These both just return their argument.  \code{No-op} is guaranteed not to
+be compiled in-line, \code{identity} may be.
+
+\begin{protos}
+\proto{memq?}{ value list}{boolean}
+\end{protos}
+%
+Returns true if \var{value} is in \var{list}, false otherwise.
+
+\begin{protos}
+\proto{any?}{ predicate list}{boolean}
+\end{protos}
+Returns true if \var{predicate} is true for any element of \var{list}.
+
+\begin{protos}
+\proto{every?}{ predicate list}{boolean}
+\end{protos}
+  Returns true if \var{predicate} is true for every element of \var{list}.
+
+\begin{protos}
+\proto{any}{ predicate list}{value}
+\proto{first}{ predicate list}{value}
+\end{protos}
+\code{Any} returns some element of \var{list} for which \var{predicate} is true, or
+false if there are none.  \code{First} does the same except that it returns
+the first element for which \var{predicate} is true.
+
+\begin{protos}
+\proto{filter}{ predicate list}{list}
+\proto{filter!}{ predicate list}{list}
+\end{protos}
+Returns a list containing all of the elements of \var{list} for which
+\var{predicate} is true.  The order of the elements is preserved.
+\code{Filter!} may reuse the storage of \var{list}.
+
+\begin{protos}
+\proto{filter-map}{ procedure list}{list}
+\end{protos}
+The same as \code{filter} except the returned list contains the results of
+applying \var{procedure} instead of elements of \var{list}.  \code{(filter-map \var{p}
+\var{l})} is the same as \code{(filter identity (map \var{p} \var{l}))}.
+
+\begin{protos}
+\proto{partition-list}{ predicate list}{list list}
+\proto{partition-list!}{ predicate list}{list list}
+\end{protos}
+The first return value contains those elements \var{list} for which
+\var{predicate} is true, the second contains the remaining elements.
+The order of the elements is preserved.  \code{Partition-list!} may
+reuse the storage of the \var{list}.
+
+\begin{protos}
+\proto{remove-duplicates}{ list}{list}
+\end{protos}
+Returns its argument with all duplicate elements removed.  The first
+instance of each element is preserved.
+
+\begin{protos}
+\proto{delq}{ value list}{list}
+\proto{delq!}{ value list}{list}
+\proto{delete}{ predicate list}{list}
+\end{protos}
+All three of these return \var{list} with some elements removed.
+\code{Delq} removes all elements \code{eq?} to \var{value}.  \code{Delq!}
+does the same and may modify the list argument.  \code{Delete} removes
+all elements for which \var{predicate} is true.  Both \code{delq} and
+\code{delete} may reuse some of the storage in the list argument, but
+won't modify it.
+
+\begin{protos}
+\proto{reverse!}{ list}{list}
+\end{protos}
+Destructively reverses \var{list}.
+
+\begin{protos}
+\proto{concatenate-symbol}{ value \ldots}{symbol}
+\end{protos}
+Returns the symbol whose name is produced by concatenating the
+\code{display}ed
+representations of \var{value}~\ldots.
+
+\begin{example}
+(concatenate-symbol 'abc "-" 4) \(\Longrightarrow\) 'abc-4
+\end{example}
+
+\section{Pretty-printing}
+
+These are in the \code{pp} structure.
+
+\begin{protos}
+\protonoresult{p}{ value}
+\protonoresult{p}{ value output-port}
+\protonoresult{pretty-print}{ value output-port position}
+\end{protos}
+Pretty-print \var{value} The current output port is used if no port is
+specified.  \var{Position} is the starting offset.  \var{Value} will be
+pretty-printed to the right of this column.
+
+\section{ASCII character encoding}
+\label{ascii-procedures}
+
+These are in the structure \code{ascii}.
+
+\begin{protos}
+\proto{char->ascii}{ char}{integer}
+\proto{ascii->char}{ integer}{char}
+\end{protos}
+\noindent
+These are identical to \code{char->integer} and \code{integer->char} except that
+ they use the
+\link{ASCII encoding}[ASCII encoding (appendix~\Ref)]{ascii-chart}.
+
+\begin{protos}
+\constproto{ascii-limit}{integer}
+\constproto{ascii-whitespaces}{list of integers}
+\end{protos}
+\code{Ascii-limit} is one more than the largest value that \code{char->ascii}
+ may return.
+\code{Ascii-whitespaces} is a list of the ASCII values of whitespace characters
+ (space, horizontal tab, line feed (= newline), vertical tab, form feed, and
+ carriage return).
+
+\section{Bitwise integer operations}
+
+These functions use the two's-complement representation for integers.
+There is no limit to the number of bits in an integer.
+They are in the structures \code{bitwise} and \code{big-scheme}.
+
+\begin{protos}
+\proto{bitwise-and}{ integer integer}{integer}
+\proto{bitwise-ior}{ integer integer}{integer}
+\proto{bitwise-xor}{ integer integer}{integer}
+\proto{bitwise-not}{ integer} {integer}
+\end{protos}
+\noindent
+These perform various logical operations on integers on a bit-by-bit
+basis. `\code{ior}' is inclusive OR and `\code{xor}' is exclusive OR.
+
+\begin{protos}
+\proto{arithmetic-shift}{ integer bit-count}{integer}
+\end{protos}
+\noindent Shifts the integer by the given bit count, which must be an integer,
+ shifting left for positive counts and right for negative ones.
+Shifting preserves the integer's sign.
+
+\begin{protos}
+\proto{bit-count}{ integer}{integer}
+\end{protos}
+\noindent Counts the number of bits set in the integer.
+If the argument is negative a bitwise NOT operation is performed
+ before counting.
+
+\section{Byte vectors}
+
+These are homogeneous vectors of small integers ($0 \le i \le 255$).
+The functions that operate on them are analogous to those for vectors.
+They are in the structure \code{byte-vectors}.
+
+\begin{protos}
+\proto{byte-vector?}{ value}{boolean}
+\proto{make-byte-vector}{ k fill}{byte-vector}
+\proto{byte-vector}{ b \ldots}{byte-vector}
+\proto{byte-vector-length}{ byte-vector}{integer}
+\proto{byte-vector-ref}{ byte-vector k}{integer}
+\protonoresult{byte-vector-set!}{ byte-vector k b}
+\end{protos}
+
+\section{Sparse vectors}
+
+These are vectors that grow as large as they need to.  That is, they
+can be indexed by arbitrarily large nonnegative integers.  The
+implementation allows for arbitrarily large gaps by arranging the
+entries in a tree.  They are in the structure \code{sparse-vectors}.
+
+\begin{protos}
+\proto{make-sparse-vector}{}{sparse-vector}
+\proto{sparse-vector-ref}{ sparse-vector k}{value}
+\protonoresult{sparse-vector-set!}{ sparse-vector k value}
+\proto{sparse-vector->list}{ sparse-vector}{list}
+\end{protos}
+%
+\code{Make-sparse-vector}, \code{sparse-vector-ref}, and
+\code{sparse-vector-set!} are analogous to \code{make-vector},
+\code{vector-ref}, and \code{vector-set!}, except that the indices
+passed to \code{sparse-vector-ref} and \code{sparse-vector-set!} can
+be arbitrarily large.  For indices whose elements have not been set in
+a sparse vector, \code{sparse-vector-ref} returns \code{\#f}.
+
+\code{Sparse-vector->list} is for debugging: It returns a list of the
+consecutive elements in a sparse vector from 0 to the highest element
+that has been set.  Note that the list will also include all the
+\code{\#f} elements for the unset elements.
+
+
+\section{Cells}
+\label{cells}
+
+These hold a single value and are useful when a simple indirection is
+ required.
+The system uses these to hold the values of lexical variables that
+ may be \code{set!}.
+
+\begin{protos}
+\proto{cell?}{ value}{boolean}
+\proto{make-cell}{ value}{cell}
+\proto{cell-ref}{ cell}{value}
+\protonoresult{cell-set!}{ cell value}
+\end{protos}
+
+\section{Queues}
+
+These are ordinary first-in, first-out queues.
+The procedures are in structure \code{queues}.
+
+\begin{protos}
+\proto{make-queue}{}{queue}
+\proto{queue?}{ value}{boolean}
+\proto{queue-empty?}{ queue}{boolean}
+\protonoresult{enqueue!}{ queue value}
+\proto{dequeue!}{ queue}{value}
+\end{protos}
+\noindent 
+\code{Make-queue} creates an empty queue, \code{queue?} is a predicate for
+ identifying queues, \code{queue-empty?} tells you if a queue is empty,
+ \code{enqueue!} and \code{dequeue!} add and remove values.
+
+\begin{protos}
+\proto{queue-length}{ queue}{integer}
+\proto{queue->list}{ queue}{values}
+\proto{list->queue}{ values}{queue}
+\proto{delete-from-queue!}{ queue value}{boolean}
+\end{protos}
+\noindent
+\code{Queue-length} returns the number of values in \var{queue}.
+\code{Queue->list} returns the values in \var{queue} as a list, in the
+ order in which the values were added.
+\code{List->queue} returns a queue containing \var{values}, preserving
+ their order.
+\code{Delete-from-queue} removes the first instance of \var{value} from
+ \code{queue}, using \code{eq?} for comparisons.
+\code{Delete-from-queue} returns \code{\#t} if \var{value} is found and
+ \code{\#f} if it is not.
+
+\section{Arrays}
+
+These provide N-dimensional, zero-based arrays and
+ are in the structure \code{arrays}.
+The array interface is derived from one invented by Alan Bawden.
+
+\begin{protos}
+\proto{make-array}{ value dimension$_0$ \ldots}{array}
+\proto{array}{ dimensions element$_0$ \ldots}{array}
+\proto{copy-array}{ array}{array}
+\end{protos}
+\noindent
+\code{Make-array} makes a new array with the given dimensions, each of which
+ must be a non-negative integer.
+Every element is initially set to \cvar{value}.
+\code{Array} Returns a new array with the given dimensions and elements.
+\cvar{Dimensions} must be a list of non-negative integers, 
+The number of elements should be the equal to the product of the
+ dimensions.
+The elements are stored in row-major order.
+\begin{example}
+(make-array 'a 2 3) \evalsto \{Array 2 3\}
+
+(array '(2 3) 'a 'b 'c 'd 'e 'f)
+    \evalsto \{Array 2 3\}
+\end{example}
+
+\code{Copy-array} returns a copy of \cvar{array}.
+The copy is identical to the \cvar{array} but does not share storage with it.
+
+\begin{protos}
+\proto{array?}{ value}{boolean}
+\end{protos}
+\noindent
+Returns \code{\#t} if \cvar{value} is an array.
+
+\begin{protos}
+\proto{array-ref}{ array index$_0$ \ldots}{value}
+\protonoresult{array-set!}{ array value index$_0$ \ldots}
+\proto{array->vector}{ array}{vector}
+\proto{array-dimensions}{ array}{list}
+\end{protos}
+\noindent
+\code{Array-ref} returns the specified array element and \code{array-set!}
+ replaces the element with \cvar{value}.
+\begin{example}
+(let ((a (array '(2 3) 'a 'b 'c 'd 'e 'f)))
+  (let ((x (array-ref a 0 1)))
+    (array-set! a 'g 0 1)
+    (list x (array-ref a 0 1))))
+    \evalsto '(b g)
+\end{example}
+
+\code{Array->vector} returns a vector containing the elements of \cvar{array}
+ in row-major order.
+\code{Array-dimensions} returns the dimensions of
+ the array as a list.
+
+\begin{protos}
+\proto{make-shared-array}{ array linear-map dimension$_0$ \ldots}{array}
+\end{protos}
+\noindent
+\code{Make-shared-array} makes a new array that shares storage with \cvar{array}
+ and uses \cvar{linear-map} to map indexes to elements.
+\cvar{Linear-map} must accept as many arguments as the number of
+ \cvar{dimension}s given and must return a list of non-negative integers
+ that are valid indexes into \cvar{array}.
+<\begin{example}
+(array-ref (make-shared-array a f i0 i1 ...)
+           j0 j1 ...)
+\end{example}
+is equivalent to
+\begin{example}
+(apply array-ref a (f j0 j1 ...))
+\end{example}
+
+As an example, the following function makes the transpose of a two-dimensional
+ array:
+\begin{example}
+(define (transpose array)
+  (let ((dimensions (array-dimensions array)))
+    (make-shared-array array
+                       (lambda (x y)
+                         (list y x))
+                       (cadr dimensions)
+                       (car dimensions))))
+
+(array->vector
+  (transpose
+    (array '(2 3) 'a 'b 'c 'd 'e 'f)))
+      \evalsto '(a d b e c f)
+\end{example}
+
+\section{Records}
+\label{records}
+
+New types can be constructed using the \code{define-record-type} macro
+ from the \code{define-record-types} structure
+The general syntax is:
+\begin{example}
+(define-record-type \cvar{tag} \cvar{type-name}
+  (\cvar{constructor-name} \cvar{field-tag} \ldots)
+  \cvar{predicate-name}
+  (\cvar{field-tag} \cvar{accessor-name} [\cvar{modifier-name}])
+  \ldots)
+\end{example}
+This makes the following definitions:
+\begin{protos}
+\constprotonoindex{\cvar{type-name}}{type}
+\protonoindex{\cvar{constructor-name}}{ field-init \ldots}{type-name}
+\protonoindex{\cvar{predicate-name}}{ value}{boolean}
+\protonoindex{\cvar{accessor-name}}{ type-name}{value}
+\protonoresultnoindex{\cvar{modifier-name}}{ type-name value}
+\end{protos}
+\noindent
+\cvar{Type-name} is the record type itself, and can be used to
+ specify a print method (see below).
+\cvar{Constructor-name} is a constructor that accepts values
+ for the fields whose tags are specified.
+\cvar{Predicate-name} is a predicate that returns \code{\#t} for
+ elements of the type and \code{\#f} for everything else.
+The \cvar{accessor-name}s retrieve the values of fields,
+ and the \cvar{modifier-name}'s update them.
+\cvar{Tag} is used in printing instances of the record type and
+ the \cvar{field-tag}s are used in the inspector and to match
+ constructor arguments with fields.
+
+\begin{protos}
+\protonoresult{define-record-discloser}{ type discloser}
+\end{protos}
+\noindent
+\code{Define-record-discloser} determines how
+ records of type \cvar{type} are printed.
+\cvar{Discloser} should be procedure which takes a single
+ record of type \cvar{type} and returns a list whose car is
+ a symbol.
+The record will be printed as the value returned by \cvar{discloser}
+ with curly braces used instead of the usual parenthesis.
+
+For example
+\begin{example}
+(define-record-type pare :pare
+  (kons x y)
+  pare?
+  (x kar set-kar!)
+  (y kdr))
+\end{example}
+ defines \code{kons} to be a constructor, \code{kar} and \code{kdr} to be
+ accessors, \code{set-kar!} to be a modifier, and \code{pare?} to be a predicate
+ for a new type of object.
+The type itself is named \code{:pare}.
+\code{Pare} is a tag used in printing the new objects.
+
+By default, the new objects print as \code{\#\{Pare\}}.
+The print method can be modified using \code{define-record-discloser}:
+\begin{example}
+(define-record-discloser :pare
+  (lambda (p) `(pare ,(kar p) ,(kdr p))))
+\end{example}
+ will cause the result of \code{(kons 1 2)} to print as
+ \code{\#\{Pare 1 2\}}.
+
+\link*{\code{Define-record-resumer}}
+ [\code{Define-record-resumer} (section~\Ref{})]
+ {sec:hibernation}
+ can be used to control how records are stored in heap images.
+
+\subsection{Low-level access to records}
+
+Records are implemented using primitive objects exactly analogous
+ to vectors.
+Every record has a record type (which is another record) in the first slot.
+Note that use of these procedures, especially \code{record-set!}, breaks
+ the record abstraction described above; caution is advised.
+
+These procedures are in the structure \code{records}.
+
+\begin{protos}
+\proto{make-record}{ n value}{record}
+\proto{record}{ value \ldots}{record-vector}
+\proto{record?}{ value}{boolean}
+\proto{record-length}{ record}{integer}
+\proto{record-type}{ record}{value}
+\proto{record-ref}{ record i}{value}
+\protonoresult{record-set!}{ record i value}
+\end{protos}
+\noindent
+These the same as the standard \code{vector-} procedures except that they
+ operate on records.
+The value returned by \code{record-length} includes the slot holding the
+ record's type.
+\code{(record-type \cvar{x})} is equivalent to \code{(record-ref \cvar{x} 0)}.
+
+\subsection{Record types}
+
+Record types are themselves records of a particular type (the first slot
+ of \code{:record-type} points to itself).
+A record type contains four values: the name of the record type, a list of
+ the names its fields, and procedures for disclosing and resuming records
+ of that type.
+Procedures for manipulating them are in the structure \code{record-types}.
+
+\begin{protos}
+\proto{make-record-type}{ name field-names}{record-type}
+\proto{record-type?}{ value}{boolean}
+\proto{record-type-name}{ record-type}{symbol}
+\proto{record-type-field-names}{ record-type}{symbols}
+\end{protos}
+\noindent
+
+\begin{protos}
+\proto{record-constructor}{ record-type field-names}{procedure}
+\proto{record-predicate}{ record-type}{procedure}
+\proto{record-accessor}{ record-type field-name}{procedure}
+\proto{record-modifier}{ record-type field-name}{procedure}
+\end{protos}
+\noindent
+These procedures construct the usual record-manipulating procedures.
+\code{Record-constructor} returns a constructor that is passed the initial
+ values for the fields specified and returns a new record.
+\code{Record-predicate} returns a predicate that return true when passed
+ a record of type \cvar{record-type} and false otherwise.
+\code{Record-accessor} and \code{record-modifier} return procedures that
+ reference and set the given field in records of the approriate type.
+
+\begin{protos}
+\protonoresult{define-record-discloser}{ record-type discloser}
+\protonoresult{define-record-resumer}{ record-type resumer}
+\end{protos}
+\noindent
+\noindent \code{Record-types} is the initial exporter of
+ \code{define-record-discloser}
+ (re-exported by \code{define-record-types} described above)
+ and
+ \code{define-record-resumer}
+ (re-exported by
+ \link*{\code{external-calls}}
+       [\code{external-calls} (section~\Ref{})]
+       {sec:hibernation}).
+
+The procedures described in this section can be used to define new
+ record-type-defining macros.
+\begin{example}
+(define-record-type pare :pare
+  (kons x y)
+  pare?
+  (x kar set-kar!)
+  (y kdr))
+\end{example}
+is (sematically) equivalent to
+\begin{example}
+(define :pare (make-record-type 'pare '(x y)))
+(define kons (record-constructor :pare '(x y)))
+(define kar (record-accessor :pare 'x))
+(define set-kar! (record-modifier :pare 'x))
+(define kdr (record-accessor :pare 'y))
+\end{example}
+
+The ``(semantically)'' above is because \code{define-record-type} adds
+ declarations, which allows the type checker to detect some misuses of records,
+ and uses more efficient definitions for the constructor, accessors, and
+ modifiers.
+Ignoring the declarations, which will have to wait for another edition of
+ the manual, what the above example actually expands into is:
+\begin{example}
+(define :pare (make-record-type 'pare '(x y)))
+(define (kons x y) (record :pare x y))
+(define (kar r) (checked-record-ref r :pare 1))
+(define (set-kar! r new)
+  (checked-record-set! r :pare 1 new))
+(define (kdr r) (checked-record-ref r :pare 2))
+\end{example} 
+\code{Checked-record-ref} and \code{Checked-record-set!} are
+ low-level procedures that check the type of the
+ record and access or modify it using a single VM instruction.
+
+\section{Finite record types}
+
+The structure \code{finite-types} has
+ two macros for defining `finite' record types.
+These are record types for which there are a fixed number of instances,
+ all of which are created at the same time as the record type itself.
+The syntax for defining an enumerated type is:
+\begin{example}
+(define-enumerated-type \cvar{tag} \cvar{type-name}
+  \cvar{predicate-name}
+  \cvar{vector-of-instances-name}
+  \cvar{name-accessor}
+  \cvar{index-accessor}
+  (\cvar{instance-name} \ldots))
+\end{example}
+This defines a new record type, bound to \cvar{type-name}, with as many
+ instances as there are \cvar{instance-name}'s.
+\cvar{Vector-of-instances-name} is bound to a vector containing the instances
+ of the type in the same order as the \cvar{instance-name} list.
+\cvar{Tag} is bound to a macro that when given an \cvar{instance-name} expands
+ into an expression that returns corresponding instance.
+The name lookup is done at macro expansion time.
+\cvar{Predicate-name} is a predicate for the new type.
+\cvar{Name-accessor} and \cvar{index-accessor} are accessors for the
+ name and index (in \cvar{vector-of-instances}) of instances of the type.
+
+\begin{example}
+(define-enumerated-type color :color
+  color?
+  colors
+  color-name
+  color-index
+  (black white purple maroon))
+
+(color-name (vector-ref colors 0)) \evalsto black
+(color-name (color white))         \evalsto white
+(color-index (color purple))       \evalsto 2
+\end{example}
+
+Finite types are enumerations that allow the user to add additional
+ fields in the type.
+The syntax for defining a finite type is:
+\begin{example}
+(define-finite-type \cvar{tag} \cvar{type-name}
+  (\cvar{field-tag} \ldots)
+  \cvar{predicate-name}
+  \cvar{vector-of-instances-name}
+  \cvar{name-accessor}
+  \cvar{index-accessor}
+  (\cvar{field-tag} \cvar{accessor-name} [\cvar{modifier-name}])
+  \ldots
+  ((\cvar{instance-name} \cvar{field-value} \ldots)
+   \ldots))
+\end{example}
+The additional fields are specified exactly as with \code{define-record-type}.
+The field arguments to the constructor are listed after the \cvar{type-name};
+ these do not include the name and index fields.
+The form ends with the names and the initial field values for
+ the instances of the type.
+The instances are constructed by applying the (unnamed) constructor to
+ these initial field values.
+The name must be first and 
+ the remaining values must match the \cvar{field-tag}s in the constructor's
+ argument list.
+
+%This differs from \code{define-record-type} in the following ways:
+%\begin{itemize}
+%\item No name is specified for the constructor, but the field arguments
+% to the constructor are listed.
+%\item The \cvar{vector-of-instances-name} is added; it will be bound
+% to a vector containing all of the instances of the type.
+%These are constructed by applying the (unnamed) constructor to the
+% initial field values at the end of the form.
+%\item There are names for accessors for two required fields, name
+% and index.
+%These fields are not settable, and are not to be included
+% in the argument list for the constructor.
+%\item The form ends with the names and the initial field values for
+% the instances of the type.
+%The name must be first.
+%The remaining values must match the \cvar{field-tag}s in the constructor's
+% argument list.
+%\item \cvar{Tag} is bound to a macro that maps \cvar{instance-name}s to the
+% the corresponding instance of the vector.
+%The name lookup is done at macro-expansion time.
+%\end{itemize}
+
+\begin{example}
+(define-finite-type color :color
+  (red green blue)
+  color?
+  colors
+  color-name
+  color-index
+  (red   color-red)
+  (green color-green)
+  (blue  color-blue)
+  ((black    0   0   0)
+   (white  255 255 255)
+   (purple 160  32 240)
+   (maroon 176  48  96)))
+
+(color-name (color black))         \evalsto black
+(color-name (vector-ref colors 1)) \evalsto white
+(color-index (color purple))       \evalsto 2
+(color-red (color maroon))         \evalsto 176
+\end{example}
+
+\section{Sets over finite types}
+\label{sets-finite-types}
+
+The structure \code{enum-sets} has a macro for defining types for sets
+of elements of finite types.  These work naturally with the finite
+types defined by the \code{finite-types} structure, but are not tied
+to them.  The syntax for defining such a type is:
+
+\begin{example}
+(define-enum-set-type \cvar{id} \cvar{type-name} \cvar{predicate} \cvar{constructor}
+   \cvar{element-syntax} \cvar{element-predicate} \cvar{all-elements} \cvar{element-index-ref})
+\end{example}
+%
+This defines \cvar{id} to be syntax for constructing sets,
+\cvar{type-name} to be a value representing the type,
+\cvar{predicate} to be a predicate for those sets, and
+\cvar{constructor} a procedure for constructing one from a list.
+
+\cvar{Element-syntax} must be the name of a macro for constructing set
+elements from names (akin to the \cvar{tag} argument to
+\code{define-enumerated-type}).  \cvar{Element-predicate} must be a
+predicate for the element type, \cvar{all-elements} a vector of all
+values of the element type, and \cvar{element-index-ref} must return
+the index of an element within the \cvar{all-elements} vector.
+
+\begin{protos}
+\proto{enum-set->list}{ enum-set}{list}
+\proto{enum-set-member?}{ enum-set enumerand}{boolean}
+\proto{enum-set=?}{ enum-set enum-set}{boolean}
+\proto{enum-set-union}{ enum-set enum-set}{enum-set}
+\proto{enum-set-intersection}{ enum-set enum-set}{ enum-set}
+\proto{enum-set-negation}{ enum-set}{enum-set}
+\end{protos}
+%
+\code{Enum-set->list} converts a set into a list of its elements.
+\code{Enum-set-member?} tests for membership.  \code{Enum-set=?} tests
+two sets of equal type for equality.  (If its arguments are not of the
+same type, \code{enum-set=?} raises an exception.)
+\code{Enum-set-union} computes the union of two sets of equal type,
+\code{enum-set-intersection} computes the intersection, and
+\code{enum-set-negation} computes the complement of a set.
+
+Here is an example.  Given an enumerated type:
+
+\begin{example}
+(define-enumerated-type color :color
+  color?
+  colors
+  color-name
+  color-index
+  (red blue green))
+\end{example}
+
+we can define sets of colors:
+
+\begin{example}
+(define-enum-set-type color-set :color-set
+                      color-set?
+                      make-color-set
+  color color? colors color-index)
+\end{example}
+
+\begin{example}
+> (enum-set->list (color-set red blue))
+(#{Color red} #{Color blue})
+> (enum-set->list (enum-set-negation (color-set red blue)))
+(#{Color green})
+> (enum-set-member? (color-set red blue) (color blue))
+#t
+\end{example}
+
+\section{Hash tables}
+
+These are generic hash tables, and are in the structure \code{tables}.
+Strictly speaking they are more maps than tables, as every table has a
+ value for every possible key (for that type of table).
+All but a finite number of those values are \code{\#f}.
+
+\begin{protos}
+\proto{make-table}{}{table}
+\proto{make-symbol-table}{}{symbol-table}
+\proto{make-string-table}{}{string-table}
+\proto{make-integer-table}{}{integer-table}
+\proto{make-table-maker}{ compare-proc hash-proc}{procedure}
+\protonoresult{make-table-immutable!}{ table}
+\end{protos}
+\noindent
+The first four functions listed make various kinds of tables.
+\code{Make-table} returns a table whose keys may be symbols, integer,
+ characters, booleans, or the empty list (these are also the values
+ that may be used in \code{case} expressions).
+As with \code{case}, comparison is done using \code{eqv?}.
+The comparison procedures used in symbol, string, and integer tables are
+ \code{eq?}, \code{string=?}, and \code{=}.
+
+\code{Make-table-maker} takes two procedures as arguments and returns
+ a nullary table-making procedure.
+\cvar{Compare-proc} should be a two-argument equality predicate.
+\cvar{Hash-proc} should be a one argument procedure that takes a key
+ and returns a non-negative integer hash value.
+If \code{(\cvar{compare-proc} \cvar{x} \cvar{y})} returns true,
+ then \code{(= (\cvar{hash-proc} \cvar{x}) (\cvar{hash-proc} \cvar{y}))}
+ must also return true.
+For example, \code{make-integer-table} could be defined
+ as \code{(make-table-maker = abs)}.
+
+\code{Make-table-immutable!} prohibits future modification to its argument.
+
+\begin{protos}
+\proto{table?}{ value}{boolean}
+\proto{table-ref}{ table key}{value or {\tt \#f}}
+\protonoresult{table-set!}{ table key value}
+\protonoresult{table-walk}{ procedure table}
+\end{protos}
+\noindent
+\code{Table?} is the predicate for tables.
+\code{Table-ref} and \code{table-set!} access and modify the value of \cvar{key}
+ in \cvar{table}.
+\code{Table-walk} applies \cvar{procedure}, which must accept two arguments,
+ to every associated key and non-\code{\#f} value in \code{table}.
+
+\begin{protos}
+\proto{default-hash-function}{ value}{integer}
+\proto{string-hash}{ string}{integer}
+\end{protos}
+\noindent
+\code{Default-hash-function} is the hash function used in the tables
+ returned by \code{make-table}, and \code{string-hash} it the one used
+ by \code{make-string-table}.
+
+\section{Port extensions}
+
+These procedures are in structure \code{extended-ports}.
+
+\begin{protos}
+\proto{make-string-input-port}{ string}{input-port}
+\proto{make-string-output-port}{}{output-port}
+\proto{string-output-port-output}{ string-output-port}{string}
+\end{protos}
+\noindent \code{Make-string-input-port} returns an input port that
+ that reads characters from the supplied string.  An end-of-file
+ object is returned if the user reads past the end of the string.
+\code{Make-string-output-port} returns an output port that saves
+ the characters written to it.
+These are then returned as a string by \code{string-output-port-output}.
+
+\begin{example}
+(read (make-string-input-port "(a b)"))
+    \evalsto '(a b)
+
+(let ((p (make-string-output-port)))
+  (write '(a b) p)
+  (let ((s (string-output-port-output p)))
+    (display "c" p)
+    (list s (string-output-port-output p))))
+    \evalsto '("(a b)" "(a b)c")
+\end{example}
+
+\begin{protos}
+\protonoresult{limit-output}{ output-port n procedure}
+\end{protos}
+\noindent
+\var{Procedure} is called on an output port.
+Output written to that port is copied to \var{output-port} until \var{n}
+ characters have been written, at which point \code{limit-output} returns.
+If \var{procedure} returns before writing \var{n} characters, then
+ \code{limit-output} also returns at that time, regardless of how many
+ characters have been written.
+
+\begin{protos}
+\proto{make-tracking-input-port}{ input-port}{input-port}
+\proto{make-tracking-output-port}{ output-port}{output-port}
+\proto{current-row}{ port}{integer or {\tt \#f}}
+\proto{current-column}{ port}{integer or {\tt \#f}}
+\protonoresult{fresh-line}{ output-port}
+\end{protos}
+\noindent \code{Make-tracking-input-port} and \code{make-tracking-output-port}
+ return ports that keep track of the current row and column and
+ are otherwise identical to their arguments.
+Closing a tracking port does not close the underlying port.
+\code{Current-row} and \code{current-column} return
+  \var{port}'s current read or write location.
+They return \code{\#f} if \var{port} does not keep track of its location.
+\code{Fresh-line} writes a newline character to \var{output-port} if
+ \code{(current-row \cvar{port})} is not 0.
+
+\begin{example}
+(define p (open-output-port "/tmp/temp"))
+(list (current-row p) (current-column p))
+    \evalsto '(0 0)
+(display "012" p)
+(list (current-row p) (current-column p))
+    \evalsto '(0 3)
+(fresh-line p)
+(list (current-row p) (current-column p))
+    \evalsto '(1 0)
+(fresh-line p)
+(list (current-row p) (current-column p))
+    \evalsto '(1 0)
+\end{example}
+
+\section{Fluid bindings}
+
+These procedures implement dynamic binding and are in structure \code{fluids}.
+A \cvar{fluid} is a cell whose value can be bound dynamically.
+Each fluid has a top-level value that is used when the fluid
+ is unbound in the current dynamic environment.
+
+\begin{protos}
+\proto{make-fluid}{ value}{fluid}
+\proto{fluid}{ fluid}{value}
+\proto{let-fluid}{ fluid value thunk}{value(s)}
+\proto{let-fluids}{ fluid$_0$ value$_0$  fluid$_1$ value$_1$ \ldots thunk}{value(s)}
+\end{protos}
+\noindent
+\code{Make-fluid} returns a new fluid with \cvar{value} as its initial
+ top-level value.
+\code{Fluid} returns \code{fluid}'s current value.
+\code{Let-fluid} calls \code{thunk}, with \cvar{fluid} bound to \cvar{value}
+ until \code{thunk} returns.
+Using a continuation to throw out of the call to \code{thunk} causes
+ \cvar{fluid} to revert to its original value, while throwing back
+ in causes \cvar{fluid} to be rebound to \cvar{value}.
+\code{Let-fluid} returns the value(s) returned by \cvar{thunk}.
+\code{Let-fluids} is identical to \code{let-fluid} except that it binds
+ an arbitrary number of fluids to new values.
+
+\begin{example}
+(let* ((f (make-fluid 'a))
+       (v0 (fluid f))
+       (v1 (let-fluid f 'b
+             (lambda ()
+               (fluid f))))
+       (v2 (fluid f)))
+  (list v0 v1 v2))
+  \evalsto '(a b a)
+\end{example}
+
+\begin{example}
+(let ((f (make-fluid 'a))
+      (path '())
+      (c \#f))
+  (let ((add (lambda ()
+               (set! path (cons (fluid f) path)))))
+    (add)
+    (let-fluid f 'b
+      (lambda ()
+        (call-with-current-continuation
+          (lambda (c0)
+            (set! c c0)))
+        (add)))
+    (add)
+    (if (< (length path) 5)
+        (c)
+        (reverse path))))
+  \evalsto '(a b a b a)
+\end{example}
+
+\section{Shell commands}
+
+Structure \code{c-system-function} provides access to the C \code{system()}
+ function.
+
+\begin{protos}
+\proto{have-system?}{}{boolean}
+\proto{system}{ string}{integer}
+\end{protos}
+\noindent
+\code{Have-system?} returns true if the underlying C implementation
+ has a command processor.
+\code{(System \cvar{string})} passes \cvar{string} to the C
+ \code{system()} function and returns the result.
+
+\begin{example}
+(begin
+  (system "echo foo > test-file")
+  (call-with-input-file "test-file" read))
+\evalsto 'foo
+\end{example}
+
+\section{Sockets}
+% Richard says: add UDP documentation.
+
+Structure \code{sockets} provides access to TCP/IP sockets for interprocess
+ and network communication.
+
+\begin{protos}
+\proto{open-socket}{}{socket}
+\proto{open-socket}{ port-number}{socket}
+\proto{socket-port-number}{ socket}{integer}
+\protonoresult{close-socket}{ socket}
+\proto{socket-accept}{ socket}{input-port output-port}
+\proto{get-host-name}{}{string}
+\end{protos}
+\noindent
+\code{Open-socket} creates a new socket.
+If no \cvar{port-number} is supplied the system picks one at random.
+\code{Socket-port-number} returns a socket's port number.
+\code{Close-socket} closes a socket, preventing any further connections.
+\code{Socket-accept} accepts a single connection on \cvar{socket}, returning
+ an input port and an output port for communicating with the client.
+If no client is waiting \code{socket-accept} blocks until one appears.
+\code{Get-host-name} returns the network name of the machine.
+
+\begin{protos}
+\proto{socket-client}{ host-name port-number}{input-port output-port}
+\end{protos}
+\noindent
+\code{Socket-client} connects to the server at \cvar{port-number} on
+ the machine named \cvar{host-name}.
+\code{Socket-client} blocks until the server accepts the connection.
+
+The following simple example shows a server and client for a centralized UID
+ service.
+\begin{example}
+(define (id-server)
+  (let ((socket (open-socket)))
+    (display "Waiting on port ")
+    (display (socket-port-number socket))
+    (newline)
+    (let loop ((next-id 0))
+      (call-with-values
+        (lambda ()
+          (socket-accept socket))
+        (lambda (in out)
+          (display next-id out)
+          (close-input-port in)
+          (close-output-port out)
+          (loop (+ next-id 1)))))))
+         
+(define (get-id machine port-number)
+  (call-with-values
+    (lambda ()
+      (socket-client machine port-number))
+    (lambda (in out)
+      (let ((id (read in)))
+        (close-input-port in)
+        (close-output-port out)
+        id))))
+\end{example}
+
+\section{Macros for writing loops}
+% JAR says: origin? history?
+
+\code{Iterate} and \code{reduce} are extensions of named-\code{let} for
+ writing loops that walk down one or more sequences,
+ such as the elements of a list or vector, the
+ characters read from a port, or an arithmetic series.
+Additional sequences can be defined by the user.
+\code{Iterate} and \code{reduce} are in structure \code{reduce}.
+
+\subsection{{\tt Iterate}}
+
+The syntax of \code{iterate} is:
+\begin{example}
+  (iterate \cvar{loop-name}
+           ((\cvar{sequence-type} \cvar{element-variable} \cvar{sequence-data} \ldots)
+            \ldots)
+           ((\cvar{state-variable} \cvar{initial-value})
+            \ldots)
+    \cvar{body-expression}
+    [\cvar{final-expression}])
+\end{example}
+
+\code{Iterate} steps the \cvar{element-variable}s in parallel through the
+ sequences, while each \cvar{state-variable} has the corresponding
+ \cvar{initial-value} for the first iteration and have later values
+ supplied by \cvar{body-expression}. 
+If any sequence has reached its limit the value of the \code{iterate}
+ expression is
+ the value of \cvar{final-expression}, if present, or the current values of
+ the \cvar{state-variable}s, returned as multiple values.
+If no sequence has reached
+ its limit, \cvar{body-expression} is evaluated and either calls \cvar{loop-name} with
+ new values for the \cvar{state-variable}s, or returns some other value(s).
+
+The \cvar{loop-name} and the \cvar{state-variable}s and \cvar{initial-value}s behave
+exactly as in named-\code{let}.  The named-\code{let} expression
+\begin{example}
+  (let loop-name ((state-variable initial-value) ...)
+    body ...)
+\end{example}
+is equivalent to an \code{iterate} expression with no sequences
+ (and with an explicit
+ \code{let} wrapped around the body expressions to take care of any
+ internal \code{define}s):
+\begin{example}
+  (iterate loop-name
+           ()
+           ((state-variable initial-value) ...)
+    (let () body ...))
+\end{example}
+
+The \cvar{sequence-type}s are keywords (they are actually macros of a particular
+ form; it is easy to add additional types of sequences).
+Examples are \code{list*} which walks down the elements of a list and
+ \code{vector*} which does the same for vectors.
+For each iteration, each \cvar{element-variable} is bound to the next
+ element of the sequence.
+The \cvar{sequence-data} gives the actual list or vector or whatever.
+
+If there is a \cvar{final-expression}, it is evaluated when the end of one or more
+ sequences is reached.
+If the \cvar{body-expression} does not call \cvar{loop-name} the
+ \cvar{final-expression} is not evaluated.
+The \cvar{state-variable}s are visible in
+ \cvar{final-expression} but the \cvar{sequence-variable}s are not.  
+
+The \cvar{body-expression} and the \cvar{final-expression} are in tail-position within
+ the \code{iterate}.
+Unlike named-\code{let}, the behavior of a non-tail-recursive call to
+ \cvar{loop-name} is unspecified (because iterating down a sequence may involve side
+ effects, such as reading characters from a port).
+
+\subsection{{\tt Reduce}}
+
+If an \code{iterate} expression is not meant to terminate before a sequence
+ has reached its end,
+ \cvar{body-expression} will always end with a tail call to \cvar{loop-name}.
+\code{Reduce} is a macro that makes this common case explicit.
+The syntax of \code{reduce} is
+ the same as that of \code{iterate}, except that there is no \cvar{loop-name}.
+The \cvar{body-expression} returns new values of the \cvar{state-variable}s
+ instead of passing them to \cvar{loop-name}.
+Thus \cvar{body-expression} must return as many values as there are state
+ variables.
+By special dispensation, if there are
+ no state variables then \cvar{body-expression} may return any number of values,
+ all of which are ignored.
+
+The syntax of \code{reduce} is:
+\begin{example}
+  (reduce ((\cvar{sequence-type} \cvar{element-variable} \cvar{sequence-data} \ldots)
+            \ldots)
+           ((\cvar{state-variable} \cvar{initial-value})
+            \ldots)
+    \cvar{body-expression}
+    [\cvar{final-expression}])
+\end{example}
+
+The value(s) returned by an instance of \code{reduce} is the value(s) returned
+ by the \cvar{final-expression}, if present, or the current value(s) of the state
+variables when the end of one or more sequences is reached.
+
+A \code{reduce} expression can be rewritten as an equivalent \code{iterate}
+ expression by adding a \cvar{loop-var} and a wrapper for the
+ \cvar{body-expression} that calls the \cvar{loop-var}.
+\begin{example}
+(iterate loop
+         ((\cvar{sequence-type} \cvar{element-variable} \cvar{sequence-data} \ldots)
+          \ldots)
+         ((\cvar{state-variable} \cvar{initial-value})
+          \ldots)
+  (call-with-values (lambda ()
+                      \cvar{body-expression})
+                    loop)
+  [\cvar{final-expression}])
+\end{example}
+
+\subsection{Sequence types}
+
+The predefined sequence types are:
+\begin{protos}
+\syntaxprotonoresultnoindex{list*}{ \cvar{elt-var} \cvar{list}}
+\syntaxprotonoresultnoindex{vector*}{ \cvar{elt-var} \cvar{vector}}
+\syntaxprotonoresultnoindex{string*}{ \cvar{elt-var} \cvar{string}}
+\syntaxprotonoresultnoindex{count*}
+ { \cvar{elt-var} \cvar{start} [\cvar{end} [\cvar{step}]]}
+\syntaxprotonoresultnoindex{input*}
+ { \cvar{elt-var} \cvar{input-port} \cvar{read-procedure}}
+\syntaxprotonoresultnoindex{stream*}
+ { \cvar{elt-var} \cvar{procedure} \cvar{initial-data}}
+\end{protos}
+
+For lists, vectors, and strings the element variable is bound to the
+ successive elements of the list or vector, or the characters in the
+ string.
+
+For \code{count*} the element variable is bound to the elements of the sequence
+\begin{example}
+ \cvar{start}, \cvar{start} + \cvar{step}, \cvar{start} + 2\cvar{step}, \ldots, \cvar{end}
+\end{example}
+ inclusive of \cvar{start} and exclusive of \cvar{end}.
+The default \cvar{step} is 1.
+The sequence does not terminate if no \cvar{end} is given or if there
+ is no $N > 0$ such that \cvar{end} = \cvar{start} + N\cvar{step}
+ (\code{=} is used to test for termination).
+For example, \code{(count* i 0 -1)} doesn't terminate
+ because it begins past the \cvar{end} value and \code{(count* i 0 1 2)} doesn't
+ terminate because it skips over the \cvar{end} value.
+
+For \code{input*} the elements are the results of successive applications
+ of \cvar{read-procedure} to \cvar{input-port}.
+The sequence ends when \cvar{read-procedure} returns an end-of-file object.
+
+For a stream, the \cvar{procedure} takes the current data value as an argument
+ and returns two values, the next value of the sequence and a new data value.
+If the new data is \code{\#f} then the previous element was the last
+ one.  For example,
+\begin{example}
+  (list* elt my-list)
+\end{example}
+ is the same as
+\begin{example}
+  (stream* elt list->stream my-list)
+\end{example}
+ where \code{list->stream} is
+\begin{example}
+  (lambda (list)
+    (if (null? list)
+        (values 'ignored \#f)
+        (values (car list) (cdr list))))
+\end{example}
+
+\subsection{Synchronous sequences}
+
+When using the sequence types described above, a loop terminates when any of
+its sequences reaches its end.  To help detect bugs it is useful to have
+sequence types that check to see if two or more sequences end on the same
+iteration.  For this purpose there is second set of sequence types called
+synchronous sequences.  These are identical to the ones listed above except
+that they cause an error to be signalled if a loop is terminated by a
+synchronous sequence and some other synchronous sequence did not reach its
+end on the same iteration.
+
+Sequences are checked for termination in order, from left to right, and
+if a loop is terminated by a non-synchronous sequence no further checking
+is done.
+
+The synchronous sequences are:
+
+\begin{protos}
+\syntaxprotonoresultnoindex{list\%}{ \cvar{elt-var} \cvar{list}}
+\syntaxprotonoresultnoindex{vector\%}{ \cvar{elt-var} \cvar{vector}}
+\syntaxprotonoresultnoindex{string\%}{ \cvar{elt-var} \cvar{string}}
+\syntaxprotonoresultnoindex{count\%}
+ { \cvar{elt-var} \cvar{start} \cvar{end} [\cvar{step}]}
+\syntaxprotonoresultnoindex{input\%}
+ { \cvar{elt-var} \cvar{input-port} \cvar{read-procedure}}
+\syntaxprotonoresultnoindex{stream\%}
+ { \cvar{elt-var} \cvar{procedure} \cvar{initial-data}}
+\end{protos}
+
+Note that the synchronous \code{count\%} must have an \cvar{end}, unlike the
+ nonsynchronous \code{count\%}.
+
+\subsection{Examples}
+
+\noindent
+Gathering the indexes of list elements that answer true to some
+predicate.
+\begin{example}
+(lambda (my-list predicate)
+  (reduce ((list* elt my-list)
+           (count* i 0))
+          ((hits '()))
+    (if (predicate elt)
+        (cons i hits)
+        hits)
+    (reverse hits))
+\end{example}
+
+\noindent
+Looking for the index of an element of a list.
+\begin{example}
+(lambda (my-list predicate)
+  (iterate loop
+           ((list* elt my-list)
+            (count* i 0))
+           ()                                ; no state
+    (if (predicate elt)
+        i
+        (loop))))
+\end{example}
+
+\noindent
+Reading one line.
+\begin{example}
+(define (read-line port)
+  (iterate loop
+           ((input* c port read-char))
+           ((chars '()))
+    (if (char=? c \#\verb2\2newline)
+        (list->string (reverse chars))
+        (loop (cons c chars)))
+    (if (null? chars)
+        (eof-object)
+        ; no newline at end of file
+        (list->string (reverse chars)))))
+\end{example}
+
+\noindent
+Counting the lines in a file.  We can't use \code{count*} because we
+need the value of the count after the loop has finished.
+\begin{example}
+(define (line-count name)
+  (call-with-input-file name
+    (lambda (in)
+      (reduce ((input* l in read-line))
+              ((i 0))
+        (+ i 1)))))
+\end{example}
+
+\subsection{Defining sequence types}
+
+The sequence types are object-oriented macros similar to enumerations.
+A non-synchronous sequence macro needs to supply three values:
+ \code{\#f} to indicate that it isn't synchronous, a list of state variables
+ and their initializers, and the code for one iteration.
+The first
+ two methods are CPS'ed: they take another macro and argument to
+ which to pass their result.
+The \code{synchronized?} method gets no additional arguments.
+The \code{state-vars} method is passed a list of names which
+ will be bound to the arguments to the sequence.
+The final method, for the step, is passed the list of names bound to
+ the arguments and the list of state variables.
+In addition there is
+ a variable to be bound to the next element of the sequence, the
+ body expression for the loop, and an expression for terminating the
+ loop.
+
+The definition of \code{list*} is
+\begin{example}
+(define-syntax list*
+  (syntax-rules (synchronized? state-vars step)
+    ((list* synchronized? (next more))
+     (next \#f more))
+    ((list* state-vars (start-list) (next more))
+     (next ((list-var start-list)) more))
+    ((list* step (start-list) (list-var)
+            value-var loop-body final-exp)
+     (if (null? list-var)
+         final-exp
+         (let ((value-var (car list-var))
+               (list-var (cdr list-var)))
+           loop-body)))))
+\end{example}
+
+Synchronized sequences are the same, except that they need to
+ provide a termination test to be used when some other synchronized
+ method terminates the loop.
+\begin{example}
+(define-syntax list\%
+  (syntax-rules (sync done)
+    ((list\% sync (next more))
+     (next \#t more))
+    ((list\% done (start-list) (list-var))
+     (null? list-var))
+    ((list\% stuff ...)
+     (list* stuff ...))))
+\end{example}
+
+\subsection{Expanded code}
+
+The expansion of 
+\begin{example}
+  (reduce ((list* x '(1 2 3)))
+          ((r '()))
+    (cons x r))
+\end{example}
+is
+\begin{example}
+  (let ((final (lambda (r) (values r)))
+        (list '(1 2 3))
+        (r '()))
+    (let loop ((list list) (r r))
+      (if (null? list)
+          (final r)
+          (let ((x (car list))
+                (list (cdr list)))
+            (let ((continue (lambda (r)
+                              (loop list r))))
+              (continue (cons x r)))))))
+\end{example}
+
+The only inefficiencies in this code are the \code{final} and \code{continue}
+ procedures, both of which could be substituted in-line.
+The macro expander could do the substitution for \code{continue} when there
+ is no explicit proceed variable, as in this case, but not in general.
+
+\section{Sorting lists and vectors}
+\label{sort}
+
+(This section, as the libraries it describes, was written mostly by
+Olin Shivers for the draft of SRFI~32.)
+
+%% Olin Shivers
+%% First draft: 1998/10/19
+%% Last update: 2002/7/21
+
+%% [Todo: del-list-neighbor-dups!
+%%        vector-copy -> subvector
+%%        use srfi-23 for reporting errors
+%%        use srfi-16 for n-aries?
+
+The sort libraries in Scheme~48 include
+%
+\begin{itemize}
+\item vector insert sort (stable)
+\item vector heap sort
+%    - Vector quick sort (with median-of-3 pivot picking)
+\item vector merge sort (stable)
+\item pure and destructive list merge sort (stable)
+\item stable vector and list merge
+\item miscellaneous sort-related procedures: vector and list merging, 
+  sorted predicates, vector binary search, vector and list 
+  delete-equal-neighbor procedures.
+\item a general, non-algorithmic set of procedure names for general sorting
+  and merging
+\end{itemize}
+
+\subsection{Design rules}
+
+\paragraph{What vs. how}
+
+There are two different interfaces: ``what'' (simple) and ``how'' (detailed).
+
+\begin{description}
+\item[Simple] you specify semantics: datatype (list or vector), 
+  mutability, and stability.
+  
+\item[Detailed] you specify the actual algorithm (quick, heap,
+  insert, merge). Different algorithms have different properties,
+  both semantic and pragmatic, so these exports are necessary.
+  
+  It is necessarily the case that the specifications of these procedures
+  make statements about execution ``pragmatics.'' For example, the sole
+  distinction between heap sort and quick sort---both of which are
+  provided by this library----is one of execution time, which is not a
+  ``semantic'' distinction. Similar resource-use statements are made about
+  ``iterative'' procedures, meaning that they can execute on input of
+  arbitrary size in a constant number of stack frames.
+\end{description}
+
+\paragraph{Consistency across procedure signatures}
+
+The two interfaces share common procedure signatures wherever
+possible, to facilitate switching a given call from one procedure
+to another.
+        
+\paragraph{Less-than parameter first, data parameter after}
+
+These procedures uniformly observe the following parameter order:
+the data to be sorted comes after the comparison procedure.
+That is, we write
+
+\begin{example}
+  (sort \(<\) \var{list})
+\end{example}
+
+not
+
+\begin{example}
+  (sort \var{list} \(<\))
+\end{example}
+%
+
+\paragraph{Ordering, comparison procedures and stability}
+
+These routines take a $<$ comparison procedure, not a $\leq$ comparison
+procedure, and they sort into increasing order. The difference between
+a $<$ spec and a $\leq$ spec comes up in two places: 
+
+\begin{itemize}
+\item the definition of an ordered or sorted data set, and
+\item the definition of a stable sorting algorithm.
+%\item correctness of quicksort. NOTE "two" above
+\end{itemize}
+%
+
+We say that a data set (a list or vector) is \textit{sorted} or
+\textit{ordered} if it contains no adjacent pair of values $\ldots x,
+y \ldots$ such that $y < x$.
+
+In other words, scanning across the data never takes a ``downwards'' step.
+
+If you use a $\leq$ procedure where these algorithms expect a $<$
+procedure, you may not get the answers you expect. For example,
+the \code{list-sorted?} procedure will return false if you pass it a $\leq$ comparison
+procedure and an ordered list containing adjacent equal elements.
+
+A ``stable'' sort is one that preserves the pre-existing order of equal
+elements. Suppose, for example, that we sort a list of numbers by 
+comparing their absolute values, i.e., using comparison procedure
+%
+\begin{verbatim}
+(lambda (x y) (< (abs x) (abs y)))
+\end{verbatim}
+%
+If we sort a list that contains both 3 and -3: \[\ldots 3, \ldots, -3 \ldots\]
+then a stable sort is an algorithm that will not swap the order
+of these two elements, that is, the answer is guaranteed to to look like
+\[\ldots 3, -3 \ldots\]
+not
+\[\ldots -3, 3 \ldots\]
+Choosing $<$ for the comparison procedure instead of $\leq$ affects
+how stability is coded. Given an adjacent pair $x, y$, \code{(<
+  $y$ $x$)} means ``$x$ should be moved in front of $x$''---otherwise,
+leave things as they are. So using a $\leq$ procedure where a $<$
+procedure is expected will \emph{invert} stability.
+
+This is due to the definition of equality, given a $<$ comparator:
+\begin{verbatim}
+    (and (not (< x y))
+         (not (< y x)))
+\end{verbatim}
+The definition is rather different, given a $\leq$ comparator:
+\begin{verbatim}
+    (and (<= x y)
+         (<= y x))
+\end{verbatim}
+%
+A ``stable'' merge is one that reliably favors one of its data sets
+when equal items appear in both data sets. \emph{All merge operations in
+this library are stable}, breaking ties between data sets in favor
+of the first data set---elements of the first list come before equal 
+elements in the second list.
+
+So, if we are merging two lists of numbers ordered by absolute value,
+the stable merge operation \code{list-merge}
+\begin{verbatim}
+    (list-merge (lambda (x y) (< (abs x) (abs y)))
+                '(0 -2 4 8 -10) '(-1 3 -4 7))
+\end{verbatim}
+reliably places the 4 of the first list before the equal-comparing -4
+  of the second list:
+\begin{verbatim}
+    (0 -1 -2 4 -4 7 8 -10)
+\end{verbatim}
+%
+  Some sort algorithms will \emph{not work correctly} if given a $\leq$
+  when they expect a $<$ comparison (or vice-versa).
+
+%% For example,
+%%   violating quicksort's spec may cause it to produce wrong answers,
+%%   diverge, raise an error, or do some fourth thing. To see why,
+%%   consider the left-scan part of the standard quicksort partition
+%%   step: (let ((i (let scan ((i i)) (if (elt< (vector-ref v i) pivot)
+%%   (scan (+ i 1)) i)))) ...)  Consider applying this loop to a vector
+%%   of all zeroes (hence, PIVOT, as well, is zero), but erroneously
+%%   using \verb|<=| for the ELT< procedure. The loop will scan right off
+%%   the end of the vector, producing a vector-index error.  The
+%%   guarantee that the scan loop will terminate before running off the
+%%   end of the vector depends critically upon ELT< performing as a true,
+%%   irreflexive $<$ relation. Running off the end of the vector is only
+%%   one of a variety of possibly ways to lose---other, variant
+%%   implementations of quicksort can, instead, loop forever on some data
+%%   sets if ELT< is a $\leq$ predicate.
+
+In short, if your comparison procedure $f$ answers true to \code{($f$ x x)}, then 
+\begin{itemize}
+\item using a stable sorting or merging algorithm will not give you a
+  stable sort or merge, 
+\item \code{list-sorted?} may surprise you.
+% \item quicksort may fail in a variety of possible ways.
+\end{itemize}
+Note that  you can synthesize a $<$ procedure from a $\leq$ procedure with
+\begin{verbatim}
+    (lambda (x y) (not (<= y x)))
+\end{verbatim}
+if need be. 
+
+Precise definitions give sharp edges to tools, but require care in use. 
+``Measure twice, cut once.''
+
+%% I have adopted the choice of $<$ from Common Lisp. One would assume
+%% the definers of Common Lisp had a good reason for adopting $<$ instead
+%% of $\leq$, but canvassing several of the principal actors in the
+%% definition process has turned up no better reason than ``an arbitrary
+%% but consistent choice.'' At minimum, then, these libraries extend the
+%% coverage of that consistent choice.
+
+\paragraph{All vector operations accept optional subrange parameters}
+
+The vector operations specified below all take optional
+\code{start}/\code{end} arguments indicating a selected subrange
+of a vector's elements. If a \code{start} parameter or
+\code{start}/\code{end} parameter pair is given to such a
+procedure, they must be exact, non-negative integers, such that
+%
+\begin{displaymath}
+    0 \leq \var{start} \leq \var{end} \leq \code{(vector-length \var{vector})}
+\end{displaymath}
+%
+where \var{vector} is the related vector parameter. If not specified,
+they default to 0 and the length of the vector, respectively. They are
+interpreted to select the range $[\var{start},\var{end})$, that
+is, all elements from index \var{start} (inclusive) up to, but not
+including, index \var{end}.
+
+\paragraph{Required vs.\ allowed side-effects}
+
+\code{List-sort!} and \code{List-stable-sort!} are allowed, but
+not required, to alter their arguments' cons cells to construct the
+result list. This is consistent with the what-not-how character of the
+group of procedures to which they belong (the \code{sorting} structure).
+
+The \code{list-delete-neighbor-dups!}, \code{list-merge!} and
+\code{list-merge-sort!} procedures, on the other hand, provide
+specific algorithms, and, as such, explicitly commit to the use of
+side-effects on their input lists in order to guarantee their key
+algorithmic properties (e.g., linear-time operation).
+
+\subsection{Procedure specification}
+
+\begin{center}
+\begin{tabular}{ll}
+Structure name & Functionality\\\hline
+\code{sorting} & General sorting for lists and vectors\\
+\code{sorted} & Sorted predicates for lists and vectors\\
+\code{list-merge-sort}& List merge sort\\
+\code{vector-merge-sort} & Vector merge sort\\
+\code{vector-heap-sort} & Vector heap sort\\
+%\code{vector-quick-sort} & Vector quick sort\\
+\code{vector-insert-sort} & Vector insertion sort\\
+\code{delete-neighbor-duplicates} & List and vector delete neighbor duplicates\\
+\code{binary-searches} & Vector binary search
+ \end{tabular}
+\end{center}
+%
+Note that there is no ``list insert sort'' package, as you might as well always
+use list merge sort. The reference implementation's destructive list merge
+sort will do fewer \code{set-cdr!}s than a destructive insert sort.
+
+\paragraph{Procedure naming and functionality}
+
+Almost all of the procedures described below are variants of two basic
+operations: sorting and merging. These procedures are consistently named
+by composing a set of basic lexemes to indicate what they do.
+\begin{center}
+
+\begin{tabular}{lp{0.8\textwidth}}
+Lexeme & Meaning\\\hline
+\code{sort}&    The procedure sorts its input data set by some $<$ comparison procedure.
+\\
+\code{merge}&   The procedure merges two ordered data sets into a single ordered
+          result.
+\\
+\code{stable} & This lexeme indicates that the sort is a stable one.
+\\
+\code{vector}& The procedure operates upon vectors.
+\\
+\code{list} &   The procedure operates upon lists.
+\\
+\code{!}      &  Procedures that end in \code{!} are allowed, and sometimes required, 
+          to reuse their input storage to construct their answer.
+\end{tabular}
+\end{center}
+
+\paragraph{Types of parameters and return values}
+
+In the procedures specified below,
+%
+\begin{itemize}
+\item A \code{<} or \code{=} parameter is a procedure accepting
+  two arguments taken from the specified procedure's data set(s), and
+  returning a boolean;
+\item \code{Start} and \code{end} parameters are exact, non-negative integers that 
+  serve as vector indices selecting a subrange of some associated vector.
+  When specified, they must satisfy the relation
+  \begin{displaymath}
+    0 \leq \var{start} \leq \var{end} \leq \code{(vector-length \var{vector})}
+  \end{displaymath}
+  where \var{vector} is the associated vector.
+\end{itemize}
+%
+Passing values to procedures with these parameters that do not satisfy
+these types is an error.
+
+If a procedure is said to return ``unspecified,'' this means that
+nothing at all is said about what the procedure returns, not even the
+number of return values. Such a procedure is not even required to be
+consistent from call to call in the nature or number of its return
+values. It is simply required to return a value (or values) that may
+be passed to a command continuation, e.g.  as the value of an
+expression appearing as a non-terminal subform of a \code{begin}
+expression. Note that in R$^5$RS, this restricts such a procedure to
+returning a single value; non-R$^5$RS systems may not even provide this
+restriction.
+
+\subsubsection{\code{sorting}---general sorting package}
+
+This library provides basic sorting and merging functionality suitable for
+general programming. The procedures are named by their semantic properties,
+i.e., what they do to the data (sort, stable sort, merge, and so forth).
+
+\begin{protos}
+  \proto{list-sorted?}{ $<$ list}{boolean} 
+  \proto{list-merge}{ $<$ list$_1$ list$_2$}{list}
+  \proto{list-merge!}{ $<$ list$_1$ list$_2$}{list}
+  \proto{list-sort}{ $<$ lis}{list}
+  \proto{list-sort!}{ $<$ lis}{list}
+  \proto{list-stable-sort}{  $<$ list}{list}
+  \proto{list-stable-sort!}{ $<$ list}{list}
+  \proto{list-delete-neighbor-dups}{  $=$ list}{list}
+  \proto{vector-sorted?}{ $<$ v [start [end]]}{boolean}
+  \proto{vector-merge}{ $<$ v$_1$ v$_2$ [start$1$ [end$1$ [start$2$ [end$2$]]]]}{vector}
+  \protonoresult{vector-merge!}{ $<$ v v$_1$ v$_2$ [start [start$1$ [end$1$ [start$2$ [end$2$]]]]]}
+  \proto{vector-sort}{ $<$ v [start [end]]}{vector}
+  \protonoresult{vector-sort!}{ $<$ v [start [end]]}
+  \proto{vector-stable-sort}{ $<$ v [start [end]]}{vector}
+  \protonoresult{vector-stable-sort!}{ $<$ v [start [end]]}
+  \proto{vector-delete-neighbor-dups}{ $=$ v [start [end]]}{vector}
+\end{protos}
+
+\begin{center}
+\begin{tabular}{ll}
+Procedure &Suggested algorithm
+\\\hline
+\code{list-sort} & vector heap or quick\\
+\code{list-sort!} & list merge sort\\
+\code{list-stable-sort} & vector merge sort\\
+\code{list-stable-sort!} & list merge sort\\
+\code{vector-sort} & heap or quick sort\\
+\code{vector-sort!} or quick sort\\
+\code{vector-stable-sort} & vector merge sort\\
+\code{vector-stable-sort!} merge sort
+\end{tabular}
+\end{center}
+%
+\code{List-Sorted?} and \code{vector-sorted?} return true if their
+input list or vector is in sorted order, as determined by their \var{$<$}
+comparison parameter.
+
+All four merge operations are stable: an element of the initial list
+\var{list$_1$} or vector \var{vector$_1$} will come before an
+equal-comparing element in the second list \var{list$_2$} or vector
+\var{vector$_2$} in the result.
+
+The procedures
+%
+\begin{itemize}
+\item \code{list-merge}
+\item \code{list-sort}
+\item \code{list-stable-sort}
+\item \code{list-delete-neighbor-dups}
+\end{itemize}
+%
+do not alter their inputs and are allowed to return a value that shares 
+a common tail with a list argument.
+
+The procedure
+\begin{itemize}
+\item \code{list-sort!}
+\item \code{list-stable-sort!}
+\end{itemize}
+%
+are ``linear update'' operators---they are allowed, but not required, to
+alter the cons cells of their arguments to produce their results. 
+
+On the other hand, the \code{list-merge!} procedure 
+make only a single, iterative, linear-time pass over its argument
+list, using \code{set-cdr!}s to rearrange the cells of the list
+into the final result ---it works ``in place.'' Hence, any cons cell
+appearing in the result must have originally appeared in an input. The
+intent of this iterative-algorithm commitment is to allow the
+programmer to be sure that if, for example, \code{list-merge!} is asked to
+merge two ten-million-element lists, the operation will complete
+without performing some extremely (possibly twenty-million) deep
+recursion.
+
+The vector procedures
+%
+\begin{itemize}
+\item \code{vector-sort}
+\item \code{vector-stable-sort}
+\item \code{vector-delete-neighbor-dups}
+\end{itemize}
+%
+do not alter their inputs, but allocate a fresh vector for their result,
+of length $\var{end} - \var{start}$. 
+
+The vector procedures
+%
+\begin{itemize}
+\item \code{vector-sort!}
+\item \code{vector-stable-sort!}
+\end{itemize}
+%
+sort their data in-place. (But note that \code{vector-stable-sort!}
+may allocate temporary storage proportional to the size of the
+input
+%%---I am not aware of $O(n \log(n))$ stable vector-sorting
+%%algorithms that run in constant space
+.)
+
+\code{Vector-merge} returns a vector of length $(\var{end$_1$}-\var{start$_1$}+(\var{end$_2$}-\var{start$_2$})$.
+    
+\code{Vector-merge!} writes its result into vector \var{v},
+beginning at index \var{start}, for indices less than \(\var{end} =
+\var{start} + (\var{end$_1$}-\var{start$_1$}) +
+(\var{end$_2$}-\var{start$_2$})\). The target subvector
+  $\var{v}[\var{start},\var{end})$ may not overlap either source
+subvector $\var{vector$_1$}[\var{start$_1$},\var{end$_1$})$ $\var{vector$_2$}[\var{start$_2$},\var{end$_2$})$.
+
+The \code{\ldots-delete-neighbor-dups-\ldots} procedures:
+These procedures delete adjacent duplicate elements from a list or a
+vector, using a given element-equality procedure. The first/leftmost
+element of a run of equal elements is the one that survives. The list or
+vector is not otherwise disordered.
+    
+These procedures are linear time---much faster than the $O(n^2)$ general
+duplicate-element deletors that do not assume any ``bunching'' of elements
+(such as the ones provided by SRFI~1). If you want to delete duplicate
+elements from a large list or vector, you can sort the elements to bring
+equal items together, then use one of these procedures, for a total time
+of $O(n\log(n))$.
+    
+The comparison procedure \(=\) passed to these procedures is always
+applied
+%
+\code{($=$ $x$ $y$)}
+%
+where $x$ comes before $y$ in the containing list or vector.
+
+\begin{itemize}
+\item \code{List-delete-neighbor-dups} does not alter its input list; its answer
+  may share storage with the input list.
+\item \code{Vector-delete-neighbor-dups} does not alter its input vector, but
+  rather allocates a fresh vector to hold the result.
+\end{itemize}
+%
+Examples:
+
+\begin{example}
+(list-delete-neighbor-dups = '(1 1 2 7 7 7 0 -2 -2))
+  \(\Longrightarrow\) (1 2 7 0 -2)
+
+(vector-delete-neighbor-dups = '\#(1 1 2 7 7 7 0 -2 -2))
+  \(\Longrightarrow\) \#(1 2 7 0 -2)
+
+(vector-delete-neighbor-dups = '\#(1 1 2 7 7 7 0 -2 -2) 3 7)
+  \(\Longrightarrow\) \#(7 0 -2)
+\end{example}
+         
+\subsubsection{Algorithm-specific sorting packages}
+
+These packages provide more specific sorting functionality, that is,
+specific committment to particular algorithms that have particular
+pragmatic consequences (such as memory locality, asymptotic running time)
+beyond their semantic behaviour (sorting, stable sorting, merging, etc.).
+Programmers that need a particular algorithm can use one of these packages.
+
+\paragraph{\code{sorted}---sorted predicates}
+%
+\begin{protos}
+  \proto{list-sorted?}{ $<$ list}{boolean}
+  \proto{vector-sorted?}{ $<$ vector}{boolean}
+  \proto{vector-sorted?}{ $<$ vector start}{boolean}
+  \proto{vector-sorted?}{ $<$ vector start end}{boolean}
+\end{protos}
+
+Return \code{\#f} iff there is an adjacent pair \(\ldots x, y \ldots\) in the input
+list or vector such that $y < x$. The optional \var{start}/\var{end} range 
+arguments restrict \code{vector-sorted?} to the indicated subvector.
+
+\paragraph{\code{list-merge-sort}---list merge sort}
+%
+\begin{protos}
+  \proto{list-merge-sort}{ $<$ list}{list}
+  \proto{list-merge-sort!}{ $<$ list}{list}
+  \proto{list-merge}{ list$_1$ $<$ list$_2$}{list}
+  \proto{list-merge!}{ list$_1$ $<$ list$_2$}{list}
+\end{protos}
+%
+The sort procedures sort their data using a list merge sort, which is
+stable. (The reference implementation is, additionally, a ``natural'' sort.
+See below for the properties of this algorithm.)
+
+The \code{!} procedures are destructive---they use \code{set-cdr!}s to
+rearrange the cells of the lists into the proper order. As such, they
+do not allocate any extra cons cells---they are ``in place'' sorts.
+%% Additionally, \code{list-merge!} is iterative---it can operate on
+%% arguments of arbitrary size with a constant number of stack frames.
+
+The merge operations are stable: an element of \var{list$_1$} will
+come before an equal-comparing element in \var{list$_2$} in the result
+list.
+
+\paragraph{\code{vector-merge-sort}---vector merge sort}
+
+\begin{protos}
+  \proto{vector-merge-sort}{ $<$ vector [start [end [temp]]]}{vector}
+  \protonoresult{vector-merge-sort!}{ $<$ vector [start [end [temp]]]}
+  \proto{vector-merge}{ $<$ vector$_1$ vector$_2$ [start$_1$ [end$_1$ [start$_2$ [end$_2$]]]]}{vector}
+  \protonoresult{vector-merge!}{ $<$ vector vector$_1$ vector$_2$ [start [start$_1$ [end$_1$ [start$_2$ [end$_2$]]]]]}
+\end{protos}
+%
+The sort procedures sort their data using vector merge sort, which is
+stable. (The reference implementation is, additionally, a ``natural'' sort.
+See below for the properties of this algorithm.)
+
+The optional \var{start}/\var{end} arguments provide for sorting of subranges, and
+default to 0 and the length of the corresponding vector.
+    
+Merge-sorting a vector requires the allocation of a temporary
+``scratch'' work vector for the duration of the sort. This scratch
+vector can be passed in by the client as the optional \var{temp}
+argument; if so, the supplied vector must be of size $\leq \var{end}$,
+and will not be altered outside the range [start,end). If not
+supplied, the sort routines allocate one themselves.
+
+The merge operations are stable: an element of \var{vector$_1$} will
+come before an equal-comparing element in \var{vector$_2$} in the
+result vector.
+
+\begin{itemize}
+\item 
+\code{Vector-merge-sort!} leaves its result in
+\(\var{vector}[\var{start},\var{end})\).
+\item   
+\code{Vector-merge-sort} returns a vector of length
+\(\var{end}-\var{start}\).
+\item 
+\code{Vector-merge} returns a vector of length
+\((\var{end$_1$}-\var{start$_1$})+(\var{end$_2$}-\var{start$_2$})\).
+\item 
+\code{Vector-merge!} writes its result into \var{vector}, beginning
+at index \var{start},
+for indices less than \(\var{end} =\var{start} +
+(\var{end$_1$}-\var{start$_1$}) + (\var{end$_2$}-\var{start$_2$})\).
+The target subvector
+\[\var{vector}[\var{start},\var{end})\]
+may not overlap either source subvector
+\[\var{vector$_1$}[\var{start$_1$},\var{end$_1$}), \textrm{ or }
+\var{vector$_2$}[\var{start$_2$},\var{end$_2$}).\]
+\end{itemize}
+
+\paragraph{\code{vector-heap-sort}---vector heap sort}
+
+\begin{protos}
+\proto{vector-heap-sort}{ $<$ vector [start [end]]}{vector}
+\protonoresult{vector-heap-sort!}{ $<$ vector [start [end]]}
+\end{protos}
+%
+These procedures sort their data using heap sort, 
+which is not a stable sorting algorithm.
+    
+\code{Vector-heap-sort} returns a vector of length \(\var{end}-\var{start}\). 
+\code{Vector-heap-sort!} is in-place, leaving its result in
+\(\var{vector}[\var{start},\var{end})\).
+
+%% vector-quick-sort-lib - vector quick sort
+%%     quick-sort   < v [start end] -> vector
+%%     quick-sort!  < v [start end] -> unspecified
+%%     quick-sort3! c v [start end] -> unspecified
+
+%%     These procedures sort their data using quick sort, 
+%%     which is not a stable sorting algorithm.
+    
+%%     QUICK-SORT returns a vector of length END-START. 
+%%     QUICK-SORT! is in-place, leaving its result in V[start,end).
+
+%%     QUICK-SORT3! is a variant of quick-sort that takes a three-way
+%%     comparison procedure C. C compares a pair of elements and returns
+%%     an exact integer whose sign indicates their relationship:
+%%       (c x y) < 0   =>   x<y
+%%       (c x y) = 0   =>   x=y
+%%       (c x y) > 0   =>   x>y
+%%     To help remember the relationship between the sign of the result and
+%%     the relation, use the procedure - as the model for C: (- x y) < 0
+%%     means that x < y; (- x y) > 0 means that x > y.
+
+%%     The extra discrimination provided by the three-way comparison can
+%%     provide significant speedups when sorting data sets with many duplicates,
+%%     especially when the comparison procedure is relatively expensive (e.g.,
+%%     comparing long strings).
+
+%%     WARNING: Some sort algorithms, such as insertion sort or heap sort,
+%%     can tolerate being passed a <= comparison procedure when they expect a < 
+%%     procedure---insertion and merge sort may simply invert stability; and
+%%     heap sort will run a bit slower, but otherwise produce a correct answer.
+
+%%     Quicksort, however, is much more critically sensitive to the distinction
+%%     between a < and a <= comparison. If QUICK-SORT or QUICK-SORT! expect a <
+%%     comparison procedure, and are erroneously given a <= procedure, they may,
+%%     depending on implementation, produce an unsorted result, go into an 
+%%     infinite loop, cause a run-time error, occasionally produce a correct
+%%     result, or do some fifth thing.
+
+%%     Implementors may wish to write QUICKSORT3! so that it (a) tests the
+%%     comparison procedure (by checking that (c v[start] v[start]) produces
+%%     false), or (b) is tolerant of an erroneous <= procedure, or (c) both.
+%%     Clients of this procedure, however, should not count on this.
+
+\paragraph{\code{vector-insert-sort}---vector insertion sort}
+
+\begin{protos}
+\proto{vector-insert-sort}{ $<$ vector [start [end]]}{vector}
+\protonoresult{vector-insert-sort!}{ $<$ vector [start [end]]}
+\end{protos}
+%
+These procedures stably sort their data using insertion sort.
+%
+\begin{itemize}
+\item \code{Vector-insert-sort} returns a vector of length \(\var{end}-\var{start}\).
+\item \code{Vector-insert-sort!} is in-place, leaving its result in
+  \(\var{vector}[\var{start},\var{end})\).
+\end{itemize}
+
+\paragraph{\code{delete-neighbor-duplicates}---list and vector
+  delete neighbor duplicates}
+
+\begin{protos}
+  \proto{list-delete-neighbor-dups}{ $=$ list}{list}
+  \proto{list-delete-neighbor-dups!}{ $=$ list}{list}
+  \proto{vector-delete-neighbor-dups}{ $=$ vector [start [end]]}{vector}
+  \proto{vector-delete-neighbor-dups!}{ $=$ vector [start [end]]}{end$'$}
+\end{protos}
+%
+These procedures delete adjacent duplicate elements from a list or
+a vector, using a given element-equality procedure $=$. The first/leftmost
+element of a run of equal elements is the one that survives. The list
+or vector is not otherwise disordered.
+
+These procedures are linear time---much faster than the $O(n^2)$ general
+duplicate-element deletors that do not assume any ``bunching'' of elements
+(such as the ones provided by SRFI~1). If you want to delete duplicate
+elements from a large list or vector, you can sort the elements to bring
+equal items together, then use one of these procedures, for a total time
+of $O(n\log(n))\).
+    
+The comparison procedure = passed to these procedures is always
+applied
+
+\begin{example}
+(\(=\) \(x\) \(y\))
+\end{example}
+
+where $x$ comes before $y$ in the containing list or vector.
+%
+\begin{itemize}
+\item 
+\code{List-delete-neighbor-dups} does not alter its input list; its
+answer may share storage with the input list.
+\item 
+\code{Vector-delete-neighbor-dups} does not alter its input vector, but
+rather allocates a fresh vector to hold the result.
+\item
+\code{List-delete-neighbor-dups!} is permitted, but not required, to
+mutate its input list in order to construct its answer.
+\item
+\code{Vector-delete-neighbor-dups!} reuses its input vector to hold the
+answer, packing its answer into the index range
+\([\var{start},\var{end$'$})\), where
+\var{end$'$} is the non-negative exact integer returned as its value. It
+returns \var{end$'$} as its result. The vector is not altered outside the range
+\([\var{start},\var{end$'$})\).
+\end{itemize}
+%
+Examples:
+
+\begin{example}
+(list-delete-neighbor-dups = '(1 1 2 7 7 7 0 -2 -2))
+  \(\Longrightarrow\) (1 2 7 0 -2)
+
+(vector-delete-neighbor-dups = '\#(1 1 2 7 7 7 0 -2 -2))
+  \(\Longrightarrow\) \#(1 2 7 0 -2)
+
+(vector-delete-neighbor-dups = '\#(1 1 2 7 7 7 0 -2 -2) 3 7)
+  \(\Longrightarrow\) \#(7 0 -2)
+
+;; Result left in v[3,9):
+(let ((v (vector 0 0 0 1 1 2 2 3 3 4 4 5 5 6 6)))
+  (cons (vector-delete-neighbor-dups! = v 3)
+        v))
+   \(\Longrightarrow\) (9 . \#(0 0 0 1 2 3 4 5 6 4 4 5 5 6 6))
+\end{example}
+
+\paragraph{\code{binary-searches}---vector binary search}
+
+\begin{protos}
+\proto{vector-binary-search}{ $<$ elt-$>$key key vector [start [end]]}{integer or {\tt \#f}}
+\proto{vector-binary-search3}{ compare-proc vector [start [end]]}{integer or {\tt \#f}}
+\end{protos}
+
+\code{vector-binary-search} searches \var{vector} in range
+\([\var{start},\var{end})\) (which default to 0 and the length of
+\var{vector}, respectively) for an element whose
+associated key is equal to \var{key}. The procedure \var{elt-$>$key} is used to map
+an element to its associated key. The elements of the vector are assumed
+to be ordered by the $<$ relation on these keys. That is, 
+
+\begin{example}
+(vector-sorted? (lambda (x y) (\(<\) (\var{elt-$>$key} x) (\var{elt-$>$key} y)))
+                \var{vector} \var{start} \var{end}) \(\Longrightarrow\) true
+\end{example}
+
+An element \var{e} of \var{vector} is a match for \var{key} if it's
+neither less nor greater than the key:
+
+\begin{example}
+(and (not (\(<\) (\var{elt-$>$key} \var{e}) \var{key}))
+     (not (\(<\) \var{key} (\var{elt-$>$key} \var{e}))))
+\end{example}
+
+If there is such an element, the procedure returns its index in the
+vector as an exact integer. If there is no such element in the searched 
+range, the procedure returns false.
+
+\begin{example}
+(vector-binary-search < car 4 '\#((1 . one) (3 . three)
+                                 (4 . four) (25 . twenty-five)))
+\(\Longrightarrow\) 2
+
+(vector-binary-search < car 7 '\#((1 . one) (3 . three)
+                                 (4 . four) (25 . twenty-five)))
+\(\Longrightarrow\) \#f
+\end{example}    
+
+\code{Vector-binary-search3} is a variant that uses a three-way comparison
+procedure \var{compare-proc}. \var{Compare-proc} compares its
+parameter to the search key, and returns an
+exact integer whose sign indicates its relationship to the search key.
+%
+\begin{displaymath}
+  \begin{array}{rclcrcl}
+      (\var{compare-proc}~x) &<& 0& \Rightarrow&  x &<& \var{search-key}\\
+      (\var{compare-proc}~x) &=& 0& \Rightarrow&  x &=& \var{search-key}\\
+      (\var{compare-proc}~x) &>& 0& \Rightarrow&  x &>& \var{search-key}
+  \end{array}
+\end{displaymath}
+
+\begin{example}
+(vector-binary-search3 (lambda (elt) (- (car elt) 4))
+                       '\#((1 . one) (3 . three)
+                          (4 . four) (25 . twenty-five)))
+\(\Longrightarrow\) 2
+\end{example}
+
+%% Rationale:
+%% %
+%% \begin{itemize}
+%% \item Why isn't \code{vector-binary-search}'s \var{elt-$>$key}
+%%   computation simply absorbed into the $<$ procedure? It is separated
+%%   out because the $<$ procedure is
+%%   applied twice inside the binary-search inner loop, once with the search
+%%   key for the first argument and the element key for the second argument,
+%%   and once, with the reverse argument order. This is not necessary for
+%%   \code{vector-binary-search3}.
+%% \item When a comparison operation is able to produce a three-way
+%%   discrimination, the inner loop of the binary search can trim the number
+%%   of per-iteration comparisons from an average of 1.5 to a guaranteed
+%%   single comparison per iteration. This can be a significant savings when
+%%   searching with an expensive comparison operation (e.g., one that
+%%   uses string compare, sends email, references a database, or queries
+%%   a network service such as a web server).
+%% \item Failure is signaled by false (rather than, say, -1) so that searches
+%%   can be used in conditional forms such as
+%% \begin{verbatim}
+%%         (or (vector-binary-search ...) ...)
+%% \end{verbatim}
+%%   or
+%% \begin{verbatim}
+%%         (cond ((vector-binary-search ...) => index-consumer)
+%%               ...)
+%% \end{verbatim}
+%% \end{itemize}
+
+\subsection{Algorithmic properties}
+
+Different sort and merge algorithms have different properties.
+Choose the algorithm that matches your needs:
+
+\begin{description}
+\item[Vector insert sort]
+  Stable, but only suitable for small vectors---$O(n^2)$.
+%% \item[Vector quick sort]
+%%   Not stable. Is fast on average---$O(n\log(n))$---but has bad worst-case
+%%   behaviour. Has good memory locality for big vectors (unlike heap sort). 
+%%   A clever pivot-picking trick (median of three samples) helps avoid 
+%%   worst-case behaviour, but pathological cases can still blow up.
+\item[Vector heap sort]
+  Not stable. Guaranteed fast---$O(n\log(n))$ \emph{worst} case. Poor
+  locality on large vectors. A very reliable workhorse.
+\item[Vector merge sort]
+    Stable. Not in-place---requires a temporary buffer of equal size. 
+    Fast---$O(n\log(n))$---and has good memory locality for large vectors.
+    
+    The implementation of vector merge sort provided by this
+    implementation is, additionally, a ``natural'' sort, meaning that it
+    exploits existing order in the input data, providing $O(n)$ best case.
+\item[Destructive list merge sort]
+    Stable, fast and in-place (i.e., allocates no new cons cells). ``Fast''
+    means $O(n\log(n))$ worse-case, and substantially better if the data
+    is already mostly ordered, all the way down to linear time for
+    a completely-ordered input list (i.e., it is a ``natural'' sort).
+
+    Note that sorting lists involves chasing pointers through memory, which
+    can be a loser on modern machine architectures because of poor cache and
+    page locality.
+%%     Pointer \emph{writing}, which is what the
+%%     \code{set-cdr!}s of a destructive list-sort algorithm do, is
+%%     even worse, especially if your Scheme has a generational GC---the
+%%     writes will thrash the write-barrier.
+    Sorting vectors has inherently better locality.
+    
+    This implementation's destructive list merge and merge sort
+    implementations are opportunistic---they avoid redundant
+    \code{set-cdr!}s, and try to take long
+    already-ordered runs of list structure as-is when doing the merges.
+\item[Pure list merge sort]
+  Stable and fast---$O(n\log(n))$ worst-case, and possibly $O(n)$,
+  depending upon the input list (see discussion above).
+\end{description}
+
+\begin{center}
+  \begin{tabular}{lllll}
+Algorithm &    Stable? & Worst case &  Average case &  In-place\\
+\hline
+Vector insert & Yes&      $O(n^2)$ &     $O(n^2)$&        Yes\\
+Vector quick  & No &      $O(n^2)$  &    $O(n\log(n))$&     Yes\\
+Vector heap   & No &      $O(n\log(n))$&   $O(n\log(n))$&     Yes\\
+Vector merge  & Yes&      $O(n\log(n))$&   $O(n\log(n))$&     No\\
+List merge    & Yes&      $O(n\log(n))$&   $O(n\log(n))$&     Either
+\end{tabular}
+\end{center}
+
+\section{Regular expressions}
+\label{regexp-adt}
+
+This section describes a functional interface for building regular
+ expressions and matching them against strings.
+The matching is done using the POSIX regular expression package.
+Regular expressions are in the structure \code{regexps}.
+
+A regular expression is either a character set, which matches any character
+in the set, or a composite expression containing one or more subexpressions.
+A regular expression can be matched against a string to determine success
+or failure, and to determine the substrings matched by particular subexpressions.
+
+\subsection{Character sets}
+
+Character sets may be defined using a list of characters and strings,
+using a range or ranges of characters, or by using set operations on
+existing character sets.
+
+\begin{protos}
+\proto{set}{ character-or-string \ldots}{char-set}
+\proto{range}{ low-char high-char}{char-set}
+\proto{ranges}{ low-char high-char \ldots}{char-set}
+\proto{ascii-range}{ low-char high-char}{char-set}
+\proto{ascii-ranges}{ low-char high-char \ldots}{char-set}
+\end{protos}
+\noindent
+\code{Set} returns a set that contains the character arguments and the
+characters in any string arguments.  \code{Range} returns a character
+set that contain all characters between \cvar{low-char} and \cvar{high-char},
+inclusive.  \code{Ranges} returns a set that contains all characters in
+the given ranges.  \code{Range} and \code{ranges} use the ordering induced by
+\code{char->integer}.  \code{Ascii-range} and \code{ascii-ranges} use the
+ ASCII ordering.
+It is an error for a \cvar{high-char} to be less than the preceding
+ \cvar{low-char} in the appropriate ordering.
+
+\begin{protos}
+\proto{negate}{ char-set}{char-set}
+\proto{intersection}{ char-set char-set}{char-set}
+\proto{union}{ char-set char-set}{char-set}
+\proto{subtract}{ char-set char-set}{char-set}
+\end{protos}
+\noindent
+These perform the indicated operations on character sets.
+
+The following character sets are predefined:
+\begin{center}
+\W\begin{tabular}{ll}
+\T\setlongtables
+\T\begin{longtable}{ll}
+ \code{lower-case} &   \code{(set "abcdefghijklmnopqrstuvwxyz")} \\
+ \code{upper-case} &   \code{(set "ABCDEFGHIJKLMNOPQRSTUVWXYZ")} \\
+ \code{alphabetic} &   \code{(union lower-case upper-case)} \\
+ \code{numeric} &      \code{(set "0123456789")} \\
+ \code{alphanumeric} & \code{(union alphabetic numeric)} \\
+ \code{punctuation} &
+ \code{(set "}\verb2!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~2\code{")} \\
+ \code{graphic} &      \code{(union alphanumeric punctuation)} \\
+ \code{printing} &     \code{(union graphic (set \#}\verb2\2\code{space))} \\
+ \code{control} &      \code{(negate printing)} \\
+ \code{blank} &
+      \code{(set \#}\verb2\2\code{space (ascii->char 9))} ; 9 is tab \\
+ \code{whitespace} &
+      \code{(union (set \#}\verb2\2\code{space) (ascii-range 9 13))} \\
+ \code{hexdigit} &     \code{(set "0123456789abcdefABCDEF")} \\
+\W\end{tabular}
+\T\end{longtable}
+\end{center}
+\noindent The above are taken from the default locale in POSIX.
+The characters in \code{whitespace} are \cvar{space}, \cvar{tab},
+ \cvar{newline} (= \cvar{line feed}), \cvar{vertical tab}, \cvar{form feed}, and
+ \cvar{carriage return}.
+
+\subsection{Anchoring}
+
+\begin{protos}
+\proto{string-start}{}{reg-exp}
+\proto{string-end}{}{reg-exp}
+\end{protos}
+\noindent
+\code{String-start} returns a regular expression that matches the beginning
+ of the string being matched against; {string-end} returns one that matches
+ the end.
+
+\subsection{Composite expressions}
+
+\begin{protos}
+\proto{sequence}{ reg-exp \ldots}{reg-exp}
+\proto{one-of}{ reg-exp \ldots}{reg-exp}
+\end{protos}
+\noindent
+\code{Sequence} matches the concatenation of its arguments, \code{one-of} matches
+any one of its arguments.
+
+\begin{protos}
+\proto{text}{ string}{reg-exp}
+\end{protos}
+\noindent
+\code{Text} returns a regular expression that matches the characters in
+ \cvar{string}, in order.
+
+\begin{protos}
+\proto{repeat}{ reg-exp}{reg-exp}
+\proto{repeat}{ count reg-exp}{reg-exp}
+\proto{repeat}{ min max reg-exp}{reg-exp}
+\end{protos}
+\noindent
+\code{Repeat} returns a regular expression that matches zero or more
+occurences of its \cvar{reg-exp} argument.  With no count the result
+will match any number of times (\cvar{reg-exp}*).  With a single
+count the returned expression will match
+ \cvar{reg-exp} exactly that number of times.
+The final case will match from \cvar{min} to \cvar{max}
+ repetitions, inclusive.
+\cvar{Max} may be \code{\#f}, in which case there
+ is no maximum number of matches.
+\cvar{Count} and \cvar{min} should be exact, non-negative integers;
+ \cvar{max} should either be an exact non-negative integer or \code{\#f}.
+
+\subsection{Case sensitivity}
+
+Regular expressions are normally case-sensitive.
+\begin{protos}
+\proto{ignore-case}{ reg-exp}{reg-exp}
+\proto{use-case}{ reg-exp}{reg-exp}
+\end{protos}
+\noindent
+The value returned by
+ \code{ignore-case} is identical its argument except that case will be
+ ignored when matching.
+The value returned by \code{use-case} is protected
+ from future applications of \code{ignore-case}.
+The expressions returned
+ by \code{use-case} and \code{ignore-case} are unaffected by later uses of the
+ these procedures.
+By way of example, the following matches \code{"ab"} but not \code{"aB"},
+ \code{"Ab"}, or \code{"AB"}.
+\begin{example}
+\code{(text "ab")}
+\end{example}
+\noindent
+while
+\begin{example}
+\code{(ignore-case (test "ab"))}
+\end{example}
+\noindent
+matches \code{"ab"}, \code{"aB"},
+ \code{"Ab"}, and \code{"AB"} and
+\begin{example}
+(ignore-case (sequence (text "a")
+                       (use-case (text "b"))))
+\end{example}
+\noindent
+matches \code{"ab"} and \code{"Ab"} but not \code{"aB"} or \code{"AB"}.
+
+\subsection{Submatches and matching}
+
+A subexpression within a larger expression can be marked as a submatch.
+When an expression is matched against a string, the success or failure
+of each submatch within that expression is reported, as well as the
+location of the substring matched be each successful submatch.
+
+\begin{protos}
+\proto{submatch}{ key reg-exp}{reg-exp}
+\proto{no-submatches}{ reg-exp}{reg-exp}
+\end{protos}
+\noindent
+\code{Submatch} returns a regular expression that matches its argument and
+ causes the result of matching its argument to be reported by the \code{match}
+ procedure.
+\cvar{Key} is used to indicate the result of this particular submatch 
+ in the alist of successful submatches returned by \code{match}.
+ Any value may be used as a \cvar{key}.
+\code{No-submatches} returns an expression identical to its
+ argument, except that all submatches have been elided.
+
+\begin{protos}
+\proto{any-match?}{ reg-exp string}{boolean}
+\proto{exact-match?}{ reg-exp string}{boolean}
+\proto{match}{ reg-exp string}{match or {\tt \#f}}
+\proto{match-start}{ match}{index}
+\proto{match-end}{ match}{index}
+\proto{match-submatches}{ match}{alist}
+\end{protos}
+\noindent
+\code{Any-match?} returns \code{\#t} if \cvar{string} matches \cvar{reg-exp} or
+ contains a substring that does, and \code{\#f} otherwise.
+\code{Exact-match?} returns \code{\#t} if \cvar{string} matches
+ \cvar{reg-exp} and \code{\#f} otherwise.
+
+\code{Match} returns \code{\#f} if \cvar{reg-exp} does not match \cvar{string}
+ and a match record if it does match.
+A match record contains three values: the beginning and end of the substring
+ that matched
+ the pattern and an a-list of submatch keys and corresponding match records
+ for any submatches that also matched.
+\code{Match-start} returns the index of
+ the first character in the matching substring and \code{match-end} gives index
+ of the first character after the matching substring.
+\code{Match-submatches} returns an alist of submatch keys and match records.
+Only the top match record returned by \code{match} has a submatch alist.
+
+Matching occurs according to POSIX.
+The match returned is the one with the lowest starting index in \cvar{string}.
+If there is more than one such match, the longest is returned.
+Within that match the longest possible submatches are returned.
+
+All three matching procedures cache a compiled version of \cvar{reg-exp}.
+Subsequent calls with the same \cvar{reg-exp} will be more efficient.
+
+The C interface to the POSIX regular expression code uses ASCII \code{nul}
+ as an end-of-string marker.
+The matching procedures will ignore any characters following an
+ embedded ASCII \code{nul}s in \cvar{string}.
+
+\begin{example}
+(define pattern (text "abc"))
+(any-match? pattern "abc")         \evalsto #t
+(any-match? pattern "abx")         \evalsto #f
+(any-match? pattern "xxabcxx")     \evalsto #t
+
+(exact-match? pattern "abc")       \evalsto #t
+(exact-match? pattern "abx")       \evalsto #f
+(exact-match? pattern "xxabcxx")   \evalsto #f
+
+(match pattern "abc")              \evalsto (#\{match 0 3\})
+(match pattern "abx")              \evalsto #f
+(match pattern "xxabcxx")          \evalsto (#\{match 2 5\})
+
+(let ((x (match (sequence (text "ab")
+                          (submatch 'foo (text "cd"))
+                          (text "ef"))
+                "xxxabcdefxx")))
+  (list x (match-submatches x)))
+  \evalsto (#\{match 3 9\} ((foo . #\{match 5 7\}))
+
+(match-submatches
+  (match (sequence
+           (set "a")
+           (one-of (submatch 'foo (text "bc"))
+                   (submatch 'bar (text "BC"))))
+         "xxxaBCd"))
+  \evalsto ((bar . #\{match 4 6\}))
+\end{example}
+
+\section{SRFIs}
+
+`SRFI' stands for `Scheme Request For Implementation'.
+An SRFI is a description of an extension to standard Scheme.
+Draft and final SRFI documents, a FAQ, and other information about SRFIs
+ can be found at the
+\xlink{SRFI web site}[ at \code{http://srfi.schemers.org}]
+{http://srfi.schemers.org}.
+
+Scheme~48 includes implementations of the following (final) SRFIs:
+\begin{itemize}
+\item SRFI 1 -- List Library
+\item SRFI 2 -- \code{and-let*}
+\item SRFI 5 -- \code{let} with signatures and rest arguments
+\item SRFI 6 -- Basic string ports
+\item SRFI 7 -- Program configuration
+\item SRFI 8 -- \code{receive}
+\item SRFI 9 -- Defining record types
+\item SRFI 11 -- Syntax for receiving multiple values 
+\item SRFI 13 -- String Library
+\item SRFI 14 -- Character-Set Library (see note below)
+\item SRFI 16 -- Syntax for procedures of variable arity
+\item SRFI 17 -- Generalized \code{set!}
+\item SRFI 22 -- Running Scheme Scripts on Unix
+\item SRFI 23 -- Error reporting mechanism
+\item SRFI 25 -- Multi-dimensional Array Primitives 
+\item SRFI 26 -- Notation for Specializing Parameters without Currying
+\item SRFI 27 -- Sources of Random Bits
+\item SRFI 28 -- Basic Format Strings
+\item SRFI 31 -- A special form \texttt{rec} for recursive evaluation
+\item SRFI 37 -- args-fold: a program argument processor
+\item SRFI 42 -- Eager Comprehensions
+\item SRFI 45 -- Primitives for Expressing Iterative Lazy Algorithms
+\end{itemize}
+Documentation on these can be found at the web site mentioned above.
+
+SRFI~14 includes the procedure \code{->char-set} which is not a standard
+ Scheme identifier (in R$^5$RS the only required identifier starting
+ with \code{-} is \code{-} itself).
+In the Scheme~48 version of SRFI~14 we have renamed \code{->char-set}
+ as \code{x->char-set}.
+
+The SRFI bindings can be accessed either by opening the appropriate structure
+ (the structure \code{srfi-}\cvar{n} contains SRFI \cvar{n})
+ or by loading structure \code{srfi-7} and then using
+ the \code{,load-srfi-7-program} command to load an SRFI 7-style program.
+The syntax for the command is
+\begin{example}
+\code{,load-srfi-7-program \cvar{name} \cvar{filename}}
+\end{example}
+This creates a new structure and associated package, binds the structure
+ to \cvar{name} in the configuration package, and then loads the program
+ found in \cvar{filename} into the package.
+
+As an example, if the file \code{test.scm} contains
+\begin{example}
+(program (code (define x 10)))
+\end{example}
+this program can be loaded as follows:
+\begin{example}
+> ,load-package srfi-7
+> ,load-srfi-7-program test test.scm
+[test]
+> ,in test
+test> x
+10
+test> 
+\end{example}
+
+%\W \chapter*{Index}
+%\W \htmlprintindex
+%\T \input{doc.ind}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "manual"
+%%% End: 

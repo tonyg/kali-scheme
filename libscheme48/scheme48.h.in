@@ -1,0 +1,104 @@
+/* Copyright (c) 1993-2004 by Richard Kelsey and Jonathan Rees.
+   See file COPYING. */
+
+#include "scheme48write-barrier.h"
+
+/* Types for the new API
+ */
+typedef int s48_error_t;
+typedef long s48_word_t;
+typedef void * s48_arena_t;
+typedef long s48_fixnum_t;
+
+/* Compatibility type until all code is switched to the new API.
+ */
+typedef long	s48_value;
+
+#define NO_ERRORS 0    /* errno value */
+
+/* Misc stuff */
+
+#define S48_EQ_P(v1, v2) ((v1) == (v2))
+/* Superceded name for the above definition, retained for compatibility. */
+#define S48_EQ(v1, v2) ((v1) == (v2)) 
+
+#define S48_MAX_FIXNUM_VALUE ((1 << 29) - 1)
+#define S48_MIN_FIXNUM_VALUE (-1 << 29)
+
+#include "stobs.h"
+
+extern void		s48_register_gc_rootB(char *);
+extern void		s48_push_gc_rootsB(char *, long);
+extern char		s48_pop_gc_rootsB(void);
+extern char		s48_pop_gc_roots_up_to_markerB(char *);
+
+#include "boxing.h"
+
+extern s48_value s48_make_record(s48_value type_shared_binding);
+
+extern s48_value	s48_get_imported_binding(char *);
+extern void		s48_define_exported_binding(char *, s48_value);
+
+extern long		s48_length(s48_value);
+extern s48_value	s48_enter_integer(long);
+
+extern s48_value	s48_set_channel_os_index(s48_value, long);
+extern s48_value	s48_add_channel(s48_value, s48_value, long);
+extern void		s48_close_channel(long);
+
+extern s48_value	s48_call_scheme(s48_value proc, long nargs, ...);
+
+#define S48_EXPORT_FUNCTION(p) (s48_define_exported_binding(#p, s48_enter_pointer((void*) p)))
+
+#define S48_MAKE_VALUE(type) (s48_make_byte_vector(sizeof(type)))
+
+#define S48_EXTRACT_VALUE_POINTER(x, type) ((type *) s48_value_pointer(x))
+#define S48_EXTRACT_VALUE(x, type) (*(S48_EXTRACT_VALUE_POINTER((x), type)))
+#define S48_SET_VALUE(x, type, v) (S48_EXTRACT_VALUE((x), type) = (v))
+
+#define S48_UNSAFE_EXTRACT_VALUE_POINTER(x, type)		\
+  (S48_ADDRESS_AFTER_HEADER((x), type))
+#define S48_UNSAFE_EXTRACT_VALUE(x, type)			\
+  (*(S48_UNSAFE_EXTRACT_VALUE_POINTER((x), type)))
+#define S48_UNSAFE_SET_VALUE(x, type, v)			\
+  (S48_UNSAFE_EXTRACT_VALUE((x), type) = (v))
+
+#define S48_UNSAFE_EXTRACT_DOUBLE(x)				\
+  (*(S48_ADDRESS_AFTER_HEADER((x), double)))
+
+#include "locals.h"
+
+/* Exceptions */
+
+extern void s48_raise_scheme_exception(long type, long nargs, ...);
+
+#include "exceptions.h"
+
+/* Type checking */
+
+#define S48_CHECK_PAIR(v) do { if (!S48_PAIR_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_FIXNUM(v) do { if (!S48_FIXNUM_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_STRING(v) do { if (!S48_STRING_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_CHANNEL(v) do { if (!S48_CHANNEL_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_RECORD(v) do { if (!S48_RECORD_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_VALUE(v) do { if (!S48_BYTE_VECTOR_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_EXPORT_BINDING(v) do { if (!S48_EXPORT_BINDING_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_BOOLEAN(v)					\
+  do { s48_value s48_temp = (v);				\
+       if (s48_temp != S48_TRUE && s48_temp != S48_FALSE)	\
+           s48_raise_argument_type_error(v); } while (0)
+
+#define S48_VALUE_P(v) (S48_BYTE_VECTOR_P(v))
+
+#define S48_TRUE_P(v) ((v) == S48_TRUE)
+#define S48_FALSE_P(v) ((v) == S48_FALSE)
+#define S48_EXTRACT_BOOLEAN(v) ((v) != S48_FALSE)
+#define S48_ENTER_BOOLEAN(v) ((v) ? S48_TRUE : S48_FALSE)
+
+extern void s48_check_record_type(s48_value record, s48_value type_binding);
+
+#define S48_SHARED_BINDING_CHECK(binding)					\
+  do { if (S48_UNSPECIFIC == S48_SHARED_BINDING_REF(binding))		\
+         s48_raise_scheme_exception(S48_EXCEPTION_UNBOUND_EXTERNAL_NAME, 1,	\
+				    S48_SHARED_BINDING_NAME(binding));	\
+  } while(0)

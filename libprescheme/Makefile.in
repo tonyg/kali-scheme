@@ -1,0 +1,13 @@
+# Makefile.in:
+#
+################################################################
+# Copyright (C) 2005 Matthew Dempsky
+# 
+# See the file "COPYING" for further information about
+# the copyright and warranty status of this work.
+# 
+
+include $(makefiles)/library.mk
+
+# arch-tag: Matthew Dempsky Thu Apr  7 00:29:50 2005 (libprescheme/Makefile.in)
+#

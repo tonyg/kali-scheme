@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 21.4 (patch 15) "Security Through Obscurity" XEmacs Lucid, Fri Dec  3 20:36:19 2004 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Sets over finite types</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_47.html">Sets over finite types</A> | Next: <A HREF="s48manual_47.html">Sets over finite types</A>
+<H2>Sets over finite types</H2>
+
+<P>The structure <CODE>enum-sets</CODE> has a macro for defining types for sets
+of elements of finite types.  These work naturally with the finite
+types defined by the <CODE>finite-types</CODE> structure, but are not tied
+to them.  The syntax for defining such a type is:
+<P><BLOCKQUOTE><PRE>
+(define-enum-set-type <CODE><I>id</I></CODE> <CODE><I>type-name</I></CODE> <CODE><I>predicate</I></CODE> <CODE><I>constructor</I></CODE>
+   <CODE><I>element-syntax</I></CODE> <CODE><I>element-predicate</I></CODE> <CODE><I>all-elements</I></CODE> <CODE><I>element-index-ref</I></CODE>)
+</PRE></BLOCKQUOTE>
+This defines <CODE><I>id</I></CODE> to be syntax for constructing sets,
+<CODE><I>type-name</I></CODE> to be a value representing the type,
+<CODE><I>predicate</I></CODE> to be a predicate for those sets, and
+<CODE><I>constructor</I></CODE> a procedure for constructing one from a list.
+<P><CODE><I>Element-syntax</I></CODE> must be the name of a macro for constructing set
+elements from names (akin to the <CODE><I>tag</I></CODE> argument to
+<CODE>define-enumerated-type</CODE>).  <CODE><I>Element-predicate</I></CODE> must be a
+predicate for the element type, <CODE><I>all-elements</I></CODE> a vector of all
+values of the element type, and <CODE><I>element-index-ref</I></CODE> must return
+the index of an element within the <CODE><I>all-elements</I></CODE> vector.
+<P><UL><LI><CODE>(enum-set-&gt;list<I>&nbsp;enum-set</I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(enum-set-member?<I>&nbsp;enum-set&nbsp;enumerand</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(enum-set=?<I>&nbsp;enum-set&nbsp;enum-set</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(enum-set-union<I>&nbsp;enum-set&nbsp;enum-set</I>)&nbsp;-&gt;&nbsp;<I>enum-set</I></CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(enum-set-intersection<I>&nbsp;enum-set&nbsp;enum-set</I>)&nbsp;-&gt;&nbsp;<I>&nbsp;enum-set</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(enum-set-negation<I>&nbsp;enum-set</I>)&nbsp;-&gt;&nbsp;<I>enum-set</I></CODE><A NAME="6">&nbsp;</A>
+</UL>
+<CODE>Enum-set-&gt;list</CODE> converts a set into a list of its elements.
+<CODE>Enum-set-member?</CODE> tests for membership.  <CODE>Enum-set=?</CODE> tests
+two sets of equal type for equality.  (If its arguments are not of the
+same type, <CODE>enum-set=?</CODE> raises an exception.)
+<CODE>Enum-set-union</CODE> computes the union of two sets of equal type,
+<CODE>enum-set-intersection</CODE> computes the intersection, and
+<CODE>enum-set-negation</CODE> computes the complement of a set.
+<P>Here is an example.  Given an enumerated type:
+<P><BLOCKQUOTE><PRE>
+(define-enumerated-type color :color
+  color?
+  colors
+  color-name
+  color-index
+  (red blue green))
+</PRE></BLOCKQUOTE>
+<P>we can define sets of colors:
+<P><BLOCKQUOTE><PRE>
+(define-enum-set-type color-set :color-set
+                      color-set?
+                      make-color-set
+  color color? colors color-index)
+</PRE></BLOCKQUOTE>
+<P><BLOCKQUOTE><PRE>
+&gt; (enum-set-&gt;list (color-set red blue))
+(#Color red #Color blue)
+&gt; (enum-set-&gt;list (enum-set-negation (color-set red blue)))
+(#Color green)
+&gt; (enum-set-member? (color-set red blue) (color blue))
+#t
+</PRE></BLOCKQUOTE>
+<P><P>
+  
+Previous: <A HREF="s48manual_47.html">Sets over finite types</A> | Next: <A HREF="s48manual_47.html">Sets over finite types</A></BODY></HTML>

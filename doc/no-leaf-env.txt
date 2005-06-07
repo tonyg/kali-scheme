@@ -1,0 +1,175 @@
+Return-Path: <kelsey@ccs.neu.edu>
+Date: Mon, 14 Jun 93 14:34:40 -0400
+To: jar@cs.cornell.edu
+Subject: environments for leaf procedures
+From: kelsey@flora.ccs.neu.edu
+Sender: kelsey@ccs.neu.edu
+
+
+I merged the no-leaf-environments code back into the system, and this
+time it may be worth it.  Loading pp.scm sped up by 2%, even though
+the compiler is doing more work.  Benchmark times (in seconds):
+
+                    old    new   speedup
+quicksort           1.48   1.39     6%
+towers              1.05   1.05     0%
+matrix-multiply     3.32   3.10     7%
+matrix-multiply2    1.94   1.80     7%
+
+Local variable names are screwed up:
+
+  > (define (f x) (let ((y 4)) (+ x y)))
+  > (f 'a)
+
+  Error: exception
+         (+ 'a 4)
+  1> ,debug
+  '#{Continuation (pc 13) f}
+
+   [0] 4
+   [1: y] 'a
+  inspect: 
+
+There is probably a simple fix for this.
+
+Here is the diff:
+
+% diff comp.scm comp.scm.save
+26d25
+< (define $compiling-leaf (make-fluid 'no))
+28,33d26
+< (define (note-not-leaf!)
+<   (set-fluid! $compiling-leaf 'no))
+< 
+< (define (compiling-leaf?)
+<   (eq? 'yes (fluid $compiling-leaf)))
+< 
+63,82c56,66
+<     (deliver-value (if (env-ref? den)
+< 		       (local-variable den cenv depth #f)
+< 		       (instruction-with-variable op/global exp den #f))
+< 		   cont)))
+< 
+< (define (local-variable den cenv depth set?)
+<   (let ((back (env-ref-back den cenv))
+< 	(over (env-ref-over den)))
+<     (if (and (compiling-leaf?)
+< 	     (= back 0))
+< 	(instruction (if set? op/stack-set! op/stack-ref)
+< 		     (+ (- over 1) depth))
+< 	(let ((back (if (compiling-leaf?) (- back 1) back)))
+< 	  (if set?
+< 	      (instruction op/set-local! back over)
+< 	      (case back
+< 		((0) (instruction op/local0 over)) ;+++
+< 		((1) (instruction op/local1 over)) ;+++
+< 		((2) (instruction op/local2 over)) ;+++
+< 		(else (instruction op/local back over))))))))
+---
+>     (if (env-ref? den)
+> 	(let ((back (env-ref-back den cenv))
+> 	      (over (env-ref-over den)))
+> 	  (deliver-value (case back
+> 			   ((0) (instruction op/local0 over)) ;+++
+> 			   ((1) (instruction op/local1 over)) ;+++
+> 			   ((2) (instruction op/local2 over)) ;+++
+> 			   (else (instruction op/local back over)))
+> 			 cont))
+> 	(deliver-value (instruction-with-variable op/global exp den #f)
+> 		       cont))))
+143,145c127,132
+< 	  (if (env-ref? den)
+< 	      (local-variable den cenv depth #t)
+< 	      (instruction-with-variable op/set-global! name den #t)))
+---
+> 	  (cond ((env-ref? den)
+> 		 (instruction op/set-local!
+> 			      (env-ref-back den cenv)
+> 			      (env-ref-over den)))
+> 		(else
+> 		 (instruction-with-variable op/set-global! name den #t))))
+203d189
+<   (note-not-leaf!)  ; this isn't strictly necessary, but it keeps things simpler
+222,231c208,215
+<   (cond ((return-cont? cont) 
+< 	 code)
+< 	(else
+< 	 (note-not-leaf!)  ; this isn't strictly necessary, but it keeps things simpler
+< 	 (sequentially (instruction-with-offset&byte op/make-cont
+< 						     (segment-size code)
+< 						     depth)
+< 		       (note-source-code (cont-source-info cont)
+< 					 code)
+< 		       (cont-segment cont)))))
+---
+>   (if (return-cont? cont) 
+>       code
+>       (sequentially (instruction-with-offset&byte op/make-cont
+> 						  (segment-size code)
+> 						  depth)
+> 		    (note-source-code (cont-source-info cont)
+> 				      code)
+> 		    (cont-segment cont))))
+264d247
+<   (note-not-leaf!)
+280,315c263,284
+<   (let-fluids $compiling-leaf 'maybe
+<     (lambda ()
+<       (let ((code (really-compile-lambda-code formals body cenv name)))
+< 	(if (eq? (fluid $compiling-leaf) 'maybe)
+< 	    (let-fluids $compiling-leaf 'yes
+< 	      (lambda ()
+< 		(really-compile-lambda-code formals body cenv name)))
+< 	    code)))))
+< 
+< (define (really-compile-lambda-code formals body cenv name)
+<   (let* ((nargs (number-of-required-args formals))
+< 	 (vars (normalize-formals formals))
+< 	 (cenv (if (null? formals)
+< 		   cenv			;+++
+< 		   (bind-vars vars cenv))))
+<     (sequentially
+<      (cond ((n-ary? formals)
+< 	    (sequentially
+< 	     (instruction op/make-rest-list nargs)
+< 	     (instruction op/push)
+< 	     (if (compiling-leaf?)
+< 		 empty-segment
+< 		 (instruction op/make-env (+ nargs 1)))))
+< 	   ((null? formals)
+< 	    (note-not-leaf!) ; no point if no variables
+< 	    empty-segment)
+< 	   ((compiling-leaf?)
+< 	    empty-segment)
+< 	   (else
+< 	    (instruction op/make-env nargs)))
+<      (note-environment
+<        vars
+<        (compile-body body
+< 		     cenv
+< 		     0
+< 		     (return-cont name))))))
+---
+>   (if (null? formals)
+>       (compile-body body		;+++ Don't make null environment
+> 		    cenv
+> 		    0
+> 		    (return-cont name))
+>       (sequentially
+>        (let ((nargs (number-of-required-args formals)))
+> 	 (if (n-ary? formals)
+> 	     (sequentially
+> 	      (instruction op/make-rest-list nargs)
+> 	      (instruction op/push)
+> 	      (instruction op/make-env (+ nargs 1)))
+> 	     (instruction op/make-env nargs)))
+>        (let* ((vars (normalize-formals formals))
+> 	      (cenv (bind-vars vars cenv)))
+> 	 (note-environment
+> 	  vars
+> 	  (compile-body body
+> 			cenv
+> 			0
+> 			(return-cont name)))))))
+> 
+

@@ -1,0 +1,55 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 21.4 (patch 15) "Security Through Obscurity" XEmacs Lucid, Fri Dec  3 20:36:25 2004 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Condition variables</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_57.html">Threads</A><BR>Previous: <A HREF="s48manual_62.html">Condition variables</A> | Next: <A HREF="s48manual_62.html">Condition variables</A>
+<H2>Condition variables</H2>
+<I>Condition variables</I> (defined in the <CODE>condvars</CODE>
+structure) allow threads perform condition synchronization: It allows
+threads to block, waiting for a specified condition--associated with a
+condition variable--to occur, and other threads to wake up the waiting
+threads when the condition is fulfilled.
+<P>Note that, in Scheme&nbsp;48, condition variables work in conjunction with
+proposals, not with mutex locks or semaphores, as in most other
+implementations of this concept.
+<P><UL><LI><CODE>(make-condvar<I></I>)&nbsp;-&gt;&nbsp;<I>condvar</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(make-condvar<I>&nbsp;id</I>)&nbsp;-&gt;&nbsp;<I>condvar</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(condvar?<I>&nbsp;thing</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(set-condvar-has-value?!<I>&nbsp;condvar&nbsp;boolean</I>)</CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(condvar-has-value?<I>&nbsp;condvar</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(set-condvar-value!<I>&nbsp;condvar&nbsp;value</I>)</CODE><A NAME="6">&nbsp;</A>
+<LI><CODE>(condvar-value<I>&nbsp;condvar</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="7">&nbsp;</A>
+<LI><CODE>(maybe-commit-and-wait-for-condvar<I>&nbsp;condvar</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="8">&nbsp;</A>
+<LI><CODE>(maybe-commit-and-set-condvar!<I>&nbsp;condvar&nbsp;value</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="9">&nbsp;</A>
+</UL>
+<CODE>Make-condvar</CODE> creates a condition variable.  (The optional
+<CODE><I>id</I></CODE> argument is only for debugging purposes; the discloser for
+condition variables prints it out if present.)  <CODE>Condvar?</CODE> is the
+predicate for condition variables.
+<P>Each condition variable has an associated value and a flag
+<CODE>has-value?</CODE> signalling if the condition has already occured.
+The accessor for flag is <CODE>condvar-has-value?</CODE>;
+<CODE>set-condvar-has-value?!</CODE> sets it.  Both are provisional
+operations and go through the current proposal.
+<CODE>Set-condvar-value!</CODE> sets the value of the condition variable
+(provisionally), and <CODE>condvar-value</CODE> extracts it.
+<P><CODE>Maybe-commit-and-wait-for-condvar</CODE> attempts to commit the
+current proposal.  If the commit succeeds, it suspends the current
+thread and registers it with the <CODE><I>condvar</I></CODE> condition variable.
+Upon waking up again <CODE>maybe-commit-and-wait-for-condvar</CODE> returns
+<CODE>#t</CODE>, If the commit fails, <CODE>maybe-commit-and-set-condvar</CODE>
+returns <CODE>#f</CODE>.
+<P><CODE>Maybe-commit-and-set-condvar!</CODE> sets the value of the
+<CODE><I>condvar</I></CODE> condition variable to <CODE><I>value</I></CODE>, (provisionally)
+sets the <CODE>has-value?</CODE> flag to <CODE>#t</CODE>, and then attempt to
+commit the current proposal.  Upon success, it wakes up all suspended
+threads registered with <CODE><I>condvar</I></CODE> and returns <CODE>#t</CODE>,
+otherwise, it returns <CODE>#f</CODE>.
+<P><P>
+  
+Previous: <A HREF="s48manual_62.html">Condition variables</A> | Next: <A HREF="s48manual_62.html">Condition variables</A></BODY></HTML>

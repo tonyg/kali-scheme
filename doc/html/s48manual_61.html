@@ -1,0 +1,182 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 21.4 (patch 15) "Security Through Obscurity" XEmacs Lucid, Fri Dec  3 20:36:24 2004 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Optimistic concurrency</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_57.html">Threads</A><BR>Previous: <A HREF="s48manual_61.html">Optimistic concurrency</A> | Next: <A HREF="s48manual_61.html">Optimistic concurrency</A>
+<H2>Optimistic concurrency</H2>
+<P>Most of the bindings described in this section are part of the <CODE>proposals</CODE>
+structure--the low-level bindings described at the very end of the
+section are part of the <CODE>low-proposals</CODE> structure.
+<P>A <CODE><I>proposal</I></CODE> is a record of reads from and and writes to locations in
+ memory.  Each thread has an associated <I>current proposal</I>
+ (which may be <CODE>#f</CODE>).
+The <CODE><I>logging</I></CODE> operations listed below record any values read or
+ written in the current proposal.
+A reading operation, such as <CODE>provisional-vector-ref</CODE>, first checks to
+ see if the current proposal contains a value for the relevent location.
+If so, that value is returned as the result of the read.
+If not, the current contents of the location are stored in the proposal and
+ then returned as the result of the read.
+A logging write to a location stores the new value as the current contents of
+ the location in the current proposal; the contents of the location itself
+ remain unchanged.
+<P><CODE><I>Committing</I></CODE> to a proposal verifies that any reads logged in
+ the proposal are still valid and, if so, performs any writes that
+ the proposal contains.
+A logged read is valid if, at the time of the commit, the location contains
+ the same value it had at the time of the original read (note that this does
+ not mean that no change occured, simply that the value now is the same as
+ the value then).
+If a proposal has an invalid read then the effort to commit fails; no change
+ is made to the value of any location.
+The verifications and subsequent writes to memory are performed atomically
+ with respect to other proposal commit attempts.
+<UL><LI><CODE>(call-ensuring-atomicity<I>&nbsp;thunk</I>)&nbsp;-&gt;&nbsp;<I>value&nbsp;...</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(call-ensuring-atomicity!<I>&nbsp;thunk</I>)</CODE><A NAME="2">&nbsp;</A>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(ensure-atomicity <CODE><I>exp</I></CODE> ...)&nbsp;-&gt;&nbsp;<I>value&nbsp;...</I></CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(ensure-atomicity! <CODE><I>exp</I></CODE> ...)</CODE></td> <td align=right>syntax</td></tr></table><A NAME="3">&nbsp;</A>
+</UL>
+If there is a proposal in place 
+ <CODE>call-ensuring-atomicity</CODE> and <CODE>call-ensuring-atomicity!</CODE>
+ simply make a (tail-recursive) call to <CODE><I>thunk</I></CODE>.
+If the current proposal is <CODE>#f</CODE> they create a new proposal,
+ install it, call <CODE><I>thunk</I></CODE>, and then try to commit to the proposal.
+This process repeats, with a new proposal on each iteration, until
+ the commit succeeds.
+<CODE>Call-ensuring-atomicity</CODE> returns whatever values are returned by <CODE><I>thunk</I></CODE>
+ on its final invocation, while <CODE>ensure-atomicity!</CODE> discards any such
+ values and returns nothing.
+<P><CODE>Ensure-Atomicity</CODE> and <CODE>ensure-atomicity!</CODE> are macro versions of
+<CODE>call-ensuring-atomicity</CODE> and <CODE>call-ensuring-atomicity!</CODE>:
+<CODE>(ensure-atomicity <CODE><I>exp</I></CODE> ...)</CODE> expands into
+<CODE>(call-ensuring-atomicity (lambda () <CODE><I>exp</I></CODE> ...))</CODE>; likewise for
+<CODE>ensure-atomicity!</CODE> and <CODE>call-ensuring-atomicity!</CODE>.
+<P><UL><LI><CODE>(provisional-car<I>&nbsp;pair</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(provisional-cdr<I>&nbsp;pair</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(provisional-set-car!<I>&nbsp;pair&nbsp;value</I>)</CODE><A NAME="6">&nbsp;</A>
+<LI><CODE>(provisional-set-cdr!<I>&nbsp;pair&nbsp;value</I>)</CODE><A NAME="7">&nbsp;</A>
+<LI><CODE>(provisional-cell-ref<I>&nbsp;cell</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="8">&nbsp;</A>
+<LI><CODE>(provisional-cell-set!<I>&nbsp;cell&nbsp;value</I>)</CODE><A NAME="9">&nbsp;</A>
+<LI><CODE>(provisional-vector-ref<I>&nbsp;vector&nbsp;i</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="10">&nbsp;</A>
+<LI><CODE>(provisional-vector-set!<I>&nbsp;vector&nbsp;i&nbsp;value</I>)</CODE><A NAME="11">&nbsp;</A>
+<LI><CODE>(provisional-string-ref<I>&nbsp;vector&nbsp;i</I>)&nbsp;-&gt;&nbsp;<I>char</I></CODE><A NAME="12">&nbsp;</A>
+<LI><CODE>(provisional-string-set!<I>&nbsp;vector&nbsp;i&nbsp;char</I>)</CODE><A NAME="13">&nbsp;</A>
+<LI><CODE>(provisional-byte-vector-ref<I>&nbsp;vector&nbsp;i</I>)&nbsp;-&gt;&nbsp;<I>k</I></CODE><A NAME="14">&nbsp;</A>
+<LI><CODE>(provisional-byte-vector-set!<I>&nbsp;vector&nbsp;i&nbsp;k</I>)</CODE><A NAME="15">&nbsp;</A>
+</UL>
+These are all logging versions of their Scheme counterparts.
+Reads are checked when the current proposal is committed and writes are
+ delayed until the commit succeeds.
+If the current proposal is <CODE>#f</CODE> these perform exactly as their Scheme
+ counterparts.
+<P>The following implementation of a simple counter may not function properly
+ when used by multiple threads.
+<BLOCKQUOTE><PRE>
+(define (make-counter)
+  (let ((value 0))
+    (lambda ()
+      (set! value (+ value 1))
+      value)))
+</PRE></BLOCKQUOTE>
+<P>Here is the same procedure using a proposal to ensure that each
+ increment operation happens atomically.
+The value of the counter is kept in a
+ <A HREF="s48manual_42.html">cell</A>
+ to allow the use of
+ logging operations.
+<BLOCKQUOTE><PRE>
+(define (make-counter)
+  (let ((value (make-cell 0)))
+    (lambda ()
+      (ensure-atomicity
+        (lambda ()
+          (let ((v (+ (provisional-cell-ref value)
+                      1)))
+            (provisional-cell-set! value v)
+            v))))))
+</PRE></BLOCKQUOTE>
+<P>Because <CODE>ensure-atomicity</CODE> creates a new proposal only if there is
+ no existing proposal in place, multiple atomic actions can be merged
+ into a single atomic action.
+For example, the following procedure increments an arbitrary number of
+ counters at the same time.
+This works even if the same counter appears multiple times;
+ <CODE>(step-counters! c0 c0)</CODE> would add two to the value of counter <CODE>c0</CODE>.
+<BLOCKQUOTE><PRE>
+(define (step-counters! . counters)
+  (ensure-atomicity
+    (lambda ()
+      (for-each (lambda (counter)
+                  (counter))
+                counters))))
+</PRE></BLOCKQUOTE>
+<P><BLOCKQUOTE><PRE>
+(define-synchronized-record-type <CODE><I>tag</I></CODE> <CODE><I>type-name</I></CODE>
+  (<CODE><I>constructor-name</I></CODE> <CODE><I>field-tag</I></CODE> ...)
+  [(<CODE><I>&nbsp;</I></CODE><CODE><I>field-tag</I></CODE> ...)]
+  <CODE><I>predicate-name</I></CODE>
+  (<CODE><I>field-tag</I></CODE> <CODE><I>accessor-name</I></CODE> [<CODE><I>modifier-name</I></CODE>])
+  ...)
+</PRE></BLOCKQUOTE>
+This is the same as <CODE>define-record-type</CODE>
+ except all field reads and
+ writes are logged in the current proposal.
+If the optional list of field tags is present then only those fields will
+ be logged.
+<P><UL><LI><CODE>(call-atomically<I>&nbsp;thunk</I>)&nbsp;-&gt;&nbsp;<I>value(s)</I></CODE><A NAME="16">&nbsp;</A>
+<LI><CODE>(call-atomically!<I>&nbsp;thunk</I>)</CODE><A NAME="17">&nbsp;</A>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(atomically <CODE><I>exp</I></CODE> ...)&nbsp;-&gt;&nbsp;<I>value(s)</I></CODE></td> <td align=right>syntax</td></tr></table>
+<LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(atomically! <CODE><I>exp</I></CODE> ...)</CODE></td> <td align=right>syntax</td></tr></table><A NAME="18">&nbsp;</A>
+</UL>
+<CODE>Call-atomically</CODE> and <CODE>call-atomically!</CODE> are identical
+ to <CODE>call-ensuring-atomicity</CODE> and <CODE>call-ensuring-atomicity!</CODE> except that they
+ always install a new proposal before calling <CODE>thunk</CODE>.
+The current proposal is saved and then restored after <CODE>thunk</CODE> returns.
+<CODE>Call-atomically</CODE> and <CODE>Call-atomically!</CODE> are useful if <CODE>thunk</CODE> contains
+ code that is not to be combined with any other operation.
+<P><CODE>Atomically</CODE> and <CODE>atomically!</CODE> are macro versions of
+<CODE>call-atomically</CODE> and <CODE>call-atomically!</CODE>:
+<CODE>(atomically <CODE><I>exp</I></CODE> ...)</CODE> expands into
+<CODE>(call-atomically (lambda () <CODE><I>exp</I></CODE> ...))</CODE>; likewise for
+<CODE>atomically!</CODE> and <CODE>call-atomically!</CODE>.
+<P><UL><LI><table border=0 cellspacing=0 cellpadding=0 width=80%>
+<tr> <td><CODE>(with-new-proposal (<CODE><I>lose</I></CODE>) <CODE><I>exp</I></CODE> ...)&nbsp;-&gt;&nbsp;<I>value&nbsp;...</I></CODE></td> <td align=right>syntax</td></tr></table>
+</UL>
+<P><CODE>With-new-proposal</CODE> saves the current proposal, installs a new
+one, executes the forms in the body, and returns whatever they
+returns.  It also binds <CODE><I>lose</I></CODE> to a thunk repeating the
+procedure of installing a new procedure and running the body.
+Typically, the body will call <CODE>maybe-commit</CODE> and, if that fails,
+call <CODE><I>lose</I></CODE> to try again.
+<P>The following procedures give access to the low-level proposal
+mechanism.  They are defined in the <CODE>low-proposals</CODE> structure.
+<UL><LI><CODE>(maybe-commit<I></I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="19">&nbsp;</A>
+<LI><CODE>(make-proposal<I></I>)&nbsp;-&gt;&nbsp;<I>proposal</I></CODE><A NAME="20">&nbsp;</A>
+<LI><CODE>(current-proposal<I></I>)&nbsp;-&gt;&nbsp;<I>proposal</I></CODE><A NAME="21">&nbsp;</A>
+<LI><CODE>(set-current-proposal!<I>&nbsp;proposal</I>)</CODE><A NAME="22">&nbsp;</A>
+</UL>
+<CODE>Maybe-commit</CODE> verifies that any reads logged in the current proposal are
+ still valid and, if so, performs any writes that it contains.
+A logged read is valid if, at the time of the commit, the location read contains
+ the same value it had at the time of the original read (note that this does
+ not mean that no change occured, simply that the value now is the same as
+ the value then).
+<CODE>Maybe-commit</CODE> returns <CODE>#t</CODE> if the commit succeeds and <CODE>#f</CODE>
+ if it fails.
+<P><CODE>Make-proposal</CODE> creates a new proposal.
+<CODE>Current-proposal</CODE> and <CODE>set-current-proposal</CODE> access and set
+ the current thread's proposal.
+It is an error to pass to <CODE>set-current-proposal!</CODE> a proposal that
+ is already in use.
+<P><P>
+  
+Previous: <A HREF="s48manual_61.html">Optimistic concurrency</A> | Next: <A HREF="s48manual_61.html">Optimistic concurrency</A></BODY></HTML>

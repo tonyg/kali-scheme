@@ -1,0 +1,204 @@
+
+[This is somewhat out of date.  It predates the switch to using optimistic
+ concurrency for mutual exclusion. -RK 5/21/01]
+
+There are two types of I/O objects in Scheme 48, channels and ports.
+Channels are the raw, unbuffered ports of the operating system.  The
+only I/O operations the VM supports for channels are block reads and
+writes.  Ports are the actual Scheme ports and are implemented in Scheme,
+with some support from the VM for READ-CHAR, PEEK-CHAR, and WRITE-CHAR
+for efficiency.  The run-time system provides ports that are buffered
+versions of channels.  Other sorts of ports are in big/more-port.scm.
+
+Source files:
+
+  rts/port.scm            port operations and port handlers
+  rts/current-port.scm    current-input-port, etc.
+  rts/channel.scm         blocking on channels and handling i/o interrupts
+  rts/channel-port.scm    ports that read and write to channels
+  rts/low.scm             CHANNEL-READ and CHANNEL-WRITE
+  big/more-port.scm       additional kinds of ports
+  vm/arch.scm             fields of ports and channels
+  vm/prim-io.scm          VM i/o opcodes
+  vm/vmio.scm             implementation of channels
+  
+----------------------------------------------------------------
+
+CHANNELS
+
+The VM instructions that deal with channels are:
+
+ (OPEN-CHANNEL <spec> <mode>) -> channel
+   <mode> is a from the enumeration OPEN-CHANNEL-OPTION in arch.scm.
+   <spec> is either a filename (as a string) or an OS port (as a one-word
+   code-vector), depending on the mode.
+
+ (CLOSE-CHANNEL <channel>)    -> unspecific
+
+ (CHANNEL-MAYBE-READ <string-or-code-vector> <start-index> <count> <wait?>
+                     <channel>)
+                              -> number of bytes read or the eof-object
+ (CHANNEL-MAYBE-WRITE <string-or-code-vector> <start-index> <count> <channel>)
+                              -> number of bytes written
+   These read or write up to the specified number of characters or bytes
+   from or to the string or code-vector, with the first character or byte
+   going at <start-index>.
+
+ (CHANNEL-ABORT <channel>)    -> number of bytes read or written or
+                                 the eof-object
+   This aborts any pending read or write operation on the channel.  The return
+   value reflects any partial completion.
+
+CHANNEL-MAYBE-READ and CHANNEL-MAYBE-WRITE do not block.  If the read or
+write cannot be completed immediately a PENDING-CHANNEL-I/O exception is
+raised.  It is then up to the run-time system to either wait or run some
+other thread.  The VM raises an I/O-COMPLETION interrupt whenever an i/o
+operation completes.
+
+Because CHANNEL-MAYBE-READ and CHANNEL-MAYBE-WRITE are awkward to use,
+the RTS defines somewhat simpler versions:
+
+ (CHANNEL-READ <buffer> <start> <needed> <channel>)
+                              -> number of bytes read or the eof-object
+ (CHANNEL-WRITE <buffer> <start> <count> <channel>)
+                              -> unspecified
+   <Buffer> is either a string or code vector and <start> is the index of the
+   first character read or written. <Needed> is one of:
+     N > 0 : the call returns when this many characters has been read or
+        an EOF is reached.
+     'IMMEDIATE : the call reads as many characters as are available and
+        returns immediately.
+     'ANY : the call returns as soon as at least one character has been read
+        or an EOF is reached.
+   <Count> is the number of characters to be written.  CHANNEL-READ will read
+   the requested number of characters unless an EOF is reached.  CHANNEL-WRITE
+   will write the requested number of characters.
+
+----------------------------------------------------------------
+
+PORTS
+
+Ports are actual Scheme port and are (usually) buffered.  They are fully
+exposed to the run-time system.  The VM instructions on ports could be
+implemented in Scheme; they are in the VM for efficiency.  Buffers are
+code-vectors (this is a micro-hack; strings have a slightly higher overhead
+because of the null terminating byte for C compatibility) (code-vectors are
+just vectors of bytes).
+
+The fields of a port are:
+ 
+ PORT-STATUS: a bit set represented as a fixnum.
+  Indices into this bit set are from the PORT-STATUS-OPTIONS
+  enumeration in arch.scm.  The current bits are: input, output,
+  open-for-input, open-for-output (the last two are for things like
+  sockets, on which you need to block but which do not support
+  normal reading or writing).
+
+ PORT-HANDLER: a record containing three procedures.  These handle
+  printing the port, closing the port, and filling (for input ports)
+  or emptying (for output ports) buffers.
+
+ PORT-DATA: ?
+  Whatever stuff the handler needs.
+
+ PORT-LOCKED?, PORT-LOCK: used by the system to guarentee the atomicity
+  of i/o operations.
+
+ PORT-BUFFER: a code-vector.  The input or output buffer of the port.
+
+ PORT-INDEX: a fixnum.  The index of the next byte to read or written.
+
+ PORT-LIMIT: a fixnum.  One past the end of the valid/available buffer space.
+
+ PORT-PENDING-EOF?: true if the next read to this port should return EOF.
+
+Additional operations on ports:
+
+ (READ-BLOCK string-or-code-vector start count input-port)
+    Read COUNT bytes into STRING-OR-CODE-VECTOR starting at index START.
+    Returns the number of bytes read.  Only an end-of-file will prevent
+    the requested number of bytes from being read.
+ 
+ (WRITE-STRING string output-port)
+    Write the characters in the string to the port.
+
+ (WRITE-BLOCK string-or-code-vector start count output-port)
+    The output counterpart to READ-BLOCK.  This always writes out the
+    requested number of bytes.  Its return value is unspecified.
+
+ (FORCE_OUTPUT output-port)
+    Causes any buffered characters to be written out.
+    
+ (CURRENT-ERROR-PORT)
+    The current error port, analogous to Scheme's CURRENT-INPUT-PORT
+    and CURRENT-OUTPUT-PORT.
+
+The system maintains a list of output ports whose buffers should be
+periodically flushed.  The default output port and ports made by
+OPEN-OUTPUT-FILE are on this list.  (PERIODICALLY-FORCE-OUTPUT! <output-port>)
+may be used to add others.
+
+----------------------------------------------------------------
+
+PORT HANDLERS
+
+Every port has a handler with three procedures.  The first two are used
+for printing and closing ports and have the same type for all ports:
+ 
+ (DISCLOSE port-data) -> disclose list
+ (CLOSE port-data) -> unspecific
+
+For CLOSE, The system takes care of modifying the port's status.
+
+The third procedure is used to fill and empty buffers.  Its arguments
+and return values depend on the kind of port:
+
+ Buffered output ports:
+  (BUFFER-PROC port-data buffer start-index byte-count) -> unspecific
+    BYTE-COUNT bytes should be copied from the buffer beginning at
+    START-INDEX.  The buffer may be either a string or a code-vector.
+
+ Unbuffered output ports:
+  (BUFFER-PROC port-data char) -> unspecific
+    Write out the given character.  The system uses this for the default
+    error port.
+
+ Input ports:
+  (BUFFER-PROC data buffer start-index needed-bytes)
+     -> EOF or number of bytes read (before an EOF)
+    Bytes should be copied into the buffer starting at START-INDEX.  The
+    buffer may be either a string or a code-vector.  NEEDED-BYTES is one of:
+
+      'IMMEDIATE
+        The call should return immediately after transfering whatever number
+        of bytes are currently available, possibly none (this is used for
+	CHAR-READY?). The maximum number of characters is determined by the
+	length of BUFFER.
+
+      'ANY
+        The call should wait until at least one byte is available or an EOF
+        occurs (used for READ-CHAR and PEEK-CHAR).  The maximum number of
+	characters is determined by the length of BUFFER.
+
+      N > 0
+        The call should wait until N bytes have been copied into the buffer
+        or an EOF occurs.  If the return value is less than NEEDED-BYTES the
+        port code inserts an EOF after the last byte.
+
+----------------------------------------------------------------
+
+Ports and the Virtual Machine
+
+Ports could be implemented entirely in Scheme, with no support from
+the VM.  For efficiency reasons VM instructions are supplied for
+three port operations:
+
+  (READ-CHAR <port>)
+  (PEEK-CHAR <port>)
+  (WRITE-CHAR <char> <port>)
+
+For each of these, if there is sufficient data or space in the
+appropriate buffer the VM performs the operation.  Otherwise a
+buffer-full/empty exception is raised and the exception handler
+uses the buffer procedure from the port's handler to fill or
+empty the buffer.

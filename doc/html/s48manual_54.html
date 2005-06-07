@@ -1,0 +1,605 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 21.4 (patch 15) "Security Through Obscurity" XEmacs Lucid, Fri Dec  3 20:36:21 2004 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Sorting lists and vectors</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_54.html">Sorting lists and vectors</A> | Next: <A HREF="s48manual_54.html">Sorting lists and vectors</A>
+<H2>Sorting lists and vectors</H2>
+
+<P>(This section, as the libraries it describes, was written mostly by
+Olin Shivers for the draft of SRFI&nbsp;32.)
+<P>The sort libraries in Scheme&nbsp;48 include
+<UL><LI>vector insert sort (stable)
+<LI>vector heap sort
+<LI>vector merge sort (stable)
+<LI>pure and destructive list merge sort (stable)
+<LI>stable vector and list merge
+<LI>miscellaneous sort-related procedures: vector and list merging, 
+  sorted predicates, vector binary search, vector and list 
+  delete-equal-neighbor procedures.
+<LI>a general, non-algorithmic set of procedure names for general sorting
+  and merging
+</UL>
+<P><H3><A NAME="1">Design rules</A></H3>
+<P><H5><A NAME="2">What vs. how</A></H5>
+<P>There are two different interfaces: "what" (simple) and "how" (detailed).
+<P><DL><DT><B>Simple</B><DD> you specify semantics: datatype (list or vector), 
+  mutability, and stability.
+<P><DT><B>Detailed</B><DD> you specify the actual algorithm (quick, heap,
+  insert, merge). Different algorithms have different properties,
+  both semantic and pragmatic, so these exports are necessary.
+<P>  It is necessarily the case that the specifications of these procedures
+  make statements about execution "pragmatics." For example, the sole
+  distinction between heap sort and quick sort--both of which are
+  provided by this library---is one of execution time, which is not a
+  "semantic" distinction. Similar resource-use statements are made about
+  "iterative" procedures, meaning that they can execute on input of
+  arbitrary size in a constant number of stack frames.
+</DL>
+<P><H5><A NAME="3">Consistency across procedure signatures</A></H5>
+<P>The two interfaces share common procedure signatures wherever
+possible, to facilitate switching a given call from one procedure
+to another.
+<P><H5><A NAME="4">Less-than parameter first, data parameter after</A></H5>
+<P>These procedures uniformly observe the following parameter order:
+the data to be sorted comes after the comparison procedure.
+That is, we write
+<P><BLOCKQUOTE><PRE>
+  (sort <I>&lt;</I> <I>list</I>)
+</PRE></BLOCKQUOTE>
+<P>not
+<P><BLOCKQUOTE><PRE>
+  (sort <I>list</I> <I>&lt;</I>)
+</PRE></BLOCKQUOTE>
+<H5><A NAME="5">Ordering, comparison procedures and stability</A></H5>
+<P>These routines take a <I>&lt;</I> comparison procedure, not a <I> &lt;= </I> comparison
+procedure, and they sort into increasing order. The difference between
+a <I>&lt;</I> spec and a <I> &lt;= </I> spec comes up in two places: 
+<P><UL><LI>the definition of an ordered or sorted data set, and
+<LI>the definition of a stable sorting algorithm.
+</UL>
+We say that a data set (a list or vector) is <I>sorted</I> or
+<I>ordered</I> if it contains no adjacent pair of values <I>...x,
+y ...</I> such that <I>y &lt; x</I>.
+<P>In other words, scanning across the data never takes a "downwards" step.
+<P>If you use a <I> &lt;= </I> procedure where these algorithms expect a <I>&lt;</I>
+procedure, you may not get the answers you expect. For example,
+the <CODE>list-sorted?</CODE> procedure will return false if you pass it a <I> &lt;= </I> comparison
+procedure and an ordered list containing adjacent equal elements.
+<P>A "stable" sort is one that preserves the pre-existing order of equal
+elements. Suppose, for example, that we sort a list of numbers by 
+comparing their absolute values, i.e., using comparison procedure
+<PRE>
+(lambda (x y) (&lt; (abs x) (abs y)))
+</PRE>
+If we sort a list that contains both 3 and -3: <BLOCKQUOTE><I>...3, ..., -3 ...</I></BLOCKQUOTE>
+then a stable sort is an algorithm that will not swap the order
+of these two elements, that is, the answer is guaranteed to to look like
+<BLOCKQUOTE><I>...3, -3 ...</I></BLOCKQUOTE>
+not
+<BLOCKQUOTE><I>...-3, 3 ...</I></BLOCKQUOTE>
+Choosing <I>&lt;</I> for the comparison procedure instead of <I> &lt;= </I> affects
+how stability is coded. Given an adjacent pair <I>x, y</I>, <CODE>(&lt;
+  <I>y</I> <I>x</I>)</CODE> means "<I>x</I> should be moved in front of <I>x</I>"--otherwise,
+leave things as they are. So using a <I> &lt;= </I> procedure where a <I>&lt;</I>
+procedure is expected will <EM>invert</EM> stability.
+<P>This is due to the definition of equality, given a <I>&lt;</I> comparator:
+<PRE>
+    (and (not (&lt; x y))
+         (not (&lt; y x)))
+</PRE>
+The definition is rather different, given a <I> &lt;= </I> comparator:
+<PRE>
+    (and (&lt;= x y)
+         (&lt;= y x))
+</PRE>
+A "stable" merge is one that reliably favors one of its data sets
+when equal items appear in both data sets. <EM>All merge operations in
+this library are stable</EM>, breaking ties between data sets in favor
+of the first data set--elements of the first list come before equal 
+elements in the second list.
+<P>So, if we are merging two lists of numbers ordered by absolute value,
+the stable merge operation <CODE>list-merge</CODE>
+<PRE>
+    (list-merge (lambda (x y) (&lt; (abs x) (abs y)))
+                '(0 -2 4 8 -10) '(-1 3 -4 7))
+</PRE>
+reliably places the 4 of the first list before the equal-comparing -4
+  of the second list:
+<PRE>
+    (0 -1 -2 4 -4 7 8 -10)
+</PRE>
+Some sort algorithms will <EM>not work correctly</EM> if given a <I> &lt;= </I>
+  when they expect a <I>&lt;</I> comparison (or vice-versa).
+<P>In short, if your comparison procedure <I>f</I> answers true to <CODE>(<I>f</I> x x)</CODE>, then 
+<UL><LI>using a stable sorting or merging algorithm will not give you a
+  stable sort or merge, 
+<LI><CODE>list-sorted?</CODE> may surprise you.
+</UL>
+Note that  you can synthesize a <I>&lt;</I> procedure from a <I> &lt;= </I> procedure with
+<PRE>
+    (lambda (x y) (not (&lt;= y x)))
+</PRE>
+if need be. 
+<P>Precise definitions give sharp edges to tools, but require care in use. 
+"Measure twice, cut once."
+<P><H5><A NAME="6">All vector operations accept optional subrange parameters</A></H5>
+<P>The vector operations specified below all take optional
+<CODE>start</CODE>/<CODE>end</CODE> arguments indicating a selected subrange
+of a vector's elements. If a <CODE>start</CODE> parameter or
+<CODE>start</CODE>/<CODE>end</CODE> parameter pair is given to such a
+procedure, they must be exact, non-negative integers, such that
+<BLOCKQUOTE><I>
+    0  &lt;= <I>start</I>  &lt;= <I>end</I>  &lt;= <CODE>(vector-length <I>vector</I>)</CODE>
+</I></BLOCKQUOTE>
+where <I>vector</I> is the related vector parameter. If not specified,
+they default to 0 and the length of the vector, respectively. They are
+interpreted to select the range <I>[<I>start</I>,<I>end</I>)</I>, that
+is, all elements from index <I>start</I> (inclusive) up to, but not
+including, index <I>end</I>.
+<P><H5><A NAME="7">Required vs. allowed side-effects</A></H5>
+<P><CODE>List-sort!</CODE> and <CODE>List-stable-sort!</CODE> are allowed, but
+not required, to alter their arguments' cons cells to construct the
+result list. This is consistent with the what-not-how character of the
+group of procedures to which they belong (the <CODE>sorting</CODE> structure).
+<P>The <CODE>list-delete-neighbor-dups!</CODE>, <CODE>list-merge!</CODE> and
+<CODE>list-merge-sort!</CODE> procedures, on the other hand, provide
+specific algorithms, and, as such, explicitly commit to the use of
+side-effects on their input lists in order to guarantee their key
+algorithmic properties (e.g., linear-time operation).
+<P><H3><A NAME="8">Procedure specification</A></H3>
+<P><BLOCKQUOTE><CENTER>
+<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
+
+Structure name </TD><TD COLSPAN="1" ALIGN="LEFT"> Functionality</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>sorting</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> General sorting for lists and vectors</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>sorted</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> Sorted predicates for lists and vectors</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>list-merge-sort</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"> List merge sort</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>vector-merge-sort</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> Vector merge sort</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>vector-heap-sort</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> Vector heap sort</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>vector-insert-sort</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> Vector insertion sort</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>delete-neighbor-duplicates</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> List and vector delete neighbor duplicates</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>binary-searches</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> Vector binary search
+ </TD></TR></TABLE>
+
+</CENTER></BLOCKQUOTE>
+Note that there is no "list insert sort" package, as you might as well always
+use list merge sort. The reference implementation's destructive list merge
+sort will do fewer <CODE>set-cdr!</CODE>s than a destructive insert sort.
+<P><H5><A NAME="9">Procedure naming and functionality</A></H5>
+<P>Almost all of the procedures described below are variants of two basic
+operations: sorting and merging. These procedures are consistently named
+by composing a set of basic lexemes to indicate what they do.
+<BLOCKQUOTE><CENTER>
+<P><TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
+
+Lexeme </TD><TD COLSPAN="1" ALIGN="LEFT"> Meaning</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>sort</CODE></TD><TD COLSPAN="1" ALIGN="LEFT">    The procedure sorts its input data set by some <I>&lt;</I> comparison procedure.
+</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>merge</CODE></TD><TD COLSPAN="1" ALIGN="LEFT">   The procedure merges two ordered data sets into a single ordered
+          result.
+</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>stable</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> This lexeme indicates that the sort is a stable one.
+</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>vector</CODE></TD><TD COLSPAN="1" ALIGN="LEFT"> The procedure operates upon vectors.
+</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>list</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT">   The procedure operates upon lists.
+</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>!</CODE>      </TD><TD COLSPAN="1" ALIGN="LEFT">  Procedures that end in <CODE>!</CODE> are allowed, and sometimes required, 
+          to reuse their input storage to construct their answer.
+</TD></TR></TABLE>
+
+</CENTER></BLOCKQUOTE>
+<P><H5><A NAME="10">Types of parameters and return values</A></H5>
+<P>In the procedures specified below,
+<UL><LI>A <CODE>&lt;</CODE> or <CODE>=</CODE> parameter is a procedure accepting
+  two arguments taken from the specified procedure's data set(s), and
+  returning a boolean;
+<LI><CODE>Start</CODE> and <CODE>end</CODE> parameters are exact, non-negative integers that 
+  serve as vector indices selecting a subrange of some associated vector.
+  When specified, they must satisfy the relation
+  <BLOCKQUOTE><I>
+    0  &lt;= <I>start</I>  &lt;= <I>end</I>  &lt;= <CODE>(vector-length <I>vector</I>)</CODE>
+  </I></BLOCKQUOTE>
+  where <I>vector</I> is the associated vector.
+</UL>
+Passing values to procedures with these parameters that do not satisfy
+these types is an error.
+<P>If a procedure is said to return "unspecified," this means that
+nothing at all is said about what the procedure returns, not even the
+number of return values. Such a procedure is not even required to be
+consistent from call to call in the nature or number of its return
+values. It is simply required to return a value (or values) that may
+be passed to a command continuation, e.g.  as the value of an
+expression appearing as a non-terminal subform of a <CODE>begin</CODE>
+expression. Note that in R<I><sup>5</sup></I>RS, this restricts such a procedure to
+returning a single value; non-R<I><sup>5</sup></I>RS systems may not even provide this
+restriction.
+<P><H4><A NAME="11"><CODE>sorting</CODE>--general sorting package</A></H4>
+<P>This library provides basic sorting and merging functionality suitable for
+general programming. The procedures are named by their semantic properties,
+i.e., what they do to the data (sort, stable sort, merge, and so forth).
+<P><UL><LI><CODE>(list-sorted?<I>&nbsp;<I>&lt;</I>&nbsp;list</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="12">&nbsp;</A> 
+  <LI><CODE>(list-merge<I>&nbsp;<I>&lt;</I>&nbsp;list<I><sub>1</sub></I>&nbsp;list<I><sub>2</sub></I></I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="13">&nbsp;</A>
+  <LI><CODE>(list-merge!<I>&nbsp;<I>&lt;</I>&nbsp;list<I><sub>1</sub></I>&nbsp;list<I><sub>2</sub></I></I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="14">&nbsp;</A>
+  <LI><CODE>(list-sort<I>&nbsp;<I>&lt;</I>&nbsp;lis</I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="15">&nbsp;</A>
+  <LI><CODE>(list-sort!<I>&nbsp;<I>&lt;</I>&nbsp;lis</I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="16">&nbsp;</A>
+  <LI><CODE>(list-stable-sort<I>&nbsp;<I>&lt;</I>&nbsp;list</I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="17">&nbsp;</A>
+  <LI><CODE>(list-stable-sort!<I>&nbsp;<I>&lt;</I>&nbsp;list</I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="18">&nbsp;</A>
+  <LI><CODE>(list-delete-neighbor-dups<I>&nbsp;<I>=</I>&nbsp;list</I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="19">&nbsp;</A>
+  <LI><CODE>(vector-sorted?<I>&nbsp;<I>&lt;</I>&nbsp;v&nbsp;[start&nbsp;[end]]</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="20">&nbsp;</A>
+  <LI><CODE>(vector-merge<I>&nbsp;<I>&lt;</I>&nbsp;v<I><sub>1</sub></I>&nbsp;v<I><sub>2</sub></I>&nbsp;[start<I>1</I>&nbsp;[end<I>1</I>&nbsp;[start<I>2</I>&nbsp;[end<I>2</I>]]]]</I>)&nbsp;-&gt;&nbsp;<I>vector</I></CODE><A NAME="21">&nbsp;</A>
+  <LI><CODE>(vector-merge!<I>&nbsp;<I>&lt;</I>&nbsp;v&nbsp;v<I><sub>1</sub></I>&nbsp;v<I><sub>2</sub></I>&nbsp;[start&nbsp;[start<I>1</I>&nbsp;[end<I>1</I>&nbsp;[start<I>2</I>&nbsp;[end<I>2</I>]]]]]</I>)</CODE><A NAME="22">&nbsp;</A>
+  <LI><CODE>(vector-sort<I>&nbsp;<I>&lt;</I>&nbsp;v&nbsp;[start&nbsp;[end]]</I>)&nbsp;-&gt;&nbsp;<I>vector</I></CODE><A NAME="23">&nbsp;</A>
+  <LI><CODE>(vector-sort!<I>&nbsp;<I>&lt;</I>&nbsp;v&nbsp;[start&nbsp;[end]]</I>)</CODE><A NAME="24">&nbsp;</A>
+  <LI><CODE>(vector-stable-sort<I>&nbsp;<I>&lt;</I>&nbsp;v&nbsp;[start&nbsp;[end]]</I>)&nbsp;-&gt;&nbsp;<I>vector</I></CODE><A NAME="25">&nbsp;</A>
+  <LI><CODE>(vector-stable-sort!<I>&nbsp;<I>&lt;</I>&nbsp;v&nbsp;[start&nbsp;[end]]</I>)</CODE><A NAME="26">&nbsp;</A>
+  <LI><CODE>(vector-delete-neighbor-dups<I>&nbsp;<I>=</I>&nbsp;v&nbsp;[start&nbsp;[end]]</I>)&nbsp;-&gt;&nbsp;<I>vector</I></CODE><A NAME="27">&nbsp;</A>
+</UL>
+<P><BLOCKQUOTE><CENTER>
+<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
+
+Procedure </TD><TD COLSPAN="1" ALIGN="LEFT">Suggested algorithm
+</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>list-sort</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> vector heap or quick</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>list-sort!</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> list merge sort</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>list-stable-sort</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> vector merge sort</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>list-stable-sort!</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> list merge sort</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>vector-sort</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> heap or quick sort</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>vector-sort!</CODE> or quick sort</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>vector-stable-sort</CODE> </TD><TD COLSPAN="1" ALIGN="LEFT"> vector merge sort</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+<CODE>vector-stable-sort!</CODE> merge sort
+</TD></TR></TABLE>
+
+</CENTER></BLOCKQUOTE>
+<CODE>List-Sorted?</CODE> and <CODE>vector-sorted?</CODE> return true if their
+input list or vector is in sorted order, as determined by their <I><I>&lt;</I></I>
+comparison parameter.
+<P>All four merge operations are stable: an element of the initial list
+<I>list<I><sub>1</sub></I></I> or vector <I>vector<I><sub>1</sub></I></I> will come before an
+equal-comparing element in the second list <I>list<I><sub>2</sub></I></I> or vector
+<I>vector<I><sub>2</sub></I></I> in the result.
+<P>The procedures
+<UL><LI><CODE>list-merge</CODE>
+<LI><CODE>list-sort</CODE>
+<LI><CODE>list-stable-sort</CODE>
+<LI><CODE>list-delete-neighbor-dups</CODE>
+</UL>
+do not alter their inputs and are allowed to return a value that shares 
+a common tail with a list argument.
+<P>The procedure
+<UL><LI><CODE>list-sort!</CODE>
+<LI><CODE>list-stable-sort!</CODE>
+</UL>
+are "linear update" operators--they are allowed, but not required, to
+alter the cons cells of their arguments to produce their results. 
+<P>On the other hand, the <CODE>list-merge!</CODE> procedure 
+make only a single, iterative, linear-time pass over its argument
+list, using <CODE>set-cdr!</CODE>s to rearrange the cells of the list
+into the final result --it works "in place." Hence, any cons cell
+appearing in the result must have originally appeared in an input. The
+intent of this iterative-algorithm commitment is to allow the
+programmer to be sure that if, for example, <CODE>list-merge!</CODE> is asked to
+merge two ten-million-element lists, the operation will complete
+without performing some extremely (possibly twenty-million) deep
+recursion.
+<P>The vector procedures
+<UL><LI><CODE>vector-sort</CODE>
+<LI><CODE>vector-stable-sort</CODE>
+<LI><CODE>vector-delete-neighbor-dups</CODE>
+</UL>
+do not alter their inputs, but allocate a fresh vector for their result,
+of length <I><I>end</I> - <I>start</I></I>. 
+<P>The vector procedures
+<UL><LI><CODE>vector-sort!</CODE>
+<LI><CODE>vector-stable-sort!</CODE>
+</UL>
+sort their data in-place. (But note that <CODE>vector-stable-sort!</CODE>
+may allocate temporary storage proportional to the size of the
+input
+.)
+<P><CODE>Vector-merge</CODE> returns a vector of length <I>(<I>end</I>_1<I></I>-<I>start</I>_1<I></I>+(<I>end</I>_2<I></I>-<I>start</I>_2<I></I>)</I>.
+<P><CODE>Vector-merge!</CODE> writes its result into vector <I>v</I>,
+beginning at index <I>start</I>, for indices less than <I><I>end</I> =
+<I>start</I> + (<I>end</I>_1<I></I>-<I>start</I>_1<I></I>) +
+(<I>end</I>_2<I></I>-<I>start</I>_2<I></I>)</I>. The target subvector
+  <I><I>v</I>[<I>start</I>,<I>end</I>)</I> may not overlap either source
+subvector <I><I>vector</I>_1<I></I>[<I>start</I>_1<I></I>,<I>end</I>_1<I></I>)</I> <I><I>vector</I>_2<I></I>[<I>start</I>_2<I></I>,<I>end</I>_2<I></I>)</I>.
+<P>The <CODE>...-delete-neighbor-dups-...</CODE> procedures:
+These procedures delete adjacent duplicate elements from a list or a
+vector, using a given element-equality procedure. The first/leftmost
+element of a run of equal elements is the one that survives. The list or
+vector is not otherwise disordered.
+<P>These procedures are linear time--much faster than the <I>O(n<sup>2</sup>)</I> general
+duplicate-element deletors that do not assume any "bunching" of elements
+(such as the ones provided by SRFI&nbsp;1). If you want to delete duplicate
+elements from a large list or vector, you can sort the elements to bring
+equal items together, then use one of these procedures, for a total time
+of <I>O(nlog(n))</I>.
+<P>The comparison procedure <I>=</I> passed to these procedures is always
+applied
+<CODE>(<I>=</I> <I>x</I> <I>y</I>)</CODE>
+where <I>x</I> comes before <I>y</I> in the containing list or vector.
+<P><UL><LI><CODE>List-delete-neighbor-dups</CODE> does not alter its input list; its answer
+  may share storage with the input list.
+<LI><CODE>Vector-delete-neighbor-dups</CODE> does not alter its input vector, but
+  rather allocates a fresh vector to hold the result.
+</UL>
+Examples:
+<P><BLOCKQUOTE><PRE>
+(list-delete-neighbor-dups = '(1 1 2 7 7 7 0 -2 -2))
+  <I>==&gt;</I> (1 2 7 0 -2)
+
+(vector-delete-neighbor-dups = '#(1 1 2 7 7 7 0 -2 -2))
+  <I>==&gt;</I> #(1 2 7 0 -2)
+
+(vector-delete-neighbor-dups = '#(1 1 2 7 7 7 0 -2 -2) 3 7)
+  <I>==&gt;</I> #(7 0 -2)
+</PRE></BLOCKQUOTE>
+<P><H4><A NAME="28">Algorithm-specific sorting packages</A></H4>
+<P>These packages provide more specific sorting functionality, that is,
+specific committment to particular algorithms that have particular
+pragmatic consequences (such as memory locality, asymptotic running time)
+beyond their semantic behaviour (sorting, stable sorting, merging, etc.).
+Programmers that need a particular algorithm can use one of these packages.
+<P><H5><A NAME="29"><CODE>sorted</CODE>--sorted predicates</A></H5>
+<UL><LI><CODE>(list-sorted?<I>&nbsp;<I>&lt;</I>&nbsp;list</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="30">&nbsp;</A>
+  <LI><CODE>(vector-sorted?<I>&nbsp;<I>&lt;</I>&nbsp;vector</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="31">&nbsp;</A>
+  <LI><CODE>(vector-sorted?<I>&nbsp;<I>&lt;</I>&nbsp;vector&nbsp;start</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="32">&nbsp;</A>
+  <LI><CODE>(vector-sorted?<I>&nbsp;<I>&lt;</I>&nbsp;vector&nbsp;start&nbsp;end</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="33">&nbsp;</A>
+</UL>
+<P>Return <CODE>#f</CODE> iff there is an adjacent pair <I>...x, y ...</I> in the input
+list or vector such that <I>y &lt; x</I>. The optional <I>start</I>/<I>end</I> range 
+arguments restrict <CODE>vector-sorted?</CODE> to the indicated subvector.
+<P><H5><A NAME="34"><CODE>list-merge-sort</CODE>--list merge sort</A></H5>
+<UL><LI><CODE>(list-merge-sort<I>&nbsp;<I>&lt;</I>&nbsp;list</I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="35">&nbsp;</A>
+  <LI><CODE>(list-merge-sort!<I>&nbsp;<I>&lt;</I>&nbsp;list</I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="36">&nbsp;</A>
+  <LI><CODE>(list-merge<I>&nbsp;list<I><sub>1</sub></I>&nbsp;<I>&lt;</I>&nbsp;list<I><sub>2</sub></I></I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="37">&nbsp;</A>
+  <LI><CODE>(list-merge!<I>&nbsp;list<I><sub>1</sub></I>&nbsp;<I>&lt;</I>&nbsp;list<I><sub>2</sub></I></I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="38">&nbsp;</A>
+</UL>
+The sort procedures sort their data using a list merge sort, which is
+stable. (The reference implementation is, additionally, a "natural" sort.
+See below for the properties of this algorithm.)
+<P>The <CODE>!</CODE> procedures are destructive--they use <CODE>set-cdr!</CODE>s to
+rearrange the cells of the lists into the proper order. As such, they
+do not allocate any extra cons cells--they are "in place" sorts.
+The merge operations are stable: an element of <I>list<I><sub>1</sub></I></I> will
+come before an equal-comparing element in <I>list<I><sub>2</sub></I></I> in the result
+list.
+<P><H5><A NAME="39"><CODE>vector-merge-sort</CODE>--vector merge sort</A></H5>
+<P><UL><LI><CODE>(vector-merge-sort<I>&nbsp;<I>&lt;</I>&nbsp;vector&nbsp;[start&nbsp;[end&nbsp;[temp]]]</I>)&nbsp;-&gt;&nbsp;<I>vector</I></CODE><A NAME="40">&nbsp;</A>
+  <LI><CODE>(vector-merge-sort!<I>&nbsp;<I>&lt;</I>&nbsp;vector&nbsp;[start&nbsp;[end&nbsp;[temp]]]</I>)</CODE><A NAME="41">&nbsp;</A>
+  <LI><CODE>(vector-merge<I>&nbsp;<I>&lt;</I>&nbsp;vector<I><sub>1</sub></I>&nbsp;vector<I><sub>2</sub></I>&nbsp;[start<I><sub>1</sub></I>&nbsp;[end<I><sub>1</sub></I>&nbsp;[start<I><sub>2</sub></I>&nbsp;[end<I><sub>2</sub></I>]]]]</I>)&nbsp;-&gt;&nbsp;<I>vector</I></CODE><A NAME="42">&nbsp;</A>
+  <LI><CODE>(vector-merge!<I>&nbsp;<I>&lt;</I>&nbsp;vector&nbsp;vector<I><sub>1</sub></I>&nbsp;vector<I><sub>2</sub></I>&nbsp;[start&nbsp;[start<I><sub>1</sub></I>&nbsp;[end<I><sub>1</sub></I>&nbsp;[start<I><sub>2</sub></I>&nbsp;[end<I><sub>2</sub></I>]]]]]</I>)</CODE><A NAME="43">&nbsp;</A>
+</UL>
+The sort procedures sort their data using vector merge sort, which is
+stable. (The reference implementation is, additionally, a "natural" sort.
+See below for the properties of this algorithm.)
+<P>The optional <I>start</I>/<I>end</I> arguments provide for sorting of subranges, and
+default to 0 and the length of the corresponding vector.
+<P>Merge-sorting a vector requires the allocation of a temporary
+"scratch" work vector for the duration of the sort. This scratch
+vector can be passed in by the client as the optional <I>temp</I>
+argument; if so, the supplied vector must be of size <I> &lt;= <I>end</I></I>,
+and will not be altered outside the range [start,end). If not
+supplied, the sort routines allocate one themselves.
+<P>The merge operations are stable: an element of <I>vector<I><sub>1</sub></I></I> will
+come before an equal-comparing element in <I>vector<I><sub>2</sub></I></I> in the
+result vector.
+<P><UL><LI><CODE>Vector-merge-sort!</CODE> leaves its result in
+<I><I>vector</I>[<I>start</I>,<I>end</I>)</I>.
+<LI><CODE>Vector-merge-sort</CODE> returns a vector of length
+<I><I>end</I>-<I>start</I></I>.
+<LI><CODE>Vector-merge</CODE> returns a vector of length
+<I>(<I>end</I>_1<I></I>-<I>start</I>_1<I></I>)+(<I>end</I>_2<I></I>-<I>start</I>_2<I></I>)</I>.
+<LI><CODE>Vector-merge!</CODE> writes its result into <I>vector</I>, beginning
+at index <I>start</I>,
+for indices less than <I><I>end</I> =<I>start</I> +
+(<I>end</I>_1<I></I>-<I>start</I>_1<I></I>) + (<I>end</I>_2<I></I>-<I>start</I>_2<I></I>)</I>.
+The target subvector
+<BLOCKQUOTE><I><I>vector</I>[<I>start</I>,<I>end</I>)</I></BLOCKQUOTE>
+may not overlap either source subvector
+<BLOCKQUOTE><I><I>vector</I>_1<I></I>[<I>start</I>_1<I></I>,<I>end</I>_1<I></I>),  or 
+<I>vector</I>_2<I></I>[<I>start</I>_2<I></I>,<I>end</I>_2<I></I>).</I></BLOCKQUOTE>
+</UL>
+<P><H5><A NAME="44"><CODE>vector-heap-sort</CODE>--vector heap sort</A></H5>
+<P><UL><LI><CODE>(vector-heap-sort<I>&nbsp;<I>&lt;</I>&nbsp;vector&nbsp;[start&nbsp;[end]]</I>)&nbsp;-&gt;&nbsp;<I>vector</I></CODE><A NAME="45">&nbsp;</A>
+<LI><CODE>(vector-heap-sort!<I>&nbsp;<I>&lt;</I>&nbsp;vector&nbsp;[start&nbsp;[end]]</I>)</CODE><A NAME="46">&nbsp;</A>
+</UL>
+These procedures sort their data using heap sort, 
+which is not a stable sorting algorithm.
+<P><CODE>Vector-heap-sort</CODE> returns a vector of length <I><I>end</I>-<I>start</I></I>. 
+<CODE>Vector-heap-sort!</CODE> is in-place, leaving its result in
+<I><I>vector</I>[<I>start</I>,<I>end</I>)</I>.
+<P><H5><A NAME="47"><CODE>vector-insert-sort</CODE>--vector insertion sort</A></H5>
+<P><UL><LI><CODE>(vector-insert-sort<I>&nbsp;<I>&lt;</I>&nbsp;vector&nbsp;[start&nbsp;[end]]</I>)&nbsp;-&gt;&nbsp;<I>vector</I></CODE><A NAME="48">&nbsp;</A>
+<LI><CODE>(vector-insert-sort!<I>&nbsp;<I>&lt;</I>&nbsp;vector&nbsp;[start&nbsp;[end]]</I>)</CODE><A NAME="49">&nbsp;</A>
+</UL>
+These procedures stably sort their data using insertion sort.
+<UL><LI><CODE>Vector-insert-sort</CODE> returns a vector of length <I><I>end</I>-<I>start</I></I>.
+<LI><CODE>Vector-insert-sort!</CODE> is in-place, leaving its result in
+  <I><I>vector</I>[<I>start</I>,<I>end</I>)</I>.
+</UL>
+<P><H5><A NAME="50"><CODE>delete-neighbor-duplicates</CODE>--list and vector
+  delete neighbor duplicates</A></H5>
+<P><UL><LI><CODE>(list-delete-neighbor-dups<I>&nbsp;<I>=</I>&nbsp;list</I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="51">&nbsp;</A>
+  <LI><CODE>(list-delete-neighbor-dups!<I>&nbsp;<I>=</I>&nbsp;list</I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="52">&nbsp;</A>
+  <LI><CODE>(vector-delete-neighbor-dups<I>&nbsp;<I>=</I>&nbsp;vector&nbsp;[start&nbsp;[end]]</I>)&nbsp;-&gt;&nbsp;<I>vector</I></CODE><A NAME="53">&nbsp;</A>
+  <LI><CODE>(vector-delete-neighbor-dups!<I>&nbsp;<I>=</I>&nbsp;vector&nbsp;[start&nbsp;[end]]</I>)&nbsp;-&gt;&nbsp;<I>end<I>'</I></I></CODE><A NAME="54">&nbsp;</A>
+</UL>
+These procedures delete adjacent duplicate elements from a list or
+a vector, using a given element-equality procedure <I>=</I>. The first/leftmost
+element of a run of equal elements is the one that survives. The list
+or vector is not otherwise disordered.
+<P>These procedures are linear time--much faster than the <I>O(n<sup>2</sup>)</I> general
+duplicate-element deletors that do not assume any "bunching" of elements
+(such as the ones provided by SRFI&nbsp;1). If you want to delete duplicate
+elements from a large list or vector, you can sort the elements to bring
+equal items together, then use one of these procedures, for a total time
+of <I>O(nlog(n))</I>.
+<P>The comparison procedure = passed to these procedures is always
+applied
+<P><BLOCKQUOTE><PRE>
+(<I>=</I> <I>x</I> <I>y</I>)
+</PRE></BLOCKQUOTE>
+<P>where <I>x</I> comes before <I>y</I> in the containing list or vector.
+<UL><LI><CODE>List-delete-neighbor-dups</CODE> does not alter its input list; its
+answer may share storage with the input list.
+<LI><CODE>Vector-delete-neighbor-dups</CODE> does not alter its input vector, but
+rather allocates a fresh vector to hold the result.
+<LI><CODE>List-delete-neighbor-dups!</CODE> is permitted, but not required, to
+mutate its input list in order to construct its answer.
+<LI><CODE>Vector-delete-neighbor-dups!</CODE> reuses its input vector to hold the
+answer, packing its answer into the index range
+<I>[<I>start</I>,<I>end</I>'<I></I>)</I>, where
+<I>end<I>'</I></I> is the non-negative exact integer returned as its value. It
+returns <I>end<I>'</I></I> as its result. The vector is not altered outside the range
+<I>[<I>start</I>,<I>end</I>'<I></I>)</I>.
+</UL>
+Examples:
+<P><BLOCKQUOTE><PRE>
+(list-delete-neighbor-dups = '(1 1 2 7 7 7 0 -2 -2))
+  <I>==&gt;</I> (1 2 7 0 -2)
+
+(vector-delete-neighbor-dups = '#(1 1 2 7 7 7 0 -2 -2))
+  <I>==&gt;</I> #(1 2 7 0 -2)
+
+(vector-delete-neighbor-dups = '#(1 1 2 7 7 7 0 -2 -2) 3 7)
+  <I>==&gt;</I> #(7 0 -2)
+
+;; Result left in v[3,9):
+(let ((v (vector 0 0 0 1 1 2 2 3 3 4 4 5 5 6 6)))
+  (cons (vector-delete-neighbor-dups! = v 3)
+        v))
+   <I>==&gt;</I> (9 . #(0 0 0 1 2 3 4 5 6 4 4 5 5 6 6))
+</PRE></BLOCKQUOTE>
+<P><H5><A NAME="55"><CODE>binary-searches</CODE>--vector binary search</A></H5>
+<P><UL><LI><CODE>(vector-binary-search<I>&nbsp;<I>&lt;</I>&nbsp;elt-<I>&gt;</I>key&nbsp;key&nbsp;vector&nbsp;[start&nbsp;[end]]</I>)&nbsp;-&gt;&nbsp;<I>integer&nbsp;or&nbsp;<TT>&nbsp;#f</TT></I></CODE><A NAME="56">&nbsp;</A>
+<LI><CODE>(vector-binary-search3<I>&nbsp;compare-proc&nbsp;vector&nbsp;[start&nbsp;[end]]</I>)&nbsp;-&gt;&nbsp;<I>integer&nbsp;or&nbsp;<TT>&nbsp;#f</TT></I></CODE><A NAME="57">&nbsp;</A>
+</UL>
+<P><CODE>vector-binary-search</CODE> searches <I>vector</I> in range
+<I>[<I>start</I>,<I>end</I>)</I> (which default to 0 and the length of
+<I>vector</I>, respectively) for an element whose
+associated key is equal to <I>key</I>. The procedure <I>elt-<I>&gt;</I>key</I> is used to map
+an element to its associated key. The elements of the vector are assumed
+to be ordered by the <I>&lt;</I> relation on these keys. That is, 
+<P><BLOCKQUOTE><PRE>
+(vector-sorted? (lambda (x y) (<I>&lt;</I> (<I>elt-$&gt;$key</I> x) (<I>elt-$&gt;$key</I> y)))
+                <I>vector</I> <I>start</I> <I>end</I>) <I>==&gt;</I> true
+</PRE></BLOCKQUOTE>
+<P>An element <I>e</I> of <I>vector</I> is a match for <I>key</I> if it's
+neither less nor greater than the key:
+<P><BLOCKQUOTE><PRE>
+(and (not (<I>&lt;</I> (<I>elt-$&gt;$key</I> <I>e</I>) <I>key</I>))
+     (not (<I>&lt;</I> <I>key</I> (<I>elt-$&gt;$key</I> <I>e</I>))))
+</PRE></BLOCKQUOTE>
+<P>If there is such an element, the procedure returns its index in the
+vector as an exact integer. If there is no such element in the searched 
+range, the procedure returns false.
+<P><BLOCKQUOTE><PRE>
+(vector-binary-search &lt; car 4 '#((1 . one) (3 . three)
+                                 (4 . four) (25 . twenty-five)))
+<I>==&gt;</I> 2
+
+(vector-binary-search &lt; car 7 '#((1 . one) (3 . three)
+                                 (4 . four) (25 . twenty-five)))
+<I>==&gt;</I> #f
+</PRE></BLOCKQUOTE>
+<P><CODE>Vector-binary-search3</CODE> is a variant that uses a three-way comparison
+procedure <I>compare-proc</I>. <I>Compare-proc</I> compares its
+parameter to the search key, and returns an
+exact integer whose sign indicates its relationship to the search key.
+<BLOCKQUOTE><I>
+  <TABLE><TR><TD COLSPAN="1" ALIGN="RIGHT">
+
+      (<I>compare-proc</I>&nbsp;x) </TD><TD COLSPAN="1" ALIGN="CENTER">&lt;</TD><TD COLSPAN="1" ALIGN="LEFT"> 0</TD><TD COLSPAN="1" ALIGN="CENTER"> =&gt;</TD><TD COLSPAN="1" ALIGN="RIGHT">  x </TD><TD COLSPAN="1" ALIGN="CENTER">&lt;</TD><TD COLSPAN="1" ALIGN="LEFT"> <I>search-key</I></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="RIGHT">
+(<I>compare-proc</I>&nbsp;x) </TD><TD COLSPAN="1" ALIGN="CENTER">=</TD><TD COLSPAN="1" ALIGN="LEFT"> 0</TD><TD COLSPAN="1" ALIGN="CENTER"> =&gt;</TD><TD COLSPAN="1" ALIGN="RIGHT">  x </TD><TD COLSPAN="1" ALIGN="CENTER">=</TD><TD COLSPAN="1" ALIGN="LEFT"> <I>search-key</I></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="RIGHT">
+(<I>compare-proc</I>&nbsp;x) </TD><TD COLSPAN="1" ALIGN="CENTER">&gt;</TD><TD COLSPAN="1" ALIGN="LEFT"> 0</TD><TD COLSPAN="1" ALIGN="CENTER"> =&gt;</TD><TD COLSPAN="1" ALIGN="RIGHT">  x </TD><TD COLSPAN="1" ALIGN="CENTER">&gt;</TD><TD COLSPAN="1" ALIGN="LEFT"> <I>search-key</I>
+  </TD></TR></TABLE>
+
+</I></BLOCKQUOTE>
+<P><BLOCKQUOTE><PRE>
+(vector-binary-search3 (lambda (elt) (- (car elt) 4))
+                       '#((1 . one) (3 . three)
+                          (4 . four) (25 . twenty-five)))
+<I>==&gt;</I> 2
+</PRE></BLOCKQUOTE>
+<P><H3><A NAME="58">Algorithmic properties</A></H3>
+<P>Different sort and merge algorithms have different properties.
+Choose the algorithm that matches your needs:
+<P><DL><DT><B>Vector insert sort</B><DD>
+  Stable, but only suitable for small vectors--<I>O(n<sup>2</sup>)</I>.
+<DT><B>Vector heap sort</B><DD>
+  Not stable. Guaranteed fast--<I>O(nlog(n))</I> <EM>worst</EM> case. Poor
+  locality on large vectors. A very reliable workhorse.
+<DT><B>Vector merge sort</B><DD>
+    Stable. Not in-place--requires a temporary buffer of equal size. 
+    Fast--<I>O(nlog(n))</I>--and has good memory locality for large vectors.
+<P>    The implementation of vector merge sort provided by this
+    implementation is, additionally, a "natural" sort, meaning that it
+    exploits existing order in the input data, providing <I>O(n)</I> best case.
+<DT><B>Destructive list merge sort</B><DD>
+    Stable, fast and in-place (i.e., allocates no new cons cells). "Fast"
+    means <I>O(nlog(n))</I> worse-case, and substantially better if the data
+    is already mostly ordered, all the way down to linear time for
+    a completely-ordered input list (i.e., it is a "natural" sort).
+<P>    Note that sorting lists involves chasing pointers through memory, which
+    can be a loser on modern machine architectures because of poor cache and
+    page locality.
+Sorting vectors has inherently better locality.
+<P>    This implementation's destructive list merge and merge sort
+    implementations are opportunistic--they avoid redundant
+    <CODE>set-cdr!</CODE>s, and try to take long
+    already-ordered runs of list structure as-is when doing the merges.
+<DT><B>Pure list merge sort</B><DD>
+  Stable and fast--<I>O(nlog(n))</I> worst-case, and possibly <I>O(n)</I>,
+  depending upon the input list (see discussion above).
+</DL>
+<P><BLOCKQUOTE><CENTER>
+  <TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
+
+Algorithm </TD><TD COLSPAN="1" ALIGN="LEFT">    Stable? </TD><TD COLSPAN="1" ALIGN="LEFT"> Worst case </TD><TD COLSPAN="1" ALIGN="LEFT">  Average case </TD><TD COLSPAN="1" ALIGN="LEFT">  In-place</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+Vector insert </TD><TD COLSPAN="1" ALIGN="LEFT"> Yes</TD><TD COLSPAN="1" ALIGN="LEFT">      <I>O(n<sup>2</sup>)</I> </TD><TD COLSPAN="1" ALIGN="LEFT">     <I>O(n<sup>2</sup>)</I></TD><TD COLSPAN="1" ALIGN="LEFT">        Yes</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+Vector quick  </TD><TD COLSPAN="1" ALIGN="LEFT"> No </TD><TD COLSPAN="1" ALIGN="LEFT">      <I>O(n<sup>2</sup>)</I>  </TD><TD COLSPAN="1" ALIGN="LEFT">    <I>O(nlog(n))</I></TD><TD COLSPAN="1" ALIGN="LEFT">     Yes</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+Vector heap   </TD><TD COLSPAN="1" ALIGN="LEFT"> No </TD><TD COLSPAN="1" ALIGN="LEFT">      <I>O(nlog(n))</I></TD><TD COLSPAN="1" ALIGN="LEFT">   <I>O(nlog(n))</I></TD><TD COLSPAN="1" ALIGN="LEFT">     Yes</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+Vector merge  </TD><TD COLSPAN="1" ALIGN="LEFT"> Yes</TD><TD COLSPAN="1" ALIGN="LEFT">      <I>O(nlog(n))</I></TD><TD COLSPAN="1" ALIGN="LEFT">   <I>O(nlog(n))</I></TD><TD COLSPAN="1" ALIGN="LEFT">     No</TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+List merge    </TD><TD COLSPAN="1" ALIGN="LEFT"> Yes</TD><TD COLSPAN="1" ALIGN="LEFT">      <I>O(nlog(n))</I></TD><TD COLSPAN="1" ALIGN="LEFT">   <I>O(nlog(n))</I></TD><TD COLSPAN="1" ALIGN="LEFT">     Either
+</TD></TR></TABLE>
+
+</CENTER></BLOCKQUOTE>
+<P><P>
+  
+Previous: <A HREF="s48manual_54.html">Sorting lists and vectors</A> | Next: <A HREF="s48manual_54.html">Sorting lists and vectors</A></BODY></HTML>

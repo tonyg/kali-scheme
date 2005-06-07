@@ -1,0 +1,54 @@
+# Makefile.in:
+#
+################################################################
+# Copyright (C) 2005 Matthew Dempsky
+# 
+# See the file "COPYING" for further information about
+# the copyright and warranty status of this work.
+# 
+
+# TODO: make configure option
+scheme48 := scheme48
+
+EXTRA_CFLAGS	 	:= 	-I$(srcdir)/../libprescheme \
+				-I$(srcdir)/../libscheme48-posix \
+				-I$(srcdir)/../libscheme48 \
+				-I-
+vm-c-sources := scheme48vm.c scheme48heap.c \
+                scheme48write-image.c scheme48read-image.c
+generated-source := $(vm-c-sources)
+
+include $(makefiles)/library.mk
+include $(srcdir)/../Makefiles/dotx-rules.mk
+
+# Generate vm (scheme48vm.c and scheme48heap.c) from VM sources.
+$(vm-c-sources):
+	(cd $(srcroot)/scheme48/ps-compiler &&				    \
+	(echo ',batch';							     \
+		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
+		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
+		echo ',exec ,load load-ps-compiler.scm';		     \
+		echo ',exec ,load compile-vm-no-gc.scm';		     \
+		echo ',exec ,load compile-gc.scm';			     \
+		echo ',exit'						     \
+	) | $(scheme48) -h 8000000 ) &&					     \
+		mv $(addprefix $(srcroot)/scheme48/scheme/vm/, $(vm-c-sources)) .
+
+scheme48.h: scheme48.h.in ../scheme/vm/interp/arch.scm \
+	    scheme/vm/data/data.scm scheme/link/generate-c-header.scm
+	cd $(srcdir) &&							\
+	(echo ',bench';							\
+		echo ',batch';						\
+		echo ',load-package big-scheme';			\
+		echo ',open big-scheme';				\
+		echo ',load scheme/link/generate-c-header.scm';		\
+		echo "(make-c-header-file \"$@\"			\
+			  \"c/scheme48.h.in\"				\
+			  \"scheme/vm/interp/arch.scm\"			\
+			  \"scheme/vm/data/data.scm\"			\
+			  \"scheme/rts/record.scm\")"			\
+	) | $(scheme48)
+
+
+# arch-tag: Matthew Dempsky Thu Apr  7 00:29:19 2005 (libscheme48/Makefile.in)
+#

@@ -1,0 +1,15 @@
+# Makefile.in:
+#
+################################################################
+# Copyright (C) 2005 Matthew Dempsky
+# 
+# See the file "COPYING" for further information about
+# the copyright and warranty status of this work.
+# 
+
+otherdirs		:=	libscheme48
+
+include $(makefiles)/library.mk
+
+# arch-tag: Matthew Dempsky Thu Apr  7 00:40:40 2005 (libscheme48-posix/Makefile.in)
+#

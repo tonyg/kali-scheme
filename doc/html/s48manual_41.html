@@ -1,0 +1,33 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 21.4 (patch 15) "Security Through Obscurity" XEmacs Lucid, Fri Dec  3 20:36:18 2004 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Sparse vectors</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_35.html">Libraries</A><BR>Previous: <A HREF="s48manual_40.html">Byte vectors</A> | Next: <A HREF="s48manual_42.html">Cells</A>
+<H2>Sparse vectors</H2>
+<P>These are vectors that grow as large as they need to.  That is, they
+can be indexed by arbitrarily large nonnegative integers.  The
+implementation allows for arbitrarily large gaps by arranging the
+entries in a tree.  They are in the structure <CODE>sparse-vectors</CODE>.
+<P><UL><LI><CODE>(make-sparse-vector<I></I>)&nbsp;-&gt;&nbsp;<I>sparse-vector</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(sparse-vector-ref<I>&nbsp;sparse-vector&nbsp;k</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(sparse-vector-set!<I>&nbsp;sparse-vector&nbsp;k&nbsp;value</I>)</CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(sparse-vector-&gt;list<I>&nbsp;sparse-vector</I>)&nbsp;-&gt;&nbsp;<I>list</I></CODE><A NAME="4">&nbsp;</A>
+</UL>
+<CODE>Make-sparse-vector</CODE>, <CODE>sparse-vector-ref</CODE>, and
+<CODE>sparse-vector-set!</CODE> are analogous to <CODE>make-vector</CODE>,
+<CODE>vector-ref</CODE>, and <CODE>vector-set!</CODE>, except that the indices
+passed to <CODE>sparse-vector-ref</CODE> and <CODE>sparse-vector-set!</CODE> can
+be arbitrarily large.  For indices whose elements have not been set in
+a sparse vector, <CODE>sparse-vector-ref</CODE> returns <CODE>#f</CODE>.
+<P><CODE>Sparse-vector-&gt;list</CODE> is for debugging: It returns a list of the
+consecutive elements in a sparse vector from 0 to the highest element
+that has been set.  Note that the list will also include all the
+<CODE>#f</CODE> elements for the unset elements.
+<P><P>
+  
+Previous: <A HREF="s48manual_40.html">Byte vectors</A> | Next: <A HREF="s48manual_42.html">Cells</A></BODY></HTML>

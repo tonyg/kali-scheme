@@ -1,0 +1,421 @@
+!!! Important notes before hand !!!
+
+The current implementation of Scheme48 and probably some of the
+extensions I'll be working on will all be somewhat biased towards
+i386.  Specifically, the following: sizeof (char *) == sizeof (long)
+== sizeof (int) == 32.
+
+These restrictions are not a problem on their own, but not checking
+for this could be.
+
+
+* Fixing the Scheme48 C FFI
+
+Okay, here's the fortunate thing: the C code seems mostly independent
+from the rest of the system.  I'll need to hack the
+vm/heap/gc-roots.scm code to use a different frame layout, and then
+hack the Scheme interface to not just store pointers to the objects
+instead of the objects themselves.
+
+I really do think this ends up being a much nicer and cleaner FFI than
+the existing one.  Currently, any function that accepts an argument to
+an S48 value must give a pointer for it to the Scheme implementation.
+By instead enforcing that only pointers are passed around, not only
+are fewer scheme values located outside the heap (meaning fewer
+pointers that need to be traced), but less likely that a scheme value
+gets relocated without a pointer being updated.
+
+The next biggest effort after fixing the original abomination will be
+that scsh uses that icky FFI.  I'll have to rewrite all of it too.  I
+expect that after I show how much nicer the new way is, there'll be
+more support though.
+
+** Doing it
+
+I expect all that needs doing in gc-root.scm is actually replacing
+
+    (define (frame-ref frame index)
+      (fetch-address (address+ frame (cells->a-units (+ index 2)))))
+
+with
+
+    (define (frame-ref frame index)
+      (address+ frame (cells->a-units (+ index 2))))
+
+along with the comments describing the frame layout.  (See below for
+further fixes after this is changed.)
+
+Next, we need to add the following CPP macros to `scheme48.h' while
+deleting the current frame-related macros:
+
+    #define S48_FRAME s48_word_t length, next
+
+    #define S48_FRAME_SIZE(L) ((sizeof (L) / sizeof (s48_word_t)) - 2)
+    #define S48_PROTECT_FRAME(L) s48_push_gc_rootsB ((void *)&(L), S48_FRAME_SIZE (frame))
+    #define S48_UNPROTECT_FRAME(L) invariant (s48_pop_gc_rootsB ())
+
+With this done, we finish writing the C wrapper code that pretends the
+VM's C interface to have been reasonable designed.  This includes
+rewriting the code in scheme48/c/.  By now, S48 is mostly self
+contained, happy, and should be able to run and build fine.
+
+There are now two more steps which can occur mostly concurrently:
+
+First, perhaps the easier part, but by far more time consuming:
+rewriting all of the existing C code in scsh to compile with the new
+interface.
+
+Second, is actually fixing the implementation.  A certain amount of
+magic can still run in the C part of the FFI (and in fact some needs
+to such as boxing and unboxing), but the s48_word_t typedef/struct
+should remain a black box.  In fact, if there was some way to ensure
+it's never directly copied that would be great.
+
+** Doing it, try #2
+
+Okay, the other method sucks because it leaves the code in a
+non-functioning shape for far too long.  Instead, a better ordering
+for the code is just to change all of the code to use pointers first,
+and then force the change to GC frames.
+
+There's also the issue of rewriting the C FFI entry points.
+E.g. s48_external_call needs to be fixed and rewritten to call
+s48_new_external_call.  I'm also not sure what more needs fixing.
+
+One side note, it doesn't make sense to protect globals and register
+functions with a single arena... how do you make sure globals aren't
+accidentally assigned with values that conflict?  I suppose one way is
+to do something like:
+
+    #define S48_DECL_GLOBAL(x) s48_global_t x = s48_allocate_global (#x)
+
+    S48_DECL_GLOBAL (foo);
+
+which returns the next free global pointer in the globals table.  This
+global index table is shared by all arena's to keep things nice and
+happy.
+
+And then we also have a function:
+
+    s48_word_t *
+    s48_global_ref (s48_arena_t arena,
+                    s48_global_t g)
+    {
+      return &arena->globals[g.val];
+    }
+
+    s48_make_nil (s48_global_ref (arena, foo), arena);
+    s48_make_false (s48_global_ref (arena, bar), arena);
+
+Of course, there's also the issue of initializing these values.  The
+best I've got is registering an init_globals function which is called
+on all newly created arenas to setup their globals.
+
+    THINK ABOUT: I think it's least error prone if the globals table
+    is required to be setup and locked before any arenas are created.
+    This means the globals table is a fixed size (no worry of needing
+    to resize it) and no worries of needing to call an init_global
+    function registered after an arena already exists.
+
+    For now, this restriction is probably fine.  In the future, maybe
+    it will be relaxed if deemed necessary/useful.
+
+
+    ALSO THINK ABOUT: Perhaps instead of s48_global it would be better
+    to have s48_global_ref and s48_global_set?  This would be
+    beneficial for the same reason not being able to get pointers
+    directly into the heap is (to allow them to be relocated over
+    time).
+
+That about procedures though?  Since their bindings don't actually
+allocate heap space either (they're just stored in the lookup tables
+in the VM), they can probably just have an s48_register_procedure
+function.
+
+    void scsh_open (s48_word_t * result,
+                    s48_arena_t arena,
+                    s48_word_t * path,
+                    s48_word_t * flags,
+                    s48_word_t * mode);
+
+    s48_register_procedure (&scsh_open, "open", 3, 0);
+
+
+
+** The new FFI API:
+
+*** Calling conventions
+
+All functions are passed several pointers to s48_word_t's along with a
+s48_arena_t value.  All "out" parameters (i.e. values to be set by the
+function call) should be listed first, followed by the arena value,
+then by all of the "in" parameters.  All functions must also return a
+s48_error_t value to indicate if an error was raised.
+
+The "in" pointers may alias either in or out pointers, however, an out
+pointer may not alias another out pointer.  Further, all functions
+must properly handle any possible aliasing.  (Checking for aliasing at
+run-time is a valid solution, but only if it doesn't lead the code to
+be less readable.)
+
+
+*** Types
+
+**** s48_word_t
+
+This is our magic little black box.  It represents a single Scheme
+value.  It should be implemented with something like:
+
+typedef union
+{
+  long _v;
+  const long _dummy;
+} s48_word_t;
+
+The great thing about this is that it prevents most common mistakes
+such as directly comparing two s48_word_t values or trying to assign
+one to another directly (or consequently trying to return one, etc.).
+
+Using this definition for s48_word_t, S48_LSET is defined as (or would
+be if we didn't want to hide all of this behind the abstraction barrier):
+
+#define S48_LSET(a,b) ((a)->_v = (b)->_v)
+
+So maybe instead:
+
+s48_error_t
+s48_set_x (s48_word_t * dest,
+           s48_arena_t arena,
+           s48_word_t * src)
+{
+  dest->_v = src->_v;
+  return 0;
+}
+
+**** s48_error_t
+
+This is the return type of the C FFI function calls.  It should help
+with some sort of error handling stuff.
+
+**** s48_arena_t
+
+A rock that has to be passed around everywhere.  It'll hold some
+magical stuff for the implementations.
+
+
+*** Functions
+
+s48_error_t
+s48_set_x (s48_word_t * dest, s48_arena_t arena, s48_word_t * src);
+
+This is our write barrier.  In the initial implementation, we'll
+probably be peachy with just using `(*(dest) = *(src))'.  FIXME: does
+this need an `s48_arena' argument?  For completeness, it probably
+wouldn't hurt, but I suppose if `arena' holds anything useful it's
+necessary.
+
+int s48_values_eq (s48_arena_t arena, s48_word_t * a, s48_word_t * b);
+int s48_values_eqv (s48_arena_t arena, s48_word_t * a, s48_word_t * b);
+int s48_values_equal (s48_arena_t arena, s48_word_t * a, s48_word_t * b);
+
+int s48_truish (s48_arena_t arena, s48_word_t * v);
+int s48_is_false (s48_arena_t arena, s48_word_t * v);
+int s48_is_true (s48_arena_t arena, s48_word_t * v);
+int s48_is_boolean (s48_arena_t arena, s48_word_t * v);
+
+s48_error s48_cons (s48_word_t * dest, s48_arena arena, s48_word_t * car, s48_word_t * cdr);
+s48_error s48_car (s48_word_t * car, s48_arena arena, s48_word_t * pair);
+s48_error s48_cdr (s48_word_t * cdr, s48_arena arena, s48_word_t * pair);
+s48_error s48_car_et_cdr (s48_word_t * car, s48_word_t * cdr, s48_arena arena, s48_word_t * pair);
+
+etc...
+
+
+** Minor details to consider changing
+
+*** Swap the order of FRAME-NEXT and FRAME-LENGTH
+
+I kinda like this order more (next and then length), but it's such a
+non-issue that I expect it makes no difference.
+
+*** Fix return values
+
+When the return value itself doesn't matter, a non-0 return value
+should mean there was an error.  The FFI needs to be "fixed" for this.
+(I say "fixed" because the current way isn't wrong per se, but the
+alternative would be nicer.)
+
+*** No non-local exits
+
+Sorry, but it seems really stupid to handle Scheme exceptions in C the
+way S48 did.  I realize they're primarily interested in getting the
+Scheme code nice and functional, but to ensure a nice set of C
+bindings, we need a C FFI that's actually fun to use without tons of
+obscure crap.
+
+For example, a function that's called by Scheme, opens a file
+descriptor, and then calls back to Scheme, needs to setup a
+DYNAMIC-WIND point to ensure the fd is closed correctly.
+
+Update: Using the exception handling techniques described below, this
+could still be handled nicely even with non-local exits by setting up
+an s48_catch block which closes the fd.  This would mostly solve the
+problems mentioned here.
+
+**** Safe variants?
+
+To still support non-local exits and make the code a little simpler,
+we can add safe_ versions of the functions which won't return errors,
+but instead invoke longjmp to return... somewhere.
+
+One thing I'll have to consider for this, however, is that the primary
+reason for wanting safe variants is to make writing functions
+easier... but then those functions won't be available for "unsafe"
+functions because they might non-local exit.  So actually we would
+need someway to intercept the trampoline call for non-local
+functions... or maybe even make this the default:
+
+    void
+    foo (s48_word_t * result,
+         s48_arena_t arena,
+         s48_word_t * val)
+    {
+      void * volatile mem = 0;
+      int volatile fd = -1;
+
+      if (s48_catch (arena))
+        {
+          if (mem)
+            free (mem);
+          if (fd >= 0)
+            close (fd);
+
+          s48_rethrow (arena);
+        }
+
+      /* code that uses `mem' */
+
+      s48_uncatch (arena);
+    }
+
+
+s48_catch would push a new jmp_buf onto a list stored in arena, while
+s48_throw would be responsible for setting the exception information
+somewhere, popping off the most recent jmp_buf, and jumping to it.
+s48_rethrow would just do the pop off and jump part.
+
+s48_uncatch pops off the jmp_buf, but doesn't call it.  (I'd prefer
+something which allows you to ensure that if there's a s48_catch,
+there's a corresponding s48_uncatch which must be called before the
+function exits.)
+
+s48_catch would probably need to be a macro implemented as something
+like:
+
+    struct s48_jmpbuf_t { jmp_buf buf; };
+    struct s48_jmpbuf_t * s48_arena_push_jmpbuf (s48_arena_t arena);
+    #define s48_catch(a) setjmp (s48_arena_push_jmpbuf (arena)->buf)
+
+I'm also tempted to instead make the syntax something like:
+
+      S48_CATCH (arena)
+        {
+          if (mem)
+            free (mem);
+          if (fd >= 0)
+            close (fd);
+          s48_rethrow (arena);
+        }
+
+Where S48_CATCH(a) is if (s48_catch (a)).
+
+This could actually turn out pretty nice.  Tom was concerned about in
+GUI toolkits when you have callback procedures, that non-local exits
+can cause problems.  Well, if your callback runs into a problem, it'll
+hit the catch block and can return whatever context-appropriate error
+and hopefully unwind to somewhere that the application code can then
+issue s48_rethrow to handle the remaining problems.
+
+We'll probably have to interweave stack frames and exception handlers
+in the list, however, so that in do_throw we can unlink stack frames
+as we unwind the stack.  Pseudo-code for do_throw:
+
+    void
+    do_throw ()
+    {
+      while (top of stack isn't a jmp_buf)
+        unlink_frame ((frame *)pop ());
+
+      longjmp ((jmp_buf)pop ());
+    }
+
+This doesn't yet address the possibility of resumable continuations
+caught while C code is on the stack.
+
+*** Misc. exception stuff
+
+For consistency, we'll need to setup S48_CATCH blocks in main() and in
+s48_call_scheme.  (Basically, we need them everywhere we transition
+from Scheme to C, or vice versa.)
+
+
+** Niceties for later
+
+*** Improving the frame GC
+
+Instead of calling TRACE-CELL on each individual memory cell, it would
+be far more efficient to simply call S48-TRACE-LOCATIONS! on the
+entire frame.  I'm /pretty/ sure this would be correct, but not
+positive enough to include the change right away.
+
+*** Improving permanent roots
+
+Also, right now there's a linked list for permanent roots.  This makes
+adding new roots pretty easy, but because I suspect garbage collection
+occurs much more often than allocating new roots does, it's somewhat
+wasteful.
+
+Instead, it should simply be an array with a way to append new entries
+onto the end.
+
+I also wonder if the best mechanism for this is to allow external
+entries to extend the GC root set or to simply provide a way to
+allocate permanent roots.  This is primarily a difference between
+globals being defined as `s48_word_t global' and `s48_word_t *
+global'.  I'm somewhat in favor of the latter actually (which if done
+allows us to further optimize the root tracing code as in the frame
+tracing code).
+
+Actually, we do need to be somewhat intelligent about handling
+permanent Scheme values: if globals are made to just be pointers to
+`s48_word_t's, then wherever these are allocated must be kept constant
+because otherwise the pointers need to be updated.  So, another
+solution is to maintain a sort of global stack frame.
+
+Whatever the solution, it'd remain best to create a dynamically
+resizable array of globals instead of a linked list still.
+
+* Issues to tackle later
+
+A few issues I've thought of, but would be better dealt with later.
+
+** Multi-threading
+
+One area of concern will still be handling multi-threading correctly.
+For example, you can't maintain a single threaded list of frames when
+threads may run concurrently.  One process may allocate a frame,
+another process allocate another frame, then the first process
+attempts to deallocate its frame.
+
+We could make the frame pointer a thread-local pointer, but the GC
+needs access to it.  Instead, we can have the GC hold an array of
+frame pointers which is dynamically extended as more pointers are
+requested by threads.
+
+Each thread then needs to pass the pointer along the way when
+allocating memory (basically getting stuffed into arena object).  Or,
+the array index could be stored in the thread local storage.
+
+
+%%% arch-tag: Matthew Dempsky Sun Apr 24 15:25:23 2005 (=notes/fixing-the-ffi.txt)
+%%%

@@ -1,0 +1,79 @@
+.TH LS48 1
+.\" File scheme48.man:  Manual page template for Scheme 48.
+.\" Replace LS48 with the name of your default image and LLIB with the
+.\" directory containing scheme48vm and default image.
+.SH NAME
+LS48 \- a Scheme interpreter
+.SH SYNOPSIS
+.B LS48
+[-i image] [-h heapsize] [-a argument]
+.SH DESCRIPTION
+.B LS48
+is an implementation of the Scheme programming language as described in
+the
+.I "Revised^5 Report on the Algorithmic Language Scheme."
+A runnable system requires two parts, an executable program that implements
+the Scheme 48 virtual machine, and an image that is used to initialize
+the store of the virtual machine.
+.B LS48
+is a shell script that starts the virtual machine with an image that runs
+in a Scheme command loop.
+.PP
+The
+.B LS48
+command loop reads Scheme expressions, 
+evaluates them, and prints their results.
+It also executes commands, which are identified by an initial comma character.
+Type the command
+.I ,help
+to receive a list of available commands.
+.PP
+The
+.B \-h
+option causes 
+.IR heapsize
+words to be allocated for both semispaces of the copying garbage
+collector.  One word is four bytes.  Cons cells are currently 3 words,
+so if you want to make sure you can allocate, say, a million cons
+cells, you should specify
+.B \-h
+6000000 (actually a little more, to account for the initial heap
+image and breathing room).
+.PP
+The 
+.I ,dump
+and
+.I ,build
+commands put heap images in files.
+The 
+.B \-i
+option causes the initial heap image to be taken from file
+.IR image .
+The
+.B \-a
+option causes a list of strings to be passed as the argument
+to an image generated using the 
+.I ,build
+command.  The first argument to
+.I ,build
+is a procedure that is passed
+the arguments following
+.B \-a
+and which should return an integer (which is the
+return value of the Scheme 48 process).
+.PP
+.nf
+     > ,build (lambda (a) (display a) (newline) 0) foo.image
+     > ,exit
+     $ LS48 -i foo.image -a mumble
+     mumble
+     $ 
+.PP
+.fi
+.SH FILES
+.TP 40
+.B LLIB/scheme48vm
+the virtual machine.
+.TP
+.B LLIB/LS48.image
+the default image.

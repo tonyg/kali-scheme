@@ -1,0 +1,13 @@
+# Makefile.in:
+#
+################################################################
+# Copyright (C) 2005 Matthew Dempsky
+# 
+# See the file "COPYING" for further information about
+# the copyright and warranty status of this work.
+# 
+
+include $(makefiles)/dirs.mk
+
+# arch-tag: Matthew Dempsky Thu Apr  7 00:30:13 2005 (scheme48/Makefile.in)
+#

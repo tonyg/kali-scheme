@@ -1,0 +1,160 @@
+# Makefile.in:
+#
+################################################################
+# Copyright (C) 2005 Matthew Dempsky
+# 
+# See the file "COPYING" for further information about
+# the copyright and warranty status of this work.
+# 
+
+# This is the scheme48 binary used to boostrap the system
+# TODO: make this a configure option
+RUNNABLE := scheme48
+
+include $(srcdir)/filenames.make
+
+libs			:=	../libscheme48/libscheme48.a \
+				../libscheme48-posix/libscheme48-posix.a \
+				../libprescheme/libprescheme.a \
+				-lnsl -ldl -lm -lffi
+
+mains			:=	scheme48vm.c scheme48.c script-interpreter.c 
+
+# Specifying these here is just a temporary kludge.
+
+POSIX_INITIALIZERS	:=	s48_init_posix_dir \
+				s48_init_posix_user \
+				s48_init_posix_regexp \
+				s48_init_posix_proc_env \
+				s48_init_posix_io \
+				s48_init_posix_proc
+
+SOCKET_INITIALIZERS	:=	s48_init_socket
+
+SYSEXITS_INITIALIZERS	:=	s48_init_sysexits
+
+LOOKUP_INITIALIZERS	:=	s48_init_external_lookup
+
+ASM_INITIALIZERS 	:=
+
+SRFI_INITIALIZERS	:=	s48_init_srfi_27
+
+FFI_INITIALIZERS 	:= 	s48_init_ffi
+
+EXTERNAL_INITIALIZERS	:=	$(POSIX_INITIALIZERS) \
+				$(SOCKET_INITIALIZERS) \
+				$(SYSEXITS_INITIALIZERS) \
+				$(LOOKUP_INITIALIZERS) \
+				$(ASM_INITIALIZERS) \
+				$(SRFI_INITIALIZERS) \
+				$(FFI_INITIALIZERS)
+
+
+generated-source	:=	external-modules.c
+
+
+IMAGE := scheme48.image
+INITIAL := initial.image
+VM := scheme48vm
+
+BIG_HEAP := -h 6000000
+LINKER_VM := $(RUNNABLE) $(BIG_HEAP)
+LINKER_RUNNABLE := $(LINKER_VM)
+START_LINKER :=	echo ',batch';					\
+	       	echo ',bench on';				\
+	       	echo ',open signals handle features';		\
+	       	echo ',open bitwise ascii code-vectors';	\
+	       	echo ',open cells record-types';		\
+	       	echo ',load $(linker-files)';			\
+	       	echo ',load scheme/alt/init-defpackage.scm'
+
+bin-install-dir := $(destdir)$(prefix)/bin
+
+scm-dir := $(prefix)/share/scheme48/scheme
+scm-install-dir := $(destdir)$(scm-dir)
+
+image-install-dir := $(destdir)$(prefix)/share/scheme48
+
+config-src-raw := scheme/interfaces.scm scheme/packages.scm \
+	       scheme/vm/shared-interfaces.scm	\
+	       scheme/low-packages.scm scheme/rts-packages.scm \
+	       scheme/comp-packages.scm scheme/initial-packages.scm \
+	       $(initial-files)
+
+config-src     := $(addprefix $(srcroot)/scheme48/, $(config-src-raw))
+
+scheme-src-raw := $(usual-files) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
+		scheme/link-packages.scm scheme/env-packages.scm \
+		scheme/more-packages.scm \
+		scheme/sort/interfaces.scm scheme/sort/packages.scm \
+		scheme/posix/packages.scm scheme/srfi/packages.scm
+
+scheme-src	:= $(addprefix $(srcroot)/scheme48/, $(scheme-src-raw))
+
+EXTRA_CFLAGS	 	:= -I$(srcdir) \
+			   -DIMAGE=\"$(image-install-dir)/$(IMAGE)\" \
+			   -DVM=\"$(bin-install-dir)/scheme48vm\"
+
+all: $(IMAGE)
+
+
+# --------------------
+# Make scheme48.image from initial.image and library .scm files.
+#
+$(IMAGE): $(VM) $(scheme-src) initial.debug $(INITIAL) $(srcdir)/build-usual-image
+	$(srcdir)/build-usual-image $(srcdir)/.. $(srcdir)/../scheme $(IMAGE) ./$(VM) $(INITIAL)
+
+# --------------------
+# Initial image
+#
+# The initial.image is built by the static linker.  The image contains
+# Scheme, the byte-code compiler, and a minimal command processor, but
+# no debugging environment to speak of.
+
+$(INITIAL) initial.debug: $(config-src) initial.scm
+	cd $(srcroot)/scheme48 && \
+	($(START_LINKER);			\
+		echo '(load-configuration "scheme/interfaces.scm")';	\
+		echo '(load-configuration "scheme/vm/shared-interfaces.scm")'; \
+		echo '(load-configuration "scheme/packages.scm")';	\
+		echo '(flatload initial-structures)';			\
+		echo '(load "scheme48/initial.scm")';			\
+		echo '(link-initial-system)'				\
+	) | $(LINKER_RUNNABLE) && \
+	mv initial.debug initial.image reify-debug.tmp $(objroot)/scheme48/scheme48
+
+external-modules.c: $(srcdir)/build-external-modules
+	$(srcdir)/build-external-modules external-modules.c $(EXTERNAL_INITIALIZERS)
+
+
+packages-raw := packages.scm rts-packages.scm alt-packages.scm \
+	        comp-packages.scm initial-packages.scm \
+	        link-packages.scm env-packages.scm \
+	        sort/packages.scm more-packages.scm
+
+packages := $(addprefix ../scheme/, $(packages-raw)) filenames.scm
+
+$(srcdir)/filenames.make: $(packages)
+	cd $(srcdir)/.. && $(RUNNABLE) -a batch < scheme48/filenames.scm
+
+include $(makefiles)/programs.mk
+
+install: $(programs)
+        # create directories
+	mkdir -p $(scm-install-dir)
+	mkdir -p $(bin-install-dir)
+        # install the VM and main executable
+	cp $(VM) scheme48 $(bin-install-dir)
+        # install the image
+	rm -f '/tmp/$(IMAGE)' &&					\
+	$(srcdir)/build-usual-image $(srcdir)/.. '$(scm-dir)'	 	\
+	         '/tmp/$(IMAGE)' './$(VM)' '$(INITIAL)' &&		\
+	cp /tmp/$(IMAGE) $(image-install-dir) &&			\
+	rm /tmp/$(IMAGE)
+        # install script interpreters
+	for dialect in r5rs srfi-7; do					\
+	  cp script-interpreter $(bin-install-dir)/scheme-$$dialect;	\
+	done
+
+# arch-tag: Matthew Dempsky Thu Apr  7 00:26:22 2005 (scheme48/Makefile.in)
+#

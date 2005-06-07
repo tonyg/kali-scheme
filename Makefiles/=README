@@ -1,0 +1,9 @@
+Package-framework provides a lot of useful makefiles for general
+purpose applications, as well as a few special purpose ones (e.g. for
+building Systas Scheme).  However, to accomodate for Scheme 48's
+module system, we need a few new special purpose Makefile snippets.
+
+To avoid the troubles of maintaining a branch of package-framework as
+well, this directory will act as a staging ground while Makefiles are
+written, generalized, and made suitable for inclusion in
+package-framework.

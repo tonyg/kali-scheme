@@ -1,0 +1,626 @@
+\chapter{Command processor}
+\label{chapter:command-processor}
+
+This chapter details Scheme~48's command processor, which incorporates
+ both a read-eval-print loop and an interactive debugger.
+At the \code{>} prompt, you can type either a Scheme form
+ (expression or definition) or a command beginning with a comma.
+In
+\link*{inspection mode}[inspection mode (see section~\Ref)]{inspector}
+ the prompt changes to \code{:} and commands
+ no longer need to be preceded by a comma; input beginning with
+ a letter or digit is assumed to be a command, not an expression.
+In inspection mode the command processor prints out a
+ menu of selectable components for the current object of interest.
+
+\section{Current focus value and {\tt \#\#}}
+
+The command processor keeps track of a current {\em focus value}.
+This value is normally the last value returned by a command.
+If a command returns multiple values the focus object is a list of the
+ values.
+The focus value is not changed if a command returns no values or 
+ a distinguished `unspecific' value.
+Examples of forms that return this unspecific value are definitions,
+ uses of \code{set!}, and \code{(if \#f 0)}.
+It prints as \code{\#\{Unspecific\}}.
+
+The reader used by the command processor reads \code{\#\#} as a special
+ expression that evaluates to the current focus object.
+\begin{example}
+> (list 'a 'b)
+'(a b)
+> (car ##)
+'a
+> (symbol->string ##)
+"a"
+> (if #f 0)
+#\{Unspecific\}
+> ##
+"a"
+> 
+\end{example}
+
+\section{Command levels}
+
+If an error, keyboard interrupt, or other breakpoint occurs, or the
+ \code{,push} command is used, the command
+ processor invokes a recursive copy of itself, preserving the dynamic state of
+ the program when the breakpoint occured.
+The recursive invocation creates a new {\em command level}.
+The command levels form a stack with the current level at the top.
+The command prompt indicates the number of stopped levels below the
+ current one: \code{>} or \code{:} for the
+ base level and \code{\cvar{n}>} or \code{\cvar{n}:} for all other levels,
+ where \cvar{n} is the command-level nesting depth.
+The \code{auto-levels} switch
+ described below can be used to disable the automatic pushing of new levels.
+
+The command processor's evaluation package and the value of the
+ \code{inspect-focus-value} switch are local to each command level.
+They are preserved when a new level is pushed and restored when
+ it is discarded.
+The settings of all other switches are shared by all command levels.
+
+\begin{description}
+\item $\langle{}$eof$\rangle{}$\\
+    Discards the current command level and resumes running the level down.
+    $\langle{}$eof$\rangle{}$ is usually
+    control-\code{D} at a Unix shell or control-\code{C} control-\code{D} using
+    the Emacs \code{cmuscheme48} library.
+
+\item \code{,pop}\\
+ The same as $\langle{}$eof$\rangle{}$.
+
+\item \code{,proceed [\cvar{exp} \ldots}]\\
+ Proceed after an interrupt or error, resuming the next command
+ level down, delivering the values of \cvar{exp~\ldots} to the continuation.
+ Interrupt continuations discard any returned values.
+ \code{,Pop} and \code{,proceed} have the same effect after an interrupt
+ but behave differently after errors.
+ \code{,Proceed} restarts the erroneous computation from the point where the
+ error occurred (although not all errors are proceedable) while
+ \code{,pop} (and $\langle{}$eof$\rangle{}$) discards it and prompts for
+ a new command.
+
+\item \code{,push}\\
+ Pushes a new command level on above the current one.
+ This is useful if the \code{auto-levels} switch has been used
+ to disable the automatic pushing of new levels for errors and interrupts.
+
+\item \code{,reset [\cvar{number}]}\\
+  Pops down to a given level and restarts that level.
+  \cvar{Number} defaults to zero, \code{,reset} restarts the command
+  processor, discarding all existing levels.
+
+\end{description}
+
+Whenever moving to an existing level, either by sending
+ an $\langle{}$eof$\rangle{}$
+ or by using \code{,reset} or the other commands listed above,
+ the command processor runs all of the \code{dynamic-wind} ``after'' thunks
+ belonging to stopped computations on the discarded level(s).
+
+\section{Logistical commands}
+\begin{description}
+\item \code{,load \cvar{filename \ldots}}\\
+    Loads the named Scheme source file(s).
+    Easier to type than \code{(load "\cvar{filename}")} because you don't have to
+    shift to type the parentheses or quote marks.  
+    (However, it is still possible to specify a filename as a Scheme
+    string literal, with quote marks---you'll need this for filenames
+    containing whitespace.)
+    Also, it works in
+    any package, unlike \code{(load "\cvar{filename}")}, which will work only
+    work in packages in which the variable \code{load} is defined appropriately.
+
+\item \code{,exit [\cvar{exp}]}
+    Exits back out to shell (or executive or whatever invoked Scheme~48
+    in the first place).
+    \cvar{Exp} should evaluate to an integer.  The
+    integer is returned to the calling program.
+    The default value of \cvar{exp} is zero, which, on Unix,
+    is generally interpreted as success.
+\end{description}
+
+\section{Module commands}
+\label{module-command-guide}
+
+There are many commands related to modules.
+Only the most commonly used module commands are described here;
+ documentation for the
+ rest can be found in \link*{the module chapter}[section~\Ref]{module-commands}.
+There is also
+\link*{a brief description of modules, structures, and packages}
+[a brief description of modules, structures, and packages in section~\Ref]
+{module-guide} below.
+
+\begin{description}
+\item \code{,open \cvar{structure \ldots}}\\
+Makes the bindings in the \cvar{structure}s visible in the current package.
+The packages associated with the \cvar{structure}s will be loaded if
+ this has not already been done (the \code{ask-before-loading} switch
+ can be used disable the automatic loading of packages).
+
+\item \code{,config [\cvar{command}]}\\
+Executes \cvar{command} in the \code{config} package, which includes
+ the module configuration language.
+For example, use
+\begin{example}
+,config ,load \cvar{filename}
+\end{example}
+to load a file containing module definitions.
+If no \cvar{command} is given, the \code{config} package becomes the
+ execution package for future commands.
+
+\item \code{,user [\cvar{command}]} \\
+    This is similar to the {\tt ,config}.  It
+    moves to or executes a command in the user package (which is the
+    default package when the \hack{} command processor starts).
+
+\end{description}
+
+\section{Debugging commands}
+\label{debug-commands}
+
+\begin{description}
+\item \code{,preview}\\
+    Somewhat like a backtrace, but because of tail recursion you see
+    less than you might in debuggers for some other languages.
+    The stack to display is chosen as follows:
+\begin{enumerate}
+    \item If the current focus object is a continuation or a thread,
+       then that continuation or thread's stack is displayed.
+    \item Otherwise, if the current command level was initiated because of
+       a breakpoint in the next level down, then the stack at that
+       breakpoint is displayed.
+    \item Otherwise, there is no stack to display and a message is printed
+       to that effect.
+\end{enumerate}
+    One line is printed out for each continuation on the chosen stack,
+    going from top to bottom.
+
+\item \code{,run \cvar{exp}}\\
+    Evaluate \cvar{exp}, printing the result(s) and making them
+    (or a list of them, if \cvar{exp} returns multiple results)
+    the new focus object.
+    The \code{,run} command is useful when writing
+    \link*{command programs}
+    [command programs, which are described in section~\Ref{} below]
+    {command-programs}.
+
+\item \code{,trace \cvar{name} \ldots}\\
+    Start tracing calls to the named procedure or procedures.
+    With no arguments, displays all procedures currently traced.
+    This affects the binding of \cvar{name}, not the behavior of the
+    procedure that is its current value.  \cvar{Name} is redefined
+    to be a procedure that prints a message,
+    calls the original value of \cvar{name}, prints another
+    message, and finally passes along the value(s) returned by the
+    original procedure.
+
+\item \code{,untrace \cvar{name} \ldots}\\
+    Stop tracing calls to the named procedure or procedures.
+    With no argument, stop tracing all calls to all procedures.
+
+\item \code{,condition}\\
+    The \code{,condition} command displays the condition object
+    describing the error or interrupt that initiated the current
+    command level.  The condition object becomes the current focus
+    value.  This is particularly useful in conjunction with
+    the inspector.  For example, if a procedure is passed the wrong number of
+    arguments, do \code{,condition} followed by
+     \code{,inspect} to inspect the
+    procedure and its arguments.
+
+\item \code{,bound?\ \cvar{name}}\\
+    Display the binding of \cvar{name}, if there is one, and otherwise
+    prints `\code{Not bound}'.
+ 
+\item \code{,expand \cvar{form}}
+\T\vspace{-1em}
+\item \code{,expand-all \cvar{form}}\\
+    Show macro expansion of \cvar{form}, if any.
+    \code{,expand} performs a single macro expansion while
+    \code{,expand-all} fully expands all macros in \cvar{form}.
+
+\item \code{,where \cvar{procedure}}\\
+    Display name of file containing \cvar{procedure}'s source code.
+\end{description}
+
+\section{Switches}
+
+There are a number of binary switches that control the behavior of the
+ command processor.
+They can be set using the \code{,set} and \code{,unset} commands.
+
+\begin{description}
+\item \code{,set \cvar{switch} [on | off | ?]}\\
+    This sets the value of mode-switch \cvar{switch}.
+    The second argument defaults to \code{on}.
+    If the second argument is \code{?} the value of \cvar{switch} is
+    is displayed and not changed.
+    Doing \code{,set ?} will display a list of the switches and
+    their current values.
+
+\item \code{,unset \cvar{switch}}\\
+    \code{,unset \cvar{switch}} is the same as
+    \code{,set \cvar{switch} off}.
+\end{description}
+
+The switches are as follows:
+\begin{description}
+\item \code{batch}\\
+    In `batch mode' any error or interrupt that comes up will cause
+    Scheme~48 to exit immediately with a non-zero exit status.  Also,
+    the command processor doesn't print prompts.  Batch mode is
+    off by default.
+
+% JAR says: disable auto-levels by default??
+
+\item \code{auto-levels}\\
+    Enables or disables the automatic pushing of a new command level when
+    an error, interrupt, or other breakpoint occurs.
+    When enabled (the default), breakpoints push a new command level,
+    and $\langle{}$eof$\rangle{}$ (see above)
+    or \code{,reset} is required to return to top level.  The effects of
+    pushed command levels include:
+\begin{itemize}
+\item a longer prompt
+\item retention of the continuation in effect at the point of errors
+\item confusion among some newcomers
+\end{itemize}
+    With \code{auto-levels} disabled one must issue a
+    \code{,push} command immediately
+    following an error in order to retain the error continuation for
+    debugging purposes; otherwise the continuation is lost as soon as
+    the focus object changes.  If you don't know anything about the
+    available debugging tools, then levels might as well be disabled.
+
+\item \code{inspect-focus-value}\\
+    Enable or disable `inspection' mode, which is used for inspecting
+    data structures and continuations.
+    \link*{Inspection mode is desribed below}
+    [Inspection mode is described in section~\Ref]
+    {inspector}.
+
+\item \code{break-on-warnings}\\
+    Enter a new command level when a warning is produced, just as
+    when an error occurs.  Normally warnings only result in a displayed
+    message and the program does not stop executing.
+
+\item \code{ask-before-loading} \\
+    If on, the system will ask before loading modules that are arguments
+    to the \code{,open} command.  \code{Ask-before-loading} is off by
+    default.
+\begin{example}
+> ,set ask-before-loading
+will ask before loading modules
+> ,open random
+Load structure random (y/n)? y
+>
+\end{example}
+
+\item \code{load-noisily}\\
+    When on, the system will print out the names of modules and files
+    as they are loaded.  \code{load-noisily} is off by default.
+\begin{example}
+> ,set load-noisily
+will notify when loading modules and files
+> ,open random
+[random /usr/local/lib/scheme48/big/random.scm]
+> 
+\end{example}
+
+\item \code{inline-values}\\
+This controls whether or not the compiler is allowed to substitute
+ variables' values in-line.
+When \code{inline-values} mode is on,
+some Scheme procedures will be substituted in-line; when it is off,
+none will.
+\link*{The performance section}[Section~\Ref]{section:performance}
+has more information.
+
+\end{description}
+
+\section{Inspection mode}
+\label{inspector}
+
+There is a data inspector available via the \code{,inspect} and
+ \code{,debug} commands or by setting the \code{inspect-focus-value} switch.
+The inspector is particularly useful with procedures, continuations,
+ and records.
+The command processor can be taken out of inspection mode by
+ using the \code{q} command, by unsetting the \code{inspect-focus-value} switch,
+ or by going to a command level where the \code{inspect-focus-value} is not
+ set.
+When in inspection mode, input that begins with
+  a letter or digit is read as a command, not as an expression.
+To see the value of a variable or number, do \code{(begin \cvar{exp})}
+  or use the \code{,run \cvar{exp}} command.
+
+In inspection mode the command processor prints out a
+ menu of selectable components for the current focus object.
+To inspect a particular component, just type the corresponding number in
+ the menu.
+That component becomes the new focus object.
+For example:
+\begin{example}
+> ,inspect '(a (b c) d)
+(a (b c) d)
+
+[0] a
+[1] (b c)
+[2] d
+: 1
+(b c)
+
+[0] b
+[1] c
+: 
+\end{example}
+
+When a new focus object is selected the previous one is pushed onto a
+ stack.
+You can pop the stack, reverting to the previous object, with
+ the \code{u} command, or use the \code{stack} command to move to
+ an earlier object.
+
+%\begin{description}
+%\item \code{stack}\\
+%    Prints the current stack out as a menu.
+%    Selecting an item pops all higher values off of the stack and
+%    makes that item the current focus value.
+%\end{description}
+%
+
+Commands useful when in inspection mode:
+\begin{itemize}
+\item\code{u} (up) pop object stack
+\item\code{m} (more) print more of a long menu
+\item\code{(\ldots)} evaluate a form and select result
+\item\code{q} quit
+\item\code{template} select a closure or continuation's template
+ (Templates are the static components of procedures; these are found
+  inside of procedures and continuations, and contain the quoted
+  constants and top-level variables referred to by byte-compiled code.)
+\item\code{d} (down) move to the next continuation
+ (current object must be a continuation)
+\item\code{menu} print the selection menu for the focus object
+\end{itemize}
+
+Multiple selection commands (\code{u}, \code{d}, and menu indexes)
+ may be put on a single line.
+
+%\code{\#\#} is always the object currently being inspected.
+%After a \code{q}
+%command,
+%or an error in the inspector, \code{\#\#} is the last object that was being
+%inspected.
+
+All ordinary commands are available when in inspection mode.
+Similarly, the inspection commands can be used when not in inspection
+ mode.
+For example:
+\begin{example}
+> (list 'a '(b c) 'd)
+'(a (b c) d)
+> ,1
+'(b c)
+> ,menu
+[0] b
+[1] c
+> 
+\end{example}
+
+If the current command level was initiated because of
+ a breakpoint in the next level down, then 
+ \code{,debug} will invoke the inspector on the
+ continuation at the point of the error.
+The \code{u} and \code{d} (up and down)
+commands then make the inspected-value stack look like a conventional stack
+debugger, with continuations playing the role of stack frames.  \code{D} goes
+to older or deeper continuations (frames), and \code{u} goes back up to more
+recent ones.
+
+\section{Command programs}
+\label{command-programs}
+
+The \code{exec} package contains procedures that are used
+ to execute the command processor's commands.
+A command \code{,\cvar{foo}} is executed by applying the value of
+ the identifier \cvar{foo} in the \code{exec} package to
+ the (suitably parsed) command arguments.
+
+\begin{description}
+\item \code{,exec [\cvar{command}]}\\
+   Evaluate \cvar{command} in the \code{exec} package.
+   For example, use
+\begin{example}
+,exec ,load \cvar{filename}
+\end{example}
+to load a file containing commands.
+If no \cvar{command} is given, the \code{exec} package becomes the
+ execution package for future commands.
+\end{description}
+
+The required argument types are as follows:
+\begin{itemize}
+\item filenames should be strings
+\item other names and identifiers should be symbols
+\item expressions should be s-expressions
+\item commands (as for \code{,config} and \code{,exec} itself)
+ should be lists of the form
+ \code{(\cvar{command-name} \cvar{argument} \cvar{...})}
+ where \cvar{command-name} is a symbol.
+\end{itemize}
+
+For example, the following two commands are equivalent:
+\begin{example}
+,config ,load my-file.scm
+
+,exec (config '(load "my-file.scm"))
+\end{example}
+
+The file \code{scheme/vm/load-vm.scm} in the source directory contains an
+ example of an \code{exec} program.
+
+\section{Building images}
+
+\begin{description}
+\item \code{,dump \cvar{filename} [\cvar{identification}]}\\
+    Writes the current heap out to a file, which can then be run using the
+    virtual machine.  The new image file includes the command processor.
+    If present, \cvar{identification}
+    should be a string (written with double quotes); this string will
+    be part of the greeting message as the image starts up.
+
+\item \code{,build \cvar{exp} \cvar{filename}}\\
+    Like \code{,dump}, except that the image file contains the value of
+    \cvar{exp}, which should be a procedure of one argument, instead of
+    the command processor.  When
+    \cvar{filename} is resumed, that procedure will be invoked on the VM's
+    \code{-a} arguments, which are passed as a list of strings.  The
+    procedure should return an integer which is
+    returned to the program that invoked the VM.  The command
+    processor and debugging system are not included in the image
+    (unless you go to some effort to preserve them, such as retaining
+    a continuation).
+
+    Doing \code{,flush} before building an image will reduce the amount
+    of debugging information in the image, making for a smaller
+    image file, but if an error occurs, the error message may be less
+    helpful.  Doing \code{,flush source maps} before loading any programs
+    used in the image will make it still smaller.
+    See \link*{the description of \code{flush}}[section~\Ref]{resource-commands}
+    for more information.
+
+\end{description}
+    
+\section{Resource query and control}
+\label{resource-commands}.
+
+\begin{description}
+\item \code{,time \cvar{exp}}\\
+    Measure execution time.
+
+\item \code{,collect}\\
+    Invoke the garbage collector.  Ordinarily this happens
+    automatically, but the command tells how much space is available
+    before and after the collection.
+
+\item \code{,keep \cvar{kind}}
+\T\vspace{-1em}
+\item \code{,flush \cvar{kind}}\\
+    These control the amount of debugging information retained after
+    compiling procedures.  This information can consume a fair amount
+    of space.  \cvar{kind} is one of the following:
+\begin{itemize}
+\item \code{maps} - environment maps (local variable names, for inspector)
+\item \code{source} - source code for continuations (displayed by inspector)
+\item \code{names} - procedure names (as displayed by \code{write} and in error
+       messages)
+\item \code{files}  - source file names
+\end{itemize}
+    These commands refer to future compilations only, not to procedures
+    that already exist.  To have any effect, they must be done before
+    programs are loaded.  The default is to keep all four types.
+% JAR says: ,keep tabulate  - puts debug data in a table that can be
+% independently  flushed (how? -RK) or even written out and re-read later!
+% (how? -RK)
+
+\item \code{,flush}\\
+    The flush command with no argument deletes the database of names
+    of initial procedures.  Doing \code{,flush} before a \code{,build} or
+    \code{,dump}
+    will make the resulting image significantly smaller, but will
+    compromise the information content of many error
+    messages.
+\end{description}
+
+\section{Threads}
+\label{command-threads}
+
+Each command level has its own set of threads.  These threads are suspended
+ when a new level is entered and resumed when the owning level again becomes
+ the current level.
+A thread that raises an error is not resumed unless
+ explicitly restarted using the \code{,proceed} command.
+In addition to any threads spawned by the user, each level has a thread
+ that runs the command processor on that level.
+A new command-processor thread is started if the current one
+ dies or is terminated.
+When a command level is abandoned for a lower level, or when
+ a level is restarted using \code{,reset}, all of the threads on that
+ level are terminated and any \code{dynamic-wind} ``after'' thunks are run.
+
+The following commands are useful when debugging multithreaded programs:
+\begin{description}
+\item \code{,resume [\cvar{number}]}\\
+  Pops out to a given level and resumes running all threads at that level.
+  \cvar{Number} defaults to zero.
+
+\item \code{,threads}\\
+    Invokes the inspector on a list of the threads running at the
+    next lower command level.
+
+\item \code{,exit-when-done [\cvar{exp}]}\\
+    Waits until all user threads have completed and then
+    exits back out to shell (or executive or whatever invoked Scheme~48
+    in the first place).
+    \cvar{Exp} should evaluate to an integer which is then
+    returned to the calling program.
+% JAR says: interaction with ,build ?
+
+%\item \code{,spawn \cvar{exp} [\cvar{name}]}\\
+%    Starts a new thread running \cvar{exp} on next command level down.
+%    The optional \cvar{name} is used for printing and debugging.
+%
+%\item \code{,suspend [\cvar{exp}]}
+%\T\vspace{-1em}
+%\item \code{,continue [\cvar{exp}]}
+%\T\vspace{-1em}
+%\item \code{,kill [\cvar{exp}]}\\
+%    Suspend, unsuspend, and terminate a thread, respectively.
+%    Suspended threads are not run until unsuspended, terminated
+%    threads are never run again.
+%    \cvar{Exp} should evaluate to a thread.
+%    If \cvar{exp} is not present, the current focus object is used.
+%
+
+% example of ,threads ,suspend ...
+\end{description}
+
+\section{Quite obscure}
+
+\begin{description}
+\item \code{,go \cvar{exp}}\\
+    This is like \code{,exit \cvar{exp}} except that the evaluation of \cvar{exp}
+    is tail-recursive with respect to the command processor.  This
+    means that the command processor itself can probably be GC'ed,
+    should a garbage collection occur in the execution of \cvar{exp}.
+    If an error occurs Scheme~48 will exit with a non-zero value.
+
+\item \code{,translate \cvar{from} \cvar{to}}\\
+    For \code{load} and the \code{,load} command
+     (but not for \code{open-\{in|out\}put-file}), file
+    names beginning with the string \cvar{from} will be changed so that the
+    initial \cvar{from} is replaced by the string \cvar{to}.  E.g.
+\begin{example}
+\code{,translate /usr/gjc/ /zu/gjc/}
+\end{example}
+    will cause \code{(load "/usr/gjc/foo.scm")} to have the same effect as
+    \code{(load "/zu/gjc/foo.scm")}.
+% JAR says: Useful with the module system!  "virtual directories"
+
+\item \code{,from-file \cvar{filename} \cvar{form} \ldots\ ,end}\\
+    This is used by the \code{cmuscheme48} Emacs library to indicate the file
+    from which the \cvar{form}s came.  \cvar{Filename} is then used by the
+    command processor to determine the package in which the \cvar{form}s
+    are to be evaluated.
+\end{description}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "manual"
+%%% End: 

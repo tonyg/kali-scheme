@@ -1,0 +1,29 @@
+# Makefile.in:
+#
+################################################################
+# Copyright (C) 2005 Matthew Dempsky
+# 
+# See the file "COPYING" for further information about
+# the copyright and warranty status of this work.
+# 
+
+# This is a kinda gross temporary hack
+
+all: ps-compiler.image
+
+ps-comp-src		:=	$(wildcard $(srcdir)/*.scm) \
+				$(wildcard $(srcdir)/*/*.scm) \
+				$(wildcard $(srcdir)/*/*/*.scm)
+
+ps-compiler.image: $(ps-comp-src)
+	(   echo ',batch' \
+	 && echo ',config ,load ../scheme/prescheme/interface.scm' \
+	 && echo ',config ,load ../scheme/prescheme/package-defs.scm' \
+	 && echo ',exec ,load load-ps-compiler.scm' \
+	 && echo ',in prescheme-compiler prescheme-compiler' \
+	 && echo ',user (define prescheme-compiler ##)' \
+	 && echo ',dump $(objroot)/scheme48/ps-compiler/ps-compiler.image "(Pre-Scheme)"' ) \
+	| (cd $(srcdir) && $(objroot)/scheme48/scheme48/scheme48 )
+
+# arch-tag: Matthew Dempsky Thu Apr  7 21:38:43 2005 (ps-compiler/Makefile.in)
+#

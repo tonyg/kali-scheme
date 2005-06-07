@@ -1,0 +1,70 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 21.4 (patch 15) "Security Through Obscurity" XEmacs Lucid, Fri Dec  3 20:36:25 2004 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Mutual exclusion</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_57.html">Threads</A><BR>Previous: <A HREF="s48manual_63.html">Mutual exclusion</A> | Next: <A HREF="s48manual_63.html">Mutual exclusion</A>
+<H2>Mutual exclusion</H2>
+<P>Scheme&nbsp;48 also has more traditional mutual-exclusion synchronization
+abstractions, specifically mutex locks and placeholders.  Note that
+typically synchronization via optimistic concurrency is usually
+preferable: Mutual exclusion often puts the running program into an
+inconsistent state for the time of the inclusion, which has adverse
+effects on modularity and interruptibility.
+<P><H3><A NAME="1">Locks</A></H3>
+<P>The <CODE>locks</CODE> structure contains bindings that implement standard
+mutex locks:
+<UL><LI><CODE>(make-lock<I></I>)&nbsp;-&gt;&nbsp;<I>lock</I></CODE><A NAME="2">&nbsp;</A>
+<LI><CODE>(lock?<I>&nbsp;thing</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(obtain-lock<I>&nbsp;lock</I>)</CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(maybe-obtain-lock<I>&nbsp;lock</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="5">&nbsp;</A>
+<LI><CODE>(release-lock<I>&nbsp;lock</I>)</CODE><A NAME="6">&nbsp;</A>
+</UL>
+<CODE>Make-lock</CODE> creates a lock in the "released" state.
+<CODE>Lock?</CODE> is the predicate for locks.
+<P><CODE>Obtain-lock</CODE> atomically checks if <CODE><I>lock</I></CODE> is in the
+"released" state.  If it is, the lock is put into the "obtained"
+state, and <CODE>obtain-lock</CODE> returns immediately.  If the lock is in
+the "obtained" state, the current thread is suspended and registered
+with the lock.
+<CODE>Maybe-obtain-lock</CODE>, like <CODE>obtain-lock</CODE>, checks the state of
+<CODE><I>lock</I></CODE>: if it is "released," the lock is put into the
+"obtained" state, if it is "obtained," <CODE>maybe-obtain-lock</CODE>
+returns immediately.  <CODE>Maybe-obtain-lock</CODE> returns <CODE>#t</CODE> if
+it was able to obtain the lock, and <CODE>#f</CODE> otherwise.
+<P><CODE>Release-lock</CODE> does nothing if <CODE><I>lock</I></CODE> is in the "released"
+state.  If it is in the "obtained" state, <CODE>release-lock</CODE>
+causes one of the threads suspended on an <CODE>obtain-lock</CODE> lock
+operation to continue execution.  If that thread is the last thread
+registered with the lock, the lock is transferred to the "released"
+state.  In any case, <CODE>release-lock</CODE> returns immediately.
+<P><H3><A NAME="7">Placeholders</A></H3>
+<P>The <CODE>placeholders</CODE> structure contains bindings for
+<I>placeholders</I>--thread-safe, write-once variables, akin to
+ID-90 I-structures or CML I-variables.
+<P>The typical scenario for placeholders is that, say, a thread&nbsp;A
+computes a value needed by another thread&nbsp;B at some unspecified time.
+Both threads share access to a placeholder; when A has computed the
+value, it places it into the placeholder.  When B needs the value, it
+extracts it from placeholder, blocking if necessary.
+<UL><LI><CODE>(make-placeholder<I></I>)&nbsp;-&gt;&nbsp;<I>placeholder</I></CODE><A NAME="8">&nbsp;</A>
+<LI><CODE>(make-placeholder<I>&nbsp;id</I>)&nbsp;-&gt;&nbsp;<I>placeholder</I></CODE><A NAME="9">&nbsp;</A>
+<LI><CODE>(placeholder?<I>&nbsp;thing</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="10">&nbsp;</A>
+<LI><CODE>(placeholder-set!<I>&nbsp;placeholder&nbsp;value</I>)</CODE><A NAME="11">&nbsp;</A>
+<LI><CODE>(placeholder-value<I>&nbsp;placeholder</I>)&nbsp;-&gt;&nbsp;<I>value</I></CODE><A NAME="12">&nbsp;</A>
+</UL>
+<CODE>Make-placeholder</CODE> creates an empty placeholder.  (The optional
+<CODE><I>id</I></CODE> argument is only for debugging purposes; the discloser for
+placeholders prints it out if present.)  <CODE>Placeholder?</CODE> is the
+predicate for placeholders.
+<P><CODE>Placeholder-set!</CODE> places a value into a placeholder.  Doing this
+more than once signals an error.  <CODE>Placeholder-value</CODE> extracts
+the value from the placeholder and returns it.  If the placeholder is
+empty, it blocks the current thread until it becomes full.
+<P><P><P>
+  
+Previous: <A HREF="s48manual_63.html">Mutual exclusion</A> | Next: <A HREF="s48manual_63.html">Mutual exclusion</A></BODY></HTML>

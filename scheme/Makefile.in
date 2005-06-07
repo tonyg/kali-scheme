@@ -1,0 +1,15 @@
+# Makefile.in:
+#
+################################################################
+# Copyright (C) 2005 Matthew Dempsky
+# 
+# See the file "COPYING" for further information about
+# the copyright and warranty status of this work.
+# 
+
+include $(makefiles)/install-scm-subdirs.mk
+
+scm-install-dir := $(destdir)$(prefix)/share/scheme48/scheme
+
+# arch-tag: Matthew Dempsky Fri Apr  8 14:40:57 2005 (scheme/Makefile.in)
+#

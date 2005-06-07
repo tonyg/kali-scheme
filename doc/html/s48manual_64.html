@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 21.4 (patch 15) "Security Through Obscurity" XEmacs Lucid, Fri Dec  3 20:36:25 2004 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Writing custom synchronization abstractions</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_57.html">Threads</A><BR>Previous: <A HREF="s48manual_64.html">Writing custom synchronization abstractions</A> | Next: <A HREF="s48manual_64.html">Writing custom synchronization abstractions</A>
+<H2>Writing custom synchronization abstractions</H2>
+<P>The bindings explained in this section are part of the
+<CODE>threads-internal</CODE> structure.  They are concerned with suspending
+threads and making them runnable again upon some later event.
+<P>Typically, a suspended thread needs to be recorded in a queue
+somewhere for later waking-up.  To allow a thread to be recorded in
+multiple queues (say, when it waits for one of a number of events),
+such <I>thread queues</I> are ordinary queues containing cells that,
+in turn, contain the thread objects themselves.  Each thread has at
+most one such cell associated with it which is shared among all queues
+(or other data structures) holding on to the suspended thread.  The
+cell is cleared when the thread is woken up.
+<UL><LI><CODE>(thread-queue-empty?<I>&nbsp;thread-queue</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="1">&nbsp;</A>
+<LI><CODE>(maybe-dequeue-thread!<I>&nbsp;thread-queue</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="2">&nbsp;</A>
+</UL>
+<CODE>Thread-queue-empty?</CODE> atomically checks whether the
+<CODE><I>thread-queue</I></CODE> thread queue is empty, i.e., if it does not
+contain non-empty cells.  <CODE>Maybe-dequeue-thread!</CODE> provisionally
+dequeues a thread from <CODE><I>thread-queue</I></CODE> if it contains one.  It
+returns the dequeued thread or <CODE>#f</CODE> if the queue is empty.
+<UL><LI><CODE>(maybe-commit-and-block<I>&nbsp;cell</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="3">&nbsp;</A>
+<LI><CODE>(maybe-commit-and-block-on-queue<I>&nbsp;thread-queue</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="4">&nbsp;</A>
+<LI><CODE>(maybe-commit-and-make-ready<I>&nbsp;thread-or-queue</I>)&nbsp;-&gt;&nbsp;<I>boolean</I></CODE><A NAME="5">&nbsp;</A>
+</UL>
+<CODE>Maybe-commit-and-block</CODE> attempts to commit the current proposal.
+If this succeeds, the current thread is blocked, the thread's cell is
+set to <CODE><I>cell</I></CODE>, and <CODE>#t</CODE> is returned.  Otherwise, <CODE>#f</CODE>
+is returned.  <CODE>Maybe-commit-and-block-on-queue</CODE> is like
+<CODE>maybe-commit-and-block</CODE>, excepts that it creates a fresh cell
+for the thread and enqueues it in <CODE><I>thread-queue</I></CODE> if the commit
+succeeds.
+<P><CODE>Maybe-commit-and-make-ready</CODE> accepts either a thread object or a
+thread queue as an argument.  In either case,
+<CODE>maybe-commit-and-make-ready</CODE> tries to commit the current
+proposal.  If that succeeds, it <CODE>maybe-commit-and-make-ready</CODE>
+makes its argument runnable: if <CODE><I>thread-or-queue</I></CODE> is a thread,
+that thread is made runnable, if it is a thread queue, all threads on
+the queue are made runnable.  (In the latter case, none of the threads
+actually runs until all have been made runnable.)
+<CODE>Marybe-commit-and-make-ready</CODE> returns <CODE>#t</CODE> if it succeeded,
+and <CODE>#f</CODE> otherwise.
+<P><P><P>
+  
+Previous: <A HREF="s48manual_64.html">Writing custom synchronization abstractions</A> | Next: <A HREF="s48manual_64.html">Writing custom synchronization abstractions</A></BODY></HTML>

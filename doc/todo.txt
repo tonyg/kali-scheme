@@ -1,0 +1,181 @@
+--*- Mode: Indented-text; -*-
+
+Scheme 48: list of bugs and things to do.
+Last update by RAK on 26 Feb 2001.
+
+Programming environment:
+    Fuller on-line documentation.
+    Error recovery.  Can do better than ,proceed.  LOAD should set up
+      restart continuations.
+    Types in scheme-interface (and elsewhere) aren't as tight as they
+      could be.
+    Add LET continuation "pessimization" to retain the environment longer.
+    Have the disassembler display local variable names.
+    This ought to be recoverable, but isn't always:
+	> (let loop ((x '())) (loop (cons 3 x)))
+	not enough room in heap for stack
+    ,exit 'not-a-fixnum should not exit
+    Semicolon comments don't quite work after commands (extra newline
+      required).
+    Command (and procedure) to change current directory.
+    Some procedure in EXEC to take the place of ## in moving values from
+      one package to another: (transport <from-package> <exp> <to-package>
+      [<id>]), and/or have eval etc. commands return the value
+    Batch mode should write error messages to (error-output).
+    In command preferred mode you have to do
+        in foo run bar
+      instead of
+        in foo bar
+      if foo is a read-only package    
+    ,reset should flush the input buffer
+    Export the VM's preview displayer as a procedure for debugging.
+
+Performance:
+    Generational GC.
+    More compact representation for debugging data?
+    Leaf procedure compilation (RK's rts/no-leaf-env.scm): if no
+      continuations or lambdas, skip the make-env and access locals
+      using stack-ref.  Expected to gain about 6% in speed.
+    Optimize loops somehow (maybe using call-template opcode and/or
+      opportunistic compilation).
+    The CAML light implementation has good documentation and patches
+      for optimizing the interpreter's switch (*pc++); perhaps we
+      could lift some of it.  (Range check isn't necessary.)
+    Floating point support in VM.
+    Faster bignum printer (e.g. the one Richard wrote - but it would be
+      nice if it were an option tied to bignums, not built in to the
+      initial image).
+    Ratnum multiplication and division might be made more efficient by
+      taking cross-GCD's.
+    Native code compiler...
+
+Compiler bugs / features:
+    Inliner is buggy: if (lambda (x) (f) x) is in-lined the call to
+      F fill occur before the argument is evaluated.
+    It would be nice if macro's and inliner's sources were saved only
+      if we are going to be doing doing any reificiation.
+
+Big Scheme bugs / features:
+    It would be nice to be able to simulate control-C interrupts on
+      a port other than the initial input port - e.g., on a socket.
+      This would require creating a new thread to act as a front end.
+      The new thread would read characters eagerly, buffering
+      everything except control-C's for the thread that is doing the
+      real work, and converting control-C's into interrupts.
+    big/pipe.scm uses the old port interface
+    Tracking output ports are not thread safe.
+
+Module system bugs:
+    ,untrace should undefine as well if the variable wasn't bound
+      before.
+    Compound signatures don't get updated when a component signature
+      changes.  They contain a list of signatures with no reinitialization
+      thunk a la structures and packages.
+
+Module system features:
+    Check for name conflicts between opened structures.
+    Check for cycles in structure inheritance.
+    Deal with package system state better (for linker).  Maybe each
+      package should point to a data structure containing
+      *location-uid*, location-name-table, *package-uid*,
+      package-name-table, and perhaps the compiler-state as well (see
+      segment.scm).
+
+VM:
+    Heaps that can grow larger.
+    Add a test to configure.in that can determine whether ld -A works.
+      If both it and dlopen() work, then both kinds of dynamic loading
+      should be made available.
+    Interrupt while writing out image causes an exit.  [Fixed?]
+    A jump-back instruction?  Might be easier to use than call-template.
+    Scrutinize all VM fatal errors to see if any can be recovered
+      from.  E.g. "out of ports" shouldn't cause a VM halt, it should
+      just cause open-port to return #f or an error code.  [Fixed?]
+    Get VM interp.scm-without-gc.scm working again.
+
+Documentation:
+    Describe (optimize auto-integrate).
+    How to use the static linker.
+    How initial.image and scheme48.image get built, really.
+    Techniques for debugging the runtime system (debug/for-debugging.scm).
+
+Cleanup:
+  VM:
+    Rename "unassigned" to "uninitialized"?  Or phase it out entirely.
+    In unix.c, use getrusage(), when available, to get run time.
+  Run-time / features / development environment:
+    A DIVIDE procedure (maybe an instruction as well) that returns two
+      values.
+    Figure out how to merge the two type systems (META-METHODS and
+      META-TYPES).  The generic function system could make use of the
+      SUBTYPE? and INTERSECT? predicates.
+    Correct floating point, esp. reading and printing.  And
+      (= 1/3 (/ 1. 3.)) returns #t, but ought to return #f.
+    Parameterize over file name syntax somehow.  Currently
+      big/filename.scm assumes Unix (cf. DIRECTORY-COMPONENT-SEPARATOR,
+      FILE-NAME-PREFERRED-CASE).  Perhaps there should be VM support for
+      this.
+    Make sure that the disassembler and assembler are inverses of one
+      another.
+    Disassembler should generate S-expression first, and then print
+      it independently.
+    Combine conditions, signals, and handle into a single structure?
+    Figure out a better way to implement ##.
+    Be consistent about "filename" versus "file-name".
+  Compiler / linker / module system:
+    The fluids $losers and $package-losers in env/pedit.scm are never
+      bound.  Could they be replaced with cells?
+    The "reflective tower" isn't really a reflective tower, it's a
+      syntactic tower.  Rename it.
+    The scanner (file loader) should operate on streams, not lists.
+      This would result in more uniform and flexible internal
+      protocols for reading files, scanning for DEFINEs, compiling,
+      and running - passes could be interleaved or separated easily.
+    Flush link/data.scm.  Linker should instead open the VM module
+      that includes vm/data.scm.
+    Flush (optimize ...) clause in DEFINE-STRUCTURE in favor of
+      optimizer argument to SCAN-STRUCTURES.
+    Vector templates ought to be supported in SYNTAX-RULES.
+    The DEFINE-INTERFACE forms should contain types for every exported
+      variable; the code in cprim.scm (and recon.scm?) shouldn't have
+      to worry about setting up types.
+    Add ENVIRONMENT-DEFINED? ?
+    Make USUAL-TRANSFORM return a transform?
+    make-c-header-file should put definitions for the interrupt
+      enumeration into scheme48.h, and unix.c et al should use them.
+    Flatloading and loading are very different operations, so FLATLOAD
+      shouldn't do SET-PACKAGE-LOADED?!; instead it should maintain its
+      own list of flatloaded packages (in a global variable, say).
+  Etc:
+    Start using a source control system (like rcs or Perforce).
+    There ought to be a sanity check to ensure that the size of the
+      area as computed by static.scm agrees with the size as computed
+      by C's sizeof() operator.
+
+What should (syntax-rules (x) ((foo ?body) (let ((x 1)) ?body))) do?
+
+
+To: jar@cs.cornell.edu
+Subject: Not a bug this time. :-)
+Date: Tue, 22 Feb 94 19:13:37 -0500
+From: Paul Stodghill <stodghil@cs.cornell.edu>
+
+The result of ,expand can be confusing. In particular, it doesn't
+distinguish between different identifiers that have the same name.
+
+For instance, in the example below, it would be more useful if the result
+of the ,expand was something like,
+
+	'((lambda (.x.1) (set! x (- .x.1))) x)
+
+Welcome to Scheme 48 0.31 (made by jar on Sun Feb 13 18:33:57 EST 1994).
+Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+Please report bugs to scheme-48-bugs@altdorf.ai.mit.edu.
+Type ,? (comma question-mark) for help.
+> (define-syntax foo
+    (syntax-rules ()
+      ((foo var) ((lambda (x) (set! var (- x))) var))))
+> (define x 1)
+> ,expand (foo x)
+'((lambda (x) (set! x (- x))) x)
+> 

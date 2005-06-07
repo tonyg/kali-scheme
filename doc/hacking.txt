@@ -1,0 +1,289 @@
+
+,bench
+,load-package linker
+,new-package =link= linker debuginfo defpackage
+,load scripts.scm
+(link-initial-system)
+
+
+To change between initial image starting in mini-command (MINI) and
+command (MAXI):
+
+  1. Definition of initial system's command module in comp-packages.scm:
+     MINI: (make-mini-command scheme)
+     MAXI: (make-command scheme)
+  2. Location of (define-module (make-command ...)...):
+     MINI: more-packages.scm
+     MAXI: comp-packages.scm
+  3. Location of (define-interface command-interface ...):
+     MINI: more-interfaces.scm
+     MAXI: interfaces.scm
+
+
+
+
+> ,new-package z architecture primitives packages table enumerated debug-data
+z> (let ((i 0))
+     (table-walk (lambda (x y) (set! i (+ i 1)))
+	         location-name-table)
+      i)
+1385
+z> (vector-length (find-all-xs (name->enumerand 'location stob)))
+1259
+(vector-length (find-all-xs (name->enumerand 'record stob)))
+2150
+
+(find-all-xs (name->enumerand 'record stob))
+z> (do ((i 0 (+ i 1))
+        (j 0 (if (package? (vector-ref rs i)) (+ j 1) j))) ((= i (vector-length rs)) j))
+72
+z> 
+
+
+
+
+> ,new-package z architecture primitives compiler table
+z> (vector-ref stob 10)
+'template
+z> stob
+'#(pair symbol vector closure location port ratio record continuation extended-number template weak-pointer external unused-d-header1 unused-d-header2 string code-vector double bignum)
+z> (vector-ref stob 7)
+'record
+z> (define rs (find-all-xs 7))
+z> (vector-length rs)
+2178
+z> (define ls (find-all-xs 4))
+z> (vector-length ls)
+1266
+z> 
+
+
+
+
+To get a fresh config package:
+
+,in config (define-structures ((config1 (export)))
+	     (open defpackage built-in-structures more-structures))
+,config-package-is config1
+
+
+To load a linker with a fresh new compiler:
+    x48 -i new-scheme48.image -h 10000000 <l.s48
+
+Then  ,load scripts.scm  or whatever.
+
+
+
+
+These are all files not belonging to any package description:
+
+    boot-packages.scm
+    comp-packages.scm
+    flatload.scm
+    more-packages.scm
+    more-interfaces.scm
+    rts-packages.scm
+    scripts.scm
+    interfaces.scm
+
+    debug/
+    alt/
+
+    link/p-features.scm
+    link/p-record.scm
+    link/t-features.scm
+    link/t-record.scm
+
+    misc/icon.scm
+    misc/mail.scm         -- related to more-thread.scm
+    misc/more-thread.scm  -- needs work
+    misc/sicp.scm	  -- add to more-packages
+
+
+,load-package rk-extensions
+,new-package rk-user rk-extensions
+,user-package-is rk-user
+
+
+
+# If initial images starts in mini-command instead of command, the
+# rule for $(IMAGE) becomes something like this:
+#	(echo ,load more-interfaces.scm $(S48ROOT)/more-packages.scm; \
+#	 echo "(ensure-loaded command)"; \
+#	 echo ",go ((structure-ref command 'command-processor) batch)"; \
+
+
+,in config (define-structures ((reification (export reify-structures)))
+  (open scheme-level-2 table
+	signals			;error
+	packages
+	features		;location-id location?
+	scan)			;find-free-names-in-syntax-rules
+  (files (link reify)))
+
+,load-package reification
+
+debug-config> ,in reification reify-structures
+'#{Procedure 8447 reify-structures}
+debug-config> (define reify-structures ##)
+debug-config> make-simple-package
+
+Error: undefined variable
+       make-simple-package
+       (package debug-config)
+1 debug-config> 
+debug-config> (define-structures ((p (export start))) (open initial-system scheme-level-2 packages))
+debug-config> (define go (in p `(start ,(reify-structures (desirable-packages) (lambda (loc) `',loc)))))
+
+
+
+### Small images for exercising the linker and/or runtime system
+
+debug/tiny.image: debug/tiny.scm $(LINKER_IMAGE)
+	($(START_LINKER_RUNNABLE) \
+	 echo "(load \"debug/tiny-packages.scm\")"; \
+	 echo "(link-simple-system '(debug tiny) 'start tiny-system)") \
+	| $(LINKER_RUNNABLE) -i $(LINKER_IMAGE)
+
+debug/little.image: $(LINKER_IMAGE) $(CONFIG_FILES) $(little-files)
+	($(START_LINKER_RUNNABLE) \
+	 echo "(load \"scripts.scm\")";  \
+	 echo "(link-little-system)")	 \
+	| $(LINKER_RUNNABLE) -i $(LINKER_IMAGE) $(BIG_HEAP)
+
+debug/medium.image: $(LINKER_IMAGE) $(CONFIG_FILES) $(medium-files)
+	($(START_LINKER_RUNNABLE) \
+	 echo "(load \"scripts.scm\")";  \
+	 echo "(link-medium-system)") \
+	| $(LINKER_RUNNABLE) -i $(LINKER_IMAGE) $(BIG_HEAP)
+
+
+	 echo "(define l-f (package-all-filenames little-system))";  \
+	 echo "(define m-f (package-all-filenames medium-system))";  \
+
+		 'little-files l-f 'medium-files m-f	      \
+
+
+[The following is from June 1992, and probably not quite compatible
+with the current compiler internals.]
+
+To eliminate use of the stack GC to implement tail recursion, change
+comp.scm as follows:
+
+(define (compile-unknown-call exp cenv depth cont)
+  (note-source-code
+   exp
+   (maybe-push-continuation (sequentially 
+			     (push-all (cdr exp) cenv 0)
+			     (compile (car exp)
+				      cenv
+				      (length (cdr exp))
+				      (fall-through-cont))
+			     (instruction (if (return-cont? cont)
+					  op/move-args-and-call
+					  op/call)
+					  (length (cdr exp))))
+			    depth
+			    cont)))
+
+
+--------------------
+
+Here's another cool thing.  6/28/93
+
+(define-interface evaluation-interface
+  (export eval load eval-from-file))
+
+(define-structure run evaluation-interface
+  (open scheme-level-2 syntactic packages scan
+	environments
+	signals
+	locations
+	features   ;force-output
+	table
+	fluids)
+  (files (debug run)))
+
+,load-package run
+,in run
+,in package-commands (environment-for-syntax-promise)
+(define cool (make-simple-package (list scheme) eval ## 'cool))
+,in command set-environment-for-commands!
+(## cool)
+
+cool> ,inspect (lambda (x) x)
+'#{Procedure 6394}
+
+ [0: exp] '(lambda (x) x)
+ [1: env] '#{Package 286 cool}
+inspect: 
+inspect: q
+cool> 
+
+
+
+(define (z s)
+  (define (show-type name static)
+    (write name)
+    (display "	: ")
+    (write (static-type static))
+    (newline))
+  (if (package? s)
+      (for-each-definition (lambda (name static loc)
+			     (show-type name static))
+			   s)
+      (interface-walk (lambda (name type)
+			(show-type name
+				   (car (structure-lookup
+					 s name #t))))
+		      (structure-interface s))))
+
+; ,open expander syntactic packages reconstruction
+
+(define (e x)
+  (let ((p (interaction-environment)))
+    (let ((node (expand-form x p)))
+      (write (node-type node (package->environment p)))
+      (newline)
+      (eval node p))))
+
+
+
+> (define hunk3 (lap hunk3
+		     0 (check-nargs= 3)
+		     2 (pop)
+		     3 (make-stored-object 3 0)
+		     6 (return)))
+> (hunk3 1  2 3)
+'(1 . 2)
+> (define cxr (lap cxr
+		   0 (check-nargs= 2)
+		   2 (pop)
+		   3 (stored-object-indexed-ref 0)
+		   5 (return)))
+> (cxr (hunk3 1  2 3) 2)
+3
+> 
+
+
+(define-syntax %cons
+  (lambda (e r c)
+    (let ((n (cadr e))
+	  (kind (caddr e)))
+      `(,(r 'lap) (%cons ,n ,kind)
+		  (check-nargs= ,n)
+		  (pop)
+		  (make-stored-object ,n ,kind)
+		  (return)))))
+
+
+(define (& x)
+  (or (node-ref x 'uid)
+      (begin (set! *n* (+ *n* 1))
+	     (node-set! x 'uid *n*)
+	     *n*))
+  x)
+
+(define (uid n) (node-ref (& n) 'uid))
+
+(define *n* 0)

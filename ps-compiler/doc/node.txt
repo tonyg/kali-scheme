@@ -1,0 +1,340 @@
+
+In the compiler `continuation' means a continuation that is a lambda node.
+Non-lambda continuation arguments, such as the argument to a RETURN, are
+not referred to as continuations (the argument isn't a continuation, it
+is a variable that is bound to a continuation).
+
+
+Every node has the following fields:
+
+  variant     ; one of LITERAL, REFERENCE, LAMBDA, or CALL
+  parent      ; parent node
+  index       ; index of this node in parent, if parent is a call node
+  simplified? ; true if it has already been simplified; if this is #F
+              ; then all of this node's ancestors must also be unsimplified
+  flag        ; useful flag, all users must leave this is #F
+
+
+Literal nodes:
+
+  value     ; the value
+  type      ; the type of the value (important for statically typed languages,
+            ; not so useful for Scheme)
+
+Reference nodes:
+
+  variable  ; the referenced variable; the binder of the variable must be
+            ; an ancestor of the reference node
+
+Call nodes:
+  primop    ; the primitive being called
+  args      ; vector of argument nodes
+  exits     ; the number of arguments that are continuations; the continuation
+            ; arguments come before the non-continuation ones
+  source    ; source info; used for error messages
+
+Primops are either trivial or nontrivial.  Trivial primops only return a value
+and have no side effects.  Calls to trivial primops never have continuation
+arguments and are always arguments to other calls.  Calls to nontrivial primops
+may or may not have continuations and are always the body of a lambda node.
+
+Lambda nodes:
+
+  type      ; one of PROC, CONT, or JUMP (and maybe THROW at some point)
+  name      ; symbol          (for debugging)
+  id        ; unique integer  (for debugging)
+  body      ; the call-node that is the body of the lambda
+  variables ; a list of variable records, with #Fs for ignored positions
+  source    ; source info; used for error messages
+  protocol  ; calling protocol from the source language
+  block     ; for use during code generation
+  env       ; for use when adding explicit environments
+
+PROC's are general procedures.  The first variable of a PROC will be bound
+to the PROC's continuation.
+
+CONT's are continuation arguments to calls.
+
+JUMP's are continuations bound by LET or LETREC, whose calling points are
+known, and which are created and called within a single PROC.
+
+Variables:
+
+  name      ; source code name for variable (used for debugging only)
+  id        ; unique numeric identifier     (used for debugging only)
+  type      ; type of variable's value
+  binder    ; LAMBDA node which binds this variable (or #F if none)
+  refs      ; list of reference nodes n for which (REFERENCE-VARIABLE n)
+            ;  = this variable
+  flag      ; useful slot, used by shapes, COPY-NODE, NODE->VECTOR, etc.
+            ; all users must leave this is #F
+  flags     ; list of various annotations, e.g. IGNORABLE
+  generate  ; for whatever code generation wants
+
+----------------------------------------------------------------
+The node tree has a very regular lexical structure:
+
+  The body of every lambda node is a non-trivial call.
+  The parent of every non-trivial call is a lambda node.
+  Every CONT lambda is a continuation of a non-trivial call.
+  Every JUMP lambda is an argument to either the LET or the LETREC 
+   primops (described below).
+  The lambda node that binds a variable is an ancestor of every reference
+   to that variable.
+  
+If you start from any leaf node and follow the parent pointers up through the
+node tree, you first go through some number, possible zero, of trivial calls
+until a non-trivial call is reached.  From that point on non-trivial calls
+alternate with CONT nodes until a PROC or JUMP lambda is reached.  Going up
+from a PROC lambda is the same as going up from a leaf, while JUMP lambdas
+are always arguments to LET or LETREC, both of which are non-trivial.
+
+A basic block appears as a sequence of non-trivial calls with a single
+continuation apiece.  The block begins with a PROC or JUMP lambda, or
+with a CONT lambda that is an argument to a call with two or more
+continuations, and ends with a call that has either no continuations,
+or two or more.
+
+Basic blocks are grouped into trees.  The root of every tree is either
+a PROC or JUMP lambda, the branch points are calls with two or more
+continuations, and the leaves are jumps or returns.  Within a tree
+the control flow follows the lexical structure of the program from
+parent to child (if we ignore calls to other PROCs).
+
+Every JUMP lambda is called from within only one PROC lambda, so a PROC
+can be considered to consist of a set of trees, the leaves of which either
+return from that PROC or jump to the top of another tree in the set.
+
+----------------------------------------------------------------
+
+Primops:
+
+  id                 ; unique symbol identifying this primop
+  trivial?           ; #t if this primop has does not accept a continuation
+  side-effects       ; one of #F, READ, WRITE, ALLOCATE, or IO
+  simplify-call-proc ; simplify method
+  primop-cost-proc   ; cost of executing this operation
+                     ; (in some undisclosed metric)
+  return-type-proc   ; the type of the value returned (for trivial primops only)
+  proc-data          ; more data for the procedure primops
+  cond-data          ; more data for conditional primops
+  code-data          ; code generation data
+
+`procedure' primops are those that call one of their values.
+`conditional' primops are those that have more than one continuation.
+
+Below is a list of the standard primops.  All but the last two are non-trivial.
+
+For the following the five primops the lambda node being called, jumped to,
+or whatever has been identified by the compiler, and the number of variables
+that the lambda node has matches the number of arguments.
+
+   (CALL <cont> <proc> . <args>)
+   (TAIL-CALL <cont-var> <proc> . <args>)
+   (RETURN <cont-var> . <args>)
+   (JUMP <jump-var> . <args>)
+;  (THROW <throw-var> . <args>)  not yet implemented
+
+These are the same as the above except that the procedure has not been
+identified by the compiler.  There is no UNKNOWN-JUMP because all calls
+to JUMP lambdas must be known.
+
+   (UNKNOWN-CALL <cont> <proc> . <args>)
+   (UNKNOWN-TAIL-CALL <cont> <proc> . <args>)
+   (UNKNOWN-RETURN <cont-var> . <args>)
+
+PROC lambdas are called with either CALL or TAIL-CALL if all of their call
+sites have been identified, or with UNKNOWN-CALL or UNKNOWN-TAIL-CALL if not.
+JUMP lambdas are called using JUMP.
+
+
+LET binds random values, such as lambda nodes or the results of trivial
+calls, to variables.  This primop only exists because of the requirement
+that every call have a primop; all it does is apply <cont> to <args>
+(it is called LET instead of APPLY because LET forms in the source code
+become calls to this primop).
+
+   (LET <cont> . <args>)
+
+
+Recursive binding:
+
+   (LETREC1 <cont>)
+   (LETREC2 <cont> <id-var> <lambda1> <lambda2> ...)
+
+These are always used together, with the body of the continuation to LETREC1
+being a call to LETREC2.  The two calls together look like:
+
+ (LETREC1 (lambda (<id-var> <var1> ... <varN>)
+            (LETREC2 <cont> <id-var> <lambda1> ... <lambdaN>)))
+
+which the CPS pretty-printer prints as:
+
+ (let* (...
+        ((id-var var1 ... varN) (letrec1))
+	(() (letrec2 id-var lambda1 ... lambdaN))
+	...)
+   ...)
+
+The end result is to bind <varI> to <lambdaI>.  The point to the excercise
+is that lambdas occur within the scope of the variables.
+
+
+Undefined effect.  This takes a continuation variable as an argument only
+so that the continuation variable is always reached.
+
+   (UNDEFINED-EFFECT <cont-var> ...)
+
+
+Accessing and mutating the store.
+Cells are used to implement SET! on lexically bound variables.  GLOBAL-SET!
+and GLOBAL-REF are used for module variables that may be set.
+
+   (CELL-SET! <cont> <cell> <value>)
+   (GLOBAL-SET! <cont> <global-var> <value>)
+
+   (CELL-REF <cell>)                 ; trivial
+   (GLOBAL-REF <global-var>)         ; trivial
+
+----------------------------------------------------------------
+Printing out the node tree.
+
+The following procedure:
+
+   (define (fact n)
+     (let loop ((n n) (r 1))
+       (if (< n 2)
+           r
+           (loop (- n 1) (* n r)))))
+
+when converted into nodes is:
+
+(LAMBDAp (c_6 n_1)
+  (letrec1 (LAMBDAc (x_13 loop_2)
+             (letrec2 (LAMBDAc ()
+	                (unknown-tail-call c_6 loop_2 n_1 '1))
+		      x_13
+                      (LAMBDAp (c_8 n_3 r_4)
+                        (test
+                          (LAMBDAc ()
+                            (unknown-return c_8 r_4))
+                          (LAMBDAc ()
+                            (unknown-tail-call c_8 loop_2 (- n_3 '1) (* n_3 r_4)))
+                          (< n_3 '2)))))))
+
+where LAMBDAp is a PROC lambda and LAMBDAc is a CONT lambda.  Lexically bound
+variables are printed as <name>_<id> and constants as '<value>.  This is not
+very readable, and larger procedures are much worse.  The first step in making
+it more comprehensible is to print each lambda node separately with a marker
+to indicate where it appears in the tree.
+
+(LAMBDAp fact_7 (c_6 n_1)
+  (letrec1 1 ^c_14))
+
+  (LAMBDAc c_14 (x_13 loop_2)
+    (letrec2 1 ^c_12 x_13 ^loop_9))
+
+    (LAMBDAc c_12 ()
+      (unknown-tail-call 0 c_6 loop_2 n_1 '1))
+
+    (LAMBDAp loop9 (c_8 n_3 r_4)
+      (test 2 ^g_10 ^g_11 (< n_3 '2)))
+
+      (LAMBDAc g_10 ()
+        (unknown-return 0 c_8 r_4))
+
+      (LAMBDAc g_11 ()
+        (unknown-tail-call 0 c_8 loop_2 (- n_3 '1) (* n_3 r_4)))
+
+The labels used are the names and id's of the lambda nodes, with a ^ in front
+to distinguish them from variables.  The code for each lambda is indented
+slightly more than the lambda in which it actually occurs.  To make the
+distinction between continuation and non-continuation lambdas clearer the
+number of continuation arguments to a call is printed just after the primop
+(for example the first two arguments to TEST are continuations).
+
+The first three calls form a basic block because the first two calls have
+exactly one continuation apiece.  To make this more easily seen these
+calls can be printed using a more condensed notation:
+
+(LAMBDAp fact_7 (c_6 n_1)
+  (LET* (((x_13 loop_2) (letrec1))
+         (()            (letrec2 x_13 ^loop_9)))
+    (unknown-tail-call 0 c_6 loop_2 n_1 '1)))
+
+The continuations are not printed as arguments but instead their variables
+are printed to the left of the call in a parody of Scheme's LET*.  The results
+of the LETREC1 are bound to the variables X_13 and LOOP_2 as would happen with
+the real LET* (if it allowed calls to return multiple values).
+
+Finally, here is the way the code for FACT is actually printed:
+
+7   (P fact_7 (c_6 n_1)
+14    (LET* (((x_13 loop_2)
+                         (letrec1))
+12           (()         (letrec2 x_13 ^loop_9)))
+        (unknown-tail-call 0 c_6 loop_2 n_1 '1)))
+
+9    (P loop_9 (c_8 n_3 r_4)
+       (test 2 ^g_10 ^g_11 (< n_3 '2)))
+
+10    (C g_10 ()
+        (unknown-return 0 c_8 r_4))
+
+11    (C g_11 ()
+        (unknown-tail-call 0 c_8 loop_2 (- n_3 '1) (* n_3 r_4)))
+
+The ID number of every lambda node is printed out at the beginning of the
+line on which the code for the lambda appears.  This is redundant for the
+lambdas that are not printed as part of a LET*.  The word `LAMBDA' is not
+printed.  The (letrec1) call appears on a new line because the printer
+indents the calls in LET* a fixed amount.
+
+The reason for printing the ID numbers is so that the actual nodes can be
+obtained.  Once a lambda has been printed (either by the pretty printer or
+by the regular printer), (NODE-UNHASH <id>) will return it:
+
+  scheme-compiler> (node-unhash 9)
+  '#{Node lambda loop 9}
+  scheme-compiler> ,inspect ##
+  '#{Node lambda loop 9}
+
+   [0: variant] 'lambda
+   [1: parent] '#{Node call letrec2}
+   [2: index] 2
+   [3: simplified?] #t
+   [4: flag] #f
+   [5: stuff-0] '#{Node call test}
+   [6: stuff-1] '(#{Variable n 3} #{Variable r 4})
+   [7: stuff-2] '(#{Name #} (n r) (if # r #))
+   [8: stuff-3] '#{Lambda-data}
+
+----------------------------------------------------------------
+Simplification.
+
+The factorial procedure above is how it looks when originally translated
+into a node tree.  The next step in compilation is to simplify the tree,
+doing constant folding, identifying call points, and so on.  The simplified
+version of FACT is:
+
+7   (P fact_7 (c_6 n_1)
+14    (LET* (((x_13 loop_2)
+                         (letrec1))
+12           (()         (letrec2 x_13 ^loop_9)))
+        (jump 0 loop_2 n_1 '1)))
+
+9    (J loop_9 (n_3 r_4)
+       (test 2 ^g_10 ^g_11 (< n_3 '2)))
+
+10    (C g_10 ()
+        (unknown-return 0 c_6 r_4))
+
+11    (C g_11 ()
+        (jump 0 loop_2 (+ '-1 n_3) (* n_3 r_4)))
+
+The only change is that the loop has been turned into a JUMP lambda.
+
+----------------------------------------------------------------
+Still to describe:
+ protocol determination
+ simplifier moving stuff down, duplicating, later passes move values back up

@@ -1,0 +1,46 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<!-- HTML file produced from file: manual.tex --
+ -- using Hyperlatex v 2.3.1 (c) Otfried Cheong--
+ -- on Emacs 21.4 (patch 15) "Security Through Obscurity" XEmacs Lucid, Fri Dec  3 20:36:24 2004 -->
+<HEAD>
+<TITLE>Scheme 48 Manual -- Debugging multithreaded programs</TITLE>
+
+</HEAD><BODY BGCOLOR="#ffffff">
+<EM>Scheme 48 Manual</EM> | <A HREF="s48manual.html#top_node">Contents</A> | In Chapter: <A HREF="s48manual_57.html">Threads</A><BR>Previous: <A HREF="s48manual_60.html">Debugging multithreaded programs</A> | Next: <A HREF="s48manual_60.html">Debugging multithreaded programs</A>
+<H2>Debugging multithreaded programs</H2>
+<P>Debugging multithreaded programs can be difficult.
+<P>As described <A HREF="s48manual_22.html">here</A>, when any thread signals an
+ error, Scheme&nbsp;48 stops running all of the threads at that command level.
+<P> The following procedure (exported by the structure
+ <CODE>debug-messages</CODE>) is useful in debugging multi-threaded
+ programs.
+<UL><LI><CODE>(debug-message<I>&nbsp;element<I><sub>0</sub></I>&nbsp;...</I>)</CODE><A NAME="1">&nbsp;</A>
+</UL>
+<CODE>Debug-message</CODE> prints the elements to `<CODE>stderr</CODE>', followed by a
+ newline.
+The only types of values that <CODE>debug-message</CODE> prints in full are small
+ integers (fixnums), strings, characters, symbols, booleans, and the empty list.
+Values of other types are abbreviated as follows:
+<BLOCKQUOTE><CENTER>
+<TABLE><TR><TD COLSPAN="1" ALIGN="LEFT">
+
+ pair       </TD><TD COLSPAN="1" ALIGN="LEFT">   <CODE>(...)</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+vector     </TD><TD COLSPAN="1" ALIGN="LEFT">   <CODE>#(...)</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+procedure  </TD><TD COLSPAN="1" ALIGN="LEFT">   <CODE>#{procedure}</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+record     </TD><TD COLSPAN="1" ALIGN="LEFT">   <CODE>#{&lt;name of record type&gt;}</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+all others </TD><TD COLSPAN="1" ALIGN="LEFT">   <CODE>???</CODE></TD></TR>
+<TR><TD COLSPAN="1" ALIGN="LEFT">
+</TD></TR></TABLE>
+
+</CENTER></BLOCKQUOTE>
+The great thing about <CODE>debug-message</CODE> is that it bypasses Scheme&nbsp;48's
+ I/O and thread handling.
+The message appears immediately, with no delays or errors.
+<P><P>
+  
+Previous: <A HREF="s48manual_60.html">Debugging multithreaded programs</A> | Next: <A HREF="s48manual_60.html">Debugging multithreaded programs</A></BODY></HTML>
