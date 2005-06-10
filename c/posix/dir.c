@@ -235,7 +235,7 @@ posix_open(s48_value path, s48_value options, s48_value mode)
   c_options = s48_extract_file_options(options);
   c_path = s48_extract_byte_vector(path);
 
-  if (O_WRONLY & c_options)
+  if ((O_WRONLY & c_options) || (O_RDWR & c_options))
     c_options |= O_NONBLOCK;
 
   if (mode == S48_FALSE)
