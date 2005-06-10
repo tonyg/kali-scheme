@@ -245,9 +245,9 @@ posix_open(s48_value path, s48_value options, s48_value mode)
     RETRY_OR_RAISE_NEG(fd, open(c_path, c_options, c_mode));
   }
 
-  channel = s48_add_channel(O_WRONLY & c_options
-			      ? S48_CHANNEL_STATUS_OUTPUT
-			      : S48_CHANNEL_STATUS_INPUT,
+  channel = s48_add_channel(O_RDONLY & c_options
+			      ? S48_CHANNEL_STATUS_INPUT
+			      : S48_CHANNEL_STATUS_OUTPUT,
 			    path,
 			    fd);
 
