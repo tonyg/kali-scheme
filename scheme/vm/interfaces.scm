@@ -213,9 +213,11 @@
 (define-interface struct-interface
   (export vm-pair? vm-pair-size vm-cons vm-car vm-set-car! vm-cdr vm-set-cdr!
 	  vm-symbol? vm-symbol-size vm-make-symbol vm-symbol->string
+          vm-symbol-uid vm-set-symbol-uid!		; Kali code
 	  vm-symbol-next vm-set-symbol-next!
 	  closure? closure-size make-closure closure-template closure-env
 	  location? location-size make-location contents set-contents! location-id
+          location-uid set-location-uid!		; Kali code
 	  cell? cell-size make-cell cell-ref cell-set!
 	  weak-pointer? weak-pointer-size make-weak-pointer weak-pointer-ref
 
@@ -223,6 +225,24 @@
 	  shared-binding-name shared-binding-is-import?
 	  shared-binding-ref shared-binding-set!
 	  shared-binding-next set-shared-binding-next!
+          shared-binding-uid set-shared-binding-uid!    ; Kali code
+
+          ;; Begin Kali code
+	  proxy? proxy-size really-make-proxy
+	  proxy-data
+
+	  proxy-data? proxy-data-size make-proxy-data
+	  proxy-data-uid set-proxy-data-uid!
+	  proxy-data-owner
+	  proxy-data-value set-proxy-data-value!
+	  proxy-data-reference-count set-proxy-data-reference-count!
+	  proxy-data-self set-proxy-data-self!
+
+	  address-space? make-address-space
+	  address-space-uid set-address-space-uid!
+	  address-space-decode-vector set-address-space-decode-vector!
+	  address-space-proxy-vector set-address-space-proxy-vector!
+	  ;; End Kali code
 
 	  channel? channel-size make-channel
 	  channel-status          set-channel-status!
@@ -272,7 +292,8 @@
 	  template? template-size make-template template-length
 	  template-ref template-set!
 	  template-code template-byte-code template-name
-
+          template-uid set-template-uid!		; Kali code
+           
 	  vm-string? vm-string-size vm-make-string vm-string-length
 	  vm-string-ref vm-string-set!
 	  enter-string enter-string+gc extract-string

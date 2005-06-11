@@ -251,8 +251,10 @@
 	    low-level
 	    ports
 	    primitives
+            proxy-internals		; Kali code
 	    low-proposals
 	    scheme-level-0
+            session-data		; Kali code
 	    shared-bindings
 	    silly
 	    source-file-names

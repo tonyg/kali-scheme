@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 26")
+(define architecture-version "Kali 26")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -171,6 +171,7 @@
   ; If the byte = 0 then do not log in the current proposal
   (stored-object-indexed-ref  stob byte 2)	; vector + offset
   (stored-object-indexed-set! stob byte 3)	; vector + offset + value
+  (untyped-indexed-set! 3) ; vector + offset + value      ; Kali code
 
   (make-byte-vector 2)
   (byte-vector-length 1)
@@ -206,6 +207,9 @@
   (byte-vector-logging-ref 2)
   (byte-vector-logging-set! 3)
 
+  (proxy-data-has-local-value? 1)	; Kali code
+  (proxy-data-local-ref 1)		; Kali code
+
   ;; Misc
   ((unassigned unspecific))
   (trap 1)			; raise exception
@@ -235,6 +239,8 @@
   (time 2)
   (vm-extension 2)		; access to extensions of the virtual machine
   (return-from-callback 2)	; return from an callback
+  (really-encode 2)		; Kali code
+  (really-decode 3)		; Kali code
 
   ;; Unnecessary primitives
   (string=? 2)
@@ -297,6 +303,7 @@
    no-current-proposal
    native-code-not-supported
    illegal-exception-return
+   unassigned-proxy-data			; Kali code
    ))
 
 ; Used by (READ-CHAR) and (WRITE-CHAR) to get the appropriate ports from
@@ -469,6 +476,9 @@
    template
    weak-pointer
    shared-binding
+   proxy			; Kali code
+   proxy-data			; Kali code
+   address-space		; Kali code
    unused-d-header1
    unused-d-header2
 
@@ -490,8 +500,10 @@
   '((pair pair? cons
       (car set-car!) (cdr set-cdr!))
     (symbol symbol? #f       ; RTS calls op/string->symbol
-      (symbol->string))
+      (symbol->string)
+      (symbol-uid set-symbol-uid!))  ; Kali code
     (location location? make-location
+      (location-uid set-location-uid!)
       (location-id set-location-id!)
       (contents set-contents!))
     (cell cell? make-cell
@@ -503,7 +515,8 @@
     (shared-binding shared-binding? make-shared-binding
       (shared-binding-name)
       (shared-binding-is-import?)
-      (shared-binding-ref shared-binding-set!))
+      (shared-binding-ref shared-binding-set!)
+      (external-uid set-external-uid!))		; Kali code
     (port port? make-port
       (port-handler)
       (port-status  set-port-status!)

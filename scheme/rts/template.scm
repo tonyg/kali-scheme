@@ -18,14 +18,15 @@
 ;(define template-ref vector-ref)
 ;(define template-set! vector-set!)
 
-(define template-overhead 4)
+(define template-overhead 5)
 
 (define (template-code       tem) (template-ref tem 0))
 (define (template-byte-code  tem) (template-ref tem 1))
 (define (template-info       tem) (template-ref tem 2))
 (define (template-package-id tem) (template-ref tem 3))
+(define (template-uid        tem) (template-ref tem 4))	; Kali code
 (define (set-template-code!       tem cv)   (template-set! tem 0 cv))
 (define (set-template-byte-code!  tem cv)   (template-set! tem 1 cv))
 (define (set-template-info!       tem info) (template-set! tem 2 info))
 (define (set-template-package-id! tem id)   (template-set! tem 3 id))
-
+(define (set-template-uid!        tem uid)  (template-set! tem 4 uid)) ; Kali code

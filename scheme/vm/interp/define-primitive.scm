@@ -113,6 +113,10 @@
 (define code-vector-> (input-type code-vector? no-coercion))
 (define vm-integer->  (input-type (lambda (x) (or (fixnum? x)
 						  (bignum? x))) no-coercion))
+(define proxy->       (input-type proxy?         no-coercion))	; Kali code
+(define proxy-data->  (input-type proxy-data?    no-coercion))	; Kali code
+(define aspace->      (input-type address-space? no-coercion))	; Kali code
+
 ; Output coercion
 
 (define (return val)

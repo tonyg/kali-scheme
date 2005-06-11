@@ -4,23 +4,27 @@
 
 ;;;; Extended number support
 
+; Kali hides the extended number types in proxies so that they will be
+; shared between address spaces.
+
 (define-simple-type :extended-number (:number) extended-number?)
 
 (define-record-type extended-number-type :extended-number-type
   (really-make-extended-number-type field-names supers priority predicate id)
   extended-number-type?
-  (field-names extended-number-type-field-names)
-  (supers      extended-number-type-supers)
-  (priority    extended-number-type-priority)
-  (predicate   extended-number-predicate)
-  (id	       extended-number-type-identity))
+  (field-names x-extended-number-type-field-names) ; Kali code
+  (supers      x-extended-number-type-supers)      ; Kali code
+  (priority    x-extended-number-type-priority)    ; Kali code
+  (predicate   x-extended-number-predicate)        ; Kali code
+  (id	       x-extended-number-type-identity))   ; Kali code
 
 (define-record-discloser :extended-number-type
   (lambda (e-n-t)
     (list 'extended-number-type (extended-number-type-identity e-n-t))))
 
 (define (make-extended-number-type field-names supers id)
-  (letrec ((t (really-make-extended-number-type
+  (letrec ((t (make-proxy                          ; Kali code
+               (really-make-extended-number-type
 	       field-names
 	       supers
 	       (+ (apply max
@@ -30,7 +34,7 @@
 	       (lambda (x)
 		 (and (extended-number? x)
 		      (eq? (extended-number-type x) t)))
-	       id)))
+                id))))
     t))
 
 (define (extended-number-type x) (extended-number-ref x 0))

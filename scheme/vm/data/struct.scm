@@ -20,7 +20,8 @@
   make-symbol                           		; hidden from RTS
   ()
   (symbol-next set-symbol-next!))       		; hidden from RTS
-(define-shared-primitive-data-type closure #f #t)
+; In non-Kali code, immutable? flag was #T.
+(define-shared-primitive-data-type closure #f #f)	; Kali change
 (define-shared-primitive-data-type location)
 (define-shared-primitive-data-type cell)
 (define-shared-primitive-data-type weak-pointer)
@@ -28,6 +29,9 @@
   #f
   ()
   (shared-binding-next set-shared-binding-next!))	; hidden from RTS
+(define-shared-primitive-data-type proxy)		; Kali code
+(define-shared-primitive-data-type proxy-data)		; Kali code
+(define-shared-primitive-data-type address-space)	; Kali code
 (define-shared-primitive-data-type port)
 (define-shared-primitive-data-type channel #f #f
   make-channel                           		; hidden from RTS

@@ -59,7 +59,8 @@
 	memory data stob struct allocation vmio
 	return-codes
 	gc-roots gc gc-util
-	heap stack external)
+	heap stack external
+        encode/decode)		; Kali code
   (for-syntax (open scheme destructuring signals))
   (files (interp interp)
 	 (interp call)
@@ -317,7 +318,8 @@
 
 (define-structures ((heap heap-interface)
 		    (heap-gc-util heap-gc-util-interface)
-		    (heap-init heap-init-interface))
+		    (heap-init heap-init-interface)
+                    (heap-internal heap-internal-interface))	; Kali code
   (open prescheme ps-receive vm-utilities vm-architecture memory data
 	ps-memory)
   (files (heap heap)))

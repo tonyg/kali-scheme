@@ -1,0 +1,11 @@
+To make kali, follow the instructions in INSTALL.  It has to be
+installed some where in your PATH.  (Before you do a
+   make install
+you can try it out by running the `go' file in the source directory.)
+
+Documentation on using Kali can be found in doc/kali.{ps|html}.
+
+If you have problems building or using Kali, please send mail to
+   kali-request@research.nj.nec.com
+and we'll see if we can be of any help.
+

@@ -187,8 +187,11 @@
 
 (define-structure more-types (export :closure :code-vector :location :double
 				     :template :channel :port :weak-pointer
-				     :shared-binding :cell)
+				     :shared-binding :cell
+                                     :proxy :proxy-data :address-spac) ; Kali code
   (open scheme-level-1 methods
+        proxy-internals address-space-internals			; Kali code
+ 	records	fluids-internal					; Kali code
 	closures code-vectors locations cells templates channels ports
 	primitives shared-bindings)
   (begin (define-simple-type :closure     (:value) closure?)
@@ -202,6 +205,19 @@
 	 (define-simple-type :weak-pointer (:value) weak-pointer?)
 	 (define-method &disclose ((obj :weak-pointer)) (list 'weak-pointer))
 	 (define-simple-type :shared-binding (:value) shared-binding?)
+; Begin Kali code
+	 (define-simple-type :proxy	  (:value) proxy?)
+	 (define-method &disclose ((obj :proxy))
+	   (cond ((not (proxy-has-local-value? obj))
+		  (list 'proxy (proxy-data-uid (proxy-data obj))))
+		 ((or (record-type? obj)
+		      (fluid? (proxy-local-ref obj)))
+		  (disclose (proxy-local-ref obj)))
+		 (else
+		  (list 'proxy (proxy-data-uid (proxy-data obj))))))
+	 (define-simple-type :address-space (:value) address-space?)
+	 (define-simple-type :proxy-data (:value) proxy-data?)
+; End Kali code	 
 	 (define-method &disclose ((obj :shared-binding))
 	   (list (if (shared-binding-is-import? obj)
 		     'imported-binding

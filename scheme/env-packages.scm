@@ -66,6 +66,7 @@
 	handle
 	display-conditions	; display-condition
 	weak
+        static-fluid-env        ; Kali code
 	debug-messages		; for debugging
 	signals			; error
 	i/o			; current-error-port
@@ -80,6 +81,25 @@
 	conditions)              ; define-condition-type
   (files (env user)
 	 (env command-level)))
+
+; Begin Kali code
+;
+; We don't want to copy the shared base of the fluid environment between
+; address spaces, so we chop it off.
+
+(define-structure static-fluid-env (export save-base-fluid-env! fluid-env-link)
+  (open scheme session-data fluids-internal)
+  (begin
+    (define base-fluid-env-slot
+      (make-session-data-slot! '()))
+
+    (define (save-base-fluid-env! env)
+      (session-data-set! base-fluid-env-slot env))
+
+    (define (fluid-env-link fluid)
+      (real-fluid-lookup (session-data-ref base-fluid-env-slot) fluid))))
+
+; End Kali code
 
 (define-structure basic-commands basic-commands-interface
   (open scheme-level-2
@@ -169,6 +189,7 @@
         closures
         packages-internal       ; location-info-tables
         debug-data
+        proxy-internals         ; Kali code
 	segments                ; get-debug-data
         enumerated              ; enumerand->name
         weak                    ; weak-pointer?

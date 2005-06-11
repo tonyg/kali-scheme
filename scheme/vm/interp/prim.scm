@@ -446,3 +446,21 @@
 ; in the usual way.
 ; For more on pclsring see `Pclsring: Keeping Process State Modular' by Alan
 ; Bawden (ftp.ai.mit.edu:pub/alan/pclsr.memo).
+
+; Begin Kali code
+
+(define-primitive untyped-indexed-set! (any-> fixnum-> any->)
+  (lambda (stob index value)
+    (cond ((or (not (stob? stob))
+	       (not (d-vector-header? (stob-header stob))))
+	       ; (immutable? stob)  ; has to be able to work on immutable objects
+	   (raise-exception wrong-type-argument 0
+			    stob (enter-fixnum index) value))
+	  ((valid-index? index (d-vector-length stob))
+	   (d-vector-set! stob index value)
+	   (goto return unspecific-value))
+	  (else
+	   (raise-exception index-out-of-range 0
+			    stob (enter-fixnum index) value)))))
+
+; End Kali code

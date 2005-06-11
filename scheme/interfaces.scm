@@ -64,6 +64,8 @@
 	  continuation?
 	  copy-bytes!
 	  current-thread		;fluids threads
+ 	  decode			; Kali code
+ 	  encode			; Kali code
 	  double?
 	  eof-object                    ;i/o-internal re-exports this
 	  extended-number-length
