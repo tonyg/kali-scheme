@@ -137,6 +137,53 @@ packages := $(addprefix ../scheme/, $(packages-raw)) filenames.scm
 $(srcdir)/filenames.make: $(packages)
 	cd $(srcdir)/.. && $(RUNNABLE) -a batch < scheme48/filenames.scm
 
+# --------------------
+# Various small images for debugging low-level changes
+
+LOAD_DEBUG = \
+	 $(START_LINKER); \
+	 echo \(load-configuration \"scheme/vm/shared-interfaces.scm\"\); \
+	 echo \(load-configuration \"scheme/interfaces.scm\"\); \
+	 echo \(load-configuration \"scheme/packages.scm\"\); \
+	 echo \(flatload debug-structures\)
+
+tiny.image: ../scheme/debug/tiny-packages.scm \
+	    ../scheme/debug/tiny.scm
+	cd $(srcroot)/scheme48 && \
+	($(START_LINKER); \
+	 echo \(load-configuration \"scheme/debug/tiny-packages.scm\"\); \
+	 echo \(link-simple-system \'\(scheme/debug tiny\) \'start tiny-system\)) \
+	| $(LINKER_RUNNABLE)
+	mv $(srcroot)/scheme48/scheme/debug/tiny.{debug,image} .
+
+low-test.image: ../scheme/debug/low-test-packages.scm \
+		../scheme/debug/low-test.scm
+	cd $(srcroot)/scheme48 && \
+	($(START_LINKER); \
+	 echo \(load-configuration \"scheme/debug/low-test-packages.scm\"\); \
+	 echo \(link-simple-system \'\(scheme/debug low-test\) \'start low-test-system\)) \
+	| $(LINKER_RUNNABLE)
+	mv $(srcroot)/scheme48/scheme/debug/low-test.{debug,image} .
+
+little.image: $(CONFIG_FILES) ../scheme/debug-packages.scm
+	cd $(srcroot)/scheme48 &&			\
+	($(LOAD_DEBUG); echo \(link-little-system\))	\
+	| time $(LINKER_RUNNABLE)
+	mv $(srcroot)/scheme48/scheme/debug/little.{debug,image} .
+
+mini.image: $(CONFIG_FILES)
+	cd $(srcroot)/scheme48 &&			\
+	($(LOAD_DEBUG); echo \(link-mini-system\))	\
+	| $(LINKER_RUNNABLE)
+	mv $(srcroot)/scheme48/scheme/debug/mini.{debug,image} .
+
+medium.image: $(CONFIG_FILES)
+	cd $(srcroot)/scheme48 &&				\
+	($(LOAD_DEBUG); echo \(flatload compiler-structures\);	\
+	 echo \(link-medium-system\)) 				\
+	| $(LINKER_RUNNABLE)
+	mv $(srcroot)/scheme48/scheme/debug/medium.{debug,image} .
+
 include $(makefiles)/programs.mk
 
 install: $(programs)
