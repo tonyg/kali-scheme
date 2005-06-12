@@ -213,8 +213,8 @@
 		    (vm-set-symbol-uid! thing false))
 		   ((template)
 		    (set-template-uid! thing false))
-		   ((external)
-		    (set-external-uid! thing false))
+		   ((shared-binding)
+		    (set-shared-binding-uid! thing false))
 		   ((address-space)
 		    (set-address-space-uid! thing false))
 		   ((address-space)
@@ -260,16 +260,16 @@
 	 (next-uid (extract-fixnum (vm-vector-ref decode-vector freelist-index)))
 	 (minimum-new-length next-uid)
 	 (want-length (max (* old-length 2) minimum-new-length))
-	 (new-length (cond ((available? (vm-vector-size want-length))
+	 (new-length (cond ((s48-available? (vm-vector-size want-length))
 			    want-length)
-			   ((available? (vm-vector-size minimum-new-length))
+			   ((s48-available? (vm-vector-size minimum-new-length))
 			    minimum-new-length)
 			   (else
 			    0))))
     (if (= new-length 0)
 	#f
 	(let ((new-vector (vm-make-vector new-length
-					  (preallocate-space
+					  (ensure-space
 					   (vm-vector-size new-length)))))
 	  (setup-new-decode-vector! new-vector decode-vector start proxies?)
 	  (if proxies?
@@ -350,10 +350,11 @@
 	   (make-element (enum element uid)
 			 (extract-fixnum
 			  (get-uid thing vm-symbol-uid vm-set-symbol-uid!))))
-	  ((external)
+	  ((shared-binding)
 	   (make-element (enum element uid)
 			 (extract-fixnum
-			  (get-uid thing external-uid set-external-uid!))))
+			  (get-uid thing shared-binding-uid
+                                   set-shared-binding-uid!))))
 	  ((address-space)
 	   (make-element (enum element uid)
 			 (extract-fixnum
@@ -471,10 +472,10 @@
 	       1     ; cells
 	       null  ; initial result list
 	       (lambda (ptr result)
-		 (if (available? vm-pair-size)
+		 (if (s48-available? vm-pair-size)
 		     (vm-cons (fetch ptr)
 			      result
-			      (preallocate-space vm-pair-size))
+			      (ensure-space vm-pair-size))
 		     false))))
 
 ;----------------------------------------------------------------

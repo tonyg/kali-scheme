@@ -160,6 +160,15 @@
   (files (interp stack)
 	 (interp stack-gc)))
 
+; Kali code.
+(define-structure encode/decode (export encode decode decode-space-multiplier)
+  (open prescheme ps-receive
+	vm-architecture memory data stob allocation
+	enum-case
+	heap heap-internal struct)
+  (files transmit))
+; end Kali code
+
 (define-structure vmio vmio-interface
   (open prescheme ps-receive channel-io vm-utilities
 	data stob struct allocation memory

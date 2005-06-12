@@ -76,6 +76,7 @@
 
 (define-interface heap-interface
   (export s48-available
+          s48-available?
 	  s48-heap-size
 
 	  s48-find-all
@@ -190,6 +191,11 @@
 	  clean-imported-bindings
 	  mark-image-channels-closed!
 	  find-resumer-records))
+
+(define-interface heap-internal-interface	; Kali code
+  (export heap-limits				; Kali code
+	  heap-pointer				; Kali code
+	  set-heap-pointer!))			; Kali code
 
 (define-interface heap-init-interface
   (export s48-initialize-heap

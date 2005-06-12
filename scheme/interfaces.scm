@@ -783,6 +783,44 @@
 	  string-hash
 	  default-hash-function))
 
+; start Kali code.
+
+(define-interface proxy-internals-interface
+  (export make-proxy make-nonlocal-proxy
+	  proxy?
+	  proxy-has-local-value?
+	  proxy-local-ref
+	  proxy-local-set!
+	  any-proxy-value initialize-any-proxy-value!
+	  proxy-data
+
+	  proxy-data?
+	  proxy-data->proxy
+	  proxy-data-uid set-proxy-data-uid!
+	  proxy-data-owner set-proxy-data-owner!
+	  proxy-data-value
+	  proxy-data-has-local-value?
+	  proxy-data-reference-count set-proxy-data-reference-count!
+	  proxy-base-count
+	  proxy-data-self
+	  proxy-data-waiters set-proxy-data-waiters!))
+
+(define-interface proxy-interface
+  (export make-proxy
+	  proxy?
+	  proxy-local-ref proxy-local-set!
+	  any-proxy-value))
+
+(define-interface address-space-internals-interface
+  (export make-address-space
+	  address-space?
+	  address-space-uid
+	  address-space-decode-vector set-address-space-decode-vector!
+	  address-space-proxy-vector set-address-space-proxy-vector!
+	  address-space-data))
+
+; end Kali code
+ 
 ;----------------
 ; Beginning of compiler interfaces
 

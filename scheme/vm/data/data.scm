@@ -299,3 +299,25 @@
 (define (remove-stob-tag stob)
   (- stob (enum tag stob)))
 
+;----------------
+; Kali only code:
+; For encode/decode
+
+(define element-type-field-width
+  (- 8 tag-field-width))
+
+(define (make-element type info)
+  (make-descriptor (enum tag stob)
+                   (adjoin-bits info type element-type-field-width)))
+
+(define (element-type element)
+  (assert (stob? element))
+  (low-bits (descriptor-data element)
+	    element-type-field-width))
+
+(define (element-info element)
+  (assert (stob? element))
+  (high-bits (descriptor-data element)
+              element-type-field-width))
+
+; end Kali code

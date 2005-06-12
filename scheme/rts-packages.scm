@@ -188,7 +188,7 @@
 (define-structure more-types (export :closure :code-vector :location :double
 				     :template :channel :port :weak-pointer
 				     :shared-binding :cell
-                                     :proxy :proxy-data :address-spac) ; Kali code
+                                     :proxy :proxy-data :address-space) ; Kali code
   (open scheme-level-1 methods
         proxy-internals address-space-internals			; Kali code
  	records	fluids-internal					; Kali code

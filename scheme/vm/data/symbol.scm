@@ -9,9 +9,11 @@
   (lambda (ignore)
     (+ vm-symbol-size
        hash-table-entry-size))
-  (let ((searcher (table-searcher vm-symbol->string
-				  vm-symbol-next
-				  vm-make-symbol)))
+  (let* ((maker (lambda (string next key)
+                  (vm-make-symbol string next key false)))
+         (searcher (table-searcher vm-symbol->string
+                                   vm-symbol-next
+                                   maker)))
     (lambda (string key)
       (searcher *the-symbol-table* string key)))
   return)

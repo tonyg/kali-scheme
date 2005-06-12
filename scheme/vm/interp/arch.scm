@@ -516,7 +516,7 @@
       (shared-binding-name)
       (shared-binding-is-import?)
       (shared-binding-ref shared-binding-set!)
-      (external-uid set-external-uid!))		; Kali code
+      (shared-binding-uid set-shared-binding-uid!))		; Kali code
     (port port? make-port
       (port-handler)
       (port-status  set-port-status!)
@@ -531,5 +531,24 @@
       (channel-id)
       (channel-os-index)
       (channel-close-silently?))
+; Begin Kali code    
+    (proxy proxy? really-make-proxy
+      (proxy-data))
+    (proxy-data proxy-data? make-proxy-data
+      (proxy-data-uid set-proxy-data-uid!)
+      (proxy-data-owner set-proxy-data-owner!)
+      (proxy-data-value set-proxy-data-value!)
+      (proxy-data-reference-count set-proxy-data-reference-count!)
+      (proxy-data-self set-proxy-data-self!)
+      (proxy-data-waiters set-proxy-data-waiters!))
+    (address-space address-space? make-address-space
+      (address-space-uid set-address-space-uid!)
+      (address-space-decode-vector set-address-space-decode-vector!)
+      (address-space-proxy-vector  set-address-space-proxy-vector!)
+      (address-space-data))		; catch-all slot for the RTS
+; End Kali code    
     ))
 
+(define proxy-base-count 67108864)  ; (arithmetic-shift 1 26))	; Kali code
+(define max-proxy-debit 4096)	    ; (arithmetic-shift 1 12))	; Kali code
+(define max-proxy-count (* max-proxy-debit 32))			; Kali code

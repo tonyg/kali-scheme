@@ -114,6 +114,14 @@
   (address+ address (+ stob value))  ; for the type checker
   (unspecific))
 
+; Kali only code:
+
+(define (heap-limits)
+  (values s48-*hp* *newspace-begin* *newspace-end* *oldspace-begin* *oldspace-end*))
+
+; end Kali code
+
+
 ;----------------
 ; Keeping track of all the areas.
 

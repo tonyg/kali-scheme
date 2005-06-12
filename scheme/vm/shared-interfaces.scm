@@ -1,4 +1,3 @@
-
 ; Two interfaces that are shared with the Scheme code.  We can't share the
 ; structure definitions, but this is a start.
 
@@ -49,6 +48,10 @@
 	  exception-cont-code-index
 	  exception-cont-exception-index
 	  exception-cont-instruction-size-index
+
+	  proxy-base-count		; Kali code
+	  max-proxy-debit		; Kali code
+	  max-proxy-count		; Kali code
 	  ))
 
 ; Data structures
@@ -91,6 +94,10 @@
 	  immutable-header? make-header-immutable
 	  d-vector-header? b-vector-header?
 	  max-stob-contents-size-in-cells
+
+	  make-element				; Kali code
+	  element-type				; Kali code
+	  element-info				; Kali code
 
 	  add-stob-tag remove-stob-tag
 	  ))
