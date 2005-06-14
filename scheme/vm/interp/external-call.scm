@@ -127,7 +127,7 @@
 
 (define lookup-imported-binding
   (let* ((maker (lambda (string next key)
-		  (make-shared-binding string true unspecific-value next key false)))
+		  (make-shared-binding string true unspecific-value false next key)))
 	 (lookup (table-searcher shared-binding-name
 				 shared-binding-next
 				 maker)))
@@ -138,7 +138,7 @@
 
 (define lookup-exported-binding
   (let* ((maker (lambda (string next key)
-		  (make-shared-binding string false unspecific-value next key false)))
+		  (make-shared-binding string false unspecific-value false next key)))
 	 (lookup (table-searcher shared-binding-name
 				 shared-binding-next
 				 maker)))

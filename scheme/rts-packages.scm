@@ -18,6 +18,7 @@
 (define-structures ((record-types record-types-interface)
 		    (records-internal records-internal-interface))
   (open scheme-level-1 records signals
+        proxy-internals ; Kali code
 	primitives)
   (files (rts record))
   (optimize auto-integrate))

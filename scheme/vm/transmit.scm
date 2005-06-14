@@ -104,7 +104,7 @@
 
 (define (make-message-vector start)
   (let ((size (address-difference *transmit-hp* (address1+ start))))
-    (store! start (make-header (enum stob code-vector) size))
+    (store! start (make-header (enum stob byte-vector) size))
     (address->stob-descriptor (address1+ start))))
 
 (define (encoding-lost!)
@@ -534,7 +534,7 @@
     (set! *new-uids* null)
     (set! *bad-count-proxies* null)
     (decode-message-body (address1+ (address1+ start)) limit aspace key)
-    (stob-header-set! message (make-header (enum stob code-vector)
+    (stob-header-set! message (make-header (enum stob byte-vector)
 					   (cells->bytes 1)))
     (values (address->stob-descriptor
 	     (address+ *start* (element-info (fetch (address1+ start)))))
@@ -626,7 +626,7 @@
 	 (aspace (extract-fixnum (fetch data-addr)))
 	 (uid (extract-fixnum (fetch (address1+ data-addr)))))
     ;; make data look like a code vector to the heap scanner
-    (store! data-addr (make-header (enum stob code-vector)
+    (store! data-addr (make-header (enum stob byte-vector)
 				   (cells->bytes 1)))
     (values aspace uid)))
 
@@ -639,7 +639,7 @@
 	  (uid (extract-fixnum (fetch (address1+ data-addr))))
 	  (count (extract-fixnum (fetch (address1+ (address1+ data-addr))))))
       ;; make data look like a code vector to the heap scanner
-      (store! data-addr (make-header (enum stob code-vector)
+      (store! data-addr (make-header (enum stob byte-vector)
 				     (cells->bytes 2)))
       (values aspace uid count))))
 

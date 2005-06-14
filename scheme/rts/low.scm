@@ -59,7 +59,7 @@
 ; be confusing.  Here we just test it against other values.
 
 (define (make-undefined-location id)
-  (let ((loc (make-location id #f)))
+  (let ((loc (make-location id #f #f)))
     (set-location-defined?! loc #f)
     loc))
 
