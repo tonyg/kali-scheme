@@ -209,13 +209,20 @@
 	  (from-address (address->vector-index from))
 	  (to-vector (address->vector to))
 	  (to-address (address->vector-index to)))
-      (do ((i 0 (+ i 1)))
-	  ((>= i count))
-	(code-vector-set! to-vector
-			  (+ i to-address)
-			  (code-vector-ref from-vector
-					   (+ i from-address)))))))
-
+      (if (>= from-address to-address)
+	  (do ((i 0 (+ i 1)))
+	      ((>= i count))
+	    (code-vector-set! to-vector
+			      (+ i to-address)
+			      (code-vector-ref from-vector
+					       (+ i from-address))))
+	  (do ((i (- count 1) (- i 1)))
+	      ((negative? i))
+	    (code-vector-set! to-vector
+			      (+ i to-address)
+			      (code-vector-ref from-vector
+					       (+ i from-address))))))))
+  
 (define (memory-equal? from to count)
   (let ((from (address-index from))
 	(to (address-index to)))

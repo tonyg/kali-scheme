@@ -147,7 +147,7 @@
 
 (define-c-generator copy-memory! #t
   (lambda (call port indent)
-    (format port "memcpy((void *)") 
+    (format port "memmove((void *)") 
     (c-value (call-arg call 1) port)
     (format port ", (void *)") 
     (c-value (call-arg call 0) port)
