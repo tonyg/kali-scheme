@@ -108,7 +108,8 @@ psbool ps_check_fd(long fd_as_long, psbool is_read, long *status)
 		   &timeout);
     if (ready == 0)
 	return PSFALSE;
-    else if (ready == 1)
+    /* Mike has witnessed it return 2 on Mac OS X. */
+    else if (ready >= 1)
 	return PSTRUE;
     else if (errno != EINTR) {
 	*status = errno;
