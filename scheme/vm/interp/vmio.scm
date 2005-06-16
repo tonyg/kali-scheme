@@ -367,7 +367,7 @@
     (write-error-string "Channel closed: ")
     (if (fixnum? id)
 	(write-error-integer (extract-fixnum id))
-	(write-error-string (extract-low-string id)))
+	(write-vm-string id (current-error-port)))
     (write-error-string " ")
     (write-error-integer (extract-fixnum (channel-os-index channel)))
     (write-error-newline)
