@@ -1,6 +1,6 @@
 @echo off
 
-set runnable=%~1
+set runnable="%~1"
 
 echo ,bench > build\generate-unicode-info.input
 echo ,batch >> build\generate-unicode-info.input
