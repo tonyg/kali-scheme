@@ -18,8 +18,8 @@
        
   <Product 
     Id="09642823-3266-4703-bcd3-ad98302f35ad"
-    Name="Scheme 48 1.3"
-    Version="1.3"
+    Name="Scheme 48 1.4"
+    Version="1.4"
     Manufacturer="The Scheme 48 Maintainers, s48-info@s48.org"
     Codepage="1252"
     Language="1033">
@@ -43,7 +43,7 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFilesFolder" Name="PFiles">
         <Directory Id="Scheme48" Name="Scheme48" LongName="Scheme 48">
-          <Directory Id="INSTALLDIR" Name="s48_1-3" LongName="Scheme 48 1.3">
+          <Directory Id="INSTALLDIR" Name="s48_1-4" LongName="Scheme 48 1.4">
 
             <Component Id="Main" Guid="47e7eda2-b740-4c68-ba6b-79ab5f02920a">
 
@@ -55,8 +55,8 @@
 
               <Shortcut Id="start_menu_entry" Directory="ProgramMenuDir"
                 Description="Scheme 48 Console"
-                Name="s48_1-3" 
-                LongName="Scheme 48 1.3"
+                Name="s48_1-4" 
+                LongName="Scheme 48 1.4"
                 Target="[INSTALLDIR]scheme48"
                 WorkingDirectory="INSTALLDIR"
                 Icon="scheme48.ico" IconIndex="0"
@@ -64,15 +64,15 @@
 
               <Shortcut Id="doc_html_menu_entry" Directory="ProgramMenuDir"
                 Description="Scheme 48 HTML Documentation"
-                Name="s48h_1-3" 
-                LongName="Scheme 48 1.3 HTML Documentation"
+                Name="s48h_1-4" 
+                LongName="Scheme 48 1.4 HTML Documentation"
                 Target="[#doc_html_manual.html]"
                 Show="normal" />
 
               <Shortcut Id="doc_pdf_menu_entry" Directory="ProgramMenuDir"
                 Description="Scheme 48 PDF Documentation"
-                Name="s48p_1-3" 
-                LongName="Scheme 48 1.3 PDF Documentation"
+                Name="s48p_1-4" 
+                LongName="Scheme 48 1.4 PDF Documentation"
                 Target="[#doc_manual.pdf]"
                 Show="normal" />
 
@@ -162,8 +162,8 @@
     <Icon Id="scheme48.ico" src="build/scheme48.ico" />
 
     <Feature Id="Complete" Level="1"
-             Title="Scheme 48 1.3"
-             Description="Scheme 48 1.3 main installation"
+             Title="Scheme 48 1.4"
+             Description="Scheme 48 1.4 main installation"
              ConfigurableDirectory="INSTALLDIR">
       <ComponentRef Id="Main" />
       <ComponentRef Id="include_component" />
