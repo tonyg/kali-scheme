@@ -320,36 +320,40 @@
 (define (decode-char/utf-32le buffer start count)
   (if (< count 4)
       (values #f 4)
-      (values
-       (scalar-value->char
-	(+ (provisional-byte-vector-ref buffer start)
-	   (arithmetic-shift
-	    (provisional-byte-vector-ref buffer (+ 1 start))
-	    8)
-	   (arithmetic-shift
-	    (provisional-byte-vector-ref buffer (+ 2 start))
-	    16)
-	   (arithmetic-shift
-	    (provisional-byte-vector-ref buffer (+ 3 start))
-	    24)))
-       4)))
+      (let ((code-point
+	     (+ (provisional-byte-vector-ref buffer start)
+		(arithmetic-shift
+		 (provisional-byte-vector-ref buffer (+ 1 start))
+		 8)
+		(arithmetic-shift
+		 (provisional-byte-vector-ref buffer (+ 2 start))
+		 16)
+		(arithmetic-shift
+		 (provisional-byte-vector-ref buffer (+ 3 start))
+		 24))))
+	(if (scalar-value? code-point)
+	    (values (scalar-value->char code-point)
+		    4)
+	    (values #f #f)))))
 
 (define (decode-char/utf-32be buffer start count)
   (if (< count 4)
       (values #f 4)
-      (values
-       (scalar-value->char
-	(+ (arithmetic-shift
-	    (provisional-byte-vector-ref buffer start)
-	    24)
-	   (arithmetic-shift
-	    (provisional-byte-vector-ref buffer (+ 1 start))
-	    16)
-	   (arithmetic-shift
-	    (provisional-byte-vector-ref buffer (+ 2 start))
-	    8)
-	   (provisional-byte-vector-ref buffer (+ 3 start))))
-       4)))
+      (let ((code-point
+	     (+ (arithmetic-shift
+		 (provisional-byte-vector-ref buffer start)
+		 24)
+		(arithmetic-shift
+		 (provisional-byte-vector-ref buffer (+ 1 start))
+		 16)
+		(arithmetic-shift
+		 (provisional-byte-vector-ref buffer (+ 2 start))
+		 8)
+		(provisional-byte-vector-ref buffer (+ 3 start)))))
+	(if (scalar-value? code-point)
+	    (values (scalar-value->char code-point)
+		    4)
+	    (values #f #f)))))
 
 (define-text-codec utf-32le-codec "UTF-32LE"
   encode-char/utf-32le
