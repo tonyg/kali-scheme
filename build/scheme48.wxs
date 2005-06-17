@@ -17,7 +17,7 @@
    -->
        
   <Product 
-    Id="09642823-3266-4703-bcd3-ad98302f35ad"
+    Id="5dc91c36-df2e-11d9-817f-00111175eb9e"
     Name="Scheme 48 1.4"
     Version="1.4"
     Manufacturer="The Scheme 48 Maintainers, s48-info@s48.org"
@@ -25,7 +25,7 @@
     Language="1033">
 
     <Package 
-      Id="20185933-8f9f-4f55-9afa-58f6b4f5ed78"
+      Id="6deda509-df2e-11d9-817f-00111175eb9e"
       Description="Scheme 48"
       Comments="Scheme 48 Development System"
       Manufacturer="The Scheme 48 Maintainers"
@@ -45,7 +45,7 @@
         <Directory Id="Scheme48" Name="Scheme48" LongName="Scheme 48">
           <Directory Id="INSTALLDIR" Name="s48_1-4" LongName="Scheme 48 1.4">
 
-            <Component Id="Main" Guid="47e7eda2-b740-4c68-ba6b-79ab5f02920a">
+            <Component Id="Main" Guid="74a1362f-df2e-11d9-817f-00111175eb9e">
 
               <File Id="Scheme48VM" Name="S48VM.EXE" LongName="scheme48vm.exe" DiskId="1"
                 src="scheme48vm.exe" Vital="yes" />
@@ -94,7 +94,7 @@
             <?include scheme48-files.wxi ?>
 
             <Directory Id="include" Name="INCLUDE" LongName="include" >
-              <Component Id="include_component" Guid="67f000c9-326c-40a7-a228-6f2e37111f77">
+              <Component Id="include_component" Guid="78c33182-df2e-11d9-817f-00111175eb9e">
                 <File Id="include_scheme48.h"
                       Name="SCHEME48.H" LongName="scheme48.h"
                       src="c/scheme48.h"
@@ -108,7 +108,7 @@
             </Directory>
 
             <Directory Id="build" Name="BUILD" LongName="build" >
-              <Component Id="build_component" Guid="09454a52-e0c8-4630-ab19-05ca78900f4b">
+              <Component Id="build_component" Guid="7d78a564-df2e-11d9-817f-00111175eb9e">
 
                 <File Id="build_initial.image" Name="INITIAL.IMA" LongName="initial.image" DiskId="1"
                       src="build/initial.image" Vital="yes" />
