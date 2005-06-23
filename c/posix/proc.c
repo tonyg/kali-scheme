@@ -614,6 +614,7 @@ extract_signal(s48_value sch_signal)
 static void
 generic_interrupt_catcher(int signum)
 {
+  extern void s48_add_os_signal(long);
   s48_add_os_signal(signum);
 
   switch (signum) {

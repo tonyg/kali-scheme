@@ -275,6 +275,6 @@ s48_add_channel(s48_value mode, s48_value id, long fd)
     if ((flags & O_NONBLOCK) == 0)
       fprintf(stderr,
         "Warning: output channel file descriptor %d is not non-blocking\n",
-	      fd); }
+	      (int) fd); }
   return s48_really_add_channel(mode, id, fd);
 }
