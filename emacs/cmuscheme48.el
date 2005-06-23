@@ -46,7 +46,7 @@
 		  (concat "~/" (substring file len))
 		file)))
 	   (t file))))
-    (replace-in-string raw "\\\\" "/")))
+    (subst-char-in-string ?\\ ?/ raw)))
 
 (defvar *scheme48-home-directory-kludge* t)
 
