@@ -14,6 +14,7 @@
 
 	  (file-options :syntax)
 	  file-options-on?
+	  file-options-union
 
 	  make-directory
 	  make-fifo
@@ -109,8 +110,9 @@
 (define-structure posix-file-options (export ((file-option file-options)
 					        :syntax)
 					     file-options?
-					     file-options-on?)
-  (open scheme define-record-types finite-types
+					     file-options-on?
+					     file-options-union)
+  (open scheme define-record-types finite-types enum-sets
 	external-calls
 	bitwise)
   (files file-options))
