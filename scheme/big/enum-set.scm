@@ -84,6 +84,7 @@
 ; The mask is settable to allow for destructive operations.  There aren't
 ; any such yet.
 
+; The C code (in external-lib.c) knows the layout of this record type.
 (define-record-type enum-set :enum-set
   (make-enum-set type mask)
   enum-set?
@@ -95,17 +96,14 @@
     (cons (enum-set-type-id (enum-set-type e-s))
          (enum-set->list e-s))))
 
+(define-exported-binding "enum-set-type" :enum-set)
+
 (define (enum-set-has-type? enum-set enum-set-type)
   (eq? (enum-set-type enum-set) enum-set-type))
 
 (define enum-set->integer enum-set-mask)
 
 (define integer->enum-set make-enum-set)
-
-(define-exported-binding "enum-set?" enum-set?)
-(define-exported-binding "enum-set->integer" enum-set->integer)
-(define-exported-binding "integer->enum-set" integer->enum-set)
-(define-exported-binding "enum-set-has-type?" enum-set-has-type?)
 
 (define (make-set-constructor id predicate values index-ref)
   (let ((type (make-enum-set-type id predicate values index-ref)))

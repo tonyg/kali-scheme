@@ -100,7 +100,7 @@ LIBSCHEME48 = c/libscheme48.a
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
 OBJS =	c/scheme48vm.o \
 	c/extension.o c/free.o c/double_to_string.o \
-	c/external.o c/bignum.o c/init.o
+	c/external.o c/external-lib.o c/bignum.o c/init.o
 
 FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
 		c/fake/sys-select.h
@@ -129,7 +129,8 @@ EXTERNAL_OBJECTS = $(POSIX_OBJECTS) $(SOCKET_OBJECTS) $(DYNLINK_OBJECTS) \
 		   $(SRFI_OBJECTS)
 EXTERNAL_LD_FLAGS = $(POSIX_LD_FLAGS) $(SOCKET_LD_FLAGS) $(DYNLINK_LD_FLAGS) \
 		    $(SYSEXITS_LD_FLAGS)
-EXTERNAL_INITIALIZERS = $(POSIX_INITIALIZERS) $(SOCKET_INITIALIZERS)	\
+EXTERNAL_INITIALIZERS = s48_initialize_external s48_init_external_libs  \
+			$(POSIX_INITIALIZERS) $(SOCKET_INITIALIZERS)	\
 			$(DYNLINK_INITIALIZERS)				\
 			$(SYSEXITS_INITIALIZERS)			\
                         $(LOOKUP_INITIALIZERS) $(ASM_INITIALIZERS)	\
@@ -308,6 +309,7 @@ c/bignum.o: c/bignum.h c/bignumint.h $(SCHEME48HS)
 c/extension.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS) c/scheme48vm.h
 c/free.o: c/sysdep.h
 c/external.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS) c/c-mods.h
+c/external.o: $(SCHEME48HS)
 c/unix/sysexits.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS)
 c/unix/event.o: c/sysdep.h $(FAKEHS) c/c-mods.h \
 			c/scheme48vm.h c/scheme48heap.h \

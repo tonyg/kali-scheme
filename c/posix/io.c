@@ -32,7 +32,7 @@ static s48_value	s48_enter_file_options(int options);
 /*
  * Record types imported from Scheme.
  */
-static s48_value	posix_file_options_type_binding = S48_FALSE;
+static s48_value	posix_file_options_enum_set_type_binding = S48_FALSE;
 
 /*
  * Install all exported functions in Scheme48.
@@ -47,9 +47,9 @@ s48_init_posix_io(void)
   S48_EXPORT_FUNCTION(posix_set_close_on_exec);
   S48_EXPORT_FUNCTION(posix_io_flags);
 
-  S48_GC_PROTECT_GLOBAL(posix_file_options_type_binding);
-  posix_file_options_type_binding =
-    s48_get_imported_binding("posix-file-options-type");
+  S48_GC_PROTECT_GLOBAL(posix_file_options_enum_set_type_binding);
+  posix_file_options_enum_set_type_binding =
+    s48_get_imported_binding("posix-file-options-enum-set-type");
 }
 
 /*
@@ -298,8 +298,9 @@ s48_enter_file_options(int file_options)
     (O_RDWR     & file_options ? 02000 : 0) |
     (O_WRONLY   & file_options ? 04000 : 0);
 
-  sch_file_options = s48_make_record(posix_file_options_type_binding);
-  S48_UNSAFE_RECORD_SET(sch_file_options, 0, s48_enter_fixnum(my_file_options));
+  sch_file_options
+    = s48_integer2enum_set(posix_file_options_enum_set_type_binding,
+			   my_file_options);
 
   return sch_file_options;
 }
@@ -310,9 +311,10 @@ s48_extract_file_options(s48_value sch_file_options)
   int	c_file_options;
   long	file_options;
 
-  s48_check_record_type(sch_file_options, posix_file_options_type_binding);
+  s48_check_enum_set_type(sch_file_options,
+			  posix_file_options_enum_set_type_binding);
 
-  file_options = s48_extract_fixnum(S48_UNSAFE_RECORD_REF(sch_file_options, 0));
+  file_options = s48_enum_set2integer(sch_file_options);
 
   c_file_options =
     (00001 & file_options ? O_CREAT    : 0) |

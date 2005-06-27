@@ -8,7 +8,7 @@ shift
 	cat <<!
 
 !
-	for i in "s48_initialize_external" "$@"; do
+	for i in "$@"; do
 		cat <<!
 extern void	$i(void);
 !
@@ -17,7 +17,7 @@ extern void	$i(void);
 
 void s48_initialize_external_modules (void) {
 !
-	for i in "s48_initialize_external" "$@"; do
+	for i in "$@"; do
 		cat <<!
 			$i();
 !
