@@ -65,14 +65,20 @@
 ; Exponentiation.
 
 (define (expt x n)
-  (if (and (integer? n) (exact? n)
-	   (integer? x) (exact? x))
-      (if (>= n 0)
-	  (raise-to-integer-power x n)
-	  (/ 1 (raise-to-integer-power x (- 0 n))))
-      (exp (* n (log x)))))
+  (cond
+   ((not (and (integer? n) (exact? n)))
+    (exp (* n (log x))))
+   ((not (and (integer? x) (exact? x)))
+    (if (>= n 0)
+	(raise-to-integer-power x n)
+	(/ 1 (raise-to-integer-power x (- 0 n)))))
+   ((>= n 0)
+    (raise-integer-to-integer-power x n))
+   (else
+    (/ 1 (raise-integer-to-integer-power x (- 0 n))))))
 
-(define (raise-to-integer-power x n)
+; both X and N are exact integers
+(define (raise-integer-to-integer-power x n)
   (cond
    ((= n 0) 1)
    ((= x 0) 0)
@@ -91,3 +97,12 @@
 			      a
 			      (loop (* s s) i a)))))))
 	   (arithmetic-shift y (* m n))))))))
+
+; N is an exact integer
+(define (raise-to-integer-power x n)
+  (cond ((zero? n) 1)
+	((odd? n)
+	 (* x (raise-to-integer-power x (- n 1))))
+	(else 
+	 (let ((v (raise-to-integer-power x (quotient n 2))))
+	   (* v v)))))
