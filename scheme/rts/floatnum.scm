@@ -227,9 +227,21 @@
 (define-method &atan1 ((x :rational)) (float-atan1 x))
 
 (define-method &number->string ((n :double) radix)
-  (if (= radix 10)
-      (float->string n)
-      (next-method)))
+  (cond
+   ((= radix 10)
+    (float->string n))
+   ((zero? n)
+    (string-copy "#i0"))
+   (else
+    (let* ((p (abs (inexact->exact (numerator n))))
+	   (q (inexact->exact (denominator n))))
+      (string-append "#i"
+		     (if (negative? n) "-" "")
+		     (number->string p radix)
+		     (if (not (= q 1))
+			 (string-append "/"
+					(number->string q radix))
+			 ""))))))
 
 ; Recognizing a floating point number.  This doesn't know about `#'.
 
