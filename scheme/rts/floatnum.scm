@@ -149,7 +149,7 @@
     (do ((x x (float* x two))
 	 (i 0 (+ i 1)))
 	((integral-floatnum? x) i)
-      (if (> i 1000) (error "I'm bored." x)))))
+      (if (> i 3000) (error "I'm bored." x)))))
 
 (define (float-denominator x)
   (expt (exact-integer->float 2) (float-fraction-length x)))
