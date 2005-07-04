@@ -100,7 +100,11 @@
       (make-rectangular 0 (sqrt (- 0 n)))
       (next-method)))			; not that we have to
 
+(define-method &sqrt ((z :recnum))
+  (exp (/ (log z) 2)))
+
 (define plus-i (make-recnum 0 1)) ; we can't read +i yet
+(define minus-i (make-recnum 0 -1))
 
 (define-method &exp ((z :recnum))
   (let ((i (imag-part z)))
@@ -116,6 +120,43 @@
   (if (< n 0)
       (make-rectangular (log (- 0 n)) (force pi))
       (next-method)))
+
+(define-method &sin ((c :recnum))
+  (let ((i-c (* c plus-i)))
+    (/ (- (exp i-c)
+	  (exp (- 0 i-c)))
+       (* 2 plus-i))))
+
+(define-method &cos ((c :recnum))
+  (let ((i-c (* c plus-i)))
+    (/ (+ (exp i-c)
+	  (exp (- 0 i-c)))
+       2)))
+
+(define-method &tan ((c :recnum))
+  (/ (sin c) (cos c)))
+
+(define-method &asin ((c :recnum))
+  (* minus-i
+     (log (+ (* c plus-i)
+	     (sqrt (- 1 (* c c)))))))
+
+(define-method &acos ((c :recnum))
+  (* minus-i
+     (log (+ c
+	     (* plus-i (sqrt (- 1 (* c c))))))))
+
+; kludge; we can't read floating point yet
+(define infinity (delay (expt (exact->inexact 2) (exact->inexact 1500))))
+
+(define-method &atan1 ((c :recnum))
+  (if (or (= c plus-i)
+	  (= c minus-i))
+      (- 0 (force infinity))
+      (* plus-i
+	 (/ (log (/ (+ plus-i c)
+		    (+ plus-i (- 0 c))))
+	    2))))
 
 ; Gleep!  Can we do quotient and remainder on Gaussian integers?
 ; Can we do numerator and denominator on complex rationals?
