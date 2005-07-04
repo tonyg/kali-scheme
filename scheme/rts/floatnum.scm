@@ -127,22 +127,22 @@
 (define float-floor (float->float (enum flop floor)))
 
 ; This lets you do ,open floatnum to get faster invocation
-(begin 
-  (define exp float-exp)
-  (define log float-log)
-  (define sin float-sin)
-  (define cos float-cos)
-  (define tan float-tan)
-  (define asin float-asin)
-  (define acos float-acos)
-  (define (atan a . maybe-b)
-    (cond ((null? maybe-b)
-	   (float-atan1 a))
-	  ((null? (cdr maybe-b))
-	   (float-atan2 a (car maybe-b)))
-	  (else
-	   (error "too many arguments to ATAN" (cons a maybe-b)))))
-  (define sqrt float-sqrt))
+; (begin 
+;   (define exp float-exp)
+;   (define log float-log)
+;   (define sin float-sin)
+;   (define cos float-cos)
+;   (define tan float-tan)
+;   (define asin float-asin)
+;   (define acos float-acos)
+;   (define (atan a . maybe-b)
+;     (cond ((null? maybe-b)
+; 	   (float-atan1 a))
+; 	  ((null? (cdr maybe-b))
+; 	   (float-atan2 a (car maybe-b)))
+; 	  (else
+; 	   (error "too many arguments to ATAN" (cons a maybe-b)))))
+;   (define sqrt float-sqrt))
 
 (define (float-fraction-length x)
   (let ((two (exact-integer->float 2)))
@@ -217,8 +217,20 @@
 (define-floatnum-method &atan2 float-atan2)
 
 (define-method &exp   ((x :rational)) (float-exp   x))
-(define-method &log   ((x :rational)) (float-log   x))
-(define-method &sqrt  ((x :rational)) (float-sqrt  x))
+(define-method &log   ((x :rational))
+  (cond 
+   ((> x 0)
+    (float-log x))
+   ((zero? x)
+    (if (exact? x)
+	(call-error "log of exact 0 is undefined" log x)
+	(float-log x)))
+   (else
+    (next-method))))
+(define-method &sqrt  ((x :rational))
+  (if (>= x 0)
+      (float-sqrt x)
+      (next-method)))
 (define-method &sin   ((x :rational)) (float-sin   x))
 (define-method &cos   ((x :rational)) (float-cos   x))
 (define-method &tan   ((x :rational)) (float-tan   x))

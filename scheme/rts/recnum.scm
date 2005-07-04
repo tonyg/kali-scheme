@@ -100,6 +100,23 @@
       (make-rectangular 0 (sqrt (- 0 n)))
       (next-method)))			; not that we have to
 
+(define plus-i (make-recnum 0 1)) ; we can't read +i yet
+
+(define-method &exp ((z :recnum))
+  (let ((i (imag-part z)))
+    (* (exp (real-part z))
+       (+ (cos i) (* plus-i (sin i))))))
+
+(define-method &log ((z :recnum))
+  (+ (log (magnitude z)) (* plus-i (angle z))))
+
+(define pi (delay (* 2 (asin 1)))) ; can't compute at build time
+
+(define-method &log ((n :real))
+  (if (< n 0)
+      (make-rectangular (log (- 0 n)) (force pi))
+      (next-method)))
+
 ; Gleep!  Can we do quotient and remainder on Gaussian integers?
 ; Can we do numerator and denominator on complex rationals?
 
