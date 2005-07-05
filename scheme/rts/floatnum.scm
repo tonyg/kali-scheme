@@ -157,21 +157,37 @@
 (define (float-numerator x)
   (float* x (float-denominator x)))
 
+(define float-precision
+  (delay
+    (do ((n 0 (+ n 1))
+	 (x (fixnum->float 1) (/ x 2)))
+	((= (fixnum->float 1) (+ (fixnum->float 1) x)) n))))
+
 (define (float->exact x)
   (if (integral-floatnum? x)
       (float->exact-integer x)		;+++
-      (let ((lose (lambda ()
-		    (call-error "no exact representation"
-				inexact->exact x)))
-	    (q (expt 2 (float-fraction-length x))))
-	(if (exact? q)
-	    (let ((e (/ (float->exact-integer
-			     (float* x (exact-integer->float q)))
-			q)))
-	      (if (exact? e)
-		  e
-		  (lose)))
-	    (lose)))))
+      (let* ((lose (lambda ()
+		     (call-error "no exact representation"
+				 inexact->exact x)))
+	     (deliver
+	      (lambda (y d)
+		(let ((q (expt 2 (float-fraction-length y))))
+		  (if (exact? q)
+		      (let ((e (/ (/ (float->exact-integer
+				      (float* y (exact-integer->float q)))
+				     q)
+				  d)))
+			(if (exact? e)
+			    e
+			    (lose)))
+		      (lose))))))
+
+	
+	(if (and (< x (fixnum->float 1)) ; watch out for denormalized numbers
+		 (> x (fixnum->float -1)))
+	    (deliver (* x (expt (fixnum->float 2) (force float-precision)))
+		     (expt 2 (force float-precision)))
+	    (deliver x 1)))))
 
 
 ; Methods on floatnums
