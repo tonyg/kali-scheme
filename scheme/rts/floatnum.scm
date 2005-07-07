@@ -163,31 +163,40 @@
 	 (x (fixnum->float 1) (/ x 2)))
 	((= (fixnum->float 1) (+ (fixnum->float 1) x)) n))))
 
+(define infinity (delay (expt (exact->inexact 2) (exact->inexact 1500))))
+
 (define (float->exact x)
-  (if (integral-floatnum? x)
-      (float->exact-integer x)		;+++
-      (let* ((lose (lambda ()
-		     (call-error "no exact representation"
-				 inexact->exact x)))
-	     (deliver
-	      (lambda (y d)
-		(let ((q (expt 2 (float-fraction-length y))))
-		  (if (exact? q)
-		      (let ((e (/ (/ (float->exact-integer
-				      (float* y (exact-integer->float q)))
-				     q)
-				  d)))
-			(if (exact? e)
-			    e
-			    (lose)))
-		      (lose))))))
+  (define (lose)
+    (call-error "no exact representation"
+		inexact->exact x))
+
+  (cond
+   ((integral-floatnum? x)
+    (float->exact-integer x))		;+++
+   ((or (not (= x x))			; NaN
+	(= x (force infinity))
+	(= (- x) (force infinity)))
+    (lose))
+   (else
+    (let ((deliver
+	   (lambda (y d)
+	     (let ((q (expt 2 (float-fraction-length y))))
+	       (if (exact? q)
+		   (let ((e (/ (/ (float->exact-integer
+				   (float* y (exact-integer->float q)))
+				  q)
+			       d)))
+		     (if (exact? e)
+			 e
+			 (lose)))
+		   (lose))))))
 
 	
-	(if (and (< x (fixnum->float 1)) ; watch out for denormalized numbers
-		 (> x (fixnum->float -1)))
-	    (deliver (* x (expt (fixnum->float 2) (force float-precision)))
-		     (expt 2 (force float-precision)))
-	    (deliver x 1)))))
+      (if (and (< x (fixnum->float 1)) ; watch out for denormalized numbers
+	       (> x (fixnum->float -1)))
+	  (deliver (* x (expt (fixnum->float 2) (force float-precision)))
+		   (expt 2 (force float-precision)))
+	  (deliver x 1))))))
 
 
 ; Methods on floatnums
