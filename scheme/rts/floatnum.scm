@@ -244,16 +244,16 @@
 (define-method &exp   ((x :rational)) (float-exp   x))
 (define-method &log   ((x :rational))
   (cond 
-   ((> x 0)
+   ((> x (exact->inexact 0)) ; avoid calling inexact->exact on X
     (float-log x))
-   ((zero? x)
+   ((= x (exact->inexact 0))
     (if (exact? x)
 	(call-error "log of exact 0 is undefined" log x)
 	(float-log x)))
    (else
     (next-method))))
 (define-method &sqrt  ((x :rational))
-  (if (>= x 0)
+  (if (>= x (exact->inexact 0))
       (float-sqrt x)
       (next-method)))
 (define-method &sin   ((x :rational)) (float-sin   x))
