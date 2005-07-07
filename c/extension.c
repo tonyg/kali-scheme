@@ -85,41 +85,12 @@ s48_extended_vm (long key, s48_value value)
     loser_.f = (double)(val); \
     *(unaligned_double*)(&S48_STOB_REF(temp_, 0)) = loser_.b; }
 
-  FLOP3(0) {
-    get_float_arg(value, 0, x);
-    get_float_arg(value, 1, y);
-    set_float_arg(value, 2, x + y);
-    EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP3(1) {
-    get_float_arg(value, 0, x);
-    get_float_arg(value, 1, y);
-    set_float_arg(value, 2, x - y);
-    EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP3(2) {
-    get_float_arg(value, 0, x);
-    get_float_arg(value, 1, y);
-    set_float_arg(value, 2, x * y);
-    EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP3(3) {
-    get_float_arg(value, 0, x);
-    get_float_arg(value, 1, y);
-    if (y == 0.0) EXT_EXCEPTION;
-    set_float_arg(value, 2, x / y);
-    EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP2(4) {
-    get_float_arg(value, 0, x);
-    get_float_arg(value, 1, y);
-    EXT_RETURN(S48_ENTER_BOOLEAN(x == y));}
-  FLOP2(5) {
-    get_float_arg(value, 0, x);
-    get_float_arg(value, 1, y);
-    EXT_RETURN(S48_ENTER_BOOLEAN(x < y));}
-  FLOP2(6) {			/* fixnum->float */
+  FLOP2(0) {			/* fixnum->float */
     s48_value arg = get_arg(value, 0);
     if (!S48_FIXNUM_P(arg)) EXT_RETURN(S48_FALSE);
     set_float_arg(value, 1, S48_UNSAFE_EXTRACT_FIXNUM(arg));
     EXT_RETURN(S48_TRUE);}
-  FLOP2(7) {			/* string->float */
+  FLOP2(1) {			/* string->float */
     static char* buf = NULL;
     static size_t max_size = 0;
     size_t len = s48_string_length(get_arg(value, 0));
@@ -135,7 +106,7 @@ s48_extended_vm (long key, s48_value value)
     set_float_arg(value, 1, atof(buf));
     EXT_RETURN(get_arg(value, 1));
   }
-  FLOP2(8) {			/* float->string */
+  FLOP2(2) {			/* float->string */
     extern size_t s48_double_to_string(char *buf, double v);
     static char buf[40];
     int i;
@@ -148,56 +119,56 @@ s48_extended_vm (long key, s48_value value)
   
     /* exp log sin cos tan asin acos atan1 atan2 sqrt */
 
-  FLOP2(9) {
+  FLOP2(3) {
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, exp(x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP2(10) {
+  FLOP2(4) {
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, log(x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP2(11) {
+  FLOP2(5) {
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, sin(x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP2(12) {
+  FLOP2(6) {
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, cos(x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP2(13) {
+  FLOP2(7) {
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, tan(x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP2(14) {
+  FLOP2(8) {
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, asin(x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP2(15) {
+  FLOP2(9) {
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, acos(x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP2(16) {			/* atan 1 */
+  FLOP2(10) {			/* atan 1 */
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, atan(x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP3(17) {			/* atan 2 */
+  FLOP3(11) {			/* atan 2 */
     get_float_arg(value, 0, y);
     get_float_arg(value, 1, x);
     set_float_arg(value, 2, atan2(y, x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP2(18) {
+  FLOP2(12) {
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, sqrt(x));
     EXT_RETURN(S48_UNSPECIFIC);}
 
-  FLOP2(19) {			/* floor */
+  FLOP2(13) {			/* floor */
     get_float_arg(value, 0, x);
     set_float_arg(value, 1, floor(x));
     EXT_RETURN(S48_UNSPECIFIC);}
-  case FLOP+20: {		/* integer? */
+  case FLOP+14: {		/* integer? */
     EXTRACT_FLOAT(value, x);
     EXT_RETURN(S48_ENTER_BOOLEAN(fmod(x, 1.0) == 0.0)); }
-  case FLOP+21: {		/* float->fixnum */
+  case FLOP+15: {		/* float->fixnum */
     EXTRACT_FLOAT(value, x);
     if (x <= (double)GREATEST_FIXNUM_VALUE
 	&& x >= (double)LEAST_FIXNUM_VALUE)
@@ -205,7 +176,7 @@ s48_extended_vm (long key, s48_value value)
       EXT_RETURN(S48_UNSAFE_ENTER_FIXNUM((long)x)); }
     else
       EXT_RETURN(S48_FALSE);}
-  FLOP3(22) {			/* quotient */
+  FLOP3(16) {			/* quotient */
     double z;
     get_float_arg(value, 0, x);
     get_float_arg(value, 1, y);
@@ -214,7 +185,7 @@ s48_extended_vm (long key, s48_value value)
     z = x / y;
     set_float_arg(value, 2, z < 0.0 ? ceil(z) : floor(z));
     EXT_RETURN(S48_UNSPECIFIC);}
-  FLOP3(23) {			/* remainder */
+  FLOP3(17) {			/* remainder */
     get_float_arg(value, 0, x);
     get_float_arg(value, 1, y);
     if (fmod(x, 1.0) != 0.0 || fmod(y, 1.0) != 0.0) EXT_EXCEPTION;

@@ -5,8 +5,7 @@
 (define floatnum? double?)
 
 (define-enumeration flop
-  (+ - * / = <
-   fixnum->float
+  (fixnum->float
    string->float
    float->string
    exp log sin cos tan asin acos atan1 atan2 sqrt
@@ -63,6 +62,12 @@
 			 res)))
     (substring res 0 len)))
 
+; Call back into the VM for a regular operation
+
+(define (extend-float&float->val op)
+  (lambda (a b)
+    (op (x->float a) (x->float b))))
+
 (define (x->float x)
   (cond ((double? x)
 	 x)
@@ -104,17 +109,17 @@
 (define integral-floatnum? (float1 (enum flop integer?)))
 (define float->fixnum      (float1 (enum flop float->fixnum)))
 
-(define float+ (float&float->float (enum flop +)))
-(define float- (float&float->float (enum flop -)))
-(define float* (float&float->float (enum flop *)))
-(define float/ (float&float->float (enum flop /)))
+(define float+ (extend-float&float->val +))
+(define float- (extend-float&float->val -))
+(define float* (extend-float&float->val *))
+(define float/ (extend-float&float->val /))
 (define float-quotient (float&float->float (enum flop quotient)))
 (define float-remainder (float&float->float (enum flop remainder)))
 (define float-atan1 (float->float (enum flop atan1)))
 (define float-atan2 (float&float->float (enum flop atan2)))
 
-(define float= (float2 (enum flop =)))
-(define float< (float2 (enum flop <)))
+(define float= (extend-float&float->val =))
+(define float< (extend-float&float->val <))
 
 (define float-exp (float->float (enum flop exp)))
 (define float-log (float->float (enum flop log)))
