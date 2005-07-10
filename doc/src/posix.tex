@@ -482,12 +482,15 @@ The returned port is an input port if \cvar{file-options} includes
 \begin{protos}
 \syntaxproto{file-options}{ \cvar{file-option-name} \ldots}{file-options}
 \proto{file-options-on?}{ file-options file-options}{boolean}
+\proto{file-options-union}{ file-options file-options}{file-options}
 \end{protos}
 \noindent
 The syntax \code{file-options} returns a file-option with the
  indicated options set.
 \code{File-options-on?} returns true if its first argument includes all of
- the options listed in the second argument.
+ the options listed in the second argument.  \code{File-options-union}
+returns a file-options argument containing exactly all of the options
+listed in either argument.
 The following file options may be used with \code{open-file}.
 
 \begin{center}
