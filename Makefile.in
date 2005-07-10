@@ -243,17 +243,22 @@ c/bibop/generation_gc.o: c/bibop/generation_gc.h c/bibop/page_constants.h      \
 	c/bibop/areas.h c/bibop/memory.h c/bibop/data.h c/bibop/utils.h        \
 	c/bibop/memory_map.h c/bibop/check_heap.h c/bibop/area_roots.h         \
 	c/bibop/measure.h c/bibop/measure.ci 				       \
-	c/bibop/gc_config.h c/bibop/remset.h
+	c/bibop/gc_config.h c/bibop/remset.h				       \
+	$(SCHEME48HS)
 c/bibop/find_all.o: c/bibop/find_all.h c/bibop/generation_gc.h c/bibop/areas.h \
-	c/bibop/data.h c/bibop/memory.h
+	c/bibop/data.h c/bibop/memory.h					       \
+	$(SCHEME48HS)
 c/bibop/check_heap.o: c/bibop/check_heap.h c/scheme48.h c/bibop/generation_gc.h\
-	c/bibop/utils.h c/bibop/data.h c/bibop/memory.h c/bibop/memory_map.h
+	c/bibop/utils.h c/bibop/data.h c/bibop/memory.h c/bibop/memory_map.h   \
+	$(SCHEME48HS)
 c/bibop/area_roots.o: c/bibop/area_roots.h c/bibop/areas.h c/bibop/memory.h    \
 	c/bibop/memory_map.h c/bibop/measure.h c/bibop/gc_config.h             \
 	c/bibop/remset.h
-c/bibop/remset.o: c/bibop/remset.h c/bibop/memory.h c/scheme48.h \
-	c/bibop/utils.h c/bibop/data.h c/bibop/generation_gc.h \
-	c/bibop/gc_config.h
+c/bibop/remset.o: c/bibop/remset.h c/bibop/memory.h c/scheme48.h	       \
+	c/bibop/utils.h c/bibop/data.h c/bibop/generation_gc.h 		       \
+	c/bibop/gc_config.h						       \
+	$(SCHEME48HS)
+
 
 # End of BIBOP GC rules
 
