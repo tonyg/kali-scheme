@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 33")
+(define architecture-version "Vanilla 34")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -514,7 +514,6 @@
    weak-pointer
    shared-binding
    unused-d-header1
-   unused-d-header2
 
    ;; B-vector types (not traced by GC)
    string        ; = least b-vector type
