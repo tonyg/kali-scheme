@@ -2182,6 +2182,14 @@ in the set, or a composite expression containing one or more subexpressions.
 A regular expression can be matched against a string to determine success
 or failure, and to determine the substrings matched by particular subexpressions.
 
+\begin{protos}
+\proto{regexp?}{ value}{boolean}
+\end{protos}
+\noindent
+Returns \code{\#t} if \cvar{value} is a regular expression created
+using the functional interface for regular expressions, and \code{\#f}
+otherwise.
+
 \subsection{Character sets}
 
 Character sets may be defined using a list of characters and strings,

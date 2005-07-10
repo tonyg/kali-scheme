@@ -275,6 +275,8 @@
 
 	  negate intersection union subtract
 
+	  regexp?
+
 	  lower-case upper-case alphabetic
 	  numeric hexdigit
 	  alphanumeric
