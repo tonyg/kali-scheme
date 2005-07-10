@@ -156,7 +156,9 @@
 
 (define-method &really-string->number ((string :integer-string) radix xact?)
   (let ((n (string->integer string radix)))
-    (if n (set-exactness n xact?) #f)))
+    (if n
+	(set-exactness n xact?)
+	(next-method)))) ; we might have something like 1e10
 
 (define (set-exactness n xact?)
   (if (exact? n)

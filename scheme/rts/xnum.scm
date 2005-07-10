@@ -276,6 +276,10 @@
 				      (string->list s)))
 		   radix
 		   xact?)))
+	  ((and (= radix 10)
+		(string-position #\e s))
+	   => (lambda (e)
+		(parse-with-exponent s xact? e)))
 	  ((string-position #\. s)
 	   => (lambda (dot)
 		(parse-decimal s radix xact? dot)))
@@ -305,6 +309,19 @@
 			 xact?))
 	#f)))
 
+(define (parse-with-exponent s xact? e)
+  (let ((len (string-length s)))
+    (cond
+     ((string->integer (substring s (+ e 1) len) 10)
+      => (lambda (exp)
+	   (cond
+	    ((really-string->number (substring s 0 e) 10 xact?)
+	     => (lambda (significand)
+		  (* significand
+		     (expt 10 exp))))
+	    (else #f))))
+     (else #f))))
+    
 (define (parse-rectangular s radix xact?)
   (let ((len (string-length s)))
     (let loop ((i (- len 2)))
