@@ -4,7 +4,7 @@
   (if (and (okay-buffer? buffer index limit)
 	   (port-handler? handler))
       (make-port handler
-		 latin-1-codec
+		 (enum text-encoding-option latin-1)
 		 (bitwise-ior input-port-mask open-input-port-mask)
 		 #f		; timestamp (was lock)
 		 data
@@ -20,7 +20,7 @@
 	   (> limit 0)
 	   (port-handler? handler))
       (make-port handler
-		 latin-1-codec
+		 (enum text-encoding-option latin-1)
 		 open-output-port-status
 		 #f		; timestamp (was lock)
 		 data
@@ -123,7 +123,7 @@
 
 (define (make-one-char-input buffer-filler!)
   (lambda (port mode)
-    (let ((decode-char
+    (let ((decode
 	   (text-codec-decode-char-proc (port-text-codec port))))
       (with-new-proposal (lose)
 
@@ -150,7 +150,7 @@
 		 (let ((buffer (port-buffer port)))
 		   (call-with-values
 		       (lambda ()
-			 (decode-char buffer index (- limit index)))
+			 (decode buffer index (- limit index)))
 		     (lambda (ch decode-count)
 		       (cond
 			(ch
@@ -367,7 +367,7 @@
 
 (define (make-one-char-output buffer-emptier!)
   (lambda (port ch)
-    (let ((encode-char
+    (let ((encode
 	   (text-codec-encode-char-proc (port-text-codec port))))
       (with-new-proposal (lose)
 	(let ((index (provisional-port-index port))
@@ -376,41 +376,33 @@
 		 (remove-current-proposal!)
 		 (call-error "invalid argument" write-byte port))
 		((< index limit)
-		 (call-with-values
-		     (lambda ()
-		       (encode-char ch
-				    (port-buffer port)
-				    index (- limit index)))
-		   (lambda (ok? encode-count)
-		     (cond
-		      (ok?
-		       (provisional-set-port-index! port (+ index encode-count))
-		       (or (maybe-commit)
-			   (lose)))
-		      (encode-count	; need more space
+		 (let ((encode-count #f)
+		       (ok? #f))
+		   (cond
+		    ((not
+		      (maybe-commit-no-interrupts
+		       (lambda ()
+			 (call-with-values
+			     (lambda ()
+			       (encode ch
+				       (port-buffer port)
+				       index (- limit index)))
+			   (lambda (the-ok? the-encode-count)
+			     (set! ok? the-ok?)
+			     (if the-ok?
+				 (set-port-index! port (+ index the-encode-count))
+				 (set! encode-count the-encode-count)))))))
+		     (lose))
+		    (ok?)		; we're done
+		    (encode-count	; need more space
+		     (with-new-proposal (_)
 		       (set-port-flushed?! port #t)
-		       (buffer-emptier! port #t)
-		       (lose))
-		      (else		; encoding error
-		       ;; We inline this instead of looping or something to avoid
-		       ;; the overhead.  Not that anyone has measured it.
-		       (call-with-values
-			   (lambda ()
-			     (encode-char #\?
-					  (port-buffer port)
-					  index (- limit index)))
-			 (lambda (ok? encode-count)
-			   (cond
-			    (ok?
-			     (provisional-set-port-index! port (+ index encode-count))
-			     (or (maybe-commit)
-				 (lose)))
-			    (encode-count ; need more space
-			     (set-port-flushed?! port #t)
-			     (buffer-emptier! port #t)
-			     (lose))
-			    (else	; encoding error
-			     (remove-current-proposal!))))))))))
+		       (buffer-emptier! port #t))
+		     (lose))
+		    (else		; encoding error
+		     (set! ch #\?)    ; if we get an encoding error on
+					; the second go, we're toast
+		     (lose)))))
 		(else
 		 (set-port-flushed?! port #t)
 		 (buffer-emptier! port #t)

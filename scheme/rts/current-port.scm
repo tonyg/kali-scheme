@@ -50,15 +50,6 @@
 ; We probably lose a lot of speed here as compared with the
 ; specialized VM instructions.
 
-(define (read-char . port-option)
-  (real-read-char (input-port-option port-option)))
-
-(define (peek-char . port-option)
-  (real-peek-char (input-port-option port-option)))
-
-(define (write-char c . port-option)
-  (real-write-char c (output-port-option port-option)))
-
 (define (newline . port-option)
   (write-char #\newline (output-port-option port-option)))
 

@@ -251,6 +251,52 @@
 (let ((do-it (read-or-peek-byte #f)))
   (define-primitive peek-byte () do-it))
 
+(define (read-or-peek-char read?)
+  (lambda ()
+    (let ((port (if (= (code-byte 0) 0)
+		    (val)
+		    (get-current-port
+		      (enter-fixnum
+		        (enum current-port-marker current-input-port))))))
+      (if (and (port? port)
+	       (port-has-status? port
+				 (enum port-status-options open-for-input)))
+	  (let ((b (port-buffer port)))
+	    (if (false? b)
+		(raise-exception buffer-full/empty 1 port)
+		(let ((i (extract-fixnum (port-index port)))
+		      (l (extract-fixnum (port-limit port)))
+		      (codec (port-text-codec-spec port))
+		      (lose
+		       (lambda () (raise-exception buffer-full/empty 1 port))))
+		  (cond ((= i l)
+			 (lose))
+			((not (fixnum? codec))
+			 (lose))
+			(else
+			 (call-with-values
+			     (lambda ()
+			       (decode-scalar-value (extract-fixnum codec) b i (- l i)))
+			   (lambda (encoding-ok? ok? incomplete? value count)
+			     (cond
+			      ((not encoding-ok?)
+			       (raise-exception wrong-type-argument 1 port))
+			      ((or (not ok?) incomplete?)
+			       (lose))
+			      (else
+			       (if read?
+				   (set-port-index! port (enter-fixnum (+ i count))))
+			       (goto continue-with-value
+				     (scalar-value->char value)
+				     1))))))))))
+	  (raise-exception wrong-type-argument 1 port)))))
+
+(let ((do-it (read-or-peek-char #t)))
+  (define-primitive read-char () do-it))
+
+(let ((do-it (read-or-peek-char #f)))
+  (define-primitive peek-char () do-it))
+
 (define-primitive write-byte ()
   (lambda ()
     (receive (byte port)
@@ -278,6 +324,49 @@
 		 (set-port-index! port (enter-fixnum (+ i 1)))
 		 (code-vector-set! b i (extract-fixnum byte))
 		 (goto continue-with-value unspecific-value 1)))))))))
+
+(define-primitive write-char ()
+  (lambda ()
+    (receive (char port)
+	(if (= (code-byte 0) 0)
+	    (values (pop)
+		    (val))
+	    (values (val)
+		    (get-current-port (enter-fixnum
+				       (enum current-port-marker
+					     current-output-port)))))
+      (cond
+       ((not (and (vm-char? char)
+		  (port? port)
+		  (port-has-status? port
+				    (enum port-status-options open-for-output))))
+	(raise-exception wrong-type-argument 1 char port))
+       ((false? (port-limit port))	; unbuffered
+	(raise-exception buffer-full/empty 1 char port))
+       (else
+	(let ((codec (port-text-codec-spec port))
+	      (lose
+	       ;; #### this isn't really the right exception
+	       (lambda () (raise-exception buffer-full/empty 1 char port))))
+	  (if (not (fixnum? codec))
+	      (lose)
+	      (let* ((b (port-buffer port))
+		     (i (extract-fixnum (port-index port)))
+		     (l (code-vector-length b)))
+		(if (= i l)
+		    (lose)
+		    (call-with-values
+			(lambda ()
+			  (encode-scalar-value (extract-fixnum codec) (char->scalar-value char) b i (- l i)))
+		      (lambda (codec-ok? encoding-ok? out-of-space? count)
+			(cond
+			 ((not codec-ok?)
+			  (raise-exception wrong-type-argument 1 char port))
+			 ((or (not encoding-ok?) out-of-space?)
+			  (lose))
+			 (else
+			  (set-port-index! port (enter-fixnum (+ i count)))
+			  (goto continue-with-value unspecific-value 1))))))))))))))
 	  
 ; Do an ASSQ-like walk up the current dynamic environment, looking for
 ; MARKER.

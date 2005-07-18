@@ -21,6 +21,7 @@
 	  (channel-status-option :syntax)
 	  (port-status-options :syntax)
 	  (current-port-marker :syntax)
+	  (text-encoding-option :syntax)
 
 	  maximum-stack-args
 	  two-byte-nargs-protocol

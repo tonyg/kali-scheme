@@ -30,6 +30,71 @@
   scalar-value?
   return-boolean)
 
+(define-syntax define-encode-char
+  (syntax-rules ()
+    ((define-encode-char ?name ?cont)
+     (define-primitive ?name (fixnum-> char-scalar-value-> code-vector-> fixnum-> fixnum->)
+       (lambda (encoding value buffer start count)
+	 (if (or (immutable? buffer)
+		 (> 0 start)
+		 (>= 0 count)
+		 (> (+ start count) (code-vector-length buffer)))
+	     (raise-exception wrong-type-argument 0
+			      (enter-fixnum encoding) buffer (enter-fixnum start) (enter-fixnum count))
+	     (call-with-values
+		 (lambda () 
+		   (encode-scalar-value encoding value buffer start count))
+	       (lambda (encoding-ok? ok? out-of-space? count)
+		 (if encoding-ok?
+		     (call-with-values
+			 (lambda () (values ok? out-of-space? count))
+		       ?cont)
+		     (raise-exception bad-option 0
+				      (enter-fixnum encoding)))))))))))
+
+(define-encode-char encode-char
+  (lambda (ok? out-of-space? count)
+    (push (enter-boolean (and ok? (not out-of-space?))))
+    (push (if ok? (enter-fixnum count) false))
+    (goto return-values 2 null 0)))
+
+(define-encode-char encode-char!
+  (lambda (ok? out-of-space? count)
+    (goto return unspecific-value)))
+
+(define-syntax define-decode-char
+  (syntax-rules ()
+    ((define-decode-char ?name ?cont)
+     (define-primitive ?name (fixnum-> code-vector-> fixnum-> fixnum->)
+       (lambda (encoding buffer start count)
+	 (if (or (> 0 start)
+		 (>= 0 count)
+		 (> (+ start count) (code-vector-length buffer)))
+	     (raise-exception wrong-type-argument 0
+			      (enter-fixnum encoding) buffer (enter-fixnum start) (enter-fixnum count))
+	     (call-with-values
+		 (lambda () (decode-scalar-value encoding buffer start count))
+	       (lambda (encoding-ok? ok? incomplete? value count)
+		 (if (not encoding-ok?)
+		     (raise-exception bad-option 0
+				      (enter-fixnum encoding))
+		     (call-with-values
+			 (lambda () (values ok? incomplete? value count))
+		       ?cont))))))))))
+
+(define-decode-char decode-char
+  (lambda (ok? incomplete? value count)
+    (push (if (and ok? (not incomplete?))
+	      (scalar-value->char value)
+	      false))
+    (push (if ok? (enter-fixnum count) false))
+    (goto return-values 2 null 0)))
+
+; this makes limited sense: we only get the exception side effect
+(define-decode-char decode-char!
+  (lambda (ok? incomplete? value count)
+    (goto return unspecific-value)))
+
 (define-primitive eof-object?
   (any->)
   (lambda (x) (vm-eq? x eof-object))

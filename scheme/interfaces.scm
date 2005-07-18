@@ -85,7 +85,9 @@
 	  memory-status			;interrupts
 	  os-error-message
 	  peek-byte
+	  peek-char
 	  read-byte
+	  read-char
 	  record
 	  record-length
 	  record-ref
@@ -110,7 +112,10 @@
 	  wait
 	  weak-pointer-ref
 	  weak-pointer?
-	  write-byte))
+	  write-byte
+	  write-char
+	  encode-char
+	  decode-char))
 
 (define-interface bitwise-interface
   (export arithmetic-shift
@@ -213,7 +218,7 @@
   (export port?
 	  make-port
 	  port-handler
-	  port-text-codec   set-port-text-codec!
+	  port-text-codec-spec set-port-text-codec-spec!
 	  port-buffer       
 
 	  port-lock         set-port-lock!
@@ -567,7 +572,8 @@
 	  make-null-output-port))
 
 (define-interface text-codecs-interface
-  (export text-codec? make-text-codec
+  (export port-text-codec set-port-text-codec!
+	  text-codec? make-text-codec
 	  text-codec-names
 	  text-codec-decode-char-proc
 	  text-codec-encode-char-proc

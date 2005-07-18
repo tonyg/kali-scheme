@@ -67,10 +67,31 @@
 			      port
 			      #f))
 			   signal-vm-exception))
+
+  (define-vm-exception-handler (enum op read-char)
+    (one-arg-proc->handler (lambda (port)
+			     ((port-handler-char (port-handler port))
+			      port
+			      #f))
+			   signal-vm-exception))
+    
+  (define-vm-exception-handler (enum op peek-char)
+    (one-arg-proc->handler (lambda (port)
+			     ((port-handler-char (port-handler port))
+			      port
+			      #t))
+			   signal-vm-exception))
   
   (define-vm-exception-handler (enum op write-byte)
     (two-arg-proc->handler (lambda (byte port)
 			     ((port-handler-byte (port-handler port))
+			      port
+			      byte))
+			   signal-vm-exception))
+
+  (define-vm-exception-handler (enum op write-char)
+    (two-arg-proc->handler (lambda (byte port)
+			     ((port-handler-char (port-handler port))
 			      port
 			      byte))
 			   signal-vm-exception)))
@@ -95,21 +116,6 @@
 ; Wrappers for the various port operations.  These check types and arguments
 ; and then call the appropriate handler procedure.
 
-(define (real-read-char port)
-  (if (open-input-port? port)
-      ((port-handler-char (port-handler port)) port #f)
-      (call-error "invalid argument" read-char port)))
-
-(define (real-peek-char port)
-  (if (open-input-port? port)
-      ((port-handler-char (port-handler port)) port #t)
-      (call-error "invalid argument" peek-char port)))
-
-(define (real-write-char char port)
-  (if (open-output-port? port)
-      ((port-handler-char (port-handler port)) port char)
-      (call-error "invalid argument" write-char port)))
-
 (define (real-char-ready? port)
   (cond
    ((open-input-port? port)
@@ -126,16 +132,6 @@
       ((port-handler-ready? (port-handler port))
          port)
       (call-error "invalid argument" real-byte-ready? port)))
-
-(define (real-peek-byte count port)
-  (if (open-input-port? port)
-      ((port-handler-byte (port-handler port)) port #f)
-      (call-error "invalid argument" peek-byte port)))
-
-(define (real-read-byte count port)
-  (if (open-input-port? port)
-      ((port-handler-byte (port-handler port)) port #t)
-      (call-error "invalid argument" read-byte port)))
 
 ; Reading in a block of characters at once.
 
@@ -174,7 +170,7 @@
   (do ((size (string-length string))
        (i 0 (+ 1 i)))
       ((>= i size) (unspecific))
-    (real-write-char (string-ref string i) port)))
+    (write-char (string-ref string i) port)))
 
 ; BYTE-READY? for output ports.
 
@@ -275,7 +271,7 @@
 (define (make-unbuffered-input-port handler data)
   (if (port-handler? handler)
       (make-port handler
-		 latin-1-codec
+		 (enum text-encoding-option latin-1)
 		 (bitwise-ior input-port-mask open-input-port-mask)
 		 #f		; timestamp (not used for unbuffered ports)
 		 data
@@ -313,7 +309,7 @@
 (define (make-unbuffered-output-port handler data)
   (if (port-handler? handler)
       (make-port handler
-		 latin-1-codec
+		 (enum text-encoding-option latin-1)
 		 open-output-port-status
 		 #f		; lock     (not used in unbuffered ports)
 		 data

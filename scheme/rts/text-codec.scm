@@ -7,11 +7,15 @@
 ; provisionally.
 
 (define-record-type text-codec :text-codec
-  (make-text-codec names
-		   encode-char-proc
-		   decode-char-proc)
+  (really-make-text-codec names
+			  builtin-code
+			  encode-char-proc
+			  decode-char-proc)
   text-codec?
   (names text-codec-names)
+  ;; either #f or an integer from enum TEXT-ENCODING-OPTION
+  ;; for encodings built into the VM
+  (builtin-code text-codec-builtin-code)
   ;; (char buffer start count) -> (ok? #f or #bytes consumed or #bytes needed)
   (encode-char-proc text-codec-encode-char-proc)
   ;; (buffer start count) -> (char #bytes consumed)
@@ -19,9 +23,43 @@
   ;;                      or (#f #f) (failure)
   (decode-char-proc text-codec-decode-char-proc))
 
+(define (make-builtin-text-codec names code)
+  (really-make-text-codec names
+			  code
+			  (lambda (char buffer start count)
+			    (encode-char code char buffer start count))
+			  (lambda (buffer start count)
+			    (decode-char code buffer start count))))
+
+(define (make-text-codec names encode-char-proc decode-char-proc)
+  (really-make-text-codec names #f encode-char-proc decode-char-proc))
+
 (define-record-discloser :text-codec
   (lambda (r)
     (cons 'text-codec (text-codec-names r))))
+
+(define *builtin-text-codecs*
+  (make-vector (+ (max (enum text-encoding-option us-ascii)
+		       (enum text-encoding-option utf-8)
+		       (enum text-encoding-option utf-16le)
+		       (enum text-encoding-option utf-16be)
+		       (enum text-encoding-option utf-32le)
+		       (enum text-encoding-option utf-32be))
+		  1)))
+
+(define (port-text-codec p)
+  (let ((spec (port-text-codec-spec p)))
+    (if (text-codec? spec)
+	spec
+	(vector-ref *builtin-text-codecs* spec))))
+
+(define (set-port-text-codec! p codec)
+  (cond
+   ((text-codec-builtin-code codec)
+    => (lambda (code)
+	 (set-port-text-codec-spec! p code)))
+   (else
+    (set-port-text-codec-spec! p codec))))
 
 (define *text-codecs* '())
 
@@ -44,6 +82,17 @@
        (register-text-codec! ?id)))
     ((define-text-codec ?id ?name ?encode-proc ?decode-proc)
      (define-text-codec ?id (?name) ?encode-proc ?decode-proc))))
+
+(define-syntax define-builtin-text-codec
+  (syntax-rules ()
+    ((define-builtin-text-codec ?id (?name ...) ?enumerand)
+     (begin
+       (define ?id (make-builtin-text-codec '(?name ...) (enum text-encoding-option ?enumerand)))
+       (register-text-codec! ?id)
+       (vector-set! *builtin-text-codecs* (enum text-encoding-option ?enumerand)
+		    ?id)))
+    ((define-builtin-text-codec ?id ?name ?enumerand)
+     (define-builtin-text-codec ?id (?name) ?enumerand))))
        
 (define-text-codec null-text-codec "null"
   (lambda (char buffer start count)
@@ -51,314 +100,10 @@
   (lambda (buffer start count)
     (values #f #f)))
 
-;; US-ASCII
-
-;; This is mainly needed because it might be the default locale
-;; encoding reported by the OS.
-
-(define (encode-char/us-ascii char buffer start count)
-  (let ((scalar-value (char->scalar-value char)))
-    (if (< scalar-value 128)
-	(begin
-	  (provisional-byte-vector-set! buffer start scalar-value)
-	  (values #t 1))
-	(values #f #f))))
-
-(define (decode-char/us-ascii buffer start count)
-  (values (scalar-value->char (provisional-byte-vector-ref buffer start))
-	  1))
-
-(define-text-codec us-ascii-codec "US-ASCII"
-  encode-char/us-ascii
-  decode-char/us-ascii)
-
-;; Latin 1
-
-(define (encode-char/latin-1 char buffer start count)
-  (let ((scalar-value (char->scalar-value char)))
-    (if (< scalar-value 256)
-	(begin
-	  (provisional-byte-vector-set! buffer start scalar-value)
-	  (values #t 1))
-	(values #f #f))))
-
-(define (decode-char/latin-1 buffer start count)
-  (values (scalar-value->char (provisional-byte-vector-ref buffer start))
-	  1))
-
-(define-text-codec latin-1-codec "ISO8859-1"
-  encode-char/latin-1
-  decode-char/latin-1)
-
-;; UTF 8
-
-(define (encode-char/utf-8 char buffer start count)
-  (let ((scalar-value (char->scalar-value char)))
-    (cond
-     ((<= scalar-value #x7f)
-      (provisional-byte-vector-set! buffer start scalar-value)
-      (values #t 1))
-     ((<= scalar-value #x7ff)
-      (if (>= count 2)
-	  (begin
-	    (provisional-byte-vector-set!
-	     buffer start
-	     (+ #xc0
-		(arithmetic-shift (bitwise-and scalar-value #b11111000000)
-				  -6)))
-	    (provisional-byte-vector-set!
-	     buffer (+ 1 start)
-	     (+ #x80
-		(bitwise-and scalar-value #b111111)))
-	    (values #t 2))
-	  (values #f 2)))
-     ((<= scalar-value #xffff)
-      (if (>= count 3)
-	  (begin
-	    (provisional-byte-vector-set!
-	     buffer start
-	     (+ #xe0
-		(arithmetic-shift (bitwise-and scalar-value #b1111000000000000)
-				  -12)))
-	    (provisional-byte-vector-set!
-	     buffer (+ 1 start)
-	     (+ #x80
-		(arithmetic-shift (bitwise-and scalar-value #b111111000000)
-				  -6)))
-	    (provisional-byte-vector-set!
-	     buffer (+ 2 start)
-	     (+ #x80
-		(bitwise-and scalar-value #b111111)))
-	    (values #t 3))
-	  (values #f 3)))
-     (else
-      (if (>= count 4)
-	  (begin
-	    (provisional-byte-vector-set!
-	     buffer start
-	     (+ #xf0
-		(arithmetic-shift (bitwise-and scalar-value #b111000000000000000000)
-				  -18)))
-	    (provisional-byte-vector-set!
-	     buffer (+ 1 start)
-	     (+ #x80
-		(arithmetic-shift (bitwise-and scalar-value #b111111000000000000)
-				  -12)))
-	    (provisional-byte-vector-set!
-	     buffer (+ 2 start)
-	     (+ #x80
-		(arithmetic-shift (bitwise-and scalar-value #b111111000000)
-				  -6)))
-	    (provisional-byte-vector-set!
-	     buffer (+ 3 start)
-	     (+ #x80
-		(bitwise-and scalar-value #b111111)))
-	    (values #t 4))
-	  (values #f 4))))))
-
-; The table, and the associated decoding algorithm, is from
-; Richard Gillam: "Unicode Demystified", chapter 14
-
-(define *utf-8-state-table*
-  '#(;; state 0
-     0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 -1 -1 -1 -1 -1 -1 -1 1 1 1 1 2 2 3 -1
-     ;; state 1
-     -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 0 0 0 0 0 0 0 0 -2 -2 -2 -2 -2 -2 -2 -2
-     ;; state 2
-     -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 1 1 1 1 1 1 1 1 -2 -2 -2 -2 -2 -2 -2 -2
-     ;; state 3
-     -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 2 2 2 2 2 2 2 2 -2 -2 -2 -2 -2 -2 -2 -2))
-
-(define *utf-8-masks* '#(#x7f #x1f #x0f #x07))
-
-; We don't check for non-shortest-form UTF-8.  Too bad.
-
-(define (decode-char/utf-8 buffer start count)
-  (let loop ((q 0) (state 0) (mask 0) (scalar-value 0))
-    (if (< q count)
-	(let* ((c (provisional-byte-vector-ref buffer (+ start q)))
-	       (state (vector-ref *utf-8-state-table*
-				  (+ (arithmetic-shift state 5)	; (* state 32)
-				     (arithmetic-shift c -3)))))
-	  (case state
-	    ((0)
-	     (let ((scalar-value (+ scalar-value
-				    (bitwise-and c #x7f))))
-	       (if (scalar-value? scalar-value)
-		   (values (scalar-value->char scalar-value)
-			   (+ q 1))
-		   (values #f #f))))
-	    ((1 2 3)
-	     (loop (+ 1 q) state #x3f
-		   (arithmetic-shift (+ scalar-value
-					(bitwise-and c
-						     (if (zero? mask)
-							 (vector-ref *utf-8-masks* state)
-							 mask)))
-				     6)))
-	    ((-2 -1)
-	     (values #f #f))))
-	(values #f (+ 1 q)))))
-
-(define-text-codec utf-8-codec "UTF-8"
-  encode-char/utf-8
-  decode-char/utf-8)
-
-; UTF-16
-
-(define (provisional-byte-vector-set-word16/le! bytes start word)
-  (provisional-byte-vector-set! bytes start
-				(bitwise-and #b11111111 word))
-  (provisional-byte-vector-set! bytes (+ 1 start)
-				(arithmetic-shift word -8)))
-
-(define (provisional-byte-vector-set-word16/be! bytes start word)
-  (provisional-byte-vector-set! bytes start
-				(arithmetic-shift word -8))
-  (provisional-byte-vector-set! bytes (+ 1 start)
-				(bitwise-and #b11111111 word)))
-
-(define (make-encode-char/utf-16 provisional-byte-vector-set-word16!)
-  (lambda (char buffer start count)
-    (let ((scalar-value (char->scalar-value char)))
-      (if (<= scalar-value #xffff)
-	  (if (< count 2)
-	      (values #f 2)
-	      (begin
-		(provisional-byte-vector-set-word16! buffer start scalar-value)
-		(values #t 2)))
-	  (if (< count 4)
-	      (values #f 4)
-	      (begin
-		(provisional-byte-vector-set-word16!
-		 buffer start
-		 (+ (arithmetic-shift scalar-value -10) #xd7c0))
-		(provisional-byte-vector-set-word16!
-		 buffer (+ 2 start)
-		 (+ (bitwise-and scalar-value #x3ff) #xdc00))
-		(values #t 4)))))))
-
-(define (provisional-byte-vector-ref-word16/le bytes start)
-  (+ (provisional-byte-vector-ref bytes start)
-     (arithmetic-shift (provisional-byte-vector-ref bytes (+ 1 start))
-		       8)))
-
-(define (provisional-byte-vector-ref-word16/be bytes start)
-  (+ (arithmetic-shift (provisional-byte-vector-ref bytes start)
-		       8)
-     (provisional-byte-vector-ref bytes (+ 1 start))))
-
-(define (make-decode-char/utf-16 provisional-byte-vector-ref-word16)
-  (lambda (buffer start count)
-    (if (< count 2)
-	(values #f 2)
-	(let ((word0 (provisional-byte-vector-ref-word16 buffer start)))
-	  (cond
-	   ((or (< word0 #xd800)
-		(> word0 #xdfff))
-	    (values (scalar-value->char word0) 2))
-	   ((< count 4)
-	    (values #f 4))
-	   ((<= word0 #xdbff)
-	    (let ((word1 (provisional-byte-vector-ref-word16 buffer (+ 2 start))))
-	      (if (and (>= word1 #xdc00)
-		       (<= word1 #xdfff))
-		  (values (scalar-value->char
-			   (+ (arithmetic-shift (- word0 #xd7c0) 10)
-			      (bitwise-and word1 #x3ff)))
-			  4)
-		  (values #f #f))))
-	   (else
-	    (values #f #f)))))))
-
-(define-text-codec utf-16le-codec "UTF-16LE"
-  (make-encode-char/utf-16 provisional-byte-vector-set-word16/le!)
-  (make-decode-char/utf-16 provisional-byte-vector-ref-word16/le))
-
-(define-text-codec utf-16be-codec "UTF-16BE"
-  (make-encode-char/utf-16 provisional-byte-vector-set-word16/be!)
-  (make-decode-char/utf-16 provisional-byte-vector-ref-word16/be))
-
-; UTF-32
-
-(define (encode-char/utf-32le char buffer start count)
-  (if (< count 4)
-      (values #f 4)
-      (let ((scalar-value (char->scalar-value char)))
-	(provisional-byte-vector-set! buffer start
-				      (bitwise-and scalar-value #xff))
-	(provisional-byte-vector-set! buffer (+ 1 start)
-				      (arithmetic-shift
-				       (bitwise-and scalar-value #xff00)
-				       -8))
-	(provisional-byte-vector-set! buffer (+ 2 start)
-				      (arithmetic-shift
-				       (bitwise-and scalar-value #xff0000)
-				       -16))
-	(provisional-byte-vector-set! buffer (+ 3 start)
-				      (arithmetic-shift scalar-value -24))
-	(values #t 4))))
-
-(define (encode-char/utf-32be char buffer start count)
-  (if (< count 4)
-      (values #f 4)
-      (let ((scalar-value (char->scalar-value char)))
-	(provisional-byte-vector-set! buffer start
-				      (arithmetic-shift scalar-value -24))
-	(provisional-byte-vector-set! buffer (+ 1 start)
-				      (arithmetic-shift
-				       (bitwise-and scalar-value #xff0000)
-				       -16))
-	(provisional-byte-vector-set! buffer (+ 2 start)
-				      (arithmetic-shift
-				       (bitwise-and scalar-value #xff00)
-				       -8))
-	(provisional-byte-vector-set! buffer (+ 3 start)
-				      (bitwise-and scalar-value #xff))
-	(values #t 4))))
-
-(define (decode-char/utf-32le buffer start count)
-  (if (< count 4)
-      (values #f 4)
-      (let ((code-point
-	     (+ (provisional-byte-vector-ref buffer start)
-		(arithmetic-shift
-		 (provisional-byte-vector-ref buffer (+ 1 start))
-		 8)
-		(arithmetic-shift
-		 (provisional-byte-vector-ref buffer (+ 2 start))
-		 16)
-		(arithmetic-shift
-		 (provisional-byte-vector-ref buffer (+ 3 start))
-		 24))))
-	(if (scalar-value? code-point)
-	    (values (scalar-value->char code-point)
-		    4)
-	    (values #f #f)))))
-
-(define (decode-char/utf-32be buffer start count)
-  (if (< count 4)
-      (values #f 4)
-      (let ((code-point
-	     (+ (arithmetic-shift
-		 (provisional-byte-vector-ref buffer start)
-		 24)
-		(arithmetic-shift
-		 (provisional-byte-vector-ref buffer (+ 1 start))
-		 16)
-		(arithmetic-shift
-		 (provisional-byte-vector-ref buffer (+ 2 start))
-		 8)
-		(provisional-byte-vector-ref buffer (+ 3 start)))))
-	(if (scalar-value? code-point)
-	    (values (scalar-value->char code-point)
-		    4)
-	    (values #f #f)))))
-
-(define-text-codec utf-32le-codec "UTF-32LE"
-  encode-char/utf-32le
-  decode-char/utf-32le)
-
-(define-text-codec utf-32be-codec "UTF-32BE"
-  encode-char/utf-32be
-  decode-char/utf-32be)
+(define-builtin-text-codec us-ascii-codec "US-ASCII" us-ascii)
+(define-builtin-text-codec latin-1-codec "ISO8859-1" latin-1)
+(define-builtin-text-codec utf-8-codec "UTF-8" utf-8)
+(define-builtin-text-codec utf-16le-codec "UTF-16LE" utf-16le)
+(define-builtin-text-codec utf-16be-codec "UTF-16BE" utf-16be)
+(define-builtin-text-codec utf-32le-codec "UTF-32LE" utf-32le)
+(define-builtin-text-codec utf-32be-codec "UTF-32BE" utf-32be)

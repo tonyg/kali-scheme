@@ -133,6 +133,7 @@
 	events
 	pending-interrupts
 	memory data stob struct allocation vmio
+	text-encodings
 	return-codes
 	gc-roots gc gc-util
 	heap stack external)
@@ -141,7 +142,8 @@
 	 (interp call)
 	 (interp define-primitive)
 	 (interp prim)
-	 (interp interrupt))
+	 (interp interrupt)
+	 )
   ;(optimize auto-integrate)
   )
 
@@ -210,7 +212,8 @@
 	gc-roots
 	symbols external-opcodes
 	stack			;pop
-	stob)			;immutable
+	stob			;immutable
+	text-encodings)
   (files (interp prim-io)))
 
 (define-structure proposal-opcodes (export initialize-proposals!+gc)
@@ -432,6 +435,11 @@
 	gc gc-roots)
   (files (data symbol)))
 
+(define-structure text-encodings text-encodings-interface
+  (open prescheme enum-case
+	struct
+	vm-architecture)
+  (files (data text-encoding)))
 
 ;----------------------------------------------------------------
 ;; DUMPER

@@ -167,7 +167,7 @@
 	signals
 	(subset primitives      (copy-bytes! write-byte))
 	encodings
-	(subset text-codecs (utf-8-codec)))
+	(subset text-codecs (set-port-text-codec! utf-8-codec)))
   (files (big more-port)))
 
 (define-structure destructuring (export (destructure :syntax))

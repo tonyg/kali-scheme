@@ -314,9 +314,7 @@ return \texttt{\#t} and the number of bytes needed by the encoding.
 If the character cannot be encoded at all, the procedure must return
 \texttt{\#f} and \texttt{\#f}.  If the encoding is possible but the
 space is not sufficient, the procedure must return \texttt{\#f} and a
-total number of bytes needed for the encoding.  All
-accesses to the byte vector should be provisional (see
-Section~\ref{sec:optimistic-concurrency}).
+total number of bytes needed for the encoding.
 
 A \cvar{decode-proc} consumes a byte vector \var{buffer}, an index
 \var{start} into the buffer, and a block size \var{count}.  It is
@@ -330,8 +328,7 @@ encoding, the procedure must return \texttt{\#f} and a total count of
 bytes (including the buffer) needed to complete the encoding.  Note
 that this byte count is only a guess: the system will provide that
 many bytes, but the decoding procedures might still signal an
-incomplete encoding, causing the system to try to obtain more.  All
-accesses to the byte vector should be provisional.
+incomplete encoding, causing the system to try to obtain more. 
 
 \section{Default encodings}
 

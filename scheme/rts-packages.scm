@@ -104,7 +104,11 @@
 	define-record-types
 	bitwise
 	unicode
-	proposals)
+	byte-vectors
+	(subset primitives (encode-char decode-char))
+	(subset architecture (text-encoding-option))
+	(subset ports (port-text-codec-spec set-port-text-codec-spec!))
+	enumerated enum-case)
   (files (rts text-codec))
   (optimize auto-integrate))
 
@@ -117,6 +121,7 @@
 	ports byte-vectors bitwise
 	define-record-types
 	proposals
+	(subset threads-internal (maybe-commit-no-interrupts))
 	session-data
 	debug-messages	; for error messages
 	methods         ; &disclose :input-port :output-port
@@ -428,8 +433,7 @@
 	i/o		 ;initialize-i/o, etc.
 	channel-i/o      ;initialize-channel-i/o
 	channel-ports    ;{in,out}put-channel->port
-	(subset text-codecs (find-text-codec))
-	(subset ports (set-port-text-codec!))
+	(subset text-codecs (find-text-codec set-port-text-codec!))
 	session-data     ;initialize-session-data!
 	fluids-internal	 ;initialize-dynamic-state!
 	exceptions-internal

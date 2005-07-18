@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 34")
+(define architecture-version "Vanilla 35")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -268,12 +268,21 @@
   (checked-record-ref index 3)
   (checked-record-set! index 4)
 
+  (encode-char 5)
+  (encode-char! 5)
+
+  (decode-char 4)
+  (decode-char! 4)
+
   ;; ports (buffered I/O) - these are all unnecessary
   ;; byte = 0 -> port is supplied
   ;;      = 1 -> get port from dynamic environment
   ((read-byte peek-byte) byte 1 0)
   (write-byte byte 2 1)
-  
+
+  ((read-char peek-char) byte 1 0)
+  (write-char byte 2 1)
+
   (os-error-message 1)
 
   ;; For writing informative messages when debugging
@@ -496,6 +505,15 @@
    open-for-output
    ))
 
+; Built-in text encodings
+
+(define-enumeration text-encoding-option
+  (us-ascii
+   latin-1
+   utf-8
+   utf-16le utf-16be
+   utf-32le utf-32be))
+
 (define-enumeration stob
   (;; D-vector types (traced by GC)
    pair
@@ -549,7 +567,10 @@
       (shared-binding-ref shared-binding-set!))
     (port port? make-port
       (port-handler)
-      (port-text-codec set-port-text-codec!)
+      ;; either an integer from the TEXT-ENCODING-OPTION for encodings
+      ;; handled by the VM, or a :TEXT-CODEC object for things handled
+      ;; purely by the RTS
+      (port-text-codec-spec set-port-text-codec-spec!)
       (port-status  set-port-status!)
       (port-lock    set-port-lock!)		; used for buffer timestamps
       (port-data    set-port-data!)

@@ -188,6 +188,10 @@
 	  value->link
 	  link->value))
 
+(define-interface text-encodings-interface
+  (export encode-scalar-value
+	  decode-scalar-value))
+
 (define-interface struct-interface
   (export vm-pair? vm-pair-size vm-cons vm-car vm-set-car! vm-cdr vm-set-cdr!
 	  vm-symbol? vm-symbol-size vm-make-symbol vm-symbol->string
@@ -219,6 +223,7 @@
 	  port-buffer set-port-buffer!
 	  port-index set-port-index!
 	  port-limit set-port-limit!
+	  port-text-codec-spec set-port-text-codec-spec!
 	  port-lock
 	  port-pending-eof? set-port-pending-eof?!
    
@@ -508,7 +513,7 @@
 	  raise
 	  push-exception-setup!
 
-	  any-> string-> boolean-> fixnum-> vm-integer-> char->
+	  any-> string-> boolean-> fixnum-> vm-integer-> char-> char-scalar-value->
 	  vector-> code-vector-> 
 	  input-type no-coercion
 	  
