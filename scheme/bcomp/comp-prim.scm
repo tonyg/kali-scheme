@@ -144,7 +144,8 @@
           ((not (number? (car arg-specs))))
 	  ((memq name '(+ * - / = < > <= >=
 			bitwise-ior bitwise-xor bitwise-and
-			make-string closed-apply)))
+			make-string closed-apply
+			encode-char/us-ascii)))
           (else
            (let ((type (get-primop-type name (car arg-specs))))
              (define-compiler-primitive name type
@@ -622,7 +623,7 @@
 
 ; READ-BYTE, PEEK-BYTE and WRITE-BYTE
 
-(let ((define-byte-io
+(let ((define-byte/char-io
 	(lambda (id opcode type)
 	  (define-compiler-primitive id
 	    type
@@ -646,14 +647,20 @@
 			      (instruction (enum op return)))
 	       empty-segment
 	       empty-segment))))))
-  (define-byte-io 'read-byte
+  (define-byte/char-io 'read-byte
     (enum op read-byte)
     (proc (&opt value-type) value-type))
-  (define-byte-io 'peek-byte
+  (define-byte/char-io 'peek-byte
     (enum op peek-byte)
+    (proc (&opt value-type) value-type))
+  (define-byte/char-io 'read-char
+    (enum op read-char)
+    (proc (&opt value-type) value-type))
+  (define-byte/char-io 'peek-char
+    (enum op peek-char)
     (proc (&opt value-type) value-type)))
 
-(let ((define-byte-io
+(let ((define-byte/char-io
 	(lambda (id opcode type)
 	  (define-compiler-primitive id
 	    type
@@ -679,9 +686,12 @@
 			      (instruction opcode 0)
 			      (instruction (enum op return)))
                 empty-segment))))))
-  (define-byte-io 'write-byte
+  (define-byte/char-io 'write-byte
     (enum op write-byte)
-    (proc (integer-type &opt value-type) unspecific-type)))
+    (proc (integer-type &opt value-type) unspecific-type))
+  (define-byte/char-io 'write-char
+    (enum op write-char)
+    (proc (char-type &opt value-type) unspecific-type)))
 
 ; Timings in 0.47 to figure out how to handle the optional ports.
 ; 
@@ -916,3 +926,48 @@
     (sequentially (integer-literal-instruction (char->ascii #\?))
 		  (instruction (enum op scalar-value->char)))
     (proc (number-type &opt char-type) string-type)))
+
+; Text encoding/decoding
+
+; These return multiple values, which is why this is more work.
+
+(let ((define-encode/decode
+	(lambda (name type arg-count retval-count
+		      regular bang)
+	  (let ((depth-inc (max (- arg-count 1) retval-count)))
+	    (define-compiler-primitive name type
+	      (lambda (node depth frame cont)
+		(depth-check! frame (+ depth depth-inc))
+		(let ((args (cdr (node-form node))))
+		  (cond
+		   ((return-cont? cont)
+		    (sequentially (push-all-but-last args depth frame node)
+				  (instruction regular)))
+		   ((ignore-values-cont? cont)
+		    (sequentially (push-all-but-last args depth frame node)
+				  (instruction bang)))
+		   ((fall-through-cont? cont)
+		    (generate-trap depth
+				   frame
+				   cont
+				   (string-append "returning " 
+						  (number->string retval-count)
+						  " arguments where one is expected")
+				   (schemify node)))
+		   (else
+		    (error "unknown compiler continuation" (enumerand->name regular op) cont)))))
+	      (direct-closed-compilator regular))))))
+
+  (define-encode/decode 'encode-char 
+    (proc (char-type exact-integer-type value-type exact-integer-type exact-integer-type)
+	  (make-some-values-type (list boolean-type value-type)))
+    5 2
+    (enum op encode-char) (enum op encode-char!))
+
+  (define-encode/decode 'decode-char 
+    (proc (exact-integer-type value-type exact-integer-type exact-integer-type)
+	  (make-some-values-type (list value-type value-type)))
+    4 2
+    (enum op decode-char) (enum op decode-char!)))
+
+  
