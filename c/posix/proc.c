@@ -660,7 +660,7 @@ posix_request_interrupts(s48_value sch_signum)
       s48_raise_out_of_memory_error();
 
     sa.sa_handler = generic_interrupt_catcher;
-    sigemptyset(&sa.sa_mask);
+    sigfillset(&sa.sa_mask);
     sa.sa_flags = 0;
 
     if (sigaction(signum, &sa, old) != 0) {
