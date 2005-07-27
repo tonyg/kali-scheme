@@ -41,25 +41,45 @@
 	     (<= scalar-value 13)))))
 
 (define (unicode-char-lower-case? c)
-  (eq? (general-category lowercase-letter)
-       (char-general-category c)))
+  (let ((encoding (char-info-encoding c)))
+    (not
+     (zero?
+      (bitwise-and 1
+		   (arithmetic-shift encoding
+				     (- (+ 1
+					   *uppercase-index-width*
+					   *lowercase-index-width*
+					   *titlecase-index-width*
+					   *general-category-bits*))))))))
 
 (define (unicode-char-upper-case? c)
-  (eq? (general-category uppercase-letter)
-       (char-general-category c)))
+  (let ((encoding (char-info-encoding c)))
+    (not
+     (zero?
+      (bitwise-and 1
+		   (arithmetic-shift encoding
+				     (- (+ *uppercase-index-width*
+					   *lowercase-index-width*
+					   *titlecase-index-width*
+					   *general-category-bits*))))))))
 
 (define (lookup-by-offset-index scalar-value offset-index offsets)
   (scalar-value->char
    (+ scalar-value (vector-ref offsets offset-index))))
 
+(define *uppercase-mask* (- (arithmetic-shift 1 *uppercase-index-width*) 1))
+
 (define (unicode-char-upcase c)
   (let ((scalar-value (char->scalar-value c))
 	(encoding (char-info-encoding c)))
-  (lookup-by-offset-index
-   scalar-value
-   (arithmetic-shift encoding
-		     (- (+ *lowercase-index-width* *titlecase-index-width* *general-category-bits*)))
-   *uppercase-offsets*)))
+    (lookup-by-offset-index
+     scalar-value
+     (bitwise-and *uppercase-mask*
+		  (arithmetic-shift encoding
+				    (- (+ *lowercase-index-width* 
+					  *titlecase-index-width*
+					  *general-category-bits*))))
+     *uppercase-offsets*)))
 
 (define *lowercase-mask* (- (arithmetic-shift 1 *lowercase-index-width*) 1))
 

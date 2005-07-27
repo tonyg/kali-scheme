@@ -677,12 +677,13 @@ scheme/env/unicode-info.scm: build/UnicodeData.txt			\
 	cd $(srcdir) &&							\
 	(echo ',bench';							\
 		echo ',batch';						\
-		echo ',open finite-types destructuring define-record-types bitwise';		\
-		echo ',open (subset srfi-13 (string-index string-prefix? string-suffix?))'; 	\
+		echo ',open finite-types destructuring define-record-types bitwise tables';	\
+		echo ',open (subset srfi-13 (string-index string-prefix? string-suffix? string-contains string-skip))';	\
+		echo ',open (subset srfi-14 (char-set:hex-digit))';				\
 		echo ',open (subset srfi-1 (find)) srfi-23';					\
 		echo ',load scheme/big/compact-table.scm scheme/env/unicode-category.scm';	\
 		echo ',load scheme/link/unicode-data.scm';					\
-		echo "(create-unicode-tables \"build/UnicodeData.txt\" \"scheme/env/unicode-info.scm\" \"scheme/srfi/srfi-14-base-char-sets.scm\")"		\
+		echo "(create-unicode-tables \"build/UnicodeData.txt\" \"build/PropList.txt\" \"scheme/env/unicode-info.scm\" \"scheme/srfi/srfi-14-base-char-sets.scm\")"		\
 	) | $(RUNNABLE) -h 6000000
 
 # --------------------

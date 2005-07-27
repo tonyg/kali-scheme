@@ -1,7 +1,8 @@
 ; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-; Parse UnicodeData.txt and generate character classification and
-; conversion tables from it.
+; Parse UnicodeData.txt and various other files from the Unicode
+; consortium, and generate character classification and conversion
+; tables from it.
 
 (define (string-split string at)
   (let ((count (string-length string)))
@@ -254,6 +255,7 @@
 
 (define (code-point-info->case+general-category-encoding
 	 info
+	 special-lowercase-table special-uppercase-table
 	 uppercase-offsets lowercase-offsets titlecase-offsets
 	 uppercase-index-width lowercase-index-width titlecase-index-width)
   (let ((code-point (code-point-info-code-point info)))
@@ -265,18 +267,53 @@
 					    code-point)))
 	  (titlecase-index (vector-index titlecase-offsets
 					 (- (code-point-info-titlecase-code-point info)
-					    code-point))))
+					    code-point)))
+	  (uppercase? (or (eq? (general-category uppercase-letter)
+			       (code-point-info-general-category info))
+			  (table-ref special-uppercase-table code-point)))
+	  (lowercase? (or (eq? (general-category lowercase-letter)
+			       (code-point-info-general-category info))
+			  (table-ref special-lowercase-table code-point))))
 
       (bitwise-ior
        (arithmetic-shift
 	(bitwise-ior
 	 (arithmetic-shift (bitwise-ior
-			    (arithmetic-shift uppercase-index lowercase-index-width)
+			    (arithmetic-shift
+			     (bitwise-ior
+			      (arithmetic-shift (bitwise-ior (if uppercase? 2 0)
+							     (if lowercase? 1 0))
+						uppercase-index-width)
+			      uppercase-index)
+			     lowercase-index-width)
 			    lowercase-index)
 			   titlecase-index-width)
 	 titlecase-index)
 	*general-category-bits*)
        (general-category-index (code-point-info-general-category info))))))
+
+(define (code-point-encoding-uppercase? encoding
+					uppercase-index-width lowercase-index-width titlecase-index-width)
+  (not
+   (zero?
+    (bitwise-and 1
+		 (arithmetic-shift encoding
+				   (- (+ 1
+					 uppercase-index-width
+					 lowercase-index-width
+					 titlecase-index-width
+					 *general-category-bits*)))))))
+
+(define (code-point-encoding-lowercase? encoding
+					uppercase-index-width lowercase-index-width titlecase-index-width)
+  (not
+   (zero?
+    (bitwise-and 1
+		 (arithmetic-shift encoding
+				   (- (+ uppercase-index-width
+					 lowercase-index-width
+					 titlecase-index-width
+					 *general-category-bits*)))))))
 
 (define (lookup-by-offset-index code-point offset-index offsets)
   (+ code-point (vector-ref offsets offset-index)))
@@ -286,8 +323,9 @@
 						  uppercase-index-width lowercase-index-width titlecase-index-width)
   (lookup-by-offset-index
    code-point
-   (arithmetic-shift encoding
-		     (- (+ lowercase-index-width titlecase-index-width *general-category-bits*)))
+   (bitwise-and (- (arithmetic-shift 1 uppercase-index-width) 1)
+		(arithmetic-shift encoding
+				  (- (+ lowercase-index-width titlecase-index-width *general-category-bits*))))
    uppercase-offsets))
 
 (define (code-point-encoding-lowercase-code-point code-point encoding
@@ -355,7 +393,56 @@
        ((or next-info (source)) => upto)
        (else #f)))))
 
-(define (make-scalar-value-case+general-category-encoding-tables infos block-bits)
+(define (parse-proplist-for-upper/lowercase filename)
+  (call-with-input-file filename
+    (lambda (port)
+      (let ((uppercase (make-integer-table)) (lowercase (make-integer-table)))
+	(let loop ()
+	  (let ((thing (read-line port)))
+	    (if (eof-object? thing)
+		(values uppercase lowercase)
+		(call-with-values
+		    (lambda ()
+		      (extract-upper/lowercase thing))
+		  (lambda (uppers lowers)
+		    (for-each (lambda (u)
+				(table-set! uppercase u #t))
+			      uppers)
+		    (for-each (lambda (l)
+				(table-set! lowercase l #t))
+			      lowers)
+		    (loop))))))))))
+
+(define (extract-upper/lowercase line)
+  (cond
+   ((string-prefix? "#" line)
+    (values '() '()))
+   ((string-contains line "Other_Uppercase")
+    (values (proplist-line-range line)
+	    '()))
+   ((string-contains line "Other_Lowercase")
+    (values '()
+	    (proplist-line-range line)))
+   (else
+    (values '() '()))))
+
+(define (proplist-line-range line)
+  (let* ((i1 (string-skip line char-set:hex-digit))
+	 (first (string->number (substring line 0 i1) 16)))
+    (if (char=? #\. (string-ref line i1))
+	(let* ((i2 (string-skip line #\. i1))
+	       (i3 (string-skip line char-set:hex-digit i2))
+	       (last (string->number (substring line i2 i3) 16)))
+	  (let loop ((last last) (range '()))
+	    (if (= last first)
+		(cons last range)
+		(loop (- last 1) (cons last range)))))
+	(list first))))
+
+(define (make-scalar-value-case+general-category-encoding-tables
+	 infos 
+	 special-lowercase-table special-uppercase-table
+	 block-bits)
 
   (let ((uppercase-offsets (mapping-offsets infos code-point-info-uppercase-code-point))
 	(lowercase-offsets (mapping-offsets infos code-point-info-lowercase-code-point))
@@ -380,6 +467,7 @@
 	      (lambda (info)
 		(code-point-info->case+general-category-encoding
 		 info
+		 special-lowercase-table special-uppercase-table
 		 uppercase-offsets lowercase-offsets titlecase-offsets
 		 uppercase-index-width lowercase-index-width titlecase-index-width)))
 	     block-size))
@@ -421,16 +509,27 @@
 	    (inner-loop (cdr values) (+ 1 last-index))))))))))
 
 (define (create-unicode-tables unicode-data-filename
+			       proplist-filename
 			       category-output-file
 			       srfi-14-base-output-file)
   (let ((infos (parse-unicode-data unicode-data-filename)))
-    (write-unicode-category-tables infos category-output-file)
-    (write-srfi-14-base-char-sets infos srfi-14-base-output-file)))
+    (call-with-values
+	(lambda ()
+	  (parse-proplist-for-upper/lowercase proplist-filename))
+      (lambda (special-uppercase-table special-lowercase-table)
+	(write-unicode-category-tables infos special-uppercase-table special-lowercase-table 
+				       category-output-file)
+	(write-srfi-14-base-char-sets infos srfi-14-base-output-file)))))
 
-(define (write-unicode-category-tables infos output-file)
+(define (write-unicode-category-tables infos special-uppercase-table special-lowercase-table
+				       output-file)
   (let ((block-bits 8))			; better than 9, at least
     (call-with-values
-	(lambda () (make-scalar-value-case+general-category-encoding-tables infos block-bits))
+	(lambda ()
+	  (make-scalar-value-case+general-category-encoding-tables
+	   infos
+	   special-uppercase-table special-lowercase-table
+	   block-bits))
       (lambda (indices
 	       encodings
 	       uppercase-offsets lowercase-offsets titlecase-offsets)
@@ -599,7 +698,8 @@
 ; for debugging
 
 (define (test-code-point-case+general-category-encoding-tables
-	 infos block-bits
+	 infos special-uppercase-table special-lowercase-table
+	 block-bits
 	 indices encodings
 	 uppercase-offsets lowercase-offsets titlecase-offsets)
 
@@ -640,6 +740,14 @@
 		      (code-point-encoding-titlecase-code-point
 		       code-point encoding
 		       titlecase-offsets
+		       uppercase-index-width lowercase-index-width titlecase-index-width))
+		     (uppercase?
+		      (code-point-encoding-uppercase?
+		       encoding
+		       uppercase-index-width lowercase-index-width titlecase-index-width))
+		     (lowercase?
+		      (code-point-encoding-lowercase?
+		       encoding
 		       uppercase-index-width lowercase-index-width titlecase-index-width)))
 
 		 (if (not (= (code-point-info-uppercase-code-point info)
@@ -652,7 +760,19 @@
 	   
 		 (if (not (= (code-point-info-titlecase-code-point info)
 			     titlecase-code-point))
-		     (error "titlecase mismatch" info titlecase-code-point)))))))
+		     (error "titlecase mismatch" info titlecase-code-point))
+
+		 (if (not (eq? (or (table-ref special-uppercase-table code-point)
+				   (eq? (code-point-info-general-category info)
+					(general-category uppercase-letter)))
+			       uppercase?))
+		     (error "uppercase? mismatch" info titlecase-code-point))
+		 (if (not (eq? (or (table-ref special-lowercase-table code-point)
+				   (eq? (code-point-info-general-category info)
+					(general-category lowercase-letter)))
+			       lowercase?))
+		     (error "lowercase? mismatch" info titlecase-code-point))
+		 )))))
      infos)))
 
 (define (find-code-point-info code-point infos)
