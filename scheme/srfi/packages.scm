@@ -104,7 +104,7 @@
 	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
 	srfi-40 srfi-42 srfi-43 srfi-45
-        srfi-60 srfi-61))
+        srfi-60 srfi-61 srfi-62))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -541,3 +541,20 @@
 (define-structure srfi-61 srfi-61-interface
   (open (modify scheme (hide cond)))
   (files srfi-61))
+
+; SRFI 62: S-expression comments
+
+; note this modifies the reader
+(define-structure srfi-62 (export)
+  (open scheme
+	reading)
+  (begin
+    (define-sharp-macro #\;
+      (lambda (char port)
+	;; The octothorpe reader leaves the semicolon
+	;; in the input stream, so we consume it.
+	(read-char port)
+	(sub-read-carefully port)
+	(sub-read port)))))
+
+

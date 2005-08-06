@@ -760,7 +760,8 @@
   (export read
 	  define-sharp-macro		;command.scm
 	  reading-error
-	  gobble-line))
+	  gobble-line
+	  sub-read sub-read-carefully))
 
 ; Level 2: the harder stuff.
 ; Various primitives get numeric types and promoted to n-ary at this point.
