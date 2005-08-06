@@ -8,7 +8,7 @@
 ;   (CALL-ERROR message proc arg ...)  - signal an error.
 ;   Record package and DEFINE-RECORD-TYPES macro.
 ;   An object :RECORD-TYPE which is the record type descriptor for
-;     record type descriptors (records are assumed to be records).
+;     record type descriptors (record types are assumed to be records).
 ;     This wouldn't be difficult to change.
 ;   A RECORD? predicate (not essential - only for defining a DISCLOSE
 ;     method for records).
