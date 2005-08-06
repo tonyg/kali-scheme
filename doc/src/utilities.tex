@@ -2455,8 +2455,12 @@ Scheme~48 includes implementations of the following (final) SRFIs:
 \item SRFI 35 -- Conditions
 \item SRFI 36 -- I/O Conditions
 \item SRFI 37 -- args-fold: a program argument processor
+\item SRFI 40 -- A Library of Streams
 \item SRFI 42 -- Eager Comprehensions
+\item SRFI 43 -- Vector library
 \item SRFI 45 -- Primitives for Expressing Iterative Lazy Algorithms
+\item SRFI 60 -- Integers as Bits
+\item SRFI 61 -- A more general cond clause
 \end{itemize}
 Documentation on these can be found at the web site mentioned above.
 
@@ -2466,7 +2470,9 @@ SRFI~14 includes the procedure \code{->char-set} which is not a standard
 In the Scheme~48 version of SRFI~14 we have renamed \code{->char-set}
  as \code{x->char-set}.
 
-The SRFI bindings can be accessed either by opening the appropriate structure
+With the exception of SRFI 62 (which is supported by default), the
+SRFI bindings can be accessed
+either by opening the appropriate structure
  (the structure \code{srfi-}\cvar{n} contains SRFI \cvar{n})
  or by loading structure \code{srfi-7} and then using
  the \code{,load-srfi-7-program} command to load an SRFI 7-style program.

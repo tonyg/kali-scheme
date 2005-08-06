@@ -103,7 +103,8 @@
 	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
 	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
-	srfi-42 srfi-45))
+	srfi-40 srfi-42 srfi-43 srfi-45
+        srfi-60 srfi-61))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -111,7 +112,9 @@
 	(srfi-5 let)
 	(srfi-13 string->list string-copy string-fill!)
 	(srfi-17 set!)
-	(srfi-45 force delay)))
+	(srfi-45 force delay)
+	(srfi-43 vector-fill! vector->list list->vector)
+        (srfi-61 cond)))
     )
 
   (files srfi-7))
@@ -425,7 +428,7 @@
   (open scheme
 	i/o-conditions))
 
-; args-fold: a program argument processor
+; SRFI 37: args-fold: a program argument processor
 
 (define-interface srfi-37-interface
   (export args-fold
@@ -438,7 +441,23 @@
 	srfi-11)
   (files srfi-37))
 
-; Eager Comprehensions
+; SRFI 40: A Library of Streams
+
+(define-interface srfi-40-interface
+  (export stream-null (stream-cons :syntax) stream? stream-null? stream-pair?
+          stream-car stream-cdr (stream-delay :syntax) stream stream-unfoldn
+          stream-map stream-for-each stream-filter))
+
+(define-structure srfi-40 srfi-40-interface
+  (open (modify scheme (hide delay force))
+        define-record-types
+	cells
+        (subset srfi-1 (any every))
+        srfi-23 ; ERROR
+	)
+  (files srfi-40))
+
+; SRFI 42: Eager Comprehensions
 
 (define-interface srfi-42-interface
   (export ((do-ec
@@ -465,8 +484,31 @@
 	srfi-23)
   (files srfi-42))
 
+; SRFI 43: Vector library
 
-; SRFI-45: Primitives for Expressing Iterative Lazy Algorithms
+(define-interface srfi-43-interface
+  (export make-vector vector vector-unfold vector-unfold-right
+          vector-copy vector-reverse-copy vector-append vector-concatenate
+          vector? vector-empty? vector= vector-ref vector-length
+          vector-fold vector-fold-right vector-map vector-map!
+          vector-for-each vector-count vector-index vector-skip
+          vector-index-right vector-skip-right
+          vector-binary-search vector-any vector-every
+          vector-set! vector-swap! vector-fill! vector-reverse!
+          vector-copy! vector-reverse-copy! vector-reverse!
+          vector->list reverse-vector->list list->vector reverse-list->vector))
+
+(define-structure srfi-43 srfi-43-interface
+  (open (modify scheme
+                (rename (vector-fill! %vector-fill!))
+                (rename (vector->list %vector->list))
+                (rename (list->vector %list->vector)))
+        (modify util (rename (unspecific unspecified-value)))
+        (subset srfi-8 (receive))
+        (subset signals (error)))
+  (files srfi-43))
+
+; SRFI 45: Primitives for Expressing Iterative Lazy Algorithms
 
 (define-interface srfi-45-interface
   (export (lazy :syntax) force (delay :syntax)))
@@ -475,3 +517,27 @@
   (open scheme
 	define-record-types)
   (files srfi-45))
+
+; SRFI 60: Integers as Bits
+
+(define-interface srfi-60-interface
+  (export logand bitwise-and logior bitwise-ior logxor bitwise-xor
+	  lognot bitwise-not bitwise-if bitwise-merge logtest 
+	  any-bits-set? logcount bit-count integer-length 
+	  log2-binary-factors first-set-bit logbit?  bit-set?  
+	  copy-bit bit-field copy-bit-field ash arithmetic-shift 
+	  rotate-bit-field reverse-bit-field integer->list 
+	  list->integer booleans->integer))
+
+(define-structure srfi-60 srfi-60-interface
+  (open scheme bitwise)
+  (files srfi-60))
+
+; SRFI 61: A more general cond clause
+
+(define-interface srfi-61-interface
+  (export (cond :syntax)))
+
+(define-structure srfi-61 srfi-61-interface
+  (open (modify scheme (hide cond)))
+  (files srfi-61))
