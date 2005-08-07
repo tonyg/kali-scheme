@@ -105,8 +105,8 @@ Unicode range.
 \code{char-ci=?}, \code{char-ci<?}, \code{char-ci<=?},
 \code{char-ci>?}, \code{char-ci>=?}, \code{string-ci=?},
 \code{string-ci<?}, \code{string-ci>?}, \code{string-ci<=?},
-\code{string-ci>=?} all use the standard Unicode case mapping, which
-maps characters to characters individually, and is locale-insensitive.
+\code{string-ci>=?} all use the standard simple locale-insensitive
+Unicode case folding.
 
 In addition, Scheme~48 provides the \code{unicode-char-maps} structure
 for more complete access to the Unicode character classification with
@@ -187,15 +187,32 @@ syntax returns the primary-category object associated with
 \cvar{primary-category-name}.  \code{Primary-category?} is the
 predicate for primary-category objects.
 
+The \code{unicode-char-maps} procedure also provides the following
+additional case-mapping procedures for characters:
+%
 \begin{protos}
 \proto{char-titlecase?}{ char}{boolean}
 \proto{char-titlecase}{ char}{char}
+\proto{char-foldcase}{ char}{char}
 \end{protos}
 %
-These two procedures complete the R$^5$RS set of case-mapping:
 \code{Char-titlecase?} tests if a character is in titlecase.
 \code{Char-titlecase} returns the titlecase counterpart of a
-character.
+character.  \code{Char-foldcase} folds the case of a character, i.e.\
+maps it to uppercase first, then to lowercase.
+%
+The following case-mapping procedures on strings are available:
+%
+\begin{protos}
+\proto{string-upcase}{ string}{string}
+\proto{string-downcase}{ string}{string}
+\proto{string-titlecase}{ string}{string}
+\proto{string-foldcase}{ string}{string}
+\end{protos}
+%
+These implement the simple case mappings defined by the Unicode
+standard---note that the length of the output string may be different
+from that of the input string.
 
 \section{SRFI 14}
 
