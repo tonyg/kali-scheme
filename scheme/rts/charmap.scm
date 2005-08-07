@@ -67,8 +67,14 @@
 (define (char-downcase-proc c)
   (string-ref downcase-map (char->ascii c)))
 
+; helper for defining the -ci procedures
+; This is relevant for Unicode, where FOLDCASE != DOWNCASE
+(define (char-foldcase c)
+  (char-foldcase-proc c))
+(define char-foldcase-proc char-downcase-proc)
+
 (define (char-ci-compare pred)
-  (lambda (c1 c2) (pred (char-upcase c1) (char-upcase c2))))
+  (lambda (c1 c2) (pred (char-foldcase c1) (char-foldcase c2))))
 (define char-ci=? (char-ci-compare char=?))
 (define char-ci<? (char-ci-compare char<?))
 (define char-ci<=? (char-ci-compare char<=?))
@@ -84,12 +90,14 @@
 				  upper-case?
 				  lower-case?
 				  upcase
-				  downcase)
+				  downcase
+				  foldcase)
   (set! char-alphabetic?-proc alphabetic?)
   (set! char-numeric?-proc numeric?)
   (set! char-whitespace?-proc whitespace?)
   (set! char-upper-case?-proc upper-case?)
   (set! char-lower-case?-proc lower-case?)
   (set! char-upcase-proc upcase)
-  (set! char-downcase-proc downcase))
+  (set! char-downcase-proc downcase)
+  (set! char-foldcase-proc foldcase))
 

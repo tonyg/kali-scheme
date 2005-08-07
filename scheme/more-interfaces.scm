@@ -316,10 +316,11 @@
 	  char-title-case?
 	  char-foldcase
 
-	  string-upcase
-	  string-downcase
+	  string-upcase string-downcase
 	  string-foldcase
-	  string-titlecase))
+	  string-titlecase
+
+	  string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=?))
 
 (define-interface conditions-interface
   (export make-condition-type

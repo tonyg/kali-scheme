@@ -93,6 +93,9 @@
 				  (- (+ *titlecase-index-width* *general-category-bits*))))
    *lowercase-offsets*)))
 
+(define (char-foldcase c)
+  (char-downcase (char-upcase c)))
+
 ; Now replace the ASCII-only procedures by these
 
 (set-char-map-procedures! unicode-char-alphabetic?
@@ -101,7 +104,8 @@
 			  unicode-char-upper-case?
 			  unicode-char-lower-case?
 			  unicode-char-upcase
-			  unicode-char-downcase)
+			  unicode-char-downcase
+			  char-foldcase)
 
 ; Unicode bonus material
 
@@ -119,9 +123,6 @@
      (bitwise-and *titlecase-mask*
 		  (arithmetic-shift encoding (- *general-category-bits*)))
      *titlecase-offsets*)))
-
-(define (char-foldcase c)
-  (char-downcase (char-upcase c)))
 
 ; check if the mapping in UnicodeDate.txt is not authoritative, and we
 ; should use the one in SpecialCasing.txt
@@ -195,6 +196,18 @@
 	    (string-set! ucase i (char-downcase (string-ref ucase i)))
 	    (loop (+ 1 i))))
       ucase)))
+
+(define (string-ci-comparator cs-comp)
+  (lambda (a-string b-string)
+    (cs-comp (string-foldcase a-string) (string-foldcase b-string))))
+
+(define string-ci=? (string-ci-comparator string=?))
+(define string-ci<? (string-ci-comparator string<?))
+(define string-ci>? (string-ci-comparator string>?))
+(define string-ci<=? (string-ci-comparator string<=?))
+(define string-ci>=? (string-ci-comparator string>=?))
+
+; Titlecase
 
 (define (char-cased? c)
   (or (char-lower-case? c)
