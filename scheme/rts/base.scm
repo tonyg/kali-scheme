@@ -251,7 +251,10 @@
 		   (else #f)))))))
 
 ;(define string=?    (make-string=? char=?))  -- VM implements this
-(define string-ci=? (make-string=? char-ci=?))
+(define string-ci=?-proc (make-string=? char-ci=?))
+
+(define (string-ci=? s1 s2)
+  (string-ci=?-proc s1 s2))
 
 (define (make-string<? char<? char=?)
   (lambda (s1 s2)
@@ -268,7 +271,11 @@
 			 (loop (+ i 1)))))))))))
 
 (define string<?    (make-string<? char<? char=?))
-(define string-ci<? (make-string<? char-ci<? char-ci=?))
+
+(define string-ci<?-proc (make-string<? char-ci<? char-ci=?))
+
+(define (string-ci<? s1 s2)
+  (string-ci<?-proc s1 s2))
 
 (define (string>? s1 s2) (string<? s2 s1))
 (define (string<=? s1 s2) (not (string>? s1 s2)))
@@ -277,6 +284,10 @@
 (define (string-ci>? s1 s2) (string-ci<? s2 s1))
 (define (string-ci<=? s1 s2) (not (string-ci>? s1 s2)))
 (define (string-ci>=? s1 s2) (not (string-ci<? s1 s2)))
+
+(define (set-string-ci-procedures! ci=? ci<?)
+  (set! string-ci=?-proc ci=?)
+  (set! string-ci<?-proc ci<?))
 
 ; Vectors
 

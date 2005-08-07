@@ -280,7 +280,7 @@
 	    scheduler
 	    scheme-level-1
 	    scheme-level-2
-	    set-char-map-procedures
+	    set-text-procedures
 	    templates
 	    threads
 	    util

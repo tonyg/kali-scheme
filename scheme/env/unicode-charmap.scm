@@ -139,14 +139,13 @@
 					   *general-category-bits*))))))))
 
 (define (prepend-specialcasing-reverse start length c r)
-  (let ((offset (- start 1)))
-    (let loop ((j length)
-	       (r r))
-      (if (zero? j)
-	  r
-	  (loop (- j 1)
-		(cons (string-ref *specialcasings* (+ j offset))
-		      r))))))
+  (let loop ((j 0)
+	     (r r))
+    (if (>= j length)
+	r
+	(loop (+ j 1)
+	      (cons (string-ref *specialcasings* (+ start j))
+		    r)))))
 
 (define (string-xcase char-xcase prepend-specialcasing-xcase/reverse
 		      s)
@@ -164,8 +163,8 @@
   (let ((specialcasing
 	 (table-ref *specialcasing-table* (char->scalar-value c))))
     (prepend-specialcasing-reverse (specialcasing-uppercase-start specialcasing)
-				  (specialcasing-uppercase-length specialcasing)
-				  c r)))
+				   (specialcasing-uppercase-length specialcasing)
+				   c r)))
 
 (define (string-upcase s)
   (string-xcase char-upcase prepend-specialcasing-upcase/reverse s))
@@ -180,8 +179,8 @@
 		     (not (unicode-char-alphabetic? (string-ref s (- i 1)))))))
 	(cons (char-downcase c) r)
 	(prepend-specialcasing-reverse (specialcasing-lowercase-start specialcasing)
-				      (specialcasing-lowercase-length specialcasing)
-				      c r))))
+				       (specialcasing-lowercase-length specialcasing)
+				       c r))))
 
 (define (string-downcase s)
   (string-xcase char-downcase prepend-specialcasing-downcase/reverse s))
@@ -203,9 +202,8 @@
 
 (define string-ci=? (string-ci-comparator string=?))
 (define string-ci<? (string-ci-comparator string<?))
-(define string-ci>? (string-ci-comparator string>?))
-(define string-ci<=? (string-ci-comparator string<=?))
-(define string-ci>=? (string-ci-comparator string>=?))
+
+(set-string-ci-procedures! string-ci=? string-ci<?)
 
 ; Titlecase
 
@@ -236,7 +234,16 @@
 	  (list->string (reverse r))
 	  (let ((c (string-ref s i)))
 	    (if (char-cased? c)
-		(let casing-loop ((j (+ 1 i)) (r (cons (char-titlecase c) r)))
+		(let casing-loop
+		    ((j (+ 1 i))
+		     (r (if (unicode-char-specialcasing? c)
+			    (let ((specialcasing
+				   (table-ref *specialcasing-table* (char->scalar-value c))))
+			      (prepend-specialcasing-reverse
+			       (specialcasing-titlecase-start specialcasing)
+			       (specialcasing-titlecase-length specialcasing)
+			       c r))
+			    (cons (char-titlecase c) r))))
 		  (if (>= j size)
 		      (list->string (reverse r))
 		      (let ((c (string-ref s j)))

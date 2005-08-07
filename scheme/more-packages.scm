@@ -75,7 +75,7 @@
 
 (define-structure unicode-char-maps unicode-char-maps-interface
   (open scheme
-	set-char-map-procedures
+	set-text-procedures
 	unicode
 	finite-types
 	define-record-types

@@ -3,7 +3,8 @@
 
 (define-structures ((scheme-level-1 scheme-level-1-interface)
 		    (util util-interface)
-		    (set-char-map-procedures (export set-char-map-procedures!)))
+		    (set-text-procedures (export set-char-map-procedures!
+						 set-string-ci-procedures!)))
   (open scheme-level-0 ascii simple-signals
         bitwise
 	code-quote)			; needed by SYNTAX-RULES

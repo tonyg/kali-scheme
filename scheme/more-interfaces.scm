@@ -318,9 +318,7 @@
 
 	  string-upcase string-downcase
 	  string-foldcase
-	  string-titlecase
-
-	  string-ci=? string-ci<? string-ci>? string-ci<=? string-ci>=?))
+	  string-titlecase))
 
 (define-interface conditions-interface
   (export make-condition-type
