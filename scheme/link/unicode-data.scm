@@ -255,6 +255,7 @@
 
 (define (code-point-info->case+general-category-encoding
 	 info
+	 specialcasing?
 	 special-lowercase-table special-uppercase-table
 	 uppercase-offsets lowercase-offsets titlecase-offsets
 	 uppercase-index-width lowercase-index-width titlecase-index-width)
@@ -281,9 +282,11 @@
 	 (arithmetic-shift (bitwise-ior
 			    (arithmetic-shift
 			     (bitwise-ior
-			      (arithmetic-shift (bitwise-ior (if uppercase? 2 0)
-							     (if lowercase? 1 0))
-						uppercase-index-width)
+			      (arithmetic-shift
+			       (bitwise-ior (if specialcasing? 4 0)
+					    (if uppercase? 2 0)
+					    (if lowercase? 1 0))
+			       uppercase-index-width)
 			      uppercase-index)
 			     lowercase-index-width)
 			    lowercase-index)
@@ -393,6 +396,8 @@
        ((or next-info (source)) => upto)
        (else #f)))))
 
+; Dealing with PropList.txt
+
 (define (parse-proplist-for-upper/lowercase filename)
   (call-with-input-file filename
     (lambda (port)
@@ -439,18 +444,171 @@
 		(loop (- last 1) (cons last range)))))
 	(list first))))
 
+; assumes START points to whitespace or the first digit
+
+(define (parse-scalar-values s start)
+  (let loop ((start start) (rev-values '()))
+    (let ((i1 (string-skip s char-set:whitespace start)))
+      (if (char=? #\; (string-ref s i1))
+	  (values (reverse rev-values) (+ 1 start))
+	  (let* ((i2 (string-skip s char-set:hex-digit i1))
+		 (n (string->number (substring s i1 i2) 16)))
+	    (loop i2 (cons n rev-values)))))))
+
+; Probably obsolete
+
+(define (parse-casefolding line)
+  (let* ((i1 (string-skip line char-set:hex-digit 0))
+	 (n (string->number (substring line 0 i1) 16))
+	 (i2 (string-skip line char-set:whitespace (+ 1 i1)))
+	 (status (string-ref line i2))
+	 (scalar-values (parse-scalar-values line (+ 2 i2))))
+    (values n status scalar-values)))
+
+(define-record-type specialcasing :specialcasing
+  (make-specialcasing scalar-value
+		      lowercase titlecase uppercase
+		      final-sigma?)
+  specialcasing?
+  (scalar-value specialcasing-scalar-value)
+  (lowercase specialcasing-lowercase)
+  (titlecase specialcasing-titlecase)
+  (uppercase specialcasing-uppercase)
+  (final-sigma? specialcasing-final-sigma?))
+
+(define (parse-specialcasing-line line)
+  (let* ((i1 (string-skip line char-set:hex-digit 0))
+	 (n (string->number (substring line 0 i1) 16)))
+    (call-with-values
+	(lambda () (parse-scalar-values line (+ 1 i1)))
+      (lambda (lowercase i2)
+	(call-with-values
+	    (lambda () (parse-scalar-values line i2))
+	  (lambda (titlecase i3)
+	    (call-with-values
+		(lambda () (parse-scalar-values line i3))
+	      (lambda (uppercase i4)
+		(let ((final-sigma?
+		       (and (string-contains line "Final_Sigma" i4) #t)))
+		  (make-specialcasing n
+				      lowercase titlecase uppercase
+				      final-sigma?))))))))))
+
+(define (parse-specialcasing filename)
+  (call-with-input-file filename
+    (lambda (port)
+      (let loop ((specialcasings '()))
+	(let ((thing (read-line port)))
+	  (if (eof-object? thing)
+	      specialcasings
+	      (if (and (not (string=? "" thing))
+		       (not (char=? #\# (string-ref thing 0))))
+		  (loop (cons (parse-specialcasing-line thing)
+			      specialcasings))
+		  (loop specialcasings))))))))
+
+
+(define (list-prefix? l1 l2)
+  (let loop ((l1 l1) (l2 l2))
+    (cond
+     ((null? l1) #t)
+     ((null? l2) #f)
+     ((equal? (car l1) (car l2))
+      (loop (cdr l1) (cdr l2)))
+     (else #f))))
+
+; We return two lists: a list of :SPECIALCASING records where the
+; xxxCASE fields are replaced by (offset . length) pairs into the
+; second list, which contains all the case mappings jumbled together.
+
+(define (specialcasing-encoding specialcasings)
+  (let ((casings '()))
+    
+    (define (add-casing! l)
+      (let loop ((rest casings)
+		 (index 0))
+	(cond
+	 ((null? rest)
+	  (set! casings (append casings l))
+	  index)
+	 ((list-prefix? l rest)
+	  index)
+	 (else
+	  (loop (cdr rest) (+ 1 index))))))
+
+    (define (transform-specialcasing s)
+      (let ((lowercase (cons (add-casing! (specialcasing-lowercase s))
+			     (length  (specialcasing-lowercase s))))
+	    (titlecase (cons (add-casing! (specialcasing-titlecase s))
+			     (length  (specialcasing-titlecase s))))
+	    (uppercase (cons (add-casing! (specialcasing-uppercase s))
+			     (length  (specialcasing-uppercase s)))))
+	(make-specialcasing (specialcasing-scalar-value s)
+			    lowercase titlecase uppercase
+			    (specialcasing-final-sigma? s))))
+    
+    (let ((transformed
+	   (map transform-specialcasing specialcasings)))
+      (values transformed
+	      casings))))
+
+(define (specialcasing-encoding-ref casings offset size)
+  (let loop ((i 0) (r '()))
+    (if (>= i size)
+	(reverse r)
+	(loop (+ 1 i)
+	      (cons (vector-ref casings (+ offset i))
+		    r)))))
+
+; for testing
+(define (check-specialcasing-encodings specialcasings)
+  (call-with-values
+      (lambda () (specialcasing-encoding specialcasings))
+    (lambda (encodings casings)
+
+      (for-each
+       (lambda (specialcasing encoding)
+	 
+	 (define (check select)
+	   (let ((pair (select encoding))
+		 (reference (select specialcasing)))
+	     (if (not
+		  (equal? reference
+			  (specialcasing-encoding-ref casings 
+						      (car pair) (cdr pair))))
+		 (error "encoding failure" encoding
+			reference (specialcasing-encoding-ref casings
+							      (car pair) (cdr pair))))))
+
+	 (check specialcasing-lowercase)
+	 (check specialcasing-uppercase)
+	 (check specialcasing-titlecase))
+       specialcasings encodings))))
+
+(define (specialcasings->table specialcasings)
+  (let ((table (make-integer-table)))
+    (for-each (lambda (s)
+		(table-set! table (specialcasing-scalar-value s)
+			    s))
+	      specialcasings)
+    table))
+
 (define (make-scalar-value-case+general-category-encoding-tables
 	 infos 
 	 special-lowercase-table special-uppercase-table
+	 specialcasings
 	 block-bits)
 
   (let ((uppercase-offsets (mapping-offsets infos code-point-info-uppercase-code-point))
 	(lowercase-offsets (mapping-offsets infos code-point-info-lowercase-code-point))
 	(titlecase-offsets (mapping-offsets infos code-point-info-titlecase-code-point)))
+
     (let ((uppercase-index-width (bits-necessary (vector-length uppercase-offsets)))
 	  (lowercase-index-width (bits-necessary (vector-length lowercase-offsets)))
 	  (titlecase-index-width (bits-necessary (vector-length titlecase-offsets)))
 
+	  (specialcasings-table (specialcasings->table specialcasings))
+	  
 	  (block-size (expt 2 block-bits)))
 
       (call-with-values
@@ -467,6 +625,8 @@
 	      (lambda (info)
 		(code-point-info->case+general-category-encoding
 		 info
+		 (table-ref specialcasings-table
+			    (code-point-info-code-point info))
 		 special-lowercase-table special-uppercase-table
 		 uppercase-offsets lowercase-offsets titlecase-offsets
 		 uppercase-index-width lowercase-index-width titlecase-index-width)))
@@ -510,73 +670,136 @@
 
 (define (create-unicode-tables unicode-data-filename
 			       proplist-filename
+			       specialcasing-filename
 			       category-output-file
 			       srfi-14-base-output-file)
-  (let ((infos (parse-unicode-data unicode-data-filename)))
+  (let ((infos (parse-unicode-data unicode-data-filename))
+	(specialcasings (parse-specialcasing specialcasing-filename)))
     (call-with-values
 	(lambda ()
 	  (parse-proplist-for-upper/lowercase proplist-filename))
       (lambda (special-uppercase-table special-lowercase-table)
-	(write-unicode-category-tables infos special-uppercase-table special-lowercase-table 
-				       category-output-file)
-	(write-srfi-14-base-char-sets infos srfi-14-base-output-file)))))
-
-(define (write-unicode-category-tables infos special-uppercase-table special-lowercase-table
-				       output-file)
-  (let ((block-bits 8))			; better than 9, at least
-    (call-with-values
-	(lambda ()
-	  (make-scalar-value-case+general-category-encoding-tables
-	   infos
-	   special-uppercase-table special-lowercase-table
-	   block-bits))
-      (lambda (indices
-	       encodings
-	       uppercase-offsets lowercase-offsets titlecase-offsets)
-
-	(call-with-output-file output-file
+	(call-with-output-file category-output-file
 	  (lambda (port)
 	    (display "; Automatically generated by WRITE-UNICODE-CATEGORY-TABLES; do not edit."
 		     port)
 	    (newline port)
 	    (newline port)
+	    (write-unicode-category-tables infos
+					   special-uppercase-table special-lowercase-table 
+					   specialcasings
+					   port)
+	    (write-specialcasings-tables specialcasings port)))
+	(write-srfi-14-base-char-sets infos srfi-14-base-output-file)))))
 
-	    (write `(define *encoding-table-block-bits* ,block-bits)
-		   port)
-	    (newline port)
-	    (newline port)
+(define (write-unicode-category-tables infos 
+				       special-uppercase-table special-lowercase-table
+				       specialcasings
+				       port)
+  (let ((block-bits 8))			; better than 9, at least
+    (call-with-values
+	(lambda ()
+	  (make-scalar-value-case+general-category-encoding-tables
+	   infos
+	   special-lowercase-table special-uppercase-table
+	   specialcasings
+	   block-bits))
+      (lambda (indices
+	       encodings
+	       uppercase-offsets lowercase-offsets titlecase-offsets)
 
-	    (write `(define *uppercase-index-width*
-		      ,(bits-necessary (vector-length uppercase-offsets)))
-		   port)
-	    (newline port)
-	    (write `(define *lowercase-index-width*
-		      ,(bits-necessary (vector-length lowercase-offsets)))
-		   port)
-	    (newline port)
-	    (write `(define *titlecase-index-width*
-		      ,(bits-necessary (vector-length titlecase-offsets)))
-		   port)
-	    (newline port)
-	    (newline port)
+	(write `(define *encoding-table-block-bits* ,block-bits)
+	       port)
+	(newline port)
+	(newline port)
 
-	    (write `(define *scalar-value-info-indices* ',indices)
-		   port)
-	    (newline port)
-	    (write `(define *scalar-value-info-encodings* ',encodings)
-		   port)
-	    (newline port)
-	    (newline port)
+	(write `(define *uppercase-index-width*
+		  ,(bits-necessary (vector-length uppercase-offsets)))
+	       port)
+	(newline port)
+	(write `(define *lowercase-index-width*
+		  ,(bits-necessary (vector-length lowercase-offsets)))
+	       port)
+	(newline port)
+	(write `(define *titlecase-index-width*
+		  ,(bits-necessary (vector-length titlecase-offsets)))
+	       port)
+	(newline port)
+	(newline port)
 
-	    (write `(define *uppercase-offsets* ',uppercase-offsets)
-		   port)
-	    (newline port)
-	    (write `(define *lowercase-offsets* ',lowercase-offsets)
-		   port)
-	    (newline port)
-	    (write `(define *titlecase-offsets* ',titlecase-offsets)
-		   port)
-	    (newline port)))))))
+	(write `(define *scalar-value-info-indices* ',indices)
+	       port)
+	(newline port)
+	(write `(define *scalar-value-info-encodings* ',encodings)
+	       port)
+	(newline port)
+	(newline port)
+
+	(write `(define *uppercase-offsets* ',uppercase-offsets)
+	       port)
+	(newline port)
+	(write `(define *lowercase-offsets* ',lowercase-offsets)
+	       port)
+	(newline port)
+	(write `(define *titlecase-offsets* ',titlecase-offsets)
+	       port)
+	(newline port)
+	(newline port)))))
+
+(define (write-specialcasings-tables specialcasings port)
+  (call-with-values
+      (lambda () (specialcasing-encoding specialcasings))
+    (lambda (encodings casings)
+
+      ;; we write it out here to avoid introducing yet another file
+      ;; into the UNICODE-CHAR-MAPS package
+      (write
+       '(define-record-type specialcasing :specialcasing
+	  (make-specialcasing scalar-value
+			      lowercase-start lowercase-length
+			      titlecase-start titlecase-length
+			      uppercase-start uppercase-length
+			      final-sigma?)
+	  specialcasing?
+	  (scalar-value specialcasing-scalar-value)
+	  (lowercase-start specialcasing-lowercase-start)
+	  (lowercase-length specialcasing-lowercase-length)
+	  (titlecase-start specialcasing-titlecase-start)
+	  (titlecase-length specialcasing-titlecase-length)
+	  (uppercase-start specialcasing-uppercase-start)
+	  (uppercase-length specialcasing-uppercase-length)
+	  (final-sigma? specialcasing-final-sigma?))
+       port)
+      (newline port)
+      (newline port)
+
+      (write `(define *specialcasing-table* (make-integer-table)) port)
+      (newline port)
+      (newline port)
+      
+      (for-each
+       (lambda (c)
+	 (write
+	  `(table-set! *specialcasing-table*
+		       ,(specialcasing-scalar-value c)
+		       (make-specialcasing
+			,(specialcasing-scalar-value c)
+			,(car (specialcasing-lowercase c))
+			,(cdr (specialcasing-lowercase c))
+			,(car (specialcasing-titlecase c))
+			,(cdr (specialcasing-titlecase c))
+			,(car (specialcasing-uppercase c))
+			,(cdr (specialcasing-uppercase c))
+			,(specialcasing-final-sigma? c)))
+	  port)
+	 (newline port))
+       encodings)
+
+      (newline port)
+
+      (write `(define *specialcasings* (list->string (map scalar-value->char ',casings))) port)
+      (newline port)
+      (newline port))))
 
 (define (write-srfi-14-base-char-sets infos output-file)
   (call-with-output-file output-file
@@ -699,6 +922,7 @@
 
 (define (test-code-point-case+general-category-encoding-tables
 	 infos special-uppercase-table special-lowercase-table
+	 specialcasings
 	 block-bits
 	 indices encodings
 	 uppercase-offsets lowercase-offsets titlecase-offsets)
@@ -766,12 +990,12 @@
 				   (eq? (code-point-info-general-category info)
 					(general-category uppercase-letter)))
 			       uppercase?))
-		     (error "uppercase? mismatch" info titlecase-code-point))
+		     (error "uppercase? mismatch" info code-point))
 		 (if (not (eq? (or (table-ref special-lowercase-table code-point)
 				   (eq? (code-point-info-general-category info)
 					(general-category lowercase-letter)))
 			       lowercase?))
-		     (error "lowercase? mismatch" info titlecase-code-point))
+		     (error "lowercase? mismatch" info code-point))
 		 )))))
      infos)))
 

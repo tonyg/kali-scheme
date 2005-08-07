@@ -78,6 +78,8 @@
 	set-char-map-procedures
 	unicode
 	finite-types
+	define-record-types
+	tables
 	bitwise)
   (files (env unicode-category)
 	 (env unicode-info)

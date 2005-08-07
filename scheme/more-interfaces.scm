@@ -313,7 +313,13 @@
 
 	  char-general-category
 	  char-titlecase
-	  char-title-case?))
+	  char-title-case?
+	  char-foldcase
+
+	  string-upcase
+	  string-downcase
+	  string-foldcase
+	  string-titlecase))
 
 (define-interface conditions-interface
   (export make-condition-type
