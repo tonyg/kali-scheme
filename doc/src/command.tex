@@ -53,14 +53,14 @@ The command prompt indicates the number of stopped levels below the
  current one: \code{>} or \code{:} for the
  base level and \code{\cvar{n}>} or \code{\cvar{n}:} for all other levels,
  where \cvar{n} is the command-level nesting depth.
-The \code{levels} switch
+The \code{levels} setting
  described below can be used to disable the automatic pushing of new levels.
 
 The command processor's evaluation package and the value of the
 current focus value are local to each command level.
 They are preserved when a new level is pushed and restored when
  it is discarded.
-The settings of all other switches are shared by all command levels.
+The settings of all other settings are shared by all command levels.
 
 \begin{description}
 \item $\langle{}$eof$\rangle{}$\\
@@ -85,7 +85,7 @@ The settings of all other switches are shared by all command levels.
 
 \item \code{,push}\\
  Pushes a new command level on above the current one.
- This is useful if the \code{levels} switch has been used
+ This is useful if the \code{levels} setting has been used
  to disable the automatic pushing of new levels for errors and interrupts.
 
 \item \code{,reset [\cvar{number}]}\\
@@ -137,7 +137,7 @@ a brief description of modules, structures, and packages in section~\ref{module-
 \item \code{,open \cvar{structure \ldots}}\\
 Makes the bindings in the \cvar{structure}s visible in the current package.
 The packages associated with the \cvar{structure}s will be loaded if
- this has not already been done (the \code{ask-before-loading} switch
+ this has not already been done (the \code{ask-before-loading} setting
  can be used disable the automatic loading of packages).
 
 \item \code{,config [\cvar{command}]}\\
@@ -223,29 +223,31 @@ If no \cvar{command} is given, the \code{config} package becomes the
     Display name of file containing \cvar{procedure}'s source code.
 \end{description}
 
-\section{Switches}
+\section{Settings}
 
-There are a number of binary switches that control the behavior of the
- command processor.
+There are a number of settings that control the behavior of the
+ command processor; most of them are booleans.
 They can be set using the \code{,set} and \code{,unset} commands.
 
 \begin{description}
-\item \code{,set \cvar{switch} [on | off | ?]}\\
-    This sets the value of mode-switch \cvar{switch}.
-    The second argument defaults to \code{on}.
-    If the second argument is \code{?} the value of \cvar{switch} is
+\item \code{,set \cvar{setting} [on | off | literal | ?]}\\
+    This sets the value of setting \cvar{setting}.
+    For a boolean setting, the second argument must be \code{on} or
+    \code{off}; it then defaults to \code{on}.
+    Otherwise, the value must be a literal, typically a posititive number.
+    If the second argument is \code{?} the value of \cvar{setting} is
     is displayed and not changed.
-    Doing \code{,set ?} will display a list of the switches and
+    Doing \code{,set ?} will display a list of the setting and
     their current values.
 
-\item \code{,unset \cvar{switch}}\\
-    \code{,unset \cvar{switch}} is the same as
-    \code{,set \cvar{switch} off}.
+\item \code{,unset \cvar{setting}}\\
+    \code{,unset \cvar{setting}} is the same as
+    \code{,set \cvar{setting} off}.
 \end{description}
 
-The switches are as follows:
+The settings are as follows:
 \begin{description}
-\item \code{batch}\\
+\item \code{batch} (boolean)\\
     In `batch mode' any error or interrupt that comes up will cause
     Scheme~48 to exit immediately with a non-zero exit status.  Also,
     the command processor doesn't print prompts.  Batch mode is
@@ -253,7 +255,7 @@ The switches are as follows:
 
 % JAR says: disable levels by default??
 
-\item \code{levels}\\
+\item \code{levels} (boolean)\\
     Enables or disables the automatic pushing of a new command level when
     an error, interrupt, or other breakpoint occurs.
     When enabled (the default), breakpoints push a new command level,
@@ -272,12 +274,12 @@ The switches are as follows:
     the focus object changes.  If you don't know anything about the
     available debugging tools, then levels might as well be disabled.
 
-\item \code{break-on-warnings}\\
+\item \code{break-on-warnings} (boolean)\\
     Enter a new command level when a warning is produced, just as
     when an error occurs.  Normally warnings only result in a displayed
     message and the program does not stop executing.
 
-\item \code{ask-before-loading} \\
+\item \code{ask-before-loading} (boolean)\\
     If on, the system will ask before loading modules that are arguments
     to the \code{,open} command.  \code{Ask-before-loading} is off by
     default.
@@ -289,7 +291,7 @@ Load structure random (y/n)? y
 >
 \end{example}
 
-\item \code{load-noisily}\\
+\item \code{load-noisily} (boolean)\\
     When on, the system will print out the names of modules and files
     as they are loaded.  \code{load-noisily} is off by default.
 \begin{example}
@@ -300,7 +302,7 @@ will notify when loading modules and files
 > 
 \end{example}
 
-\item \code{inline-values}\\
+\item \code{inline-values} (boolean)\\
 This controls whether or not the compiler is allowed to substitute
  variables' values in-line.
 When \code{inline-values} mode is on,
@@ -309,6 +311,21 @@ none will.
 Section~\ref{section:performance}
 has more information.
 
+\item \code{inspector-menu-limit} (positive integer)\\
+This controls how many items the displayed portion of the inspector
+menu contains at most.  (See Section~\ref{inspector}.)
+
+\item \code{inspector-writing-depth} (positive integer)\\
+This controls the maximum depth to which the inspector
+prints values.  (See Section~\ref{inspector}.)
+
+\item \code{inspector-writing-length} (positive integer)\\
+This controls the maximum length to which the inspector
+prints values.  (See Section~\ref{inspector}.)
+
+\item \code{trace-writing-length} (positive integer)\\
+This controls the maximum length to which tracing
+prints procedure calls.
 \end{description}
 
 \section{Inspection mode}

@@ -10,10 +10,6 @@
 ;
 ; The current thing being inspected is the focus object.
 
-(define *menu-limit* 15)	; maximum menu entries
-(define *write-depth* 3)	; limit for recursive writes
-(define *write-length* 5)       ; ditto
-
 (define (current-menu)
   (or (maybe-menu)
       (let ((menu (prepare-menu (focus-object))))
@@ -31,10 +27,10 @@
   (let* ((menu (current-menu))
 	 (position (menu-position)))
     (if (> (menu-length menu)
-	   (+ *menu-limit* position))
+	   (+ (inspector-menu-limit) position))
 	(begin
 	  (set-menu-position! (- (+ position
-				    *menu-limit*)
+				    (inspector-menu-limit))
 				 1))
 	  (present-menu))
 	(write-line "There is no more." (command-output)))))
@@ -246,8 +242,8 @@
 (define (display-menu menu start port)
   (newline port)
   (maybe-display-source (focus-object) #f)
-  (let ((items (menu-refs menu start (+ *menu-limit* 1)))
-	(limit (+ start *menu-limit*)))
+  (let ((items (menu-refs menu start (+ (inspector-menu-limit) 1)))
+	(limit (+ start (inspector-menu-limit))))
     (let loop ((i start) (items items))
       (with-limited-output
        (lambda ()
@@ -297,7 +293,9 @@
 		       "Next call is "
 		       "Waiting for ")
 		   o-port)
-	  (limited-write exp o-port *write-depth* *write-length*)
+	  (limited-write exp o-port
+			 (inspector-writing-depth)
+			 (inspector-writing-length))
 	  (newline o-port)
 	  (if (and (pair? (cdr info))
 		   (integer? (cadr info)))
@@ -308,7 +306,8 @@
 				       (list '^^^)
 				       (list-tail parent (+ i 1)))
 			       o-port
-			       *write-depth* *write-length*)
+			       (inspector-writing-depth)
+			       (inspector-writing-length))
 		(newline o-port)))))))
 
 ;----------------
@@ -327,11 +326,11 @@
 (define (with-limited-output thunk . limits)
   (let-fluids $write-length (if (pair? limits)
 				(car limits)
-				*write-length*)
+				(inspector-writing-length))
 	      $write-depth (if (and (pair? limits)
 				    (pair? (cdr limits)))
 			       (cadr limits)
-			       *write-depth*)
+			       (inspector-writing-depth))
     thunk))
 
 (define (write-carefully x port)

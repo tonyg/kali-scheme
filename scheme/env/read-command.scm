@@ -151,6 +151,8 @@
 	   (if (symbol? thing)
 	       thing
 	       (read-command-error port "invalid name" thing))))
+	((literal)
+	 (read port))
 	((selection-command)
 	 (let ((x (read port)))
 	   (if (selection-command? x)

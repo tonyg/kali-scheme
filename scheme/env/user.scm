@@ -4,7 +4,7 @@
 ; The user's state is in two parts:
 ; User context - preserved across dump commands (but not by us).
 ;   This includes the designated user and configuration environments
-;   and the values of a bunch of user-preference switches.
+;   and the values of a bunch of user-preference settings.
 ;
 ;   Static
 ;    command-environment
@@ -66,14 +66,34 @@
 
 ; Various bits of context.
 
-(define break-on-warnings?      (user-context-accessor 'break-on-warnings?
-						       (lambda () #f)))
+(define break-on-warnings? (user-context-accessor 'break-on-warnings?
+						  (lambda () #f)))
 (define set-break-on-warnings?! (user-context-modifier 'break-on-warnings?))
 
-(define load-noisily?           (user-context-accessor 'load-noisily?
+(define load-noisily? (user-context-accessor 'load-noisily?
 						       (lambda () #f)))
-(define set-load-noisily?!      (user-context-modifier 'load-noisily?))
+(define set-load-noisily?! (user-context-modifier 'load-noisily?))
 
+; maximum writing depth for traces
+(define trace-writing-depth (user-context-accessor 'trace-writing-depth
+						   (lambda () 8)))
+(define set-trace-writing-depth! (user-context-modifier 'trace-writing-depth))
+
+; maximum menu entries in inspector
+(define inspector-menu-limit (user-context-accessor 'inspector-menu-limit
+						    (lambda () 15)))
+(define set-inspector-menu-limit! (user-context-modifier 'inspector-menu-limit))
+
+; ditto, maximum writing depth
+(define inspector-writing-depth (user-context-accessor 'inspector-writing-depth
+						       (lambda () 3)))
+(define set-inspector-writing-depth! (user-context-modifier 'inspector-writing-depth))
+
+; ditto, maximum writing length
+(define inspector-writing-length (user-context-accessor 'inspector-writing-length
+							(lambda () 5)))
+(define set-inspector-writing-length! (user-context-modifier 'inspector-writing-length))
+  
 ;----------------
 ; User session state.
 ;

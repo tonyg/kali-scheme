@@ -125,11 +125,11 @@
 (define set-ask-before-loading?!
   (user-context-modifier 'ask-before-loading?))
 
-(add-switch 'ask-before-loading
-	    ask-before-loading?
-	    set-ask-before-loading?!
-	    "will ask before loading modules"
-	    "will not ask before loading modules")
+(add-setting 'ask-before-loading #t
+	     ask-before-loading?
+	     set-ask-before-loading?!
+	     "will ask before loading modules"
+	     "will not ask before loading modules")
 
 (define-command-syntax 'for-syntax "[<command>]"
   "go to current package's package for syntax"

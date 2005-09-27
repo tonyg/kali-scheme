@@ -10,6 +10,7 @@
   (open scheme ;;-level-2     ; eval, interaction-environment
 	tables fluids cells
 	conditions i/o-conditions
+	define-record-types
 	handle
 	command-levels
 	command-state

@@ -400,60 +400,98 @@
 	   (apply proc (cdr command))))))
 
 ;----------------
-; Switches - these are boolean-valued cells for controlling the behavior
+; Settings - these are cells for controlling the behavior
 ; of the command interpreter.
 ;
-; This code is here so that the help listing can print out the switches
+; This code is here so that the help listing can print out the settings
 ; and their current values.
 
-(define *switches* '())
+(define-record-type setting :setting
+  (make-setting name type get set on-doc off-doc)
+  setting?
+  (name setting-name)
+  ;; is #t for boolean or a predicate
+  (type setting-type)
+  (get setting-get)
+  (set setting-set)
+  ;; We have two documentation strings, one for `on' and one for `off'.
+  (on-doc setting-on-doc)
+  (off-doc setting-off-doc))
 
-(define (lookup-switch name)
-  (assq name *switches*))
+(define (setting-boolean? setting)
+  (eqv? #t (setting-type setting)))
 
-(define (add-switch name get set on-doc off-doc)
-  (set! *switches*
-	(insert (list name get set on-doc off-doc)
-		*switches*
+; alist mapping names to :SETTING records
+(define *settings-alist* '())
+
+(define (lookup-setting name)
+  (cond
+   ((assq name *settings-alist*) => cdr)
+   (else #f)))
+
+(define (add-setting name boolean? get set on-doc . maybe-off-doc)
+  (set! *settings-alist*
+	(insert (cons name
+		      (make-setting name boolean? get set on-doc
+			      (if (null? maybe-off-doc)
+				  #f
+				  (car maybe-off-doc))))
+		*settings-alist*
 		(lambda (z1 z2)
 		  (string<=? (symbol->string (car z1))
 			     (symbol->string (car z2)))))))
 
-(define (switch-on? switch)
-  ((cadr switch)))
+(define (setting-value setting)
+  ((setting-get setting)))
 
-(define (switch-set! switch value)
-  ((caddr switch) value))
+(define (setting-set! setting value)
+  (if (if (setting-boolean? setting)
+	  (and (not (eqv? value #t))
+	       (not (eqv? value #f)))
+	  (not ((setting-type setting) value)))
+      (error "invalid value for setting" (setting-name setting) value))
+  ((setting-set setting) value))
 
-; We have two documentation strings, one for `on' and one for `off'.
+(define (setting-doc setting)
+  (cond
+   ((not (setting-boolean? setting))
+    (setting-on-doc setting))
+   ((setting-value setting)
+    (setting-on-doc setting))
+   (else
+    (setting-off-doc setting))))
 
-(define (switch-doc switch)
-  (let ((doc (cdddr switch)))
-    (if (switch-on? switch)
-	(car doc)
-	(cadr doc))))
+; Print out a list of the settings and their current values.
 
-; Print out a list of the switches and their current values.
-
-(define (list-switches)
+(define (list-settings)
   (let ((o-port (command-output))
-	(size (apply max (map (lambda (switch)
-				(string-length (symbol->string (car switch))))
-			      *switches*))))
-    (for-each (lambda (switch)
-		(let ((name (symbol->string (car switch))))
+	(size (apply max
+		     (map (lambda (z)
+			    (string-length (symbol->string (setting-name (cdr z)))))
+			  *settings-alist*))))
+    (for-each (lambda (z)
+		(let* ((setting (cdr z))
+		       (name (symbol->string (setting-name setting))))
 		  (display #\space o-port)
 		  (display name o-port)
 		  (display #\space o-port)
 		  (write-spaces (- size (string-length name)) o-port)
-		  (display (if (switch-on? switch)
-			       "(on, "
-			       "(off, ")
-			   o-port)
-		  (display (switch-doc switch) o-port)
+		  (display #\( o-port)
+		  (cond
+		   ((not (setting-boolean? setting))
+		    (write (setting-value setting) o-port)
+		    (display ", " o-port)
+		    (display (setting-on-doc setting) o-port))
+		   ((setting-value setting)
+		    (display "on, " o-port)
+		    (display (setting-on-doc setting) o-port))
+		   (else
+		    (display "off, " o-port)
+		    (display (setting-off-doc setting) o-port)))
 		  (display #\) o-port)
 		  (newline o-port)))
-	      *switches*)))
+	      *settings-alist*)))
+
 
 ;----------------
 ; help
@@ -498,10 +536,10 @@
 ""
 "Square brackets [...] indicate optional arguments."
 ""
-"The following switches are turned on and off by the `set' and `unset' commands:"
+"The following settings are set by the `set' and `unset' commands:"
 ""
                 ))
-    (list-switches)
+    (list-settings)
     (for-each (lambda (s)
                 (write-line s o-port))
               '(

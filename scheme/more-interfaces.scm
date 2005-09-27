@@ -42,13 +42,14 @@
 	  &environment-id-string
 	  ;&evaluate
 
-	  ; Switches
-	  add-switch
-	  lookup-switch
-	  switch-on?
-	  switch-set!
-	  switch-doc
-	  list-switches
+	  ; Settings
+	  add-setting
+	  lookup-setting
+	  setting-boolean?
+	  setting-value
+	  setting-set!
+	  setting-doc
+	  list-settings
 	  ))
 
 (define-interface command-levels-interface
@@ -85,12 +86,13 @@
 	  command-input
 	  command-output
 	  command-error-output
-	  batch-mode?
-	  set-batch-mode?!
-	  break-on-warnings?
-	  set-break-on-warnings?!
-	  load-noisily?
-	  set-load-noisily?!
+	  batch-mode? set-batch-mode?!
+	  break-on-warnings? set-break-on-warnings?!
+	  load-noisily? set-load-noisily?!
+	  trace-writing-depth set-trace-writing-depth!
+	  inspector-menu-limit set-inspector-menu-limit!
+	  inspector-writing-depth set-inspector-writing-depth!
+	  inspector-writing-length set-inspector-writing-length!
 
 	  maybe-menu
 	  set-menu!

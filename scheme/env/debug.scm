@@ -180,88 +180,116 @@
 
 ; Toggling various boolean flags.
 
-(define-command-syntax 'set "<switch> [<on-or-off-or-?>]"
-  "set the value of a switch (? lists switches)"
-  '(name &opt name))
+(define-command-syntax 'set "<setting> [<on-or-off-or-literal-or-?>]"
+  "set the value of a setting (? lists settings)"
+  '(name &opt literal))
 
-(define-command-syntax 'unset "<switch>"
-  "turn off a switch"
+(define-command-syntax 'unset "<setting>"
+  "set boolean setting to off"
   '(name))
 
 (define (set name . maybe-value)
   (if (eq? name '?)
-      (list-switches)
-      (let* ((switch (lookup-switch name))
-	     (value (cond ((not switch)
-			   (error "switch not found" name))
+      (list-settings)
+      (let* ((setting (lookup-setting name))
+	     (value (cond ((not setting)
+			   (error "setting not found" name))
 			  ((null? maybe-value)
-			   #t)
-			  (else
+			   (if (setting-boolean? setting)
+			       #t
+			       (error "no value specified")))
+			  ((eq? (car maybe-value) '?)
+			   (if (setting-boolean? setting)
+			       (display (if (setting-value setting)
+					    "on, "
+					    "off, ")
+					(command-output)))
+			   (setting-value setting))
+			  ((setting-boolean? setting)
 			   (case (car maybe-value)
 			     ((off) #f)
 			     ((on) #t)
-			     ((?)
-			      (display (if (switch-on? switch)
-					   "on, "
-					   "off, ")
-				       (command-output))
-			      (switch-on? switch))
 			     (else
-			      (error "invalid setting (should be on or off or ?)"
-				     (car maybe-value)))))))
+			      (error "invalid value for boolean setting; should be on or off"))))
+			  (else
+			   (car maybe-value))))
 	     (out (command-output)))
-	(switch-set! switch value)
-	(display (switch-doc switch) out)
+	(setting-set! setting value)
+	(display (setting-doc setting) out)
+	(if (not (setting-boolean? setting))
+	    (begin
+	      (display " is " (command-output))
+	      (write value (command-output))))
 	(newline out))))
 	 
 (define (unset name)
-  (let ((switch (lookup-switch name))
+  (let ((setting (lookup-setting name))
 	(out (command-output)))
-    (if (not switch)
-	(error "switch not found" name)
-	(switch-set! switch #f))
-    (display (switch-doc switch) out)
+    (if (not setting)
+	(error "setting not found" name)
+	(setting-set! setting #f))
+    (display (setting-doc setting) out)
     (newline out)))
 
-; The actual switches.
+; The actual settings.
 
-(add-switch 'batch
-	    batch-mode?
-	    set-batch-mode?!
-	    "will not prompt and will exit on errors"
-	    "will prompt and will not exit on errors")
+(define (positive-integer? n)
+  (and (integer? n)
+       (exact? n)
+       (positive? n)))
 
-(add-switch 'inline-values
-	    (lambda ()
-	      (package-integrate? (environment-for-commands)))
-	    (lambda (b)
-	      (set-package-integrate?! (environment-for-commands) b))
-	    "will compile some calls in line"
-	    "will not compile calls in line")
+(add-setting 'batch #t
+	     batch-mode?
+	     set-batch-mode?!
+	     "will not prompt and will exit on errors"
+	     "will prompt and will not exit on errors")
 
-(add-switch 'break-on-warnings
-	    break-on-warnings?
-	    set-break-on-warnings?!
-	    "will enter breakpoint on warnings"
-	    "will not enter breakpoint on warnings")
+(add-setting 'inline-values #t
+	     (lambda ()
+	       (package-integrate? (environment-for-commands)))
+	     (lambda (b)
+	       (set-package-integrate?! (environment-for-commands) b))
+	     "will compile some calls in line"
+	     "will not compile calls in line")
 
-(add-switch 'load-noisily
-	    load-noisily?
-	    set-load-noisily?!
-	    "will notify when loading modules and files"
-	    "will not notify when loading modules and files")
+(add-setting 'break-on-warnings #t
+	     break-on-warnings?
+	     set-break-on-warnings?!
+	     "will enter breakpoint on warnings"
+	     "will not enter breakpoint on warnings")
 
-;(add-switch 'form-preferred
-;            form-preferred?
-;            set-form-preferred?!
-;            "commas are required before commands"
-;            "commas are not required before commands")
+(add-setting 'load-noisily #t
+	     load-noisily?
+	     set-load-noisily?!
+	     "will notify when loading modules and files"
+	     "will not notify when loading modules and files")
 
-(add-switch 'levels
-	    push-command-levels?
-	    set-push-command-levels?!
-	    "will push command level on errors"
-	    "will not push command level on errors")
+;(add-setting 'form-preferred #t
+;             form-preferred?
+;             set-form-preferred?!
+;             "commas are required before commands"
+;             "commas are not required before commands")
+
+(add-setting 'levels #t
+	     push-command-levels?
+	     set-push-command-levels?!
+	     "will push command level on errors"
+	     "will not push command level on errors")
+
+(add-setting 'inspector-menu-limit positive-integer?
+	     inspector-menu-limit
+	     set-inspector-menu-limit!
+	     "maximum number of menu entries in inspector")
+
+(add-setting 'inspector-writing-depth positive-integer?
+	     inspector-writing-depth
+	     set-inspector-writing-depth!
+	     "maximum writing depth in inspector")
+
+(add-setting 'inspector-writing-length positive-integer?
+	     inspector-writing-length
+	     set-inspector-writing-length!
+	     "maximum writing length in inspector")
 
 ; Old toggling commands retained for compatibility
 ; These have no help strings.
@@ -272,8 +300,8 @@
 (define (toggle-command name)
   (lambda maybe-value
     (set name (if (null? maybe-value)
-		  (if (switch-on? (or (lookup-switch name)
-				      (error "switch not found" name)))
+		  (if (setting-value (or (lookup-setting name)
+					 (error "setting not found" name)))
 		      'off
 		      'on)
 		  (car maybe-value)))))
@@ -433,6 +461,11 @@ Kind should be one of: names maps files source tabulate"
 (define-command-syntax 'untrace "<name> ..." "stop tracing calls"
   '(&rest name))
 
+(add-setting 'trace-writing-depth positive-integer?
+	     trace-writing-depth
+	     set-trace-writing-depth!
+	     "writing depth for traces")
+
 ; Trace internals
 
 (define (trace-1 name)
@@ -469,34 +502,33 @@ Kind should be one of: names maps files source tabulate"
   (lambda args
     (apply-traced proc name args)))
 
-(define *trace-depth* 8)
 (define (apply-traced proc name args)
   (let ((port (command-output)))
     (dynamic-wind
      (lambda ()
        (display "[" port))
      (lambda ()
-       (with-limited-output
-	 (lambda ()
-	   (display "Enter " port)
-	   (write-carefully (error-form name args) port)
-	   (newline port))
-	 *trace-depth*
-	 *trace-depth*)
-       (call-with-values (lambda ()
-			   (apply proc args))
-	 (lambda results
-	   (with-limited-output
- 	     (lambda ()
-	       (display " Leave " port)
-	       (write-carefully name port)
-	       (for-each (lambda (result)
-			   (display " " port)
-			   (write-carefully (value->expression result) port))
-			 results))
-	     *trace-depth*
-	     (- *trace-depth* 1))
-	   (apply values results))))
+       (let ((depth (trace-writing-depth)))
+	 (with-limited-output
+	  (lambda ()
+	    (display "Enter " port)
+	    (write-carefully (error-form name args) port)
+	    (newline port))
+	  depth depth)
+	 (call-with-values (lambda ()
+			     (apply proc args))
+	   (lambda results
+	     (with-limited-output
+	      (lambda ()
+		(display " Leave " port)
+		(write-carefully name port)
+		(for-each (lambda (result)
+			    (display " " port)
+			    (write-carefully (value->expression result) port))
+			  results))
+	      depth
+	      (- depth 1))
+	     (apply values results)))))
      (lambda ()
        (display "]" port)
        (newline port)))))
