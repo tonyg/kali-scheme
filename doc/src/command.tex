@@ -53,11 +53,11 @@ The command prompt indicates the number of stopped levels below the
  current one: \code{>} or \code{:} for the
  base level and \code{\cvar{n}>} or \code{\cvar{n}:} for all other levels,
  where \cvar{n} is the command-level nesting depth.
-The \code{auto-levels} switch
+The \code{levels} switch
  described below can be used to disable the automatic pushing of new levels.
 
 The command processor's evaluation package and the value of the
- \code{inspect-focus-value} switch are local to each command level.
+current focus value are local to each command level.
 They are preserved when a new level is pushed and restored when
  it is discarded.
 The settings of all other switches are shared by all command levels.
@@ -85,7 +85,7 @@ The settings of all other switches are shared by all command levels.
 
 \item \code{,push}\\
  Pushes a new command level on above the current one.
- This is useful if the \code{auto-levels} switch has been used
+ This is useful if the \code{levels} switch has been used
  to disable the automatic pushing of new levels for errors and interrupts.
 
 \item \code{,reset [\cvar{number}]}\\
@@ -251,9 +251,9 @@ The switches are as follows:
     the command processor doesn't print prompts.  Batch mode is
     off by default.
 
-% JAR says: disable auto-levels by default??
+% JAR says: disable levels by default??
 
-\item \code{auto-levels}\\
+\item \code{levels}\\
     Enables or disables the automatic pushing of a new command level when
     an error, interrupt, or other breakpoint occurs.
     When enabled (the default), breakpoints push a new command level,
@@ -265,17 +265,12 @@ The switches are as follows:
 \item retention of the continuation in effect at the point of errors
 \item confusion among some newcomers
 \end{itemize}
-    With \code{auto-levels} disabled one must issue a
+    With \code{levels} disabled one must issue a
     \code{,push} command immediately
     following an error in order to retain the error continuation for
     debugging purposes; otherwise the continuation is lost as soon as
     the focus object changes.  If you don't know anything about the
     available debugging tools, then levels might as well be disabled.
-
-\item \code{inspect-focus-value}\\
-    Enable or disable `inspection' mode, which is used for inspecting
-    data structures and continuations.
-    Inspection mode is described in section~\ref{inspector}.
 
 \item \code{break-on-warnings}\\
     Enter a new command level when a warning is produced, just as
@@ -320,13 +315,11 @@ has more information.
 \label{inspector}
 
 There is a data inspector available via the \code{,inspect} and
- \code{,debug} commands or by setting the \code{inspect-focus-value} switch.
+ \code{,debug} commands.
 The inspector is particularly useful with procedures, continuations,
  and records.
 The command processor can be taken out of inspection mode by
- using the \code{q} command, by unsetting the \code{inspect-focus-value} switch,
- or by going to a command level where the \code{inspect-focus-value} is not
- set.
+ using the \code{q} command.
 When in inspection mode, input that begins with
   a letter or digit is read as a command, not as an expression.
 To see the value of a variable or number, do \code{(begin \cvar{exp})}
