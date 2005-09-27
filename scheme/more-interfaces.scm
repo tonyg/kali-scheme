@@ -208,6 +208,11 @@
 	  ;set-package-evaluator!
 	  ))
 
+(define-interface display-conditions-interface
+  (export display-condition		;command.scm
+	  &disclose-condition      	;env/disclosers.scm
+	  limited-write))
+
 (define-interface debuginfo-interface
   (export read-debug-info
 	  write-debug-info))

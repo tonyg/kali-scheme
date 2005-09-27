@@ -186,6 +186,15 @@
 	weak)
   (files (env debuginfo)))
 
+; Utility for displaying error messages
+
+(define-structure display-conditions display-conditions-interface
+  (open scheme-level-2
+	writing
+	methods
+	handle)	;ignore-errors
+  (files (env dispcond)))
+
 ; Most of the debugging commands.
 
 (define-structures ((debugging		;additional exports in future

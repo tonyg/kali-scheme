@@ -33,24 +33,25 @@
 ; Scheme = scheme-level-2 plus EVAL and friends
 
 (define-module (make-scheme environments evaluation)
+
   (define-structure scheme scheme-interface
     (open scheme-level-2
 	  environments
 	  evaluation))
   scheme)
 
-
 ; Command processor.
 
 (define-module (make-mini-command scheme) ;copied from debug-packages.scm
+
   (define-structure mini-command (export command-processor)
     (open scheme
+	  writing methods
 	  simple-signals simple-conditions handle
-	  display-conditions
 	  i/o)                 ;current-error-port
-    (files (debug mini-command)))
+    (files (debug mini-command)
+	   (env dispcond))) ; avoid having to include this generally
   mini-command)
-
 
 ; For building systems.
 

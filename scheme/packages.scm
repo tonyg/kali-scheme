@@ -292,7 +292,6 @@
   (export ((channel-ports
 	    simple-conditions
 	    continuations
-	    display-conditions
 	    ;; escapes
 	    exceptions
 	    exceptions-internal
@@ -425,6 +424,7 @@
 	    destructuring
 	    disassembler
 	    disclosers
+	    display-conditions
 	    dump/restore
 	    dynamic-externals
 	    encodings

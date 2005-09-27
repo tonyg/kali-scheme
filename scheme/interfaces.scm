@@ -1320,11 +1320,6 @@
 	  ; eval-scanned-forms
 	  ))
 
-(define-interface display-conditions-interface
-  (export display-condition		;command.scm
-	  &disclose-condition      	;env/disclosers.scm
-	  limited-write))
-
 ; Bindings needed by the form composed by REIFY-STRUCTURES.
 
 (define-interface for-reification-interface

@@ -455,11 +455,3 @@
   (files ;;(alt weak)   ;Only needed if VM's weak pointers are buggy
 	 (rts population)))
 
-; Utility for displaying error messages
-
-(define-structure display-conditions display-conditions-interface
-  (open scheme-level-2
-	writing
-	methods
-	handle)	;ignore-errors
-  (files (env dispcond)))
