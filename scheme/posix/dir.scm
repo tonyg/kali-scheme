@@ -81,13 +81,15 @@
 ; the file doesn't already exist.
 
 (define (open-file path options . mode)
-  (let ((channel (call-imported-binding posix-open
-					(thing->file-name-byte-string path)
-					options
-					(if (null? mode)
-					    #f
-					    (car mode)))))
-    (if (file-options-on? options (file-options read-only))
+  (let* ((input? (file-options-on? options (file-options read-only)))
+	 (channel (call-imported-binding posix-open
+					 (thing->file-name-byte-string path)
+					 options
+					 (if (null? mode)
+					     #f
+					     (car mode))
+					 input?)))
+    (if input?
 	(input-channel->port channel)
 	(output-channel->port channel))))
 

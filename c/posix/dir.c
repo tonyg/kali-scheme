@@ -37,7 +37,7 @@ static s48_value	posix_opendir(s48_value svname),
 			posix_readdir(s48_value svdir),
 			posix_working_directory(s48_value new_wd),
 			posix_open(s48_value path, s48_value options,
-				   s48_value mode),
+				   s48_value mode, s48_value input_p),
 			posix_file_stuff(s48_value op, s48_value arg1,
 					 s48_value arg2),
 			posix_file_info(s48_value svname,
@@ -222,7 +222,7 @@ posix_working_directory(s48_value new_wd)
  */
 
 static s48_value
-posix_open(s48_value path, s48_value options, s48_value mode)
+posix_open(s48_value path, s48_value options, s48_value mode, s48_value input_p)
 {
   int		fd,
     		c_options;
@@ -245,7 +245,7 @@ posix_open(s48_value path, s48_value options, s48_value mode)
     RETRY_OR_RAISE_NEG(fd, open(c_path, c_options, c_mode));
   }
 
-  channel = s48_add_channel(O_RDONLY & c_options
+  channel = s48_add_channel(S48_EXTRACT_BOOLEAN(input_p)
 			      ? S48_CHANNEL_STATUS_INPUT
 			      : S48_CHANNEL_STATUS_OUTPUT,
 			    path,
