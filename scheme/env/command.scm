@@ -232,8 +232,9 @@
 	  (lambda ()
 	    ((cdr pair) args)))))
    (else
-    (display "invalid argument to run-script-handler" (current-error-port))
-    (display tag)
+    (display "invalid argument to run-script-handler:" (current-error-port))
+    (display tag (current-error-port))
+    (newline (current-error-port))
     1)))
 
 (define (EX_SOFTWARE) (shared-binding-ref (lookup-imported-binding "EX_SOFTWARE")))
