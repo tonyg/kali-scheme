@@ -103,7 +103,7 @@
 	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
 	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
-	srfi-40 srfi-42 srfi-43 srfi-45
+	srfi-39 srfi-40 srfi-42 srfi-43 srfi-45
         srfi-60 srfi-61 srfi-62))
 
     ; Some SRFI's redefine Scheme variables.
@@ -441,6 +441,19 @@
 	srfi-11)
   (files srfi-37))
 
+; SRFI 39: Parameter objects
+
+(define-interface srfi-39-interface
+  (export make-parameter
+          ((parameterize) :syntax)))
+
+(define-structure srfi-39 srfi-39-interface
+  (open scheme
+	signals
+        fluids
+        cells)
+  (files srfi-39))
+  
 ; SRFI 40: A Library of Streams
 
 (define-interface srfi-40-interface
