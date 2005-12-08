@@ -46,8 +46,7 @@
      (zero?
       (bitwise-and 1
 		   (arithmetic-shift encoding
-				     (- (+ 1
-					   *uppercase-index-width*
+				     (- (+ *uppercase-index-width*
 					   *lowercase-index-width*
 					   *titlecase-index-width*
 					   *general-category-bits*))))))))
@@ -58,7 +57,8 @@
      (zero?
       (bitwise-and 1
 		   (arithmetic-shift encoding
-				     (- (+ *uppercase-index-width*
+				     (- (+ 1
+					   *uppercase-index-width*
 					   *lowercase-index-width*
 					   *titlecase-index-width*
 					   *general-category-bits*))))))))
