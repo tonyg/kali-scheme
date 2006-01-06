@@ -959,7 +959,7 @@
 	      (direct-closed-compilator regular))))))
 
   (define-encode/decode 'encode-char 
-    (proc (char-type exact-integer-type value-type exact-integer-type exact-integer-type)
+    (proc (exact-integer-type char-type value-type exact-integer-type exact-integer-type)
 	  (make-some-values-type (list boolean-type value-type)))
     5 2
     (enum op encode-char) (enum op encode-char!))

@@ -37,10 +37,12 @@
        (lambda (encoding value buffer start count)
 	 (if (or (immutable? buffer)
 		 (> 0 start)
-		 (>= 0 count)
+		 (> 0 count)
 		 (> (+ start count) (code-vector-length buffer)))
 	     (raise-exception wrong-type-argument 0
-			      (enter-fixnum encoding) buffer (enter-fixnum start) (enter-fixnum count))
+			      (enter-fixnum encoding)
+			      (scalar-value->char value)
+			      buffer (enter-fixnum start) (enter-fixnum count))
 	     (call-with-values
 		 (lambda () 
 		   (encode-scalar-value encoding value buffer start count))
@@ -68,7 +70,7 @@
      (define-primitive ?name (fixnum-> code-vector-> fixnum-> fixnum->)
        (lambda (encoding buffer start count)
 	 (if (or (> 0 start)
-		 (>= 0 count)
+		 (> 0 count)
 		 (> (+ start count) (code-vector-length buffer)))
 	     (raise-exception wrong-type-argument 0
 			      (enter-fixnum encoding) buffer (enter-fixnum start) (enter-fixnum count))

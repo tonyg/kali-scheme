@@ -48,11 +48,14 @@
 ;; encoding reported by the OS.
 
 (define (encode-scalar-value/us-ascii value buffer start count)
-  (if (< value 128)
-      (begin
-	(code-vector-set! buffer start value)
-	(values #t #f 1))
-      (values #f #f 0)))
+  (cond
+   ((< count 1)
+    (values #t #t 1))
+   ((< value 128)
+    (code-vector-set! buffer start value)
+    (values #t #f 1))
+   (else
+    (values #f #f 0))))
 
 (define (decode-scalar-value/us-ascii buffer start count)
   (values #t ; OK?
@@ -63,11 +66,14 @@
 ; Latin-1
 
 (define (encode-scalar-value/latin-1 value buffer start count)
-  (if (< value 256)
-      (begin
-	(code-vector-set! buffer start value)
-	(values #t #f 1))
-      (values #f #f 0)))
+  (cond
+   ((< count 1)
+    (values #t #t 1))
+   ((< value 256)
+    (code-vector-set! buffer start value)
+    (values #t #f 1))
+   (else
+    (values #f #f 0))))
 
 (define (decode-scalar-value/latin-1 buffer start count)
   (values #t ; OK?
@@ -79,8 +85,11 @@
 (define (encode-scalar-value/utf-8 value buffer start count)
   (cond
    ((<= value #x7f)
-    (code-vector-set! buffer start value)
-    (values #t #f 1))
+    (if (>= count 1)
+	(begin
+	  (code-vector-set! buffer start value)
+	  (values #t #f 1))
+	(values #t #t 1)))
    ((<= value #x7ff)
     (if (>= count 2)
 	(begin
