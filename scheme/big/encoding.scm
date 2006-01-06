@@ -2,21 +2,17 @@
 
 ; Common character/string encodings
 
-; It's a shame the algorithms are implemented multiple times for the
-; port encodings and this, only in different forms.  But I don't know
-; how to unify the different algorithms.
-
-; There's grotesque amounts of code duplication within this file.
-
 ; UTF-8
 
-(define (char-encoding-length/utf-8 char)
-  (let ((scalar-value (char->scalar-value char)))
-    (cond
-     ((<= scalar-value #x7f) 1)
-     ((<= scalar-value #x7ff) 2)
-     ((<= scalar-value #xffff) 3)
-     (else 4))))
+(define empty-buffer (make-byte-vector 0 0))
+
+(define (char-encoding-length/utf-8 c)
+  (call-with-values
+      (lambda ()
+	(encode-char (enum text-encoding-option utf-8)
+		     c empty-buffer 0 0))
+    (lambda (ok? count)
+      count)))
 
 (define (string-encoding-length/utf-8 s start-index count)
   (let loop ((utf-8-length 0)
@@ -28,51 +24,14 @@
 	      (+ 1 char-index)))))
 
 ; returns byte count of the encoding
-(define (encode-char/utf-8 char target target-start)
-  (let ((scalar-value (char->scalar-value char)))
-    (cond
-     ((<= scalar-value #x7f)
-      (byte-vector-set! target target-start scalar-value)
-      1)
-     ((<= scalar-value #x7ff)
-      (byte-vector-set! target target-start
-			(+ #xc0
-			   (arithmetic-shift (bitwise-and scalar-value #b11111000000)
-					     -6)))
-      (byte-vector-set! target (+ 1 target-start)
-			(+ #x80
-			   (bitwise-and scalar-value #b111111)))
-      2)
-     ((<= scalar-value #xffff)
-      (byte-vector-set! target target-start
-			(+ #xe0
-			   (arithmetic-shift (bitwise-and scalar-value #b1111000000000000)
-					     -12)))
-      (byte-vector-set! target (+ 1 target-start)
-			(+ #x80
-			   (arithmetic-shift (bitwise-and scalar-value #b111111000000)
-					     -6)))
-      (byte-vector-set! target (+ 2 target-start)
-			(+ #x80
-			   (bitwise-and scalar-value #b111111)))
-      3)
-     (else
-      (byte-vector-set! target target-start
-			(+ #xf0
-			   (arithmetic-shift (bitwise-and scalar-value #b111000000000000000000)
-					     -18)))
-      (byte-vector-set! target (+ 1 target-start)
-			(+ #x80
-			   (arithmetic-shift (bitwise-and scalar-value #b111111000000000000)
-					     -12)))
-      (byte-vector-set! target (+ 2 target-start)
-			(+ #x80
-			   (arithmetic-shift (bitwise-and scalar-value #b111111000000)
-					     -6)))
-      (byte-vector-set! target (+ 3 target-start)
-			(+ #x80
-			   (bitwise-and scalar-value #b111111)))
-      4))))
+(define (encode-char/utf-8 c target target-start)
+  (call-with-values
+      (lambda ()
+	(encode-char (enum text-encoding-option utf-8)
+		     c target target-start
+		     (- (byte-vector-length target) target-start)))
+    (lambda (ok? count)
+      count)))
 
 (define-enumerated-type encoding-status :encoding-status
   encoding-status?
@@ -101,16 +60,19 @@
 	      source-index
 	      target-index))
      (else
-      (let* ((c (string-ref source (+ source-start source-index)))
-	     (size (char-encoding-length/utf-8  c)))
-	(if (> (+ target-index size) target-count)
-	    (values (encoding-status insufficient)
-		    source-index
-		    target-index)
-	    (begin
-	      (encode-char/utf-8 (string-ref source (+ source-start source-index))
-				 target (+ target-start target-index))
-	      (loop (+ source-index 1) (+ target-index size)))))))))
+      (let ((c (string-ref source (+ source-start source-index))))
+	(call-with-values
+	    (lambda ()
+	      (encode-char (enum text-encoding-option utf-8)
+			   c
+			   target (+ target-start target-index)
+			   (max 0 (- target-count target-index))))
+	  (lambda (ok? count)
+	    (if (not ok?)
+		(values (encoding-status insufficient)
+			source-index
+			target-index)
+		(loop (+ source-index 1) (+ target-index count))))))))))
 
 (define (string->utf-8-n s start count)
   (let* ((size (string-encoding-length/utf-8 s 0 count))
@@ -153,21 +115,6 @@
   decoding-status-index
   (complete incomplete insufficient invalid))
 
-; The table, and the associated decoding algorithm, is from
-; Richard Gillam: "Unicode Demystified", chapter 14
-
-(define *utf-8-state-table*
-  '#(;; state 0
-     0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 -1 -1 -1 -1 -1 -1 -1 1 1 1 1 2 2 3 -1
-     ;; state 1
-     -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 0 0 0 0 0 0 0 0 -2 -2 -2 -2 -2 -2 -2 -2
-     ;; state 2
-     -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 1 1 1 1 1 1 1 1 -2 -2 -2 -2 -2 -2 -2 -2
-     ;; state 3
-     -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 2 2 2 2 2 2 2 2 -2 -2 -2 -2 -2 -2 -2 -2))
-
-(define *utf-8-masks* '#(#x7f #x1f #x0f #x07))
-
 ; Returns three values:
 ; - decoding status
 ; - character if status is COMPLETE, else #f
@@ -176,38 +123,25 @@
 ; We don't check for non-shortest-form UTF-8.  Too bad.
 
 (define (decode-char/utf-8 bytes start-index count)
-  (let loop ((q 0) (state 0) (mask 0) (scalar-value 0))
-    (if (< q count)
-	(let* ((c (byte-vector-ref bytes (+ start-index q)))
-	       (state (vector-ref *utf-8-state-table*
-				  (+ (arithmetic-shift state 5)	; (* state 32)
-				     (arithmetic-shift c -3)))))
-	  (case state
-	    ((0)
-	     (let ((scalar-value (+ scalar-value
-				    (bitwise-and c #x7f))))
-	       (if (scalar-value? scalar-value)
-		   (values (decoding-status complete)
-			   (scalar-value->char scalar-value)
-			   (+ q 1))
-		   (values (decoding-status invalid)
-			   #f
-			   #f))))
-	    ((1 2 3)
-	     (loop (+ 1 q) state #x3f
-		   (arithmetic-shift (+ scalar-value
-					(bitwise-and c
-						     (if (zero? mask)
-							 (vector-ref *utf-8-masks* state)
-							 mask)))
-				     6)))
-	    ((-2 -1)
-	     (values (decoding-status invalid)
-		     #f
-		     #f))))
+  (call-with-values
+      (lambda ()
+	(decode-char (enum text-encoding-option utf-8)
+		     bytes start-index
+		     count))
+    (lambda (maybe-char count)
+      (cond
+       (maybe-char
+	(values (decoding-status complete)
+	       maybe-char
+	       count))
+       (count
 	(values (decoding-status incomplete)
-		q
-		#f))))
+		#f
+		count))
+       (else
+	(values (decoding-status invalid)
+		#f
+		#f))))))
 
 ; If STOP-AT-INVALID? is #f, we'll skip an invalid byte, and pretend
 ; it generated one character.
@@ -226,21 +160,22 @@
 		index target-index)
 	(call-with-values
 	    (lambda ()
-	      (decode-char/utf-8 bytes
-				 (+ start index)
-				 (- count index)))
-	  (lambda (status c consumed)
+	      (decode-char (enum text-encoding-option utf-8)
+			   bytes
+			   (+ start index)
+			   (- count index)))
+	  (lambda (char count)
 	    (cond
-	     ((eq? status (decoding-status complete))
-	      (loop (+ index consumed) (+ target-index 1)))
-	     ((eq? status (decoding-status incomplete))
+	     (char
+	      (loop (+ index count) (+ target-index 1)))
+	     (count
 	      (values (decoding-status incomplete)
 		      index target-index))
-	     ((eq? status (decoding-status invalid))
-	      (if stop-at-invalid?
-		  (values (decoding-status invalid)
-			  index target-index)
-		  (loop (+ 1 index) (+ 1 target-index))))))))))
+	     (stop-at-invalid?
+	      (values (decoding-status invalid)
+		      index target-index))
+	     (else
+	      (loop (+ 1 index) (+ 1 target-index)))))))))
 
 ; Returns three values:
 ; - :DECODING-STATUS object
@@ -263,24 +198,24 @@
      (else
       (call-with-values
 	  (lambda ()
-	    (decode-char/utf-8 bytes
-			       (+ start index)
-			       (- count index)))
-	(lambda (status c consumed)
+	    (decode-char (enum text-encoding-option utf-8)
+			 bytes
+			 (+ start index)
+			 (- count index)))
+	(lambda (char count)
 	  (cond
-	   ((eq? status (decoding-status complete))
-	    (string-set! target (+ target-start target-index) c)
-	    (loop (+ index consumed) (+ target-index 1)))
-	   ((eq? status (decoding-status incomplete))
+	   (char
+	    (string-set! target (+ target-start target-index) char)
+	    (loop (+ index count) (+ target-index 1)))
+	   (count
 	    (values (decoding-status incomplete)
 		    index target-index))
-	   ((eq? status (decoding-status invalid))
-	    (if maybe-error-char
-		(begin
-		  (string-set! target (+ target-start target-index) maybe-error-char)
-		  (loop (+ 1 index) (+ 1 target-index)))
-		(values (decoding-status invalid)
-			index target-index))))))))))
+	   (maybe-error-char
+	    (string-set! target (+ target-start target-index) maybe-error-char)
+	    (loop (+ 1 index) (+ 1 target-index)))
+	   (else
+	    (values (decoding-status invalid)
+		    index target-index)))))))))
 
 ; may be slightly faster because of REVERSE-LIST->STRING
 ; If MAYBE-ERROR-CHAR is #f, we'll raise an error upon an invalid encoding
@@ -297,16 +232,17 @@
 	(reverse-list->string rev-chars char-count)
 	(call-with-values
 	    (lambda ()
-	      (decode-char/utf-8 source
-				 (+ start source-index)
-				 (- source-count source-index)))
-	  (lambda (status c consumed)
+	      (decode-char (enum text-encoding-option utf-8)
+			   source
+			   (+ start source-index)
+			   (- source-count source-index)))
+	  (lambda (char count)
 	    (cond
-	     ((eq? status (decoding-status complete))
-	      (loop (cons c rev-chars)
+	     (char
+	      (loop (cons char rev-chars)
 		    (+ 1 char-count)
-		    (+ consumed source-index)))
-	     ((eq? status (decoding-status invalid))
+		    (+ count source-index)))
+	     ((not count)
 	      (if maybe-error-char
 		  (loop (cons maybe-error-char rev-chars)
 			(+ 1 char-count)
@@ -314,14 +250,15 @@
 		  (decoding-error "UTF-8"
 				  "invalid encoding"
 				  source (+ start source-index))))
-	     ((eq? status (decoding-status incomplete))
-	      (if maybe-error-char
-		  (let loop ((error-char-count (- source-count consumed))
-			     (rev-chars '()))
-		    (if (zero? error-char-count)
-			(reverse-list->string rev-chars (+ 1 char-count))
-			(loop (- error-char-count 1) (cons maybe-error-char rev-chars))))
-		  (decoding-error "UTF-8"
-				  "incomplete encoding"
-				  source (+ start source-index))))))))))
+	     ;; it's incomplete from here
+	     (maybe-error-char
+	      (let loop ((error-char-count (- source-count count))
+			 (rev-chars '()))
+		(if (zero? error-char-count)
+		    (reverse-list->string rev-chars (+ 1 char-count))
+		    (loop (- error-char-count 1) (cons maybe-error-char rev-chars)))))
+	     (else
+	      (decoding-error "UTF-8"
+			      "incomplete encoding"
+			      source (+ start source-index)))))))))
 
