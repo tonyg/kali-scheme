@@ -41,7 +41,14 @@
     (newline port)))
 
 (define *depth* 5)
+(define (condition-display-depth) *depth*)
+(define (set-condition-display-depth! new)
+  (set! *depth* new))
+
 (define *length* 6)
+(define (condition-display-length) *length*)
+(define (set-condition-display-length! new)
+  (set! *length* new))
 
 (define-generic disclose-condition &disclose-condition)
 

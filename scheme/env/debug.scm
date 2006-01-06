@@ -291,6 +291,16 @@
 	     set-inspector-writing-length!
 	     "maximum writing length in inspector")
 
+(add-setting 'condition-writing-length positive-integer?
+	     condition-display-length
+	     set-condition-display-length!
+	     "maximum writing length for conditions")
+
+(add-setting 'condition-writing-depth positive-integer?
+	     condition-display-depth
+	     set-condition-display-depth!
+	     "maximum writing depth for conditions")
+
 ; Old toggling commands retained for compatibility
 ; These have no help strings.
 

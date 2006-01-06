@@ -213,7 +213,9 @@
 (define-interface display-conditions-interface
   (export display-condition		;command.scm
 	  &disclose-condition      	;env/disclosers.scm
-	  limited-write))
+	  limited-write
+	  condition-display-depth set-condition-display-depth!
+	  condition-display-length set-condition-display-length!))
 
 (define-interface debuginfo-interface
   (export read-debug-info

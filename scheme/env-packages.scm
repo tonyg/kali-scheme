@@ -215,6 +215,7 @@
         evaluation              ; eval-from-file, eval
         environments            ; environment-define! (for ,trace)
         conditions
+	display-conditions      ; for setting writing length and depth
         (subset filenames       (set-translation!))
         disclosers              ; template-name, debug-data-names
         packages                ; flush-location-names, package-integrate?
