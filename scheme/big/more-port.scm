@@ -40,16 +40,29 @@
       (set-port-location-column! location
 				 (+ 1 (port-location-column location)))))
 
+; A codec that doesn't trigger the VM taking over
+
+(define-text-codec utf-8/diy "UTF-8/DIY"
+  (lambda (char buffer start count)
+    (encode-char (enum text-encoding-option utf-8) char buffer start count))
+  (lambda (buffer start count)
+    (decode-char (enum text-encoding-option utf-8)  buffer start count)))
+
 ;----------------
 ; Input ports that keep track of the current row and column.
 
 (define (make-tracking-input-port port)
   (if (input-port? port)
-      (make-buffered-input-port tracking-input-port-handler
-				(make-port-location port)
-				(make-byte-vector (default-buffer-size) 0)
-				0
-				0)
+      (let ((tracking
+	     (make-buffered-input-port tracking-input-port-handler
+				       (make-port-location port)
+				       (make-byte-vector (default-buffer-size) 0)
+				       0
+				       0)))
+	;; We need this because otherwise the VM won't give control
+	;; back to our handler for every character.
+	(set-port-text-codec-spec! tracking utf-8/diy)
+	tracking)
       (call-error "not an input port" make-tracking-input-port port)))
 
 (define (make-tracking-one-char-input plain-one-char-input)
@@ -141,11 +154,16 @@
 
 (define (make-tracking-output-port port)
   (if (output-port? port)
-      (make-buffered-output-port tracking-output-port-handler
-				 (make-port-location port)
-				 (make-byte-vector (default-buffer-size) 0)
-				 0
-				 (default-buffer-size))
+      (let ((tracking
+	     (make-buffered-output-port tracking-output-port-handler
+					(make-port-location port)
+					(make-byte-vector (default-buffer-size) 0)
+					0
+					(default-buffer-size))))
+	;; We need this because otherwise the VM won't give control
+	;; back to our handler for every character.
+	(set-port-text-codec-spec! tracking utf-8/diy)
+	tracking)
       (call-error "not an output port" make-tracking-output-port port)))
 
 (define (fresh-line port)
