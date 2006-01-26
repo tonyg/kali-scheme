@@ -117,7 +117,10 @@
 (define-structure encodings encodings-interface
   (open scheme-level-2
 	unicode
-	bitwise byte-vectors
+	byte-vectors
+	(subset primitives (encode-char decode-char))
+	(subset architecture (text-encoding-option))
+	enumerated
 	conditions exceptions
 	finite-types
 	(subset silly (reverse-list->string)))
@@ -167,9 +170,12 @@
 	proposals
 	util				; unspecific
 	signals
-	(subset primitives      (copy-bytes! write-byte))
+	(subset primitives      (copy-bytes! write-byte encode-char decode-char))
+	(subset architecture    (text-encoding-option))
+	enumerated
 	encodings
-	(subset text-codecs (set-port-text-codec! utf-8-codec)))
+	(subset text-codecs
+		(set-port-text-codec! utf-8-codec define-text-codec)))
   (files (big more-port)))
 
 (define-structure destructuring (export (destructure :syntax))
