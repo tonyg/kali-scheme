@@ -94,8 +94,8 @@
 	   #t)))
 
 (define (breakpoint . rest)
-  (command-loop (condition (&breakpoint)
-			   (&irritants (values rest)))))
+  (command-loop (conditions:condition (&breakpoint)
+				      (&irritants (values rest)))))
 
 (define-condition-type &breakpoint &condition
   breakpoint?)

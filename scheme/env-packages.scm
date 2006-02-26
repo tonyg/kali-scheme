@@ -214,7 +214,10 @@
         util                    ; filter
         evaluation              ; eval-from-file, eval
         environments            ; environment-define! (for ,trace)
-        conditions
+	;; debug.scm has a procedure called condition, and it has to be called that
+        (modify conditions	(prefix conditions:)
+		                (expose condition))
+	(modify conditions      (hide condition))
 	display-conditions      ; for setting writing length and depth
         (subset filenames       (set-translation!))
         disclosers              ; template-name, debug-data-names
