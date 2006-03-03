@@ -818,7 +818,7 @@
 	 (or (and (eq? s1 s2) (= start1 start2))		; Fast path
 	     (%string-compare s1 start1 end1 s2 start2 end2	; Real test
 			      (lambda (i) #f)
-			      values
+			      (lambda (i) #t)
 			      (lambda (i) #f))))))
 
 (define (string<> s1 s2 . maybe-starts+ends)
@@ -827,9 +827,9 @@
     (or (not (= (- end1 start1) (- end2 start2)))		; Fast path
 	(and (not (and (eq? s1 s2) (= start1 start2)))		; Quick filter
 	     (%string-compare s1 start1 end1 s2 start2 end2	; Real test
-			      values
+			      (lambda (i) #t)
 			      (lambda (i) #f)
-			      values)))))
+			      (lambda (i) #t))))))
 
 (define (string< s1 s2 . maybe-starts+ends)
   (let-string-start+end2 (start1 end1 start2 end2) 
@@ -838,7 +838,7 @@
 	(< end1 end2)
 
 	(%string-compare s1 start1 end1 s2 start2 end2 		; Real test
-			 values
+			 (lambda (i) #t)
 			 (lambda (i) #f)
 			 (lambda (i) #f)))))
 
@@ -851,7 +851,7 @@
 	(%string-compare s1 start1 end1 s2 start2 end2 		; Real test
 			 (lambda (i) #f)
 			 (lambda (i) #f)
-			 values))))
+			 (lambda (i) #t)))))
 
 (define (string<= s1 s2 . maybe-starts+ends)
   (let-string-start+end2 (start1 end1 start2 end2) 
@@ -860,8 +860,8 @@
 	(<= end1 end2)
 
 	(%string-compare s1 start1 end1 s2 start2 end2 		; Real test
-			 values
-			 values
+			 (lambda (i) #t)
+			 (lambda (i) #t)
 			 (lambda (i) #f)))))
 
 (define (string>= s1 s2 . maybe-starts+ends)
@@ -872,8 +872,8 @@
 
 	(%string-compare s1 start1 end1 s2 start2 end2 		; Real test
 			 (lambda (i) #f)
-			 values
-			 values))))
+			 (lambda (i) #t)
+			 (lambda (i) #t)))))
 
 (define (string-ci= s1 s2 . maybe-starts+ends)
   (let-string-start+end2 (start1 end1 start2 end2) 
@@ -882,7 +882,7 @@
 	 (or (and (eq? s1 s2) (= start1 start2))		; Fast path
 	     (%string-compare-ci s1 start1 end1 s2 start2 end2	; Real test
 				 (lambda (i) #f)
-				 values
+				 (lambda (i) #t)
 				 (lambda (i) #f))))))
 
 (define (string-ci<> s1 s2 . maybe-starts+ends)
@@ -891,9 +891,9 @@
     (or (not (= (- end1 start1) (- end2 start2)))		; Fast path
 	(and (not (and (eq? s1 s2) (= start1 start2)))		; Quick filter
 	     (%string-compare-ci s1 start1 end1 s2 start2 end2	; Real test
-				 values
+				 (lambda (i) #t)
 				 (lambda (i) #f)
-				 values)))))
+				 (lambda (i) #t))))))
 
 (define (string-ci< s1 s2 . maybe-starts+ends)
   (let-string-start+end2 (start1 end1 start2 end2) 
@@ -902,7 +902,7 @@
 	(< end1 end2)
 
 	(%string-compare-ci s1 start1 end1 s2 start2 end2	; Real test
-			    values
+			    (lambda (i) #t)
 			    (lambda (i) #f)
 			    (lambda (i) #f)))))
 
@@ -915,7 +915,7 @@
 	(%string-compare-ci s1 start1 end1 s2 start2 end2	; Real test
 			    (lambda (i) #f)
 			    (lambda (i) #f)
-			    values))))
+			    (lambda (i) #t)))))
 
 (define (string-ci<= s1 s2 . maybe-starts+ends)
   (let-string-start+end2 (start1 end1 start2 end2) 
@@ -924,8 +924,8 @@
 	(<= end1 end2)
 
 	(%string-compare-ci s1 start1 end1 s2 start2 end2	; Real test
-			    values
-			    values
+			    (lambda (i) #t)
+			    (lambda (i) #t)
 			    (lambda (i) #f)))))
 
 (define (string-ci>= s1 s2 . maybe-starts+ends)
@@ -936,8 +936,8 @@
 
 	(%string-compare-ci s1 start1 end1 s2 start2 end2	; Real test
 			    (lambda (i) #f)
-			    values
-			    values))))
+			    (lambda (i) #t)
+			    (lambda (i) #t)))))
 
 
 ;;; Hash
