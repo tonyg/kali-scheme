@@ -37,7 +37,7 @@ static s48_value	enter_signal(int signal);
 static int		extract_signal(s48_value sch_signal);
 static void		signal_map_init();
 
-static char		**enter_string_array(s48_value strings),
+static char		**enter_byte_vector_array(s48_value strings),
 			*add_dot_slash(char *name);
 
 /*
@@ -311,7 +311,7 @@ static s48_value
 posix_exec(s48_value program, s48_value lookup_p,
 	   s48_value env, s48_value args)
 {
-  char **c_args = enter_string_array(args);
+  char **c_args = enter_byte_vector_array(args);
   char *c_program, *real_c_program;
   int status;
 
@@ -326,7 +326,7 @@ posix_exec(s48_value program, s48_value lookup_p,
       status = execvp(c_program, c_args);
     }
   else {
-    char **c_env = enter_string_array(env);
+    char **c_env = enter_byte_vector_array(env);
     
     if (NULL == strchr(c_program, '/'))
       real_c_program = add_dot_slash(c_program);
@@ -350,25 +350,25 @@ posix_exec(s48_value program, s48_value lookup_p,
 }
 
 /*
- * Convert a list of strings into an array of char pointers.
+ * Convert a list of byte vectors into an array of char pointers.
  */
 
 static char **
-enter_string_array(s48_value strings)
+enter_byte_vector_array(s48_value vectors)
 {
-  int length = S48_UNSAFE_EXTRACT_FIXNUM(s48_length(strings));
+  int length = S48_UNSAFE_EXTRACT_FIXNUM(s48_length(vectors));
   char **result = (char **)malloc((length + 1) * sizeof(char *));
   int i;
 
   if (result == NULL)
     s48_raise_out_of_memory_error();
   
-  for(i = 0; i < length; i++, strings = S48_UNSAFE_CDR(strings)) {
-    s48_value string = S48_UNSAFE_CAR(strings);
-    if (! S48_STRING_P(string)) {
+  for(i = 0; i < length; i++, vectors = S48_UNSAFE_CDR(vectors)) {
+    s48_value vector = S48_UNSAFE_CAR(vectors);
+    if (! S48_BYTE_VECTOR_P(vector)) {
       free(result);
-      s48_raise_argument_type_error(string); }
-    result[i] = S48_UNSAFE_EXTRACT_BYTE_VECTOR(string); }
+      s48_raise_argument_type_error(vector); }
+    result[i] = S48_UNSAFE_EXTRACT_BYTE_VECTOR(vector); }
   result[length] = NULL;
 
   return result;

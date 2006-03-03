@@ -27,11 +27,11 @@
 ; because the first argument may or may not be the name of the program or file).
 ;
 ; (EXEC-WITH-ALIAS program lookup? environment arguments)
-;   program: string, name of file or program
+;   program: byte vector, name of file or program
 ;   lookup?: should the program be looked up in PATH?
 ;   environment: either #f, which uses the parent's environment in the child,
-;            or a list of strings of the form "name=value".
-;   arguments: a list of strings
+;            or a list of byte vectors, representing text of the form "name=value".
+;   arguments: a list of byte vectors
 
 (import-lambda-definition external-exec-with-alias (program lookup? environment arguments)
 			  "posix_exec")
@@ -53,11 +53,11 @@
   (exec-arg->byte-string (thing->exec-arg thing)))
 
 (define (exec-with-alias program lookup? environment arguments)
-  (exec-with-alias (thing->exec-arg-byte-string program)
-		   lookup?
-		   (and environment
-			(thing->exec-arg-byte-string environment))
-		   (map exec-arg->byte-string arguments)))
+  (external-exec-with-alias (thing->exec-arg-byte-string program)
+			    lookup?
+			    (and environment
+				 (thing->exec-arg-byte-string environment))
+			    (map thing->exec-arg-byte-string arguments)))
 
 ; Four versions of exec():
 ;  - program looked up, use default environment
