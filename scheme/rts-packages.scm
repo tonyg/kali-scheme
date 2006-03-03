@@ -174,7 +174,8 @@
   (open scheme-level-1
 	unicode
 	number-i/o
-	i/o				;output-port-option, write-string
+	(subset i/o             (write-char write-string))
+	(subset i/o-internal    (output-port-option))
 	methods				;disclose
 	(subset i/o-internal	(open-output-port?))
 	(subset simple-signals	(call-error))
@@ -185,7 +186,7 @@
 (define-structure reading reading-interface
   (open scheme-level-1
 	number-i/o
-	i/o		;input-port-option
+	(subset i/o-internal (input-port-option))
 	ascii		;for dispatch table
 	unicode
 	simple-signals	;warn, signal-condition, make-condition
@@ -431,7 +432,7 @@
 					make-usual-resumer
 					add-initialization-thunk!)
   (open scheme-level-1
-	i/o		 ;initialize-i/o, etc.
+	(subset i/o-internal (initialize-i/o initialize-i/o-handlers!))
 	channel-i/o      ;initialize-channel-i/o
 	channel-ports    ;{in,out}put-channel->port
 	(subset text-codecs (find-text-codec set-port-text-codec!))

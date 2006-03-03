@@ -555,13 +555,8 @@
 	  write-char
 	  read-block write-block
 	  newline
-	  input-port-option		;read.scm
-	  output-port-option		;write.scm
 	  write-string			;write.scm
-	  initialize-i/o                ;init.scm
 	  with-current-ports
-	  initialize-i/o-handlers!      ;init.scm
-	  disclose-port
 	  current-error-port
 	  current-noise-port
 	  force-output			;xport.scm
@@ -589,7 +584,15 @@
 	  utf-32le-codec utf-32be-codec))
 
 (define-interface i/o-internal-interface
-  (export make-buffered-input-port  make-unbuffered-input-port
+  (export input-port-option		;read.scm
+	  output-port-option		;write.scm
+
+	  initialize-i/o                ;init.scm
+	  initialize-i/o-handlers!      ;init.scm
+
+	  disclose-port
+
+	  make-buffered-input-port  make-unbuffered-input-port
 	  make-buffered-output-port make-unbuffered-output-port
 
 	  make-port-handler
