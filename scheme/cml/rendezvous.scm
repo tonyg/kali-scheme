@@ -484,10 +484,7 @@
 (define (sync-group group)
   (call-with-values
    (lambda () (collect-group group))
-   (lambda (prim-rv+ack-flag-list flag-sets)
-     (if (null? (cdr prim-rv+ack-flag-list))
-	 (sync-prim-rv (caar prim-rv+ack-flag-list))
-	 (really-sync-group prim-rv+ack-flag-list flag-sets)))))
+   really-sync-group))
 
 ;; This is analogous to SYNC-PRIM-RVS
 
