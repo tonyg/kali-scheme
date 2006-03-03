@@ -119,6 +119,17 @@ s48_socket(s48_value udp_p, s48_value input_p)
 				0));
   RETRY_OR_RAISE_NEG(status, fcntl(fd, F_SETFL, O_NONBLOCK));
 
+  /*
+   * If we don't do this, we may get "Address already in use" if we
+   * try to do anything on the same port too soon.
+   * Alan Bawden says this is OK:
+   * http://news.gmane.org/gmane.lisp.scheme.scheme48/cutoff=1672
+   */
+  int on = 1;
+  RETRY_OR_RAISE_NEG(status,
+		     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+				&on, sizeof(on)));
+
   mode = (input_p == S48_FALSE) ?
     S48_CHANNEL_STATUS_SPECIAL_OUTPUT :
     S48_CHANNEL_STATUS_SPECIAL_INPUT;
