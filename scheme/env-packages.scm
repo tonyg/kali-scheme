@@ -167,7 +167,7 @@
 	segments                ; get-debug-data
         enumerated              ; enumerand->name
         weak                    ; weak-pointer?
-	i/o                     ; disclose-port
+	(subset i/o-internal (disclose-port))
 	low-level		; cell-unassigned?
         templates continuations channels
         architecture)
