@@ -51,7 +51,6 @@
 (define-structure foo (export)
   (open scheme testing
 	;assembler
-	code-vectors
 	byte-vectors
 	ports
 	queues
@@ -150,7 +149,7 @@
 
 (define (identity x) x)		; handy for preventing inlining
 
-(let ((port (make-port #f #f #f -1 0 0 (make-code-vector 1024 25) 0 1023 #f #f)))
+(let ((port (make-port #f #f #f -1 0 0 (make-byte-vector 1024 25) 0 1023 #f #f)))
   (set-port-index! port 0)
   (test "read-char0" = 25 (read-byte port))
   (test "read-char1" = 25 ((identity read-byte) port)))

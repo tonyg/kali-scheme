@@ -49,7 +49,7 @@
 						    open-for-output)))
 	     #f		; lock
 	     channel
-	     (make-code-vector buffer-size 0)
+	     (make-byte-vector buffer-size 0)
 	     0 buffer-size
 	     #f #f))
 
@@ -63,7 +63,7 @@
 						    open-for-input)))
 	     #f		; lock
 	     channel
-	     (make-code-vector buffer-size 0)
+	     (make-byte-vector buffer-size 0)
 	     0 buffer-size
 	     #f #f))
 
@@ -142,7 +142,7 @@
 (define (fill-buffer port)
   (let ((got (channel-read (port-in-buffer port)
 			   0
-			   (code-vector-length (port-in-buffer port))
+			   (code-byte-length (port-in-buffer port))
 			   (port-data port))))
     (cond ((= got 0)
 	   (fill-buffer port))
