@@ -19,5 +19,7 @@ extern long ps_abort_fd_op(long fd_as_long);
 
 extern long ps_io_buffer_size(void);
 
+extern psbool ps_io_crlf_p(void);
+
 extern char *ps_console_encoding(long fd_as_long);
 
