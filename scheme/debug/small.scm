@@ -42,29 +42,30 @@
 (define (output-channel->port channel)
   (make-port #f
 	     'text-codec
+	     #f
 	     (bitwise-ior (arithmetic-shift 1 (enum port-status-options
 						    output))
 			  (arithmetic-shift 1 (enum port-status-options
 						    open-for-output)))
-	     channel
 	     #f		; lock
-	     #f #f	; input stuff
+	     channel
 	     (make-code-vector buffer-size 0)
-	     0))
+	     0 buffer-size
+	     #f #f))
 
 (define (input-channel->port channel)
   (make-port #f
 	     'text-codec
+	     #f
 	     (bitwise-ior (arithmetic-shift 1 (enum port-status-options
 						    input))
 			  (arithmetic-shift 1 (enum port-status-options
 						    open-for-input)))
-	     channel
 	     #f		; lock
+	     channel
 	     (make-code-vector buffer-size 0)
-	     0
-	     0
-	     #f #f))  ; output stuff
+	     0 buffer-size
+	     #f #f))
 
 (define *error-channel* #f)
 

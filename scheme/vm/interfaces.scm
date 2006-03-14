@@ -224,7 +224,9 @@
 	  port-index set-port-index!
 	  port-limit set-port-limit!
 	  port-text-codec-spec set-port-text-codec-spec!
+	  port-crlf? set-port-crlf?!
 	  port-lock
+	  port-pending-cr?  set-port-pending-cr?!
 	  port-pending-eof? set-port-pending-eof?!
    
 	  vm-vector? vm-vector-size vm-make-vector vm-vector-length

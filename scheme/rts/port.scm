@@ -90,10 +90,10 @@
 			   signal-vm-exception))
 
   (define-vm-exception-handler (enum op write-char)
-    (two-arg-proc->handler (lambda (byte port)
+    (two-arg-proc->handler (lambda (ch port)
 			     ((port-handler-char (port-handler port))
 			      port
-			      byte))
+			      ch))
 			   signal-vm-exception)))
 
 ; Check the VM exception and then lock the port.
@@ -272,12 +272,14 @@
   (if (port-handler? handler)
       (make-port handler
 		 (enum text-encoding-option latin-1)
+		 #f
 		 (bitwise-ior input-port-mask open-input-port-mask)
 		 #f		; timestamp (not used for unbuffered ports)
 		 data
 		 #f		; buffer
 		 #f		; index
 		 #f		; limit
+		 #f             ; pending-cr?
 		 #f)            ; pending-eof?
       (call-error "invalid argument"
 		  make-unbuffered-input-port handler data)))
@@ -310,12 +312,14 @@
   (if (port-handler? handler)
       (make-port handler
 		 (enum text-encoding-option latin-1)
+		 #f
 		 open-output-port-status
 		 #f		; lock     (not used in unbuffered ports)
 		 data
 		 (make-byte-vector 128 0) ; buffer
 		 #f		; index
 		 #f		; limit
+		 #f             ; pending-cr?
 		 #f)            ; pending-eof?
       (call-error "invalid argument"
 		  make-unbuffered-output-port handler data)))
@@ -334,20 +338,40 @@
 	  (encode-char
 	   (text-codec-encode-char-proc (port-text-codec port))))
       (let ((encode-count
-	     (atomically
-	      (call-with-values
-		  (lambda ()
-		    (encode-char ch
-				 buffer 0 (byte-vector-length buffer)))
-		(lambda (ok? encode-count)
-		  ;; OK? must be true
-		  encode-count)))))
+	     (if (and (port-crlf? port)
+		      (char=? ch #\newline))
+		 (atomically
+		  (call-with-values
+		      (lambda ()
+			(encode-char cr
+				     buffer 0 (byte-vector-length buffer)))
+		    (lambda (ok? encode-count-cr)
+		      ;; OK? must be true
+		      (call-with-values
+			  (lambda ()
+			    (encode-char #\newline
+					 buffer 
+					 encode-count-cr
+					 (- (byte-vector-length buffer) encode-count-cr)))
+			(lambda (ok? encode-count-lf)
+			;; OK? must be true
+			  (+ encode-count-cr encode-count-lf))))))
+		 (atomically
+		  (call-with-values
+		      (lambda ()
+			(encode-char ch
+				     buffer 0 (byte-vector-length buffer)))
+		    (lambda (ok? encode-count)
+		      ;; OK? must be true
+		      encode-count))))))
 	(let loop ((index 0))
 	  (let* ((to-write (- encode-count index))
 		 (written
 		  (write-block port buffer index to-write)))
 	    (if (< written to-write)
 		(loop (+ index written)))))))))
+
+(define cr (ascii->char 13))
 
 (define (make-write-block-handler write-block)
   (lambda (port buffer start count)
@@ -398,10 +422,12 @@
 (define (make-null-output-port)
   (make-port null-output-port-handler
 	     null-text-codec
+	     #f
 	     open-output-port-status
 	     #f		; timestamp
 	     #f		; data
 	     null-output-buffer
 	     0		; index
 	     (byte-vector-length null-output-buffer)	; limit
+	     #f         ; pending-cr?
 	     #f))	; pending-eof?

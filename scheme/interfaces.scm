@@ -219,6 +219,7 @@
 	  make-port
 	  port-handler
 	  port-text-codec-spec set-port-text-codec-spec!
+	  port-crlf?        set-port-crlf?!
 	  port-buffer       
 
 	  port-lock         set-port-lock!
@@ -226,12 +227,15 @@
 	  port-data         set-port-data!
 	  port-index        set-port-index!
 	  port-limit        set-port-limit!
+	  port-pending-cr?  set-port-pending-cr?!
 	  port-pending-eof? set-port-pending-eof?!
 
 	  provisional-port-status provisional-set-port-status!
 	  provisional-port-index  provisional-set-port-index!
 	  provisional-port-limit  provisional-set-port-limit!
 	  provisional-port-lock   provisional-set-port-lock!
+	  provisional-port-pending-cr?
+	  provisional-set-port-pending-cr?!
 	  provisional-port-pending-eof?
 	  provisional-set-port-pending-eof?!))
 

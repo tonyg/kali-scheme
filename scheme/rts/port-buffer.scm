@@ -5,12 +5,14 @@
 	   (port-handler? handler))
       (make-port handler
 		 (enum text-encoding-option latin-1)
+		 #f
 		 (bitwise-ior input-port-mask open-input-port-mask)
 		 #f		; timestamp (was lock)
 		 data
 		 buffer
 		 index
 		 limit
+		 #f             ; pending-cr?
 		 #f)            ; pending-eof?
       (call-error "invalid argument"
 		  make-buffered-input-port handler data buffer index limit)))
@@ -21,12 +23,14 @@
 	   (port-handler? handler))
       (make-port handler
 		 (enum text-encoding-option latin-1)
+		 #f
 		 open-output-port-status
 		 #f		; timestamp (was lock)
 		 data
 		 buffer
 		 index
 		 limit
+		 #f             ; pending-cr?
 		 #f)            ; pending-eof?
       (call-error "invalid argument"
 		  make-buffered-output-port handler data buffer index limit)))
@@ -119,7 +123,8 @@
 	       (buffer-filler! port #t)
 	       (lose)))))))
 
-; The MODE argument says whether we're doing a READ, a PEEK, or a CHAR-READY?
+; The MODE argument says whether we're doing a READ (#f) , a PEEK (#t),
+; or a CHAR-READY? ( () )
 
 (define (make-one-char-input buffer-filler!)
   (lambda (port mode)
@@ -127,80 +132,105 @@
 	   (text-codec-decode-char-proc (port-text-codec port))))
       (with-new-proposal (lose)
 
-	(let ((index (provisional-port-index port))
-	      (limit (provisional-port-limit port)))
+	(let ((limit (provisional-port-limit port)))
+	  (let loop ((index (provisional-port-index port)))
 	  
-	  (define (consume&deliver decode-count val)
-	    (if (not mode)
-		(provisional-set-port-index! port
-					     (+ index decode-count)))
-	    (if (maybe-commit)
-		val
-		(lose)))
+	    (define (consume&deliver decode-count val)
+	      (if (not mode)
+		  (provisional-set-port-index! port
+					       (+ index decode-count)))
+	      (if (maybe-commit)
+		  val
+		  (lose)))
 
-	  (cond ((not (open-input-port? port))
-		 (remove-current-proposal!)
-		 (call-error "invalid argument"
+	    (cond ((not (open-input-port? port))
+		   (remove-current-proposal!)
+		   (call-error "invalid argument"
+			       (cond
+				((not mode) read-char)
+				((null? mode) char-ready?)
+				(else peek-char))
+			       port))
+		  ((< index limit)
+		   (let ((buffer (port-buffer port)))
+		     (call-with-values
+			 (lambda ()
+			   (decode buffer index (- limit index)))
+		       (lambda (ch decode-count)
+			 (cond
+			  (ch
+			    ;; CR/LF handling. Great.
+			   (cond
+			    ((port-crlf? port)
 			     (cond
-			      ((not mode) read-char)
-			      ((null? mode) char-ready?)
-			      (else peek-char))
-			     port))
-		((< index limit)
-		 (let ((buffer (port-buffer port)))
-		   (call-with-values
-		       (lambda ()
-			 (decode buffer index (- limit index)))
-		     (lambda (ch decode-count)
-		       (cond
-			(ch
-			 (consume&deliver decode-count
-					  (if (null? mode)
-					      #t
-					      ch)))
-			((or (not decode-count) ; decoding error
-			     (provisional-port-pending-eof? port)) ; partial char
-			 (consume&deliver 1
-					  (if (null? mode)
-					      #t
-					      #\?)))
-			;; need at least DECODE-COUNT bytes
-			(else
-			 (if (> decode-count
-				(- (byte-vector-length buffer)
-				   limit))
+			      ((char=? ch cr)
+			       (provisional-set-port-pending-cr?! port #t)
+			       (consume&deliver decode-count
+						(if (null? mode) ; CHAR-READY?
+						    #t
+						    #\newline)))
+			      ((and (char=? ch #\newline)
+				    (provisional-port-pending-cr? port))
+			       (provisional-set-port-pending-cr?! port #f)
+			       (loop (+ index decode-count)))
+			      (else
+			       (provisional-set-port-pending-cr?! port #f)
+			       (consume&deliver decode-count
+						(if (null? mode) ; CHAR-READY?
+						    #t
+						    ch)))))
+			    (else
+			     (provisional-set-port-pending-cr?! port #f)
+			     (consume&deliver decode-count
+					      (if (null? mode) ; CHAR-READY?
+						  #t
+						  ch)))))
+			     
+			  ((or (not decode-count) ; decoding error
+			       (provisional-port-pending-eof? port)) ; partial char
+			   (consume&deliver 1
+					    (if (null? mode)
+						#t
+						#\?)))
+			  ;; need at least DECODE-COUNT bytes
+			  (else
+			   (if (> decode-count
+				  (- (byte-vector-length buffer)
+				     limit))
 			      
-			     ;; copy what we have to the
-			     ;; beginning so there's space at the
-			     ;; end we can try to fill
-			     (begin
-			       ;; (debug-message "aligning port buffer")
-			       (attempt-copy-bytes! buffer index
-						    buffer 0
-						    (- limit index))
-			       (provisional-set-port-index! port 0)
-			       (provisional-set-port-limit! port (- limit index))))
-			 (if (or (buffer-filler! port (not (null? mode)))
-				 (not (null? mode)))
-			     (lose)
-			     #f)))))))
-		((provisional-port-pending-eof? port)
-		 (if (not mode)
-		     (provisional-set-port-pending-eof?! port #f))
-		 (cond
-		  ((not (maybe-commit))
-		   (lose))
-		  ((null? mode) #t)
-		  (else (eof-object))))
-		(else
-		 (if (= index limit)	; we have zilch
-		     (begin
-		       (provisional-set-port-index! port 0)
-		       (provisional-set-port-limit! port 0)))
-		 (if (or (buffer-filler! port (not (null? mode)))
-			 (not (null? mode)))
-		     (lose)
-		     #f))))))))
+			       ;; copy what we have to the
+			       ;; beginning so there's space at the
+			       ;; end we can try to fill
+			       (begin
+				 ;; (debug-message "aligning port buffer")
+				 (attempt-copy-bytes! buffer index
+						      buffer 0
+						      (- limit index))
+				 (provisional-set-port-index! port 0)
+				 (provisional-set-port-limit! port (- limit index))))
+			   (if (or (buffer-filler! port (not (null? mode)))
+				   (not (null? mode)))
+			       (lose)
+			       #f)))))))
+		  ((provisional-port-pending-eof? port)
+		   (if (not mode)
+		       (provisional-set-port-pending-eof?! port #f))
+		   (cond
+		    ((not (maybe-commit))
+		     (lose))
+		    ((null? mode) #t)
+		    (else (eof-object))))
+		  (else
+		   (if (= index limit)	; we have zilch
+		       (begin
+			 (provisional-set-port-index! port 0)
+			 (provisional-set-port-limit! port 0))
+		       ;; may be out of synch because of CR/LF conversion
+		       (provisional-set-port-index! port index))
+		   (if (or (buffer-filler! port (not (null? mode)))
+			   (not (null? mode)))
+		       (lose)
+		       #f)))))))))
 
 ;----------------
 ; See if there is a byte available.
@@ -382,16 +412,44 @@
 		    ((not
 		      (maybe-commit-no-interrupts
 		       (lambda ()
-			 (call-with-values
-			     (lambda ()
-			       (encode ch
-				       (port-buffer port)
-				       index (- limit index)))
-			   (lambda (the-ok? the-encode-count)
-			     (set! ok? the-ok?)
-			     (if the-ok?
-				 (set-port-index! port (+ index the-encode-count))
-				 (set! encode-count the-encode-count)))))))
+			 (if (and (port-crlf? port)
+				  (char=? ch #\newline))
+			     ;; CR/LF handling ruins our day once again
+			     (call-with-values
+				 (lambda ()
+				   (encode cr
+					   (port-buffer port)
+					   index (- limit index)))
+			       (lambda (the-ok? cr-encode-count)
+				 (cond
+				  ((or (not the-ok?)
+				       (>= (+ index cr-encode-count) limit))
+				   (set! ok? #f)
+				   (set! encode-count (+ 1 cr-encode-count))) ; LF will take at least one
+				  (else
+				   (call-with-values
+				       (lambda ()
+					 (encode #\newline
+						 (port-buffer port)
+						 (+ index cr-encode-count)
+						 (- limit (+ index cr-encode-count))))
+				     (lambda (the-ok? lf-encode-count)
+				       (set! ok? the-ok?)
+				       (if the-ok?
+					   (set-port-index! port
+							    (+ index
+							       cr-encode-count lf-encode-count))
+					   (set! encode-count (+ cr-encode-count lf-encode-count)))))))))
+			     (call-with-values
+				 (lambda ()
+				   (encode ch
+					   (port-buffer port)
+					   index (- limit index)))
+			       (lambda (the-ok? the-encode-count)
+				 (set! ok? the-ok?)
+				 (if the-ok?
+				     (set-port-index! port (+ index the-encode-count))
+				     (set! encode-count the-encode-count))))))))
 		     (lose))
 		    (ok?)		; we're done
 		    (encode-count	; need more space

@@ -571,12 +571,15 @@
       ;; handled by the VM, or a :TEXT-CODEC object for things handled
       ;; purely by the RTS
       (port-text-codec-spec set-port-text-codec-spec!)
+      (port-crlf?   set-port-crlf?!)
       (port-status  set-port-status!)
       (port-lock    set-port-lock!)		; used for buffer timestamps
       (port-data    set-port-data!)
       (port-buffer  set-port-buffer!)
       (port-index   set-port-index!)
       (port-limit   set-port-limit!)
+      ;; for CR/LF handling
+      (port-pending-cr?  set-port-pending-cr?!)
       (port-pending-eof? set-port-pending-eof?!))
     (channel channel? #f
       (channel-status)

@@ -52,6 +52,7 @@
   (open scheme testing
 	;assembler
 	code-vectors
+	byte-vectors
 	ports
 	queues
 	random
@@ -149,7 +150,7 @@
 
 (define (identity x) x)		; handy for preventing inlining
 
-(let ((port (make-port #f #f -1 0 0 (make-code-vector 1024 25) 0 1023 #f)))
+(let ((port (make-port #f #f #f -1 0 0 (make-code-vector 1024 25) 0 1023 #f #f)))
   (set-port-index! port 0)
   (test "read-char0" = 25 (read-byte port))
   (test "read-char1" = 25 ((identity read-byte) port)))
@@ -182,6 +183,33 @@
 (test "sort" equal? '(1 2 3 3) (sort-list '(2 3 1 3) <))
 
 (test "bigbit" = (expt 2 100) (arithmetic-shift 1 100))
+
+(test "CR/LF conversion"
+      equal?
+      #t
+      (let ((port (make-byte-vector-output-port)))
+	(set-port-crlf?! port #t)
+	(let loop ((i 0))
+	  (if (< i 10000)
+	      (begin
+		(display "a" port)
+		(newline port)
+		(loop (+ 1 i)))))
+	(let ((b (byte-vector-output-port-output port)))
+	  (if (not (= (byte-vector-length b) 30000))
+	      (byte-vector-length b)
+	      (let ((port
+		     (make-byte-vector-input-port b)))
+		(set-port-crlf?! port #t)
+		(let loop ((i 0))
+		  (if (= i 10000)
+		      #t
+		      (let* ((c1 (read-char port))
+			     (c2 (read-char port)))
+			(if (and (equal? c1 #\a)
+				 (equal? c2 #\newline))
+			    (loop (+ 1 i))
+			    (list i c1 c2))))))))))
 
 (test "format" string=? "x(1 2)" (format #f "x~s" '(1 2)))
 

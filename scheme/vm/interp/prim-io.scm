@@ -264,31 +264,53 @@
 	  (let ((b (port-buffer port)))
 	    (if (false? b)
 		(raise-exception buffer-full/empty 1 port)
-		(let ((i (extract-fixnum (port-index port)))
-		      (l (extract-fixnum (port-limit port)))
-		      (codec (port-text-codec-spec port))
-		      (lose
-		       (lambda () (raise-exception buffer-full/empty 1 port))))
-		  (cond ((= i l)
-			 (lose))
-			((not (fixnum? codec))
-			 (lose))
-			(else
-			 (call-with-values
-			     (lambda ()
-			       (decode-scalar-value (extract-fixnum codec) b i (- l i)))
-			   (lambda (encoding-ok? ok? incomplete? value count)
-			     (cond
-			      ((not encoding-ok?)
-			       (raise-exception wrong-type-argument 1 port))
-			      ((or (not ok?) incomplete?)
-			       (lose))
-			      (else
-			       (if read?
-				   (set-port-index! port (enter-fixnum (+ i count))))
-			       (goto continue-with-value
-				     (scalar-value->char value)
-				     1))))))))))
+		(let loop ((i (extract-fixnum (port-index port))))
+		  (let ((l (extract-fixnum (port-limit port)))
+			(codec (port-text-codec-spec port))
+			(lose
+			 (lambda ()
+			   ;; we may have gotten out of synch because of CR/LF conversion
+			   (set-port-index! port (enter-fixnum i))
+			   (raise-exception buffer-full/empty 1 port))))
+		    (cond ((= i l)
+			   (lose))
+			  ((not (fixnum? codec))
+			   (lose))
+			  (else
+			   (call-with-values
+			       (lambda ()
+				 (decode-scalar-value (extract-fixnum codec) b i (- l i)))
+			     (lambda (encoding-ok? ok? incomplete? value count)
+			       
+			       (define (deliver)
+				 (set-port-pending-cr?! port false)
+				 (if read?
+				     (set-port-index! port (enter-fixnum (+ i count))))
+				 (goto continue-with-value
+				       (scalar-value->char value)
+				       1))
+			       
+			       (cond
+				((not encoding-ok?)
+				 (raise-exception wrong-type-argument 1 port))
+				((or (not ok?) incomplete?)
+				 (lose))
+				((not (false? (port-crlf? port)))
+				 ;; CR/LF handling.  Great.
+				 (cond
+				  ((= value cr-code)
+				   (set-port-pending-cr?! port true)
+				   (if read?
+				       (set-port-index! port (enter-fixnum (+ i count))))
+				   (goto continue-with-value (scalar-value->char lf-code) 1))
+				  ((and (= value lf-code)
+					(not (false? (port-pending-cr? port))))
+				   (set-port-pending-cr?! port false)
+				   (loop (+ i count)))
+				  (else
+				   (deliver))))
+				(else
+				 (deliver)))))))))))
 	  (raise-exception wrong-type-argument 1 port)))))
 
 (let ((do-it (read-or-peek-char #t)))
@@ -325,6 +347,9 @@
 		 (code-vector-set! b i (extract-fixnum byte))
 		 (goto continue-with-value unspecific-value 1)))))))))
 
+(define cr-code 13)
+(define lf-code 10)
+
 (define-primitive write-char ()
   (lambda ()
     (receive (char port)
@@ -353,20 +378,48 @@
 	      (let* ((b (port-buffer port))
 		     (i (extract-fixnum (port-index port)))
 		     (l (code-vector-length b)))
-		(if (= i l)
-		    (lose)
-		    (call-with-values
-			(lambda ()
-			  (encode-scalar-value (extract-fixnum codec) (char->scalar-value char) b i (- l i)))
-		      (lambda (codec-ok? encoding-ok? out-of-space? count)
-			(cond
-			 ((not codec-ok?)
-			  (raise-exception wrong-type-argument 1 char port))
-			 ((or (not encoding-ok?) out-of-space?)
-			  (lose))
-			 (else
-			  (set-port-index! port (enter-fixnum (+ i count)))
-			  (goto continue-with-value unspecific-value 1))))))))))))))
+		(cond
+		 ((= i l) (lose))
+		 ;; CR/LF handling is atrocious
+		 ((and (not (false? (port-crlf? port)))
+		       (= (char->scalar-value char) lf-code))
+		  (call-with-values
+		      (lambda ()
+			(encode-scalar-value (extract-fixnum codec) cr-code b i (- l i)))
+		    (lambda (codec-ok? encoding-ok? out-of-space? count)
+		      (cond
+		       ((not codec-ok?)
+			(raise-exception wrong-type-argument 1 char port))
+		       ((or (not encoding-ok?) out-of-space?)
+			(lose))
+		       (else
+			(let ((i (+ i count)))
+			  (if (= i l)
+			      (lose)
+			      (call-with-values
+				  (lambda ()
+				    (encode-scalar-value (extract-fixnum codec) lf-code b i (- l i)))
+				(lambda (codec-ok? encoding-ok? out-of-space? count)
+				  (cond
+				   ;; the codec is the same as before, so it must be OK
+				   ((or (not encoding-ok?) out-of-space?)
+				    (lose))
+				   (else
+				    (set-port-index! port (enter-fixnum (+ i count)))
+				    (goto continue-with-value unspecific-value 1))))))))))))
+		 (else
+		  (call-with-values
+		      (lambda ()
+			(encode-scalar-value (extract-fixnum codec) (char->scalar-value char) b i (- l i)))
+		    (lambda (codec-ok? encoding-ok? out-of-space? count)
+		      (cond
+		       ((not codec-ok?)
+			(raise-exception wrong-type-argument 1 char port))
+		       ((or (not encoding-ok?) out-of-space?)
+			(lose))
+		       (else
+			(set-port-index! port (enter-fixnum (+ i count)))
+			(goto continue-with-value unspecific-value 1)))))))))))))))
 	  
 ; Do an ASSQ-like walk up the current dynamic environment, looking for
 ; MARKER.
