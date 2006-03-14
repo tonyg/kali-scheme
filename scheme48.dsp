@@ -119,6 +119,10 @@ SOURCE=.\c\extension.c
 # End Source File
 # Begin Source File
 
+SOURCE=".\c\external-lib.c"
+# End Source File
+# Begin Source File
+
 SOURCE=.\c\external.c
 # End Source File
 # Begin Source File

@@ -10,6 +10,6 @@ echo ,exec ,load load-ps-compiler.scm >> compile-bibop-gc.input
 echo ,exec ,load compile-bibop-gc.scm >> compile-bibop-gc.input
 echo ,exit >> compile-bibop-gc.input
 
-call %runnable% -h 10000000 < compile-bibop-gc.input
+call %runnable% -h 12000000 < compile-bibop-gc.input
 cd ..
 move /Y scheme\vm\scheme48-bibop-heap.c c
