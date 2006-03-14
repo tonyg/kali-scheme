@@ -427,6 +427,7 @@
 	  channel-read-block
 	  channel-write-block
 	  channel-buffer-size
+	  channel-crlf?
 	  channel-console-encoding
 	  channel-abort
 	  ))

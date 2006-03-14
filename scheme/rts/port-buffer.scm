@@ -542,7 +542,8 @@
 
 ;----------------
 
-(define (default-buffer-size) (channel-buffer-size))
+(define (default-buffer-size)
+  (channel-parameter (enum channel-parameter-option buffer-size)))
 
 ;----------------
 ; Code to periodically flush output ports.

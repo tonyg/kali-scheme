@@ -204,7 +204,7 @@
   (files (interp external-call)))
 
 (define-structure io-opcodes (export)
-  (open prescheme vm-utilities vm-architecture ps-receive
+  (open prescheme vm-utilities vm-architecture ps-receive enum-case
 	interpreter-internal
 	channel-io vmio
 	memory data struct

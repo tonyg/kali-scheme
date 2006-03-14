@@ -208,6 +208,12 @@ ps_io_buffer_size(void)
   return 4096;
 }
 
+psbool
+ps_io_crlf_p(void)
+{
+  return PSFALSE;
+}
+
 char *
 ps_console_encoding(long fd_as_long)
 {

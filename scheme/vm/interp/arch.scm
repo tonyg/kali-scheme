@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 35")
+(define architecture-version "Vanilla 36")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -208,7 +208,7 @@
   (close-channel 1)
   (channel-maybe-read 5)
   (channel-maybe-write 4)
-  (channel-buffer-size)
+  (channel-parameter 1)
   (channel-ready? 1)
   (channel-abort 1)             ; stop channel operation
   (open-channels-list)		; return a list of the open channels
@@ -504,6 +504,11 @@
    open-for-input
    open-for-output
    ))
+
+; Parameters that configure a channel
+
+(define-enumeration channel-parameter-option
+  (buffer-size crlf?))
 
 ; Built-in text encodings
 

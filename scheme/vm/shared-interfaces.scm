@@ -19,6 +19,7 @@
 	  stob-data
 	  (time-option :syntax)
 	  (channel-status-option :syntax)
+	  (channel-parameter-option :syntax)
 	  (port-status-options :syntax)
 	  (current-port-marker :syntax)
 	  (text-encoding-option :syntax)

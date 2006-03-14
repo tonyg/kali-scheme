@@ -184,9 +184,15 @@
 ;----------------
 
 ;; random stuff
-(define-primitive channel-buffer-size ()
-  (lambda ()
-    (goto return-fixnum (channel-buffer-size))))
+(define-primitive channel-parameter (fixnum->)
+  (lambda (param)
+    (enum-case channel-parameter-option param
+      ((buffer-size)
+       (goto return-fixnum (channel-buffer-size)))
+      ((crlf?)
+       (goto return-boolean (channel-crlf?)))
+      (else
+       (raise-exception bad-option 0 (enter-fixnum param))))))
 
 (define-primitive channel-abort (channel->)
   (lambda (channel)

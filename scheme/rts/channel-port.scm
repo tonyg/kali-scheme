@@ -113,11 +113,14 @@
     (if (>= 0 buffer-size)
 	(call-error "invalid buffer size"
 		    input-channel->port channel buffer-size)
-	(make-buffered-input-port input-channel-handler
-				  (make-channel-cell channel closer)
-				  (make-byte-vector buffer-size 0)
-				  0
-				  0))))
+	(let ((port
+	       (make-buffered-input-port input-channel-handler
+					 (make-channel-cell channel closer)
+					 (make-byte-vector buffer-size 0)
+					 0
+					 0)))
+	  (set-port-crlf?! port (channel-crlf?))
+	  port))))
 
 ;----------------
 ; Output ports
@@ -195,11 +198,14 @@
      channel-port-ready?))
 
 (define (output-channel->port channel . maybe-buffer-size)
-  (if (and (not (null? maybe-buffer-size))
-	   (eq? 0 (car maybe-buffer-size)))
-      (make-unbuffered-output-port unbuffered-output-handler
-				   (make-channel-cell channel close-channel))
-      (real-output-channel->port channel maybe-buffer-size close-channel)))
+  (let ((port
+	 (if (and (not (null? maybe-buffer-size))
+		  (eq? 0 (car maybe-buffer-size)))
+	     (make-unbuffered-output-port unbuffered-output-handler
+					  (make-channel-cell channel close-channel))
+	     (real-output-channel->port channel maybe-buffer-size close-channel))))
+    (set-port-crlf?! port (channel-crlf?))
+    port))
 
 ; This is for sockets, which have their own closing mechanism.
 
@@ -332,3 +338,11 @@
 							buffer start count))
 				       (lambda (port)			; ready
 					 (channel-ready? (channel-cell-ref (port-data port))))))
+
+; Utilities
+
+(define (channel-buffer-size)
+  (channel-parameter (enum channel-parameter-option buffer-size)))
+
+(define (channel-crlf?)
+  (channel-parameter (enum channel-parameter-option crlf?)))
