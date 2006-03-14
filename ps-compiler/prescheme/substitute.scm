@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2005 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
 
 ; Substituting new variables for old in expressions.
 

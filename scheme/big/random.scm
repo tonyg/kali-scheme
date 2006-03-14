@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Random number generator, extracted from T sources.  Original

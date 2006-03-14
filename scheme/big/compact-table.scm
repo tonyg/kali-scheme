@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; A compact table is an encoding of a very large vector that has lots
 ; of recurring patterns.  It was written for encoding Unicode tables.

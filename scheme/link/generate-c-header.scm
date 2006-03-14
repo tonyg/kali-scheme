@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; [This is a kludge.  Richard is loathe to include it in the
 ; distribution.  But now the system itself uses it, so we're stuck.]

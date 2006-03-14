@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; You may think that file names / environment variables / user names
 ; etc. are just text, but on most platforms, that assumptions, that

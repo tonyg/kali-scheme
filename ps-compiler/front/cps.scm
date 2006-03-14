@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2005 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
 
 ; (cps-call <primop> <exits> <first-arg-index> <args> <cps>) ->
 ;                   <call-node> + <top-call-node> + <bottom-lambda-node>

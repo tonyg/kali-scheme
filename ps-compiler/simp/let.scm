@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2005 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
 
 
 ; Simplifying LET nodes, i.e. calls to the LET primop.

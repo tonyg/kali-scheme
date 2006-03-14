@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ;; This is an implementation of SRFI 35, together with some conversion
 ;; machinery to dock to the primitive condition system in SIMPLE-CONDITIONS.

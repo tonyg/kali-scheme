@@ -1,6 +1,6 @@
 Scheme 48 Windows port
 ----------------------
-Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
+Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 Starting with version 1.3, Scheme 48 has a native Windows port, which
 works on Windows NT 4.0 and above (including Windows 2000 and XP, but

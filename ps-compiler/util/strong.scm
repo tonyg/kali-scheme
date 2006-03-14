@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2005 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
 
 
 ; Code to find the strongly connected components of a graph.

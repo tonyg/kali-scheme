@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2005 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
 
 ; Move nested procedures out to top level.  We move them all out, then merge
 ; as many as possible back together (see merge.scm), and finally check to

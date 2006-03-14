@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2005 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
 
 ; This file has the Pre-Scheme compiler's code for dealing with the
 ; Scheme 48's module system.

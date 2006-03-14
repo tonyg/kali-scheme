@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #ifndef __S48_AREAS_H
