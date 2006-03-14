@@ -268,22 +268,6 @@
 				(bitwise-and (provisional-port-status port)
 					     (bitwise-not open-input-port-mask))))
 
-(define (make-unbuffered-input-port handler data)
-  (if (port-handler? handler)
-      (make-port handler
-		 (enum text-encoding-option latin-1)
-		 #f
-		 (bitwise-ior input-port-mask open-input-port-mask)
-		 #f		; timestamp (not used for unbuffered ports)
-		 data
-		 #f		; buffer
-		 #f		; index
-		 #f		; limit
-		 #f             ; pending-cr?
-		 #f)            ; pending-eof?
-      (call-error "invalid argument"
-		  make-unbuffered-input-port handler data)))
-
 ;----------------
 ; Output ports
 

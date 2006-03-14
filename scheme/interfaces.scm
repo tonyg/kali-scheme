@@ -596,7 +596,7 @@
 
 	  disclose-port
 
-	  make-buffered-input-port  make-unbuffered-input-port
+	  make-buffered-input-port
 	  make-buffered-output-port make-unbuffered-output-port
 
 	  make-port-handler
