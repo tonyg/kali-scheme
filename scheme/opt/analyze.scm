@@ -216,13 +216,13 @@
   (lambda (exp ret?)
     (let ((static (static-value (car exp))))
       (if (transform? static)
-	  (let* ((node (make-node (get-operator 'call) exp))
-		 (new-node (apply-inline-transform static
-						   (node-form node)
-						   (node-form (car exp)))))
-	    (if (eq? new-node node)
-		(really-simple-call? exp ret?)
-		(simple? new-node ret?)))
+          (let ((new-node
+                 (apply-inline-transform static
+                                         exp
+                                         (node-form (car exp)))))
+            (if (eq? new-node exp)
+                (really-simple-call? exp ret?)
+                (simple? new-node ret?)))
 	  (really-simple-call? exp ret?)))))
 
 ; Return the static value of FORM, if any.
