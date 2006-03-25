@@ -483,6 +483,7 @@
 	    text-codec-utils
 	    traverse
 	    udp-sockets
+	    unicode-normalizations
 	    value-pipes
 	    variable-argument-lists
 

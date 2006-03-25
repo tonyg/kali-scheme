@@ -35,7 +35,8 @@
 			general-category
 			combining-class
 			bidirectional-category-id
-			decomposition-id
+			canonical-decomposition
+			compatibility-decomposition
 			decimal-digit-value
 			digit-value
 			numeric-value
@@ -56,8 +57,9 @@
   (combining-class code-point-info-combining-class)
   ;; symbol
   (bidirectional-category-id code-point-info-bidirectional-category-id)
-  ;; #f or string
-  (decomposition-id code-point-info-decomposition-id)
+  ;; #f or list
+  (canonical-decomposition code-point-info-canonical-decomposition)
+  (compatibility-decomposition code-point-info-compatibility-decomposition)
   ;; number
   (decimal-digit-value code-point-info-decimal-digit-value)
   ;; number
@@ -85,7 +87,8 @@
 	  (code-point-info-general-category r)
 	  (code-point-info-combining-class r)
 	  (code-point-info-bidirectional-category-id r)
-	  (code-point-info-decomposition-id r)
+	  (code-point-info-canonical-decomposition r)
+	  (code-point-info-compatibility-decomposition r)
 	  (code-point-info-decimal-digit-value r)
 	  (code-point-info-digit-value r)
 	  (code-point-info-numeric-value r)
@@ -102,7 +105,7 @@
 		  general-category-id
 		  combining-class-id
 		  bidirectional-category-text
-		  decomposition-id
+		  decomposition-text
 		  decimal-digit-value-text
 		  digit-value-text
 		  numeric-value-text
@@ -116,15 +119,18 @@
     (let ((code-point (maybe-code-point code-point-hex #f)))
       (let ((uppercase-code-point (maybe-code-point uppercase-code-point-hex code-point))
 	    (lowercase-code-point (maybe-code-point lowercase-code-point-hex code-point))
-	    (titlecase-code-point (maybe-code-point titlecase-code-point-hex code-point)))
+	    (titlecase-code-point (maybe-code-point titlecase-code-point-hex code-point))
+	    (decomposition (parse-decomposition decomposition-text)))
+	     
 	(make-code-point-info code-point
 			      name
 			      (id->general-category general-category-id)
 			      (string->number combining-class-id)
 			      (string->symbol bidirectional-category-text)
-			      (if (zero? (string-length decomposition-id))
-				  #f
-				  decomposition-id)
+			      (and (and (pair? decomposition) (number? (car decomposition)))
+				   decomposition)
+			      (and (and (pair? decomposition) (symbol? (car decomposition)))
+				   (cdr decomposition))
 			      (string->number decimal-digit-value-text)
 			      (string->number digit-value-text)
 			      (string->number numeric-value-text)
@@ -135,6 +141,25 @@
 			      lowercase-code-point
 			      titlecase-code-point)))))
 
+;; return #f or a list, which contains the scalar values of the decompositon
+;; for compatibility decompositions, the tag is prepended as a symbol
+(define (parse-decomposition d)
+  (cond
+   ((zero? (string-length d))
+    #f)
+   ((char=? #\< (string-ref d 0))
+    (let ((after (string-index d #\space)))
+      (cons (string->symbol (substring d 0 after))
+	    (call-with-values
+		(lambda ()
+		  (parse-scalar-values d after))
+	      (lambda (l i) l)))))
+   (else
+    (call-with-values
+	(lambda ()
+	  (parse-scalar-values d 0))
+      (lambda (l i) l)))))
+
 ; for EXPANDED-CODE-POINT-INFO-SOURCE
 (define (code-point-info-with-code-point+name info code-point name)
   (make-code-point-info code-point
@@ -142,7 +167,8 @@
 			(code-point-info-general-category info)
 			(code-point-info-combining-class info)
 			(code-point-info-bidirectional-category-id info)
-			(code-point-info-decomposition-id info)
+			(code-point-info-canonical-decomposition info)
+			(code-point-info-compatibility-decomposition info)
 			(code-point-info-decimal-digit-value info)
 			(code-point-info-digit-value info)
 			(code-point-info-numeric-value info)
@@ -447,13 +473,15 @@
 ; assumes START points to whitespace or the first digit
 
 (define (parse-scalar-values s start)
-  (let loop ((start start) (rev-values '()))
-    (let ((i1 (string-skip s char-set:whitespace start)))
-      (if (char=? #\; (string-ref s i1))
-	  (values (reverse rev-values) (+ 1 start))
-	  (let* ((i2 (string-skip s char-set:hex-digit i1))
-		 (n (string->number (substring s i1 i2) 16)))
-	    (loop i2 (cons n rev-values)))))))
+  (let ((size (string-length s)))
+    (let loop ((start start) (rev-values '()))
+      (let ((i1 (string-skip s char-set:whitespace start)))
+	(if (or (not i1) (char=? #\; (string-ref s i1)))
+	    (values (reverse rev-values) (+ 1 start))
+	    (let* ((i2 (or (string-skip s char-set:hex-digit i1)
+			   size))
+		   (n (string->number (substring s i1 i2) 16)))
+	      (loop i2 (cons n rev-values))))))))
 
 ; Probably obsolete
 
@@ -596,8 +624,7 @@
 (define (make-scalar-value-case+general-category-encoding-tables
 	 infos 
 	 special-lowercase-table special-uppercase-table
-	 specialcasings
-	 block-bits)
+	 specialcasings)
 
   (let ((uppercase-offsets (mapping-offsets infos code-point-info-uppercase-code-point))
 	(lowercase-offsets (mapping-offsets infos code-point-info-lowercase-code-point))
@@ -609,7 +636,7 @@
 
 	  (specialcasings-table (specialcasings->table specialcasings))
 	  
-	  (block-size (expt 2 block-bits)))
+	  (block-size (expt 2 *block-bits*)))
 
       (call-with-values
 	  (lambda ()
@@ -620,7 +647,7 @@
 		(make-code-point-info code-point
 				      "<unassigned>"
 				      (general-category unassigned)
-				      #f #f #f #f #f #f #f #f #f
+				      #f #f #f #f #f #f #f #f #f #f
 				      code-point code-point code-point))
 	      (lambda (info)
 		(code-point-info->case+general-category-encoding
@@ -671,7 +698,9 @@
 (define (create-unicode-tables unicode-data-filename
 			       proplist-filename
 			       specialcasing-filename
+			       composition-exclusions-filename
 			       category-output-file
+			       normalization-output-file
 			       srfi-14-base-output-file)
   (let ((infos (parse-unicode-data unicode-data-filename))
 	(specialcasings (parse-specialcasing specialcasing-filename)))
@@ -690,61 +719,71 @@
 					   specialcasings
 					   port)
 	    (write-specialcasings-tables specialcasings port)))
-	(write-srfi-14-base-char-sets infos srfi-14-base-output-file)))))
+	(write-srfi-14-base-char-sets infos srfi-14-base-output-file)
+	(call-with-output-file normalization-output-file
+	  (lambda (port)
+	    (display "; Automatically generated by WRITE-UNICODE-CATEGORY-TABLES; do not edit."
+		     port)
+	    (newline port)
+	    (newline port)
+	    (write-normalization-tables
+	     infos
+	     (parse-composition-exclusions composition-exclusions-filename)
+	     port)))))))
+    
+(define *block-bits* 8)			; better than 9, at least
 
 (define (write-unicode-category-tables infos 
 				       special-uppercase-table special-lowercase-table
 				       specialcasings
 				       port)
-  (let ((block-bits 8))			; better than 9, at least
-    (call-with-values
-	(lambda ()
-	  (make-scalar-value-case+general-category-encoding-tables
-	   infos
-	   special-lowercase-table special-uppercase-table
-	   specialcasings
-	   block-bits))
-      (lambda (indices
-	       encodings
-	       uppercase-offsets lowercase-offsets titlecase-offsets)
+  (call-with-values
+      (lambda ()
+	(make-scalar-value-case+general-category-encoding-tables
+	 infos
+	 special-lowercase-table special-uppercase-table
+	 specialcasings))
+    (lambda (indices
+	     encodings
+	     uppercase-offsets lowercase-offsets titlecase-offsets)
 
-	(write `(define *encoding-table-block-bits* ,block-bits)
-	       port)
-	(newline port)
-	(newline port)
+      (write `(define *encoding-table-block-bits* ,*block-bits*)
+	     port)
+      (newline port)
+      (newline port)
 
-	(write `(define *uppercase-index-width*
-		  ,(bits-necessary (vector-length uppercase-offsets)))
-	       port)
-	(newline port)
-	(write `(define *lowercase-index-width*
-		  ,(bits-necessary (vector-length lowercase-offsets)))
-	       port)
-	(newline port)
-	(write `(define *titlecase-index-width*
-		  ,(bits-necessary (vector-length titlecase-offsets)))
-	       port)
-	(newline port)
-	(newline port)
+      (write `(define *uppercase-index-width*
+		,(bits-necessary (vector-length uppercase-offsets)))
+	     port)
+      (newline port)
+      (write `(define *lowercase-index-width*
+		,(bits-necessary (vector-length lowercase-offsets)))
+	     port)
+      (newline port)
+      (write `(define *titlecase-index-width*
+		,(bits-necessary (vector-length titlecase-offsets)))
+	     port)
+      (newline port)
+      (newline port)
 
-	(write `(define *scalar-value-info-indices* ',indices)
-	       port)
-	(newline port)
-	(write `(define *scalar-value-info-encodings* ',encodings)
-	       port)
-	(newline port)
-	(newline port)
+      (write `(define *scalar-value-info-indices* ',indices)
+	     port)
+      (newline port)
+      (write `(define *scalar-value-info-encodings* ',encodings)
+	     port)
+      (newline port)
+      (newline port)
 
-	(write `(define *uppercase-offsets* ',uppercase-offsets)
-	       port)
-	(newline port)
-	(write `(define *lowercase-offsets* ',lowercase-offsets)
-	       port)
-	(newline port)
-	(write `(define *titlecase-offsets* ',titlecase-offsets)
-	       port)
-	(newline port)
-	(newline port)))))
+      (write `(define *uppercase-offsets* ',uppercase-offsets)
+	     port)
+      (newline port)
+      (write `(define *lowercase-offsets* ',lowercase-offsets)
+	     port)
+      (newline port)
+      (write `(define *titlecase-offsets* ',titlecase-offsets)
+	     port)
+      (newline port)
+      (newline port))))
 
 (define (write-specialcasings-tables specialcasings port)
   (call-with-values
@@ -918,16 +957,189 @@
 	    (set! current-left scalar-value)
 	    (set! current-right (+ 1 scalar-value))))))))))
 
+
+(define (write-normalization-tables infos excluded port)
+  (call-with-values
+      (lambda ()
+	(make-normalization-encoding-tables infos))
+    (lambda (indices encodings)
+      (write `(define *normalization-info-block-bits* ,*block-bits*)
+	     port)
+      (newline port)
+      (write `(define *normalization-info-indices* ',indices)
+	     port)
+      (newline port)
+      (write `(define *normalization-info-encodings* ',encodings)
+	     port)
+      (newline port)))
+
+  (newline port)
+
+  (let ((canonical-pairs (canonical-decomposition-pairs infos)))
+    (write `(define *canonical-decomposition-scalar-values*
+	      ',(list->vector (map car canonical-pairs)))
+	   port)
+    (newline port)
+    (write `(define *canonical-decompositions*
+	      ',(list->vector (map cdr canonical-pairs)))
+	   port)
+    (newline port))
+
+  (newline port)
+      
+  (call-with-values
+      (lambda ()
+	(compatibility-decomposition-tables infos))
+    (lambda (decompositions scalar-values indices)
+      (write `(define *compatibility-decompositions* ',decompositions)
+	     port)
+      (newline port)
+      (write `(define *compatibility-scalar-values* ',scalar-values)
+	     port)
+      (newline port)
+      (write `(define *compatibility-indices* ',indices)
+	     port)
+      (newline port)))
+
+  (newline port)
+
+  (let ((composition-pairs (composition-pairs infos excluded)))
+    (write `(define *composition-scalar-values*
+	      ',(list->vector (map car composition-pairs)))
+	   port)
+    (newline port)
+    (write `(define *composition-encodings*
+	      ',(list->vector (map cdr composition-pairs)))
+	   port)
+    (newline port)))
+
+(define (parse-composition-exclusions filename)
+  (call-with-input-file filename
+    (lambda (port)
+      (let loop ((exclusions '()))
+	(let ((thing (read-line port)))
+	  (cond
+	   ((eof-object? thing) exclusions)
+	   ((and (not (string=? "" thing))
+		 (not (char=? #\# (string-ref thing 0))))
+	    (let ((end (or (string-skip thing char-set:hex-digit)
+			   (string-length thing))))
+	      (loop
+	       (cons (string->number (substring thing 0 end) 16)
+		     exclusions))))
+	   (else (loop exclusions))))))))
+
+(define (make-normalization-encoding-tables infos)
+  (compute-compact-table
+   (make-consecutive-info-source
+    (expanded-code-point-info-source infos)
+    (lambda (code-point)
+      (make-code-point-info code-point
+			    "<unassigned>"
+			    (general-category unassigned)
+			    0 #f #f #f #f #f #f #f #f #f
+			    code-point code-point code-point))
+    (lambda (info)
+      (bitwise-ior (code-point-info-combining-class info) ; 0..240
+		   (if (code-point-info-canonical-decomposition info)
+		       #x100
+		       0)
+		   (if (code-point-info-compatibility-decomposition info)
+		       #x200
+		       0))))
+   (expt 2 *block-bits*)))
+
+(define (encode-canonical-decomposition l)
+  (cond
+   ((null? (cdr l))
+    (if (> (car l) #xffff)
+	l
+	(car l)))
+   (else
+    (let ((a (car l))
+	  (b (cadr l)))
+      (if (or (> a #xffff)
+	      (> b #xffff))
+	  (cons a b)
+	  (bitwise-ior (arithmetic-shift b 16) a))))))
+
+;; generate an alist that maps scalar values to decomposition encodings
+(define (canonical-decomposition-pairs infos)
+  (let ((pairs '()))
+    (for-each-expanded-code-point-info
+     (lambda (info)
+       (cond
+	((code-point-info-canonical-decomposition info)
+	 => (lambda (d)
+	      (set! pairs
+		    (cons
+		     (cons (code-point-info-code-point info)
+			   (encode-canonical-decomposition d))
+		     pairs))))))
+     infos)
+    (reverse pairs)))
+
+(define (compatibility-decomposition-tables infos)
+  (let ((reverse-decomps '())
+	(decomp-index 0)
+	(rev-infos '()))
+    (for-each-expanded-code-point-info
+     (lambda (info)
+       (cond
+	((code-point-info-compatibility-decomposition info)
+	 => (lambda (d)
+	      (let ((size (length d)))
+		(set! reverse-decomps
+		      (append (reverse d) reverse-decomps))
+		(set! rev-infos
+		      (cons (cons (code-point-info-code-point info)
+				  decomp-index)
+			    rev-infos))
+		(set! decomp-index (+ decomp-index size)))))))
+     infos)
+    (let ((decomps (list->vector (reverse reverse-decomps))))
+      (values decomps
+	      (list->vector (map car (reverse rev-infos)))
+	      (list->vector 
+	       (map cdr (reverse (cons (cons #f (vector-length decomps)) rev-infos))))))))
+
+(define (composition-pairs infos excluded)
+  (let ((pairs '()))
+    (for-each-expanded-code-point-info
+     (lambda (info)
+       (cond
+	((code-point-info-canonical-decomposition info)
+	 => (lambda (d)
+	      (if (and (pair? (cdr d)) ; not a singleton
+		       (not (member (code-point-info-code-point info) excluded))
+		       (code-point-info-combining-class
+			(find-code-point-info (car d) infos))) ; possibly expensive
+		  (set! pairs
+			(cons (cons (code-point-info-code-point info)
+				    (encode-composition d))
+			      pairs)))))))
+     infos)
+
+    (sort-list pairs
+	       (lambda (p1 p2)
+		 (< (cdr p1) (cdr p2))))))
+
+(define (encode-composition l)
+  (if (or (> (car l) #xffff)
+	  (> (cadr l) #xffff))
+      (error "non-BMP composition"))
+  (bitwise-ior (arithmetic-shift (cadr l) 16)
+	       (car l)))
+
 ; for debugging
 
 (define (test-code-point-case+general-category-encoding-tables
 	 infos special-uppercase-table special-lowercase-table
 	 specialcasings
-	 block-bits
 	 indices encodings
 	 uppercase-offsets lowercase-offsets titlecase-offsets)
 
-  (let ((lower-mask (- (arithmetic-shift 1 block-bits) 1))
+  (let ((lower-mask (- (arithmetic-shift 1 *block-bits*) 1))
 	(uppercase-index-width (bits-necessary (vector-length uppercase-offsets)))
 	(lowercase-index-width (bits-necessary (vector-length lowercase-offsets)))
 	(titlecase-index-width (bits-necessary (vector-length titlecase-offsets))))
@@ -936,7 +1148,7 @@
      (lambda (info)
        (let* ((code-point (code-point-info-code-point info))
 	      (base-index (vector-ref indices
-				      (arithmetic-shift code-point (- block-bits))))
+				      (arithmetic-shift code-point (- *block-bits*))))
 	      (index (+ base-index (bitwise-and code-point lower-mask)))
 	      (encoding (vector-ref encodings index)))
 
@@ -973,6 +1185,7 @@
 		      (code-point-encoding-lowercase?
 		       encoding
 		       uppercase-index-width lowercase-index-width titlecase-index-width)))
+		      
 
 		 (if (not (= (code-point-info-uppercase-code-point info)
 			     uppercase-code-point))
@@ -998,6 +1211,30 @@
 		     (error "lowercase? mismatch" info code-point))
 		 )))))
      infos)))
+
+(define (check-unicode-tables unicode-data-filename
+			      proplist-filename
+			      specialcasing-filename)
+  (let ((infos (parse-unicode-data unicode-data-filename))
+	(specialcasings (parse-specialcasing specialcasing-filename)))
+    (call-with-values
+	(lambda ()
+	  (parse-proplist-for-upper/lowercase proplist-filename))
+      (lambda (special-uppercase-table special-lowercase-table)
+	(call-with-values
+	    (lambda ()
+	      (make-scalar-value-case+general-category-encoding-tables
+	       infos
+	       special-lowercase-table special-uppercase-table
+	       specialcasings))
+	  (lambda (indices
+		   encodings
+		   uppercase-offsets lowercase-offsets titlecase-offsets)
+	    (test-code-point-case+general-category-encoding-tables
+	     infos special-uppercase-table special-lowercase-table
+	     specialcasings
+	     indices encodings
+	     uppercase-offsets lowercase-offsets titlecase-offsets)))))))
 
 (define (find-code-point-info code-point infos)
   (find (lambda (info)

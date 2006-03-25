@@ -133,6 +133,13 @@
 	text-codecs)
   (files (big text-codec-util)))
 
+(define-structure unicode-normalizations unicode-normalizations-interface
+  (open scheme
+	unicode
+	bitwise)
+  (files (big unicode-normalization-info)
+	 (big unicode-normalization)))
+
 ;----------------
 ; Big Scheme
 

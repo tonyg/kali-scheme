@@ -667,7 +667,8 @@ scheme/debug/mini1.image: $(VM) scheme/debug/mini.image
 
 
 # --------------------
-# Generate unicode-info.scm and srfi-14-base-char-set.scm from UnicodeData.txt
+# Generate unicode-info.scm, srfi-14-base-char-set.scm, and unicode-normalization-info
+# from UnicodeData.txt
 # Get fresh UnicodeData.txt from http://www.unicode.org.
 
 scheme/env/unicode-info.scm: build/UnicodeData.txt			\
@@ -675,15 +676,9 @@ scheme/env/unicode-info.scm: build/UnicodeData.txt			\
 	scheme/env/unicode-category.scm					\
 	scheme/big/compact-table.scm
 	cd $(srcdir) &&							\
-	(echo ',bench';							\
-		echo ',batch';						\
-		echo ',open finite-types destructuring define-record-types bitwise tables';	\
-		echo ',open (subset srfi-13 (string-index string-prefix? string-suffix? string-contains string-skip))';	\
-		echo ',open (subset srfi-14 (char-set:hex-digit char-set:whitespace))';		\
-		echo ',open (subset srfi-1 (find)) srfi-23';					\
-		echo ',load scheme/big/compact-table.scm scheme/env/unicode-category.scm';	\
-		echo ',load scheme/link/unicode-data.scm';					\
-		echo "(create-unicode-tables \"build/UnicodeData.txt\" \"build/PropList.txt\" \"build/SpecialCasing.txt\"\"scheme/env/unicode-info.scm\" \"scheme/srfi/srfi-14-base-char-sets.scm\")"		\
+		(echo ',batch';							\
+		echo ',config ,load scheme/link/unicode-data-packages.scm';	\
+		echo ",in unicode-data (create-unicode-tables \"build/UnicodeData.txt\" \"build/PropList.txt\" \"build/SpecialCasing.txt\" \"build/CompositionExclusions.txt\" \"scheme/env/unicode-info.scm\" \"scheme/big/unicode-normalization-info.scm\" \"scheme/srfi/srfi-14-base-char-sets.scm\")"		\
 	) | $(RUNNABLE) -h 6000000
 
 # --------------------
