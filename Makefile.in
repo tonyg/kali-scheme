@@ -314,7 +314,7 @@ c/bignum.o: c/bignum.h c/bignumint.h $(SCHEME48HS)
 c/extension.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS) c/scheme48vm.h
 c/free.o: c/sysdep.h
 c/external.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS) c/c-mods.h
-c/external.o: $(SCHEME48HS)
+c/external-lib.o: $(SCHEME48HS)
 c/unix/sysexits.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS)
 c/unix/event.o: c/sysdep.h $(FAKEHS) c/c-mods.h \
 			c/scheme48vm.h c/scheme48heap.h \
