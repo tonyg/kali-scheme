@@ -195,79 +195,38 @@
        ((char=? c #\r) *return*)
        ((char=? c #\e) *escape*)
        ((char=? c #\x)
-	(let ((digit0 (read-char port))
-	      (digit1 (read-char port)))
-	  (if (or (eof-object? digit0)
-		  (eof-object? digit1))
-	      (reading-error port "end of file within a string"))
-	  (cond
-	   ((string->number (string digit0 digit1) 16)
-	    => scalar-value->char)
-	   (else
-	    (reading-error port
-			   "invalid hexadecimal escape sequence within a string")))))
-
-       ((or (char=? c #\u)
-	    (char=? c #\U))
-	(decode-hex-char-literal c port "string"))
-
-       ((octal-digit? c)
-	(if (octal-digit? (peek-char port))
-	    (let ((digit1 (read-char port)))
-	      (if (octal-digit? (peek-char port))
-		  (let* ((digit2 (read-char port))
-			 (n (string->number (string c digit1 digit2) 8)))
-		    (if (<= n #o377)
-			(scalar-value->char n)
-			(reading-error port
-				       "invalid octal escape sequence within a string (>#o377)")))
-		  (scalar-value->char (string->number (string c digit1) 8))))
-	    (scalar-value->char (- scalar-value 48))))
+	(let ((d (decode-hex-digits port char-semicolon? "string literal")))
+	  (read-char port) ; remove semicolon
+	  d))
        (else
 	(reading-error port
 		       "invalid escaped character in string"
 		       c))))))
 
-(define (octal-digit? c)
-  (and (not (eof-object? c))
-       (let ((scalar-value (char->scalar-value c)))
-	 (and (>= scalar-value 48)	; #\0
-	      (<= scalar-value 55)))))	; #\7
+(define (char-semicolon? c)
+  (equal? c #\;))
 
-; The \u / \U syntax is shared between character and string literals
+; The \x syntax is shared between character and string literals
 
-(define (decode-hex-char-literal c port desc)
-  (cond
-   ((char=? c #\u)
-    (decode-hex-digits port 4 desc))
-   ((char=? c #\U)
-    (decode-hex-digits port 6 desc))))
-
-(define (decode-hex-digits port max-digit-count desc)
-  (let loop ((rev-digits '()) (count 0))
-
-    (define (return)
-      (scalar-value->char
-       (string->number (list->string (reverse rev-digits)) 16)))
-
-    (if (>= count max-digit-count)
-	(return)
-	(let ((c (peek-char port)))
-	  (cond
-	   ((eof-object? c)
-	    (if (null? rev-digits)
-		(reading-error port
-			       (string-append "end of file within a " desc))
-		(return)))
-	   ((not (char-hex-digit? c))
-	    (if (null? rev-digits)
-		(reading-error port
-			       (string-append "invalid hex digit in a " desc)
-			       c)
-		(return)))
-	   (else
-	    (read-char port)
-	    (loop (cons c rev-digits) (+ 1 count))))))))
+; This doesn't remove the delimiter from the port.
+(define (decode-hex-digits port delimiter? desc)
+  (let loop ((rev-digits '()))
+    (let ((c (peek-char port)))
+      (cond
+       ((delimiter? c)
+	(scalar-value->char
+	 (string->number (list->string (reverse rev-digits)) 16)))
+       ((eof-object? c)
+	(reading-error
+	 port
+	 (string-append "premature end of a scalar-value literal within a " desc)))
+       ((not (char-hex-digit? c))
+	(reading-error port
+		       (string-append "invalid hex digit in a " desc)
+		       c))
+       (else
+	(read-char port)
+	(loop (cons c rev-digits)))))))
 
 (define (char-hex-digit? c)
   (let ((scalar-value (char->scalar-value c)))
@@ -342,28 +301,11 @@
       (cond ((eof-object? c)
 	     (reading-error port "end of file after #\\"))
 
-	    ((and (or (char=? #\u c) (char=? #\U c)))
+	    ((char=? #\x c)
 	     (read-char port)
 	     (if (delimiter? (peek-char port))
 		 c
-		 (decode-hex-char-literal c port "char literal")))
-
-	    ((octal-digit? c)
-	     (read-char port)
-	     (if (delimiter? (peek-char port))
-		 c
-		 (let ((digit1 (read-char port))
-		       (digit2 (read-char port)))
-		   (if (or (eof-object? digit1)
-			   (eof-object? digit2))
-		       (reading-error port
-				      "unexpected end of file within a octal char literal"))
-		   (let ((n (string->number (string c digit1 digit2) 8)))
-		     (if (<= n #o377)
-			 (scalar-value->char n)
-			 (reading-error port
-					"invalid octal char literal (>#o377)"))))))
-
+		 (decode-hex-digits port char-scalar-value-literal-delimiter? "char literal")))
 	    ((char-alphabetic? c)
 	     (let ((name (sub-read-carefully port)))
 	       (cond ((= (string-length (symbol->string name)) 1)
@@ -376,6 +318,10 @@
 	    (else
 	     (read-char port)
 	     c)))))
+
+(define (char-scalar-value-literal-delimiter? c)
+  (or (eof-object? c)
+      (delimiter? c)))
 
 (define-sharp-macro #\(
   (lambda (c port)

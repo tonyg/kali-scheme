@@ -57,13 +57,9 @@ R$^5$RS provides:
 \item \verb|#\return| (ASCII 13) 
 \item \verb|#\esc| (ASCII 27) 
 \item \verb|#\rubout| (ASCII 127) 
-\item \verb|#\|\meta{o}\meta{o}\meta{o} where
-\meta{o}\meta{o}\meta{o} is an octal number in the range
-$\left[0,255\right]$, denoting the scalar value of the character
-\item \verb|#\u|\meta{x}\ldots\meta{x} hex, up to four digits,
-  where \meta{x}\ldots\meta{x} denotes the scalar value of the character
-\item \verb|#\U|\meta{x}\ldots\meta{x} hex, up to six digits,
-  where \meta{x}\ldots\meta{x} denotes the scalar value of the character
+\item \verb|#\x|\meta{x}\meta{x}\ldots{} hex, explicitly or implicitly
+  delimited, where \meta{x}\meta{x}\ldots{} denotes the scalar value
+  of the character
 \end{itemize}
 
 \subsection{String literals}
@@ -81,17 +77,10 @@ R$^5$RS provides:
 \item \verb|\r|: return (ASCII 13) 
 \item \verb|\e|: escape (ASCII 27) 
 \item \verb|\'|: quote (ASCII 39, same as unquoted) 
-\item \verb|\|\meta{o}, \meta{o}\meta{o}, \meta{o}\meta{o}\meta{o}:
-  octal, where the sequence of \meta{o}s forms an octal number between
-  0 and 255, denoting the scalar value of the character
 \item \verb|\|\meta{newline}: elided (allows a single-line string to
   span source lines)
-\item \verb|\x|\meta{x}\meta{x} hex, where \meta{x}\meta{x}
+\item \verb|\x|\meta{x}\meta{x}\ldots{}\verb|;| hex, where \meta{x}\meta{x}\ldots{}
   denotes the scalar value of the character
-\item \verb|\u|\meta{x}\ldots\meta{x} hex, up to four digits,
-  where \meta{x}\ldots\meta{x} denotes the scalar value of the character
-\item \verb|\U|\meta{x}\ldots\meta{x} hex, up to six digits,
-  where \meta{x}\ldots\meta{x} denotes the scalar value of the character
 \end{itemize}
 
 \section{Character classification and case mappings}
