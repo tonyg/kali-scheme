@@ -190,7 +190,8 @@
 
 (define-interface text-encodings-interface
   (export encode-scalar-value
-	  decode-scalar-value))
+	  decode-scalar-value
+	  (text-encoding-option :syntax )))
 
 (define-interface struct-interface
   (export vm-pair? vm-pair-size vm-cons vm-car vm-set-car! vm-cdr vm-set-cdr!
@@ -262,7 +263,7 @@
 	  vm-make-string vm-make-string+gc
 	  vm-string? vm-string-size vm-string-length
 	  vm-string-ref vm-string-set!
-	  enter-string enter-string+gc extract-low-string
+	  enter-string enter-string+gc enter-string+gc-n extract-low-string
 	  vm-string=? vm-string-hash
 	  copy-vm-string-chars!
 	  write-vm-string
@@ -657,8 +658,17 @@
 	  s48-string-length
 	  s48-allocate-string
 	  s48-enter-string-latin-1
-	  s48-copy-string-to-scheme-string-latin-1
-	  s48-copy-scheme-string-to-string-latin-1
+	  s48-enter-string-latin-1-n
+	  s48-copy-latin-1-to-string-n
+	  s48-copy-latin-1-to-string
+	  s48-copy-string-to-latin-1
+	  s48-copy-string-to-latin-1-n
+	  s48-string-utf-8-length
+	  s48-string-utf-8-length-n
+	  s48-enter-string-utf-8
+	  s48-enter-string-utf-8-n
+	  s48-copy-string-to-utf-8
+	  s48-copy-string-to-utf-8-n
 	  ))
 
 ; Reading and writing images

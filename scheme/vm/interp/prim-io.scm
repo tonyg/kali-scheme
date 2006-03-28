@@ -285,7 +285,9 @@
 			  (else
 			   (call-with-values
 			       (lambda ()
-				 (decode-scalar-value (extract-fixnum codec) b i (- l i)))
+				 (decode-scalar-value (extract-fixnum codec) 
+						      (address+ (address-after-header b) i)
+						      (- l i)))
 			     (lambda (encoding-ok? ok? incomplete? value count)
 			       
 			       (define (deliver)
@@ -391,7 +393,9 @@
 		       (= (char->scalar-value char) lf-code))
 		  (call-with-values
 		      (lambda ()
-			(encode-scalar-value (extract-fixnum codec) cr-code b i (- l i)))
+			(encode-scalar-value (extract-fixnum codec) cr-code 
+					     (address+ (address-after-header b) i)
+					     (- l i)))
 		    (lambda (codec-ok? encoding-ok? out-of-space? count)
 		      (cond
 		       ((not codec-ok?)
@@ -404,7 +408,9 @@
 			      (lose)
 			      (call-with-values
 				  (lambda ()
-				    (encode-scalar-value (extract-fixnum codec) lf-code b i (- l i)))
+				    (encode-scalar-value (extract-fixnum codec) lf-code 
+							 (address+ (address-after-header b) i)
+							 (- l i)))
 				(lambda (codec-ok? encoding-ok? out-of-space? count)
 				  (cond
 				   ;; the codec is the same as before, so it must be OK
@@ -416,7 +422,9 @@
 		 (else
 		  (call-with-values
 		      (lambda ()
-			(encode-scalar-value (extract-fixnum codec) (char->scalar-value char) b i (- l i)))
+			(encode-scalar-value (extract-fixnum codec) (char->scalar-value char) 
+					     (address+ (address-after-header b) i)
+					     (- l i)))
 		    (lambda (codec-ok? encoding-ok? out-of-space? count)
 		      (cond
 		       ((not codec-ok?)

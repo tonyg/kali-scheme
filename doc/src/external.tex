@@ -377,7 +377,6 @@ The `extract' ones convert from Scheme to C and the `enter's go the other
 \cproto{double \ \ \ s48\_extract\_double(s48\_value)}
 \cproto{s48\_value S48\_ENTER\_BOOLEAN(int)}
 \cproto{s48\_value s48\_enter\_char(unsigned char)}
-\cgcproto{s48\_value s48\_enter\_string(char *)}
 \cgcproto{s48\_value s48\_enter\_byte\_vector(char *, long)}
 \cgcproto{s48\_value s48\_enter\_integer(long)}
 \cgcproto{s48\_value s48\_enter\_double(double)}
@@ -388,10 +387,10 @@ The `extract' ones convert from Scheme to C and the `enter's go the other
  \code{S48\_ENTER\_BOOLEAN} is \code{\#f} if its argument is zero
   and \code{\#t} otherwise.
 
- \code{s48\_extract\_string} and \code{s48\_extract\_byte\_vector} return
- pointers to the actual
- storage used by the string or byte vector.
- These pointers are valid only until the next; see Section~\ref{gc}.
+ The \code{s48\_extract\_byte\_vector} function returns a
+ pointer to the actual
+ storage used by the byte vector.
+ These pointers are valid only until the next GC; see Section~\ref{gc}.
 
 The second argument to \code{s48\_enter\_byte\_vector} is the length of
  byte vector.
@@ -425,6 +424,60 @@ These have the disadvantage of only having a limited range, but
  is not a fixnum or if the argument to \code{s48\_enter\_fixnum} is less than
  \code{S48\_MIN\_FIXNUM\_VALUE} or greater than \code{S48\_MAX\_FIXNUM\_VALUE}
  ($-2^{29}$ and $2^{29}-1$ in the current system).
+
+\begin{protos}
+\cgcproto{s48\_value s48\_enter\_string\_latin\_1(char*);}
+\cgcproto{s48\_value s48\_enter\_string\_latin\_1\_n(char*, long);}
+\cproto{void\ \ \ \ \ \ s48\_copy\_latin\_1\_to\_string(char*, s48\_value);}
+\cproto{void\ \ \ \ \ \ s48\_copy\_latin\_1\_to\_string\_n(char*, long, s48\_value);}
+\cproto{void\ \ \ \ \ \ s48\_copy\_string\_to\_latin\_1(s48\_value, char*);}
+\cproto{void\ \ \ \ \ \ s48\_copy\_string\_to\_latin\_1\_n(s48\_value, long, long, char*);}
+\cgcproto{s48\_value s48\_enter\_string\_utf\_8(char*);}
+\cgcproto{s48\_value s48\_enter\_string\_utf\_8\_n(char*, long);}
+\cproto{long\ \ \ \ \ \ s48\_string\_utf\_8\_length(s48\_value);}
+\cproto{long\ \ \ \ \ \ s48\_string\_utf\_8\_length\_n(s48\_value, long, long);}
+\cproto{void\ \ \ \ \ \ s48\_copy\_string\_to\_utf\_8(s48\_value, char*);}
+\cproto{void\ \ \ \ \ \ s48\_copy\_string\_to\_utf\_8\_n(s48\_value, long, long, char*);}
+\end{protos}
+%
+The \code{s48\_enter\_string\_latin\_1} function creates a Scheme
+string, initializing its contents from its NUL-terminated,
+Latin-1-encoded argument.  The \code{s48\_enter\_string\_latin\_1\_n}
+function does the same, but allows specifying the length explicitly---no NUL
+terminator is necessary.
+
+The \code{s48\_copy\_latin\_1\_to\_string} function copies
+Latin-1-encoded characters from its first NUL-terminated argument to
+the Scheme string that is its second argument.  The
+\code{s48\_copy\_latin\_1\_to\_string\_n} does the same, but allows
+specifying the number of characters explicitly.  The
+\code{s48\_copy\_string\_to\_latin\_1} function converts the
+characters of the Scheme string specified as the first argument into
+Latin-1 and writes them into the string specified as the second
+argument.  (Note that it does not NUL-terminate the result.)  The
+\code{s48\_copy\_string\_to\_latin\_1\_n} function does the same, but
+allows specifying a starting index and a character count into the
+source string.
+
+The \code{s48\_enter\_string\_utf\_8} function creates a Scheme
+string, initializing its contents from its NUL-terminated,
+UTF-8-encoded argument.  The \code{s48\_enter\_string\_utf\_8\_n}
+function does the same, but allows specifying the length
+explicitly---no NUL terminator is necessary.
+
+The \code{s48\_string\_utf\_8\_length} function computes the length
+that the UTF-8 encoding of its argument (a Scheme string) would
+occupy, not including NUL termination.  The
+\code{s48\_string\_utf\_8\_length} function does the same, but allows
+specifying a starting index and a count into the input string.
+
+The \code{s48\_copy\_string\_to\_utf\_8} function converts the
+characters of the Scheme string specified as the first argument into
+UTF-8 and writes them into the string specified as the second
+argument.  (Note that it does not NUL-terminate the result.)  The
+\code{s48\_copy\_string\_to\_utf\_8\_n} function does the same, but
+allows specifying a starting index and a character count into the
+source string.
 
 \subsection{C versions of Scheme procedures}
 
@@ -535,7 +588,7 @@ Variables bound to values in the Scheme~48 heap need to be registered with
  variables will be updated if the garbage collector moves the object.
 The garbage collector has no facility for updating pointers to the interiors
  of objects, so such pointers, for example the ones returned by
- \code{EXTRACT\_STRING}, will likely become invalid when a garbage collection
+ \code{s48\_extract\_byte\_vector}, will likely become invalid when a garbage collection
  occurs.
 
 \subsection{Registering objects with the GC}
@@ -797,7 +850,6 @@ They are provided for the purpose of writing more efficient code;
 
 \begin{protos}
 \cproto{char \ \ \ \ \ S48\_UNSAFE\_EXTRACT\_CHAR(s48\_value)}
-\cproto{char * \ \ \ S48\_UNSAFE\_EXTRACT\_STRING(s48\_value)}
 \cproto{long \ \ \ \ \ S48\_UNSAFE\_EXTRACT\_INTEGER(s48\_value)}
 \cproto{long \ \ \ \ \ S48\_UNSAFE\_EXTRACT\_DOUBLE(s48\_value)}
 \end{protos}

@@ -8,6 +8,7 @@
 	integer-arithmetic
 	flonum-arithmetic
 	data struct
+	text-encodings
 	interpreter interpreter-internal
 	stack gc interpreter-gc gc-util
 	vmio
@@ -345,9 +346,8 @@
   (files (data symbol)))
 
 (define-structure text-encodings text-encodings-interface
-  (open prescheme enum-case
-	struct
-	vm-architecture)
+  (open prescheme ps-memory enum-case
+	(subset vm-architecture (text-encoding-option)))
   (files (data text-encoding)))
 
 ;----------------------------------------------------------------

@@ -70,6 +70,8 @@
 (define (s48-integer-bitwise-xor x y)
   (integer-bitwise-xor x y))
 
+;; Strings
+
 (define (s48-string-set s i c)
   (vm-string-set! s i c))
 
@@ -85,8 +87,126 @@
 (define (s48-enter-string-latin-1 s)
   (enter-string+gc s))
 
-(define (s48-copy-string-to-scheme-string-latin-1 string len vm-string)
+(define (s48-enter-string-latin-1-n s count)
+  (enter-string+gc-n s count))
+
+(define (s48-copy-latin-1-to-string-n string len vm-string)
   (copy-string-to-vm-string/latin-1! string len vm-string))
 
-(define (s48-copy-scheme-string-to-string-latin-1 vm-string string)
-  (copy-vm-string-to-string/latin-1! vm-string string))
+(define (s48-copy-latin-1-to-string string vm-string)
+  (copy-string-to-vm-string/latin-1! string (string-length string) vm-string))
+
+(define (s48-copy-string-to-latin-1 vm-string string)
+  (copy-vm-string-to-string/latin-1! vm-string 0 (vm-string-length vm-string) string))
+
+(define (s48-copy-string-to-latin-1-n vm-string start count string)
+  ;; #### validate arguments?
+  (copy-vm-string-to-string/latin-1! vm-string start count string))
+
+(define (s48-enter-string-utf-8 p)
+  (call-with-values
+      (lambda ()
+	(utf-8-length p (string-length (fetch-nul-terminated-string p))))
+    (lambda (consumed decoded)
+      (let ((vm (vm-make-string+gc decoded)))
+	(decode-utf-8! p vm consumed)
+	vm))))
+
+(define (s48-enter-string-utf-8-n p size)
+  (call-with-values
+      (lambda ()
+	(utf-8-length p size))
+    (lambda (consumed decoded)
+      (let ((vm (vm-make-string+gc decoded)))
+	(decode-utf-8! p vm consumed)
+	vm))))
+
+(define (s48-string-utf-8-length vm-string)
+  (string-encoding-length/utf-8 vm-string 0 (vm-string-length vm-string)))
+
+(define (s48-string-utf-8-length-n vm-string start-index count)
+  ;; #### validate arguments?
+  (string-encoding-length/utf-8 vm-string start-index count))
+
+(define (s48-copy-string-to-utf-8 vm-string string)
+  (copy-vm-string-to-string/utf-8! vm-string 0 (vm-string-length vm-string) string))
+
+(define (s48-copy-string-to-utf-8-n vm-string start count string)
+  ;; #### validate arguments?
+  (copy-vm-string-to-string/utf-8! vm-string start count string))
+
+;; returns # bytes consumed, # characters decoded
+(define (utf-8-length p size)
+  (let loop ((index 0)
+	     (target-index 0))
+    (if (>= index size)
+	(values index target-index)
+	(call-with-values
+	    (lambda ()
+	      (decode-scalar-value
+	       (enum text-encoding-option utf-8)
+	       (address+ p index)
+	       (- size index)))
+	  (lambda (encoding-ok? ok? incomplete? value count)
+	    (cond
+	     ((not encoding-ok?)
+	      (loop (+ 1 index) (+ target-index 1)))
+	     (incomplete?
+	      (values index target-index))
+	     (else
+	      (loop (+ index count) (+ target-index 1)))))))))
+
+(define (decode-utf-8! p s size)
+  (let loop ((index 0)
+	     (target-index 0))
+    (if (>= index size)
+	(unspecific)
+	(call-with-values
+	    (lambda ()
+	      (decode-scalar-value
+	       (enum text-encoding-option utf-8)
+	       (address+ p index)
+	       (- size index)))
+	  (lambda (encoding-ok? ok? incomplete? value count)
+	    (cond
+	     ((not encoding-ok?)
+	      (vm-string-set! s target-index (char->ascii #\?))
+	      (loop (+ 1 index) (+ target-index 1)))
+	     (incomplete?
+	      (vm-string-set! s target-index (char->ascii #\?))
+	      (unspecific))
+	     (else
+	      (vm-string-set! s target-index value)
+	      (loop (+ index count) (+ target-index 1)))))))))
+
+(define (string-encoding-length/utf-8 s start-index count)
+  (let loop ((utf-8-length 0)
+	     (char-index 0))
+    (if (>= char-index count)
+	utf-8-length
+	(loop (+ utf-8-length 
+		 (scalar-value-encoding-length/utf-8
+		  (vm-string-ref s (+ start-index char-index))))
+	      (+ 1 char-index)))))
+
+(define (scalar-value-encoding-length/utf-8 sv)
+  (call-with-values
+      (lambda ()
+	(encode-scalar-value (enum text-encoding-option utf-8)
+			     sv (integer->address 0) 0))
+    (lambda (encoding-ok? ok? out-of-space? count)
+      ;; we know the encoding is OK
+      count)))
+
+(define (copy-vm-string-to-string/utf-8! vm-string start count string)
+  (let loop ((source-index 0)
+	     (target-index 0))
+    (if (>= source-index count)
+	(unspecific)
+	(let ((sv (vm-string-ref vm-string (+ start source-index))))
+	  (call-with-values
+	      (lambda ()
+		(encode-scalar-value (enum text-encoding-option utf-8)
+				     sv (address+ string target-index) 4))
+	    (lambda (encoding-ok? ok? out-of-space? count)
+	      (loop (+ source-index 1) (+ target-index count))))))))

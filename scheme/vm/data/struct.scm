@@ -165,11 +165,13 @@
     (copy-string-to-vm-string/latin-1! string len v)
     v))
 
-(define (enter-string+gc string)
-  (let* ((len (string-length string))
-	 (v (vm-make-string+gc len)))
+(define (enter-string+gc-n string len)
+  (let ((v (vm-make-string+gc len)))
     (copy-string-to-vm-string/latin-1! string len v)
     v))
+
+(define (enter-string+gc string)
+  (enter-string+gc-n string (string-length string)))
 
 (define (copy-string-to-vm-string/latin-1! string len v)
   (do ((i 0 (+ i 1)))
@@ -177,12 +179,11 @@
     (vm-string-set! v i (char->ascii (string-ref string i))))
   (unspecific))
 
-(define (copy-vm-string-to-string/latin-1! vm-string string)
-  (do ((len (vm-string-length vm-string))
-       (i 0 (+ 1 i)))
-      ((>= i len))
+(define (copy-vm-string-to-string/latin-1! vm-string start count string)
+  (do ((i 0 (+ 1 i)))
+      ((>= i count))
     ;; #### need to check if we're Latin 1 and otherwise put in a #\? or something
-    (string-set! string i (ascii->char (vm-string-ref vm-string i)))) 
+    (string-set! string (+ i start) (ascii->char (vm-string-ref vm-string i)))) 
   (unspecific))
 
 (define (copy-vm-string-chars! from from-index to to-index count)

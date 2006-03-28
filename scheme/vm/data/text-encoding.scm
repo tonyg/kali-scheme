@@ -1,13 +1,13 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
 ; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-(define (encode-scalar-value encoding value buffer start count)
+(define (encode-scalar-value encoding value buffer count)
   (let-syntax ((encode
 		(syntax-rules ()
 		  ((encode ?encode-proc)
 		   (call-with-values
 		       (lambda ()
-			 (?encode-proc value buffer start count))
+			 (?encode-proc value buffer count))
 		     (lambda (encoding-ok? out-of-space? count)
 		       (values #t encoding-ok? out-of-space? count)))))))
     (enum-case
@@ -22,12 +22,12 @@
      (else
       (values #f #f #f 0)))))
 
-(define (decode-scalar-value encoding buffer start count)
+(define (decode-scalar-value encoding buffer count)
   (let-syntax ((decode
 		(syntax-rules ()
 		  ((decode ?decode-proc)
 		   (call-with-values
-		       (lambda () (?decode-proc buffer start count))
+		       (lambda () (?decode-proc buffer count))
 		     (lambda (ok? incomplete? value count)
 		       (values #t ok? incomplete? value count)))))))
     (enum-case
@@ -47,59 +47,59 @@
 ;; This is mainly needed because it might be the default locale
 ;; encoding reported by the OS.
 
-(define (encode-scalar-value/us-ascii value buffer start count)
+(define (encode-scalar-value/us-ascii value buffer count)
   (cond
    ((< count 1)
     (values #t #t 1))
    ((< value 128)
-    (code-vector-set! buffer start value)
+    (buffer-set! buffer 0 value)
     (values #t #f 1))
    (else
     (values #f #f 0))))
 
-(define (decode-scalar-value/us-ascii buffer start count)
+(define (decode-scalar-value/us-ascii buffer count)
   (values #t ; OK?
 	  #f ; incomplete?
-	  (code-vector-ref buffer start)
+	  (buffer-ref buffer 0)
 	  1))
 
 ; Latin-1
 
-(define (encode-scalar-value/latin-1 value buffer start count)
+(define (encode-scalar-value/latin-1 value buffer count)
   (cond
    ((< count 1)
     (values #t #t 1))
    ((< value 256)
-    (code-vector-set! buffer start value)
+    (buffer-set! buffer 0 value)
     (values #t #f 1))
    (else
     (values #f #f 0))))
 
-(define (decode-scalar-value/latin-1 buffer start count)
+(define (decode-scalar-value/latin-1 buffer count)
   (values #t ; OK?
 	  #f ; incomplete?
-	  (code-vector-ref buffer start)
+	  (buffer-ref buffer 0)
 	  1))
 ; UTF-8
 
-(define (encode-scalar-value/utf-8 value buffer start count)
+(define (encode-scalar-value/utf-8 value buffer count)
   (cond
    ((<= value #x7f)
     (if (>= count 1)
 	(begin
-	  (code-vector-set! buffer start value)
+	  (buffer-set! buffer 0 value)
 	  (values #t #f 1))
 	(values #t #t 1)))
    ((<= value #x7ff)
     (if (>= count 2)
 	(begin
-	  (code-vector-set!
-	   buffer start
+	  (buffer-set!
+	   buffer 0
 	   (+ #xc0
 	      (logical-shift-right (bitwise-and value #b11111000000)
 				   6)))
-	  (code-vector-set!
-	   buffer (+ 1 start)
+	  (buffer-set!
+	   buffer 1
 	   (+ #x80
 	      (bitwise-and value #b111111)))
 	  (values #t #f 2))
@@ -107,18 +107,18 @@
    ((<= value #xffff)
     (if (>= count 3)
 	(begin
-	  (code-vector-set!
-	   buffer start
+	  (buffer-set!
+	   buffer 0
 	   (+ #xe0
 	      (logical-shift-right (bitwise-and value #b1111000000000000)
 				   12)))
-	  (code-vector-set!
-	   buffer (+ 1 start)
+	  (buffer-set!
+	   buffer 1
 	   (+ #x80
 	      (logical-shift-right (bitwise-and value #b111111000000)
 				   6)))
-	  (code-vector-set!
-	   buffer (+ 2 start)
+	  (buffer-set!
+	   buffer 2
 	   (+ #x80
 	      (bitwise-and value #b111111)))
 	  (values #t #f 3))
@@ -126,23 +126,23 @@
    (else
     (if (>= count 4)
 	(begin
-	  (code-vector-set!
-	   buffer start
+	  (buffer-set!
+	   buffer 0
 	   (+ #xf0
 	      (logical-shift-right (bitwise-and value #b111000000000000000000)
 				   18)))
-	  (code-vector-set!
-	   buffer (+ 1 start)
+	  (buffer-set!
+	   buffer 1
 	   (+ #x80
 	      (logical-shift-right (bitwise-and value #b111111000000000000)
 				   12)))
-	  (code-vector-set!
-	   buffer (+ 2 start)
+	  (buffer-set!
+	   buffer 2
 	   (+ #x80
 	      (logical-shift-right (bitwise-and value #b111111000000)
 				   6)))
-	  (code-vector-set!
-	   buffer (+ 3 start)
+	  (buffer-set!
+	   buffer 3
 	   (+ #x80
 	      (bitwise-and value #b111111)))
 	  (values #t #f 4))
@@ -155,21 +155,21 @@
 (define *utf-8-state-table*
   '#(;; state 0
      0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 -1 -1 -1 -1 -1 -1 -1 1 1 1 1 2 2 3 -1
-     ;; state 1
-     -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 0 0 0 0 0 0 0 0 -2 -2 -2 -2 -2 -2 -2 -2
-     ;; state 2
-     -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 1 1 1 1 1 1 1 1 -2 -2 -2 -2 -2 -2 -2 -2
-     ;; state 3
-     -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 2 2 2 2 2 2 2 2 -2 -2 -2 -2 -2 -2 -2 -2))
+       ;; state 1
+       -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 0 0 0 0 0 0 0 0 -2 -2 -2 -2 -2 -2 -2 -2
+       ;; state 2
+       -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 1 1 1 1 1 1 1 1 -2 -2 -2 -2 -2 -2 -2 -2
+       ;; state 3
+       -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 2 2 2 2 2 2 2 2 -2 -2 -2 -2 -2 -2 -2 -2))
 
 (define *utf-8-masks* '#(#x7f #x1f #x0f #x07))
 
 ; We don't check for non-shortest-form UTF-8.  Too bad.
 
-(define (decode-scalar-value/utf-8 buffer start count)
+(define (decode-scalar-value/utf-8 buffer count)
   (let loop ((q 0) (state 0) (mask 0) (scalar-value 0))
     (if (< q count)
-	(let* ((c (code-vector-ref buffer (+ start q)))
+	(let* ((c (buffer-ref buffer q))
 	       (state (vector-ref *utf-8-state-table*
 				  (+ (shift-left state 5)	; (* state 32)
 				     (arithmetic-shift-right c 3)))))
@@ -196,57 +196,55 @@
 
 ; UTF-16
 
-(define (code-vector-set-word16/le! buffer start word)
-  (code-vector-set! buffer start
-		    (bitwise-and #b11111111 word))
-  (code-vector-set! buffer (+ 1 start)
-		    (logical-shift-right word 8)))
+(define (buffer-set-word16/le! buffer index word)
+  (buffer-set! buffer index
+	       (bitwise-and #b11111111 word))
+  (buffer-set! buffer (+ index 1)
+	       (logical-shift-right word 8)))
 
-(define (code-vector-set-word16/be! buffer start word)
-  (code-vector-set! buffer start
-		    (logical-shift-right word 8))
-  (code-vector-set! buffer (+ 1 start)
-		    (bitwise-and #b11111111 word)))
+(define (buffer-set-word16/be! buffer index word)
+  (buffer-set! buffer index
+	       (logical-shift-right word 8))
+  (buffer-set! buffer (+ index 1)
+	       (bitwise-and #b11111111 word)))
 
-(define (make-encode-scalar-value/utf-16 code-vector-set-word16!)
-  (lambda (value buffer start count)
+(define (make-encode-scalar-value/utf-16 buffer-set-word16!)
+  (lambda (value buffer count)
     (if (<= value #xffff)
 	(if (< count 2)
 	    (values #t #t 2)
 	    (begin
-	      (code-vector-set-word16! buffer start value)
+	      (buffer-set-word16! buffer 0 value)
 	      (values #t #f 2)))
 	(if (< count 4)
 	    (values #t #t 4)
 	    (begin
-	      (code-vector-set-word16!
-	       buffer start
+	      (buffer-set-word16!
+	       buffer 0
 	       (+ (logical-shift-right value 10) #xd7c0))
-	      (code-vector-set-word16!
-	       buffer (+ 2 start)
+	      (buffer-set-word16!
+	       buffer 2
 	       (+ (bitwise-and value #x3ff) #xdc00))
 	      (values #t #f 4))))))
 
 (define encode-scalar-value/utf-16le
-  (make-encode-scalar-value/utf-16 code-vector-set-word16/le!))
+  (make-encode-scalar-value/utf-16 buffer-set-word16/le!))
 (define encode-scalar-value/utf-16be
-  (make-encode-scalar-value/utf-16 code-vector-set-word16/be!))
+  (make-encode-scalar-value/utf-16 buffer-set-word16/be!))
 
-(define (code-vector-ref-word16/le codes start)
-  (+ (code-vector-ref codes start)
-     (shift-left (code-vector-ref codes (+ 1 start))
-		 8)))
+(define (buffer-ref-word16/le codes index)
+  (+ (buffer-ref codes index)
+     (shift-left (buffer-ref codes (+ index 1)) 8)))
 
-(define (code-vector-ref-word16/be codes start)
-  (+ (shift-left (code-vector-ref codes start)
-		 8)
-     (code-vector-ref codes (+ 1 start))))
+(define (buffer-ref-word16/be codes index)
+  (+ (shift-left (buffer-ref codes index) 8)
+     (buffer-ref codes (+ index 1))))
 
-(define (make-decode-scalar-value/utf-16 code-vector-ref-word16)
-  (lambda (buffer start count)
+(define (make-decode-scalar-value/utf-16 buffer-ref-word16)
+  (lambda (buffer count)
     (if (< count 2)
 	(values #t #t 0 2)
-	(let ((word0 (code-vector-ref-word16 buffer start)))
+	(let ((word0 (buffer-ref-word16 buffer 0)))
 	  (cond
 	   ((or (< word0 #xd800)
 		(> word0 #xdfff))
@@ -254,7 +252,7 @@
 	   ((< count 4)
 	    (values #t #t 0 4))
 	   ((<= word0 #xdbff)
-	    (let ((word1 (code-vector-ref-word16 buffer (+ 2 start))))
+	    (let ((word1 (buffer-ref-word16 buffer 2 )))
 	      (if (and (>= word1 #xdc00)
 		       (<= word1 #xdfff))
 		  (values #t #f
@@ -266,58 +264,58 @@
 	    (values #f #f 0 0)))))))
 
 (define decode-scalar-value/utf-16le
-  (make-decode-scalar-value/utf-16 code-vector-ref-word16/le))
+  (make-decode-scalar-value/utf-16 buffer-ref-word16/le))
 (define decode-scalar-value/utf-16be
-  (make-decode-scalar-value/utf-16 code-vector-ref-word16/be))
+  (make-decode-scalar-value/utf-16 buffer-ref-word16/be))
 
 ; UTF-32
 
-(define (encode-scalar-value/utf-32le value buffer start count)
+(define (encode-scalar-value/utf-32le value buffer count)
   (if (< count 4)
       (values #t #t 4)
       (begin
-	(code-vector-set! buffer start
-			  (bitwise-and value #xff))
-	(code-vector-set! buffer (+ 1 start)
-			  (logical-shift-right
-			   (bitwise-and value #xff00)
-			   8))
-	(code-vector-set! buffer (+ 2 start)
-			  (logical-shift-right
-			   (bitwise-and value #xff0000)
-			   16))
-	(code-vector-set! buffer (+ 3 start)
-			  (logical-shift-right value 24))
+	(buffer-set! buffer 0
+		     (bitwise-and value #xff))
+	(buffer-set! buffer 1
+		     (logical-shift-right
+		      (bitwise-and value #xff00)
+		      8))
+	(buffer-set! buffer 2
+		     (logical-shift-right
+		      (bitwise-and value #xff0000)
+		      16))
+	(buffer-set! buffer 3
+		     (logical-shift-right value 24))
 	(values #t #f 4))))
 
-(define (encode-scalar-value/utf-32be value buffer start count)
+(define (encode-scalar-value/utf-32be value buffer count)
   (if (< count 4)
       (values #t #t 4)
       (begin
-	(code-vector-set! buffer start
-			  (logical-shift-right value 24))
-	(code-vector-set! buffer (+ 1 start)
-			  (logical-shift-right
-			   (bitwise-and value #xff0000)
-			   16))
-	(code-vector-set! buffer (+ 2 start)
-			  (logical-shift-right
-			   (bitwise-and value #xff00)
-			   8))
-	(code-vector-set! buffer (+ 3 start)
-			  (bitwise-and value #xff))
+	(buffer-set! buffer 0
+		     (logical-shift-right value 24))
+	(buffer-set! buffer 1
+		     (logical-shift-right
+		      (bitwise-and value #xff0000)
+		      16))
+	(buffer-set! buffer 2
+		     (logical-shift-right
+		      (bitwise-and value #xff00)
+		      8))
+	(buffer-set! buffer 3
+		     (bitwise-and value #xff))
 	(values #t #f 4))))
 
-(define (decode-scalar-value/utf-32le buffer start count)
+(define (decode-scalar-value/utf-32le buffer count)
   (if (< count 4)
       (values #t #t 0 4)
       (let ((code-point
-	     (+ (code-vector-ref buffer start)
-		(shift-left (code-vector-ref buffer (+ 1 start))
+	     (+ (buffer-ref buffer 0)
+		(shift-left (buffer-ref buffer 1)
 			    8)
-		(shift-left (code-vector-ref buffer (+ 2 start))
+		(shift-left (buffer-ref buffer 2)
 			    16)
-		(shift-left (code-vector-ref buffer (+ 3 start))
+		(shift-left (buffer-ref buffer 3)
 			    24))))
 	(if (scalar-value? code-point)
 	    (values #t #f 
@@ -325,18 +323,18 @@
 		    4)
 	    (values #f #f 0 0)))))
 
-(define (decode-scalar-value/utf-32be buffer start count)
+(define (decode-scalar-value/utf-32be buffer count)
   (if (< count 4)
       (values #t #t 0 4)
       (let ((code-point
-	     (+ (shift-left (code-vector-ref buffer start)
+	     (+ (shift-left (buffer-ref buffer 0)
 			    24)
-		(shift-left (code-vector-ref buffer (+ 1 start))
+		(shift-left (buffer-ref buffer 1)
 			    16)
 		(shift-left
-		 (code-vector-ref buffer (+ 2 start))
+		 (buffer-ref buffer 2)
 		 8)
-		(code-vector-ref buffer (+ 3 start)))))
+		(buffer-ref buffer 3))))
 	(if (scalar-value? code-point)
 	    (values #t #f
 		    code-point
@@ -349,3 +347,9 @@
   (and (>= x 0)
        (or (<= x #xd7ff)
 	   (and (>= x #xe000) (<= x #x10ffff)))))
+
+(define (buffer-ref b i)
+  (unsigned-byte-ref (address+ b i)))
+
+(define (buffer-set! b i v)
+  (unsigned-byte-set! (address+ b i) v))

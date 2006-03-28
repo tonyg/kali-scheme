@@ -45,7 +45,9 @@
 			      buffer (enter-fixnum start) (enter-fixnum count))
 	     (call-with-values
 		 (lambda () 
-		   (encode-scalar-value encoding value buffer start count))
+		   (encode-scalar-value encoding value 
+					(address+ (address-after-header buffer) start)
+					count))
 	       (lambda (encoding-ok? ok? out-of-space? count)
 		 (if encoding-ok?
 		     (call-with-values
@@ -75,7 +77,10 @@
 	     (raise-exception wrong-type-argument 0
 			      (enter-fixnum encoding) buffer (enter-fixnum start) (enter-fixnum count))
 	     (call-with-values
-		 (lambda () (decode-scalar-value encoding buffer start count))
+		 (lambda () 
+		   (decode-scalar-value encoding 
+					(address+ (address-after-header buffer) start)
+					count))
 	       (lambda (encoding-ok? ok? incomplete? value count)
 		 (if (not encoding-ok?)
 		     (raise-exception bad-option 0

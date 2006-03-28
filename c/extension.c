@@ -101,7 +101,7 @@ s48_extended_vm (long key, s48_value value)
 	if (buf == NULL)
 	  EXT_RETURN(S48_FALSE);
       }
-    s48_copy_scheme_string_to_string_latin_1(get_arg(value, 0), buf);
+    s48_copy_string_to_latin_1(get_arg(value, 0), buf);
     buf[len] = '\0';
     set_float_arg(value, 1, atof(buf));
     EXT_RETURN(get_arg(value, 1));
@@ -113,7 +113,7 @@ s48_extended_vm (long key, s48_value value)
     size_t len;
     get_float_arg(value, 0, x);
     len = s48_double_to_string(buf, x);
-    s48_copy_string_to_scheme_string_latin_1(buf, len, get_arg(value,1));
+    s48_copy_latin_1_to_string_n(buf, len, get_arg(value,1));
     EXT_RETURN(S48_UNSAFE_ENTER_FIXNUM(len));
   }
   
