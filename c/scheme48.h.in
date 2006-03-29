@@ -69,10 +69,8 @@ S48_EXTERN long		s48_string_utf_8_length_n(s48_value s, long start, long count);
 S48_EXTERN void		s48_copy_string_to_utf_8(s48_value sch_s, char* s);
 S48_EXTERN void		s48_copy_string_to_utf_8_n(s48_value sch_s, long start, long count, char* s);
 
-S48_EXTERN s48_value	s48_enter_char(unsigned char);
-S48_EXTERN unsigned char s48_extract_char(s48_value);
-S48_EXTERN s48_value	s48_enter_scalar_value(long);
-S48_EXTERN long		s48_extract_scalar_value(s48_value);
+S48_EXTERN s48_value	s48_enter_char(long);
+S48_EXTERN long 	s48_extract_char(s48_value);
 S48_EXTERN s48_value	s48_enter_fixnum(long);
 S48_EXTERN long		s48_extract_fixnum(s48_value);
 S48_EXTERN s48_value	s48_enter_integer(long);

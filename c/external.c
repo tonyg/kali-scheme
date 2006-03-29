@@ -748,17 +748,20 @@ s48_extract_double(s48_value s48_double)
 }
 
 s48_value
-s48_enter_char(unsigned char a_char)
+s48_enter_char(long a_char)
 {
-  if (a_char > 255)
+  if (! ((a_char >= 0)
+	 && ((a_char <= 0xd7ff)
+	     || ((a_char >= 0xe000) && (a_char <= 0x10ffff)))))
+    /* #### not quite */
     s48_raise_range_error(s48_enter_fixnum(a_char),
 			  s48_enter_fixnum(0),
-			  s48_enter_fixnum(255));
+			  s48_enter_fixnum(0x10ffff));
 
   return S48_UNSAFE_ENTER_CHAR(a_char);
 }
 
-unsigned char
+long
 s48_extract_char(s48_value a_char)
 {
   if (! S48_CHAR_P(a_char))
@@ -767,22 +770,6 @@ s48_extract_char(s48_value a_char)
   return S48_UNSAFE_EXTRACT_CHAR(a_char);
 }
 
-s48_value
-s48_enter_scalar_value(long scalar_value)
-{
-  /* #### need range checks */
-  return S48_UNSAFE_ENTER_SCALAR_VALUE(scalar_value);
-}
-
-long
-s48_extract_scalar_value(s48_value a_char)
-{
-  if (! S48_CHAR_P(a_char))
-    s48_raise_argument_type_error(a_char);
-  
-  return S48_UNSAFE_EXTRACT_SCALAR_VALUE(a_char);
-}
-  
 /********************************/
 /* Allocation */
 

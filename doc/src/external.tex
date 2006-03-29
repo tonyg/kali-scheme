@@ -370,13 +370,13 @@ The `extract' ones convert from Scheme to C and the `enter's go the other
 
 \begin{protos}
 \cproto{int \ \ \ \ \ \ S48\_EXTRACT\_BOOLEAN(s48\_value)}
-\cproto{unsigned char s48\_extract\_char(s48\_value)}
+\cproto{long\ \ \ \ \ \ s48\_extract\_char(s48\_value)}
 \cproto{char * \ \ \ s48\_extract\_string(s48\_value)}
 \cproto{char * \ \ \ s48\_extract\_byte\_vector(s48\_value)}
 \cproto{long \ \ \ \ \ s48\_extract\_integer(s48\_value)}
 \cproto{double \ \ \ s48\_extract\_double(s48\_value)}
 \cproto{s48\_value S48\_ENTER\_BOOLEAN(int)}
-\cproto{s48\_value s48\_enter\_char(unsigned char)}
+\cproto{s48\_value s48\_enter\_char(long)}
 \cgcproto{s48\_value s48\_enter\_byte\_vector(char *, long)}
 \cgcproto{s48\_value s48\_enter\_integer(long)}
 \cgcproto{s48\_value s48\_enter\_double(double)}
@@ -386,6 +386,11 @@ The `extract' ones convert from Scheme to C and the `enter's go the other
  \code{\#f} and true otherwise.
  \code{S48\_ENTER\_BOOLEAN} is \code{\#f} if its argument is zero
   and \code{\#t} otherwise.
+
+The \code{s48\_extract\_char} function extracts the scalar value from
+a Scheme character as a C \code{long}.  Conversely,
+\code{s48\_enter\_char} creates a Scheme character from a scalar
+value.  (Note that ASCII values are also scalar values.)
 
  The \code{s48\_extract\_byte\_vector} function returns a
  pointer to the actual
@@ -849,7 +854,8 @@ They are provided for the purpose of writing more efficient code;
  their general use is not recommended.
 
 \begin{protos}
-\cproto{char \ \ \ \ \ S48\_UNSAFE\_EXTRACT\_CHAR(s48\_value)}
+\cproto{long \ \ \ \ \ S48\_UNSAFE\_EXTRACT\_CHAR(s48\_value)}
+\cproto{s48\_value S48\_UNSAFE\_ENTER\_CHAR(long)}
 \cproto{long \ \ \ \ \ S48\_UNSAFE\_EXTRACT\_INTEGER(s48\_value)}
 \cproto{long \ \ \ \ \ S48\_UNSAFE\_EXTRACT\_DOUBLE(s48\_value)}
 \end{protos}
