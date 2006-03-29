@@ -55,7 +55,7 @@ S48_EXTERN char		s48_pop_gc_roots_up_to_markerB(char *);
 S48_EXTERN s48_value	s48_make_string(int, long);
 S48_EXTERN void		s48_string_set(s48_value s, long i, long c);
 S48_EXTERN long		s48_string_ref(s48_value s, long i);
-S48_EXTERN s48_value	s48_string_length(s48_value s);
+S48_EXTERN long		s48_string_length(s48_value s);
 S48_EXTERN s48_value	s48_enter_string_latin_1(char* s);
 S48_EXTERN s48_value	s48_enter_string_latin_1_n(char* s, long count);
 S48_EXTERN void		s48_copy_latin_1_to_string(char* s, s48_value sch_s);
