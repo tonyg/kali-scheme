@@ -38,10 +38,6 @@
 (define (write-page port)
   (write-char (ascii->char 12) port))
 
-;; this isn't portable at all
-(define (write-byte byte port)
-  (write-char (ascii->char byte) port))
-  
 (define io-byte-mask
   (low-bits -1 bits-per-io-byte))
 

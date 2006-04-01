@@ -65,24 +65,32 @@ include $(srcdir)/build/filenames.make
 # or Pseudoscheme.  (It has also been made to run in Scheme->C.)  It
 # doesn't matter a whole lot which Scheme you use as long as it's not
 # broken or unavailable.  The two best choices are:
+#
 # 1. As below.
 #    These settings requires you to already have a $(RUNNABLE)
 #    command.  This is desirable if you are making changes to the
 #    system that might break scheme48vm and/or scheme48.image.  But it
 #    requires you to have squirreled away a previous working version
-#    of scheme48.
+#    of scheme48.  The settings assume a pre-Unicode version; if you
+#    want to use an installed Unicode-capable Scheme 48 (1.4 or later),
+#    you need to use this setting:
+#    LINKER_WRITEBYTE = ,open (subset i/o (write-byte))
+#
 # 2. LINKER_VM = ./$(VM) $(BIG_HEAP)
 #    LINKER_RUNNABLE = $(LINKER_VM) -i $(IMAGE)
+#    LINKER_WRITEBYTE = ,open (subset i/o (write-byte))
 #    This builds the linker on the scheme48vm and scheme48.image
 #    that are in the current directory.
 
 BIG_HEAP = -h 8000000
 LINKER_VM = $(RUNNABLE) $(BIG_HEAP)
 LINKER_RUNNABLE = $(LINKER_VM)
+LINKER_WRITEBYTE = ,load scheme/link/write-byte.scm
 START_LINKER = echo ',batch';					\
 	       echo ',bench on';				\
 	       echo ',open signals handle features';		\
 	       echo ',open bitwise ascii code-vectors';		\
+	       echo '$(LINKER_WRITEBYTE)';			\
 	       echo ',open cells record-types';			\
 	       echo ',load $(linker-files)';			\
 	       echo ',load scheme/alt/init-defpackage.scm'
