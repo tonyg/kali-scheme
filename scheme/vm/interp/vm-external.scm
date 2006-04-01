@@ -72,13 +72,31 @@
 
 ;; Strings
 
+(define (ensure-string s)
+  (if (not (vm-string? s))
+      (raise-argument-type-error s)))
+
+(define (ensure-index-range i min max)
+  (if (or (< i min)
+	  (> i max))
+      (raise-range-error (enter-fixnum i)
+			 (enter-fixnum min) (enter-fixnum max))))     
+  
+(define (ensure-string-index s i)
+  (ensure-index-range i 0 (- (vm-string-length s) 1)))
+
 (define (s48-string-set s i c)
+  (ensure-string s)
+  (ensure-string-index s i)
   (vm-string-set! s i c))
 
 (define (s48-string-ref s i)
+  (ensure-string s)
+  (ensure-string-index s i)
   (vm-string-ref s i))
 
 (define (s48-string-length s)
+  (ensure-string s)
   (vm-string-length s))
 
 (define (s48-allocate-string len)
@@ -91,16 +109,24 @@
   (enter-string+gc-n s count))
 
 (define (s48-copy-latin-1-to-string-n string len vm-string)
+  (ensure-string vm-string)
+  (ensure-index-range len 0 (vm-string-length vm-string))
   (copy-string-to-vm-string/latin-1! string len vm-string))
 
 (define (s48-copy-latin-1-to-string string vm-string)
-  (copy-string-to-vm-string/latin-1! string (string-length string) vm-string))
+  (ensure-string vm-string)
+  (let ((len (string-length string)))
+    (ensure-index-range len 0 (vm-string-length vm-string))
+    (copy-string-to-vm-string/latin-1! string (string-length string) vm-string)))
 
 (define (s48-copy-string-to-latin-1 vm-string string)
+  (ensure-string vm-string)
   (copy-vm-string-to-string/latin-1! vm-string 0 (vm-string-length vm-string) string))
 
 (define (s48-copy-string-to-latin-1-n vm-string start count string)
-  ;; #### validate arguments?
+  (ensure-string vm-string)
+  (ensure-string-index vm-string start)
+  (ensure-index-range count 0 (- (vm-string-length vm-string) start))
   (copy-vm-string-to-string/latin-1! vm-string start count string))
 
 (define (s48-enter-string-utf-8 p)
@@ -122,17 +148,23 @@
 	vm))))
 
 (define (s48-string-utf-8-length vm-string)
+  (ensure-string vm-string)
   (string-encoding-length/utf-8 vm-string 0 (vm-string-length vm-string)))
 
 (define (s48-string-utf-8-length-n vm-string start-index count)
-  ;; #### validate arguments?
+  (ensure-string vm-string)
+  (ensure-string-index vm-string start-index)
+  (ensure-index-range count 0 (- (vm-string-length vm-string) start-index))
   (string-encoding-length/utf-8 vm-string start-index count))
 
 (define (s48-copy-string-to-utf-8 vm-string string)
+  (ensure-string vm-string)
   (copy-vm-string-to-string/utf-8! vm-string 0 (vm-string-length vm-string) string))
 
 (define (s48-copy-string-to-utf-8-n vm-string start count string)
-  ;; #### validate arguments?
+  (ensure-string vm-string)
+  (ensure-string-index vm-string start)
+  (ensure-index-range count 0 (- (vm-string-length vm-string) start))
   (copy-vm-string-to-string/utf-8! vm-string start count string))
 
 ;; returns # bytes consumed, # characters decoded

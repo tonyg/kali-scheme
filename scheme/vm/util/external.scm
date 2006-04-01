@@ -72,3 +72,9 @@
   (syntax-rules ()
     ((shared-set! x v)
      (set! x v))))
+
+(define (raise-argument-type-error val)
+  (fake-it 'raise-argument-type-error))
+
+(define (raise-range-error val min max)
+  (fake-it 'raise-range-error))

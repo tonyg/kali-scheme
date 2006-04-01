@@ -48,6 +48,17 @@
 	((shared-set! x v)
          (real-shared-set! x v))))
 
+    ; for use in C functions usable from external code, defined as
+    ; PreScheme procedures
+
+    (define raise-argument-type-error
+      ;; value
+      (external "s48_raise_argument_type_error" (=> (integer) null)))
+
+    (define raise-range-error
+      ;; value, min, max
+      (external "s48_raise_range_error" (=> (integer integer integer) null)))
+
     ; Lots of bignum stuff.  This should be moved to its own interface.
     (define export-key
       (external "s48_export_key" (=> (integer) integer)))

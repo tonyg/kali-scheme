@@ -35,6 +35,9 @@ extern long		s48_call_native_procedure(long, long),
 #define SHARED_REF(x)		(x)
 #define SHARED_SETB(x, v)	((x) = (v))
 
+extern void s48_raise_argument_type_error(s48_value);
+extern void s48_raise_range_error(s48_value, s48_value, s48_value);
+
 /*
  * We rename these to avoid name clashes.
  */
