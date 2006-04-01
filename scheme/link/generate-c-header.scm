@@ -100,9 +100,7 @@
       (c-define "S48_~A    (S48_MISC_IMMEDIATE(~D))" name i)))
   (newline)
   (c-define "S48_UNSAFE_ENTER_CHAR(c) (S48_CHAR | ((c) << 8))")
-  (c-define "S48_UNSAFE_EXTRACT_CHAR(x) ((unsigned char)((x) >> 8))")
-  (c-define "S48_UNSAFE_ENTER_SCALAR_VALUE(s) (S48_CHAR | ((s) << 8))")
-  (c-define "S48_UNSAFE_EXTRACT_SCALAR_VALUE(x) ((x) >> 8)")
+  (c-define "S48_UNSAFE_EXTRACT_CHAR(x) ((long)((x) >> 8))")
   (c-define "S48_CHAR_P(x) ((((long) (x)) & 0xff) == S48_CHAR)"))
 
 (define (stob-stuff stob-list stob-data)
@@ -203,6 +201,10 @@
 	      '("BYTE_VECTOR"))
     (c-define "S48_UNSAFE_BYTE_VECTOR_LENGTH(x) (S48_STOB_BYTE_LENGTH(x))")
     (c-define "S48_UNSAFE_EXTRACT_BYTE_VECTOR(x) (S48_ADDRESS_AFTER_HEADER((x), char))")
+
+    (c-define "S48_STRING_LENGTH(s) (s48_string_length(s))")
+    (c-define "S48_STRING_REF(s, i) (s48_string_ref((s), (i)))")
+    (c-define "S48_STRING_SET(s, i, v) (s48_string_set((s), (i), (v)))")
 
     (c-define (string-append "S48_EXTRACT_EXTERNAL_OBJECT(x, type) "
 			     "((type *)(S48_ADDRESS_AFTER_HEADER(x, long)+1))"))))
