@@ -182,14 +182,11 @@
      (if (null? arg) (begin body ...)
 	 (error "Too many arguments in let-opt" arg)))))
 
-(define (char-cased? ch)
-  (or (and (char<=? #\a ch)
-	   (char<=? ch #\z))
-      (and (char<=? #\A ch)
-	   (char<=? ch #\Z))))
+(define (char-cased? c)
+  (or (char-lower-case? c)
+      (char-upper-case? c)
+      (char-title-case? c)))
 	 
-(define char-titlecase char-upcase)
-
 ; End S48 additions
 
 ;;; Support for START/END substring specs

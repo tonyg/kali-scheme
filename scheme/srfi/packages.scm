@@ -204,6 +204,7 @@
   (open scheme-level-2
 	bitwise
 	srfi-8 srfi-14
+	unicode-char-maps
 	(subset signals		(error)))
   (files srfi-13))
 
