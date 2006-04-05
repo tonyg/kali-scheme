@@ -182,8 +182,11 @@
 (define (copy-vm-string-to-string/latin-1! vm-string start count string)
   (do ((i 0 (+ 1 i)))
       ((>= i count))
-    ;; #### need to check if we're Latin 1 and otherwise put in a #\? or something
-    (string-set! string (+ i start) (ascii->char (vm-string-ref vm-string i)))) 
+    (let ((c (vm-string-ref vm-string i)))
+      (string-set! string (+ i start) 
+		   (if (<= c 255)
+		       (ascii->char c)
+		       #\?))))
   (unspecific))
 
 (define (copy-vm-string-chars! from from-index to to-index count)
