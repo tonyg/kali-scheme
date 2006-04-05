@@ -372,7 +372,7 @@
        (char-set-contains? char-set:letter+digit #\Z)))
 
 (test "char-set:letter (size)" equal?
-      90547
+      91395
       (char-set-size char-set:letter))
 
 (test "char-set:letter / letter+digit" char-set=
@@ -459,9 +459,9 @@
 
 ;; Iterating over character sets ----------------------------------------
 
-;; The number 268 comes from "grep Nd UnicodeData.txt | wc -l"
+;; The number 270 comes from "grep Nd UnicodeData.txt | wc -l"
 (test "char-set-size (2)" equal?
-      268
+      270
       (char-set-size char-set:digit))
 
 (test "cursors (2)" char-set=
@@ -592,6 +592,8 @@
        (char-set= char-set:digit (string->char-set (char-set->string char-set:digit)))))
 
 ))))
+
+(load-package 'srfi-14-test)
 
 (if (in 'testing '(run (lost?)))
     (display "Some tests failed.")

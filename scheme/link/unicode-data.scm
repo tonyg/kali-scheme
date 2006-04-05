@@ -864,14 +864,13 @@
 		       (code-point-info-general-category info))
 		      (primary-category ?name)))))))
 
-
 	(write-srfi-14-base-char-set-definition
 	 'char-set:lower-case
-	 (general-category-predicate lowercase-letter)
+	 srfi-14-lower-case?
 	 infos port)
 	(write-srfi-14-base-char-set-definition
 	 'char-set:upper-case
-	 (general-category-predicate uppercase-letter)
+	 srfi-14-upper-case?
 	 infos port)
 	(write-srfi-14-base-char-set-definition
 	 'char-set:title-case
@@ -905,6 +904,30 @@
 	 'char-set:space-separator
 	 (general-category-predicate space-separator)
 	 infos port)))))
+
+; SRFI 14 has funny notions of lower case and upper case
+
+(define (srfi-14-lower-case? info)
+  (let ((cp (code-point-info-code-point info)))
+    (and (not (and (>= cp #x2000)
+		   (<= cp #x2fff)))
+	 (= cp (code-point-info-lowercase-code-point info))
+	 (or (not (= cp (code-point-info-uppercase-code-point info)))
+	     (string-contains (code-point-info-name info)
+			      "SMALL LETTER")
+	     (string-contains (code-point-info-name info)
+			      "SMALL LIGATURE")))))
+
+(define (srfi-14-upper-case? info)
+  (let ((cp (code-point-info-code-point info)))
+    (and (not (and (>= cp #x2000)
+		   (<= cp #x2fff)))
+	 (= cp (code-point-info-uppercase-code-point info))
+	 (or (not (= cp (code-point-info-lowercase-code-point info)))
+	     (string-contains (code-point-info-name info)
+			      "CAPITAL LETTER")
+	     (string-contains (code-point-info-name info)
+			      "CAPITAL LIGATURE")))))
 
 (define (write-srfi-14-base-char-set-definition name pred infos port)
   (write (srfi-14-base-char-set-definition name pred infos)
