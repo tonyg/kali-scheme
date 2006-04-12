@@ -47,7 +47,7 @@
 	 ;; We assume they're always the same.  We should probably
 	 ;; verify.
 	 (if reload-on-repeat?
-	     (reload-dynamic-externals-internal dynamic-externals "s48_on_reload"))
+	     (reload-dynamic-externals-internal dynamic-externals #t "s48_on_reload"))
 	 dynamic-externals))
    (else
     (let* ((shared-object (open-shared-object name complete-name?))
