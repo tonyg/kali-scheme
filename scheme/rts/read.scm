@@ -364,17 +364,32 @@
 (define (sub-read-token c port)
   (let loop ((l (list (preferred-case c))) (n 1))
     (let ((c (peek-char port)))
-      (if (eof-object? c)
-	  (reverse-list->string l n)
-	  (let ((sv (char->scalar-value c)))
-	    (if (if (< sv *dispatch-table-limit*)
-		    (vector-ref read-terminating?-vector sv)
-		    (binary-search *non-symbol-constituents-above-127* sv))
-		(reverse-list->string l n)
-		(begin
-		  (read-char port)
-		  (loop (cons (preferred-case c) l)
-			(+ n 1)))))))))
+      (cond
+       ((eof-object? c)
+	(reverse-list->string l n))
+       ((char=? c #\\)
+	(read-char port)
+	(let ((c (peek-char port)))
+	  (cond
+	   ((or (eof-object? c)
+		(not (char=? #\x c)))
+	    (reading-error port "invalid escape sequence in a symbol"
+			   c))
+	   (else
+	    (read-char port)
+	    (let ((d (decode-hex-digits port char-semicolon? "symbol literal")))
+	      (read-char port)		; remove semicolon
+	      (loop (cons d l) (+ n 1)))))))
+       (else
+	(let ((sv (char->scalar-value c)))
+	  (if (if (< sv *dispatch-table-limit*)
+		  (vector-ref read-terminating?-vector sv)
+		  (binary-search *non-symbol-constituents-above-127* sv))
+	      (reverse-list->string l n)
+	      (begin
+		(read-char port)
+		(loop (cons (preferred-case c) l)
+		      (+ n 1))))))))))
 
 (define (parse-token string port)
   (if (let ((c (string-ref string 0)))

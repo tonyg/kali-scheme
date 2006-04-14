@@ -42,6 +42,10 @@ are synonyms for \code{char->scalar-value} and
 
 \section{Character and string literals}
 
+The syntax specified here is in line with the current Unicode proposal
+for R$^6$RS, as set forth in SRFI~75, except for case-sensitivity.
+(Scheme~48 is case-insensitive.)
+
 \subsection{Character literals}
 
 The following character names are available in addition to what
@@ -82,6 +86,18 @@ R$^5$RS provides:
 \item \verb|\x|\meta{x}\meta{x}\ldots{}\verb|;| hex, where \meta{x}\meta{x}\ldots{}
   denotes the scalar value of the character
 \end{itemize}
+
+\subsection{Identifiers and symbol literals}
+
+Where R$^5$RS allows a \meta{letter}, Scheme~48 allows in addition any
+character whose scalar value is greater than 127 and whose Unicode
+general category is Lu, Ll, Lt, Lm, Lo, Mn, Mc, Me, Nd, Nl, No, Pd, Pc,
+Po, Sc, Sm, Sk, So, or Co.
+
+Moreover, when a backslash appears in a symbol, it must start a
+\verb|\x|\meta{x}\meta{x}\ldots{}\verb|;| escape, which identifies an
+arbitrary character to include in the symbol. Note that a backslash
+itself can be specified as \verb|\x5C;|.
 
 \section{Character classification and case mappings}
 
