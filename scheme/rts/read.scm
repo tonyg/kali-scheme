@@ -350,14 +350,17 @@
 (define (sub-read-token c port)
   (let loop ((l (list (preferred-case c))) (n 1))
     (let ((c (peek-char port)))
-      (cond ((or (eof-object? c)
-		  (and (< (char->scalar-value c) *dispatch-table-limit*)
-		       (vector-ref read-terminating?-vector (char->scalar-value c))))
-             (reverse-list->string l n))
-            (else
-	     (read-char port)
-             (loop (cons (preferred-case c) l)
-                   (+ n 1)))))))
+      (if (eof-object? c)
+	  (reverse-list->string l n)
+	  (let ((sv (char->scalar-value c)))
+	    (if (if (< sv *dispatch-table-limit*)
+		    (vector-ref read-terminating?-vector sv)
+		    (binary-search *non-symbol-constituents-above-127* sv))
+		(reverse-list->string l n)
+		(begin
+		  (read-char port)
+		  (loop (cons (preferred-case c) l)
+			(+ n 1)))))))))
 
 (define (parse-token string port)
   (if (let ((c (string-ref string 0)))
@@ -411,3 +414,24 @@
 (define (reading-error port message . irritants)
   (apply signal 'read-error message
 	 (append irritants (list port))))
+
+; returns index of value (must be number) in vector
+(define (binary-search vec val)
+  (let ((size (vector-length vec)))
+    (let loop ((low 0)			; inclusive
+	       (high size))		; exclusive
+      (cond
+       ((< low (- high 1))
+	(let* ((pos (quotient (+ low high) 2)) ; always in
+	       (at (vector-ref vec pos)))
+	  (cond
+	   ((= val at) pos)
+	   ((< val at)
+	    (loop low pos))
+	   (else
+	    (loop pos high)))))
+       ((< low high)
+	(if (= val (vector-ref vec low))
+	    low
+	    #f))
+       (else #f)))))

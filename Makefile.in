@@ -686,7 +686,7 @@ scheme/env/unicode-info.scm: build/UnicodeData.txt			\
 	cd $(srcdir) &&							\
 		(echo ',batch';							\
 		echo ',config ,load scheme/link/unicode-data-packages.scm';	\
-		echo ",in unicode-data (create-unicode-tables \"build/UnicodeData.txt\" \"build/PropList.txt\" \"build/SpecialCasing.txt\" \"build/CompositionExclusions.txt\" \"scheme/env/unicode-info.scm\" \"scheme/big/unicode-normalization-info.scm\" \"scheme/srfi/srfi-14-base-char-sets.scm\")"		\
+		echo ",in unicode-data (create-unicode-tables \"build/UnicodeData.txt\" \"build/PropList.txt\" \"build/SpecialCasing.txt\" \"build/CompositionExclusions.txt\" \"scheme/env/unicode-info.scm\" \"scheme/rts/syntax-info.scm\" \"scheme/big/unicode-normalization-info.scm\" \"scheme/srfi/srfi-14-base-char-sets.scm\")"		\
 	) | $(RUNNABLE) -h 6000000
 
 # --------------------
