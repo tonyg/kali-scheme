@@ -76,10 +76,10 @@
   (vector-ref *canonical-decompositions*
 	      (binary-search *canonical-decomposition-scalar-values* s)))
 
-(define (string-nfd s)
+(define (string-normalize-nfd s)
   (decompose #f s))
 
-(define (string-nfkd s)
+(define (string-normalize-nfkd s)
   (decompose #t s))
 
 (define (decompose compat? s)
@@ -261,8 +261,8 @@
 		(loop (+ p 1) (+ p2 1) (+ i 1) (+ j 1))))
 	  (substring s 0 (min size p2))))))
 
-(define (string-nfc s)
-  (compose! (string-nfd s)))
+(define (string-normalize-nfc s)
+  (compose! (string-normalize-nfd s)))
 
-(define (string-nfkc s)
-  (compose! (string-nfkd s)))
+(define (string-normalize-nfkc s)
+  (compose! (string-normalize-nfkd s)))

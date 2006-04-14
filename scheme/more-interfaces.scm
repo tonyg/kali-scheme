@@ -420,10 +420,10 @@
 	  set-port-text-codec-according-to-bom!))
 
 (define-interface unicode-normalizations-interface
-  (export string-nfd
-	  string-nfkd
-	  string-nfc
-	  string-nfkc))
+  (export string-normalize-nfd
+	  string-normalize-nfkd
+	  string-normalize-nfc
+	  string-normalize-nfkc))
 
 ; --------------------
 ; Big Scheme
