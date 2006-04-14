@@ -170,7 +170,11 @@
         (cond ((eof-object? c)
                (reading-error port "end of file within a string"))
               ((char=? c #\\)
-	       (loop (cons (decode-escape port) l) (+ i 1)))
+	       (cond
+		((decode-escape port)
+		 => (lambda (e)
+		      (loop (cons e l) (+ i 1))))
+		(else (loop l i))))
               ((char=? c #\")
 	       (reverse-list->string l i))
               (else
@@ -182,10 +186,20 @@
 	(reading-error port "end of file within a string"))
     (let ((scalar-value (char->scalar-value c)))
       (cond
-       ((or (char=? c #\\) (char=? c #\")
-	    (char=? c #\') (char=? c #\newline)) ; proposed for R6RS
+       ((or (char=? c #\\) (char=? c #\"))
 	c)
-       ;; these are all from Matthew Flatt's proposal for R6RS
+       ((char=? c #\newline)
+	;; SRFI 75; skip intra-line whitespace
+	(let loop ()
+	  (let ((c (peek-char port)))
+	    (cond 
+	     ((eof-object? c)
+	      (reading-error port "end of file within a string"))
+	     ((char-unicode-whitespace? c)
+	      (read-char port)
+	      (loop))
+	     (else #f)))))
+       ;; SRFI 75
        ((char=? c #\a) *alarm*)
        ((char=? c #\b) *backspace*)
        ((char=? c #\t) *tab*)
@@ -381,11 +395,14 @@
 	))
 
 (define (delimiter? c)
-  (or (char-whitespace? c)
+  (or (char-unicode-whitespace? c)
       (char=? c #\))
       (char=? c #\()
       (char=? c #\")
       (char=? c #\;)))
+
+(define (char-unicode-whitespace? c)
+  (binary-search *whitespaces* (char->scalar-value c)))
 
 ;--- This loses because the compiler won't in-line it.
 ; and it's in READ's inner loop.

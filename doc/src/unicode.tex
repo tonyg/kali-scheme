@@ -34,7 +34,7 @@ encode scalar values with two 16-bit words.  Note that this
 representation differs from that of Java, which uses UTF-16 code units
 as the character representation---Scheme~48 effectively uses UTF-32,
 and is thus in line with other Scheme implementations and the current
-Unicode proposal for R$^6$RS.
+Unicode proposal for R$^6$RS, as set forth in SRFI~75.
 
 The R$^5$RS procedures \code{char->integer} and \code{integer->char}
 are synonyms for \code{char->scalar-value} and
@@ -77,7 +77,7 @@ R$^5$RS provides:
 \item \verb|\r|: return (ASCII 13) 
 \item \verb|\e|: escape (ASCII 27) 
 \item \verb|\'|: quote (ASCII 39, same as unquoted) 
-\item \verb|\|\meta{newline}: elided (allows a single-line string to
+\item \verb|\|\meta{newline}\meta{intraline whitespace}: elided (allows a single-line string to
   span source lines)
 \item \verb|\x|\meta{x}\meta{x}\ldots{}\verb|;| hex, where \meta{x}\meta{x}\ldots{}
   denotes the scalar value of the character
