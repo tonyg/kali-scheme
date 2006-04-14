@@ -9,8 +9,6 @@ considered experimental.
 
 Specifically, the following caveats apply to the Windows port:
 
-o I/O is always binary; the I/O system doesn't perform any kind of
-  automatic CR/LF conversion.
 o UDP sockets don't work.  (But TCP sockets do.)
 o The "old-style" interface to loading external code dynamically
   doesn't work.  (But the new interface works---see doc\news.txt and
