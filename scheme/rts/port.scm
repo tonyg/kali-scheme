@@ -217,6 +217,14 @@
       (call-error "invalid argument" close-output-port port)))
 
 ;----------------
+
+(define (port-text-codec p)
+  (spec->text-codec (port-text-codec-spec p)))
+
+(define (set-port-text-codec! p codec)
+  (set-port-text-codec-spec! p (text-codec->spec codec)))
+
+;----------------
 ; Check that BUFFER contains COUNT characters starting from START.
 
 (define (okay-limits? buffer start count)

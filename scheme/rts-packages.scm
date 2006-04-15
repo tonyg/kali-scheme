@@ -108,7 +108,6 @@
 	byte-vectors
 	(subset primitives (encode-char decode-char))
 	(subset architecture (text-encoding-option))
-	(subset ports (port-text-codec-spec set-port-text-codec-spec!))
 	enumerated enum-case)
   (files (rts text-codec))
   (optimize auto-integrate))
@@ -194,7 +193,8 @@
 	simple-conditions	;define-condition-type
 	primitives	;make-immutable!
 	silly)		;reverse-list->string
-  (files (rts read))
+  (files (rts read)
+	 (rts syntax-info))
   (optimize auto-integrate))
 
 (define-structure scheme-level-2 scheme-level-2-interface
@@ -434,9 +434,10 @@
 					add-initialization-thunk!)
   (open scheme-level-1
 	(subset i/o-internal (initialize-i/o initialize-i/o-handlers!))
+	(subset i/o (set-port-text-codec!))
 	channel-i/o      ;initialize-channel-i/o
 	channel-ports    ;{in,out}put-channel->port
-	(subset text-codecs (find-text-codec set-port-text-codec!))
+	(subset text-codecs (find-text-codec))
 	session-data     ;initialize-session-data!
 	fluids-internal	 ;initialize-dynamic-state!
 	exceptions-internal

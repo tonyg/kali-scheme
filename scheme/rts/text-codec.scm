@@ -47,19 +47,14 @@
 		       (enum text-encoding-option utf-32be))
 		  1)))
 
-(define (port-text-codec p)
-  (let ((spec (port-text-codec-spec p)))
-    (if (text-codec? spec)
-	spec
-	(vector-ref *builtin-text-codecs* spec))))
+(define (spec->text-codec spec)
+  (if (text-codec? spec)
+      spec
+      (vector-ref *builtin-text-codecs* spec)))
 
-(define (set-port-text-codec! p codec)
-  (cond
-   ((text-codec-builtin-code codec)
-    => (lambda (code)
-	 (set-port-text-codec-spec! p code)))
-   (else
-    (set-port-text-codec-spec! p codec))))
+(define (text-codec->spec codec)
+  (or (text-codec-builtin-code codec)
+      codec))
 
 (define *text-codecs* '())
 

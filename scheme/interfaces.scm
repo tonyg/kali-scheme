@@ -563,6 +563,7 @@
 	  current-error-port
 	  current-noise-port
 	  force-output			;xport.scm
+	  port-text-codec set-port-text-codec!
 	  output-port-ready?
 	  input-port?
 	  output-port?
@@ -570,7 +571,7 @@
 	  make-null-output-port))
 
 (define-interface text-codecs-interface
-  (export port-text-codec set-port-text-codec!
+  (export spec->text-codec text-codec->spec
 	  text-codec? make-text-codec
 	  text-codec-names
 	  text-codec-decode-char-proc
