@@ -397,23 +397,34 @@
 ; --------------------
 
 (define-interface encodings-interface
-  (export char-encoding-length/utf-8
+  (export char-encoding-length
+	  string-encoding-length
+	  encode-char
+	  encode-string
+	  string->bytes-n
+	  string->bytes
+	  bytes-string-size
+	  decode-char
+	  decode-string
+	  bytes->string bytes->string-n
+	  
+	  char-encoding-length/utf-8
 	  string-encoding-length/utf-8
-	  (encoding-status :syntax)
-	  encoding-status?
 	  encode-char/utf-8
 	  encode-string/utf-8
 	  string->utf-8-n
 	  string->utf-8
-
-	  (decoding-status :syntax)
-	  decoding-status?
-	  &decoding-error decoding-error? decoding-error-encoding-name
-
 	  bytes-string-size/utf-8
 	  decode-char/utf-8
 	  decode-string/utf-8
-	  utf-8->string utf-8->string-n))
+	  utf-8->string utf-8->string-n
+
+	  (encoding-status :syntax)
+	  encoding-status?
+
+	  (decoding-status :syntax)
+	  decoding-status?
+	  &decoding-error decoding-error? decoding-error-encoding-name))
 
 (define-interface text-codec-utils-interface
   (export guess-port-text-codec-according-to-bom

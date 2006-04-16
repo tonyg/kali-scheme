@@ -118,12 +118,17 @@
   (open scheme-level-2
 	unicode
 	byte-vectors
-	(subset primitives (encode-char decode-char))
+	(modify primitives 
+		(prefix primitive-)
+		(expose encode-char decode-char))
 	(subset architecture (text-encoding-option))
+	text-codecs
 	enumerated
 	conditions exceptions
 	finite-types
+	proposals
 	(subset silly (reverse-list->string)))
+  (optimize auto-integrate)
   (files (big encoding)))
 
 (define-structure text-codec-utils text-codec-utils-interface
