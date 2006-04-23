@@ -104,7 +104,7 @@
 	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
 	srfi-39 srfi-40 srfi-42 srfi-43 srfi-45
-        srfi-60 srfi-61 srfi-62 srfi-66))
+        srfi-60 srfi-61 srfi-62 srfi-66 srfi-67))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -572,6 +572,8 @@
 	(sub-read port)))))
 
 
+; SRFI 66: Octet Vectors
+
 (define-interface srfi-66-interface
   (export make-u8vector
 	  u8vector?
@@ -583,9 +585,47 @@
 	  u8vector=?
 	  u8vector-compare))
 
-
 (define-structure srfi-66 srfi-66-interface
   (open scheme
 	byte-vectors
 	(subset primitives (copy-bytes!)))
   (files srfi-66))
+
+; SRFI 67: Compare Procedures
+
+(define-interface srfi-67-interface
+  (export boolean-compare
+	  char-compare char-compare-ci
+	  string-compare string-compare-ci
+	  symbol-compare
+	  integer-compare rational-compare real-compare complex-compare
+	  number-compare
+	  vector-compare vector-compare-as-list
+	  list-compare list-compare-as-vector
+	  pair-compare-car pair-compare-cdr
+	  pair-compare
+	  default-compare
+	  (refine-compare :syntax)
+	  (select-compare :syntax)
+	  (cond-compare :syntax)
+	  (if3 :syntax)
+	  ((if=? if<? if>? if<=? if>=? if-not=?) :syntax)
+	  =? <? >? <=? >=? not=?
+	  </<? </<=? <=/<? <=/<=? >/>? >/>=? >=/>? >=/>=?
+	  chain=? chain<? chain>? chain<=? chain>=?
+	  pairwise-not=?
+	  min-compare max-compare
+	  kth-largest
+	  compare-by< compare-by> compare-by<= compare-by>= compare-by=/< compare-by=/>
+	  debug-compare))
+
+(define-structure srfi-67 srfi-67-interface
+  (open scheme
+	srfi-16 ; CASE-LAMBDA
+	srfi-23 ; ERROR
+	srfi-27 ; RANDOM
+	)
+  (files srfi-67))
+
+	
+	  
