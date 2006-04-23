@@ -104,7 +104,7 @@
 	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
 	srfi-39 srfi-40 srfi-42 srfi-43 srfi-45
-        srfi-60 srfi-61 srfi-62))
+        srfi-60 srfi-61 srfi-62 srfi-66))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -572,3 +572,20 @@
 	(sub-read port)))))
 
 
+(define-interface srfi-66-interface
+  (export make-u8vector
+	  u8vector?
+	  list->u8vector u8vector->list
+	  u8vector
+	  u8vector-length
+	  u8vector-ref u8vector-set!
+	  u8vector-copy! u8vector-copy
+	  u8vector=?
+	  u8vector-compare))
+
+
+(define-structure srfi-66 srfi-66-interface
+  (open scheme
+	byte-vectors
+	(subset primitives (copy-bytes!)))
+  (files srfi-66))
