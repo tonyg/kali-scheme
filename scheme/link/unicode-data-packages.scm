@@ -3,7 +3,9 @@
 (define-structure unicode-data (export create-unicode-tables)
   (open scheme
 	finite-types destructuring define-record-types bitwise tables
-	(subset srfi-13 (string-index string-prefix? string-suffix? string-contains string-skip))
+	(subset srfi-13 (string-contains
+			 string-index string-prefix? string-suffix?  string-skip
+			 string-trim-both))
 	(subset srfi-14 (char-set:hex-digit char-set:whitespace))
 	(subset srfi-1 (iota find filter-map))
 	srfi-23 ; ERROR

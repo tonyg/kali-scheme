@@ -94,7 +94,11 @@
    *lowercase-offsets*)))
 
 (define (char-foldcase c)
-  (char-downcase (char-upcase c)))
+  (case (char->scalar-value c)
+    ((#x130 #x131) ; Turkish 0 and 1
+     c)
+    (else 
+     (char-downcase (char-upcase c)))))
 
 ; Now replace the ASCII-only procedures by these
 
@@ -185,16 +189,15 @@
 (define (string-downcase s)
   (string-xcase char-downcase prepend-specialcasing-downcase/reverse s))
 
+(define (prepend-specialcasing-foldcase/reverse c r s i size)
+  (let ((specialcasing
+	 (table-ref *specialcasing-table* (char->scalar-value c))))
+    (prepend-specialcasing-reverse (specialcasing-foldcase-start specialcasing)
+				   (specialcasing-foldcase-length specialcasing)
+				   c r)))
+
 (define (string-foldcase s)
-  ;; map to uppercase, then back to lowercase char-by-char
-  (let* ((ucase (string-upcase s))
-	 (size (string-length ucase)))
-    (let loop ((i 0))
-      (if (< i size)
-	  (begin
-	    (string-set! ucase i (char-downcase (string-ref ucase i)))
-	    (loop (+ 1 i))))
-      ucase)))
+  (string-xcase char-foldcase prepend-specialcasing-foldcase/reverse s))
 
 (define (string-ci-comparator cs-comp)
   (lambda (a-string b-string)

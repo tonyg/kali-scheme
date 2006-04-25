@@ -471,37 +471,34 @@
 	(list first))))
 
 ; assumes START points to whitespace or the first digit
-
+; returns list of scalar values + position after sequence
+; (possibly after trailing semicolon)
 (define (parse-scalar-values s start)
   (let ((size (string-length s)))
     (let loop ((start start) (rev-values '()))
       (let ((i1 (string-skip s char-set:whitespace start)))
-	(if (or (not i1) (char=? #\; (string-ref s i1)))
-	    (values (reverse rev-values) (+ 1 start))
-	    (let* ((i2 (or (string-skip s char-set:hex-digit i1)
-			   size))
-		   (n (string->number (substring s i1 i2) 16)))
-	      (loop i2 (cons n rev-values))))))))
-
-; Probably obsolete
-
-(define (parse-casefolding line)
-  (let* ((i1 (string-skip line char-set:hex-digit 0))
-	 (n (string->number (substring line 0 i1) 16))
-	 (i2 (string-skip line char-set:whitespace (+ 1 i1)))
-	 (status (string-ref line i2))
-	 (scalar-values (parse-scalar-values line (+ 2 i2))))
-    (values n status scalar-values)))
+	(cond
+	 ((not i1)
+	  (values (reverse rev-values) (+ start 1)))
+	 ((char=? #\; (string-ref s i1))
+	  (values (reverse rev-values) (+ i1 1)))
+	 (else
+	  (let* ((i2 (or (string-skip s char-set:hex-digit i1)
+			 size))
+		 (n (string->number (substring s i1 i2) 16)))
+	    (loop i2 (cons n rev-values)))))))))
 
 (define-record-type specialcasing :specialcasing
   (make-specialcasing scalar-value
-		      lowercase titlecase uppercase
+		      lowercase titlecase uppercase foldcase
 		      final-sigma?)
   specialcasing?
   (scalar-value specialcasing-scalar-value)
   (lowercase specialcasing-lowercase)
   (titlecase specialcasing-titlecase)
   (uppercase specialcasing-uppercase)
+  ;; This will actually come from CaseFolding.txt
+  (foldcase specialcasing-foldcase set-specialcasing-foldcase!)
   (final-sigma? specialcasing-final-sigma?))
 
 (define (parse-specialcasing-line line)
@@ -516,11 +513,16 @@
 	    (call-with-values
 		(lambda () (parse-scalar-values line i3))
 	      (lambda (uppercase i4)
-		(let ((final-sigma?
-		       (and (string-contains line "Final_Sigma" i4) #t)))
-		  (make-specialcasing n
-				      lowercase titlecase uppercase
-				      final-sigma?))))))))))
+		(let ((i5 (or (string-index line #\; (+ 1 i4))
+			      (string-index line #\# (+ 1 i4))
+			      (string-length line))))
+		  (let ((conditions (string-trim-both (substring line i4 i5))))
+		    (if (or (string=? "" conditions)
+			    (string=? "Final_Sigma" conditions))
+			(make-specialcasing n
+					    lowercase titlecase uppercase #f
+					    (string=? conditions "Final_Sigma"))
+			#f)))))))))))
 
 (define (parse-specialcasing filename)
   (call-with-input-file filename
@@ -529,12 +531,74 @@
 	(let ((thing (read-line port)))
 	  (if (eof-object? thing)
 	      specialcasings
-	      (if (and (not (string=? "" thing))
-		       (not (char=? #\# (string-ref thing 0))))
-		  (loop (cons (parse-specialcasing-line thing)
-			      specialcasings))
-		  (loop specialcasings))))))))
+	      (cond
+	       ((and (not (string=? "" thing))
+		     (not (char=? #\# (string-ref thing 0)))
+		     (parse-specialcasing-line thing))
+		=> (lambda (sc)
+		     (loop (cons sc specialcasings))))
+	       (else (loop specialcasings)))))))))
 
+; we only extract the common and full case foldings
+(define (parse-casefolding-line line)
+  (let* ((i1 (string-skip line char-set:hex-digit 0))
+	 (n (string->number (substring line 0 i1) 16))
+	 (i2 (string-skip line char-set:whitespace (+ 1 i1)))
+	 (status (string-ref line i2)))
+    (call-with-values
+	(lambda ()
+	  (parse-scalar-values line (+ 2 i2)))
+      (lambda (scalar-values i)
+	(cond
+	 ((or (char=? status #\C)
+	      (char=? status #\F))
+	  (cons n (cons status scalar-values)))
+	 ((> (length scalar-values) 1)
+	  (error "multi-character common case-folding mapping"))
+	 (else #f))))))
+
+(define (parse-casefolding filename)
+  (call-with-input-file filename
+    (lambda (port)
+      (let loop ((casefoldings '()))
+	(let ((thing (read-line port)))
+	  (cond
+	   ((eof-object? thing) casefoldings)
+	   ((and (not (string=? "" thing))
+		 (not (char=? #\# (string-ref thing 0)))
+		 (parse-casefolding-line thing))
+	    => (lambda (folding)
+		 (loop (cons folding casefoldings))))
+	   (else (loop casefoldings))))))))
+
+(define (merge-specialcasings+casefoldings! specialcasings casefoldings)
+  (for-each
+   (lambda (casefolding)
+     (let ((sv (car casefolding))
+	   (status (cadr casefolding))
+	   (folding (cddr casefolding)))
+       (cond
+	((find (lambda (specialcasing)
+		 (= (specialcasing-scalar-value specialcasing) sv))
+	       specialcasings)
+	 => (lambda (specialcasing)
+	      (set-specialcasing-foldcase! specialcasing folding)))
+	((char=? status #\F) ; the others will be covered by UnicodeData.txt
+	 (let ((sv-list (list sv)))
+	   (set! specialcasings
+		 (cons
+		  (make-specialcasing sv
+				      sv-list sv-list sv-list
+				      folding
+				      #f)
+		  specialcasings)))))))
+   casefoldings)
+  specialcasings)
+
+(define (parse-specialcasing+casefolding specialcasing-filename casefolding-filename)
+  (let ((specialcasings (parse-specialcasing specialcasing-filename))
+	(casefoldings (parse-casefolding casefolding-filename)))
+    (merge-specialcasings+casefoldings! specialcasings casefoldings)))
 
 (define (list-prefix? l1 l2)
   (let loop ((l1 l1) (l2 l2))
@@ -570,9 +634,11 @@
 	    (titlecase (cons (add-casing! (specialcasing-titlecase s))
 			     (length  (specialcasing-titlecase s))))
 	    (uppercase (cons (add-casing! (specialcasing-uppercase s))
-			     (length  (specialcasing-uppercase s)))))
+			     (length  (specialcasing-uppercase s))))
+	    (foldcase (cons (add-casing! (specialcasing-foldcase s))
+			    (length (specialcasing-foldcase s)))))
 	(make-specialcasing (specialcasing-scalar-value s)
-			    lowercase titlecase uppercase
+			    lowercase titlecase uppercase foldcase
 			    (specialcasing-final-sigma? s))))
     
     (let ((transformed
@@ -593,25 +659,26 @@
   (call-with-values
       (lambda () (specialcasing-encoding specialcasings))
     (lambda (encodings casings)
-
-      (for-each
-       (lambda (specialcasing encoding)
+      (let ((casings (list->vector casings)))
+	(for-each
+	 (lambda (specialcasing encoding)
 	 
-	 (define (check select)
-	   (let ((pair (select encoding))
-		 (reference (select specialcasing)))
-	     (if (not
-		  (equal? reference
-			  (specialcasing-encoding-ref casings 
-						      (car pair) (cdr pair))))
-		 (error "encoding failure" encoding
-			reference (specialcasing-encoding-ref casings
-							      (car pair) (cdr pair))))))
+	   (define (check select)
+	     (let ((pair (select encoding))
+		   (reference (select specialcasing)))
+	       (if (not
+		    (equal? reference
+			    (specialcasing-encoding-ref casings 
+							(car pair) (cdr pair))))
+		   (error "encoding failure" encoding
+			  reference (specialcasing-encoding-ref casings
+								(car pair) (cdr pair))))))
 
-	 (check specialcasing-lowercase)
-	 (check specialcasing-uppercase)
-	 (check specialcasing-titlecase))
-       specialcasings encodings))))
+	   (check specialcasing-lowercase)
+	   (check specialcasing-uppercase)
+	   (check specialcasing-titlecase)
+	   (check specialcasing-foldcase))
+	 specialcasings encodings)))))
 
 (define (specialcasings->table specialcasings)
   (let ((table (make-integer-table)))
@@ -698,13 +765,15 @@
 (define (create-unicode-tables unicode-data-filename
 			       proplist-filename
 			       specialcasing-filename
+			       casefolding-filename
 			       composition-exclusions-filename
 			       category-output-file
 			       syntax-info-output-file
 			       normalization-output-file
 			       srfi-14-base-output-file)
   (let ((infos (parse-unicode-data unicode-data-filename))
-	(specialcasings (parse-specialcasing specialcasing-filename)))
+	(specialcasings (parse-specialcasing+casefolding specialcasing-filename
+							 casefolding-filename)))
     (call-with-values
 	(lambda ()
 	  (parse-proplist-for-upper/lowercase proplist-filename))
@@ -809,6 +878,7 @@
 			      lowercase-start lowercase-length
 			      titlecase-start titlecase-length
 			      uppercase-start uppercase-length
+			      foldcase-start foldcase-length
 			      final-sigma?)
 	  specialcasing?
 	  (scalar-value specialcasing-scalar-value)
@@ -818,6 +888,8 @@
 	  (titlecase-length specialcasing-titlecase-length)
 	  (uppercase-start specialcasing-uppercase-start)
 	  (uppercase-length specialcasing-uppercase-length)
+	  (foldcase-start specialcasing-foldcase-start)
+	  (foldcase-length specialcasing-foldcase-length)
 	  (final-sigma? specialcasing-final-sigma?))
        port)
       (newline port)
@@ -840,6 +912,8 @@
 			,(cdr (specialcasing-titlecase c))
 			,(car (specialcasing-uppercase c))
 			,(cdr (specialcasing-uppercase c))
+			,(car (specialcasing-foldcase c))
+			,(cdr (specialcasing-foldcase c))
 			,(specialcasing-final-sigma? c)))
 	  port)
 	 (newline port))
