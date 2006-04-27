@@ -55,6 +55,8 @@
 
 (define (write-c-header header out)
   (format out "#include <stdio.h>~%")
+  (format out "#include <string.h>~%")
+  (format out "#include <stdlib.h>~%")
   (format out "#include \"prescheme.h\"~%")
   (for-each (lambda (s)
 	      (display s out)
