@@ -88,14 +88,18 @@
 
 ; 3-sided conditional
 
+; Scheme 48 hack: Using COND + EQ? over CASE speeds things up quite a
+; bit; this isn't portable, however.
+
 (define-syntax if3
   (syntax-rules ()
-    ((if3 c less equal greater)
-     (case c
-       ((-1) less)
-       (( 0) equal)
-       (( 1) greater)
-       (else (error "comparison value not in {-1,0,1}"))))))
+    ((if3 ?c ?less ?equal ?greater)
+     (let ((c ?c))
+       (cond
+	((eq? c -1) ?less)
+	((eq? c 0) ?equal)
+	((eq? c 1) ?greater)
+	(else (error "comparison value not in {-1,0,1}")))))))
 
 
 ; 2-sided conditionals for comparisons
