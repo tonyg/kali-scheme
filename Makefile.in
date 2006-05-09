@@ -465,10 +465,7 @@ image: $(INITIAL)
 test: check
 
 tags:
-	etags scheme/vm/interp/arch.scm scheme/rts/*.scm scheme/bcomp/*.scm \
-	scheme/*.scm scheme/env/*.scm scheme/big/*.scm scheme/link/*.scm \
-	scheme/opt/*.scm scheme/debug/*.scm scheme/misc/*.scm scheme/sort/*.scm \
-	scheme/cml/*.scm
+	find . -name "*.scm" -o -name "*.c" -o -name "*.h" | etags -
 
 # --------------------
 # Distribution...
