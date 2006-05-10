@@ -346,7 +346,7 @@
 					 encode-count-cr
 					 (- (byte-vector-length buffer) encode-count-cr)))
 			(lambda (ok? encode-count-lf)
-			;; OK? must be true
+			  ;; OK? must be true
 			  (+ encode-count-cr encode-count-lf))))))
 		 (atomically
 		  (call-with-values
@@ -354,8 +354,15 @@
 			(encode-char ch
 				     buffer 0 (byte-vector-length buffer)))
 		    (lambda (ok? encode-count)
-		      ;; OK? must be true
-		      encode-count))))))
+		      (if ok?
+			  encode-count
+			  ;; hrmpfl ...
+			  (call-with-values
+			      (lambda ()
+				(encode-char #\?
+					     buffer 0 (byte-vector-length buffer)))
+			    (lambda (ok? encode-count)
+			      encode-count)))))))))
 	(let loop ((index 0))
 	  (let* ((to-write (- encode-count index))
 		 (written
