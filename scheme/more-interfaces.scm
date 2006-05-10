@@ -352,7 +352,7 @@
 	  &call-error call-error?
 	  call-error-proc call-error-args
 	  &vm-exception vm-exception?
-	  vm-exception-opcode vm-exception-reason
+	  vm-exception-opcode vm-exception-reason vm-exception-arguments
 	  &warning warning?
 	  &note note?
 	  &syntax-error syntax-error?
