@@ -310,7 +310,7 @@ Returns \code{\#t} if \cvar{value} is an array.
 \proto{array-ref}{ array index$_0$ \ldots}{value}
 \protonoresultnoindex{array-set!}{ array value index$_0$ \ldots}\mainschindex{array-set"!}
 \proto{array->vector}{ array}{vector}
-\proto{array-dimensions}{ array}{list}
+\proto{array-shape}{ array}{list}
 \end{protos}
 \noindent
 \code{Array-ref} returns the specified array element and \code{array-set!}
@@ -325,7 +325,7 @@ Returns \code{\#t} if \cvar{value} is an array.
 
 \code{Array->vector} returns a vector containing the elements of \cvar{array}
  in row-major order.
-\code{Array-dimensions} returns the dimensions of
+\code{Array-shape} returns the dimensions of
  the array as a list.
 
 \begin{protos}
@@ -337,7 +337,7 @@ Returns \code{\#t} if \cvar{value} is an array.
 \cvar{Linear-map} must accept as many arguments as the number of
  \cvar{dimension}s given and must return a list of non-negative integers
  that are valid indexes into \cvar{array}.
-<\begin{example}
+\begin{example}
 (array-ref (make-shared-array a f i0 i1 ...)
            j0 j1 ...)
 \end{example}
@@ -350,12 +350,12 @@ As an example, the following function makes the transpose of a two-dimensional
  array:
 \begin{example}
 (define (transpose array)
-  (let ((dimensions (array-dimensions array)))
+  (let ((shape (array-shape array)))
     (make-shared-array array
                        (lambda (x y)
                          (list y x))
-                       (cadr dimensions)
-                       (car dimensions))))
+                       (cadr shape)
+                       (car shape))))
 
 (array->vector
   (transpose
