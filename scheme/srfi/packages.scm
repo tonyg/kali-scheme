@@ -105,7 +105,7 @@
 	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
 	srfi-39 srfi-40 srfi-42 srfi-43 srfi-45
         srfi-60 srfi-61 srfi-62 srfi-66 srfi-67
-	srfi-74))
+	srfi-74 srfi-78))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -669,3 +669,18 @@
 	srfi-66 ; U8VECTOR
 	)
   (files srfi-74))
+
+; SRFI 78: Lightweight testing
+
+(define-interface srfi-78-interface
+  (export (check :syntax)
+          (check-ec :syntax)
+          check-report
+          check-set-mode!
+          check-reset!
+          check-passed?))
+
+(define-structure srfi-78 srfi-78-interface
+  (open scheme srfi-42
+        (subset signals (error)))
+  (files srfi-78))
