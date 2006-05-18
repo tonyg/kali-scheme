@@ -405,7 +405,6 @@
 
 (define strange-symbol-names
   '("+" "-" "..."
-	"1+" "-1+"  ;Only for S&ICP support
 	"->"	    ;Only for JAR's thesis
 	))
 
