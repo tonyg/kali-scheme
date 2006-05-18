@@ -2434,6 +2434,7 @@ Scheme~48 includes implementations of the following (final) SRFIs:
 \begin{itemize}
 \item SRFI 1 -- List Library
 \item SRFI 2 -- \code{and-let*}
+\item SRFI 4 -- Homogeneous numeric vector datatypes (see note below)
 \item SRFI 5 -- \code{let} with signatures and rest arguments
 \item SRFI 6 -- Basic string ports
 \item SRFI 7 -- Program configuration
@@ -2462,11 +2463,17 @@ Scheme~48 includes implementations of the following (final) SRFIs:
 \item SRFI 60 -- Integers as Bits
 \item SRFI 61 -- A more general cond clause
 \item SRFI 62 -- S-expression comments
+\item SRFI 63 -- Homogeneous and Heterogeneous Arrays
 \item SRFI 66 -- Octet Vectors
 \item SRFI 67 -- Compare Procedures
 \item SRFI 74 -- Octet-Addressed Binary Blocks
+\item SRFI 78 -- Lightweight testing
 \end{itemize}
 Documentation on these can be found at the web site mentioned above.
+
+SRFI~4 specifies an external representation for homogeneous numeric
+vectors that is incompatible with R$^5$RS.  The Scheme~48 version of
+SRFI~4 does not support this external representation.
 
 SRFI~14 includes the procedure \code{->char-set} which is not a standard
  Scheme identifier (in R$^5$RS the only required identifier starting
