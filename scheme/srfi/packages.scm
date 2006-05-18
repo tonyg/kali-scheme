@@ -54,7 +54,35 @@
   (files srfi-2))
 
 ; SRFI-3 - withdrawn
-; SRFI-4 - needs hacks to the reader
+
+; SRFI 4: Homogeneous numeric vector datatypes
+; Does not include hacks to the reader.
+; Does not include float vectors.
+
+(define-interface srfi-4-interface
+  (export
+   s8vector? make-s8vector s8vector s8vector-length
+   s8vector-ref s8vector-set! s8vector->list list->s8vector
+   u8vector? make-u8vector u8vector u8vector-length
+   u8vector-ref u8vector-set! u8vector->list list->u8vector
+   s16vector? make-s16vector s16vector s16vector-length
+   s16vector-ref s16vector-set! s16vector->list list->s16vector
+   u16vector? make-u16vector u16vector u16vector-length
+   u16vector-ref u16vector-set! u16vector->list list->u16vector
+   s32vector? make-s32vector s32vector s32vector-length
+   s32vector-ref s32vector-set! s32vector->list list->s32vector
+   u32vector? make-u32vector u32vector u32vector-length
+   u32vector-ref u32vector-set! u32vector->list list->u32vector
+   s64vector? make-s64vector s64vector s64vector-length
+   s64vector-ref s64vector-set! s64vector->list list->s64vector
+   u64vector? make-u64vector u64vector u64vector-length u64vector-ref
+   u64vector-set! u64vector->list list->u64vector
+   ))
+
+(define-structure srfi-4 srfi-4-interface
+  (open scheme define-record-types srfi-16 srfi-74)  ; reading
+  (files srfi-4))
+
 
 ; A compatible let form with signatures and rest arguments
 
@@ -99,7 +127,7 @@
 
   (begin
     (define available-srfis
-      '(srfi-1 srfi-2 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
+      '(srfi-1 srfi-2 srfi-4 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
 	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
 	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
