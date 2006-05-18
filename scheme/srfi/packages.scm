@@ -132,7 +132,7 @@
 	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
 	srfi-39 srfi-40 srfi-42 srfi-43 srfi-45
-        srfi-60 srfi-61 srfi-62 srfi-66 srfi-67
+        srfi-60 srfi-61 srfi-62 srfi-63 srfi-66 srfi-67
 	srfi-74 srfi-78))
 
     ; Some SRFI's redefine Scheme variables.
@@ -143,7 +143,8 @@
 	(srfi-17 set!)
 	(srfi-45 force delay)
 	(srfi-43 vector-fill! vector->list list->vector)
-        (srfi-61 cond)))
+        (srfi-61 cond)
+        (srfi-63 equal?)))
     )
 
   (files srfi-7))
@@ -600,6 +601,25 @@
 	(sub-read-carefully port)
 	(sub-read port)))))
 
+; SRFI 63: Homogeneous and Heterogeneous Arrays
+
+(define-interface srfi-63-interface
+  (export array? equal? array-rank array-dimensions make-array
+          make-shared-array list->array array->list vector->array
+          array->vector array-in-bounds? array-ref array-set!
+          a:fixz8b a:fixz16b a:fixz32b a:fixz64b
+          a:fixn8b a:fixn16b a:fixn32b a:fixn64b          
+          a:floc16b a:floc32b a:floc64b a:floc128b
+          a:flor16b a:flor32b a:flor64b a:flor128b          
+          a:floq32d a:floq64d a:floq128d
+          a:bool))
+
+(define-structure srfi-63 srfi-63-interface
+  (open (modify scheme-level-2 (hide equal?)) ; redefined
+        define-record-types
+        srfi-4 srfi-16
+        (subset signals (error)))  
+  (files srfi-63))
 
 ; SRFI 66: Octet Vectors
 
