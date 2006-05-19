@@ -1,16 +1,5 @@
 ;; SRFI 63: Homogeneous and Heterogeneous Arrays
 
-;; Until the SRFI 4 implementation includes float vectors,
-;; these definitions are needed:
-
-(define make-f64vector make-vector)
-(define f64vector-ref vector-ref)
-(define f64vector-set! vector-set!)
-
-(define make-f32vector make-vector)
-(define f32vector-ref vector-ref)
-(define f32vector-set! vector-set!)
-
 (define-syntax enumerate
   (syntax-rules ()
     ((enumerate name (const val) ...)
