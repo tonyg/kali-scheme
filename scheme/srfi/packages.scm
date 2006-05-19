@@ -56,8 +56,7 @@
 ; SRFI-3 - withdrawn
 
 ; SRFI 4: Homogeneous numeric vector datatypes
-; Does not include hacks to the reader.
-; Does not include float vectors.
+; Does not include hacks to the reader (intentionally).
 
 (define-interface srfi-4-interface
   (export
@@ -77,10 +76,14 @@
    s64vector-ref s64vector-set! s64vector->list list->s64vector
    u64vector? make-u64vector u64vector u64vector-length u64vector-ref
    u64vector-set! u64vector->list list->u64vector
+   f32vector? make-u32vector f32vector f32vector-length f32vector-ref
+   f32vector-set! f32vector->list list->f32vector
+   f64vector? make-f64vector f64vector f64vector-length f64vector-ref
+   f64vector-set! f64vector->list list->f64vector   
    ))
 
 (define-structure srfi-4 srfi-4-interface
-  (open scheme define-record-types srfi-16 srfi-74)  ; reading
+  (open scheme define-record-types srfi-16 srfi-60 srfi-74)  ; reading
   (files srfi-4))
 
 
