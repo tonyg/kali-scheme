@@ -136,7 +136,7 @@
 	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
 	srfi-39 srfi-40 srfi-42 srfi-43 srfi-45
         srfi-60 srfi-61 srfi-62 srfi-63 srfi-66 srfi-67
-	srfi-74 srfi-78))
+	srfi-71 srfi-74 srfi-78))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -147,9 +147,10 @@
 	(srfi-45 force delay)
 	(srfi-43 vector-fill! vector->list list->vector)
         (srfi-61 cond)
-        (srfi-63 equal?)))
+        (srfi-63 equal?)
+        (srfi-71 let let* letrec)))
     )
-
+  
   (files srfi-7))
 
 ; receive: Binding to multiple values
@@ -678,6 +679,36 @@
 	srfi-27 ; RANDOM
 	)
   (files srfi-67))
+
+; SRFI 71: Extended LET-syntax for multiple values
+
+(define-interface srfi-71-interface
+  (export ((let let* letrec) :syntax)
+          ((values->list values->vector) :syntax)
+          uncons
+          uncons-2
+          uncons-3
+          uncons-4
+          uncons-cons
+          unlist
+          unvector))
+
+(define-structure srfi-71 srfi-71-interface
+  (open (modify scheme
+                (rename (let r5rs-let)
+                        (let* r5rs-let*)
+                        (letrec r5rs-letrec))))
+  (files srfi-71)
+  (begin
+    (define-syntax let
+      (syntax-rules ()
+        ((let . args) (srfi-let . args))))
+    (define-syntax let*
+      (syntax-rules ()
+        ((let* . args) (srfi-let* . args))))
+    (define-syntax letrec
+      (syntax-rules ()
+        ((letrec . args) (srfi-letrec* . args))))))
 
 ; SRFI 74: Octet-addressed binary objects
 
