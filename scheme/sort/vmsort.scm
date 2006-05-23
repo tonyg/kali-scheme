@@ -47,9 +47,9 @@
 ;;; If these preconditions hold, the routine can be bummed to run with 
 ;;; unsafe vector-indexing and fixnum arithmetic ops:
 ;;;   - V V1 V2 are vectors.
-;;;   - START0 START1 END1 START2 END2 are fixnums.
-;;;   - (<= 0 START0 END0 (vector-length V),
-;;;     where end0 = start0 + (end1 - start1) + (end2 - start2)
+;;;   - START START1 END1 START2 END2 are fixnums.
+;;;   - (<= 0 START END0 (vector-length V),
+;;;     where end0 = start + (end1 - start1) + (end2 - start2)
 ;;;   - (<= 0 START1 END1 (vector-length V1))
 ;;;   - (<= 0 START2 END2 (vector-length V2))
 ;;; If you put these error checks in the two client procedures above, you can
@@ -57,14 +57,14 @@
 ;;; exported. This will provide *huge* speedup.
 
 (define (%vector-merge! elt< v v1 v2 start start1 end1 start2 end2)
-  (letrec ((vblit (lambda (fromv j i end)      ; Blit FROMV[J,END) to V[I,?].
+  (letrec ((vblit (lambda (fromv j i end) ; Blit FROMV[J,END) to V[I,?].
 		    (let lp ((j j) (i i))
 		      (vector-set! v i (vector-ref fromv j))
 		      (let ((j (+ j 1)))
 			(if (< j end) (lp j (+ i 1))))))))
 
-    (cond ((<= end1 start1) (if (< start2 end2) (vblit v2 start2 start)))
-	  ((<= end2 start2) (vblit v1 start1 start))
+    (cond ((<= end1 start1) (if (< start2 end2) (vblit v2 start2 start end2)))
+          ((<= end2 start2) (vblit v1 start1 start end1))
 
 	  ;; Invariants: I is next index of V to write; X = V1[J]; Y = V2[K].
 	  (else (let lp ((i start)
@@ -80,8 +80,8 @@
 			(let ((j (+ j 1)))
 			  (vector-set! v i x)
 			  (if (< j end1)
-			      (vblit v2 k i1 end2)
-			      (lp i1 j (vector-ref v1 j) k y))))))))))
+			      (lp i1 j (vector-ref v1 j) k y)
+			      (vblit v2 k i1 end2))))))))))
 
 
 ;;; (vector-merge-sort  < v [start end temp]) -> vector
