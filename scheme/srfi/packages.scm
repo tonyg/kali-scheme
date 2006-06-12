@@ -693,22 +693,27 @@
           unlist
           unvector))
 
-(define-structure srfi-71 srfi-71-interface
+(define-structure srfi-71*
+  (export ((srfi-let srfi-let* srfi-letrec) :syntax)
+          ((values->list values->vector) :syntax)
+          uncons
+          uncons-2
+          uncons-3
+          uncons-4
+          uncons-cons
+          unlist
+          unvector)  
   (open (modify scheme
                 (rename (let r5rs-let)
                         (let* r5rs-let*)
                         (letrec r5rs-letrec))))
-  (files srfi-71)
-  (begin
-    (define-syntax let
-      (syntax-rules ()
-        ((let . args) (srfi-let . args))))
-    (define-syntax let*
-      (syntax-rules ()
-        ((let* . args) (srfi-let* . args))))
-    (define-syntax letrec
-      (syntax-rules ()
-        ((letrec . args) (srfi-letrec* . args))))))
+  (files srfi-71))
+
+(define-structure srfi-71 srfi-71-interface
+  (open (modify srfi-71*
+                (rename (srfi-let let)
+                        (srfi-let* let*)
+                        (srfi-letrec letrec)))))
 
 ; SRFI 74: Octet-addressed binary objects
 
