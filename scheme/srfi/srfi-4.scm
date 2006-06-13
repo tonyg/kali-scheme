@@ -132,9 +132,10 @@
   
   (define (mantissa expn b2 b3 b4)
     (case expn   ; recognize special literal exponents
-      ((255) #f)
+      ((255) #f) ; won't handle NaN and +/- Inf
       ((0)       ; denormalized
-       (exact->inexact (* (expt 2 (- 1 (+ 127 23))) (combine b2 b3 b4))))
+       (exact->inexact (* (expt 2 (- 1 (+ 127 23)))
+                          (combine b2 b3 b4))))
       (else
        (exact->inexact
         (* (expt 2 (- expn (+ 127 23)))
@@ -147,15 +148,15 @@
   
   (define (sign b1 b2 b3 b4)
     (if (> b1 127)  ; 1st bit of b1 is sign
-        (cond ((exponent (- b1 128) b2 b3 b4) => -) (else #f))
+        (cond ((exponent (- b1 128) b2 b3 b4) => -)
+              (else #f))
         (exponent b1 b2 b3 b4)))
   
   (let* ((b  (uint-list->blob 4 (endianness big) (list n)))
          (b1 (blob-u8-ref b 0))  
          (b2 (blob-u8-ref b 1))
          (b3 (blob-u8-ref b 2))  
-         (b4 (blob-u8-ref b 3)))
-    
+         (b4 (blob-u8-ref b 3)))    
     (sign b1 b2 b3 b4)))
 
 ;; Takes an unsigned 64 bit integer to the flonum it represents.
@@ -165,21 +166,24 @@
     (case expn   ; recognize special literal exponents
       ((255) #f) ; won't handle NaN and +/- Inf
       ((0)       ; denormalized
-       (exact->inexact (* (expt 2.0 (- 1 (+ 1023 52)))
+       (exact->inexact (* (expt 2 (- 1 (+ 1023 52)))
                           (combine b2 b3 b4 b5 b6 b7 b8))))
       (else
        (exact->inexact
-        (* (expt 2.0 (- expn (+ 1023 52)))
+        (* (expt 2 (- expn (+ 1023 52)))
            (combine (+ b2 16) b3 b4 b5 b6 b7 b8)))))) ; hidden bit
+
   (define (exponent b1 b2 b3 b4 b5 b6 b7 b8)
     (mantissa (bitwise-ior (arithmetic-shift b1 4)          ; 7 bits
                            (extract-bit-field 4 4 b2))      ; + 4 bits
               (extract-bit-field 4 0 b2) b3 b4 b5 b6 b7 b8))
+
   (define (sign b1 b2 b3 b4 b5 b6 b7 b8)
     (if (> b1 127)  ; 1st bit of b1 is sign
         (cond ((exponent (- b1 128) b2 b3 b4 b5 b6 b7 b8) => -)
               (else #f))
         (exponent b1 b2 b3 b4 b5 b6 b7 b8)))
+
   (let* ((b  (uint-list->blob 8 (endianness big) (list n)))
          (b1 (blob-u8-ref b 0))  (b2 (blob-u8-ref b 1))
          (b3 (blob-u8-ref b 2))  (b4 (blob-u8-ref b 3))
