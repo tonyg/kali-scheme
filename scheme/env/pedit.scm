@@ -172,24 +172,25 @@
 
 ;; Deal with editing operations
 
-(define (really-verify-later! thunk)           ;cf. define-structure macro
-  (let ((loser (ignore-errors thunk)))
-    (cond ((or (structure? loser)
-               (interface? loser))
-	   ;; (write `(loser: ,loser)) (newline)
-	   (let ((cell (fluid $losers)))
-	     (cell-set! cell
-			(cons loser
-			      (cell-ref cell)))))))
-  #f)
+(define (really-verify-later! thunk)	;cf. define-structure macro
+  (let ((cell (fluid $loser-thunks)))
+    (cell-set! cell
+	       (cons thunk
+		     (cell-ref cell)))))
 
-(define $losers (make-fluid (make-cell '())))
+(define $loser-thunks (make-fluid (make-cell '())))
 (define $package-losers (make-fluid (make-cell '())))
 
 (define (package-system-sentinel)
-  (drain $losers verify-loser)
+  (drain $loser-thunks verify-loser-thunk)
   (drain $package-losers verify-package))
 
+(define (verify-loser-thunk thunk)
+  (let ((loser (ignore-errors thunk)))
+    (if (or (structure? loser)
+	    (interface? loser))
+	(verify-loser loser))))
+ 
 (define (verify-loser loser)
   (if *debug?*
       (begin (write `(verify-loser ,loser)) (newline)))
