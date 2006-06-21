@@ -318,24 +318,29 @@
 (define (sync-prim-rv prim-rv)
   (let ((poll-thunk (prim-rv-poll-thunk prim-rv))
 	(wrap-proc (prim-rv-wrap-proc prim-rv)))
-    (with-new-proposal (lose)
-      (let ((status ((prim-rv-poll-thunk prim-rv))))
-	(cond
-	 ((enabled? status)
-	  (let* ((queue (make-queue))
-		 (value ((enabled-do-proc status) queue)))
-	    (if (maybe-commit-and-make-ready queue)
-		(wrap-proc value)
-		(lose))))
-	 ((blocked? status)
-	  (let ((trans-id (make-trans-id)))
-	    ((blocked-proc status) trans-id values wrap-proc)
-	    (cond
-	     ((maybe-commit-and-trans-id-value trans-id)
-	      => (lambda (pair)
-		   ((cdr pair) (car pair))))
-	     (else
-	      (lose))))))))))
+    (let ((old (current-proposal)))
+      (let lose ()
+	(set-current-proposal! (make-proposal))
+	(let ((status ((prim-rv-poll-thunk prim-rv))))
+	  (cond
+	   ((enabled? status)
+	    (let* ((queue (make-queue))
+		   (value ((enabled-do-proc status) queue)))
+	      (if (maybe-commit-and-make-ready queue)
+		  (begin
+		    (set-current-proposal! old)
+		    (wrap-proc value))
+		  (lose))))
+	   ((blocked? status)
+	    (let ((trans-id (make-trans-id)))
+	      ((blocked-proc status) trans-id values wrap-proc)
+	      (cond
+	       ((maybe-commit-and-trans-id-value trans-id)
+		=> (lambda (pair)
+		     (set-current-proposal! old)
+		     ((cdr pair) (car pair))))
+	       (else
+		(lose)))))))))))
 
 (define (select-do-proc priority+do-list n)
   (cond
@@ -379,8 +384,8 @@
     (block))
    ((null? (cdr prim-rvs)) (sync-prim-rv (car prim-rvs)))
    (else
-    (with-new-proposal (lose)
-      (let ()
+    (let ((old (current-proposal)))
+      (let lose ()
 	(define (find-enabled prim-rvs block-procs wrap-procs)
 	  (if (null? prim-rvs)
 	      (let ((trans-id (make-trans-id)))
@@ -390,6 +395,7 @@
 		(cond
 		 ((maybe-commit-and-trans-id-value trans-id)
 		  => (lambda (pair)
+		       (set-current-proposal! old)
 		       ((cdr pair) (car pair))))
 		 (else
 		  (lose))))
@@ -419,7 +425,9 @@
 		     (queue (make-queue))
 		     (value (do-proc queue)))
 		(if (maybe-commit-and-make-ready queue)
-		    (wrap-proc value)
+		    (begin
+		      (set-current-proposal! old)
+		      (wrap-proc value))
 		    (lose)))
 	      (let* ((prim-rv (car prim-rvs))
 		     (poll-thunk (prim-rv-poll-thunk prim-rv))
@@ -437,6 +445,8 @@
 		  (handle-enabled (cdr prim-rvs)
 				  priority+do-list
 				  priority))))))
+
+	(set-current-proposal! (make-proposal))
 
 	(find-enabled prim-rvs '() '()))))))
 
@@ -489,9 +499,10 @@
 ;; This is analogous to SYNC-PRIM-RVS
 
 (define (really-sync-group prim-rv+ack-flag-list flag-sets)
-
-  (with-new-proposal (lose)
-    (let ()
+  
+  (let ((old (current-proposal)))
+    
+    (let lose ()
       (define (find-enabled prim-rv+ack-flag-list
 			    block-proc+ack-flag-list
 			    wrap-procs)
@@ -509,6 +520,7 @@
 	      (cond
 	       ((maybe-commit-and-trans-id-value trans-id)
 		=> (lambda (pair)
+		     (set-current-proposal! old)
 		     ((cdr pair) (car pair))))
 	       (else
 		(lose))))
@@ -543,7 +555,9 @@
 	      (check-cvars! flag-sets queue)
 	      (let ((value (do-proc queue)))
 		(if (maybe-commit-and-make-ready queue)
-		    (wrap-proc value)
+		    (begin
+		      (set-current-proposal! old)
+		      (wrap-proc value))
 		    (lose))))
 	    (let* ((prim-rv+ack-flag (car prim-rv+ack-flag-list))
 		   (prim-rv (car prim-rv+ack-flag))
@@ -563,6 +577,8 @@
 		(handle-enabled (cdr prim-rv+ack-flag-list)
 				priority+do-list
 				priority))))))
+
+      (set-current-proposal! (make-proposal))
 
       (find-enabled prim-rv+ack-flag-list '() '()))))
 

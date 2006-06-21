@@ -14,7 +14,7 @@
 	threads
 	(subset threads-internal (maybe-commit-and-make-ready
 				  maybe-commit-and-block))
-	proposals
+	proposals low-proposals
 	big-util
 	cells queues
 	(subset util (unspecific))
