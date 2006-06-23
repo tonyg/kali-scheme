@@ -161,7 +161,7 @@
 	  (let ((lookup (make-lookup alist hidden default interface))
 		(walker (if default
 			    (make-default-walker alist hidden default interface)
-			    (make-alist-walker alist interface))))
+			    (make-alist-walker alist hidden interface))))
 	    (let ((int (make-interface lookup walker #f)))
 	      (note-reference-to-interface! interface int)
 	      int))))
@@ -365,15 +365,16 @@
   (lambda (proc)
     (for-each-declaration
       (lambda (name base-name type)
-	(if (not (memq name hidden))
-	    (proc (cond ((cdr-assq name alist)
-			 => car)
-			((symbol? default)
-			 (symbol-append default name))
-			(else
-			 name))
+	(let ((new-name (cond ((cdr-assq name alist)
+			       => car)
+			      ((symbol? default)
+			       (symbol-append default name))
+			      (else
+			       name))))
+	(if (not (memq new-name hidden))
+	    (proc new-name
 		  base-name
-		  type)))
+		  type))))
       interface)))
 
 ; Same as ASSQ except we look for THING as the cdr instead of the car.
@@ -390,15 +391,16 @@
 ; With no default, all of the names are in the ALIST and we do not need to
 ; walk over the declarations in the base interface.
 
-(define (make-alist-walker alist interface)
+(define (make-alist-walker alist hidden interface)
   (lambda (proc)
     (for-each (lambda (pair)
 		(mvlet (((base-name type)
 			  (interface-ref interface (cdr pair))))
-		  (if base-name
-		      (proc (car pair)
-			    base-name
-			    type))))
+		  (let ((new-name (car pair)))
+		    (if (and base-name (not (memq new-name hidden)))
+			(proc new-name
+			      base-name
+			      type)))))
 	      alist)))
 	 
 ;----------------
