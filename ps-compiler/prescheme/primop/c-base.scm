@@ -273,18 +273,30 @@
 	    (format port "*TT~D = " (- (- i start) 1))
 	    (c-value arg port)
 	    (write-char #\; port)))))
-  (indent-to port indent)
-  (display "return" port)
   (let ((result (call-arg call start)))
-    (if (and (not (no-value-node? result))
-	     (let ((type (get-variable-type
-			  (reference-variable (call-arg call 0)))))
-	       (and (not (eq? type type/unit))
-		    (not (eq? type type/null)))))
-	(begin
-	  (write-char #\space port)
-	  (c-value result port))))
-  (display ";" port)
+    (cond
+     ((and (not (no-value-node? result))
+	   (let ((type (get-variable-type
+			(reference-variable (call-arg call 0)))))
+	     (and (not (eq? type type/unit))
+		  (not (eq? type type/null)))))
+
+      (indent-to port indent)
+      (display "return" port)
+      (write-char #\space port)
+      (c-value result port)
+      (display ";" port))
+     (else
+      (if (call-node? result)
+	  ;; emit for the side effects
+	  (begin
+	    (indent-to port indent)
+	    (primop-generate-c (call-primop result) result port 0)
+	    (display ";" port)
+	    (newline port)))
+      (indent-to port indent)
+      (display "return" port)
+      (display ";" port))))
   (values))
 
 ; Allocate
