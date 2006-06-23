@@ -41,6 +41,10 @@
   (vector-set! (session-data-ref interrupt-handlers)
 	       interrupt
 	       handler))
+
+(define (get-interrupt-handler interrupt)
+  (vector-ref (session-data-ref interrupt-handlers)
+	      interrupt))
       
 (define no-interrupts 0)
 

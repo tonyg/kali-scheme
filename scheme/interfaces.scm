@@ -743,6 +743,7 @@
 	  no-interrupts
 	  ;reset-timer-interrupts!
 	  set-interrupt-handler!
+	  get-interrupt-handler
 	  interrupt?
 	  ;set-timer-interrupt!
 	  schedule-interrupt
