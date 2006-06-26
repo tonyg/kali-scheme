@@ -282,7 +282,7 @@
 (define (process-alias args alist hidden default)
   (values (append (map (lambda (spec)
 			 (cons (cadr spec)
-			       (car spec)))
+			       (interface-lookup (car spec) alist hidden default)))
 		       args)
 		  alist)
 	  hidden
@@ -293,7 +293,7 @@
 (define (process-rename args alist hidden default)
   (values (append (map (lambda (spec)
 			 (cons (cadr spec)
-			       (car spec)))
+			       (interface-lookup (car spec) alist hidden default)))
 		       args)
 		  alist)
 	  (append (map car args) hidden)
@@ -365,16 +365,18 @@
   (lambda (proc)
     (for-each-declaration
       (lambda (name base-name type)
-	(let ((new-name (cond ((cdr-assq name alist)
-			       => car)
-			      ((symbol? default)
-			       (symbol-append default name))
-			      (else
-			       name))))
-	(if (not (memq new-name hidden))
-	    (proc new-name
-		  base-name
-		  type))))
+	(let* ((name-1 (cond ((symbol? default)
+			      (symbol-append default name))
+			     (else name)))
+	       (names (cond ((cdr-assq name alist)
+			     => (lambda (p) (list (car p) name-1)))
+			    (else (list name-1)))))
+	  (for-each (lambda (new-name)
+		      (if (not (memq new-name hidden))
+			  (proc new-name
+				base-name
+				type)))
+		    names)))
       interface)))
 
 ; Same as ASSQ except we look for THING as the cdr instead of the car.
