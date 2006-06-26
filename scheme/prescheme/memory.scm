@@ -80,7 +80,7 @@
 
 (define (allocate-memory size)
   (cond ((> size max-size)
-	 -1)  ; error result
+	 null-address)  ; error result
 	(else
 	 (if (>= *next-index* (vector-length *memory*))
 	     (let ((new (make-vector (* 2 (vector-length *memory*)))))
