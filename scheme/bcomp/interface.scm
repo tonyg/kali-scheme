@@ -159,9 +159,7 @@
 	         (process-commands commands)))
 	(lambda (interface)
 	  (let ((lookup (make-lookup alist hidden default interface))
-		(walker (if default
-			    (make-default-walker alist hidden default interface)
-			    (make-alist-walker alist hidden interface))))
+		(walker (make-interface-walker alist hidden default interface)))
 	    (let ((int (make-interface lookup walker #f)))
 	      (note-reference-to-interface! interface int)
 	      int))))
@@ -357,53 +355,43 @@
 
 ;----------------
 ; Return a procedure for walking over the declarations in a modified interface.
-; There are two versions, depending on whether names are passed on by default.
+; There are two helpers, depending on whether names are passed on by default.
+
+(define (make-interface-walker alist hidden default interface)
+  (lambda (proc)
+    (if default
+	(walk-default proc alist hidden default interface))
+    (walk-alist proc alist hidden interface)))
+
 ; If there is a default we need to walk over the declarations in the base
 ; interface and pass on the ones that are not hidden.
 
-(define (make-default-walker alist hidden default interface)
-  (lambda (proc)
-    (for-each-declaration
-      (lambda (name base-name type)
-	(let* ((name-1 (cond ((symbol? default)
-			      (symbol-append default name))
-			     (else name)))
-	       (names (cond ((cdr-assq name alist)
-			     => (lambda (p) (list (car p) name-1)))
-			    (else (list name-1)))))
-	  (for-each (lambda (new-name)
-		      (if (not (memq new-name hidden))
-			  (proc new-name
-				base-name
-				type)))
-		    names)))
-      interface)))
-
-; Same as ASSQ except we look for THING as the cdr instead of the car.
-
-(define (cdr-assq thing alist)
-  (let loop ((alist alist))
-    (cond ((null? alist)
-	   #f)
-	  ((eq? thing (cdar alist))
-	   (car alist))
-	  (else
-	   (loop (cdr alist))))))
-
+(define (walk-default proc alist hidden default interface)
+  (for-each-declaration
+   (lambda (name base-name type)
+     (let ((new-name
+	    (cond ((symbol? default)
+		   (symbol-append default name))
+		  (else name))))
+       (if (not (memq new-name hidden))
+	   (proc new-name
+		 base-name
+		 type))))
+   interface))
+	 
 ; With no default, all of the names are in the ALIST and we do not need to
 ; walk over the declarations in the base interface.
 
-(define (make-alist-walker alist hidden interface)
-  (lambda (proc)
-    (for-each (lambda (pair)
-		(mvlet (((base-name type)
-			  (interface-ref interface (cdr pair))))
-		  (let ((new-name (car pair)))
-		    (if (and base-name (not (memq new-name hidden)))
-			(proc new-name
-			      base-name
-			      type)))))
-	      alist)))
+(define (walk-alist proc alist hidden interface)
+  (for-each (lambda (pair)
+	      (mvlet (((base-name type)
+		       (interface-ref interface (cdr pair))))
+		(let ((new-name (car pair)))
+		  (if (and base-name (not (memq new-name hidden)))
+		      (proc new-name
+			    base-name
+			    type)))))
+	    alist))
 	 
 ;----------------
 ; Random utility.
