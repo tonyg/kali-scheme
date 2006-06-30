@@ -82,6 +82,7 @@
 	      #t)
 	  (enum prescheme:errors no-errors)))
 
+(define (channel-crlf?) #f)
 ;----------------
 ; Non-blocking I/O (implemented using CHAR-READY?)
 ;
