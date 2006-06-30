@@ -14,7 +14,11 @@
     ))
 
 (define-structures ((external external-interface))
-  (open scheme bitwise ps-memory)
+  (open scheme bitwise ps-memory
+        bignum-low ; for s48-allocate-bignum
+        (subset stob (b-vector-set! b-vector-ref b-vector-length))
+        (subset memory (address->stob-descriptor address-after-header))
+        (subset data (least-fixnum-value greatest-fixnum-value)))
   (for-syntax (open scheme signals)) ; for error
   (files (util external)))
 

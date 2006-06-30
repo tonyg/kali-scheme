@@ -80,7 +80,7 @@
 	  make-tag&immediate-type
 
 	  enter-fixnum extract-fixnum
-	  bits-per-fixnum greatest-fixnum-value
+	  bits-per-fixnum greatest-fixnum-value least-fixnum-value
 	  too-small-for-fixnum? too-big-for-fixnum?
 	  descriptor->fixnum fixnum->stob
 	  fixnum= fixnum< fixnum> fixnum<= fixnum>=
