@@ -135,8 +135,7 @@
     (trace-finalizer-alist!)
     
     ; These could be moved to the appropriate modules.
-    (trace-io s48-trace-value)
-    (trace-channel-names s48-trace-value)))
+    (trace-io s48-trace-value)))
 
 (add-post-gc-cleanup!
   (lambda (major? in-trouble?)
@@ -144,6 +143,7 @@
     (set! *last-code-pointer-resumed* *code-pointer*)
     (partition-finalizer-alist!)
     (close-untraced-channels! s48-extant? s48-trace-value)
+    (trace-channel-names s48-trace-value)
     (set! *gc-in-trouble?* in-trouble?)
     (note-interrupt! (if major?
 			 (enum interrupt post-major-gc)
