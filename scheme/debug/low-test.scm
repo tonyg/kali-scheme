@@ -238,6 +238,102 @@
   (arith-test (bitwise-and 5) "(bitwise-and 5)" 5 out)
   (arith-test (bitwise-and 7 3) "(bitwise-and 7 3)" 3 out)
   (arith-test (bitwise-and 7 3 17) "(bitwise-and 7 3 17)" 1 out)
+
+
+  ;; The following tests are not very extensive but should cover all
+  ;; operations. See the structure test-bignum in debug-package.scm
+  ;; for a bigger test suite, which, however, requires a full Scheme
+  ;; environment.
+  
+  ;; tests *, -, external-bignum->long
+  (bool-test (= 0 (- (* 1000 1000 1000 1000)
+                     (* 1000 1000 1000 1000)))
+             "(= 0 (- (* 1000 1000 1000 1000)
+                     (* 1000 1000 1000 1000)))"
+             #t
+             out)
+
+  ;; tests quotient, external-bignum->long
+  (bool-test (= 1000 (quotient (* 1000 1000 1000 1000)
+                               (* 1000 1000 1000)))
+             "(= 1000 (quotient (* 1000 1000 1000 1000)
+                    (* 1000 1000 1000)))"
+             #t
+             out)
+
+
+  ;; tests remainder, external-bignum->long
+  (bool-test (= 0 (remainder (* 1000 1000 1000 1000)
+                             (* 1000 1000 1000)))
+             "(= 0 (remainder (* 1000 1000 1000 1000)
+                   (* 1000 1000 1000)))"
+             #t
+             out)
+  
+  ;; tests /, external-bignum->long
+  (bool-test (= 1000 (/ (* 1000 1000 1000 1000)
+                        (* 1000 1000 1000)))
+             "(= 1000 (/ (* 1000 1000 1000 1000)
+              (* 1000 1000 1000)))"
+             #t
+             out)
+
+  ;; tests *,=
+  (bool-test (= (* 1000 1000 1000 1000)
+                (* 1000 1000 1000 1000))
+             "(= (* 1000 1000 1000 1000)
+      (* 1000 1000 1000 1000))"
+             #t
+             out)
+
+  ;; tests *, compare
+  (bool-test (< (* 1000 1000 1000 1000)
+                (* 1000 1000 1000 1001))
+             "(< (* 1000 1000 1000 1000)
+      (* 1000 1000 1000 1001))"
+             #t
+             out)
+  
+  ;; tests *, compare
+  (bool-test (> (* 1000 1000 1000 1001)
+                (* 1000 1000 1000 1000))
+             "(> (* 1000 1000 1000 1001)
+      (* 1000 1000 1000 1000))"
+             #t
+             out)
+
+  ;; tests negate, test 
+  (bool-test (=  (magnitude (* -1000 1000 1000 1000))
+                 (* 1000 1000 1000 1000))
+             "(=  (magnitude (* -1000 1000 1000 1000))
+       (* 1000 1000 1000 1000))"
+             #t
+             out)
+
+  ;; test bitwise-and, bitwise-ior, arithmetic-shift
+  (bool-test (= (bitwise-and (bitwise-ior (arithmetic-shift
+                                           (arithmetic-shift 1 130) 10)
+                                          #xffffff)
+                             #xffffff)
+                #xffffff)
+             "(= (bitwise-and (bitwise-ior (arithmetic-shift
+                                 (arithmetic-shift 1 130) 10)
+                                #xffffff)
+                   #xffffff)
+      #xffffff)"
+             #t
+             out)
+
+  ;; test bit-count, bitwise-ior, arithmetic-shift
+  (bool-test (= (bit-count (bitwise-ior (arithmetic-shift 1 140)
+                              #xff))
+      9)
+             "(= (bit-count (bitwise-ior (arithmetic-shift 1 140)
+                              #xff))
+      9)"
+             #t
+             out)
+
   (apply write-string (read-string in) (cons out '()))
   (newline out)
   0)
