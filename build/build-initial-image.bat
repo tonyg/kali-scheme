@@ -8,6 +8,7 @@ echo ,batch > build\build-initial-image.input
 echo ,bench on >> build\build-initial-image.input
 echo ,open signals handle features >> build\build-initial-image.input
 echo ,open bitwise ascii code-vectors >> build\build-initial-image.input
+echo ,load scheme/link/write-byte.scm >> build\build-initial-image.input
 echo ,open cells record-types >> build\build-initial-image.input
 echo ,load %linker-files% >> build\build-initial-image.input
 echo ,load scheme/alt/init-defpackage.scm >> build\build-initial-image.input
