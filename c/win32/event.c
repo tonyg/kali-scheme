@@ -468,30 +468,26 @@ s48_get_next_event(long *ready_fd, long *status)
 int
 s48_wait_for_event(long max_wait, psbool is_minutes)
 {
-  int	status;
-
   /* fprintf(stderr, "[waiting]\n"); */
+
+  DWORD dwMilliseconds;
 
   s48_stop_alarm_interrupts();
 
-  if (keyboard_interrupt_count >  0)
-    status = NO_ERRORS;
-  else {
-    DWORD dwMilliseconds;
-    if (max_wait == -1)
-      dwMilliseconds = INFINITE;
-    else if (is_minutes)
-      dwMilliseconds = max_wait * 60 * 1000;
-    else
-      dwMilliseconds = max_wait * (1000 / TICKS_PER_SECOND);
+  if (max_wait == -1)
+    dwMilliseconds = INFINITE;
+  else if (is_minutes)
+	dwMilliseconds = max_wait * 60 * 1000;
+  else
+    dwMilliseconds = max_wait * (1000 / TICKS_PER_SECOND);
 
-    SleepEx(dwMilliseconds,
-	    TRUE);
-    if (there_are_ready_ports())
-      NOTE_EVENT;
-  }
+  SleepEx(dwMilliseconds,
+          TRUE);
+  if (there_are_ready_ports())
+    NOTE_EVENT;
+
   s48_start_alarm_interrupts();
-  return status;
+  return NO_ERRORS;
 }
 
 
