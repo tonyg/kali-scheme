@@ -50,7 +50,7 @@
 	     (lose (enum exception wrong-type-argument)))
 	    ((fixnum? spec)
 	     (if (<= 0 (extract-fixnum spec))
-		 (win (extract-fixnum spec))
+	 (win (extract-fixnum spec))
 		 (lose (enum exception wrong-type-argument))))
 	    ((code-vector? spec)
 	     (receive (channel status)
@@ -276,7 +276,8 @@
 			(lose
 			 (lambda ()
 			   ;; we may have gotten out of synch because of CR/LF conversion
-			   (set-port-index! port (enter-fixnum i))
+			   (if read?
+			       (set-port-index! port (enter-fixnum i)))
 			   (raise-exception buffer-full/empty 1 port))))
 		    (cond ((= i l)
 			   (lose))
@@ -291,9 +292,10 @@
 			     (lambda (encoding-ok? ok? incomplete? value count)
 			       
 			       (define (deliver)
-				 (set-port-pending-cr?! port false)
 				 (if read?
-				     (set-port-index! port (enter-fixnum (+ i count))))
+				     (begin
+				       (set-port-pending-cr?! port false)
+				       (set-port-index! port (enter-fixnum (+ i count)))))
 				 (goto continue-with-value
 				       (scalar-value->char value)
 				       1))
@@ -307,13 +309,15 @@
 				 ;; CR/LF handling.  Great.
 				 (cond
 				  ((= value cr-code)
-				   (set-port-pending-cr?! port true)
 				   (if read?
-				       (set-port-index! port (enter-fixnum (+ i count))))
+				       (begin
+					 (set-port-pending-cr?! port true)
+					 (set-port-index! port (enter-fixnum (+ i count)))))
 				   (goto continue-with-value (scalar-value->char lf-code) 1))
 				  ((and (= value lf-code)
 					(not (false? (port-pending-cr? port))))
-				   (set-port-pending-cr?! port false)
+				   (if read?
+				       (set-port-pending-cr?! port false))
 				   (loop (+ i count)))
 				  (else
 				   (deliver))))
