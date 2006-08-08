@@ -85,9 +85,9 @@
 		  (< (point-depth here)
 		     (point-depth target))))
 	 (travel-to-point! here (point-parent target))
+	 ((point-in target))
 	 (set-dynamic-env! (point-dynamic-env target))
-	 (set-dynamic-point! target)
-	 ((point-in target)))
+	 (set-dynamic-point! target))
 	(else
 	 (set-dynamic-env! (point-dynamic-env here))
 	 (set-dynamic-point! here)
