@@ -200,7 +200,7 @@
 			    (cons template-offset template-indexes))
 		      . ,env-code)))
     (if (any (lambda (b)
-	       (< byte-limit b))
+	       (<= byte-limit b))
 	     code-bytes)
 	(apply instruction
 	       (enum op make-big-flat-env)
