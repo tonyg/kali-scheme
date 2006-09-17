@@ -318,35 +318,42 @@
 (define (parse-opcode-args op start-pc code template attribution)
   (let ((specs (vector-ref opcode-arg-specs op)))
     (let loop ((specs specs) (pc (+ start-pc 1)) (len 0) (args '()))
-      (cond ((null? specs)
-  	     (cons len args))
-            ((eq? (car specs) 'protocol)
-             (receive (size p-args)
-                 (parse-protocol code pc attribution)
-               (loop (cdr specs) 
-                     (+ pc size) 
-                     (+ len size) 
-                     (cons (cons 'protocol p-args) args))))
-            ((eq? (car specs) 'env-data)
-             (receive (size env-data)
-                 (parse-flat-env-args pc code 1 code-vector-ref)
-               (loop (cdr specs)
-                     (+ pc size)
-                     (+ len size)
-                     (cons (cons 'env-data env-data) args))))
-            ((= 0 (arg-spec-size (car specs) pc code))
-             (cons len args))
-	    (else
-  	     (let ((arg (parse-opcode-arg specs 
-					  pc 
-					  start-pc 
-					  code 
-					  template
-                                          attribution)))
- 	     (loop (cdr specs) 
-		   (+ pc (arg-spec-size (car specs) pc code))
-		   (+ len (arg-spec-size (car specs) pc code))
-		   (cons arg args))))))))
+      (if (null? specs)
+	  (cons len args)
+	  (let ((spec (car specs)))
+            (cond
+	     ((eq? spec 'protocol)
+	      (receive (size p-args)
+		  (parse-protocol code pc attribution)
+		(loop (cdr specs) 
+		      (+ pc size) 
+		      (+ len size) 
+		      (cons (cons 'protocol p-args) args))))
+	     ((or (eq? spec 'env-data)
+		  (eq? spec 'big-env-data))
+	      (receive (size env-data)
+		  (receive (slot-size fetch)
+		      (if (eq? spec 'env-data)
+			  (values 1 code-vector-ref)
+			  (values 2 get-offset))
+		    (parse-flat-env-args pc code slot-size fetch))
+		(loop (cdr specs)
+		      (+ pc size)
+		      (+ len size)
+		      (cons (cons 'env-data env-data) args))))
+	     ((= 0 (arg-spec-size spec pc code))
+	      (cons len args))
+	     (else
+	      (let ((arg (parse-opcode-arg specs 
+					   pc 
+					   start-pc 
+					   code 
+					   template
+					   attribution)))
+		(loop (cdr specs) 
+		      (+ pc (arg-spec-size spec pc code))
+		      (+ len (arg-spec-size spec pc code))
+		      (cons arg args))))))))))
   
 ; The number of bytes required by an argument.
 
