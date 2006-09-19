@@ -200,11 +200,15 @@
 	      (let ((var (bound-to-variable proc)))
 		(if (not var)
 		    (bug "known procedure has no variable ~S" proc))
-		(format #t "Removing unused procedure: ~S~%"
-			(variable-name var)) ; would LAMBDA-NAME be better?
-		(mark-changed (node-parent proc))
-		(detach-bound-value var proc)
-		(erase proc)))
+		(format #t "Removing unused procedure: ~S_~S~%"
+			(variable-name var) (variable-id var))
+		(let ((parent (node-parent proc)))
+		  (mark-changed parent)
+		  (detach-bound-value var proc)
+		  (erase proc)
+		  (if (and (calls-this-primop? parent 'let)
+			   (= (call-arg-count parent) 1))
+		      (remove-body parent)))))
 	    procs))
 
 ;----------------
