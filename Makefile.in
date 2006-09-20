@@ -676,7 +676,7 @@ scheme/debug/mini1.image: $(VM) scheme/debug/mini.image
 # from UnicodeData.txt
 # Get fresh UnicodeData.txt from http://www.unicode.org.
 
-scheme/env/unicode-info.scm: build/UnicodeData.txt			\
+scheme/rts/syntax-info.scm: build/UnicodeData.txt			\
 	scheme/link/unicode-data.scm 					\
 	scheme/env/unicode-category.scm					\
 	scheme/big/compact-table.scm
