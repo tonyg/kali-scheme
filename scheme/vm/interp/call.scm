@@ -86,7 +86,7 @@
                      (address->integer (pop-continuation-from-stack))
                      -2)))))
       ((3)
-       (goto return-values s48-*native-protocol* null 0))
+       (error "unexpected native return value" tag))
       ((4)
        (goto interpret *code-pointer*))
       ((5)
