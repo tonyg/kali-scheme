@@ -78,6 +78,8 @@
   (make-flat-env  env-data)      ; make new environment from env-data
   (make-big-flat-env big-env-data) ; same, but with two-byte size and offsets
 
+  (make-flat-closure two-bytes)  ; create flat closure
+
   (push 1)		         ; push *val* onto stack
   (push-false)			 ; a common combination
   (pop)			         ; pop top of stack into *val*
