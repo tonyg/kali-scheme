@@ -181,8 +181,8 @@
 
   (make-vector-object stob 2)			; size + init
   ; If the byte = 0 then do not log in the current proposal
-  (stored-object-indexed-ref  stob index 2)	; vector + offset
-  (stored-object-indexed-set! stob index 3)	; vector + offset + value
+  (stored-object-indexed-ref  stob byte 2)	; vector + offset
+  (stored-object-indexed-set! stob byte 3)	; vector + offset + value
 
   (make-double)
 
