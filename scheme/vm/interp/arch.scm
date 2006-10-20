@@ -78,6 +78,13 @@
   (make-flat-env  env-data)      ; make new environment from env-data
   (make-big-flat-env big-env-data) ; same, but with two-byte size and offsets
 
+  ; the following four emitted from the byte-code optimizer, for the
+  ; benefit of the native-code compiler
+  (env-set! stack-index index 1)             ; set environment slot
+  (big-env-set! two-byte-stack-index two-byte-index 1)
+  (template-ref stack-index index) ; same thing as stack-indirect
+  (big-template-ref two-byte-stack-index two-byte-index) ; same thing as stack-indirect
+
   (make-flat-closure two-bytes)  ; create flat closure
 
   (push 1)		         ; push *val* onto stack

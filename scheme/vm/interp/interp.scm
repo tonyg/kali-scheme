@@ -545,6 +545,19 @@
 		      (code-byte 1))
 	2))
 
+; same as stack-indirect, but serves as annotation for native-code
+; compiler
+(define-opcode template-ref
+  (goto continue-with-value
+	(d-vector-ref (stack-ref (code-byte 0))
+		      (code-byte 1))
+	2))
+(define-opcode big-template-ref
+  (goto continue-with-value
+	(d-vector-ref (stack-ref (code-offset 0))
+		      (code-offset 2))
+	4))
+
 (define-opcode push+stack-indirect
   (push *val*)
   (goto continue-with-value
