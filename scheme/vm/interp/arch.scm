@@ -267,7 +267,9 @@
   (time 2)
   (vm-extension 2)		; access to extensions of the virtual machine
   (return-from-callback 2)	; return from an callback
-
+  (op-with-cell-literal byte byte byte byte ;word-literal
+                       byte +)
+  
   ;; Unnecessary primitives
   (string=? 2)
   (reverse-list->string 2)
