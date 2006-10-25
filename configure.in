@@ -1,6 +1,24 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
 dnl
+define(S48_ENABLE_UNIVERSAL_BINARY, [dnl
+AC_MSG_CHECKING([whether we are building a Universal Binary])
+dnl
+AC_ARG_ENABLE([universal-binary],
+[AC_HELP_STRING([--enable-universal-binary],
+		[Build MacOS X Universal Binary])],
+	[dnl 
+         CFLAGS="${CFLAGS} -arch i386 -arch ppc";
+	 option_enable_universal_binary="yes";
+	 AC_DEFINE([BUILD_UNIVERSAL_BINARY], 1,
+		   [Define if we are building an OS X Universal Binary.])
+	 AC_MSG_RESULT(yes)],
+   	[dnl
+	 option_enable_universal_binary="no";
+	 AC_MSG_RESULT(no)])])
+dnl
+dnl
+dnl
 define(S48_PICK_GC, [dnl
 AC_ARG_ENABLE([gc],
 [AC_HELP_STRING([--enable-gc=GC],
@@ -75,6 +93,10 @@ inline void f(void)
 dnl
 define(S48_IEEE_ENDIANNESS, [dnl
 AC_MSG_CHECKING([IEEE floating-point endianness])
+if test "$option_enable_universal_binary" = "yes" 
+then 
+  AC_MSG_RESULT([building Universal Binary; using compiler defined macros instead])
+else
 AC_TRY_RUN([#include <stdio.h>
 
 typedef unsigned long word32_t;
@@ -105,6 +127,7 @@ AC_MSG_RESULT([$ieee_endianness])
 if test "$ieee_endianness" = "most first"; then
   AC_DEFINE([IEEE_MOST_FIRST], 1, [Define if IEEE doubles are stored with most-significant byte first.])
 fi
+fi
 ])dnl
 dnl
 define(S48_USCORE, [dnl
@@ -131,6 +154,7 @@ AC_INIT(c/prescheme.h)
      AC_CONFIG_HEADER(c/sysdep.h)
      AC_CONFIG_HEADER(c/scheme48write-barrier.h)
      S48_PICK_GC
+     S48_ENABLE_UNIVERSAL_BINARY
      S48_CREATE_BUILD_DIRS
      S48_PROG_CC
      AC_ISC_POSIX

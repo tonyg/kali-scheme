@@ -49,7 +49,7 @@ typedef unsigned long word32_t;
 
 typedef union { double d; word32_t word[2]; } double_overlay;
 
-#ifdef IEEE_MOST_FIRST
+#if ((defined(BUILD_UNIVERSAL_BINARY) && defined(__BIG_ENDIAN__)) || IEEE_MOST_FIRST)
 #define DOUBLE_WORD0(x) ((double_overlay*)&(x))->word[0]
 #define DOUBLE_WORD1(x) ((double_overlay*)&(x))->word[1]
 #else
