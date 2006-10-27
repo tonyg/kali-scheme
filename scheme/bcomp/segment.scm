@@ -421,9 +421,6 @@
 
 (define (insert-backward-label! astate location label-pc offset)
   (let ((cv (astate-code-vector astate)))
-    (write (cons label-pc
-				       (astate-jump-back-dests astate)))
-    (newline)
     (set-astate-jump-back-dests! astate
 				 (cons label-pc
 				       (astate-jump-back-dests astate)))
