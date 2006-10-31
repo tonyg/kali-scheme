@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <regex.h> /* POSIX.2 */
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "scheme48.h"
