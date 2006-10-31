@@ -37,9 +37,8 @@
 (define *interrupted-template*) ; template in place when the most recent
 				; interrupt occured - for profiling
 
-(define *interrupted-byte-call-return-code*)	; used to return from interrupts
+(define *interrupted-byte-opcode-return-code*)	; used to return from interrupts
 (define *interrupted-native-call-return-code*)	; used to return from interrupts
-(define *poll-interrupt-return-code*)           ; used to return from interrupts
 (define *exception-return-code*)	; used to mark exception continuations
 (define *native-exception-return-code*)	; used to mark native exception continuations
 (define *call-with-values-return-code*)	; for call-with-values opcode
@@ -67,9 +66,8 @@
 
 (define (clear-registers)
   (reset-stack-pointer false)
-  (set-code-pointer! *interrupted-byte-call-return-code* 0)
+  (set-code-pointer! *interrupted-byte-opcode-return-code* 0)
   (set-code-pointer! *interrupted-native-call-return-code* 0)
-  (set-code-pointer! *poll-interrupt-return-code* 0)
   (set! *last-code-pointer-resumed* *code-pointer*)
   (set! *val*                unspecific-value)
   (set! *current-thread*     null)
@@ -107,12 +105,10 @@
 
     (set! *val*                   (s48-trace-value *val*))
     (set! *current-thread*        (s48-trace-value *current-thread*))
-    (set! *interrupted-byte-call-return-code*
-          (s48-trace-value *interrupted-byte-call-return-code*))
+    (set! *interrupted-byte-opcode-return-code*
+          (s48-trace-value *interrupted-byte-opcode-return-code*))
     (set! *interrupted-native-call-return-code*
           (s48-trace-value *interrupted-native-call-return-code*))
-    (set! *poll-interrupt-return-code*
-          (s48-trace-value *poll-interrupt-return-code*))
     (set! *exception-return-code* (s48-trace-value *exception-return-code*))
     (set! *native-exception-return-code* (s48-trace-value *native-exception-return-code*))
     (set! *call-with-values-return-code*
@@ -262,22 +258,16 @@
 
 (define (initialize-interpreter+gc)          ;Used only at startup
   (let ((key (ensure-space (* 6 return-code-size))))
-    (set! *interrupted-byte-call-return-code*
+    (set! *interrupted-byte-opcode-return-code*
 	  (make-return-code ignore-values-protocol
                             #xffff              ; dummy template offset
-			    (enum op resume-interrupted-call-to-byte-code)
+			    (enum op resume-interrupted-opcode-to-byte-code)
 			    #xFFFF		; escape value
 			    key))
     (set! *interrupted-native-call-return-code*
 	  (make-return-code ignore-values-protocol
                             #xffff              ; dummy template offset
 			    (enum op resume-interrupted-call-to-native-code)
-			    #xFFFF		; escape value
-			    key))
-    (set! *poll-interrupt-return-code*
-	  (make-return-code ignore-values-protocol
-                            #xffff              ; dummy template offset
-			    (enum op return-from-poll-interrupt)
 			    #xFFFF		; escape value
 			    key))
     (set! *exception-return-code*

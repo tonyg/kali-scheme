@@ -30,7 +30,7 @@
     (push code)
     (push (enter-fixnum pc)))
   (push-interrupt-state)
-  (push-adlib-continuation! (code+pc->code-pointer *interrupted-byte-call-return-code*
+  (push-adlib-continuation! (code+pc->code-pointer *interrupted-byte-opcode-return-code*
 						   return-code-pc))
   (goto find-and-call-interrupt-handler))
 
@@ -59,17 +59,7 @@
 ; Ditto, except that we are going to return to the current continuation instead
 ; of continuating with the current template.
 
-(define (push-poll-interrupt-continuation)
-  (push-interrupt-state)
-  (push poll-interrupt-continuation-descriptors)
-  (push-continuation! (code+pc->code-pointer *poll-interrupt-return-code*
-					     return-code-pc)))
-
 (define interrupt-state-descriptors 2)
-
-(define poll-interrupt-continuation-descriptors
-  (enter-fixnum (+ 1		; this number
-		   interrupt-state-descriptors)))
 
 (define (push-interrupt-state)
   (push (current-proposal))
@@ -214,21 +204,10 @@
 (define-opcode poll
   (if (and (interrupt-flag-set?)
            (pending-interrupt?))
-      (begin
-        (push-continuation! (address+ *code-pointer*
-				      (code-offset 0)))
-        (push-poll-interrupt-continuation)
-        (goto find-and-call-interrupt-handler))
-      (goto continue 2)))
+      (goto handle-interrupt)
+      (goto continue 0)))
 	    
-; Return from a call to an interrupt handler.
-
-(define-opcode return-from-poll-interrupt
-  (pop)
-  (s48-pop-interrupt-state)
-  (goto return-values 0 null 0))
-
-(define-opcode resume-interrupted-call-to-byte-code
+(define-opcode resume-interrupted-opcode-to-byte-code
   (pop)
   (s48-pop-interrupt-state)
   (let ((pc (pop)))

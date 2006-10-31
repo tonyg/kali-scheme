@@ -79,8 +79,7 @@
        (goto perform-application s48-*native-protocol*))
       ((2)
        (cond ((pending-interrupt?)
-              (push-poll-interrupt-continuation)
-              (goto find-and-call-interrupt-handler))
+	      (goto handle-interrupt))
              (else
               (loop (s48-invoke-native-continuation
                      (address->integer (pop-continuation-from-stack))

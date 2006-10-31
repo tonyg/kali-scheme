@@ -118,7 +118,7 @@
 				 ; offset is to return pointer
   (tail-call nargs 1 +)          ; same, no return pointer, moves arguments
   (big-call offset two-byte-nargs 1 +) ; ditto, nargs counts are two bytes
-  (poll offset)			 ; offset is for continuation-pc if interrupt
+  (poll)
   (apply offset two-byte-nargs 2 +)   ; last argument is procedure to call, second to
 				 ; last is a list of additional arguments, next
                                  ; two bytes are the number of stack arguments
@@ -255,9 +255,8 @@
   (return-from-native-exception 1)
   (set-interrupt-handlers! 1)
   (set-enabled-interrupts! 1)
-  (resume-interrupted-call-to-byte-code)
+  (resume-interrupted-opcode-to-byte-code)
   (resume-interrupted-call-to-native-code)
-  (return-from-poll-interrupt)
   (schedule-interrupt 1)
   (wait 2)                      ; do nothing until something happens
   (call-external-value 1 +)
