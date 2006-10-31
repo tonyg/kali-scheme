@@ -453,7 +453,7 @@
 (define gc-mask-size-offset -3)		; -3           gc mask size
 					; -4 -5        offset
                                         ; -6 -7        template
-(define gc-mask-offset      -8)         ; -8 ...       mask
+(define gc-mask-offset      -8)         ; -8 ...       mask (low bytes first)
 
 ; The number of additional values that the VM adds to exception continuations.
 (define exception-continuation-cells 5)

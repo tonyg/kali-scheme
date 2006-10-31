@@ -434,11 +434,11 @@
 	 (offset (get-offset code (- end-pc 5)))
          (template (get-offset code (- end-pc 7)))
 	 (mask-bytes
-	  (let lp ((the-pc (+ pc 2)))
+	  (let lp ((the-pc (+ pc 2)) (mask-bytes '()))
 	    (if (>= the-pc (+ pc 2 gc-mask-size))
-		'()
-		(cons (code-vector-ref code the-pc)
-		      (lp (+ the-pc 1)))))))
+		mask-bytes
+		(lp (+ the-pc 1)
+		    (cons (code-vector-ref code the-pc) mask-bytes))))))
     (make-cont-data len
                     mask-bytes
                     template

@@ -151,7 +151,7 @@
 	      '()))
 	 (gc-mask-size (length gc-mask))
 	 (size (+ 10			;   header (3)
-                                        ;   gc-mask (see below)
+                                        ;   gc-mask, low bytes first (see below)
                                         ; + template (2) 
 					; + offset (2)
 					; + gc-mask size (1)
@@ -183,11 +183,12 @@
       ((null? offsets)
        mask)))
 
+; low bytes first
 (define (bits->bytes n)
   (do ((n n (arithmetic-shift n -8))
        (b '() (cons (bitwise-and n #xFF) b)))
       ((= 0 n)
-       b)))
+       (reverse b))))
 
 
 ;;;;;;;;;;;;;;;;;;;;
