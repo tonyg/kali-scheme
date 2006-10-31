@@ -66,10 +66,10 @@ posix_compile_regexp(s48_value pattern,
   s48_value sch_regex;
   int status;
   S48_DECLARE_GC_PROTECT(1);
-  int flags = S48_EXTRACT_BOOLEAN(extended_p)    ? REG_EXTENDED : 0 |
-              S48_EXTRACT_BOOLEAN(ignore_case_p) ? REG_ICASE    : 0 |
-              S48_EXTRACT_BOOLEAN(submatches_p)  ? 0 : REG_NOSUB |
-              S48_EXTRACT_BOOLEAN(newline_p)     ? REG_NEWLINE  : 0;
+  int flags = (S48_EXTRACT_BOOLEAN(extended_p)    ? REG_EXTENDED : 0) |
+              (S48_EXTRACT_BOOLEAN(ignore_case_p) ? REG_ICASE    : 0) |
+              (S48_EXTRACT_BOOLEAN(submatches_p)  ? 0 : REG_NOSUB) |
+              (S48_EXTRACT_BOOLEAN(newline_p)     ? REG_NEWLINE  : 0);
 
   S48_GC_PROTECT_1(pattern);
 
@@ -113,8 +113,8 @@ posix_regexp_match(s48_value sch_regex, s48_value string, s48_value sch_start,
   regmatch_t *pmatch,
              pmatch_buffer[32];
 
-  int flags = S48_EXTRACT_BOOLEAN(bol_p) ? 0 : REG_NOTBOL |
-              S48_EXTRACT_BOOLEAN(eol_p) ? 0 : REG_NOTEOL;
+  int flags = (S48_EXTRACT_BOOLEAN(bol_p) ? 0 : REG_NOTBOL) |
+              (S48_EXTRACT_BOOLEAN(eol_p) ? 0 : REG_NOTEOL);
 
   if ((start < 0) || (start > len))
     s48_raise_range_error(sch_start,
@@ -185,10 +185,10 @@ posix_regexp_error_message(s48_value pattern,
 {
   regex_t compiled_regex;
   int status;
-  int flags = S48_EXTRACT_BOOLEAN(extended_p)    ? REG_EXTENDED : 0 |
-              S48_EXTRACT_BOOLEAN(ignore_case_p) ? REG_ICASE    : 0 |
-              S48_EXTRACT_BOOLEAN(submatches_p)  ? 0 : REG_NOSUB |
-              S48_EXTRACT_BOOLEAN(newline_p)     ? REG_NEWLINE  : 0;
+  int flags = (S48_EXTRACT_BOOLEAN(extended_p)    ? REG_EXTENDED : 0) |
+              (S48_EXTRACT_BOOLEAN(ignore_case_p) ? REG_ICASE    : 0) |
+              (S48_EXTRACT_BOOLEAN(submatches_p)  ? 0 : REG_NOSUB) |
+              (S48_EXTRACT_BOOLEAN(newline_p)     ? REG_NEWLINE  : 0);
 
   S48_CHECK_STRING(pattern);
 
