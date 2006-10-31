@@ -142,7 +142,8 @@
 	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
 	srfi-39 srfi-40 srfi-42 srfi-43 srfi-45
         srfi-60 srfi-61 srfi-62 srfi-63 srfi-66 srfi-67
-	srfi-71 srfi-74 srfi-78))
+	srfi-71 srfi-74 srfi-78
+	srfi-95))
 
     ; Some SRFI's redefine Scheme variables.
     (define shadowed
@@ -777,3 +778,13 @@
   (open scheme srfi-42
         (subset signals (error)))
   (files srfi-78))
+
+; SRFI 95: Sorting and Merging
+
+(define-interface srfi-95-interface
+  (export sorted? merge merge! sort sort!))
+
+(define-structure srfi-95 srfi-95-interface
+  (open scheme srfi-63
+	(subset signals (error)))
+  (files srfi-95))
