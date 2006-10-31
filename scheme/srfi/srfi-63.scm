@@ -17,6 +17,13 @@
  (bool    20)
  (string  21))
 
+(define (srfi-4-vector? x)
+  (or (s8vector?  x) (u8vector?  x)
+      (s16vector? x) (u16vector? x)
+      (s32vector? x) (u32vector? x)
+      (s64vector? x) (u64vector? x)
+      (f32vector? x) (f64vector? x)))
+
 ;; This implementation uses SRFI-4 vectors as the store for
 ;; several of the homogeneous array types, but several types
 ;; are implemented using plain vectors.  To improve the 
@@ -60,19 +67,31 @@
   (store-type strict-array-store-type))
     
 (define (array-dimensions array)
-  (cond ((vector? array) (list (vector-length array)))
-        ((string? array) (list (string-length array)))
-        (else (strict-array-dimensions array))))
+  (if (strict-array? array) 
+      (strict-array-dimensions array)
+      (list
+       (cond ((vector? array)    (vector-length array))
+	     ((string? array)    (string-length array))
+	     ((s8vector? array)  (s8vector-length array))
+	     ((u8vector? array)  (u8vector-length array))
+	     ((s16vector? array) (s16vector-length array))
+	     ((u16vector? array) (u16vector-length array))
+	     ((s32vector? array) (s32vector-length array))
+	     ((u32vector? array) (u32vector-length array))
+	     ((s64vector? array) (s64vector-length array))
+	     ((u64vector? array) (u64vector-length array))
+	     ((f32vector? array) (f32vector-length array))
+	     ((f64vector? array) (f64vector-length array))))))
 
 (define (array-scales array)
-  (cond ((string? array) '(1))
-        ((vector? array) '(1))
-        (else (strict-array-scales array))))
+  (if (strict-array? array)
+      (strict-array-scales array)
+      '(1)))
 
 (define (array-store array)
-  (cond ((string? array) array)
-        ((vector? array) array)
-        (else (strict-array-store array))))
+  (if (strict-array? array)
+      (strict-array-store array)
+      array))
 
 (define store-makers
   (apply vector
@@ -87,9 +106,20 @@
          (map (lambda (item) (list-ref item 3)) implementation-list)))
 
 (define (array-store-type array)
-  (cond ((string? array) (a: string))
-        ((vector? array) (a: vector))
-        (else (strict-array-store-type array))))
+  (if (strict-array? array)
+      (strict-array-store-type array)      
+      (cond ((string? array)    (a: string))
+	    ((vector? array)    (a: vector))	    
+	    ((s8vector? array)  (a: fixz8b))
+	    ((u8vector? array)  (a: fixn8b))
+	    ((s16vector? array) (a: fixz16b))
+	    ((u16vector? array) (a: fixn16b))
+	    ((s32vector? array) (a: fixz32b))
+	    ((u32vector? array) (a: fixn32b))
+	    ((s64vector? array) (a: fixz64b))
+	    ((u64vector? array) (a: fixn64b))
+	    ((f32vector? array) (a: floc32b))
+	    ((f64vector? array) (a: floc64b)))))
 
 (define (array-store-ref array)
   (vector-ref store-reffers (array-store-type array)))
@@ -101,14 +131,15 @@
   (vector-ref store-makers array-type))
 
 (define (array-offset array)
-  (cond ((string? array) 0)
-        ((vector? array) 0)
-        (else (strict-array-offset array))))
+  (if (strict-array? array)
+      (strict-array-offset array)
+      0))
 
 (define (array? obj)
-  (or (string? obj)
+  (or (strict-array? obj)
+      (string? obj)
       (vector? obj)
-      (strict-array? obj)))
+      (srfi-4-vector? obj)))
 
 (define (equal? obj1 obj2) 
   (cond ((eqv? obj1 obj2) #t)
@@ -154,22 +185,21 @@
                (list      ;; a list with single element at origin
                 (apply array-ref prototype
                        (map (lambda (x) 0) pdims))))))    
-      
-      (cond ((and onedim? (string? prot))
-             (apply make-string (car dimensions) initializer))
-            ((and onedim? (vector? prot))
-             (apply make-vector (car dimensions) initializer))            
-            (else
-             (let* ((store-type (array-store-type prototype))
-                    (store (apply (array-store-maker store-type)
-                                  tcnt initializer)))
-               (let loop ((dims (reverse dimensions)) (scales '(1)))
-                 (if (null? dims)
-                     (make-strict-array dimensions (cdr scales) 0 
-                                        store
-                                        store-type)
-                     (loop (cdr dims)
-                           (cons (* (car dims) (car scales)) scales))))))))))
+
+      (if (and onedim? (or (string? prot) (srfi-4-vector? prot)))
+	  (apply (array-store-maker (array-store-type prot))
+		 (car dimensions) initializer)
+	  (let* ((store-type (array-store-type prototype))
+		 (store (apply (array-store-maker store-type)
+			       tcnt initializer)))
+	    (let loop ((dims (reverse dimensions)) (scales '(1)))
+	      (if (null? dims)
+		  (make-strict-array dimensions (cdr scales) 0 
+				     store
+				     store-type)
+		  (loop (cdr dims)
+			(cons (* (car dims) (car scales)) scales)))))))))
+
 
 (define (make-shared-array array mapper . dimensions)
   (define odl (array-scales array))
@@ -287,8 +317,6 @@
           array-type))))
 
 (define a:floc128b (tag-maker (a: floc128b)))
-(define a:floc64b  (tag-maker (a: floc64b)))
-(define a:floc32b  (tag-maker (a: floc32b)))
 (define a:floc16b  (tag-maker (a: floc16b)))
 
 (define a:flor128b (tag-maker (a: flor128b)))
@@ -300,14 +328,24 @@
 (define a:floq64d  (tag-maker (a: floq64d)))
 (define a:floq32d  (tag-maker (a: floq32d)))
 
-(define a:fixz64b  (tag-maker (a: fixz64b)))
-(define a:fixz16b  (tag-maker (a: fixz16b)))
-(define a:fixz32b  (tag-maker (a: fixz32b)))
-(define a:fixz8b   (tag-maker (a: fixz8b)))
-
-(define a:fixn64b  (tag-maker (a: fixn64b)))
-(define a:fixn32b  (tag-maker (a: fixn32b)))
-(define a:fixn16b  (tag-maker (a: fixn16b)))
-(define a:fixn8b   (tag-maker (a: fixn8b)))
-
 (define a:bool     (tag-maker (a: bool)))
+
+(define (srfi-4-proto f)
+  (case-lambda
+   (()  (f))
+   ((x) (f x))))
+
+(define a:floc64b (srfi-4-proto f64vector))
+(define a:floc32b (srfi-4-proto f32vector))
+
+(define a:fixz64b (srfi-4-proto s64vector))
+(define a:fixz32b (srfi-4-proto s32vector))
+(define a:fixz16b (srfi-4-proto s16vector))
+(define a:fixz8b  (srfi-4-proto s8vector))
+
+(define a:fixn64b (srfi-4-proto u64vector))
+(define a:fixn32b (srfi-4-proto u32vector))
+(define a:fixn16b (srfi-4-proto u16vector))
+(define a:fixn8b  (srfi-4-proto u8vector))
+
+
