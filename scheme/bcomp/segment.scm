@@ -194,17 +194,20 @@
 ;;;;;;;;;;;;;;;;;;;;
 ; Emitting the PROTOCOL pseudo instruction
 
-(define (make-push-byte need-template? need-env?)
-  (bitwise-ior (if need-template? 
-                   #b10 
-                   #b00)
-               (if need-env?
-                   #b01
-                   #b00)))
+(define (make-push-byte need-template? need-env? need-closure?)
+  (bitwise-ior (if need-env?
+                   #b001
+                   #b000)
+               (if need-template? 
+                   #b010 
+                   #b000)
+	       (if need-closure?
+		   #b100
+		   #b000)))
 
 
-(define (lambda-protocol nargs need-template? need-env?)
-  (let ((push-byte (make-push-byte need-template? need-env?)))
+(define (lambda-protocol nargs need-template? need-env? need-closure?)
+  (let ((push-byte (make-push-byte need-template? need-env? need-closure?)))
     (cond ((<= nargs maximum-stack-args)
            (instruction (enum op protocol) nargs push-byte))
           ((<= nargs available-stack-space)
@@ -216,8 +219,8 @@
           (else
            (error "compiler bug: too many formals" nargs)))))
 
-(define (nary-lambda-protocol nargs need-template? need-env?)
-  (let ((push-byte (make-push-byte need-template? need-env?)))
+(define (nary-lambda-protocol nargs need-template? need-env? need-closure?)
+  (let ((push-byte (make-push-byte need-template? need-env? need-closure?)))
     (cond ((<= nargs available-stack-space)
            (instruction (enum op protocol)
                         two-byte-nargs+list-protocol

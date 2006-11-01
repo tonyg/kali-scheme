@@ -2,7 +2,7 @@
 
 (define-record-type attribution :attribution
   (make-attribution init-template template-literal 
-                           opcode-table make-label at-label)
+		    opcode-table make-label at-label)
   attribution?
   (init-template attribution-init-template)
   (template-literal attribution-template-literal)
@@ -22,8 +22,8 @@
 
 ;; Example attribution
 (define (disass)
-  (define (disass-init-template state template p-args push-template? push-env?)
-    (cons (list 0 'protocol p-args push-template? push-env?)
+  (define (disass-init-template state template p-args push-template? push-env? push-closure?)
+    (cons (list 0 'protocol p-args push-template? push-env? push-closure?)
           state))
 
   (define instruction-set-table 
@@ -92,17 +92,21 @@
          (debug-data-jump-back-dests (template-debug-data tem)))
         (receive (size protocol-arguments)
             (parse-protocol code 1 attribution)
-          (receive (push-template? push-env?)
+          (receive (push-template? push-env? push-closure?)
               (case (code-vector-ref code (+ size 1))
-                ((0) (values #f #f))
-                ((1) (values #f #t))
-                ((2) (values #t #f))
-                ((3) (values #t #t))
+                ((#b000) (values #f #f #f))
+                ((#b001) (values #f #t #f))
+                ((#b010) (values #t #f #f))
+                ((#b011) (values #t #t #f))
+                ((#b100) (values #f #f #t))
+                ((#b110) (values #t #f #t))
+                ((#b101) (values #f #t #t))
+                ((#b111) (values #t #t #t))
                 (else (error "invalid init-template spec" (code-vector-ref code (+ size 1)))))
             (fun (+ size 2)
                  length
                  ((attribution-init-template attribution) 
-                  state tem protocol-arguments push-template? push-env?))))))))
+                  state tem protocol-arguments push-template? push-env? push-closure?))))))))
           
 
 (define (parse-instruction template code pc state attribution)

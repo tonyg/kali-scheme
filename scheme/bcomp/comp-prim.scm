@@ -30,7 +30,8 @@
 			       (or maybe-nargs 0)
 					; nargs (needed if template used)
 			       #f	; no env
-			       maybe-nargs))) ; need template if nargs
+			       maybe-nargs ; need template if nargs
+			       #f)))       ; no closure
 	(segment->template (proc frame) frame)))))
 
 ; --------------------
@@ -53,9 +54,9 @@
     (let ((arg-specs (vector-ref opcode-arg-specs opcode)))
       (sequentially (if (pair? arg-specs)
                         (sequentially
-                         (lambda-protocol (car arg-specs) #f #f)
+                         (lambda-protocol (car arg-specs) #f #f #f)
                          (instruction (enum op pop)))
-                        (lambda-protocol 0 #f #f))
+                        (lambda-protocol 0 #f #f #f))
                     (instruction opcode)
                     (instruction (enum op return))))))
 
@@ -175,7 +176,7 @@
 
 (define (simple-closed-compilator nargs segment)
   (lambda (frame)
-    (sequentially (lambda-protocol nargs #f #f)
+    (sequentially (lambda-protocol nargs #f #f #f)
                   (if (< 0 nargs)
                       (instruction (enum op pop))
                       empty-segment)
@@ -206,7 +207,7 @@
 	cont))
     (cons 0
 	  (lambda (frame)
-	    (sequentially (lambda-protocol 0 #t #f)
+	    (sequentially (lambda-protocol 0 #t #f #f)
 			  (instruction (enum op stack-indirect)
 				       (template-offset frame 1) ; template
 				       (literal->index frame 0))
@@ -396,7 +397,7 @@
 		      (call-instruction 1 label)	; one argument
 		      after))))
   (lambda (frame)
-    (sequentially (lambda-protocol 1 #f #f)
+    (sequentially (lambda-protocol 1 #f #f #f)
                   (instruction (enum op current-cont))
 		  (instruction (enum op push))
 		  (instruction (enum op stack-ref) 1)
@@ -455,7 +456,7 @@
     (lambda (frame)
       (receive (before depth label after)
 	  (push-continuation-no-protocol 2 frame #f (plain-fall-through-cont))
-	(sequentially (lambda-protocol 2 #f #f)
+	(sequentially (lambda-protocol 2 #f #f #f)
 		      (instruction (enum op stack-ref+push) 1)
 		      (instruction (enum op false))
 		      (instruction (enum op stack-set!) 2)

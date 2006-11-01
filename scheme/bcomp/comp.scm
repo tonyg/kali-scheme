@@ -11,10 +11,10 @@
     (lambda ()
       (if (null? forms)
 	  (segment->template (sequentially
-			      (lambda-protocol 0 #t #f)
+			      (lambda-protocol 0 #t #f #f)
 			      (deliver-value (instruction (enum op unspecific))
 					     (return-cont #f)))
-			     (make-frame #f name 0 #f #f))
+			     (make-frame #f name 0 #f #f #f))
 	  (compile-forms-loop (reverse forms)
 			      name
 			      #f)))))			;next template
@@ -31,10 +31,10 @@
 ; Stack has zero args, no env, template.
   
 (define (compile-form form name next)
-  (let ((frame (make-frame #f name 0 #f #t)))
+  (let ((frame (make-frame #f name 0 #f #t #f)))
     (segment->template
       (sequentially
-        (lambda-protocol 0 #t #f)	; template, no env
+        (lambda-protocol 0 #t #f #f)	; template, no env, no closure
 	(let ((node (flatten-form (force-node form))))
 	  (cond ((define-node? node)
 		 (sequentially
@@ -125,7 +125,8 @@
 			    #f		; no name
 			    nargs	; args on stack
 			    #f		; drop environment
-			    #t)))	; keep template
+			    #t		; keep template
+			    #f)))       ; drop closure
     (append-templates inits
 		      nargs
 		      frame
@@ -143,7 +144,7 @@
 (define (append-templates templates nargs frame final)
   (segment->template
     (sequentially
-      (lambda-protocol nargs #t #f)	; push template
+      (lambda-protocol nargs #t #f #f)	; push template
       (reduce (lambda (template seg)
 		(sequentially
 		  (template-call template

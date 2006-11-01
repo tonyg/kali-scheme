@@ -35,18 +35,20 @@
                      template-or-code)))
       (parse-template-code template code level disasm-attribution)))
 
-(define (disasm-init-template level template p-args push-template? push-env?)
+(define (disasm-init-template level template p-args push-template? push-env? push-closure?)
   (if (template-name template)
       (write (template-name template)))
   (print-opcode (enum op protocol) 0 level)
   (show-protocol p-args 0)
-  (if (or push-template? push-env?)
+  (if (or push-template? push-env? push-closure?)
       (begin
         (display " (push")
         (if push-env?
             (display " env"))
         (if push-template?
             (display " template"))
+	(if push-closure?
+	    (display " closure"))
         (display #\))))
   (display #\))
   level)

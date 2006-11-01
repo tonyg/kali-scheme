@@ -6,46 +6,52 @@
 ; env-index      - the location of this procedure's environment in the frame
 ;                  (#f if the procedure does not use its environment)
 ; template-index - the location of this procedure's template in the frame
-;                  (again, this is #f if the template is not needed)
+;                  (#f if the template is not needed)
+; closure-index  - the location of this procedure's closure in the frame
+;                  (#f if the closure is not needed)
 ; size		 - largest size reached by the frame, in descriptors
 ; literals	 - list of literals and bindings referenced
 ; count		 - length of LITERALS
 ; debug-data	 - debug information (see ddata.scm)
 
 (define-record-type frame :frame
-  (really-make-frame literals count debug-data env-index template-index size)
+  (really-make-frame literals count debug-data env-index template-index closure-index size)
   frame?
   (env-index      frame-env-index)
   (template-index frame-template-index)
+  (closure-index  frame-closure-index)
   (size           frame-size     set-frame-size!)
   (literals       frame-literals set-frame-literals!)
   (count	  frame-count    set-frame-count!)
   (debug-data     frame-debug-data))
 
-; SIZE is the number of values on the stack when the procedure is entered
-; (typically the number of arguments).  ENV? is true if the environment was
-; pushed on after the arguments, TEMPLATE? is true if the template was
-; pushed as well.
+; SIZE is the number of values on the stack when the procedure is
+; entered (typically the number of arguments).  ENV? is true if the
+; environment was pushed on after the arguments, TEMPLATE? is true if
+; the template was pushed as well.  CLOSURE? is true if the closure
+; was pushed as well.
 
-(define (make-frame parent name size env? template?)
+(define (make-frame parent name size env? template? closure?)
   (let* ((ddata (new-debug-data (adjust-procedure-name name)
 				(if parent
 				    (frame-debug-data parent)
-				    #f)))
-	 (finish (lambda (env-index template-index size)
-		   (really-make-frame '()
-				      0
-				      ddata
-				      env-index
-				      template-index
-				      size))))
-    (if env?
-	(if template?
-	    (finish size (+ size 1) (+ size 2))
-	    (finish size #f         (+ size 1)))
-	(if template?
-	    (finish #f   size       (+ size 1))
-	    (finish #f   #f         size)))))
+				    #f))))
+    
+    (define (allocate-index really?)
+      (and really?
+	   (let ((index size))
+	     (set! size (+ 1 size))
+	     index)))
+
+    (let* ((env-index (allocate-index env?))
+	   (template-index (allocate-index template?))
+	   (closure-index (allocate-index closure?)))
+
+      (really-make-frame '()
+			 0
+			 ddata
+			 env-index template-index closure-index
+			 size))))
 
 (define (adjust-procedure-name name)
   (cond ((string? name)			; only files have strings for names

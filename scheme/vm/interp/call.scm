@@ -498,14 +498,29 @@
       (goto handle-interrupt)
       (goto interpret *code-pointer*)))
 
-(define (env-and-template-setup env/template template)
-  (cond ((= #b11 env/template)
+(define (env-and-template-setup spec template)
+  (cond ((= #b011 spec)
 	 (push (closure-env *val*))
 	 (push template))
-	((= #b01 env/template)
+	((= #b001 spec)
 	 (push (closure-env *val*)))
-	((= #b10 env/template)
-	 (push template))))
+	((= #b010 spec)
+	 (push template))
+	;; the next two are for the output of the optimizer,
+	;; for closures that have the environment merged in
+	((= #b100 spec)
+	 (push *val*))  ; closure
+	((= #b110 spec)
+	 (push template)
+	 (push *val*))
+	;; the following probably won't occur in the wild
+	((= #b101 spec)
+	 (push (closure-env *val*))
+	 (push *val*))
+	((= #b111 spec)
+	 (push (closure-env *val*))
+	 (push template)
+	 (push *val*))))
 
 ;----------------------------------------------------------------
 ; Get a two-byte number from CODE-VECTOR.
