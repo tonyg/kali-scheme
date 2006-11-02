@@ -29,9 +29,9 @@
 			       name	; name of primop
 			       (or maybe-nargs 0)
 					; nargs (needed if template used)
-			       #f	; no env
 			       maybe-nargs ; need template if nargs
-			       #f)))       ; no closure
+			       #f	; no env
+			       #f)))    ; no closure
 	(segment->template (proc frame) frame)))))
 
 ; --------------------

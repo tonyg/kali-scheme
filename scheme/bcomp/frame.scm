@@ -3,10 +3,10 @@
 ; also has a list of the literals that will go in the procedure's template
 ; and the debugging data for the template.
 ;
-; env-index      - the location of this procedure's environment in the frame
-;                  (#f if the procedure does not use its environment)
 ; template-index - the location of this procedure's template in the frame
 ;                  (#f if the template is not needed)
+; env-index      - the location of this procedure's environment in the frame
+;                  (#f if the procedure does not use its environment)
 ; closure-index  - the location of this procedure's closure in the frame
 ;                  (#f if the closure is not needed)
 ; size		 - largest size reached by the frame, in descriptors
@@ -15,10 +15,10 @@
 ; debug-data	 - debug information (see ddata.scm)
 
 (define-record-type frame :frame
-  (really-make-frame literals count debug-data env-index template-index closure-index size)
+  (really-make-frame literals count debug-data template-index env-index closure-index size)
   frame?
-  (env-index      frame-env-index)
   (template-index frame-template-index)
+  (env-index      frame-env-index)
   (closure-index  frame-closure-index)
   (size           frame-size     set-frame-size!)
   (literals       frame-literals set-frame-literals!)
@@ -31,7 +31,7 @@
 ; the template was pushed as well.  CLOSURE? is true if the closure
 ; was pushed as well.
 
-(define (make-frame parent name size env? template? closure?)
+(define (make-frame parent name size template? env? closure?)
   (let* ((ddata (new-debug-data (adjust-procedure-name name)
 				(if parent
 				    (frame-debug-data parent)
@@ -43,14 +43,14 @@
 	     (set! size (+ 1 size))
 	     index)))
 
-    (let* ((env-index (allocate-index env?))
-	   (template-index (allocate-index template?))
-	   (closure-index (allocate-index closure?)))
+    (let* ((closure-index (allocate-index closure?))
+	   (env-index (allocate-index env?))
+	   (template-index (allocate-index template?)))
 
       (really-make-frame '()
 			 0
 			 ddata
-			 env-index template-index closure-index
+			 template-index env-index closure-index
 			 size))))
 
 (define (adjust-procedure-name name)

@@ -31,7 +31,7 @@
 ; Stack has zero args, no env, template.
   
 (define (compile-form form name next)
-  (let ((frame (make-frame #f name 0 #f #t #f)))
+  (let ((frame (make-frame #f name 0 #t #f #f)))
     (segment->template
       (sequentially
         (lambda-protocol 0 #t #f #f)	; template, no env, no closure
@@ -124,8 +124,8 @@
 	 (frame (make-frame #f		; no parent
 			    #f		; no name
 			    nargs	; args on stack
-			    #f		; drop environment
 			    #t		; keep template
+			    #f		; drop environment
 			    #f)))       ; drop closure
     (append-templates inits
 		      nargs

@@ -195,10 +195,10 @@
 ; Emitting the PROTOCOL pseudo instruction
 
 (define (make-push-byte need-template? need-env? need-closure?)
-  (bitwise-ior (if need-env?
+  (bitwise-ior (if need-template? 
                    #b001
                    #b000)
-               (if need-template? 
+               (if need-env?
                    #b010 
                    #b000)
 	       (if need-closure?

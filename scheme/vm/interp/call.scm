@@ -503,24 +503,24 @@
 	 (push (closure-env *val*))
 	 (push template))
 	((= #b001 spec)
-	 (push (closure-env *val*)))
-	((= #b010 spec)
 	 (push template))
+	((= #b010 spec)
+	 (push (closure-env *val*)))
 	;; the next two are for the output of the optimizer,
 	;; for closures that have the environment merged in
 	((= #b100 spec)
 	 (push *val*))  ; closure
 	((= #b110 spec)
-	 (push template)
-	 (push *val*))
+	 (push *val*)
+	 (push (closure-env *val*)))
 	;; the following probably won't occur in the wild
 	((= #b101 spec)
-	 (push (closure-env *val*))
-	 (push *val*))
+	 (push *val*)
+	 (push template))
 	((= #b111 spec)
+	 (push *val*)
 	 (push (closure-env *val*))
-	 (push template)
-	 (push *val*))))
+	 (push template))))
 
 ;----------------------------------------------------------------
 ; Get a two-byte number from CODE-VECTOR.

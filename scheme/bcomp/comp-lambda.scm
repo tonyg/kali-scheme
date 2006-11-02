@@ -72,7 +72,7 @@
 	 (n-ary? (n-ary? formals))
 	 (stack-nargs (if n-ary? (+ nargs 1) nargs))
 	 (need-env? (not (null? free)))		;+++  ; could just be #t
-	 (frame (make-frame frame lambda-name stack-nargs need-env? #t #f))
+	 (frame (make-frame frame lambda-name stack-nargs #t need-env? #f))
 	 (extras (if need-env? 2 1)))
     (set-lexical-offsets! free stack-nargs)
     (let ((code (compile-lambda-code formals
