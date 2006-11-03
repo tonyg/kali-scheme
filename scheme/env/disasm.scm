@@ -63,7 +63,7 @@
   level)
 
 (define disasm-table (make-opcode-table
-                               (lambda (opcode template level pc . args)
+                               (lambda (opcode template level pc len . args)
                                  (print-opcode opcode pc level)
                                  (print-opcode-args args)
                                  (display #\))
@@ -80,7 +80,7 @@
 
 ;------------------------------
 (define-disasm protocol
-  (lambda (opcode template level pc p-args)
+  (lambda (opcode template level pc len p-args)
     (print-opcode opcode pc level)
     (show-protocol (cdr p-args) pc)
     (display #\))
@@ -131,7 +131,7 @@
 
 ;------------------------------
 (define-disasm global
-  (lambda (opcode template level pc index-to-template index-within-template)
+  (lambda (opcode template level pc len index-to-template index-within-template)
     (print-opcode opcode pc level)
     (print-opcode-args (list index-to-template index-within-template))
     (display #\space)
@@ -140,7 +140,7 @@
     level))
 
 (define-disasm set-global!
-  (lambda (opcode template level pc index-to-template index-within-template)
+  (lambda (opcode template level pc len index-to-template index-within-template)
     (print-opcode opcode pc level)
     (print-opcode-args (list index-to-template index-within-template))
     (display #\space)
@@ -161,7 +161,7 @@
 
 
 ;------------------------------
-(define (disasm-make-flat-env opcode template level pc env-data-arg)
+(define (disasm-make-flat-env opcode template level pc len env-data-arg)
   (let ((env-data (cdr env-data-arg)))
     (print-opcode opcode pc level)
     (display #\space)
@@ -229,13 +229,13 @@
 	      (cdr l)))))
 
 (define-disasm cont-data
-  (lambda (opcode template level pc cont-data-arg)
+  (lambda (opcode template level pc len cont-data-arg)
     (print-opcode opcode pc level)
     (display-cont-data (cdr cont-data-arg))
     (display #\))
     level))
 ;------------------------------
-(define (display-shuffle opcode template level pc moves-data)
+(define (display-shuffle opcode template level pc len moves-data)
   (print-opcode opcode pc level)
   (write-char #\space)
   (let ((moves (cdr moves-data)))

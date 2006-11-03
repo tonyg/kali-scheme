@@ -28,7 +28,7 @@
 
   (define instruction-set-table 
     (make-opcode-table 
-     (lambda (opcode template state pc . args)
+     (lambda (opcode template state pc len . args)
        (cons `(,pc ,(enumerand->name opcode op) ,@(map cdr args)) state))))
 
   (define (attribute-literal literal i state)
@@ -118,12 +118,13 @@
                                                  pc 
                                                  code 
                                                  template 
-                                                 attribution)))))
-    (values (+ 1 (car len.rev-args))  ; 1 for the opcode
-            (really-parse-instruction pc opcode template state 
+                                                 attribution))))
+	 (total-len (+ 1 (car len.rev-args))))  ; 1 for the opcode
+    (values total-len
+            (really-parse-instruction pc total-len opcode template state 
                                       (reverse (cdr len.rev-args)) attribution))))
 
-(define (really-parse-instruction pc opcode template state args attribution)
+(define (really-parse-instruction pc len opcode template state args attribution)
   (let ((new-state (if (label-at-pc? pc)
                        ((attribution-at-label attribution) 
                         (pc->label pc attribution)
@@ -132,7 +133,7 @@
   (let ((opcode-attribution 
          (opcode-table-ref (attribution-opcode-table attribution) opcode)))
     (if opcode-attribution
-	(apply opcode-attribution opcode template new-state pc args)
+	(apply opcode-attribution opcode template new-state pc len args)
 	(error "cannot attribute " (enumerand->name opcode op) args)))))
 
 ;;--------------------
