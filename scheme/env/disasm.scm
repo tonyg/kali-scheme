@@ -43,12 +43,12 @@
   (if (or push-template? push-env? push-closure?)
       (begin
         (display " (push")
+	(if push-closure?
+	    (display " closure"))
         (if push-env?
             (display " env"))
         (if push-template?
             (display " template"))
-	(if push-closure?
-	    (display " closure"))
         (display #\))))
   (display #\))
   level)
