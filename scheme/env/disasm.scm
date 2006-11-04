@@ -205,28 +205,19 @@
 ;------------------------------
 
 (define (display-cont-data cont-data)
-  (let ((gc-mask (bytes->bits (cont-data-mask-bytes cont-data))))
-    (write-char #\space)
-    (display (list 'depth (cont-data-depth cont-data)))
-    (write-char #\space)
-    (display (list 'template (cont-data-template cont-data)))
-    (if (zero? (cont-data-gc-mask-size cont-data))
-	(display " all-live"))
-    (let loop ((mask gc-mask) (i 0))
-      (if (not (zero? mask))
-	  (begin
-	    (if (odd? mask)
-		(begin
-		  (write-char #\space)
-		  (display i)))
-	    (loop (arithmetic-shift mask -1) (+ 1 i)))))))
-		  
-(define (bytes->bits l)
-  (let loop ((n 0) (l l))
-    (if (null? l)
-	n
-	(loop (+ (arithmetic-shift n 8) (car l))
-	      (cdr l)))))
+  (write-char #\space)
+  (display (list '=> (cont-data-pc cont-data)))
+  (write-char #\space)
+  (display (list 'depth (cont-data-depth cont-data)))
+  (write-char #\space)
+  (display (list 'template (cont-data-template cont-data)))
+  (write-char #\space)
+  (cond
+   ((cont-data-live-offsets cont-data)
+    => (lambda (offsets)
+	 (display (cons 'live offsets))))
+   (else
+    (display "all-live"))))
 
 (define-disasm cont-data
   (lambda (opcode template level pc len cont-data-arg)

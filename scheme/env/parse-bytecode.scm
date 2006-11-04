@@ -422,10 +422,12 @@
      (else (error "unknown arg spec: " (car specs))))))
 
 (define-record-type cont-data :cont-data
-  (make-cont-data length mask-bytes template pc gc-mask-size depth)
+  (make-cont-data length mask-bytes live-offsets template pc gc-mask-size depth)
   cont-data?
   (length cont-data-length)
   (mask-bytes cont-data-mask-bytes)
+  ;; #f if all are live
+  (live-offsets cont-data-live-offsets)
   (template cont-data-template)
   (pc cont-data-pc)
   (gc-mask-size cont-data-gc-mask-size)
@@ -443,13 +445,34 @@
 	    (if (>= the-pc (+ pc 2 gc-mask-size))
 		mask-bytes
 		(lp (+ the-pc 1)
-		    (cons (code-vector-ref code the-pc) mask-bytes))))))
+		    (cons (code-vector-ref code the-pc) mask-bytes)))))
+	 (live-offsets
+	  (and (not (zero? gc-mask-size))
+	       (gc-mask-live-offsets (bytes->bits mask-bytes)))))
     (make-cont-data len
                     mask-bytes
+		    live-offsets
                     template
                     (pc->label offset attribution)
                     gc-mask-size
                     depth)))
+
+(define (bytes->bits l)
+  (let loop ((n 0) (l l))
+    (if (null? l)
+	n
+	(loop (+ (arithmetic-shift n 8) (car l))
+	      (cdr l)))))
+
+(define (gc-mask-live-offsets mask)
+  (let loop ((mask mask) (i 0) (l '()))
+    (if (zero? mask)
+	(reverse l)
+	(loop (arithmetic-shift mask -1) (+ 1 i)
+	      (if (odd? mask)
+		  (cons i l)
+		  l)))))
+
 ;----------------
 ; Utilities.
 
