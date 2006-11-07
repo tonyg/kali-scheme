@@ -815,6 +815,46 @@
 	(else
 	 (goto continue 2))))
 
+(define-opcode jump-if-not-binary
+  (enum-case op (code-byte 2)
+    ((eq?)
+     (cond
+      ((not (vm-eq? (pop) *val*))
+       (set! *code-pointer*
+	     (address+ *code-pointer*
+		       (code-offset 0)))
+       (goto interpret *code-pointer*))
+      ;; missing: < > <= >= char<?
+      (else
+       (goto continue 3))))
+    (else
+     (raise-exception bad-option 3 (enter-fixnum (code-byte 0))))))
+
+(define-opcode jump-if-not-unary
+  (enum-case op (code-byte 2)
+    ((eof-object?)
+     (cond
+      ((not (vm-eq? *val* eof-object))
+       (set! *code-pointer*
+	     (address+ *code-pointer*
+		       (code-offset 0)))
+       (goto interpret *code-pointer*))
+      (else
+       (goto continue 3))))
+    ;; missing: number? integer? rational? real? complex? exact?
+    (else
+     (raise-exception bad-option 3 (enter-fixnum (code-byte 0))))))
+
+(define-opcode jump-if-not-stored-object-has-type?
+  (cond
+   ((not (stob-of-type? *val* (code-byte 2)))
+    (set! *code-pointer*
+	  (address+ *code-pointer*
+		    (code-offset 0)))
+    (goto interpret *code-pointer*))
+   (else
+    (goto continue 3))))
+
 ; Unconditional jumps
 
 (define-opcode jump
