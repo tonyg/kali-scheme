@@ -39,6 +39,7 @@
 
 (define *interrupted-byte-opcode-return-code*)	; used to return from interrupts
 (define *interrupted-native-call-return-code*)	; used to return from interrupts
+(define *native-poll-return-code*)              ; used to return from interrupts
 (define *exception-return-code*)	; used to mark exception continuations
 (define *native-exception-return-code*)	; used to mark native exception continuations
 (define *call-with-values-return-code*)	; for call-with-values opcode
@@ -68,6 +69,7 @@
   (reset-stack-pointer false)
   (set-code-pointer! *interrupted-byte-opcode-return-code* 0)
   (set-code-pointer! *interrupted-native-call-return-code* 0)
+  (set-code-pointer! *native-poll-return-code* 0)
   (set! *last-code-pointer-resumed* *code-pointer*)
   (set! *val*                unspecific-value)
   (set! *current-thread*     null)
@@ -109,6 +111,8 @@
           (s48-trace-value *interrupted-byte-opcode-return-code*))
     (set! *interrupted-native-call-return-code*
           (s48-trace-value *interrupted-native-call-return-code*))
+    (set! *native-poll-return-code*
+          (s48-trace-value *native-poll-return-code*))
     (set! *exception-return-code* (s48-trace-value *exception-return-code*))
     (set! *native-exception-return-code* (s48-trace-value *native-exception-return-code*))
     (set! *call-with-values-return-code*
@@ -234,7 +238,10 @@
       (let ((code (code-pointer->code *last-code-pointer-resumed*)))
 	(if (within-code? *code-pointer* code)
 	    code
-	    (error "VM error: unable to locate current code vector")))))
+	    (error "VM error: unable to locate current code vector"
+                   (address->integer *code-pointer*)
+                   *last-code-called*
+                   (address->integer *last-code-pointer-resumed*))))))
 
 (define (code-pointer->code code-pointer)
   (let ((pc (fetch-two-bytes (address- code-pointer 5))))
@@ -268,6 +275,12 @@
 	  (make-return-code ignore-values-protocol
                             #xffff              ; dummy template offset
 			    (enum op resume-interrupted-call-to-native-code)
+			    #xFFFF		; escape value
+			    key))
+    (set! *native-poll-return-code*
+	  (make-return-code ignore-values-protocol
+                            #xffff              ; dummy template offset
+			    (enum op resume-native-poll)
 			    #xFFFF		; escape value
 			    key))
     (set! *exception-return-code*

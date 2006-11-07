@@ -396,6 +396,7 @@
 
 	  s48-call-native-procedure
 	  s48-invoke-native-continuation
+          s48-jump-native
 	  s48-native-return
 
 	  get-proposal-lock!

@@ -42,6 +42,15 @@
 						   return-code-pc))
   (goto find-and-call-interrupt-handler))
 
+(define (handle-native-poll template return-address)
+  (push *val*)
+  (push template)
+  (push return-address)
+  (push-interrupt-state)
+  (push-adlib-continuation! (code+pc->code-pointer *native-poll-return-code*
+						   return-code-pc))
+  (goto find-and-call-interrupt-handler))
+
 ; MG: This is an old comment, I don't want to remove it because I
 ; don't understand it:
 ; We now have three places interrupts are caught:
@@ -221,6 +230,14 @@
   (set! *val* (pop))
   (let ((protocol-skip (extract-fixnum (pop))))
     (goto really-call-native-code protocol-skip)))
+
+(define-opcode resume-native-poll
+  (pop)                                 ; frame size
+  (s48-pop-interrupt-state)
+  (let* ((return-address (pop))
+         (template (pop)))
+    (set! *val* (pop))
+    (goto post-native-dispatch (s48-jump-native return-address template))))
 
 ; Do nothing much until something happens.  To avoid race conditions this
 ; opcode is called with all interrupts disabled, so it has to return if

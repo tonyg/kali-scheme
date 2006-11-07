@@ -263,6 +263,7 @@
   (set-enabled-interrupts! 1)
   (resume-interrupted-opcode-to-byte-code)
   (resume-interrupted-call-to-native-code)
+  (resume-native-poll)
   (schedule-interrupt 1)
   (wait 2)                      ; do nothing until something happens
   (call-external-value 1 +)

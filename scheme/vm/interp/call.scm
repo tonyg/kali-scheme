@@ -71,6 +71,8 @@
   (set! s48-*native-protocol* protocol))
 
 (define (post-native-dispatch tag)
+;  (write-string "P" (current-error-port))
+;  (write-integer tag (current-error-port))
   (let loop ((tag tag))
     (case tag
       ((0)
@@ -78,12 +80,14 @@
       ((1)
        (goto perform-application s48-*native-protocol*))
       ((2)
-       (cond ((pending-interrupt?)
-	      (goto handle-interrupt))
-             (else
-              (loop (s48-invoke-native-continuation
-                     (address->integer (pop-continuation-from-stack))
-                     -2)))))
+       (let* ((template (pop))
+              (return-address (pop)))
+         (cond ((pending-interrupt?)
+                ;(write-string "interrupt is pending" (current-error-port))
+                (goto handle-native-poll template return-address))
+               (else
+                ;(write-string "no interrupt is pending" (current-error-port))
+                (loop (s48-jump-native return-address template))))))
       ((3)
        (error "unexpected native return value" tag))
       ((4)
