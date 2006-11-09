@@ -39,19 +39,17 @@
     (compile-constant (cadr (node-form node)) depth frame cont)))
 
 (define (compile-constant obj depth frame cont)
-  (deliver-value (cond ((ignore-values-cont? cont)
-			empty-segment)			;+++ dead code
-		       ((eq? obj #f)
-			; +++ hack for bootstrap from Schemes that don't
-			; distinguish #f/()
-			(instruction (enum op false)))
-		       ((small-integer? obj)
-			(integer-literal-instruction obj))
-		       (else
-			(stack-indirect-instruction
-			  (template-offset frame depth)
-			  (literal->index frame obj))))
-		 cont))
+  (deliver-constant-value (cond ((eq? obj #f)
+				 ;; +++ hack for bootstrap from Schemes that don't
+				 ;; distinguish #f/()
+				 (instruction (enum op false)))
+				((small-integer? obj)
+				 (integer-literal-instruction obj))
+				(else
+				 (stack-indirect-instruction
+				  (template-offset frame depth)
+				  (literal->index frame obj))))
+			  cont))
 
 (define (small-integer? obj)
   (and (integer? obj)
@@ -67,13 +65,19 @@
 
 (define-compilator 'unspecific (proc () unspecific-type)
   (lambda (node depth frame cont)
-    (deliver-value (instruction (enum op unspecific))
-		   cont)))
+    (deliver-constant-value (instruction (enum op unspecific))
+			    cont)))
 
 (define-compilator 'unassigned (proc () unspecific-type)
   (lambda (node depth frame cont)
-    (deliver-value (instruction (enum op unassigned))
-		   cont)))
+    (deliver-constant-value (instruction (enum op unassigned))
+			    cont)))
+
+(define (deliver-constant-value segment cont)
+  (deliver-value (if (ignore-values-cont? cont)
+		     empty-segment
+		     segment)
+		 cont))
 
 ;----------------------------------------------------------------
 ; Variable reference
