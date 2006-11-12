@@ -3,8 +3,8 @@
 ; Code to turn PROC lambdas into JUMP lambdas.
 
 ; FIND-JUMP-PROCS returns two lists.  The first contains lists of the form
-;    ((<proc-lambda> ...) (<var> ...) <continuation>)
-; indicating that these lambda nodes, bound to the given variables, are all
+;    (<continuation> <proc-lambda> ...)
+; indicating that these lambda nodes are all
 ; called with <continuation> as their only continuation.  The second list
 ; is of procedures that are called only by each other.  The procedures in
 ; the second list are deleted.  Those in the first list are converted to
@@ -12,19 +12,24 @@
 ;
 ; INTEGRATE-JUMP-PROCS! returns #T if any change is made to the program.
 
-(define (integrate-jump-procs!)
+(define (integrate-jump-procs! node)
   (receive (hits useless)
       (find-jump-procs (filter proc-lambda?
 			       (make-lambda-list))
 		       find-calls)
     (remove-unused-procedures! useless)
-    (for-each (lambda (p)
-		(procs->jumps (cdr p)
-			      (map bound-to-variable (cdr p))
-			      (car p)))
-	      hits)
-    (or (not (null? hits))
-	(not (null? useless)))))
+    (let loop ((changed? #f))
+      (receive (hits useless)
+	  (find-jump-procs (filter proc-lambda?
+				   (make-lambda-list))
+			   find-calls)
+	(if (null? hits)
+	    changed?
+	    (let ((p (car hits)))
+	      (procs->jumps (cdr p)
+			    (map bound-to-variable (cdr p))
+			    (car p))
+      	      (loop #t)))))))
 
 ; We want to find subsets of ALL-PROCS such that all elements of a subset
 ; are always called with the same continuation.  (PROC->USES <proc>) returns
@@ -229,32 +234,34 @@
 		    #f)))
       (receive (called-vars called-procs)
 	  (bound-above? lca called-vars called-procs)
-	(for-each detach-bound-value called-vars called-procs)
-	(cond ((lambda-node? cont)
-	       (determine-continuation-protocol cont jump-procs)
-	       (let ((cont-copy (copy-node-tree cont)))
-		 (change-lambda-type cont-copy 'jump)
-		 (put-in-letrec (cons cvar
-				      called-vars)
-				(cons cont-copy
-				      called-procs)
-				lca)))
-	      (else
-	       (put-in-letrec called-vars called-procs lca))))
-      (for-each proc-calls->jumps jump-procs)
-      (for-each (lambda (p)
-		  (let* ((v (car (lambda-variables p)))
-			 (refs (variable-refs v)))
-		    (set-variable-refs! v '())
-		    (for-each (lambda (r)
-				(if (lambda-node? cont)
-				    (return->jump (node-parent r) cvar)
-				    (replace r (make-reference-node
-						(car (lambda-variables proc))))))
-			      refs)
-		    (remove-variable p v)))
-		jump-procs)
-      (values))))
+	(receive (called-vars called-procs)
+	    (filter-ancestors called-vars called-procs)
+	  (for-each detach-bound-value called-vars called-procs)
+	  (cond ((lambda-node? cont)
+		 (determine-continuation-protocol cont jump-procs)
+		 (let ((cont-copy (copy-node-tree cont)))
+		   (change-lambda-type cont-copy 'jump)
+		   (put-in-letrec (cons cvar
+					called-vars)
+				  (cons cont-copy
+					called-procs)
+				  lca)))
+		(else
+		 (put-in-letrec called-vars called-procs lca))))
+	(for-each proc-calls->jumps jump-procs)
+	(for-each (lambda (p)
+		    (let* ((v (car (lambda-variables p)))
+			   (refs (variable-refs v)))
+		      (set-variable-refs! v '())
+		      (for-each (lambda (r)
+				  (if (lambda-node? cont)
+				      (return->jump (node-parent r) cvar)
+				      (replace r (make-reference-node
+						  (car (lambda-variables proc))))))
+				refs)
+		      (remove-variable p v)))
+		  jump-procs)
+	(values)))))
 
 ; Returns those of VARS and VALS where there is a call to the variable that
 ; passes CONT as a continuation, or where the variable is not bound.  The
@@ -303,6 +310,24 @@
 	   (loop (cdr vars) (cdr vals)
 		 (cons (car vars) r-vars)
 		 (cons (car vals) r-vals))))))
+
+; Filter the list of VARS and VALS so that none of the nodes
+; contained in any of the other is included.
+; If we didn't do this, we might hoist them and mess with the scoping.
+(define (filter-ancestors all-vars all-vals)
+  (let loop ((vars all-vars) (vals all-vals) (r-vars '()) (r-vals '()))
+    (cond
+     ((null? vars)
+      (values r-vars r-vals))
+     ((any (lambda (other-val)
+	     (and (not (eq? (car vals) other-val))
+		  (node-ancestor? other-val (car vals))))
+	   all-vals)
+      (loop (cdr vars) (cdr vals) r-vars r-vals))
+     (else
+      (loop (cdr vars) (cdr vals)
+	    (cons (car vars) r-vars)
+	    (cons (car vals) r-vals))))))
 
 (define (detach-bound-value var node)
   (if (variable-binder var)
