@@ -10,18 +10,39 @@
 (define *gc-count* 0)
 (define (s48-gc-count) *gc-count*)
 
+(define *gc-seconds* 0)
+(define *gc-mseconds* 0)
+
+(define (s48-gc-run-time)
+  (values *gc-seconds* *gc-mseconds*))
+
 (define (s48-collect force-major?)
-  (set! *from-begin* (heap-begin))
-  (set! *from-end* (heap-limit))
-  (swap-spaces)
-  (set-heap-pointer! (heap-begin))
-  (set! *weak-pointer-hp* null-address)
-  (s48-gc-root)			       ; trace the interpreter's roots
-  (do-gc)
-  (clean-weak-pointers)
-  (s48-post-gc-cleanup #t ; it's always a major collection
-		       (in-trouble?))
-  (set! *gc-count* (+ *gc-count* 1)))
+  (receive (start-seconds start-mseconds) (run-time)
+    (set! *from-begin* (heap-begin))
+    (set! *from-end* (heap-limit))
+    (swap-spaces)
+    (set-heap-pointer! (heap-begin))
+    (set! *weak-pointer-hp* null-address)
+    (s48-gc-root)                      ; trace the interpreter's roots
+    (do-gc)
+    (clean-weak-pointers)
+    (s48-post-gc-cleanup #t           ; it's always a major collection
+                         (in-trouble?))
+    (set! *gc-count* (+ *gc-count* 1))
+    (receive (end-seconds end-mseconds) (run-time)
+      (if (>= end-mseconds start-mseconds)
+          (begin
+            (set! *gc-seconds* (+ *gc-seconds*
+                                  (- end-seconds start-seconds)))
+            (set! *gc-mseconds* (+ *gc-mseconds*
+                                   (- end-mseconds start-mseconds))))
+          (begin
+            (set! *gc-seconds* (+ *gc-seconds*
+                                  (- (- end-seconds start-seconds) 1)))
+            (set! *gc-mseconds* (+ *gc-mseconds*
+                                   (- (+ 1000 end-mseconds)
+                                      start-mseconds))))))))
+  
 
 (define *from-begin*)
 (define *from-end*)

@@ -488,6 +488,7 @@
   (run-time
    real-time
    cheap-time     ; cheap (no system call) access to the polling clock
+   gc-run-time
    ;current-time
    ))
 

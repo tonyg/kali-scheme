@@ -469,6 +469,10 @@
        (receive (seconds mseconds)
 	   (real-time)
 	 (goto return-time-value option seconds mseconds)))
+      ((gc-run-time)
+       (receive (seconds mseconds)
+	   (s48-gc-run-time)
+	 (goto return-time-value option seconds mseconds)))
       (else
        (raise-exception bad-option 0 (enter-fixnum option) other)))))
       

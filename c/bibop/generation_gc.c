@@ -92,7 +92,8 @@ static unsigned long rdm_threshold = S48_RDM_INITIAL_THRESHOLD;
 static char heap_is_initialized = 0;
 static char gc_forbid_count = 0;
 static unsigned long gc_count = 0;
-
+static long gc_seconds = 0;
+static long gc_mseconds = 0;
 
 static void recreate_creation_space() {
   unsigned int s_below;
@@ -632,6 +633,11 @@ long s48_gc_count() {
   return gc_count;
 }
 
+long s48_gc_run_time(long* mseconds) {
+  *mseconds = gc_mseconds;
+  return gc_seconds;
+}
+
 static unsigned long aging_space_survival;
 
 /* collect the first COUNT generations */
@@ -803,6 +809,9 @@ void s48_collect(psbool force_major) {
 */
   unsigned long user_defined_hsize, heap_live_size;
   psbool was_major;
+  long start_seconds, start_mseconds, end_seconds, end_mseconds;
+
+  start_seconds = s48_run_time(&start_mseconds);
 
   was_major = do_collect(force_major, FALSE);
 
@@ -820,6 +829,15 @@ void s48_collect(psbool force_major) {
     if (heap_live_size > user_defined_hsize)
       s48_gc_error("Scheme 48 heap overflow (max heap size %i cells)\n",
 		   user_defined_hsize);
+  }
+  end_seconds = s48_run_time(&end_mseconds);
+  if (end_mseconds >= start_mseconds) {
+    gc_seconds = gc_seconds + (end_seconds - start_seconds);
+    gc_mseconds = gc_mseconds + (end_mseconds - start_mseconds);
+  }
+  else {
+    gc_seconds = gc_seconds + ((end_seconds - start_seconds) - 1); 
+    gc_mseconds = gc_mseconds + ((1000 + end_mseconds) - start_mseconds);
   }
 }
 

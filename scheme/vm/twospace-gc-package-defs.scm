@@ -28,6 +28,7 @@
 
 (define-structure gc gc-interface
   (open prescheme ps-receive vm-utilities vm-architecture
+        external
 	memory data
 	heap heap-gc-util
 	heap-two-space

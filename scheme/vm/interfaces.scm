@@ -136,6 +136,7 @@
 	  s48-extant?
 
 	  s48-gc-count
+          s48-gc-run-time
 	  ))
 
 (define external-opcodes-interface

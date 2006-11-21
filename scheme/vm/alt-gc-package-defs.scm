@@ -64,5 +64,7 @@
       (external "s48_extantP" (=> (integer) boolean)))
     (define s48-gc-count
       (external "s48_gc_count" (=> () integer)))
+    (define s48-gc-run-time
+      (external "s48_gc_run_time" (=> () integer integer)))
     ))
 
