@@ -271,6 +271,7 @@
 	    channel-i/o
 	    condvars
 	    define-record-types
+	    encodings
 	    enum-case
 	    enumerated
 	    fluids
@@ -282,6 +283,7 @@
 	    scheme-level-2
 	    set-text-procedures
 	    templates
+	    text-codecs
 	    threads
 	    util
 	    vm-data
@@ -310,7 +312,6 @@
 	    records-internal
 	    root-scheduler
 	    session-data
-	    text-codecs
 	    threads-internal
 	    vm-exceptions
 	    usual-resumer
@@ -427,7 +428,6 @@
 	    display-conditions
 	    dump/restore
 	    dynamic-externals
-	    encodings
 	    enum-case
 	    enum-sets
 	    extended-numbers

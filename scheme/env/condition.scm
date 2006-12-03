@@ -402,6 +402,16 @@
      (list '&interrupt
 	   (enumerand->name (interrupt-type c) interrupt)))))
 
+(define-condition-type &decoding-error &error
+  decoding-error?
+  (encoding-name decoding-error-encoding-name))
+
+(define-primitive-condition-discloser &decoding-error
+  (lambda (c)
+    (list
+     (list '&decoding-error
+	   (decoding-error-encoding-name c)))))
+
 ;; This is for backwards compatibility and shouldn't be used by application code
 (define-condition-type &simple-condition &condition
   simple-condition?

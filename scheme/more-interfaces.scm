@@ -358,6 +358,8 @@
 	  &syntax-error syntax-error?
 	  &interrupt interrupt?
 	  interrupt-type
+	  &decoding-error decoding-error?
+	  decoding-error-encoding-name
 	  &simple-condition simple-condition?
 	  simple-condition-type simple-condition-stuff))
 
@@ -393,38 +395,8 @@
   (export (define-record-type :syntax)
 	  define-record-discloser))
 
-; Character sets
-; --------------------
-
-(define-interface encodings-interface
-  (export char-encoding-length
-	  string-encoding-length
-	  encode-char
-	  encode-string
-	  string->bytes-n
-	  string->bytes
-	  bytes-string-size
-	  decode-char
-	  decode-string
-	  bytes->string bytes->string-n
-	  
-	  char-encoding-length/utf-8
-	  string-encoding-length/utf-8
-	  encode-char/utf-8
-	  encode-string/utf-8
-	  string->utf-8-n
-	  string->utf-8
-	  bytes-string-size/utf-8
-	  decode-char/utf-8
-	  decode-string/utf-8
-	  utf-8->string utf-8->string-n
-
-	  (encoding-status :syntax)
-	  encoding-status?
-
-	  (decoding-status :syntax)
-	  decoding-status?
-	  &decoding-error decoding-error? decoding-error-encoding-name))
+; Unicode
+; -------
 
 (define-interface text-codec-utils-interface
   (export guess-port-text-codec-according-to-bom

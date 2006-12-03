@@ -62,11 +62,11 @@
 	     (target-index 0))
     (cond
      ((>= source-index source-count)
-      (values (encoding-status complete)
+      (values (enum encoding-status complete)
 	      source-index
 	      target-index))
      ((>= target-index target-count)
-      (values (encoding-status insufficient)
+      (values (enum encoding-status insufficient)
 	      source-index
 	      target-index))
      (else
@@ -79,7 +79,7 @@
 			      (max 0 (- target-count target-index))))
 	  (lambda (ok? count)
 	    (if (not ok?)
-		(values (encoding-status insufficient)
+		(values (enum encoding-status insufficient)
 			source-index
 			target-index)
 		(loop (+ source-index 1) (+ target-index count))))))))))
@@ -109,15 +109,15 @@
     (lambda (maybe-char count)
       (cond
        (maybe-char
-	(values (decoding-status complete)
+	(values (enum decoding-status complete)
 		maybe-char
 		count))
        (count
-	(values (decoding-status incomplete)
+	(values (enum decoding-status incomplete)
 		#f
 		count))
        (else
-	(values (decoding-status invalid)
+	(values (enum decoding-status invalid)
 		#f
 		#f))))))
 
@@ -133,7 +133,7 @@
   (let loop ((index 0)
 	     (target-index 0))
     (if (>= index count)
-	(values (decoding-status complete)
+	(values (enum decoding-status complete)
 		index target-index)
 	(call-with-values
 	    (lambda ()
@@ -146,10 +146,10 @@
 	     (char
 	      (loop (+ index count) (+ target-index 1)))
 	     (count
-	      (values (decoding-status incomplete)
+	      (values (enum decoding-status incomplete)
 		      index target-index))
 	     (stop-at-invalid?
-	      (values (decoding-status invalid)
+	      (values (enum decoding-status invalid)
 		      index target-index))
 	     (else
 	      (loop (+ 1 index) (+ 1 target-index)))))))))
@@ -167,11 +167,11 @@
 	     (target-index 0))
     (cond
      ((>= index count)
-      (values (decoding-status complete)
+      (values (enum decoding-status complete)
 	      index
 	      target-index))
      ((>= target-index target-count)
-      (values (decoding-status insufficient)
+      (values (enum decoding-status insufficient)
 	      index target-index))
      (else
       (call-with-values
@@ -186,13 +186,13 @@
 	    (string-set! target (+ target-start target-index) char)
 	    (loop (+ index count) (+ target-index 1)))
 	   (count
-	    (values (decoding-status incomplete)
+	    (values (enum decoding-status incomplete)
 		    index target-index))
 	   (maybe-error-char
 	    (string-set! target (+ target-start target-index) maybe-error-char)
 	    (loop (+ 1 index) (+ 1 target-index)))
 	   (else
-	    (values (decoding-status invalid)
+	    (values (enum decoding-status invalid)
 		    index target-index)))))))))
 
 ; may be slightly faster because of REVERSE-LIST->STRING
@@ -319,35 +319,18 @@
 
 (define empty-buffer (make-byte-vector 0 0))
 
-(define-enumerated-type encoding-status :encoding-status
-  encoding-status?
-  encoding-statuses
-  encoding-status-name
-  encoding-status-index
+(define-enumeration encoding-status
   (complete insufficient))
-
-(define-condition-type &decoding-error &error
-  decoding-error?
-  (encoding-name decoding-error-encoding-name))
 
 (define (decoding-error encoding-name
 			message
 			bytes start)
-  (raise
-   (condition
-    (&decoding-error
-     (encoding-name encoding-name))
-    (&irritants
-     (values (list bytes start)))
-    (&message
-     (message
-      (string-append "error while decoding " encoding-name ": " message))))))
+  (signal-condition
+   (make-decoding-error encoding-name
+			(string-append "error while decoding " encoding-name ": " message)
+			bytes start)))
 
-(define-enumerated-type decoding-status :decoding-status
-  decoding-status?
-  decoding-statuses
-  decoding-status-name
-  decoding-status-index
+(define-enumeration decoding-status
   (complete incomplete insufficient invalid))
 
 ;; UTF-8

@@ -112,6 +112,22 @@
   (files (rts text-codec))
   (optimize auto-integrate))
 
+(define-structure encodings encodings-interface
+  (open scheme-level-2
+	unicode
+	byte-vectors
+	(modify primitives 
+		(prefix primitive-)
+		(expose encode-char decode-char))
+	(subset architecture (text-encoding-option))
+	text-codecs
+	enumerated
+	simple-conditions simple-signals
+	proposals
+	(subset silly (reverse-list->string)))
+  (optimize auto-integrate)
+  (files (rts encoding)))
+
 (define-structures ((i/o i/o-interface)
 		    (i/o-internal i/o-internal-interface))
   (open scheme-level-1 simple-signals fluids

@@ -114,6 +114,22 @@
 			(cons (os-error-message status)
 			      (cons operation args)))))
 
+; Decoding errors
+
+(define-condition-type 'decoding-error '(error))
+(define decoding-error? (condition-predicate 'decoding-error))
+(define (make-decoding-error encoding-name message bytes start)
+  (make-condition 'decoding-error
+		  (list encoding-name message bytes start)))
+(define (decoding-error-encoding-name c)
+  (car (condition-stuff c)))
+(define (decoding-error-message c)
+  (cadr (condition-stuff c)))
+(define (decoding-error-bytes c)
+  (caddr (condition-stuff c)))
+(define (decoding-error-start c)
+  (cadddr (condition-stuff c)))
+
 ; Warnings
 
 (define-condition-type 'warning '())

@@ -46,6 +46,14 @@
 			 (status (sc:i/o-error-status simple-condition))
 			 (operation (sc:i/o-error-operation simple-condition))
 			 (arguments (sc:i/o-error-arguments simple-condition)))))
+	    ((sc:decoding-error? simple-condition)
+	     (condition (&decoding-error
+			 (encoding-name (sc:decoding-error-encoding-name simple-condition)))
+			(&irritants
+			 (values (list (sc:decoding-error-bytes simple-condition)
+				       (sc:decoding-error-start simple-condition))))
+			(&message
+			 (message (sc:decoding-error-message simple-condition)))))
 	    ((sc:error? simple-condition)
 	     (condition (&message (message (cadr simple-condition)))
 			(&error)	; probably not always true

@@ -542,7 +542,14 @@
 	  i/o-error-message
 	  i/o-error-operation
 	  i/o-error-arguments
-	  make-i/o-error))
+	  make-i/o-error
+
+	  decoding-error?
+	  decoding-error-encoding-name
+	  decoding-error-message
+	  decoding-error-bytes
+	  decoding-error-start
+	  make-decoding-error))
 
 (define-interface wind-interface
   (export call-with-current-continuation
@@ -586,6 +593,32 @@
 	  utf-8-codec
 	  utf-16le-codec utf-16be-codec
 	  utf-32le-codec utf-32be-codec))
+
+(define-interface encodings-interface
+  (export char-encoding-length
+	  string-encoding-length
+	  encode-char
+	  encode-string
+	  string->bytes-n
+	  string->bytes
+	  bytes-string-size
+	  decode-char
+	  decode-string
+	  bytes->string bytes->string-n
+	  
+	  char-encoding-length/utf-8
+	  string-encoding-length/utf-8
+	  encode-char/utf-8
+	  encode-string/utf-8
+	  string->utf-8-n
+	  string->utf-8
+	  bytes-string-size/utf-8
+	  decode-char/utf-8
+	  decode-string/utf-8
+	  utf-8->string utf-8->string-n
+
+	  (encoding-status :enumeration)
+	  (decoding-status :enumeration)))
 
 (define-interface i/o-internal-interface
   (export input-port-option		;read.scm
