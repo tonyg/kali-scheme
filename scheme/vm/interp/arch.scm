@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 36")
+(define architecture-version "Vanilla 37")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -271,6 +271,7 @@
   (undefine-shared-binding 2)
   (find-undefined-imported-bindings)
   (time 2)
+  (system-parameter 1)
   (vm-extension 2)		; access to extensions of the virtual machine
   (return-from-callback 2)	; return from an callback
   (op-with-cell-literal byte byte byte byte ;word-literal
@@ -536,6 +537,11 @@
    utf-8
    utf-16le utf-16be
    utf-32le utf-32be))
+
+; Options for op/system-parameter
+
+(define-enumeration system-parameter-option
+  (os-string-encoding))
 
 (define-enumeration stob
   (;; D-vector types (traced by GC)

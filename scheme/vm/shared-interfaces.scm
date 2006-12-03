@@ -23,6 +23,7 @@
 	  (port-status-options :syntax)
 	  (current-port-marker :syntax)
 	  (text-encoding-option :syntax)
+	  (system-parameter-option :syntax)
 
 	  maximum-stack-args
 	  two-byte-nargs-protocol

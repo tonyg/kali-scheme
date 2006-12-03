@@ -72,43 +72,30 @@
 ; We cheat here by using one type for both the variable names and
 ; their values.  The rules are the same for both, after all.
 
-(define-string/bytes-type environment-variable :environment-variable
-  environment-variable?
-  
-  string-encoding-length encode-string
-  string-decoding-length decode-string
-
-  thing->environment-variable
-  string->environment-variable
-  byte-vector->environment-variable
-  
-  environment-variable->string
-  environment-variable->byte-vector environment-variable->byte-string)
-
 (define (lookup-environment-variable name)
   (cond
    ((external-lookup-environment-variable
-     (environment-variable->byte-string
-      (thing->environment-variable name)))
-    => thing->environment-variable)
+     (os-string->byte-vector
+      (x->os-string name)))
+    => x->os-string)
    (else #f)))
 
 (define (lookup-environment-variable->string name)
   (cond
    ((lookup-environment-variable name)
-    => environment-variable->string)
+    => os-string->string)
    (else #f)))
    
 (define (environment-alist)
   (map (lambda (pair)
-	 (cons (thing->environment-variable (car pair))
-	       (thing->environment-variable (cdr pair))))
+	 (cons (x->os-string (car pair))
+	       (x->os-string (cdr pair))))
        (external-environment-alist)))
 
 (define (environment-alist-as-strings)
   (map (lambda (pair)
-	 (cons (environment-variable->string (car pair))
-	       (environment-variable->string (cdr pair))))
+	 (cons (os-string->string (car pair))
+	       (os-string->string (cdr pair))))
        (environment-alist)))
 
 (import-lambda-definition external-lookup-environment-variable (name) "posix_get_env")

@@ -26,6 +26,9 @@
       (external "s48_real_time" (=> () integer integer)))
     (define run-time 
       (external "s48_run_time" (=> () integer integer)))
+    
+    (define get-os-string-encoding
+      (external "s48_get_os_string_encoding" (=> () (^ char))))
 
     (define s48-call-native-procedure
       (external "s48_call_native_procedure" (=> (integer integer) integer)))

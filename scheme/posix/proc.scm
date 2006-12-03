@@ -36,21 +36,8 @@
 (import-lambda-definition external-exec-with-alias (program lookup? environment arguments)
 			  "posix_exec")
 
-(define-string/bytes-type exec-arg :exec-arg
-  exec-arg?
-  
-  string-encoding-length encode-string
-  string-decoding-length decode-string
-
-  thing->exec-arg
-  string->exec-arg
-  byte-vector->exec-arg
-  
-  exec-arg->string
-  exec-arg->byte-vector exec-arg->byte-string)
-
 (define (thing->exec-arg-byte-string thing)
-  (exec-arg->byte-string (thing->exec-arg thing)))
+  (os-string->byte-vector (x->os-string thing)))
 
 (define (exec-with-alias program lookup? environment arguments)
   (external-exec-with-alias (thing->exec-arg-byte-string program)

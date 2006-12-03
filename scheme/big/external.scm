@@ -59,19 +59,6 @@
 ;----------------
 ; Making new externals.
 
-(define-string/bytes-type dynamic-external-name :dynamic-external-name
-  dynamic-external-name?
-  
-  string-encoding-length encode-string
-  string-decoding-length decode-string
-
-  thing->dynamic-external-name
-  string->dynamic-external-name
-  byte-vector->dynamic-external-name
-  
-  dynamic-external-name->string
-  dynamic-external-name->byte-vector dynamic-external-name->byte-string)
-
 (define (get-external name)
   (cond ((table-ref *the-external-table* name)
 	 => (lambda (x) x))
@@ -79,8 +66,10 @@
 	 (let* ((value (make-code-vector 4 0))
 		(new (make-external name value)))
 	   (table-set! *the-external-table* name new)
-	   (if (not (external-lookup (dynamic-external-name->byte-string
-				      (thing->dynamic-external-name name))
+	   (if (not (external-lookup (os-string->byte-vector
+				      (call-with-os-string-text-codec
+				       utf-8-codec
+				       (lambda () (x->os-string name))))
 				     value))
 	       (warn "External not found" name))
 	   new))))
@@ -145,6 +134,6 @@
 ;----------------
 
 (define (dynamic-load name)
-  (external-dynamic-load (thing->file-name-byte-string name)))
+  (external-dynamic-load (os-string->byte-vector (x->os-string name))))
 
 (import-lambda-definition external-dynamic-load (filename) "s48_dynamic_load")

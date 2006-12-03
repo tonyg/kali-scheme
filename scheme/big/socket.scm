@@ -201,22 +201,7 @@
 
 ;----------------
 
-; Mike has no clue if this is right---supposedly, the host name format
-; is being extended to cover non-ASCII, and the encoding should be
-; fixed, but I don't know what it is.
-
-(define-string/bytes-type host-name :host-name
-  host-name?
-  
-  string-encoding-length encode-string
-  string-decoding-length decode-string
-
-  thing->host-name
-  string->host-name
-  byte-vector->host-name
-  
-  host-name->string
-  host-name->byte-vector host-name->byte-string)
+; #### Need IDNA support here
 
 ;----------------
 ; The C calls we use.  These are in c/unix/socket.c.

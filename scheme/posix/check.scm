@@ -13,13 +13,13 @@
 (define-structure posix-test (export)
   (open scheme testing sort threads
 	util		; every
-	file-names
 	posix-files
 	posix-time
 	posix-users
 	posix-i/o
 	posix-process-data
-	posix-processes)
+	posix-processes
+	os-strings)
   (begin
 
 (define-syntax xtest
@@ -140,7 +140,7 @@
 (test "set-working-directory!" string=? directory-name
       (begin
 	(set-working-directory! directory-name)
-	(file-name->string (working-directory))))
+	(os-string->string (working-directory))))
 
 (test "i/o-flags" equal? '(#f #f #t #f #f #f #f #t)
       (let* ((out (open-file "file0"
@@ -205,10 +205,10 @@
 		(loop (cons next names))
 		(begin
 		  (close-directory-stream directory)
-		  (sort-list (map file-name->string names) string<=?)))))))
+		  (sort-list (map os-string->string names) string<=?)))))))
  
 (test "listings1" equal? '("file1" "link-to-file0")
-      (sort-list (map file-name->string (list-directory ".")) string<=?))
+      (sort-list (map os-string->string (list-directory ".")) string<=?))
 
 (test "unlink" = 1
       (begin
@@ -247,18 +247,18 @@
 			      (group-info-id my-group))
 		  (group-id=? (file-info-group root-info)
 			      (group-info-id my-group))
-		  (user-name->string (user-info-name root-user)))))))
+		  (os-string->string (user-info-name root-user)))))))
 
 (test "environment" equal? '(#t #t #f)
       (let ((env (reverse (environment-alist))))
 	(list (if (null? env)
 		  #t
-		  (string=? (environment-variable->string (cdar env))
+		  (string=? (os-string->string (cdar env))
 			    (lookup-environment-variable->string (caar env))))
 	      (every (lambda (x)
 		       (and (pair? x)
-			    (environment-variable? (car x))
-			    (environment-variable? (cdr x))))
+			    (os-string? (car x))
+			    (os-string? (cdr x))))
 		     env)
 	      (lookup-environment-variable->string "="))))
 

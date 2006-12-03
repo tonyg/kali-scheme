@@ -165,6 +165,9 @@
     ((shared-set! x v)
      (set! x v))))
 
+(define (get-os-string-encoding)
+  "UTF-8")
+
 (define (raise-argument-type-error val)
   (fake-it 'raise-argument-type-error))
 

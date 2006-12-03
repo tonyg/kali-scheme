@@ -260,7 +260,7 @@
 	     (else
 	      (punt))))
 	  (lambda ()
-	    (open-channel (thing->file-name-byte-string file-name)
+	    (open-channel (os-string->byte-vector (x->os-string file-name))
 			  file-name
 			  option close-silently?)))))
     (if (channel? thing)

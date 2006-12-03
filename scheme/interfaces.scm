@@ -102,6 +102,7 @@
 	  set-interrupt-handlers!	;interrupts
 	  set-session-data!		;channels
 	  string-hash
+	  system-parameter
 	  template-length
 	  template-ref
 	  template-set!
@@ -190,28 +191,6 @@
 	  channel-abort
 
 	  open-channels-list))
-
-(define-interface default-string-encodings-interface
-  (export string-encoding-length encode-string
-	  string-decoding-length decode-string
-
-	  string->byte-string
-	  byte-vector->string
-	  string->byte-vector
-
-	  set-string-encoding-procedures!))
-
-(define-interface string/bytes-types-interface
-  (export (define-string/bytes-type :syntax)))
-
-(define-interface file-names-interface
-  (export file-name?
-	  thing->file-name
-	  string->file-name byte-vector->file-name
-	  file-name->string
-	  file-name->byte-vector
-	  file-name->byte-string
-	  thing->file-name-byte-string))
 
 (define-interface ports-interface
   (export port?
@@ -619,6 +598,12 @@
 
 	  (encoding-status :enumeration)
 	  (decoding-status :enumeration)))
+
+(define-interface os-strings-interface
+  (export os-string?
+	  string->os-string byte-vector->os-string x->os-string
+	  os-string->string os-string->byte-vector
+	  call-with-os-string-text-codec))
 
 (define-interface i/o-internal-interface
   (export input-port-option		;read.scm

@@ -374,6 +374,8 @@
 	  cheap-time
 	  schedule-interrupt
 
+	  get-os-string-encoding
+
  	  external-bignum-make-cached-constants
  	  external-bignum-add
  	  external-bignum-subtract

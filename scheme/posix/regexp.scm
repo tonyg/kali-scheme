@@ -72,7 +72,7 @@
     (if (and (string? pattern)
 	     (pair? options))
 	(let* ((pattern (string->immutable-string pattern))
-	       (pattern-byte-string (string->byte-string pattern))
+	       (pattern-byte-string (string->byte-vector pattern))
 	       (regexp (apply really-make-regexp pattern pattern-byte-string #f options)))
 	  (add-finalizer! regexp free-compiled-regexp)
 	  regexp)
@@ -123,7 +123,7 @@
 	   (string? string))
       (call-imported-binding posix-regexp-match
 			     (regexp-compiled regexp)
-			     (string->byte-string string)
+			     (string->byte-vector string)
 			     start
 			     submatches?
 			     starts-line?
@@ -131,6 +131,14 @@
       (call-error "invalid argument"
 		  regexp-match
 		  regexp string start starts-line? ends-line?)))
+
+; we can't do any better with POSIX, Mike thinks
+(define (string->byte-vector s)
+  (os-string->byte-vector
+   (call-with-os-string-text-codec
+    latin-1-codec
+    (lambda ()
+      (string->os-string s)))))
   
 ; These are made by the C code.  The SUBMATCHES field is not used by us,
 ; but is used by the functional interface.

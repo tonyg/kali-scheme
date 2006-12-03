@@ -238,7 +238,6 @@
 	    byte-vectors
 	    cells
 	    code-vectors
-	    default-string-encodings
 	    features
 	    records
 	    simple-signals
@@ -247,7 +246,6 @@
 	    closures
 	    code-quote
 	    escapes
-	    file-names
 	    locations
 	    loopholes
 	    low-level
@@ -258,7 +256,6 @@
 	    shared-bindings
 	    silly
 	    source-file-names
-	    string/bytes-types
 	    structure-refs
 	    debug-messages
 	    unicode
@@ -275,6 +272,7 @@
 	    enum-case
 	    enumerated
 	    fluids
+	    os-strings
 	    proposals
 	    queues
 	    record-types

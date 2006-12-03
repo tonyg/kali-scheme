@@ -505,6 +505,14 @@
 ;          (else
 ;           (* mantissa (expt 10 (- exponent system)))))))
 
+(define-primitive system-parameter (fixnum->)
+  (lambda (key)
+    (enum-case system-parameter-option key
+      ((os-string-encoding)
+       (goto return (enter-string+gc (get-os-string-encoding))))
+      (else
+       (raise-exception bad-option 0 (enter-fixnum key))))))
+
 (define-enumeration vm-extension-status
   (okay
    exception

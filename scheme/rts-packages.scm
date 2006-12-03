@@ -80,26 +80,6 @@
   (files (rts session))
   (optimize auto-integrate))
 
-(define-structure default-string-encodings default-string-encodings-interface
-  (open scheme-level-1
-	byte-vectors
-	unicode)
-  (files (rts default-string-encoding)))
-
-(define-structure string/bytes-types string/bytes-types-interface
-  (open scheme-level-1
-	define-record-types
-	byte-vectors
-	simple-signals
-	(subset primitives (copy-bytes!)))
-  (files (rts string-bytes)))
-
-(define-structure file-names file-names-interface
-  (open scheme-level-1
-	string/bytes-types
-	default-string-encodings)
-  (files (rts file-name)))
-
 (define-structure text-codecs text-codecs-interface
   (open scheme-level-1
 	define-record-types
@@ -127,6 +107,17 @@
 	(subset silly (reverse-list->string)))
   (optimize auto-integrate)
   (files (rts encoding)))
+
+(define-structure os-strings os-strings-interface
+  (open scheme-level-1
+	define-record-types
+	byte-vectors
+	(subset primitives (system-parameter make-immutable! copy-bytes!))
+	(subset architecture (system-parameter-option))
+	text-codecs encodings
+	enumerated
+	fluids)
+  (files (rts os-string)))
 
 (define-structures ((i/o i/o-interface)
 		    (i/o-internal i/o-internal-interface))
@@ -169,7 +160,7 @@
 	ports
 	i/o i/o-internal text-codecs
 	channels channel-i/o
-	file-names
+	os-strings
 	proposals
 	condvars
 	simple-signals simple-conditions

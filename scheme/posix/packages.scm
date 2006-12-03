@@ -67,19 +67,11 @@
 	  user-id->integer integer->user-id
 	  user-id=?
 
-	  user-name?
-	  thing->user-name
-	  user-name->string user-name->byte-vector user-name->byte-string
-
 	  user-info?
 	  user-info-name user-info-id user-info-group
 	  user-info-home-directory user-info-shell
 	  user-id->user-info
 	  name->user-info
-
-	  group-name?
-	  thing->group-name
-	  group-name->string group-name->byte-vector group-name->byte-string
 
 	  group-id?
 	  group-id->integer integer->group-id
@@ -101,9 +93,7 @@
 	posix-file-options
 	channel-i/o
 	channel-ports
-	file-names
-	string/bytes-types
-	default-string-encodings)
+	os-strings)
   (for-syntax (open scheme bitwise))
   (files dir))
 
@@ -127,12 +117,6 @@
 	  get-groups
 	  get-login-name
 
-	  environment-variable?
-	  thing->environment-variable
-	  environment-variable->string
-	  environment-variable->byte-vector
-	  environment-variable->byte-string
-
 	  lookup-environment-variable  lookup-environment-variable->string
 	  environment-alist environment-alist-as-strings
 	  ))
@@ -144,7 +128,7 @@
 (define-structures ((posix-process-data posix-process-data-interface)
 		    (posix-platform-names posix-platform-names-interface))
   (open scheme define-record-types external-calls
-	default-string-encodings string/bytes-types
+	os-strings
 	interrupts
 	posix-processes posix-users posix-time) ; we need these to be loaded
   (files proc-env))
@@ -206,8 +190,7 @@
 	channel-ports		;force-channel-output-ports!
 	interrupts		;set-interrupt-handler!
 	architecture		;interrupts enum
-	string/bytes-types
-	default-string-encodings)
+	os-strings)
   (files proc
 	 signal))
 
@@ -264,8 +247,8 @@
 		    (posix-regexps-internal (export make-match)))
   (open scheme define-record-types finite-types external-calls
 	(subset big-util (string->immutable-string))
-	default-string-encodings
-	signals)
+	signals
+	os-strings text-codecs)
   (files regexp))
 
 (define-interface regexps-interface

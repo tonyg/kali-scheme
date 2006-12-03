@@ -303,7 +303,7 @@
 	primitives		;find-all-records
 	i/o			;current-error-port
         code-vectors
-	file-names string/bytes-types default-string-encodings
+	os-strings text-codecs
 	external-calls)
   (files (big external)))
 
@@ -311,7 +311,7 @@
   (open scheme-level-2
 	define-record-types
 	external-calls
-	file-names string/bytes-types default-string-encodings)
+	os-strings text-codecs)
   (files (big shared-object)))
 
 (define-structure load-dynamic-externals load-dynamic-externals-interface
@@ -324,7 +324,7 @@
   (files (big dynamic-external)))
 
 (define-structure c-system-function (export have-system? system)
-  (open scheme-level-2 byte-vectors default-string-encodings external-calls signals)
+  (open scheme-level-2 byte-vectors os-strings external-calls signals)
   (begin
     (import-lambda-definition s48-system (string))
 
@@ -333,13 +333,7 @@
 
     ;; Kludge
     (define (system cmd-line)
-      (cond
-       ((byte-vector? cmd-line)
-	(s48-system cmd-line))
-       ((string? cmd-line)
-	(s48-system (string->byte-string cmd-line)))
-       (else
-	(call-error "not a string" system string))))))
+      (s48-system (x->os-string (os-string->byte-vector cmd-line))))))
     
 ; Rudimentary object dump and restore
 
@@ -403,8 +397,7 @@
 	channel-ports		; {in|out}put-channel->port
 	channel-i/o		; wait-for-channel
 	condvars		; for wait-for-channel
-	string/bytes-types
-	default-string-encodings)
+	os-strings)
   (files (big socket)))
 
 ; Heap traverser
