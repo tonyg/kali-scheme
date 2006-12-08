@@ -32,23 +32,28 @@
 	  (os-string->string oss))))
 
 (define $os-string-text-codec
-  (make-fluid (find-text-codec
-	       (system-parameter (enum system-parameter-option os-string-encoding)))))
+  (make-fluid 
+   (lambda () ; delay until execution time
+     (find-text-codec
+      (system-parameter (enum system-parameter-option os-string-encoding))))))
+
+(define (current-os-string-text-codec)
+  ((fluid $os-string-text-codec)))
 
 (define (call-with-os-string-text-codec codec thunk)
-  (let-fluid $os-string-text-codec codec
+  (let-fluid $os-string-text-codec (lambda () codec)
 	     thunk))
   
 (define (string->os-string s)
   (let ((c (string-copy s)))
     (make-immutable! c)
-    (make-os-string (fluid $os-string-text-codec)
+    (make-os-string (current-os-string-text-codec)
 		    c #f)))
 
 (define (byte-vector->os-string b)
   (let ((c (byte-vector-copy b)))
     (make-immutable! b)
-    (make-os-string (fluid $os-string-text-codec)
+    (make-os-string (current-os-string-text-codec)
 		    #f c)))
 
 (define (os-string->byte-vector oss)
