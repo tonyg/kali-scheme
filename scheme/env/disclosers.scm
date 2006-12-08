@@ -57,12 +57,11 @@
 	      '?))))
   
 (define-method &disclose ((obj :code-vector))
-  (list 'byte-vector (code-vector-length obj))
-; (cons 'code-vector
-;       (let ((z (code-vector-length obj)))
-;         (do ((i (- z 1) (- i 1))
-;              (l '() (cons (code-vector-ref obj i) l)))
-;             ((< i 0) l))))
+ (cons 'byte-vector
+       (let ((z (code-vector-length obj)))
+         (do ((i (- z 1) (- i 1))
+              (l '() (cons (code-vector-ref obj i) l)))
+             ((< i 0) l))))
   )
 
 (define-method &disclose ((obj :channel))
@@ -77,7 +76,8 @@
 		 'output-channel)
 		(else	; shouldn't happen unless we get out of sync
 		 'unknown-channel))
-	  (channel-id obj))))
+	  (channel-id obj)
+	  (channel-os-index obj))))
 
 (define-method &disclose ((obj :port))
   (disclose-port obj))
