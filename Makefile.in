@@ -677,6 +677,10 @@ scheme/debug/mini1.image: $(VM) scheme/debug/mini.image
 # Get fresh UnicodeData.txt from http://www.unicode.org.
 
 scheme/rts/syntax-info.scm: build/UnicodeData.txt			\
+	build/PropList.txt						\
+	build/SpecialCasing.txt						\
+	build/CaseFolding.txt						\
+	build/CompositionExclusions.txt					\
 	scheme/link/unicode-data.scm 					\
 	scheme/env/unicode-category.scm					\
 	scheme/big/compact-table.scm

@@ -54,7 +54,7 @@
   (files record))
 
 (define-structures ((buffer (export port->stream stream-read-char)))
-  (open prescheme)
+  (open prescheme ps-record-types ps-memory)
   (files buffer))
 
 (define-structures ((values (export test)))

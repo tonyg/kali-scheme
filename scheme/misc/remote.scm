@@ -4,7 +4,7 @@
 ; This is a small mock-up of the Cornell mobile robot system.
 ; It is not intended as a remote procedure call mechanism.
 
-; ,load-config =scheme48/misc/packages.scm
+; ,config ,load =scheme48/misc/packages.scm
 ; ,open remote
 
 ; To start a server, do
