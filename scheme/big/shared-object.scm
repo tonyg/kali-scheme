@@ -69,7 +69,8 @@
 					      (os-string->byte-vector
 					       (call-with-os-string-text-codec
 						utf-8-codec
-						(x->os-string name))))))
+						(lambda ()
+						  (x->os-string name)))))))
 
 ;; This simply calls a C function with no parameters and no return
 ;; value.  It's typically for calling the initialization function; we
