@@ -87,6 +87,11 @@ build\build-initial-image.bat
 
   build\build-initial-image.bat "C:\Program Files\Scheme 48\Scheme 48 1.3\scheme48"
 
+build\generate-unicode-info.bat
+  This builds the Unicode tables from source.
+
+  build\generate-unicode-info.bat "C:\Program Files\Scheme 48\Scheme 48 1.3\scheme48"
+
 build\i-know-what-i-am-doing.bat
   This builds the VM C sources from Scheme.
 
