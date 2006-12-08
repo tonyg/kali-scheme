@@ -673,30 +673,8 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="c\main.c"
+				RelativePath=".\c\win32\main_win32.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="c\bibop\memory_map.c"
@@ -875,6 +853,10 @@
 						BrowseInformation="1"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\c\win32\utf-8of16.c"
+				>
 			</File>
 			<File
 				RelativePath="c\bibop\utils.c"

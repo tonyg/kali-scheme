@@ -14,6 +14,10 @@
 #include "event.h"
 #include "fd-io.h"
 
+extern int s48_utf_8of16_to_utf_16(const unsigned char* utf_8of16,
+				   LPWSTR utf_16,
+				   int* errorp);
+
 enum stream_descriptor_type {
   STREAM_FILE_REGULAR, /* overlapped I/O works */
   STREAM_FILE_SPECIAL, /* overlapped I/O doesn't work */
@@ -268,19 +272,22 @@ ps_open_fd(char *filename, psbool is_input, long *status)
   HANDLE handle;
   char filename_temp[FILE_NAME_SIZE];
   char *expanded;
+  WCHAR filename_utf16[FILE_NAME_SIZE];
   extern char *s48_expand_file_name(char *, char *, int);
 
   expanded = s48_expand_file_name(filename, filename_temp, FILE_NAME_SIZE);
   if (expanded == NULL)
     return -1;
 
-  handle = CreateFile(expanded,
-		      is_input ? GENERIC_READ : GENERIC_WRITE,
-		      is_input ? FILE_SHARE_READ : FILE_SHARE_WRITE,
-		      NULL,
-		      is_input ? OPEN_EXISTING : CREATE_ALWAYS,
-		      FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
-		      NULL);
+  s48_utf_8of16_to_utf_16(expanded, filename_utf16, NULL);
+
+  handle = CreateFileW(filename_utf16,
+		       is_input ? GENERIC_READ : GENERIC_WRITE,
+		       is_input ? FILE_SHARE_READ : FILE_SHARE_WRITE,
+		       NULL,
+		       is_input ? OPEN_EXISTING : CREATE_ALWAYS,
+		       FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
+		       NULL);
   
   if (handle == INVALID_HANDLE_VALUE)
     {
@@ -1281,22 +1288,36 @@ s48_init_socket(void)
 static void
 raise_windows_error(DWORD id)
 {
-  char buf[512];
+#define ERROR_BUFFER_SIZE 512
+  WCHAR buf[ERROR_BUFFER_SIZE + 1];
 
   for (;;)
     {
-      if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
-			NULL, /* lpSource */
-			id,
-			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			buf, sizeof(buf)-1,
-			NULL)) /* arguments ... */
-	s48_raise_string_os_error(buf);
+      if (FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM,
+			 NULL, /* lpSource */
+			 id,
+			 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			 buf, ERROR_BUFFER_SIZE,
+			 NULL)) /* arguments ... */
+	{
+	  char buf_utf8[ERROR_BUFFER_SIZE * 3 + 1];
+	  WideCharToMultiByte(CP_UTF8,
+			      0, /* dwFlags */
+			      buf,
+			      -1,
+			      buf_utf8, 
+			      ERROR_BUFFER_SIZE * 3, 
+			      NULL, /* lpDefaultChar */
+			      NULL /* lpUsedDefaultChar */
+			      );
+	  s48_raise_string_os_error(buf_utf8);
+	}
       else
 	/* risky, but we assume some amount of sanity on the side of
 	   the Windows implementors---haha */
 	id = GetLastError();
     }
+#undef ERROR_BUFFER_SIZE
 }
 
 /*
@@ -1686,6 +1707,11 @@ s48_connect(s48_value channel,
       hints.ai_canonname = NULL;
       hints.ai_addr = NULL;
       hints.ai_next = NULL;
+      /* ####
+       * Unicode note: GetAddrInfoW exists, but Mike doesn't know
+       * if just passing in IDNA (which we'll need to do eventually
+       * anyway) works aas well.
+       */
       status = getaddrinfo(machine_name,
 			   NULL, /* servname */
 			   &hints,
@@ -1873,6 +1899,7 @@ s48_get_host_name(void)
 {
   char	mbuff[4096]; /* we don't have MAXHOSTNAMELEN on Windows */
 
+  /* #### Unicode? IDNA? */
   if (gethostname(mbuff, sizeof(mbuff)) == SOCKET_ERROR)
     raise_windows_error(WSAGetLastError());
 

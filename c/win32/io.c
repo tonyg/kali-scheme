@@ -299,3 +299,10 @@ ps_close(FILE *stream)
   else
     return errno;
 }
+
+unsigned char*
+s48_get_os_string_encoding(void)
+{
+  /* really UTF-8of16, but that doesn't matter at the Scheme level */
+  return "UTF-8";
+}
