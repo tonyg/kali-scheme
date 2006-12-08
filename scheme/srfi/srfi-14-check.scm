@@ -372,7 +372,7 @@
        (char-set-contains? char-set:letter+digit #\Z)))
 
 (test "char-set:letter (size)" equal?
-      91395
+      92496
       (char-set-size char-set:letter))
 
 (test "char-set:letter / letter+digit" char-set=
@@ -459,9 +459,9 @@
 
 ;; Iterating over character sets ----------------------------------------
 
-;; The number 270 comes from "grep Nd UnicodeData.txt | wc -l"
+;; The number 290 comes from "grep Nd UnicodeData.txt | wc -l"
 (test "char-set-size (2)" equal?
-      270
+      290
       (char-set-size char-set:digit))
 
 (test "cursors (2)" char-set=
