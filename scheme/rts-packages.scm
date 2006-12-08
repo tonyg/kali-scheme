@@ -440,6 +440,7 @@
 					make-usual-resumer
 					add-initialization-thunk!)
   (open scheme-level-1
+	os-strings
 	(subset i/o-internal (initialize-i/o initialize-i/o-handlers!))
 	(subset i/o (set-port-text-codec!))
 	channel-i/o      ;initialize-channel-i/o

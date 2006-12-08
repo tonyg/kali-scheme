@@ -35,15 +35,34 @@
     (s48-restart (s48-startup-procedure) 8)))
   
 (define (enter-startup-argument+gc startup-vector startup-vector-length)
-  (let ((vector (vm-make-vector+gc startup-vector-length)))
+  (let* ((argv-total-bytes-count
+	  (let loop ((i 0) (count 0))
+	    (if (= i startup-vector-length)
+		count
+		(goto loop
+		      (+ 1 i)
+		      (+ count (+ (string-length (vector-ref startup-vector i)) 1))))))
+	 (key (ensure-space
+	       (+ stob-overhead startup-vector-length
+		  (* startup-vector-length stob-overhead)
+		  (bytes->cells argv-total-bytes-count))))
+	 (vector (make-d-vector (enum stob vector) startup-vector-length key)))
     (natural-for-each (lambda (i)
 			(vm-vector-set! vector
 					i
-					(enter-string+gc
-					 (vector-ref startup-vector i))))
+					(enter-os-string-byte-vector
+					 (vector-ref startup-vector i)
+					 key)))
 		      startup-vector-length)
     vector))
 
+(define (enter-os-string-byte-vector s key)
+  (let* ((len (string-length s))
+	 (vec (make-code-vector (+ len 1) key))) ; NUL
+    (do ((i 0 (+ 1 i)))
+	((> i len) vec)
+      (code-vector-set! vec i (char->ascii (string-ref s i))))))
+      
 ;----------------
 ; Restart the interpreter, calling PROC with NARGS arguments already on the
 ; stack.

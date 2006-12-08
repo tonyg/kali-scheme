@@ -7,7 +7,7 @@
 	bignum-low
 	integer-arithmetic
 	flonum-arithmetic
-	data struct
+	data struct stob
 	text-encodings
 	interpreter interpreter-internal
 	stack gc interpreter-gc gc-util

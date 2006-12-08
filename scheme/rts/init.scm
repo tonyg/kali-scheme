@@ -23,7 +23,9 @@
 		      (initialize-records! records)
 		      (if warn-about-undefined-imported-bindings?
 			  (warn-about-undefined-imported-bindings))
-		      (entry-point (vector->list resume-arg))))))
+		      (entry-point
+		       (map byte-vector->os-string
+			    (vector->list resume-arg)))))))
 
 (define (usual-resumer entry-point)
   (make-usual-resumer #t really-signal-condition entry-point))

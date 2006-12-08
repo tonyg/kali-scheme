@@ -10,6 +10,7 @@
 (define (make-mini-command scheme)
   (define-structure mini-command (export command-processor)
     (open scheme
+	  ascii byte-vectors
 	  simple-signals simple-conditions handle
 	  display-conditions
 	  i/o)   ; current-error-port

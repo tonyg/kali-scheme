@@ -245,15 +245,16 @@
 (define (new-command-processor info commands built-in . meta-structs)
   ;; Argument to ,build command
   (lambda (arg)
-    (call-with-values (lambda ()
-			(make-user-envs commands built-in meta-structs))
-      (lambda (env init-thunk)
-	(with-interaction-environment env
-	  (lambda ()
-	    (start-command-processor arg
-				     (lambda ()
-				       (greet-user info))
-				     init-thunk)))))))
+    (let ((arg (map os-string->string arg))) ; enough for us
+      (call-with-values (lambda ()
+			  (make-user-envs commands built-in meta-structs))
+	(lambda (env init-thunk)
+	  (with-interaction-environment env
+	    (lambda ()
+	      (start-command-processor arg
+				       (lambda ()
+					 (greet-user info))
+				       init-thunk))))))))
 
 (define (make-user-envs commands built-in meta-structs)
   (let* ((tower (make-reflective-tower

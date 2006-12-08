@@ -46,6 +46,7 @@
 
   (define-structure mini-command (export command-processor)
     (open scheme
+	  ascii byte-vectors
 	  writing methods
 	  simple-signals simple-conditions handle
 	  i/o)                 ;current-error-port

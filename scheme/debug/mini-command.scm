@@ -69,3 +69,13 @@
              (list->string (reverse l)))
             (else
              (loop (cons (read-char port) l) (+ n 1)))))))
+
+(define (byte-vector->string b)
+  (let ((size (- (byte-vector-length b) 1)))
+    (do ((s (make-string size))
+	 (i 0 (+ 1 i)))
+	((= i size)
+	 s)
+      (string-set! s i (ascii->char (vector-ref b i))))))
+
+    

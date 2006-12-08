@@ -144,6 +144,7 @@
 	i/o			; force-output, current-error-port, silently
         signals
 	util			; every
+	os-strings
         fluids)
   (files (env pacman)))
 
