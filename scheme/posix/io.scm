@@ -32,7 +32,8 @@
   (cond ((not (port? port))
 	 (call-error "not a port" port-terminal-name port))
 	((port->channel port)
-	 => channel-terminal-name)
+	 => (lambda (channel)
+	      (byte-vector->os-string (channel-terminal-name channel))))
 	(else
 	 #f)))
 

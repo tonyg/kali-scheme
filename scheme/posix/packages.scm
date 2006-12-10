@@ -227,6 +227,7 @@
 	util
 	posix-file-options
 	ports			;port?
+	os-strings
 	architecture
 	enum-case)
   (files io))
