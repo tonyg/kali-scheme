@@ -908,6 +908,80 @@ Using a continuation to throw out of the call to \code{thunk} causes
   \evalsto '(a b a b a)
 \end{example}
 
+\section{OS strings}
+\label{os-strings}
+
+\index{OS string}
+On common operating systems such as Unix and Windows, various
+parameters to OS functionality---such as file names, user names,
+command-line arguments etc.---appear as text in most contexts, but are
+really byte sequences: On Unix, the byte sequence may be interpreted
+as text through some locale-determined encoding.  On Windows, such
+parameters are typically represented as sequences of UTF-16 code
+units.  In both cases, not every such byte sequence has a string
+equivalent: On Unix, a byte sequence encoding a file name using
+Latin-1 often cannot be decoded using UTF-8.  On Windows, unpaired
+UTF-16 surrogates are admissible in encodings, and no lossless text
+decoding for them exists.
+
+For representing such string-like parameters, Scheme~48 uses an
+abstraction called \textit{OS strings}.  An OS string is created from
+either a string or a NUL-terminated byte sequence stored in a byte
+vector, and has an associated text codec (see
+section~\ref{text-codecs}) that is able to convert from one
+representation to the other.  The exact meaning of a NUL-terminated
+byte sequence is dependent on this text codec.  However, only codecs
+for encodings that are a conservative extension of ASCII (such as
+ASCII itself, Latin-1, or UTF-8) should be used here, to allow a
+minimal set of portable file names.  (The Windows port uses a special
+synthetic encoding called UTF-8of16 compatible with UTF-8 but capable
+of encoding even invalid UTF-16 internally, but uses the UTF-8 codec
+at the Scheme level.)
+
+Most procedures accepting OS strings also accept strings or byte
+vectors, which are then used to construct a OS string.  In the headers
+of the specifications of these procedures, such arguments occur as
+\var{os-string-thing}.\index{os-string-thing@\var{os-string-thing}}
+The standard Scheme procedures such as \code{open-input-file} that
+take file names all accept \var{os-string-thing} arguments.  OS
+strings are in the \code{os-strings} structure.
+
+\begin{protos}
+\proto{string->os-string}{ string}{os-string}
+\proto{byte-vector->os-string}{ byte-vector}{os-string}
+\proto{x->os-string}{ os-string-thing}{os-string}
+\end{protos}
+\noindent
+These procedures create an OS string from a string, a byte-vector
+(whose last value should be 0), and an \var{os-string-thing} argument,
+respectively, always using the standard OS-string text codec (see
+below).
+
+\begin{protos}
+\proto{os-string->byte-vector}{ os-string}{byte-vector}
+\proto{os-string->string}{ os-string}{string}
+\end{protos}
+\noindent
+These procedures yield the contents of an OS string.  For an OS string
+created from a string, \code{os-string->string} will return a string
+with the same contents; for an OS string created from a byte vector,
+\code{os-string->byte-vector} will return a byte vector with the same
+contents.  For the other cases, data loss as determined by the text
+codec is possible.
+
+\begin{protos}
+\proto{current-os-string-text-codec}{}{text-codec}
+\proto{call-with-os-string-text-codec}{ text-codec thunk}{ value(s)}
+\end{protos}
+\noindent
+The \code{current-os-string-text-codec} returns the current text codec
+used for creating new OS strings.  The initial default is determined
+by the operating system.  (On Unix, this is the text codec determined
+by the locale.  On Windows, this is UTF-8.)  The
+\code{call-with-os-string-text-codec} procedure dynamically binds the
+current text codec to \var{text-codec} during the invocation of
+\var{thunk}.
+
 \section{Shell commands}
 
 Structure \code{c-system-function} provides access to the C \code{system()}
@@ -915,7 +989,7 @@ Structure \code{c-system-function} provides access to the C \code{system()}
 
 \begin{protos}
 \proto{have-system?}{}{boolean}
-\proto{system}{ string}{integer}
+\proto{system}{ os-string-thing}{integer}
 \end{protos}
 \noindent
 \code{Have-system?} returns true if the underlying C implementation

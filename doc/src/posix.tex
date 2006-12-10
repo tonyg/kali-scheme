@@ -119,8 +119,9 @@ They differ in how the new program is found, what its environment is,
 The environment is either inherited from the current process
  (\code{exec} and \code{exec-file}) or given as an argument
  (\code{\ldots{}-with-environment}).
-\cvar{Program-name} and \cvar{filename} and any \cvar{arg$_i$} should be strings.
- \cvar{Env} should be a list of strings of the form
+\cvar{Program-name} and \cvar{filename} and any \cvar{arg$_i$} should
+be \var{os-string-thing} arguments (see section~\ref{os-strings}.
+ \cvar{Env} should be a list of \var{os-string-thing} arguments of the form
  \code{"\cvar{name}=\cvar{value}"}.
 The first four procedures add their first argument, \cvar{program-name} or
  \cvar{filename}, before the \cvar{arg0 \ldots} arguments.
@@ -129,10 +130,10 @@ The first four procedures add their first argument, \cvar{program-name} or
  four.
 \cvar{Name} is looked up in the search path if \cvar{lookup?} is true
  and is used as a filename otherwise.
-\cvar{Maybe-env} is either a list of strings for the environment of the
+\cvar{Maybe-env} is either a list of \var{os-string-thing}s for the environment of the
  new program or \code{\#f} in which case the new program inherits its
  environment from the current one.
-\cvar{Arguments} should be a list of strings; unlike with the other four
+\cvar{Arguments} should be a list of \var{os-string-thing}s; unlike with the other four
  procedures, \cvar{name} is not added to this list (hence \code{-with-alias}).
 
 \section{Signals}
@@ -321,7 +322,7 @@ The effective values may be set, but not the original ones.
 
 \begin{protos}
 \proto{get-groups}{}{ group-ids}
-\proto{get-login-name}{}{ string}
+\proto{get-login-name}{}{ os-string}
 \end{protos}
 \noindent
 \code{Get-groups} returns a list of the supplementary groups of the
@@ -335,7 +336,7 @@ The effective values may be set, but not the original ones.
 \subsection{Environment variables}
 
 \begin{protos}
-\proto{lookup-environment-variable}{ string}{string or {\tt \#f}}
+\proto{lookup-environment-variable}{ os-string-thing}{os-string or {\tt \#f}}
 \proto{environment-alist}{}{alist}
 \end{protos}
 \noindent
@@ -343,7 +344,7 @@ The effective values may be set, but not the original ones.
  environment list and returns the corresponding value or \code{\#f}
  if there is none.
 \code{Environment-alist} returns the entire environment as a list of
- \code{(\cvar{name-string} . \cvar{value-string})} pairs.
+ \code{(\cvar{name-os-string} . \cvar{value-os-string})} pairs.
 
 \section{Users and groups}
 
@@ -371,18 +372,18 @@ User-ids and group-ids have their own
 
 \begin{protos}
 \proto{user-id->user-info}{ user-id}{user-info}
-\proto{name->user-info}{ string}{user-info}
+\proto{name->user-info}{ os-string}{user-info}
 \end{protos}
 \noindent
 These return the user info for a user identified by user-id or name.
 
 \begin{protos}
 \proto{user-info?}{ x}{ boolean}
-\proto{user-info-name}{ user-info}{ string}
+\proto{user-info-name}{ user-info}{ os-string}
 \proto{user-info-id}{ user-info}{ user-id}
 \proto{user-info-group}{ user-info}{ group-id}
-\proto{user-info-home-directory}{ user-info}{ string}
-\proto{user-info-shell}{ user-info}{ string}
+\proto{user-info-home-directory}{ user-info}{ os-string}
+\proto{user-info-shell}{ user-info}{ os-string}
 \end{protos}
 \noindent
 A \code{user-info} contains information about a user.
@@ -390,14 +391,14 @@ Available are the user's name, id, group, home directory, and shell.
 
 \begin{protos}
 \proto{group-id->group-info}{ group-id}{group-info}
-\proto{name->group-info}{ string}{group-info}
+\proto{name->group-info}{ os-string}{group-info}
 \end{protos}
 \noindent
 These return the group info for a group identified by group-id or name.
 
 \begin{protos}
 \proto{group-info?}{ x}{ boolean}
-\proto{group-info-name}{ group-info}{ string}
+\proto{group-info-name}{ group-info}{ os-string}
 \proto{group-info-id}{ group-info}{ group-id}
 \proto{group-info-members}{ group-info}{ user-ids}
 \end{protos}
@@ -445,7 +446,7 @@ Directory streams are like input ports, with each read operation
 \code{Close-directory-stream} closes a directory stream.
 
 \begin{protos}
-\proto{list-directory}{ name}{list of strings}
+\proto{list-directory}{ name}{list of os-strings}
 \end{protos}
 \noindent
 This is the obvious utility; it returns a list of the names in directory
@@ -455,8 +456,8 @@ This is the obvious utility; it returns a list of the names in directory
 \subsection{Working directory}
 
 \begin{protos}
-\proto{working-directory}{}{string}
-\protonoresultnoindex{set-working-directory!}{ string}\mainschindex{set-working-directory"!}
+\proto{working-directory}{}{os-string}
+\protonoresultnoindex{set-working-directory!}{ os-string-thing}\mainschindex{set-working-directory"!}
 \end{protos}
 \noindent
 These return and set the working directory.
@@ -469,7 +470,8 @@ These return and set the working directory.
 \proto{open-file}{ path file-options file-mode}{port}
 \end{protos}
 \noindent
-\code{Open-file} opens a port to the file named by string \cvar{path}.
+\code{Open-file} opens a port to the file named by \cvar{path}, which
+must be a \var{os-string-thing} argument.
 The \cvar{file-options} argument determines various aspects of the 
  returned port.
 The optional \cvar{file-mode} argument is used only if the file to be opened
@@ -551,6 +553,7 @@ Bits set in \cvar{file-mode} are cleared in the modes of any files or
 \protonoresult{link}{ existing new}
 \end{protos}
 \noindent
+Both \var{existing} and \var{new} must be \var{os-string-thing} arguments.
 \code{Link} makes path \cvar{new} be a new link to the file
  pointed to by path \cvar{existing}.
 The two paths must be in the same file system.
@@ -558,11 +561,12 @@ The two paths must be in the same file system.
 % 5.4 Special File Creation
 
 \begin{protos}
-\protonoresult{make-directory}{ name file-mode}
-\protonoresult{make-fifo}{ file-mode}
+\protonoresult{make-directory}{ path file-mode}
+\protonoresult{make-fifo}{ path file-mode}
 \end{protos}
 \noindent
-These two procedures make new directories and fifo files.
+These two procedures make new directories and fifo files.  In both
+cases, \var{path} must be a \var{os-string-thing} argument.
 
 % 5.5 File Removal
 
@@ -572,6 +576,8 @@ These two procedures make new directories and fifo files.
 \protonoresult{rename}{ old-path new-path}
 \end{protos}
 \noindent
+\var{Path}, \var{old-path} and \var{new-path} must all be
+\var{os-string-thing} arguments.
 \code{Unlink} removes the link indicated by \cvar{path}.
 \code{Remove-directory} removes the indicated (empty) directory.
 \code{Rename} moves the file pointed to by \cvar{old-path} to the
@@ -586,7 +592,8 @@ Any other links to the file remain unchanged.
 \syntaxproto{access-mode}{ \cvar{mode-name}}{access-mode}
 \end{protos}
 \noindent
-\code{Accessible?} returns true if \cvar{path} is a file that
+\code{Accessible?} returns true if \cvar{path} (which must be a
+\var{os-string-thing} argument) is a file that
  can be accessed in the listed mode.
 If more than one mode is specified \code{accessible?} returns true
  if all of the specified modes are permitted.
@@ -597,13 +604,14 @@ The \cvar{mode-name}\/s are: \code{read}, \code{write}, \code{execute},
 \subsection{File information}
 
 \begin{protos}
-\proto{get-file-info}{ name}{file-info}
+\proto{get-file-info}{ path}{file-info}
 \proto{get-file/link-info}{ name}{file-info}
 \proto{get-port-info}{ fd-port}{file-info}
 \end{protos}
 \noindent
 \code{Get-file-info} and \code{get-file/link-info} both return
- a file info record for the named file.
+ a file info record for the file named by \var{path}, which must be a
+ \var{os-string-thing} argument.
 \code{Get-file-info} follows symbolic links while \code{get-file/link-info}
  does not.
 \code{Get-port-info} returns a file info record for the file
@@ -613,7 +621,7 @@ An error is raised if \cvar{fd-port} does not read from or write to a
 
 \begin{protos}
 \proto{file-info?}{ x}{boolean}
-\proto{file-info-name}{ file-info}{string}
+\proto{file-info-name}{ file-info}{os-string}
 \end{protos}
 \noindent
 \code{File-info?} is a predicate for file-info records.
@@ -964,8 +972,12 @@ The procedures in this section provide access to POSIX regular expression
  matching.
 The regular expression syntax and semantics are far too complex to
  be described here.
-Because the C interface uses zero bytes for marking the ends of strings,
- patterns and strings that contain zero bytes will not work correctly.
+Due to limitations in the underlying facility, only Latin-1 strings
+are guaranteed to work here---on some platforms, only ASCII may
+function correctly.
+Moreover, because the C interface uses zero bytes for marking the ends of strings,
+ patterns and strings that contain zero bytes will not work
+ correctly. 
 
 These procedures are in structures \code{posix-regexps} and \code{posix}.
 
