@@ -7,6 +7,7 @@
 \usepackage{alltt}
 \usepackage{makeidx}
 \usepackage{matter}
+\usepackage{ifpdf}
 
 \input{myindex}
 \input{proto}
@@ -17,7 +18,6 @@
 % \includeonly{module}
 
 \let\url\relax
-\input{pdfcond}
 \ifpdf
 \usepackage[pdftex,hyperindex,
      pdftitle={The Incomplete Scheme 48 Reference Manual},
