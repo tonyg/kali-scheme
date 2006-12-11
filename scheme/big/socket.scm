@@ -116,8 +116,7 @@
     (let loop ((retry? #f))
       (disable-interrupts!)
       (let ((output-channel (real-socket-connect channel
-						 (host-name->byte-string
-						  (thing->host-name host-name))
+						 (host-name->byte-vector host-name)
 						 port-number
 						 retry?)))
 	(cond ((channel? output-channel)
@@ -132,6 +131,19 @@
 		   (maybe-commit-and-wait-for-condvar condvar))
 		 (enable-interrupts!)
 		 (loop #t))))))))
+
+;; #### This needs to be IDNA
+
+(define (host-name->byte-vector host)
+  (let* ((size (string-length host))
+	 (b (make-byte-vector (+ size 1) 0)))
+    (do ((i 0 (+ 1 i)))
+	((= i size))
+      (let ((code (char->integer (string-ref host i))))
+	(if (< code 128)
+	    (byte-vector-set! b i code)
+	    (byte-vector-set! b i #x3f)))) ; ?
+    b))
 
 ;----------------
 ; UDP stuff
@@ -198,10 +210,6 @@
 (define (close-socket-output-channel channel)
   (close-socket-half channel #f)
   (close-channel channel))
-
-;----------------
-
-; #### Need IDNA support here
 
 ;----------------
 ; The C calls we use.  These are in c/unix/socket.c.
