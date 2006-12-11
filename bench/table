@@ -2,7 +2,8 @@
 
 SYSTEMS="Gambit-C Bigloo Chicken MzScheme Scheme48"
 BENCHMARKS="all"
-SETTINGS="r5rs r6rs r6rs-fixflo r6rs-fixflo-unsafe"
+#SETTINGS="r5rs r6rs r6rs-fixflo r6rs-fixflo-unsafe"
+SETTINGS="r6rs"
 
 # mostly-fixflo mostly-flofix mostly-fix mostly-flo mostly-generic sb-mostly-fixflo sb-mostly-flofix sb-mostly-fix sb-mostly-flo sb-mostly-generic 
 
@@ -31,8 +32,4 @@ for setting in $SETTINGS ; do
 
   mv bench.html bench-$setting.html
 
-done
-
-for setting in $SETTINGS ; do
-  open bench-$setting.html
 done
