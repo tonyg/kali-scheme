@@ -397,7 +397,7 @@
 	channel-ports		; {in|out}put-channel->port
 	channel-i/o		; wait-for-channel
 	condvars		; for wait-for-channel
-	os-strings)
+	byte-vectors)
   (files (big socket)))
 
 ; Heap traverser
