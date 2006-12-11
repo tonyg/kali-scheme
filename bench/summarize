@@ -52,11 +52,11 @@ runtime == 1 && $0 == "*** wrong result ***" {
   failed = 1;
 }
 
-runtime == 1 && /^Command .* with non-zero/ {
+runtime == 1 && /Command .* with non-zero/ {
   crashed = 1;
 }
 
-runtime == 1 && /^Command terminated by signal/ {
+runtime == 1 && /Command terminated by signal/ {
   crashed = 1;
 }
 
@@ -80,7 +80,7 @@ runtime == 1 && /^[ ]*[0-9]+ ms real time$/ {
   real = $1;
 }
 
-runtime == 1 && /^cpu time: ([0-9]+) real time: ([0-9]+)/ {
+runtime == 1 && /cpu time: ([0-9]+) real time: ([0-9]+)/ {
   cpu = $3;
   real = $6;
 }
