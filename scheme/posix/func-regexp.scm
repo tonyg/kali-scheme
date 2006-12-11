@@ -899,11 +899,10 @@
   (or (regexp-compiled exp)
       (mvlet* (((string match-flags)
 		(exp->posix-string exp))
-	       (regexp (if (null? match-flags)
-			   (make-posix-regexp string (regexp-option extended))
-			   (make-posix-regexp string
-					      (regexp-option extended)
-					      (regexp-option submatches)))))
+	       ;; must always have submatches on, needed by EXACT-MATCH?
+	       (regexp (make-posix-regexp string 
+					  (regexp-option extended)
+					  (regexp-option submatches))))
 	(set-regexp-compiled! exp (cons regexp match-flags))
 	(cons regexp match-flags))))
 

@@ -119,18 +119,25 @@
 ; of SUBMATCHES?.
 
 (define (regexp-match regexp string start submatches? starts-line? ends-line?)
-  (if (and (regexp? regexp)
-	   (string? string))
-      (call-imported-binding posix-regexp-match
-			     (regexp-compiled regexp)
-			     (string->byte-vector string)
-			     start
-			     submatches?
-			     starts-line?
-			     ends-line?)
+  (cond
+   ((not (and (regexp? regexp)
+	      (string? string)))
       (call-error "invalid argument"
 		  regexp-match
-		  regexp string start starts-line? ends-line?)))
+		  regexp string start starts-line? ends-line?))
+   ((and submatches?
+	 (not (regexp-submatches? regexp)))
+    (call-error "regexp not compiled for submatches"
+		regexp-match
+		  regexp string start starts-line? ends-line?))
+   (else
+    (call-imported-binding posix-regexp-match
+			   (regexp-compiled regexp)
+			   (string->byte-vector string)
+			   start
+			   submatches?
+			   starts-line?
+			   ends-line?))))
 
 ; we can't do any better with POSIX, Mike thinks
 (define (string->byte-vector s)
