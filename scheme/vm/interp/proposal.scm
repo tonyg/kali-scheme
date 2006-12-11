@@ -107,6 +107,8 @@
 	       (set-proposal-in-use?! proposal true))
 	   (set-current-proposal! proposal)
 	   (goto return unspecific-value))
+	  ((vm-eq? proposal (current-proposal))
+	   (goto return unspecific-value))
 	  (else
 	   (raise-exception wrong-type-argument 0 proposal)))))
 
