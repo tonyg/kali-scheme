@@ -2,9 +2,8 @@
 
 ; A test suite for the POSIX interface.
 
-; ,translate =scheme48 scheme
-; ,config ,load scheme/debug/test.scm
-; ,exec ,load scheme/posix/check.scm
+; ,config ,load =scheme48/debug/test.scm
+; ,exec ,load =scheme48/posix/check.scm
 ; ,exec (done)
 
 (load-package 'testing)
