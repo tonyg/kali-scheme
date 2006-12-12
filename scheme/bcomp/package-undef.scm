@@ -79,13 +79,18 @@
       (if (not (table-ref (package-definitions package) name))
 	  (let loop ((opens (package-opens package)))
 	    (if (not (null? opens))
-		(if (interface-member? (structure-interface (car opens))
-				       name)
-		    (begin (table-set! (package-cached package) name place)
-			   (package-note-caching!
-			    (structure-package (car opens))
-			    name place))
-		    (loop (cdr opens))))))))
+		(call-with-values
+		    (lambda ()
+		      (interface-ref (structure-interface (car opens))
+				     name))
+		  (lambda (internal-name type)
+		    (if internal-name
+			(begin
+			  (table-set! (package-cached package) name place)
+			  (package-note-caching!
+			   (structure-package (car opens))
+			   internal-name place))
+                        (loop (cdr opens))))))))))
 
 ; Find the actual package providing PLACE and remember that it is being used.
 
@@ -147,10 +152,15 @@
   (let loop ((opens (package-opens package)))
     (if (null? opens)
 	(get-undefined package name)
-	(if (interface-member? (structure-interface (car opens))
-			       name)
-	    (location-for-reference (structure-package (car opens)) name)
-	    (loop (cdr opens))))))
+	(call-with-values
+	    (lambda ()
+	      (interface-ref (structure-interface (car opens))
+			     name))
+	  (lambda (internal-name type)
+	    (if internal-name
+		(location-for-reference (structure-package (car opens))
+					internal-name)
+		(loop (cdr opens))))))))
 
 ;----------------
 ; Maintain and display a list of undefined names.
