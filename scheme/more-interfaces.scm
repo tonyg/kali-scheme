@@ -318,6 +318,7 @@
 	  (general-category :syntax)
 	  general-category?
 	  general-category-id
+	  general-category-symbol
 	  general-category-primary-category
 
 	  char-general-category
@@ -407,6 +408,16 @@
 	  string-normalize-nfkd
 	  string-normalize-nfc
 	  string-normalize-nfkc))
+
+(define-interface r6rs-unicode-interface
+  (compound-interface unicode-normalizations-interface
+		      (export char-titlecase
+			      char-title-case?
+			      char-foldcase
+			      string-upcase string-downcase
+			      string-foldcase
+			      string-titlecase)
+		      (export char-general-category)))
 
 ; --------------------
 ; Big Scheme

@@ -482,6 +482,7 @@
 	    traverse
 	    udp-sockets
 	    unicode-normalizations
+	    r6rs-unicode
 	    value-pipes
 	    variable-argument-lists
 

@@ -224,6 +224,32 @@ from that of the input string.
 The SRFI~14 (``Character Sets'') implementation in the \code{srfi-14}
 structure is fully Unicode-compliant.
 
+\section{R6RS}
+
+The \texttt{unicode-r6rs} structure exports the procedures from the
+\texttt{(r6rs unicode)} library of 5.91 draft of R$^6$RS that are not
+already in the \texttt{scheme} structure:
+
+\begin{flushleft}
+\texttt{string-normalize-nfd}\\
+\texttt{string-normalize-nfkd}\\
+\texttt{string-normalize-nfc}\\
+\texttt{string-normalize-nfkc}\\
+\texttt{char-titlecase}\\
+\texttt{char-title-case?}\\
+\texttt{char-foldcase}\\
+\texttt{string-upcase}\\
+\texttt{string-downcase}\\
+\texttt{string-foldcase}\\
+\texttt{string-titlecase}
+\end{flushleft}
+%
+The \texttt{r6rs-unicode} structure also exports a
+\texttt{char-general-category} procedure compatible with the
+\texttt{(r6rs unicode)} library.  Note that, as Scheme~48 treats
+source code case-insensitively, the symbols it returns are
+all-lowercase.
+
 \section{I/O}
 
 Ports must encode any text a program writes to an output port to a
