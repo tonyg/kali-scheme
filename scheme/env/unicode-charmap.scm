@@ -1,4 +1,5 @@
 ; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 2005-2006 by Basis Technology Corporation.  See file COPYING.
 
 ; Unicode version of env/rts/charmap.scm, replaces relevant procedures there.
 
