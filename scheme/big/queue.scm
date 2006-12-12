@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2005 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Queues
 ; Richard's code with Jonathan's names.
@@ -10,13 +10,6 @@
 ;
 ; Now using optimistic concurrency.  We really need two sets of procedures to
 ; allow those who don't care to avoid the cost of the concurrency checks.
-
-; The various provisional-cdr, provisional-set-cdr! calls, and the
-; provisional-length and provisional-memq functions, are needed,
-; because delete-from-queue-if! modifies the element list "in the
-; middle"; so the synchronized fields HEAD and TAIL don't get
-; changed. This increases the log sizes, but that's not avoidable, if
-; we want to have delete-from-queue! -- David
 
 (define-synchronized-record-type queue :queue
   (really-make-queue uid head tail)
@@ -50,7 +43,7 @@
 	    ((null? (queue-tail q))		; someone got in first
 	     (invalidate-current-proposal!))
 	    (else
-	     (provisional-set-cdr! (queue-tail q) p)))
+	     (set-cdr! (queue-tail q) p)))
       (set-queue-tail! q p))))
 
 (define (queue-head q)
@@ -66,7 +59,7 @@
 	     (error "empty queue" q))
 	    (else
 	     (let ((value (car pair))
-		   (next  (provisional-cdr pair)))
+		   (next  (cdr pair)))
 	       (set-queue-head! q next)
 	       (if (null? next)
 		   (set-queue-tail! q '()))   ; don't retain pointers
@@ -83,7 +76,7 @@
 	     #f)
 	    (else
 	     (let ((value (car pair))
-		   (next  (provisional-cdr pair)))
+		   (next  (cdr pair)))
 	       (set-queue-head! q next)
 	       (if (null? next)
 		   (set-queue-tail! q '()))   ; don't retain pointers
@@ -96,14 +89,7 @@
 
 (define (on-queue? q v)
   (ensure-atomicity
-   (provisional-memq v (real-queue-head q))))
-
-(define (provisional-memq v list)
-  (let loop ((list list))
-    (cond
-     ((null? list) #f)
-     ((eq? v (provisional-car list)) list)
-     (else (loop (provisional-cdr list))))))
+   (memq v (real-queue-head q))))
 
 ; This removes the first occurrence of V from Q.
 
@@ -114,28 +100,35 @@
 
 (define (delete-from-queue-if! q pred)
   (ensure-atomicity
-    (let ((list (real-queue-head q)))
-      (cond ((null? list)
-	     #f)
-	    ((pred (car list))
-	     (set-queue-head! q (provisional-cdr list))
-	     (if (null? (cdr list))
-		 (set-queue-tail! q '()))   ; don't retain pointers
-	     #t)
-	    ((null? (provisional-cdr list))
-	     #f)
-	    (else
-	     (let loop ((list list))
-	       (let ((tail (provisional-cdr list)))
-		 (cond ((null? tail)
-			#f)
-		       ((pred (car tail))
-			(provisional-set-cdr! list (provisional-cdr tail))
-			(if (null? (cdr tail))
-			    (set-queue-tail! q list))
-			#t)
-		       (else
-			(loop tail))))))))))
+   (let ((head (real-queue-head q)))
+     (cond ((null? head)
+	    #f)
+	   ((pred (car head))
+	    (set-queue-head! q (cdr head))
+	    ;; force proposal check
+	    (set-queue-tail! q (if (null? (cdr head))
+				   '()
+				   (let ((p (queue-tail q))) 
+				     (cons (car p) (cdr p)))))
+	    #t)
+	   ((null? (cdr head))
+	    #f)
+	   (else
+	    (let loop ((list head))
+	      (let ((tail (cdr list)))
+		(cond ((null? tail)
+		       #f)
+		      ((pred (car tail))
+		       (set-cdr! list (cdr tail))
+		       ;; force proposal check
+		       (set-queue-head! q (cons (car head) (cdr head)))
+		       (set-queue-tail! q (if (null? (cdr tail))
+					      list
+					      (let ((p (queue-tail q)))
+						(cons (car p) (cdr p)))))
+		       #t)
+		      (else
+		       (loop tail))))))))))
 
 (define (queue->list q)
   (ensure-atomicity
@@ -156,9 +149,5 @@
 
 (define (queue-length q)
   (ensure-atomicity
-    (provisional-length (real-queue-head q))))
+    (length (real-queue-head q))))
 
-(define (provisional-length list)
-  (do ((res 0 (+ res 1))
-       (list list (provisional-cdr list)))
-      ((null? list) res)))
