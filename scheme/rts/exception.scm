@@ -124,7 +124,8 @@
 
 ;; no tail recursive call to the handler here
 (define (raise obj)
-  (let ((cell (make-cell (fluid-cell-ref $exception-handlers))))
+  (let* ((cell (make-cell (fluid-cell-ref $exception-handlers)))
+	 (last-handler #f))
     (let-fluid
      $exception-handlers cell
      (lambda ()
@@ -136,7 +137,8 @@
 	    (if (null? maybe-obj)
 		(loop (cdr handlers) obj)
 		(loop (cdr handlers) (car maybe-obj)))))
-	 (error "exception handler returned" (car handlers) obj))))))
+	 (set! last-handler (car handlers)))))
+    (error "exception handler returned" last-handler obj)))
 
 (define-syntax guard
   (syntax-rules ()
