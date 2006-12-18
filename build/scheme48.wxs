@@ -148,9 +148,10 @@
     </Directory>
 
     <!-- declare building of scheme48.image -->
+    <!-- /v:off needed to avoid mangling !s on some systems -->
     <CustomAction Id="build_usual_image"
-                  FileKey="build_build_usual_image.bat"
-                  ExeCommand='"[INSTALLDIR]" "[INSTALLDIR]scheme" "[INSTALLDIR]scheme48.image" "[INSTALLDIR]scheme48vm.exe" "[INSTALLDIR]build\initial.image"'
+                  Directory="INSTALLDIR"
+                  ExeCommand='[SystemFolder]cmd.exe /v:off /c build\build-usual-image.bat "[INSTALLDIR]" "[INSTALLDIR]scheme" "[INSTALLDIR]scheme48.image" "[INSTALLDIR]scheme48vm.exe" "[INSTALLDIR]build\initial.image"'
                   Return="check" />
 
     <!-- declare generation of front end -->
