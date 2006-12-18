@@ -119,7 +119,7 @@
 			(if (null? free)
 			    args
 			    (append args
-				    (list (map node-form free)))))
+				    (list (map name-node->symbol free)))))
 		      0
 		      (compile body depth frame (return-cont name)))))
 
