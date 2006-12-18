@@ -38,7 +38,7 @@ extern long		s48_call_native_procedure(long, long),
 extern void s48_raise_argument_type_error(s48_value);
 extern void s48_raise_range_error(s48_value, s48_value, s48_value);
 
-unsigned char *s48_get_os_string_encoding(void);
+char *s48_get_os_string_encoding(void);
 
 /*
  * We rename these to avoid name clashes.

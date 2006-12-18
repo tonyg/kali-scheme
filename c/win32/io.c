@@ -300,7 +300,7 @@ ps_close(FILE *stream)
     return errno;
 }
 
-unsigned char*
+char*
 s48_get_os_string_encoding(void)
 {
   /* really UTF-8of16, but that doesn't matter at the Scheme level */

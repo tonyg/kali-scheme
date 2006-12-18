@@ -143,7 +143,7 @@ s48_get_file_size(unsigned char *name)
 
 /* encoding of argv */
 
-unsigned char*
+char*
 s48_get_os_string_encoding(void)
 {
   static char setlocale_called = PSFALSE;
