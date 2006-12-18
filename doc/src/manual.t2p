@@ -26,6 +26,8 @@
 {\bf\hr}
 }
 
+\let\ifpdf=\iffalse
+
 \let\PRIMdocument\document
 
 \def\document{\PRIMdocument
