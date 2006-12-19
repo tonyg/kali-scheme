@@ -20,6 +20,9 @@ LIBOBJS = @LIBOBJS@
 
 GC_OBJS = @GC_OBJS@
 
+ASM_OBJECTS = @ASM_OBJECTS@
+ASM_STYLE = @ASM_STYLE@
+
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 ### End of `configure' section###
@@ -209,14 +212,28 @@ LOOKUP_INITIALIZERS = 	s48_init_external_lookup
 # End of lookup rules
 # Native-code glue rules
 
-ASM_OBJECTS = c/fake/glue.o
-ASM_INITIALIZERS =
+# Fake definitions if there is no support for native code
+FAKE_ASM_OBJECTS = c/fake/glue.o
 
 # Real definitions to be used when a. native code works and b. it is supported
 # on the machine we're compiling on
-#ASM_OBJECTS = c/glue.o c/asm-glue.o
-#ASM_INITIALIZERS =	s48_init_asm_glue
+# Does currently not work because of the new GC infrastructure
+X86_ASM_OBJECTS = c/glue.o c/asm-glue.o
 
+ASM_INITIALIZERS = s48_init_asm_glue
+
+# Assumes s48-compiler/ in the working directory
+
+c/glue.o: c/glue_$(ASM_STYLE).s
+	gcc -c -o $@ $<
+
+c/glue_$(ASM_STYLE).s: s48-compiler/assembler/x86/x86-glue.scm
+	(echo ',batch';						\
+	 echo ',open srfi-23';					\
+	 echo ',load $<';					\
+	 echo '(glue-code "$@" (quote $(ASM_STYLE)))';		\
+	 echo ',exit'						\
+	) | $(RUNNABLE)
 # End of native-code glue rules
 
 # Two-space copier objects
@@ -436,6 +453,7 @@ configure: configure.in
 clean:
 	-rm -f $(VM) script-interpreter					\
 		*.o c/unix/*.o c/posix/*.o c/*.o c/fake/*.o c/bibop/*.o\
+		c/glue_gnu.s c/glue_darwin.s				\
 		TAGS $(IMAGE)						\
 		build/*.tmp $(MANPAGE) build/linker.image		\
 		scheme/debug/*.image scheme/debug/*.debug config.cache	\

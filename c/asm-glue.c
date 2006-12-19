@@ -222,3 +222,11 @@ s48_make_native_return_code(int n_stack_args)
   
 }
 
+void
+s48_write_fatal_message(char* msg, int size, int bc_pc){
+  fprintf(stderr, "s48_write_fatal_message called with bc-pc %d\n", bc_pc);
+  write(2, msg, size);
+  fprintf(stderr, "s48_write_fatal_message put out\n");
+  exit(1);
+  return;
+}

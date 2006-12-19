@@ -150,6 +150,27 @@ define(S48_CREATE_BUILD_DIRS, [dnl
         mkdir -p c/fake
 ])dnl
 dnl
+define(S48_NATIVE_CODE, [dnl
+        AC_MSG_CHECKING([native-code compiler support])
+        case `uname -m` in
+          i?86 )
+                AC_MSG_RESULT([x86])
+		ASM_OBJECTS='${X86_ASM_OBJECTS}' ;;
+          * )
+                AC_MSG_RESULT([no])
+		ASM_OBJECTS='${FAKE_ASM_OBJECTS}' ;;
+        esac
+        AC_MSG_CHECKING([assembler style])
+        case `uname` in
+          Darwin )
+                AC_MSG_RESULT([Darwin])
+                ASM_STYLE='darwin' ;;
+          * )
+                AC_MSG_RESULT([GNU(hopefully)])
+                ASM_STYLE='gnu' ;;
+        esac        
+])dnl
+dnl
 AC_INIT(c/prescheme.h)
      AC_CONFIG_HEADER(c/sysdep.h)
      AC_CONFIG_HEADER(c/scheme48write-barrier.h)
@@ -248,9 +269,12 @@ fail
      S48_USCORE
      S48_RDYNAMIC
      S48_IEEE_ENDIANNESS
+     S48_NATIVE_CODE
      AC_SUBST(CFLAGS)
      AC_SUBST(LDFLAGS)
      AC_SUBST(GC_OBJS)
+     AC_SUBST(ASM_OBJECTS)
+     AC_SUBST(ASM_STYLE)
      AC_SUBST(S48_GC_TWOSPACE)
      AC_SUBST(S48_GC_BIBOP)
 AC_OUTPUT(Makefile)
