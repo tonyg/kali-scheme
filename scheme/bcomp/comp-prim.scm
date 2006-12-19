@@ -394,14 +394,14 @@
 			       (+ depth 1)
 			       frame
 			       (fall-through-cont node 1))
-		      (call-instruction 1 label)	; one argument
+		      (call-instruction 1 (+ depth 1) label) ; one argument
 		      after))))
   (lambda (frame)
     (sequentially (lambda-protocol 1 #f #f #f)
                   (instruction (enum op current-cont))
 		  (instruction (enum op push))
 		  (instruction (enum op stack-ref) 1)
-                  (call-instruction 1 #f))))	; one argument, no return label
+                  (call-instruction 1 (+ (frame-size frame) 1) #f)))) ; one argument, no return label
 
 ; (call-with-values producer consumer)
 

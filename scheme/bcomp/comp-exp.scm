@@ -315,7 +315,7 @@
 			     (+ depth nargs)
 			     frame
 			     (fall-through-cont node 0))
-		    (call-instruction nargs label)
+		    (call-instruction nargs (+ depth nargs) label)
 		    after))))
 
 ; A redex is a call of the form ((lambda (x1 ... xn) body ...) e1 ... en).
@@ -552,7 +552,7 @@
 ; signficantly slower (because the argument count cannot be encoded in
 ; the protocol).
 
-(define (call-instruction nargs label)
+(define (call-instruction nargs depth label)
   (if label
       (if (> nargs maximum-stack-args)				;+++
 	  (instruction-using-label (enum op big-call)
@@ -569,7 +569,9 @@
 		       (high-byte nargs)
 		       (low-byte nargs))
 	  (instruction (enum op tail-call)
-		       nargs))))
+		       nargs
+                       (high-byte depth)
+                       (low-byte depth)))))
   
 (define (stack-ref-instruction index)
   (if (>= index byte-limit)					;+++

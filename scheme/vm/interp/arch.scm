@@ -116,7 +116,7 @@
   ;; Different ways to call procedures
   (call     offset nargs 1 +)    ; last argument is the procedure to call,
 				 ; offset is to return pointer
-  (tail-call nargs 1 +)          ; same, no return pointer, moves arguments
+  (tail-call nargs two-bytes 1 +)   ; same, no return pointer but stack frame size, moves arguments
   (big-call offset two-byte-nargs 1 +) ; ditto, nargs counts are two bytes
   (poll)
   (apply offset two-byte-nargs 2 +)   ; last argument is procedure to call, second to
@@ -140,10 +140,8 @@
 				 ; nargs is needed for interrupt handling
   (jump-if-false offset 1)	 ; boolean in *val*
 
-  ;; conditional jumps; the byte argument is the byte code of a predicate
-  (jump-if-not-binary offset byte 2) ; binary conditional, like eq?, =, etc.
-  (jump-if-not-unary offset byte 1) ; unary conditional, like number?
-  (jump-if-not-stored-object-has-type? offset stob 1) ; special case, bah
+  ;; conditional jumps; the first byte argument is the byte code of a predicate
+  (test-op+jump-if-false instr instr)
 
   (jump          offset)
   (jump-back     offset-)	 ; same, but subtract the offset
