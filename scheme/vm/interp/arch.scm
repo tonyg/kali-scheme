@@ -140,8 +140,10 @@
 				 ; nargs is needed for interrupt handling
   (jump-if-false offset 1)	 ; boolean in *val*
 
-  ;; conditional jumps; the first byte argument is the byte code of a predicate
-  (test-op+jump-if-false instr instr)
+  ;; conditional jumps; the byte argument is the byte code of a predicate
+  (jump-if-not-binary offset byte 2) ; binary conditional, like eq?, =, etc.
+  (jump-if-not-unary offset byte 1) ; unary conditional, like number?
+  (jump-if-not-stored-object-has-type? offset stob 1) ; special case, bah
 
   (jump          offset)
   (jump-back     offset-)	 ; same, but subtract the offset
