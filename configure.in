@@ -155,20 +155,24 @@ define(S48_NATIVE_CODE, [dnl
         case `uname -m` in
           i?86 )
                 AC_MSG_RESULT([x86])
-		ASM_OBJECTS='${X86_ASM_OBJECTS}' ;;
+            	ASM_OBJECTS='${X86_ASM_OBJECTS}'
+                AC_CHECK_FUNCS(sigaltstack, HAVE_SIGALTSTACK=1, HAVE_SIGALTSTACK=0)
+                if test "$HAVE_SIGALTSTACK" = 0; then
+                  AC_MSG_ERROR([Your system lacks sigaltstack])
+                fi
+                AC_MSG_CHECKING([assembler style])
+                case `uname` in
+                  Darwin )
+                    AC_MSG_RESULT([Darwin])
+                    ASM_STYLE='darwin' ;;
+                  * )
+                    AC_MSG_RESULT([GNU(hopefully)])
+                    ASM_STYLE='gnu' ;;
+                esac ;;
           * )
                 AC_MSG_RESULT([no])
-		ASM_OBJECTS='${FAKE_ASM_OBJECTS}' ;;
+                ASM_OBJECTS='${FAKE_ASM_OBJECTS}' ;;
         esac
-        AC_MSG_CHECKING([assembler style])
-        case `uname` in
-          Darwin )
-                AC_MSG_RESULT([Darwin])
-                ASM_STYLE='darwin' ;;
-          * )
-                AC_MSG_RESULT([GNU(hopefully)])
-                ASM_STYLE='gnu' ;;
-        esac        
 ])dnl
 dnl
 AC_INIT(c/prescheme.h)

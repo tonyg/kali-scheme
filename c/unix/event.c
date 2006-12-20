@@ -29,6 +29,22 @@ void		s48_start_alarm_interrupts(void);
 void
 s48_sysdep_init(void)
 {
+#ifdef HAVE_SIGALTSTACK 
+  stack_t ss;
+  
+  ss.ss_sp = malloc(SIGSTKSZ);
+  if (ss.ss_sp == NULL)
+    fprintf(stderr,
+	    "Failed to malloc alt stack, errno = %d\n",
+	    errno);
+  ss.ss_size = SIGSTKSZ;
+  ss.ss_flags = 0;
+  if (sigaltstack(&ss, NULL) == -1)
+    fprintf(stderr,
+	    "Failed to sigaltstack, errno = %d\n",
+	    errno);
+#endif
+
   if (!s48_setcatcher(SIGINT, s48_when_keyboard_interrupt)
       || !s48_setcatcher(SIGALRM, s48_when_alarm_interrupt)
       || !s48_setcatcher(SIGPIPE, when_sigpipe_interrupt)) {
@@ -56,7 +72,13 @@ s48_setcatcher(int signum, void (*catcher)(int))
     return (PSTRUE);
   sa.sa_handler = catcher;
   sigemptyset(&sa.sa_mask);
+
+#ifdef HAVE_SIGALTSTACK
+  sa.sa_flags = SA_ONSTACK;
+#else
   sa.sa_flags = 0;
+#endif
+
   if (sigaction(signum, &sa, (struct sigaction *)NULL) != 0)
     return (PSFALSE);
   return (PSTRUE);
