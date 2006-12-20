@@ -41,6 +41,8 @@
     (define s48-write-barrier
       (external "S48_WRITE_BARRIER" (=> (integer address integer) null)))
 
+    (define s48-check-heap
+      (external "s48_check_heap" (=> (integer) boolean)))
     (define s48-stob-in-heap?
       (external "s48_stob_in_heapP" (=> (integer) boolean)))
     ))
