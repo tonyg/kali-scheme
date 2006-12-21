@@ -111,6 +111,7 @@ s48_socket(s48_value udp_p, s48_value input_p)
     		mode,
     		status;
   s48_value	channel;
+  int on = 1;
 
   RETRY_OR_RAISE_NEG(fd, socket(AF_INET,
 				(udp_p == S48_FALSE) ?
@@ -125,7 +126,6 @@ s48_socket(s48_value udp_p, s48_value input_p)
    * Alan Bawden says this is OK:
    * http://news.gmane.org/gmane.lisp.scheme.scheme48/cutoff=1672
    */
-  int on = 1;
   RETRY_OR_RAISE_NEG(status,
 		     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
 				&on, sizeof(on)));
