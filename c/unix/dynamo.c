@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include "sysdep.h"
 #include "scheme48.h"
 #include "c-mods.h"
