@@ -2,6 +2,145 @@
 
 Recent changes to Scheme 48.
 
+12/23/06 (version 1.4)
+	 Additions:
+	  REGEXP? is now exported from the REXEXPS structure.
+	  SRFIs 4, 39, 40, 43, 43, 60, 61, 63, 66, 67, 71, 78
+	   (mostly thanks to David Van Horn)
+	  In the command processor, switches were generalized to
+	   settings, specifically to customize various printing
+	   parameters.	See the manual for details.
+	  A generic byte-code parser was added to the system; the
+	   disassembler uses it.
+	  A REINITIALIZERS package for register actions to be
+	   performed after resuming an image was added.
+	  A VARIABLE-ARGUMENTS-LISTS structure implementing a macro
+	   for dealing with optional default parameters was added.
+	  A GET-INTERRUPT-HANDLER procedure was added.
+	  An --enable-universal-binary option was added to configure
+	   to facilitate building universal binaries on Mac OS X.
+	  The C code now has access to enum sets.
+	 Changes:
+	  FILE-OPTIONS (in the POSIX libary) are now enum sets; this
+	    allows using enum-set operations on them.
+	  Various changes were made to the VM to enable native-code
+	   compilation.
+	  Socket addresses are always reusable.
+	  1+ and 1- are no longer valid identifiers.
+	  The ordering of in/out thunks of DYNAMIC-WIND was changed to
+	   be consistent with itself and with the upcoming R6RS.
+	  The Windows build is now done using Visual Studio 2005.
+	 Bug fixes:
+	  Macro-defining macros now work in PreScheme.
+	  Opening a file for both read and write via the POSIX
+	    libraries wouldn't work correctly.	(Reported by Andreas
+	    Rottmann.)
+	  PreScheme's COPY-MEMORY! now works for overlapping regions.
+	  Various C compilation problems were fixed.
+	  cmuscheme48.el should now work under GNU Emacs as well as
+	    XEmacs.
+	  Numerous problems with floating-point arithmetic were fixed.
+	  A race condition with queues was fixed. (thanks to David
+	   Frese)
+	  Part of script messages were printed on stdout rather than
+	   stderr; fixed.  (thanks to Andreas Rottmann)
+	  A shadowing bug in the DEBUGGING package was fixed.  (thanks
+	   to Taylor Campbell)
+	  A bug in the CML SYNC-GROUP primitive was fixed.  (thanks to
+	   Heath Putnam)
+	  Various errors in SRFI 13 were fixed.
+	  A bug in the auto-integrator was fixed.  (thanks to Taylor
+	   Campbell)
+	  A bug in LOAD-DYNAMIC-EXTERNALS was fixed.  (thanks to
+	   Taylor Campbell)
+	  Several bugs in VECTOR-MERGE were fixed.  (reported by
+	   Matthias Radestock)
+	  The CML WRAP was made correctly tail-recursive.  (reported
+	   by Heath Putnam)
+	  A bug in the PreScheme C backend, that would sometimes
+	   incorrectly delete tail calls without a return value, was
+	   fixed.  (reported by Eric Merritt)
+	  Several bugs in interface walking were fixed.	 (reported by
+	   Taylor Campbell)
+	  A bug in the PreScheme compiler affecting the removal of
+	   unused procedures was fixed.	 (thanks to Eric Knauel)
+	  Some precedence bugs in the C stubgs for the regexp code
+	   were fixed.	(thanks to Matthew Dempsky)
+	  A bug in the REGEXPS package for regexps without submatches
+	   was fixed.
+	  (set-current-proposal! (current-proposal)) no longer raises
+	   an exception.  (thanks to Taylor Campbell)
+	  A bug in package caching was fixed.  (thanks to Taylor
+	   Campbell)
+	  A bug in the generation of environment maps was fixed.
+	   (thanks to Taylor Campbell)
+	  The Windows installer package should now work even on
+	   systems that have delayed variable expansion on by default.
+	   (thanks to Emilio Lopes)
+	  Exception handlers that return from RAISE are now handled
+	   correctly.  (reported by Norbert Freudemann)
+
+05/01/05 (version 1.3)
+	 Additions:
+	  A collection of libraries implementing the Concurrent ML
+	   model for concurrent programming has been added; it is
+	   compatible to the CML libraries in Sunterlib.  See the
+	   documentation for details.
+	  Support for SRFIs 34-36 ("Exception handling for programs",
+	   "Conditions", "I/O conditions") has been added.  This is in
+	   the CONDITIONS, EXCEPTIONS, and I/O-CONDITIONS structures,
+	   for which the SRFI-34, SRFI-35, and SRFI-36 structures are
+	   essentially aliases.  A bridging infrastructure between the
+	   old condition system and the new one translates condition
+	   objects back and forth, hopefully transparently for the
+	   user.
+	  A new infrastructure for dynamically loading external
+	   libraries from shared objects has been added; check the
+	   manual for details.  The old infrastructure is still
+	   presented, but is unsupported on Windows and will be
+	   removed in a future release.
+	  The S48_GC_UNPROTECT_GLOBAL macro has been added, which
+	   allows to remove a root added by S48_GC_PROTECT_GLOBAL.
+	  The Scheme 48 header files should now be compileable by a
+	   C++ compiler.
+	  An experimental Windows port has been added.
+         Changes:
+          The HTML manual is now generated with tex2page.
+          A number of changes to the VM to support the (future)
+           native-code compiler have been made.
+          The PreScheme type rule for IF is now more strict, thus
+           disallowing code that would lead to invalid C output.
+           (This fixes a bug reported by Markus Ziegler.)
+         Bug fixes:
+          The TRAVERSE structure for displaying heap statistics has
+           been re-enabled.
+          A number of misues of CALL-ERROR have been corrected
+           (reported by Taylor Campbell).
+	  The VALUE-PIPES package works again
+           (fix by Taylor Campbell).
+	  In PreScheme it is now possible to shift integers by
+	   non-constant shift widths.
+	  Logical right shifts in PreScheme work now
+           (reported by Taylor Campbell).
+          A bug in TERMINATE-THREAD! was fixed
+           (reported by Taylor Campbell).
+          A bug in the implementation of ,exit-when-done was fixed.
+          A bug in the regexp-matching code that prevented matching
+           the empty string correctly was fixed.
+          A bug in the implementation of STRING-CONTAINS from SRFI-13
+           was fixed.
+          A bug in the implementation of :WHILE in SRFI-42 was fixed
+           (submitted by Sebastian Egner).
+          Bugs in the implementations of ANGLE and MAGNITUDE were
+           fixed.
+          An obscure bug in the implementation of APPLY (which was
+           triggered by certain instances of (apply apply ...) )
+           was fixed.
+	  For a degenerate case of ITERATE, the code was made to
+	   conform the documentation
+	   (reported by Taylor Campbell).
+          Various miscellaneous fixes.
+
 12/05/04 (version 1.2)
          Additions:
           The LU-DECOMPOSITIONS structure was added for good.
