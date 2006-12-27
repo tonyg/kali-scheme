@@ -491,7 +491,7 @@ tags:
 # DISTFILES should include all sources.
 DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
 		configure acconfig.h configure.in Makefile.in 		\
-		scheme48.dsp scheme48.dsw				\
+		scheme48.sln scheme48.vcproj				\
 		mkinstalldirs install-sh				\
 		doc/*.ps doc/*.pdf doc/*.txt 				\
 		doc/html/*.html doc/html/*.css doc/html/*.gif 		\
@@ -503,7 +503,7 @@ DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
 		build/initial.debug build/initial.image			\
 		build/build-external-modules				\
 		build/*.bat build/*.sh build/*.rc			\
-		build/dummy build/*.wxs build/*.wxi			\
+		build/dummy build/*.wxs 				\
 		build/*.bmp build/*.ico					\
 		c/*.[ch] c/*/*.[ch] c/*/*.ci				\
 		c/scheme48.h.in	c/scheme48write-barrier.h.in		\
