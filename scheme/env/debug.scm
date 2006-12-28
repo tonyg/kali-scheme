@@ -709,9 +709,39 @@ Kind should be one of: names maps files source tabulate"
 	(probe (package-lookup (environment-for-commands) name)))
     (if probe
 	(begin (display "Bound to " port)
-	       (write probe)
-	       (newline port))
+	       (cond ((binding? probe)
+                      (describe-binding probe port))
+                     (else
+                      (write probe port)
+                      (newline port)))
+               (set-focus-object! probe))
 	(write-line "Not bound" port))))
+
+(define (describe-binding binding port)
+  (let ((type (binding-type binding))
+	(location (binding-place binding))
+	(static (binding-static binding)))
+    (display (binding-type-description binding) port)
+    (write-char #\space port)
+    (write location port)
+    (newline port)
+    (display "  Type " port)
+    (write (type->sexp type #t) port)
+    (newline port)
+    (cond (static (display "  Static " port)
+                  (write static port)
+                  (newline port)))))
+
+(define (binding-type-description binding)
+  (let ((type (binding-type binding))
+        (static (binding-static binding)))
+    (cond ((variable-type? type) "mutable variable")
+          ((eq? type undeclared-type) "unknown denotation")
+          ((subtype? type syntax-type)
+           (if (transform? static) "macro" "special operator"))
+          ((primop? static) "primitive procedure")
+          ((transform? static) "integrated procedure")
+          (else "variable"))))
 
 ; ,expand <form>
 

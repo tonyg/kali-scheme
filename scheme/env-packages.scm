@@ -223,6 +223,10 @@
         disclosers              ; template-name, debug-data-names
         packages                ; flush-location-names, package-integrate?
         packages-internal       ; [set-]package-integrate?[!], flush-location-names
+	bindings
+	meta-types
+	(subset transforms (transform?))
+	(subset primops (primop?))
 	undefined		; noting-undefined-variables
         continuations           ; continuation-template, continuation-preview
         architecture            ; op/global, etc.
