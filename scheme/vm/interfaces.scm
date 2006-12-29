@@ -101,10 +101,6 @@
 	  ; for debugging
 	  s48-check-heap
 	  s48-stob-in-heap?
-          
-          ; for the native code (works with the two-space copier only)
-          s48-*limit*
-          s48-*hp*
 	  ))
 
 
