@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 (define-record-type base-type :base-type
   (really-make-base-type name uid)

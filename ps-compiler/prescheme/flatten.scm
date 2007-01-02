@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 ; Definitions are (<variable> . <value>) pairs, where <value> can be any
 ; Scheme value.  This code walks the values looking for sharing and for

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; To load the VM into Scheme 48:
 ;   ,exec ,load load-vm.scm
@@ -52,7 +52,7 @@
 ;     echo \(link-simple-system \'\(scheme/debug tiny\) \'start tiny-system\)) \
 ;    | ./scheme48vm -h 5000000 -i build/linker.image
 ;    Welcome to Scheme 48 0.53 (suspended image).
-;    Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees.
+;    Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees.
 ;    Please report bugs to scheme-48-bugs@martigny.ai.mit.edu.
 ;    Type ,? (comma question-mark) for help.
 ;    > Will exit on errors

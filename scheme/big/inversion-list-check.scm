@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; ,config ,load =scheme48/debug/test.scm
 ; ,exec ,load =scheme48/big/inversion-list-check.scm

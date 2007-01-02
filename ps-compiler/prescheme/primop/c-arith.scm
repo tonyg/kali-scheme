@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 (define-local-syntax (define-c-arith-binop-generator id c-op)
   `(define-c-generator ,id #t

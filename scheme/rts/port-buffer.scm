@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 			       
 (define (make-buffered-input-port handler data buffer index limit)
   (if (and (okay-buffer? buffer index limit)
