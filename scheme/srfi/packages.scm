@@ -137,7 +137,7 @@
   (begin
     (define available-srfis
       '(srfi-1 srfi-2 srfi-4 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
-	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
+	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17 srfi-19
 	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
 	srfi-39 srfi-40 srfi-42 srfi-43 srfi-45
@@ -327,7 +327,119 @@
   (files srfi-17))
 
 ; SRFI-18 - no implementation given
-; SRFI-19 - implementation is specific to MzScheme
+
+(define-interface srfi-19-interface
+  (export 
+   ;; Constants
+   time-duration
+   time-monotonic
+   time-process
+   time-tai
+   time-thread
+   time-utc
+   ;; Current time and clock resolution
+   current-date
+   current-julian-day
+   current-modified-julian-day
+   current-time
+   time-resolution
+   ;; Time object and accessors
+   make-time
+   time?
+   time-type
+   time-nanosecond
+   time-second
+   set-time-type!
+   set-time-nanosecond!
+   set-time-second!
+   copy-time
+   ;; Time comparison procedures
+   time<=?
+   time<?
+   time=?
+   time>=?
+   time>?
+   ;; Time arithmetic procedures
+   time-difference
+   time-difference!
+   add-duration
+   add-duration!
+   subtract-duration
+   subtract-duration!
+   ;; Date object and accessors
+   make-date
+   date?
+   date-nanosecond
+   date-second
+   date-minute
+   date-hour
+   date-day
+   date-month
+   date-year
+   date-zone-offset
+   date-year-day
+   date-week-day
+   date-week-number
+   ;; Time/Date/Julian Day/Modified Julian Day converters
+   date->julian-day
+   date->modified-julian-day
+   date->time-monotonic
+   date->time-tai
+   date->time-utc
+   julian-day->date
+   julian-day->time-monotonic
+   julian-day->time-tai
+   julian-day->time-utc
+   modified-julian-day->date
+   modified-julian-day->time-monotonic
+   modified-julian-day->time-tai
+   modified-julian-day->time-utc
+   time-monotonic->date
+   time-monotonic->time-tai
+   time-monotonic->time-tai!
+   time-monotonic->time-utc
+   time-monotonic->time-utc!
+   time-tai->date
+   time-tai->julian-day
+   time-tai->modified-julian-day
+   time-tai->time-monotonic
+   time-tai->time-monotonic!
+   time-tai->time-utc
+   time-tai->time-utc!
+   time-utc->date
+   time-utc->julian-day
+   time-utc->modified-julian-day
+   time-utc->time-monotonic
+   time-utc->time-monotonic!
+   time-utc->time-tai
+   time-utc->time-tai!
+   ;; Date to string/string to date converters.
+   date->string
+   string->date))
+
+(define-structure srfi-19 srfi-19-interface
+  (open scheme
+	srfi-9 ; DEFINE-RECORD-PROCEDURES
+        srfi-23 ; ERROR
+        ascii
+        receiving
+        (modify posix-time (prefix posix:))
+        (modify extended-ports
+                (rename (make-string-output-port open-output-string)
+                        (string-output-port-output get-output-string)
+                        (make-string-input-port open-input-string))))
+  (files srfi-19))
+
+(define-structure srfi-19-tests (export run-tests)
+  (open scheme 
+	srfi-9 ; DEFINE-RECORD-PROCEDURES
+        srfi-19
+        srfi-34 ; exceptions
+        srfi-35 ; conditions
+        srfi-78 ; lightweight testing
+        formats)
+  (files srfi-19-check))
+
 ; SRFI-20 - withdrawn
 ; SRFI-21 - no implementation given
 ; SRFI-22 - needs internals hacking
