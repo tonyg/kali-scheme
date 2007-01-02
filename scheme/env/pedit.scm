@@ -173,39 +173,64 @@
 ;; Deal with editing operations
 
 (define (really-verify-later! thunk)	;cf. define-structure macro
-  (let ((cell (fluid $loser-thunks)))
-    (cell-set! cell
-	       (cons thunk
-		     (cell-ref cell)))))
-
-(define $loser-thunks (make-fluid (make-cell '())))
+  (let ((premature (ignore-errors thunk))) ; old value if we're redefining
+    (let ((cell (fluid $losers))
+	  (loser (if (or (structure? premature)
+			 (interface? premature))
+		     (cons premature thunk)
+		     (cons #f thunk))))
+      (cell-set! cell
+		 (cons loser
+		       (cell-ref cell))))))
+ 
+; each element is a a pair (thing, thunk)
+(define $losers (make-fluid (make-cell '())))
 (define $package-losers (make-fluid (make-cell '())))
 
 (define (package-system-sentinel)
-  (drain $loser-thunks verify-loser-thunk)
+  (drain $losers verify-loser)
   (drain $package-losers verify-package))
 
-(define (verify-loser-thunk thunk)
-  (let ((loser (ignore-errors thunk)))
-    (if (or (structure? loser)
-	    (interface? loser))
-	(verify-loser loser))))
- 
 (define (verify-loser loser)
+  (really-verify-loser (car loser)
+		       (ignore-errors (cdr loser))))
+
+(define (really-verify-loser premature thing)
   (if *debug?*
-      (begin (write `(verify-loser ,loser)) (newline)))
-  (cond ((interface? loser)
-	 (walk-population verify-loser (interface-clients loser)))
-	((structure? loser)
-	 (reinitialize-structure! loser)
-	 (walk-population verify-loser (structure-clients loser)))
-	((package? loser)
-	 (reinitialize-package! loser)
-	 (let* ((cell (fluid $package-losers))
-		(losers (cell-ref cell)))
-	   (if (not (memq loser losers))
-	       (cell-set! cell
-			  (cons loser losers)))))))
+      (begin (write `(verify-loser ,premature ,thing)) (newline)))
+  (cond
+   ((structure? thing) (verify-structure premature thing))
+   ((interface? thing) (verify-interface premature thing))))
+ 
+(define (verify-structure premature struct)
+  (reinitialize-structure! struct)
+  (if *debug?*
+      (begin
+	(write `(verify-structure ,struct ,(population->list (structure-clients struct))))
+	(newline)))
+  (walk-population note-verify-package (structure-clients struct)))
+
+(define (verify-interface premature int)
+  ;; add clients of old interface to new one
+  (if (interface? premature)
+      (walk-population
+       (lambda (client)
+	 (note-reference-to-interface! int client))
+       (interface-clients premature)))
+  (if *debug?*
+      (begin
+	(write `(verify-interface ,(population->list (interface-clients int))))
+	(newline)))
+  (walk-population (lambda (thing) (verify-structure #f thing))
+		   (interface-clients int)))
+
+(define (note-verify-package pack)
+  (reinitialize-package! pack)
+  (let* ((cell (fluid $package-losers))
+	 (losers (cell-ref cell)))
+    (if (not (memq pack losers))
+	(cell-set! cell
+		   (cons pack losers)))))
 
 (define (drain flu check)
   (let ((cell (fluid flu)))
