@@ -208,7 +208,7 @@
 						      (- limit index))
 				 (provisional-set-port-index! port 0)
 				 (provisional-set-port-limit! port (- limit index))))
-			   (if (or (buffer-filler! port (not (null? mode)))
+			   (if (or (not (buffer-filler! port (not (null? mode))))
 				   (not (null? mode)))
 			       (lose)
 			       #f)))))))
@@ -227,7 +227,7 @@
 			 (provisional-set-port-limit! port 0))
 		       ;; may be out of synch because of CR/LF conversion
 		       (provisional-set-port-index! port index))
-		   (if (or (buffer-filler! port (not (null? mode)))
+		   (if (or (not (buffer-filler! port (not (null? mode))))
 			   (not (null? mode)))
 		       (lose)
 		       #f)))))))))
