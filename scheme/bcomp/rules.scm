@@ -26,7 +26,9 @@
 	   exp))
    exp))
   '(append and car cdr cond cons else eq? equal? lambda let let* map
-	   pair? quote code-quote values vector-length vector-ref vector =))
+	   pair? quote code-quote values
+	   vector->list list->vector vector?
+	   =))
 
 
 (define (process-rules rules subkeywords r c)
@@ -54,9 +56,9 @@
   (define %tail (r 'tail))
   (define %temp (r 'temp))
   (define %= (r '=))
-  (define %vector-length (r 'vector-length))
-  (define %vector-ref (r 'vector-ref))
-  (define %vector (r 'vector))
+  (define %vector->list (r 'vector->list))
+  (define %list->vector (r 'list->vector))
+  (define %vector? (r 'vector?))
 
   (define (make-transformer rules)
     `(,%lambda (,%input ,%rename ,%compare)
@@ -94,15 +96,8 @@
 		    ,@(process-match `(,%car ,%temp) (car pattern))
 		    ,@(process-match `(,%cdr ,%temp) (cdr pattern))))))
 	  ((vector? pattern)
-	   (let ((size (vector-length pattern)))
-	   `((,%let* ((,%temp ,input))
-	      (,%and (,%= (,%vector-length ,%temp) ,size)
-		     ,@(let recur ((i 0))
-			 (if (= i size)
-			     '()
-			     (append
-			      (process-match `(,%vector-ref ,%temp ,i) (vector-ref pattern i))
-			      (recur (+ i 1))))))))))
+	   `((,%vector? ,input)
+	     ,@(process-match `(,%vector->list ,input) (vector->list pattern))))
 	  ((or (null? pattern) (boolean? pattern) (char? pattern))
 	   `((,%eq? ,input ',pattern)))
 	  (else
@@ -138,14 +133,9 @@
 	   (append (process-pattern (car pattern) `(,%car ,path) mapit)
 		   (process-pattern (cdr pattern) `(,%cdr ,path) mapit)))
 	  ((vector? pattern)
-	   (let ((size (vector-length pattern)))
-	     (let recur ((i 0))
-	       (if (= i size)
-		   '()
-		   (append (process-pattern (vector-ref pattern i)
-					    `(,%vector-ref ,path ,i)
-					    mapit)
-			   (recur (+ 1 i)))))))
+	   (process-pattern (vector->list pattern) 
+			    `(,%vector->list ,path)
+			    mapit))
 	  (else '())))
 
   ; Generate code to compose the output expression according to template
@@ -185,14 +175,8 @@
 	   `(,%cons ,(process-template (car template) dim env)
 		    ,(process-template (cdr template) dim env)))
 	  ((vector? template)
-	   `(,%vector
-	     ,@(let ((size (vector-length template)))
-		 (let recur ((i 0))
-		   (if (= i size)
-		       '()
-		       (cons
-			(process-template (vector-ref template i) dim env)
-			(recur (+ 1 i))))))))
+	   `(,%list->vector
+	     ,(process-template (vector->list template) dim env)))
 	  (else
 	   `(,%quote ,template))))
 
