@@ -459,8 +459,8 @@
 	  $restore-index))
 
 (define-interface extended-ports-interface
-  (export byte-source->input-port
-	  byte-sink->output-port
+  (export byte-source->input-port char-source->input-port
+	  byte-sink->output-port char-sink->output-port
 	  make-tracking-input-port make-tracking-output-port
 	  make-byte-vector-input-port make-string-input-port
 	  make-byte-vector-output-port make-string-output-port

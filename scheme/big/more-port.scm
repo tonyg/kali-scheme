@@ -309,6 +309,28 @@
    (lambda (port)		; ready?
      #t)))
 
+; Output ports from single char consumers
+
+(define (char-sink->output-port proc)
+  (make-unbuffered-output-port char-sink-output-port-handler
+			       proc))
+
+(define char-sink-output-port-handler
+  (make-port-handler
+   (lambda (proc)
+     (list 'char-sink-output-port))
+   make-output-port-closed!
+   (lambda (port byte)
+     (call-error "char port does not accept bytes"))
+   (lambda (port ch)
+     ((port-data port) ch))
+   (lambda (port buffer start count)
+     (call-error "char port does not accept bytes"))
+   (lambda (port)		; ready?
+     #t)
+   (lambda (port error-if-closed?)	; output forcer
+     (unspecific))))
+
 ; Call PROC on a port that will transfer COUNT bytes to PORT and
 ; then quit.
 
@@ -326,25 +348,27 @@
 (define write-one-line limit-output)
 
 ;----------------
-; Input ports from single byte producers
+; Input ports from single value producers
 ;
-; (byte-source->input-port <next-byte-thunk>
-;                          [<byte-ready?-thunk>
-;                          [<close-thunk>]])
+; ((make-source->input-port handler)
+;                     <next-thunk>
+;                     [<ready?-thunk>
+;                     [<close-thunk>]])
 
-(define (byte-source->input-port source . more)
-  (make-buffered-input-port byte-source-input-port-handler
-			    (make-source-data source
-					      (if (null? more)
-						  (lambda () #t)
-						  (car more))
-					      (if (or (null? more)
-						      (null? (cdr more)))
-						  values
-						  (cadr more)))
-			    (make-byte-vector 128 0)
-			    0
-			    0))
+(define (make-source->input-port handler)
+  (lambda (source . more)
+    (make-buffered-input-port handler
+			      (make-source-data source
+						(if (null? more)
+						    (lambda () #t)
+						    (car more))
+						(if (or (null? more)
+							(null? (cdr more)))
+						    values
+						    (cadr more)))
+			      (make-byte-vector 128 0)
+			      0
+			      0)))
 
 (define-record-type source-data :source-data
   (make-source-data source ready? close)
@@ -353,10 +377,10 @@
   (ready? source-data-ready?)
   (close source-data-close))
 
-(define byte-source-input-port-handler
+(define (make-source-input-port-handler discloser-name encode-data)
   (make-buffered-input-port-handler
    (lambda (proc)
-     (list 'byte-source-input-port))
+     (list discloser-name))
    (lambda (port)
      (make-input-port-closed! port)
      ((source-data-close (port-data port))))
@@ -365,32 +389,49 @@
 	   (data (port-data port))
 	   (limit (provisional-port-limit port)))
        (let ((got
-	      (byte-source-read-block port data
-				      buffer
-				      limit
-				      (- (byte-vector-length buffer) limit))))
-	 (if (not (eof-object? got))
-	     (provisional-set-port-limit! port (+ limit got)))
+	      (source-read-block encode-data
+				 port data
+				 buffer
+				 limit
+				 (- (byte-vector-length buffer) limit))))
+	 (provisional-set-port-limit! port (+ limit got))
 	 (maybe-commit))))
    (lambda (port)
      (if (port-pending-eof? port)
 	 #t
 	 ((source-data-ready? (port-data port)))))))
 
-(define (byte-source-read-block port data buffer start count)
+(define (source-read-block encode-data port data buffer start count)
   (let loop ((i 0))
     (if (= i count)
 	count
 	(let ((next ((source-data-source data))))
-	  (cond ((eof-object? next)
-		 (if (= 0 i)
-		     (eof-object)
-		     (begin
-		       (provisional-set-port-pending-eof?! port #t)
-		       i)))
-		(else
-		 (byte-vector-set! buffer (+ start i) next)
-		 (loop (+ i 1))))))))
+	  (if (eof-object? next)
+	      (begin
+		(provisional-set-port-pending-eof?! port #t)
+		i)
+	      (let ((got (encode-data next buffer (+ start i)))) ; we know the end is the limit
+		(loop (+ i got))))))))
 
+(define (encode-byte thing buffer start)
+  (byte-vector-set! buffer start thing)
+  1)
 
-						
+(define byte-source-input-port-handler
+  (make-source-input-port-handler 'byte-source-input-port
+				  encode-byte))
+
+(define byte-source->input-port
+  (make-source->input-port byte-source-input-port-handler))
+
+(define char-source-input-port-handler
+  (make-source-input-port-handler 'char-source-input-port
+				  encode-char/utf-8))
+
+(define char-source->input-port 
+  (let ((make (make-source->input-port char-source-input-port-handler)))
+    (lambda (source . more)
+      (let ((port (apply make source more)))
+	(set-port-text-codec! port utf-8-codec)
+	port))))
+
