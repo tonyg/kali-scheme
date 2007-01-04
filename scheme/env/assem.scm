@@ -43,14 +43,14 @@
 	  (error "missing protocol instruction"))
       (call-with-values
        (lambda () (assemble-protocol (cdar insts)))
-       (lambda (protocol env? template? body-depth)
+       (lambda (protocol template? env? closure? body-depth)
 	 (let* ((id (cadr exp))
 		(template (compile-lap id
 				       protocol
 				       (cdr insts)
 				       bindings
 				       body-depth
-				       (make-frame frame id body-depth env? template?))))
+				       (make-frame frame id body-depth template? env? closure?))))
 	   (fixup-template-refs! template)
 	   (deliver-value
 	    (sequentially
@@ -335,14 +335,19 @@
 		       (memq 'env (cdar rest))))
 		 (push-template?
 		  (and (not (null? rest))
-		       (memq 'template (cdar rest)))))
-	     (let ((extras (+ (if push-env? 1 0) (if push-template? 1 0))))
+		       (memq 'template (cdar rest))))
+		 (push-closure?
+		  (and (not (null? rest))
+		       (memq 'closure (cdar rest)))))
+	     (let ((extras (+ (if push-template? 1 0)
+			      (if push-env? 1 0)
+			      (if push-closure? 1 0))))
 	       (if nary?
-		   (values (nary-lambda-protocol count push-template? push-env?)
-			   push-env? push-template?
+		   (values (nary-lambda-protocol count push-template? push-env? push-closure?)
+			   push-template? push-env? push-closure?
 			   (+ 1 count extras))
-		   (values (lambda-protocol count push-template? push-env?)
-			   push-env? push-template?
+		   (values (lambda-protocol count push-template? push-env? push-closure?)
+			   push-template? push-env? push-closure?
 			   (+ count extras))))))))
       (case (car args)
 	((args+nargs)
