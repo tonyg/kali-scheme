@@ -7,7 +7,7 @@
   (let ((in (current-input-port))
 	(out (current-output-port))
 	(err (current-error-port))
-	(batch? (member "batch" args)))
+	(batch? (member "batch" (map os-string->string args))))
     (let loop ()
       ((call-with-current-continuation
 	 (lambda (go)
