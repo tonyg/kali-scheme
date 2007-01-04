@@ -235,9 +235,7 @@
        (exact? count)
        (<= 0 count)
        (<= (+ start count)
-	   (cond ((string? buffer)
-		  (string-length buffer))
-		 ((byte-vector? buffer)
+	   (cond ((byte-vector? buffer)
 		  (byte-vector-length buffer))
 		 (else
 		  -1)))))
