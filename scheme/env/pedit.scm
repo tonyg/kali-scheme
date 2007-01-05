@@ -221,7 +221,7 @@
       (begin
 	(write `(verify-interface ,(population->list (interface-clients int))))
 	(newline)))
-  (walk-population (lambda (thing) (verify-structure #f thing))
+  (walk-population (lambda (thing) (really-verify-loser #f thing))
 		   (interface-clients int)))
 
 (define (note-verify-package pack)
