@@ -31,11 +31,17 @@
 	  (text-codec-names (os-string-text-codec oss))
 	  (os-string->string oss))))
 
+(define *initial-os-string-text-codec* #f)
+
+(define (initialize-os-string-text-codec!)
+  (set! *initial-os-string-text-codec*
+	(or (find-text-codec
+	     (system-parameter (enum system-parameter-option os-string-encoding)))
+	    us-ascii-codec)))
+
 (define $os-string-text-codec
   (make-fluid 
-   (lambda () ; delay until execution time
-     (find-text-codec
-      (system-parameter (enum system-parameter-option os-string-encoding))))))
+   (lambda () *initial-os-string-text-codec*)))
 
 (define (current-os-string-text-codec)
   ((fluid $os-string-text-codec)))
@@ -102,3 +108,5 @@
 	 (result (make-byte-vector size 0)))
     (copy-bytes! b 0 result 0 size)
     result))
+
+(initialize-os-string-text-codec!)

@@ -108,7 +108,8 @@
   (optimize auto-integrate)
   (files (rts encoding)))
 
-(define-structure os-strings os-strings-interface
+(define-structures ((os-strings os-strings-interface)
+		    (os-strings-internal (export initialize-os-string-text-codec!)))
   (open scheme-level-1
 	define-record-types
 	byte-vectors
@@ -446,6 +447,7 @@
 	channel-i/o      ;initialize-channel-i/o
 	channel-ports    ;{in,out}put-channel->port
 	(subset text-codecs (find-text-codec))
+	os-strings-internal
 	session-data     ;initialize-session-data!
 	fluids-internal	 ;initialize-dynamic-state!
 	exceptions-internal

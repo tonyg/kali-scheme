@@ -19,8 +19,9 @@
     (initialize-rts signal-condition-proc
 		    in in-encoding out out-encoding error error-encoding
 		    (lambda ()
+		      (initialize-os-string-text-codec!)
 		      (run-initialization-thunks)
-		      (initialize-records! records)
+		      (initialize-records! records)		      
 		      (if warn-about-undefined-imported-bindings?
 			  (warn-about-undefined-imported-bindings))
 		      (entry-point
