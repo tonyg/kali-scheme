@@ -95,7 +95,11 @@
   (lambda (buffer start count)
     (values #f #f)))
 
-(define-builtin-text-codec us-ascii-codec "US-ASCII" us-ascii)
+(define-builtin-text-codec us-ascii-codec
+  ("US-ASCII"
+   "ANSI_X3.4-1968" ; apparently, the POSIX locale on some Linux systems returns this
+   )
+  us-ascii)
 (define-builtin-text-codec latin-1-codec "ISO8859-1" latin-1)
 (define-builtin-text-codec utf-8-codec "UTF-8" utf-8)
 (define-builtin-text-codec utf-16le-codec "UTF-16LE" utf-16le)
