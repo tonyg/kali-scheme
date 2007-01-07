@@ -12,7 +12,7 @@
     (if (>= scalar-value ascii-limit)
 	(signal-condition
 	 (cons 'call-error
-	       (cons "not an ASCII/Latin-1 character"
+	       (cons "not an ASCII character"
 		     (cons char->ascii (cons c '()))))))
     scalar-value))
 
@@ -20,7 +20,7 @@
   (if (or (>= x ascii-limit) (< x 0))
       (signal-condition
        (cons 'call-error
-	     (cons"not an ASCII/Latin-1 code"
+	     (cons"not an ASCII code"
 		  (cons ascii->char
 			(cons x '()))))))
   (scalar-value->char x))
