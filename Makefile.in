@@ -22,6 +22,7 @@ GC_OBJS = @GC_OBJS@
 
 ASM_OBJECTS = @ASM_OBJECTS@
 ASM_STYLE = @ASM_STYLE@
+ASM_INITIALIZERS = @ASM_INITIALIZERS@
 
 prefix = @prefix@
 exec_prefix = @exec_prefix@
@@ -220,7 +221,7 @@ FAKE_ASM_OBJECTS = c/fake/glue.o
 # Does currently not work because of the new GC infrastructure
 X86_ASM_OBJECTS = c/glue.o c/asm-glue.o
 
-ASM_INITIALIZERS = s48_init_asm_glue
+X86_ASM_INITIALIZERS = s48_init_asm_glue
 
 # Assumes s48-compiler/ in the working directory
 

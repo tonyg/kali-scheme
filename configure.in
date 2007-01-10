@@ -156,6 +156,7 @@ define(S48_NATIVE_CODE, [dnl
           i?86 )
                 AC_MSG_RESULT([x86])
             	ASM_OBJECTS='${X86_ASM_OBJECTS}'
+                ASM_INITIALIZERS='${X86_ASM_INITIALIZERS}'
                 AC_CHECK_FUNCS(sigaltstack, HAVE_SIGALTSTACK=1, HAVE_SIGALTSTACK=0)
                 if test "$HAVE_SIGALTSTACK" = 0; then
                   AC_MSG_ERROR([Your system lacks sigaltstack])
@@ -171,7 +172,8 @@ define(S48_NATIVE_CODE, [dnl
                 esac ;;
           * )
                 AC_MSG_RESULT([no])
-                ASM_OBJECTS='${FAKE_ASM_OBJECTS}' ;;
+                ASM_OBJECTS='${FAKE_ASM_OBJECTS}'
+                ASM_INITIALIZERS='';;
         esac
 ])dnl
 dnl
@@ -279,6 +281,7 @@ fail
      AC_SUBST(GC_OBJS)
      AC_SUBST(ASM_OBJECTS)
      AC_SUBST(ASM_STYLE)
+     AC_SUBST(ASM_INITIALIZERS)
      AC_SUBST(S48_GC_TWOSPACE)
      AC_SUBST(S48_GC_BIBOP)
 AC_OUTPUT(Makefile)
