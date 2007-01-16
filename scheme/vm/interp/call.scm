@@ -17,7 +17,29 @@
 (define-opcode tail-call
   (let ((stack-arg-count (code-byte 0)))
     (move-args-above-cont! stack-arg-count)
-    (goto do-call (code-byte 0))))
+    (goto do-call stack-arg-count)))
+
+(define-opcode known-call
+  (let ((stack-arg-count (code-byte 2)))
+    (make-continuation-on-stack (address+ *code-pointer* (code-offset 0))
+				stack-arg-count)
+    (goto do-known-call stack-arg-count)))
+
+(define-opcode known-tail-call
+  (let ((stack-arg-count (code-byte 0)))
+    (move-args-above-cont! stack-arg-count)
+    (goto do-known-call stack-arg-count)))
+
+; questionable
+(define-opcode big-known-call
+  (let ((stack-arg-count (code-offset 2)))
+    (maybe-make-continuation stack-arg-count)
+    (goto do-known-call stack-arg-count)))
+
+(define (do-known-call stack-arg-count)
+  (let* ((template (closure-template *val*))
+	 (code (template-code template)))
+    (goto run-body-with-default-space code 2 template)))
 
 (define (do-call stack-arg-count)
   (if (closure? *val*)
