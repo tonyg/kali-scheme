@@ -74,6 +74,7 @@
 	  add-variable-simplifier!
 	  remove-variable-simplifier!
 	  note-known-global-lambda!
+	  variable-known-lambda
           ))
 
 (define-interface node-interface
