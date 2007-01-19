@@ -48,7 +48,10 @@
         '()))
 
 (define-syntax enum
-  (cons (lambda (e r c) `(,(cadr e) enum ,(caddr e)))
+  (cons (lambda (e r c) 
+          (if (not (= (length e) 3))
+              '(syntax-error "wrong number of arguments for enum" e)
+              `(,(cadr e) enum ,(caddr e))))
         '()))
 
 
