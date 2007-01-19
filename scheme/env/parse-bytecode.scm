@@ -346,6 +346,20 @@
 		      (+ pc size)
 		      (+ len size)
 		      (cons (cons 'env-data env-data) args))))
+             ((eq? spec 'instr)
+              (let ((opcode (code-vector-ref code pc)))
+                (let ((len.revargs (parse-opcode-args opcode
+                                                      pc
+                                                      code
+                                                      template
+                                                      attribution)))
+                  (loop (cdr specs)
+                        (+ pc 1 (car len.revargs))
+                        (+ len 1 (car len.revargs))
+                        (cons
+                         (cons 'instr
+                               (cons opcode (reverse (cdr len.revargs))))
+                              args)))))
 	     ((= 0 (arg-spec-size spec pc code))
 	      (cons len args))
 	     (else

@@ -242,7 +242,7 @@
 (define-disasm big-stack-shuffle! display-shuffle)
 
 (define (write-instruction code template pc level write-sub-templates?)
-  ;; An in the previous version, WRITE-SUB-TEMPLATES? is ignored and
+  ;; As in the previous version, WRITE-SUB-TEMPLATES? is ignored and
   ;; sub templates are never written.
   (call-with-values 
    (lambda ()
@@ -283,6 +283,8 @@
        (write `(=> ,arg)))
       ((stob)
        (write (enumerand->name arg stob)))
+      ((instr)
+       (write arg))
       (else
        (error "unknown arg spec" spec)))))
 
