@@ -29,7 +29,8 @@ language implementations to use, i.e.:
   chicken-int      for Chicken interpreter.
   mzscheme         for MzScheme.
   scheme48         for Scheme48.
-  scheme48-jit     for Scheme48 with JIT.
+  scheme48-opt-only     for Scheme48 without JIT but with the optimizer
+  scheme48-jit     for Scheme48 with JIT and optimizer
   scheme48-jit-noopt     for Scheme48 with JIT but without the optimizer
   larceny          for Larceny.
   awk              for AWK.
@@ -458,7 +459,7 @@ JAVA_BENCHMARKS="tfib"
 ALL_BENCHMARKS="$GABRIEL_BENCHMARKS $C_BENCHMARKS $OTHER_BENCHMARKS"
 
 ALL_INTERPRETERS='bigloo-int petite-chez gambit-int chicken-int scm stk'
-ALL_COMPILERS='gambit bigloo chicken mzscheme scheme48 scheme48-jit scheme48-jit-noopt larceny'
+ALL_COMPILERS='gambit bigloo chicken mzscheme scheme48 scheme48-opt-only scheme48-jit scheme48-jit-noopt larceny'
 ALL_GAMBIT='gambit gambit-int'
 ALL_NON_SCHEME='awk cc gcc java'
 ALL_SYSTEMS="$ALL_COMPILERS $ALL_INTERPRETERS $ALL_NON_SCHEME"
@@ -1015,6 +1016,60 @@ chicken-int) NAME='Chicken-int'
             esac
             ;;
        
+     scheme48-opt-only) NAME='Scheme48-opt-only'
+            COMP=scheme48_jit_comp
+            EXEC=scheme48_jit_exec
+            iterfile=num-iters.scm
+            extension=".scm"
+            case "$setting" in
+              r5rs)
+                COMPOPTS="-h 20000000"
+                INSERTCODE="(define-syntax if-fixflo (syntax-rules () ((if-fixflo yes no) no)))"
+                PREFIXCODE="; %s %s"
+                SUFFIXCODE="; %s %s"
+                REPLCOMMANDS=",bench off\n,open time posix bitwise ascii\n,load %s.scm\n,exit\n;%s"
+                ;;
+              r6rs)
+                COMPOPTS="-h 20000000 -i ../../comp.image"
+                INSERTCODE="(define-syntax if-fixflo (syntax-rules () ((if-fixflo yes no) no)))"
+                PREFIXCODE="(define-structure %s (export main) (open scheme time posix bitwise ascii) (optimize auto-integrate) (begin ; %s"
+                SUFFIXCODE=")) ; %s %s"
+                REPLCOMMANDS=",batch\n,config ,load %s.scm\n,open %s\n(compile-structure '%s 'optimize)(newline)(main)\n,exit\n"
+                ;;
+              r6rs-unsafe)
+                # Scheme48 does not have an unsafe mode.
+                COMPOPTS="-h 20000000"
+                INSERTCODE=""
+                PREFIXCODE="; %s %s"
+                SUFFIXCODE="; %s %s"
+                REPLCOMMANDS=";%s %s"
+                COMP=nonexistent_comp
+                EXEC=nonexistent_exec
+                ;;
+              r6rs-fixflo)
+                # Scheme48 does not have fixnum/flonum specific arithmetic operators.
+                COMPOPTS="-h 20000000"
+                INSERTCODE=""
+                PREFIXCODE="; %s %s"
+                SUFFIXCODE="; %s %s"
+                REPLCOMMANDS=";%s %s"
+                COMP=nonexistent_comp
+                EXEC=nonexistent_exec
+                ;;
+              r6rs-fixflo-unsafe)
+                # Scheme48 does not have fixnum/flonum specific arithmetic operators.
+                # Scheme48 does not have an unsafe mode.
+                COMPOPTS="-h 20000000"
+                PREFIXCODE="; %s %s"
+                SUFFIXCODE="; %s %s"
+                INSERTCODE=""
+                REPLCOMMANDS=";%s %s"
+                COMP=nonexistent_comp
+                EXEC=nonexistent_exec
+                ;;
+            esac
+            ;;
+
      scheme48-jit) NAME='Scheme48-jit'
             COMP=scheme48_jit_comp
             EXEC=scheme48_jit_exec
@@ -1029,7 +1084,7 @@ chicken-int) NAME='Chicken-int'
                 REPLCOMMANDS=",bench off\n,open time posix bitwise ascii\n,load %s.scm\n,exit\n;%s"
                 ;;
               r6rs)
-                COMPOPTS="-h 20000000 -i ~/sw/trunk/s48-compiler/comp.image"
+                COMPOPTS="-h 20000000 -i ../../comp.image"
                 INSERTCODE="(define-syntax if-fixflo (syntax-rules () ((if-fixflo yes no) no)))"
                 PREFIXCODE="(define-structure %s (export main) (open scheme time posix bitwise ascii) (optimize auto-integrate) (begin ; %s"
                 SUFFIXCODE=")) ; %s %s"
@@ -1083,7 +1138,7 @@ chicken-int) NAME='Chicken-int'
                 REPLCOMMANDS=",bench off\n,open time posix bitwise ascii\n,load %s.scm\n,exit\n;%s"
                 ;;
               r6rs)
-                COMPOPTS="-h 20000000 -i ~/sw/trunk/s48-compiler/comp.image"
+                COMPOPTS="-h 20000000 -i ../../comp.image"
                 INSERTCODE="(define-syntax if-fixflo (syntax-rules () ((if-fixflo yes no) no)))"
                 PREFIXCODE="(define-structure %s (export main) (open scheme time posix bitwise ascii) (optimize auto-integrate) (begin ; %s"
                 SUFFIXCODE=")) ; %s %s"
