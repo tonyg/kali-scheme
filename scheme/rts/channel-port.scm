@@ -155,6 +155,8 @@
 		   ;; the periodic buffer flushing doesn't annoy the heck
 		   ;; out of us.
 		   (provisional-set-port-index! port 0)
+		   ;; good housekeeping; also keeps port-buffer flusher sane
+		   (provisional-set-port-pending-eof?! port #f)
 		   (note-buffer-reuse! port)
 		   (set-channel-cell-in-use?! cell #f)
 		   (if (maybe-commit)

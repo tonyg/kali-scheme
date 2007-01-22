@@ -86,8 +86,8 @@
 
 ; And a current field.
 
-(define port-flushed? port-pending-eof?)
-(define set-port-flushed?! set-port-pending-eof?!)
+(define port-flushed port-pending-eof?)
+(define set-port-flushed! set-port-pending-eof?!)
 
 ;----------------
 
@@ -391,8 +391,7 @@
 	       (or (maybe-commit)
 		   (lose)))
 	      (else
-	       (set-port-flushed?! port #t)
-	       (buffer-emptier! port #t)
+	       (call-to-flush! port (lambda () (buffer-emptier! port #t)))
 	       (lose)))))))
 
 (define (make-one-char-output buffer-emptier!)
@@ -425,7 +424,7 @@
 				  ((or (not the-ok?)
 				       (>= (+ index cr-encode-count) limit))
 				   (set! ok? #f)
-				   (set! encode-count (+ 1 cr-encode-count))) ; LF will take at least one
+			   (set! encode-count (+ 1 cr-encode-count))) ; LF will take at least one
 				  (else
 				   (call-with-values
 				       (lambda ()
@@ -454,16 +453,14 @@
 		    (ok?)		; we're done
 		    (encode-count	; need more space
 		     (with-new-proposal (_)
-		       (set-port-flushed?! port #t)
-		       (buffer-emptier! port #t))
+		       (call-to-flush! port (lambda () (buffer-emptier! port #t))))
 		     (lose))
 		    (else		; encoding error
 		     (set! ch #\?)    ; if we get an encoding error on
 					; the second go, we're toast
 		     (lose)))))
 		(else
-		 (set-port-flushed?! port #t)
-		 (buffer-emptier! port #t)
+		 (call-to-flush! port (lambda () (buffer-emptier! port #t)))
 		 (lose))))))))
 
 ; We have the following possibilities:
@@ -499,8 +496,7 @@
 			      (loop sent)))
 			(lose))))
 	      (else
-	       (buffer-emptier! port #t)
-	       (set-port-flushed?! port #t)
+	       (call-to-flush! port (lambda () (buffer-emptier! port #t)))
 	       (lose)))))))
 
 (define (copy-bytes-out! buffer start count port)
@@ -534,8 +530,7 @@
 		   (call-error "invalid argument" force-output port)))
 	     (unspecific))
 	    ((< 0 (provisional-port-index port))
-	     (set-port-flushed?! port #t)
-	     (if (or (not (buffer-emptier! port necessary?))
+	     (if (or (not (call-to-flush port (lambda () (buffer-emptier! port necessary?))))
 		     necessary?)
 		 (lose)))))))
 
@@ -562,12 +557,12 @@
 ; this was called.  The actual i/o is done using separate threads to
 ; keep i/o errors from killing anything vital.
 ; 
-; If USE-FLUSHED?-FLAGS? is true this won't flush buffers that have been
+; If USE-FLUSHED-FLAGS? is true this won't flush buffers that have been
 ; flushed by someone else since the last call.  If it is false then flush
 ; all non-empty buffers, because the system has nothing to do and is going
 ; to pause while waiting for external events.
 
-(define (output-port-forcers use-flushed?-flags?)
+(define (output-port-forcers use-flushed-flags?)
   (let ((pair (session-data-ref flush-these-ports)))
     (let loop ((next (cdr pair))
 	       (last pair)
@@ -578,19 +573,21 @@
 ;				  " thunk(s)]")
 	  thunks ;)
 	  (let ((port (weak-pointer-ref (car next))))
-	    (cond ((or (not port)			; GCed or closed so
-		       (not (open-output-port? port)))	; drop it from the list
+	    (cond ((or (not port)	; GCed or closed so
+		       (not (open-output-port? port))) ; drop it from the list
 		   (set-cdr! last (cdr next))
 		   (loop (cdr next) last thunks))
-		  ((and use-flushed?-flags?		; flushed recently
-			(port-flushed? port))
-		   (set-port-flushed?! port #f)		; race condition, but
-		   (loop (cdr next) next thunks))	; it is harmless
-		  ((< 0 (port-index port))		; non-empty
+		  ((eq? (port-flushed port) 'flushing) ; somebody else is doing it
+		   (loop (cdr next) next thunks)) 
+		  ((and use-flushed-flags? ; flushed recently
+			(port-flushed port))
+		   (set-port-flushed! port #f)	; race condition, but harmless
+		   (loop (cdr next) next thunks))
+		  ((< 0 (port-index port)) ; non-empty
 		   (loop (cdr next) next
 			 (cons (make-forcing-thunk port)
 			       thunks)))
-		  (else					; empty
+		  (else			; empty
 		   (loop (cdr next) next thunks))))))))
 
 ; Returns a list of the current ports that are flushed whenever.
@@ -635,3 +632,14 @@
 	     port))
 	  "error when closing port"
 	  port))))
+
+(define (call-to-flush! port thunk)
+  (set-port-flushed! port 'flushing) ; don't let the periodic flusher go crazy
+  (thunk)
+  (set-port-flushed! port #t))
+
+(define (call-to-flush port thunk)
+  (set-port-flushed! port 'flushing) ; don't let the periodic flusher go crazy
+  (let ((retval (thunk))) ; one is enough
+    (set-port-flushed! port #t)
+    retval))
