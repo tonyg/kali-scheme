@@ -495,6 +495,20 @@
 	(subset signals (error)))
   (files (big either)))
 
+; test suites
+
+(define-structure test-suites test-suites-interface
+  (open scheme
+	cells
+	big-util
+	signals
+	define-record-types
+	exceptions conditions
+	display-conditions
+	(subset i/o (current-error-port))
+	fluids)
+  (files (big test-suite)))
+
 (define-structure libscheme48 (export dump-libscheme48-image)
   (open scheme
  	(subset escapes (with-continuation))

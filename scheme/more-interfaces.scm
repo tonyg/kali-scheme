@@ -645,3 +645,9 @@
 	  placeholder-value
 	  placeholder-set!))
 
+(define-interface test-suites-interface 
+  (export ((define-test-suite define-test-case define-test-cases) :syntax)
+	  ((check check-exception) :syntax)
+	  run-test-suite
+	  =within
+	  zap-test-suite!))

@@ -532,6 +532,7 @@
 	    srfi-71 srfi-74 srfi-78
 
             libscheme48
+	    test-suites
 	    )
 	   :structure)
 	  ((define-signature define-package) :syntax)))
