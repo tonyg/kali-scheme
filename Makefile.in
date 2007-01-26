@@ -75,10 +75,10 @@ include $(srcdir)/build/filenames.make
 #    command.  This is desirable if you are making changes to the
 #    system that might break scheme48vm and/or scheme48.image.  But it
 #    requires you to have squirreled away a previous working version
-#    of scheme48.  The settings assume a pre-Unicode version; if you
-#    want to use an installed Unicode-capable Scheme 48 (1.4 or later),
+#    of scheme48.  The settings assume a Unicode version; if you want
+#    to use an installed non-Unicode-capable Scheme 48 (1.4 or earlier),
 #    you need to use this setting:
-#    LINKER_WRITEBYTE = ,open (subset i/o (write-byte))
+#    LINKER_WRITEBYTE = ,load scheme/link/write-byte.scm
 #
 # 2. LINKER_VM = ./$(VM) $(BIG_HEAP)
 #    LINKER_RUNNABLE = $(LINKER_VM) -i $(IMAGE)
@@ -89,7 +89,7 @@ include $(srcdir)/build/filenames.make
 BIG_HEAP = -h 8000000
 LINKER_VM = $(RUNNABLE) $(BIG_HEAP)
 LINKER_RUNNABLE = $(LINKER_VM)
-LINKER_WRITEBYTE = ,load scheme/link/write-byte.scm
+LINKER_WRITEBYTE = ,open (subset i/o (write-byte))
 START_LINKER = echo ',batch';					\
 	       echo ',bench on';				\
 	       echo ',open signals handle features';		\
@@ -467,9 +467,7 @@ distclean: clean
 check:	$(VM) $(IMAGE) scheme/debug/check.scm
 	(								\
 		echo ',batch';						\
-		echo ',config ,load =scheme48/debug/test.scm';		\
 		echo ',exec ,load =scheme48/debug/check.scm';		\
-		echo ',exec (done)'					\
 	) | ./$(VM) -i $(IMAGE)
 
 # --------------------
