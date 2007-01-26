@@ -208,7 +208,11 @@
       (begin
 	(write `(verify-structure ,struct ,(population->list (structure-clients struct))))
 	(newline)))
-  (walk-population note-verify-package (structure-clients struct)))
+  (walk-population (lambda (thing)
+		     (cond
+		      ((package? thing) (note-verify-package thing))
+		      ((structure? thing) (verify-structure #f thing))))
+		   (structure-clients struct)))
 
 (define (verify-interface premature int)
   ;; add clients of old interface to new one
