@@ -42,6 +42,66 @@
 	  (write-byte-vector (vector-ref arg 0) out)))
   (newline out)
 
+  (arith-test (- (* 1000 1000 1000 1000)
+                 (* 1000 1000 1000 1000))
+              "*, -, external-bignum->long"
+              0
+              out)
+
+  (arith-test (quotient (* 1000 1000 1000 1000)
+                        (* 1000 1000 1000))
+              "quotient, external-bignum->long"
+              1000
+              out)
+  
+  (arith-test (remainder (* 1000 1000 1000 1000)
+                         (* 1000 1000 1000))
+              "remainder, external-bignum->long"
+              0
+              out)
+  
+  (arith-test (/ (* 1000 1000 1000 1000)
+                 (* 1000 1000 1000))
+              "/, external-bignum->long"
+              1000
+              out)
+  
+  (arith-test (* 1000 1000 1000 1000)
+              "*,="
+              (* 1000 1000 1000 1000)
+              out)
+  
+  (bool-test (< (* 1000 1000 1000 1000)
+                (* 1000 1000 1000 1001))
+             "*,<"
+             #t
+             out)
+  
+  (bool-test (> (* 1000 1000 1000 1001)
+                (* 1000 1000 1000 1000))
+             "*,>"
+             #t
+             out)
+
+  (arith-test (magnitude (* -1000 1000 1000 1000))
+              "negate,test"
+              (* 1000 1000 1000 1000)
+              out)
+
+  (arith-test (bitwise-and (bitwise-ior (arithmetic-shift
+                                         (arithmetic-shift 1 130) 10)
+                                        #xffffff)
+                           #xffffff)
+              "bitwise-and, bitwise-ior, arithmetic-shift"
+              #xffffff
+              out)
+
+  (arith-test (bit-count (bitwise-ior (arithmetic-shift 1 140)
+                                      #xff))
+              "bit-count, bitwise-ior, arithmetic-shift"
+              9
+              out)
+
   (write-string "=" out) (newline out)
   (bool-test (= 1 1) "(= 1 1)" #t out)
   (bool-test (= 1 2) "(= 1 2)" #f out)
