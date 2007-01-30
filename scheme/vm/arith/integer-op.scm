@@ -232,10 +232,7 @@
 		  (goto return quot)
 		  (binary-lose x y)))))
 	  ((and (double? x) (double? y))
-	   (let ((result (flonum-divide x y)))
-	     (if (false? result)
-		 (binary-lose x y)
-		 (goto return result))))
+	   (goto return (flonum-divide x y)))
 	  (else
 	   (binary-lose x y)))))
 
