@@ -8,49 +8,52 @@
 ;
 
 
-(define-record-type stream
-  make-stream
-  (port   port)
-  (type   int8u)
-  (buffer int32)   ; pointer the start of the buffer
-  (size   int32)
-  (loc    int32)   ; pointer to the next char to be read or the next slot to
-                   ; be written
-  (limit  int32))  ; end of the available characters
+(define-record-type stream :stream
+  (make-stream port type buffer size loc limit)
+  (port   input-port stream-port set-stream-port!)
+  (type   integer stream-type set-stream-type!)
+  ;; pointer the start of the buffer
+  (buffer address stream-buffer set-stream-buffer!)
+  (size   integer stream-size set-stream-size!)
+  ;; pointer to the next char to be read or the next slot to be written
+  (loc    address stream-loc set-stream-loc!)
+  ;; end of the available caharacters
+  (limit  address stream-limit set-stream-limit!))
+
+(define-record-type z :z
+  (make-z a)
+  (a stream z-a set-z-a!))
 
 (define buffer-size 1024)
 
 (define (port->stream port type)
-  (let ((buffer (allocate-memory buffer-size))
-	(stream (make-stream)))
-    (if (or (null-memory? buffer)
-	    (null-pointer? stream))
+  (let* ((buffer (allocate-memory buffer-size))
+	 (stream (make-stream port type buffer buffer-size buffer buffer)))
+    (if (or ; (null-memory? buffer)
+	 (null-pointer? stream))
 	(error "out of memory"))
-    (set-stream-port!   stream port)
-    (set-stream-type!   stream type)
-    (set-stream-buffer! stream buffer)
-    (set-stream-size!   stream buffer-size)
-    (set-stream-loc!    stream buffer)
-    (set-stream-limit!  stream buffer)
-    buffer))
+    (make-z stream)))
 
 (define (stream-read-char stream)
   (let ((loc (stream-loc stream)))
-    (cond ((< loc (stream-limit stream))
+    (cond ((address< loc (stream-limit stream))
 	   (let ((ch (unsigned-byte-ref loc)))
-	     (set-stream-loc! stream (+ 1 (stream-loc stream)))
+	     (set-stream-loc! stream (address+ (stream-loc stream) 1))
 	     ch))
 	  (else
-	   (let* ((buffer (stream-buffer stream))
-		  (count (read-block (stream-port stream)
-				     buffer
-				     (stream-size stream))))
-	     (cond ((= count 0)   ; EOF
-		    0)
-		   (else
-		    (set-stream-loc! stream (+ buffer 1))
-		    (set-stream-limit! stream (+ buffer count))
-		    (unsigned-byte-ref buffer))))))))
+	   (let ((buffer (stream-buffer stream)))
+	     (call-with-values
+	      (lambda ()
+		(read-block (stream-port stream)
+			    buffer
+			    (stream-size stream)))
+	      (lambda (count ignore status)
+		(cond ((= count 0)   ; EOF
+		       0)
+		      (else
+		       (set-stream-loc! stream (address+ buffer 1))
+		       (set-stream-limit! stream (address+ buffer count))
+		       (unsigned-byte-ref buffer))))))))))
 
 ; this will need to be PCLUSR'd.
 
