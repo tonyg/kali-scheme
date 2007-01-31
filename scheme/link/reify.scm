@@ -57,11 +57,13 @@
   (display "Reifying") (force-output (current-output-port))
 
   (let* ((result-form (reify-object alist))
+	 (init-exprs (map (lambda (init) (init)) (reverse *initializations*)))
 	 (shebang
 	  `(lambda (get-location)
 	     (let ((the-objects (make-vector ,*object-count* #f)))
-	       (begin ,@(map (lambda (init) (init))
-			     (reverse *initializations*)))
+	       ;; silly code to avoid oversize template
+	       (begin ,@(map (lambda (exprs) `(let ((foo (lambda (x) ,@exprs))) (foo 'foo)))
+			     (split-into-sublists init-exprs 100)))
 	       (let ((structs ,result-form))
 		 (set! the-objects #f)	;SO IT CAN BE GC'D
 		 (set! get-location #f)
@@ -73,6 +75,27 @@
     (set! *deal-with-location* (lambda (loc) loc))
 
     shebang))
+
+(define (list-split l n)
+  (let loop ((n n)
+	     (l l)
+	     (rev-result '()))
+    (if (or (zero? n) (null? l))
+	(values (reverse rev-result) l)
+	(loop (- n 1)
+	      (cdr l)
+	      (cons (car l) rev-result)))))
+
+(define (split-into-sublists l n)
+  (let loop ((l l)
+	     (rev-result '()))
+    (if (null? l)
+	(reverse rev-result)
+	(call-with-values
+	    (lambda () (list-split l n))
+	  (lambda (head rest)
+	    (loop rest
+		  (cons head rev-result)))))))
 
 (define (flush-state)
   (set! *objects* '())

@@ -14,6 +14,8 @@
 			       0))
 	 (astate (make-astate cv))
 	 (debug-data (frame-debug-data frame)))
+    (if (> (segment-size segment) 65535)
+	(error "VM limit exceeded: segment too large" (segment-size segment)))
     (emit-segment! astate segment)
     (if big-stack?
 	(add-big-stack-protocol! cv (frame-size frame)))
@@ -84,8 +86,6 @@
   (make-assembly-state cv 0 '() '()))
 
 (define (emit-byte! a byte)
-  (if (>= byte 256)
-      (set! byte (remainder byte 256))) ; #### FIX WHY WE TRIGGER THIS!
   (code-vector-set! (astate-code-vector a) (astate-pc a) byte)
   (set-astate-pc! a (+ (astate-pc a) 1)))
 
