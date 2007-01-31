@@ -16,6 +16,7 @@
 
 (define-structure bindings bindings-interface
   (open scheme-level-2
+	define-record-types
 	meta-types
 	locations)
   (files (bcomp binding))
@@ -224,7 +225,7 @@
 (define-structure interfaces interfaces-interface
   (open scheme-level-2
 	define-record-types tables
-	util			;filter every mvlet
+	util			;filter every mvlet symbol-append
 	simple-signals		;error
 	weak			;populations
 	meta-types)
@@ -326,6 +327,7 @@
 	reconstruction
 	var-utilities
 	transforms
+	syntactic               ;static-value
 	packages
 	simple-signals
 	features		;force-output

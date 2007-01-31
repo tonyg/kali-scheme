@@ -257,22 +257,6 @@
 		     struct)
     `(simple-interface ',(list->vector names) ',(list->vector types))))
 
-
-; The compiler doesn't like to see unusual objects quoted, but this will
-; fake it out.
-
-(define strange-quotation
-  (let ((operator/literal (get-operator 'literal)))
-    (define (normal? thing)
-      (or (number? thing)
-	  (and (vector? thing)
-	       (every normal? (vector->list thing)))))
-    (lambda (thing)
-      (if (normal? thing)
-	  `',thing
-	  (make-node operator/literal thing)))))
-
-
 (define *reify-debug*  ;#f
   (let ((fn "build/reify-debug.tmp"))
     (lambda (x) (call-with-output-file fn

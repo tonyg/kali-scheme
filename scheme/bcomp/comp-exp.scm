@@ -108,10 +108,6 @@
 	  (else
 	   (error "variable has too many indirections" name binding)))))
 
-(define (index->offset index depth)
-  (- (- depth 1)
-     index))
-
 ;----------------------------------------------------------------
 ; Hacked versions of the above for peephole optimization of pushes.
 ; This tries to compile NODE with an implicit push instruction preceeding
@@ -768,19 +764,6 @@
 (define-compilator 'loophole syntax-type
   (lambda (node depth frame cont)
     (compile (caddr (node-form node)) depth frame cont)))
-
-; Node predicates and operators.
-
-(define lambda-node?      (node-predicate 'lambda      syntax-type))
-(define flat-lambda-node? (node-predicate 'flat-lambda syntax-type))
-(define name-node?        (node-predicate 'name        'leaf))
-(define literal-node?     (node-predicate 'literal     'leaf))
-(define quote-node?       (node-predicate 'quote       syntax-type))
-
-(define operator/lambda     (get-operator 'lambda syntax-type))
-(define operator/set!	    (get-operator 'set!   syntax-type))
-(define operator/call	    (get-operator 'call   'internal))
-(define operator/begin      (get-operator 'begin  syntax-type))
 
 ; Should this be in its own spot?
 

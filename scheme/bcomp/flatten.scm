@@ -336,24 +336,6 @@
 			      primop)
 		   args)))
 
-;----------------
-; The operators and primops used here.
-
-(define operator/flat-lambda (get-operator 'flat-lambda))
-(define operator/lambda      (get-operator 'lambda))
-(define operator/name        (get-operator 'name))
-(define operator/letrec      (get-operator 'letrec))
-(define operator/pure-letrec (get-operator 'pure-letrec))
-(define operator/begin       (get-operator 'begin))
-(define operator/literal     (get-operator 'literal))
-(define operator/call        (get-operator 'call))
-(define operator/unassigned  (get-operator 'unassigned))
-(define operator/set!        (get-operator 'set!))
-
-(define define-node?      (node-predicate 'define))
-(define lambda-node?      (node-predicate 'lambda))
-(define flat-lambda-node? (node-predicate 'flat-lambda))
-
 ; We get loaded before these are defined, so we have to delay the lookups.
 
 (define-syntax define-primop

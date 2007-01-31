@@ -17,7 +17,7 @@
 ;
 ; Clients are packages that import the structure's bindings.
 
-(define-record-type structure :structure
+(define-record-type structure :structure-type ; avoid name conflict with :STRUCTURE type
   (really-make-structure package interface-thunk interface clients name)
   structure?
   (interface-thunk structure-interface-thunk)
@@ -26,7 +26,7 @@
   (clients   structure-clients)
   (name	     structure-name set-structure-name!))
 
-(define-record-discloser :structure
+(define-record-discloser :structure-type
   (lambda (structure)
     (list 'structure
 	  (package-uid (structure-package structure))

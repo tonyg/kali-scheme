@@ -50,3 +50,4 @@
 ; BITWISE -- use alt/bitwise.scm (!)
 ; ASCII -- use alt/ascii.scm
 ; CODE-VECTORS -- use alt/code-vectors.scm
+; BINARY I/O -- check out alt/write-byte.scm

@@ -392,11 +392,3 @@
 			    base-name
 			    type)))))
 	    alist))
-	 
-;----------------
-; Random utility.
-			  
-(define (symbol-append a b)
-  (string->symbol (string-append (symbol->string a)
-				 (symbol->string b))))
-

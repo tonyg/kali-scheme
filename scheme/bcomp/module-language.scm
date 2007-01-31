@@ -200,15 +200,6 @@
 		       (,%quote ,names))))))))
   (cons lambda list make-a-package quote make-reflective-tower %file-name%))
 
-(define-syntax receive
-  (syntax-rules ()
-    ((receive (?var ...) ?producer . ?body)
-     (call-with-values (lambda () ?producer)
-       (lambda (?var ...)
-	 (note-name! ?var '?var) ...
-	 (let () . ?body))))))
-
-
 ; (DEFINE-REFLECTIVE-TOWER-MAKER <proc>)
 ;   <proc> should be an expression that evaluates to a procedure of
 ;   two arguments.  The first argument is a list of DEFINE-STRUCTURE

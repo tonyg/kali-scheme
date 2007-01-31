@@ -61,7 +61,6 @@
 
 (define (make-immutable! thing) thing)
 (define (immutable? thing) #f)
-(define (unspecific) (if #f #f))
 
 
 ; BITWISE
@@ -119,3 +118,8 @@
 (define (code-vector-length t) (- (vector-length t) 1))
 (define (code-vector-ref t i) (vector-ref t (+ i 1)))
 (define (code-vector-set! t i x) (vector-set! t (+ i 1) x))
+
+(define (write-byte byte port)
+  (write-char (ascii->char byte) port))
+  
+

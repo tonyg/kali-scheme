@@ -37,7 +37,6 @@
     (for-each (lambda (thunk) (thunk)) (reverse l))
     (newline)))
 
-(define *source-file-name* "")    ;Cf. alt/config.scm
 (define (fload filename . rest)
   (let ((save filename))
     (dynamic-wind (lambda () (set! *source-file-name* filename))

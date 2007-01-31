@@ -60,9 +60,6 @@
 	((not (define-syntax-node? node))
 	 (run node env))))
 
-(define define-node? (node-predicate 'define syntax-type))
-(define define-syntax-node? (node-predicate 'define-syntax syntax-type))
-
 ; Main dispatch for a single expression.
 
 (define (run node env)

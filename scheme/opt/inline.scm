@@ -205,9 +205,6 @@
 	(node-set! node 'binding binding))
     node))
 
-(define operator/name (get-operator 'name))
-(define operator/literal (get-operator 'literal))
-
 ; --------------------
 ; Convert a qualified name #(>> parent-name symbol) to an alias.
 
@@ -234,13 +231,4 @@
 			env parent static))))
 	(error "invalid qualified reference"
 	       env parent binding))))
-
-;----------------
-
-(define quote-node? (node-predicate 'quote))
-(define call-node? (node-predicate 'call))
-(define lambda-node? (node-predicate 'lambda))
-(define name-node? (node-predicate 'name))
-(define loophole-node? (node-predicate 'loophole))
-
 

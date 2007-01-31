@@ -78,7 +78,7 @@ include $(srcdir)/build/filenames.make
 #    of scheme48.  The settings assume a Unicode version; if you want
 #    to use an installed non-Unicode-capable Scheme 48 (1.4 or earlier),
 #    you need to use this setting:
-#    LINKER_WRITEBYTE = ,load scheme/link/write-byte.scm
+#    LINKER_WRITEBYTE = ,load scheme/alt/write-byte.scm
 #
 # 2. LINKER_VM = ./$(VM) $(BIG_HEAP)
 #    LINKER_RUNNABLE = $(LINKER_VM) -i $(IMAGE)

@@ -2,42 +2,33 @@
 
 ; Bindings: used to store bindings in packages.
 
-; Representation is #(type place operator-or-transform-or-#f [path]).
+; Representation is type place operator-or-transform-or-#f [path].
 ; PLACE is a unique (to EQ?) value, usually a location.
 
-; Why aren't these records?  Because they need to be written out in
-; the initial image?
-
-(define binding? vector?)
-
-(define (binding-type b)   (vector-ref b 0))
-(define (binding-place b)  (vector-ref b 1))
-(define (binding-static b) (vector-ref b 2))
-
-(define (binding-path binding)
-  (if (= 4 (vector-length binding))
-      (vector-ref binding 3)
-      #f))
-
-(define (set-binding-place! binding place)
-  (vector-set! binding 1 place))
+(define-record-type binding :binding
+  (really-make-binding type place static path)
+  binding?
+  (type binding-type set-binding-type!)
+  (place binding-place set-binding-place!)
+  (static binding-static set-binding-static!)
+  (path binding-path))
 
 (define (make-binding type place static)
-  (vector type place static))
+  (really-make-binding type place static #f))
 
 (define (add-path binding path)
-  (vector (binding-type binding)
-	  (binding-place binding)
-	  (binding-static binding)
-	  path))
+  (really-make-binding (binding-type binding)
+		       (binding-place binding)
+		       (binding-static binding)
+		       path))
 
 ; Used when updating a package binding.
 
 (define (clobber-binding! binding type place static)
-  (vector-set! binding 0 type)
+  (set-binding-type! binding type)
   (if place
-      (vector-set! binding 1 place))
-  (vector-set! binding 2 static))
+      (set-binding-place! binding place))
+  (set-binding-static! binding static))
 
 ; Return a binding that's similar to the given one, but has its type
 ; replaced with the given type.

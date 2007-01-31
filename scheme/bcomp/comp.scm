@@ -68,8 +68,6 @@
 		  (call-template-inst template label 0 depth frame)
 		  after)))
 
-(define define-node? (node-predicate 'define syntax-type))
-
 ; Definitions must be treated differently from assignments: we must
 ; use SET-CONTENTS! instead of SET-GLOBAL! because the SET-GLOBAL!
 ; instruction traps if an attempt is made to store into an undefined

@@ -225,12 +225,3 @@
 (define note-reference! (usage-incrementator usage-reference-count set-reference!))
 (define note-operator! (usage-incrementator usage-operator-count set-operator!))
 (define note-assignment! (usage-incrementator usage-assignment-count set-assignment!))
-
-;----------------
-
-(define lambda-node? (node-predicate 'lambda))
-(define quote-node? (node-predicate 'quote))
-(define literal-node? (node-predicate 'literal))
-(define call-node? (node-predicate 'call))
-(define name-node? (node-predicate 'name 'leaf))
-(define define-node? (node-predicate 'define syntax-type))

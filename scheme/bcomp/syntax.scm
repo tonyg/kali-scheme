@@ -488,7 +488,7 @@
 (define-expander 'letrec
   (lambda (op op-node exp env)
     (if (and (at-least-this-long? exp 3)
-	     (specs? (cadr exp)))
+	     (let-specs? (cadr exp)))
 	(let ((specs (cadr exp))
 	      (body (cddr exp)))
 	  (let* ((names (map (lambda (spec)
@@ -518,7 +518,7 @@
 (define-expander 'let-syntax
   (lambda (op op-node exp env)
     (if (and (at-least-this-long? exp 3)
-	     (specs? (cadr exp)))
+	     (let-specs? (cadr exp)))
 	(let ((specs (cadr exp)))
 	  (expand-body (cddr exp)
 		       (bind (map car specs)
@@ -536,7 +536,7 @@
 (define-expander 'letrec-syntax
   (lambda (op op-node exp env)
     (if (and (at-least-this-long? exp 3)
-	     (specs? (cadr exp)))
+	     (let-specs? (cadr exp)))
 	(let ((specs (cadr exp)))
 	  (expand-body
 	    (cddr exp)
@@ -598,7 +598,7 @@
 	(else
 	 #f)))
 
-(define (specs? x)
+(define (let-specs? x)
   (or (null? x)
       (and (pair? x)
 	   (let ((s (car x)))
@@ -606,7 +606,7 @@
 		  (name? (car s))
 		  (pair? (cdr s))
 		  (null? (cddr s))))
-	   (specs? (cdr x)))))
+	   (let-specs? (cdr x)))))
 
 ; --------------------
 ; Utilities
@@ -620,27 +620,3 @@
 	((transform? d)
 	 (eq? (transform-type d) syntax-type))
 	(else #f)))
-
-;----------------
-; Node predicates and operators.
-
-(define begin-node? (node-predicate 'begin syntax-type))
-(define call-node? (node-predicate 'call 'internal))
-(define name-node? (node-predicate 'name 'leaf))
-
-(define operator/literal (get-operator 'literal 'leaf))
-(define operator/quote (get-operator 'quote syntax-type))
-(define operator/call (get-operator 'call 'internal))
-(define operator/name (get-operator 'name 'leaf))
-(define operator/unspecific (get-operator 'unspecific (proc () unspecific-type)))
-(define operator/unassigned (get-operator 'unassigned (proc () value-type)))
-(define operator/lambda (get-operator 'lambda syntax-type))
-(define operator/begin (get-operator 'begin syntax-type))
-(define operator/letrec (get-operator 'letrec syntax-type))
-(define operator/define (get-operator 'define syntax-type))
-(define operator/define-syntax (get-operator 'define-syntax syntax-type))
-(define operator/primitive-procedure
-  (get-operator 'primitive-procedure syntax-type))
-(define operator/structure-ref (get-operator 'structure-ref syntax-type))
-
-

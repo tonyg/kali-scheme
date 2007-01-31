@@ -5,7 +5,7 @@
 ; This is file pseudoscheme-features.scm.
 ; Synchronize any changes with all the other *-features.scm files.
 
-(define *load-file-type* #f) ;For fun
+(define *scheme-file-type* #f) ;For fun
 
 
 ; SIGNALS
@@ -37,7 +37,6 @@
 
 (define (make-immutable! thing) thing)
 (define (immutable? thing) #f)
-(define (unspecific) (if #f #f))
 
 
 ; BITWISE
@@ -85,6 +84,8 @@
   (lisp:length (lisp:the (lisp:simple-array (lisp:unsigned-byte 8) (lisp:*))
 			 bv)))
 
+(define (write-byte byte port)
+  (write-char (ascii->char byte) port))
 
 ; The rest is unnecessary in Pseudoscheme versions 2.8d and after.
 

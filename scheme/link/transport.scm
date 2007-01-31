@@ -22,7 +22,7 @@
 ; return it.  Locations and symbols may have multiple references in
 ; the image.  Their transported addresses are kept in a table.
 
-(define (transport thing)
+(define (transport thing . stuff)
   (let transport ((thing thing))
     (cond ((immediate? thing)
            (transport-immediate thing))
@@ -53,7 +53,7 @@
           ((string? thing)
 	   (transport-string thing))
           (else
-           (error "cannot transport object" thing)))))
+           (error "cannot transport object" thing stuff))))) ; DELETEME stuff
 
 ; Transport the things that are not allocated from the heap.
 
@@ -232,7 +232,7 @@
          (new (cdr data)))
     (do ((i 0 (+ i 1)))
         ((>= i length))
-      (vector-set! new i (transport (ref vector i))))
+      (vector-set! new i (transport (ref vector i) vector type)))
     descriptor))
 
 ;==============================================================================

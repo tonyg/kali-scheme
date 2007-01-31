@@ -26,6 +26,9 @@
 					       (- i ,least-uid)))))))))
 	       filename))
 
+; The compiler doesn't like to see unusual objects quoted, but this will
+; fake it out.
+
 (define strange-quotation
   (let ((operator/quote (get-operator 'quote)))
     (lambda (thing)

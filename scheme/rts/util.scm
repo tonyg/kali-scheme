@@ -30,7 +30,7 @@
 
 (define posq (pos eq?))
 (define posv (pos eqv?))
-(define position (pos equal?))
+(define posqual (pos equal?))
 
 ; Is pred true of any element of l?
 
@@ -66,6 +66,10 @@
   (cond ((null? l) (list x))
         ((< x (car l)) (cons x l))
         (else (cons (car l) (insert x (cdr l) <)))))
+
+(define (symbol-append . syms)
+  (string->symbol (apply string-append
+                         (map symbol->string syms))))
 
 ;----------------
 ; Variations on a theme.

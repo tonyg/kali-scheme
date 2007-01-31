@@ -88,7 +88,6 @@
 (define closure-template-offset 0)
 (define closure-env-offset	1)
 
-(define location-contents-offset 1)
 (define location-id-offset     0)
 
 ; Procedures for manipulating bits

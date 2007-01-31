@@ -84,6 +84,8 @@
   (make-assembly-state cv 0 '() '()))
 
 (define (emit-byte! a byte)
+  (if (>= byte 256)
+      (set! byte (remainder byte 256))) ; #### FIX WHY WE TRIGGER THIS!
   (code-vector-set! (astate-code-vector a) (astate-pc a) byte)
   (set-astate-pc! a (+ (astate-pc a) 1)))
 

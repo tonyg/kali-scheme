@@ -383,11 +383,12 @@
 	  last
 	  posq
 	  posv
-	  position
+	  posqual
 	  reduce
 	  sublist
 	  insert
 	  unspecific
+	  symbol-append
 
 	  (mvlet :syntax)))
 
@@ -1034,6 +1035,7 @@
 	  scan-forms
 	  expand-scanned-form
 	  syntax?
+	  static-value
 	  make-compiler-env
 	  bind-source-file-name))
 
@@ -1063,6 +1065,32 @@
 	  operator-uid
 	  operator?
 	  operators-table		;config.scm comp-package.scm
+
+	  lambda-node?
+	  flat-lambda-node?
+	  name-node?
+	  call-node?
+	  literal-node?
+	  quote-node?
+	  define-node?
+	  loophole-node?
+
+	  operator/flat-lambda
+	  operator/lambda
+	  operator/set!
+	  operator/call
+	  operator/begin
+	  operator/name
+	  operator/letrec
+	  operator/pure-letrec
+	  operator/literal
+	  operator/quote
+	  operator/unassigned
+	  operator/unspecific
+	  operator/define
+	  operator/define-syntax
+	  operator/primitive-procedure
+	  operator/structure-ref
 	  ))
 
 ;----------------
@@ -1118,6 +1146,7 @@
 	  template-offset
 	  environment-offset
 	  depth-check!
+	  index->offset
 	  literal->index
 	  binding->index))
 
@@ -1201,8 +1230,7 @@
 	  make-new-location		;ctop.scm
 	  structure-package
 	  note-structure-name!
-	  (:package :type)
-	  (:structure :type)))		;for (define-method ...)'s
+	  (:package :type)))
 
 (define-interface packages-internal-interface
   (export package-loaded?		;env/load-package.scm

@@ -183,10 +183,6 @@
                   segment
                   (instruction (enum op return)))))
 
-(define (symbol-append . syms)
-  (string->symbol (apply string-append
-                         (map symbol->string syms))))
-
 (define (define-stob-predicate name stob-name)
   (define-simple-primitive name
     (proc (value-type) boolean-type)

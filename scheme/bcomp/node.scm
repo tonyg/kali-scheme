@@ -141,3 +141,33 @@
   (if (node? node)
       node
       (force node)))
+
+; Node predicates and operators.
+
+(define lambda-node?      (node-predicate 'lambda      syntax-type))
+(define flat-lambda-node? (node-predicate 'flat-lambda syntax-type))
+(define call-node?        (node-predicate 'call))
+(define name-node?        (node-predicate 'name        'leaf))
+(define literal-node?     (node-predicate 'literal     'leaf))
+(define quote-node?       (node-predicate 'quote       syntax-type))
+(define define-node?      (node-predicate 'define))
+(define loophole-node?    (node-predicate 'loophole))
+
+(define operator/flat-lambda (get-operator 'flat-lambda))
+(define operator/lambda      (get-operator 'lambda syntax-type))
+(define operator/set!	     (get-operator 'set! syntax-type))
+(define operator/call	     (get-operator 'call 'internal))
+(define operator/begin       (get-operator 'begin syntax-type))
+(define operator/name        (get-operator 'name 'leaf))
+(define operator/letrec      (get-operator 'letrec))
+(define operator/pure-letrec (get-operator 'pure-letrec))
+(define operator/literal     (get-operator 'literal))
+(define operator/quote       (get-operator 'quote syntax-type))
+(define operator/unassigned  (get-operator 'unassigned))
+(define operator/unspecific  (get-operator 'unspecific (proc () unspecific-type)))
+(define operator/define      (get-operator 'define syntax-type))
+(define operator/define-syntax (get-operator 'define-syntax syntax-type))
+(define operator/primitive-procedure
+  (get-operator 'primitive-procedure syntax-type))
+(define operator/structure-ref (get-operator 'structure-ref syntax-type))
+

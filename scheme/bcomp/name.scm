@@ -123,8 +123,8 @@
 (define (name->qualified name env)
   (cond ((not (generated? name))
 	 name)
-	((let ((d0 (lookup env name))
-	       (d1 (lookup env (generated-name name))))
+	((let ((d0 (cenv-lookup env name))
+	       (d1 (cenv-lookup env (generated-name name))))
 	   (and d0 d1 (same-denotation? d0 d1)))
 	 (generated-name name))   ;+++
 	(else
@@ -148,8 +148,8 @@
   (let recur ((name name))
     (if (generated? name)
 	(let ((parent (generated-parent-name name)))
-	  (if (let ((b1 (lookup env name))
-		    (b2 (lookup env parent)))
+	  (if (let ((b1 (cenv-lookup env name))
+		    (b2 (cenv-lookup env parent)))
 		(and b1
 		     b2
 		     (or (same-denotation? b1 b2)
