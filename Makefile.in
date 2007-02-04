@@ -468,7 +468,17 @@ check:	$(VM) $(IMAGE) scheme/debug/check.scm
 	(								\
 		echo ',batch';						\
 		echo ',exec ,load =scheme48/debug/check.scm';		\
-	) | ./$(VM) -i $(IMAGE)
+		echo ',config ,load =scheme48/test-packages.scm';	\
+		echo ',open big-test';					\
+		echo ',config ,load =scheme48/misc/packages.scm';	\
+		echo ',config ,load =scheme48/misc/test-packages.scm';	\
+		echo ',open misc-test';					\
+		echo ',config ,load =scheme48/srfi/test-packages.scm';	\
+		echo ',open srfi-test';					\
+		echo ',open test-suites';				\
+		echo '(define-test-suite all-tests (compiler-tests big-tests misc-tests srfi-tests))'; \
+		echo '(run-test-suite all-tests)'			\
+	) | ./$(VM) -i $(IMAGE) -h 8000000
 
 # --------------------
 # Rules from here on down are not essential for the basic installation

@@ -14,3 +14,10 @@
 	test-suites
         formats)
   (files srfi-19-check))
+
+(define-structure srfi-test (export srfi-tests)
+  (open scheme test-suites
+	srfi-14-test
+	srfi-19-test)
+  (begin
+    (define-test-suite srfi-tests (srfi-14-tests srfi-19-tests))))
