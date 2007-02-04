@@ -82,9 +82,9 @@
        (define-test-case ?name ?suite ?body0 ?body1 ...) ...))))
 
 (define-syntax check
-  (syntax-rules (=>)
+  (syntax-rules (=> not)
     ((check ?actual)
-     (check ?actual => #t))
+     (check (and ?actual #t) => #t))
     ((check ?actual => ?expected)
      (check ?actual (=> equal?) ?expected))
     ((check ?actual (=> ?equal?) ?expected)
