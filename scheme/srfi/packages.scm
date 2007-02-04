@@ -430,16 +430,6 @@
                         (make-string-input-port open-input-string))))
   (files srfi-19))
 
-(define-structure srfi-19-tests (export run-tests)
-  (open scheme 
-	srfi-9 ; DEFINE-RECORD-PROCEDURES
-        srfi-19
-        srfi-34 ; exceptions
-        srfi-35 ; conditions
-        srfi-78 ; lightweight testing
-        formats)
-  (files srfi-19-check))
-
 ; SRFI-20 - withdrawn
 ; SRFI-21 - no implementation given
 ; SRFI-22 - needs internals hacking
