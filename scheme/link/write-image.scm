@@ -9,6 +9,7 @@
   (initialize-memory)
   (call-with-output-file file
     (lambda (port)
+      (set-port-crlf?! port #f)
       (let ((start (transport start-proc)) ; transport the start-proc
 	    (false (transport #f)))
 	(display id-string port)

@@ -81,3 +81,6 @@
 ; BINARY I/O
 
 ; WRITE-BYTE is built-in
+
+(define (set-port-crlf?! port val)
+  (values))
