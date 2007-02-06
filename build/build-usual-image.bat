@@ -28,7 +28,7 @@ echo (ensure-loaded command-processor) >> %srcdir%\build\build-usual-image.input
 echo (ensure-loaded usual-commands) >> %srcdir%\build\build-usual-image.input
 echo ,go ((*structure-ref command 'command-processor) >> %srcdir%\build\build-usual-image.input
 echo      (structure-package usual-commands) >> %srcdir%\build\build-usual-image.input
-echo      (list "batch")) >> %srcdir%\build\build-usual-image.input
+echo      (list ((*structure-ref os-strings 'string->os-string) "batch"))) >> %srcdir%\build\build-usual-image.input
 echo (ensure-loaded usual-features) >> %srcdir%\build\build-usual-image.input
 echo ,structure more-structures more-structures-interface >> %srcdir%\build\build-usual-image.input
 echo ,in debuginfo (read-debug-info "%srcdir_cooked%build/initial.debug") >> %srcdir%\build\build-usual-image.input

@@ -28,7 +28,7 @@ $vm -i $initial -a batch <<EOF
 (ensure-loaded usual-commands)
 ,go ((*structure-ref command 'command-processor)
      (structure-package usual-commands)
-     (list "batch"))
+     (list ((*structure-ref os-strings 'string->os-string) "batch")))
 (ensure-loaded usual-features)
 ,structure more-structures more-structures-interface
 ,in debuginfo (read-debug-info "$srcdir/build/initial.debug")
