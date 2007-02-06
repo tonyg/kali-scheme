@@ -216,7 +216,7 @@
 ; ARG is a list of command-line arguments after "run-script"
 
 (define (run-script arg)
-  (run-script-handler (car arg) (cdr arg)))
+  (run-script-handler (os-string->string (car arg)) (cdr arg)))
 
 (define *script-handler-alist* '())
 
@@ -232,7 +232,7 @@
 	  (lambda ()
 	    ((cdr pair) args)))))
    (else
-    (display "invalid argument to run-script-handler:" (current-error-port))
+    (display "invalid argument to run-script-handler: " (current-error-port))
     (display tag (current-error-port))
     (newline (current-error-port))
     1)))
@@ -258,22 +258,22 @@
   (lambda (args)
     (with-srfi-22-error-handling
      (lambda ()
-       (load-script-into (car args) (interaction-environment))
-       ((environment-ref (interaction-environment) 'main) args)))))
+       (load-script-into (os-string->string (car args)) (interaction-environment))
+       ((environment-ref (interaction-environment) 'main) (map os-string->string args))))))
 
 (define-script-handler "srfi-7"
   (lambda (args)
     (with-srfi-22-error-handling
      (lambda ()
        (eval '(load-package 'srfi-7) (user-command-environment))
-       (eval `(load-srfi-7-script 'srfi-7-script ,(car args))
+       (eval `(load-srfi-7-script 'srfi-7-script ,(os-string->string (car args)))
 	     (user-command-environment))
        (let ((cell (make-cell #f)))	; kludge
 	 (let-fluid $command-results cell
 	  (lambda ()
 	    (eval '(in 'srfi-7-script '(run main))
 		  (user-command-environment))))
-	 ((car (cell-ref cell)) args))))))
+	 ((car (cell-ref cell)) (map os-string->string args)))))))
 
 ;----------------
 ; Evaluate a form and save its result as the current focus values.

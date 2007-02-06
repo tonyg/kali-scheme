@@ -10,6 +10,7 @@
   (open scheme ;;-level-2     ; eval, interaction-environment
 	tables fluids cells
 	conditions i/o-conditions
+	os-strings
 	define-record-types
 	handle
 	command-levels
@@ -47,6 +48,7 @@
 		    (command-state command-state-interface))
   (open scheme
 	enumerated enum-case 
+	os-strings
 	tables queues
 	session-data
 	define-record-types

@@ -136,9 +136,9 @@
 				    resume-args	; focus values
 				    #f		; exit status
 				    (and (pair? resume-args)
-					 (equal? (car resume-args) "batch"))
+					 (string=? (os-string->string (car resume-args)) "batch"))
 				    (and (pair? resume-args)
-					 (equal? (car resume-args) "run-script")))))
+					 (string=? (os-string->string (car resume-args)) "run-script")))))
     (with-handler command-levels-condition-handler
       (lambda ()
 	(let-fluids $command-level-thread? #t
