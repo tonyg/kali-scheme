@@ -1,8 +1,8 @@
 ; Random tests, mostly for stuff in scheme/big
 
-(define-test-suite big-tests)
+(define-test-suite misc-big-tests)
 
-(define-test-case many-args big-tests
+(define-test-case many-args misc-big-tests
   (check 
       (let ((f (lambda (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 x29 x30 x31 x32 x33 x34 x35 x36 x37 x38 x39 x40 x41 x42 x43 x44 x45 x46 x47 x48 x49 x50 x51 x52 x53 x54 x55 x56 x57 x58 x59 x60 x61 x62 x63 x64 x65 x66 x67 x68 x69 x70 x71 x72 x73 x74 x75 x76 x77 x78 x79 x80 x81 x82 x83 x84 x85 x86 x87 x88 x89 x90 x91 x92 x93 x94 x95 x96 x97 x98 x99 
 			x100 x101 x102 x103 x104 x105 x106 x107 x108 x109 x110 x111 x112 x113 x114 x115 x116 x117 x118 x119 x120 x121 x122 x123 x124 x125 x126 x127 x128 x129 x130 x131 x132 x133 x134 x135 x136 x137 x138 x139 x140 x141 x142 x143 x144 x145 x146 x147 x148 x149 x150 x151 x152 x153 x154 x155 x156 x157 x158 x159 x160 x161 x162 x163 x164 x165 x166 x167 x168 x169 x170 x171 x172 x173 x174 x175 x176 x177 x178 x179 x180 x181 x182 x183 x184 x185 x186 x187 x188 x189 x190 x191 x192 x193 x194 x195 x196 x197 x198 x199 
@@ -50,12 +50,12 @@
 	900 901 902 903 904 905 906 907 908 909 910 911 912 913 914 915 916 917 918 919 920 921 922 923 924 925 926 927 928 929 930 931 932 933 934 935 936 937 938 939 940 941 942 943 944 945 946 947 948 949 950 951 952 953 954 955 956 957 958 959 960 961 962 963 964 965 966 967 968 969 970 971 972 973 974 975 976 977 978 979 980 981 982 983 984 985 986 987 988 989 990 991 992 993 994 995 996 997 998 999 
 	)))
 
-(define-test-cases big-tests
+(define-test-cases misc-big-tests
   (*1 (check (* 1 2 3) => 6))
   (*2 (check (* 214760876 10) => 2147608760))
   (*3 (check (* 47123 46039) => 2169495797)))
 
-(define-test-case internal-define big-tests
+(define-test-case internal-define misc-big-tests
   (check (let ()
 	      (define a 5)
 	      (define b 15)
@@ -81,25 +81,25 @@
 
 (define (identity x) x)		; handy for preventing inlining
 
-(define-test-case read-byte big-tests
+(define-test-case read-byte misc-big-tests
   (let ((port (make-port #f #f #f -1 0 0 (make-byte-vector 1024 25) 0 1023 #f #f)))
     (set-port-index! port 0)
     (check (read-byte port) => 25)
     (check ((identity read-byte) port) => 25)))
 
-(define-test-case apply big-tests
+(define-test-case apply misc-big-tests
   (check (apply list 1 2 '(3 4)) => '(1 2 3 4)))
 
-(define-test-case char<->integer big-tests
+(define-test-case char<->integer misc-big-tests
   (check (integer->char (char->integer #\a)) => #\a))
 
-(define-test-case number->string big-tests
+(define-test-case number->string misc-big-tests
   (check (number->string 12) => "12")
   (check (number->string 12 8) => "14")
   (check (number->string -12) => "-12")
   (check (number->string -12 8) => "-14"))
 
-(define-test-case string->number big-tests
+(define-test-case string->number misc-big-tests
   (check (string->number "12") => 12)
   (check (string->number "12" 8) => 10)
   (check (string->number "-12") => -12)
@@ -107,21 +107,21 @@
 
 ;(test "lap" equal? #f ((lap #f () (protocol 0) (false) (return))))
 
-(define-test-case q big-tests
+(define-test-case q misc-big-tests
   (let ((q (make-queue)))
     (enqueue! q 'a)
     (check (dequeue! q) => 'a)))
 
-(define-test-case random big-tests
+(define-test-case random misc-big-tests
   (check (<= 0 ((make-random 7))) => #t))
 
-(define-test-case sort big-tests
+(define-test-case sort misc-big-tests
   (check (sort-list '(2 3 1 3) <) => '(1 2 3 3)))
 
-(define-test-case bigbit big-tests
+(define-test-case bigbit misc-big-tests
   (check (arithmetic-shift 1 100) => (expt 2 100)))
 
-(define-test-case cr/lf big-tests
+(define-test-case cr/lf misc-big-tests
   (check
    (let ((port (make-byte-vector-output-port)))
      (set-port-crlf?! port #t)
@@ -148,10 +148,10 @@
 			 (list i c1 c2)))))))))
    => #t))
 
-(define-test-case format big-tests
+(define-test-case format misc-big-tests
   (check (format #f "x~s" '(1 2)) => "x(1 2)"))
 
-(define-test-case fancy-input-ports big-tests
+(define-test-case fancy-input-ports misc-big-tests
   (let ((p1 (make-tracking-input-port (make-string-input-port "
 
 
@@ -162,7 +162,7 @@
 	(close-input-port p1)
 	(check (open-input-port? p1) => #f)))
 
-(define-test-case byte-sink-input-ports big-tests
+(define-test-case byte-sink-input-ports misc-big-tests
 
   (define (list-from-to n)
     (let loop ((i 0)
@@ -192,7 +192,7 @@
     (check (port->byte-list (byte-source->input-port byte-source))
 	   => l)))
 
-(define-test-case fancy-output-ports big-tests
+(define-test-case fancy-output-ports misc-big-tests
   (let* ((r 0)
 	 (c 0)
 	 (s (call-with-string-output-port
@@ -210,7 +210,7 @@
     (check s => "8
    9")))
 
-(define-test-case limit-output big-tests
+(define-test-case limit-output misc-big-tests
   (check
    (call-with-string-output-port
     (lambda (out)
@@ -220,33 +220,33 @@
 		      (display '(1 2 3 4 5 6) out)))))
    => "(1 2 3 4 5"))
 
-(define-test-case destructure big-tests
+(define-test-case destructure misc-big-tests
   (check (destructure (((x (y) z) '(b (a) c))) y) => 'a))
 
-(define-test-case array big-tests
+(define-test-case array misc-big-tests
   (check (let ((a (make-array 'b 3 4)))
 	   (array-set! a 'a 1 2)
 	   (array-ref a 1 2))
 	 => 'a))
 
-(define-test-case delay big-tests
+(define-test-case delay misc-big-tests
   (check (letrec ((p (delay (if c 3 (begin (set! c #t)
 					   (+ (force p) 1)))))
 		  (c #f))
 	   (force p)) 
 	 => 3))
 
-(define-test-case receive big-tests
+(define-test-case receive misc-big-tests
   (check (receive stuff (values 'a 'b) stuff) => '(a b)))
 
-(define-test-case dump big-tests
+(define-test-case dump misc-big-tests
   (let ((z '(a "b" 3 #t)))
     (check (let ((q (make-queue)))
 	     (dump z (lambda (c) (enqueue! q c)) -1)
 	     (restore (lambda () (dequeue! q))))
 	   => z)))
 
-(define-test-case placeholders big-tests
+(define-test-case placeholders misc-big-tests
   (let ((r 0)
 	(l1 (make-lock))
 	(l2 (make-lock))
@@ -267,7 +267,7 @@
       (obtain-lock l2)
       (check r => 23))))
 
-(define-test-case search-trees big-tests
+(define-test-case search-trees misc-big-tests
   (check (let ((t (make-search-tree = <)))
 	   (search-tree-set! t 3 'b)
 	   (search-tree-set! t 4 'a)
@@ -282,13 +282,13 @@
   color-index
   (black white purple maroon))
 
-(define-test-case enumerated-types big-tests
+(define-test-case enumerated-types misc-big-tests
   (check (list (color-name (vector-ref colors 0))
 	       (color-name (color white))
 	       (color-index (color purple)))
 	 => '(black white 2)))
 
-(define-test-case masks big-tests
+(define-test-case masks misc-big-tests
   (let ((type (make-mask-type 'color-mask
 			      color?
 			      (lambda (i) (vector-ref colors i))
@@ -340,7 +340,7 @@
       (check (show (mask-negate m1)) => '(white purple))
       (check (show (mask-negate m2)) => '(black white purple maroon)))))
 
-(define-test-case sockets big-tests
+(define-test-case sockets misc-big-tests
   (check
    (let ((server (open-socket))
 	 (name (get-host-name)))
@@ -372,7 +372,7 @@
 		 (loop (+ i 1) result)))))))
    => '(303 202 101)))
 
-(define-test-case float big-tests
+(define-test-case float misc-big-tests
  (let* ((one (exact->inexact 1))
 	(three (exact->inexact 3))
 	(third (/ one three))
@@ -380,7 +380,7 @@
    (check (= 1/3 xthird) => #f)
    (check (exact->inexact xthird) => third)))
 
-(define-test-case float-comparisons big-tests
+(define-test-case float-comparisons misc-big-tests
   (let ((arg0 '(1.0 1.0 2.0)) (arg1 '(2.0 1.0 1.0)))
     (check (map = arg0 arg1) => '(#f #t #f))
     (check (map < arg0 arg1) => '(#t #f #f))
@@ -388,11 +388,11 @@
     (check (map <= arg0 arg1) => '(#t #t #f))
     (check (map >= arg0 arg1) => '(#f #t #t))))
 
-(define-test-case float-ops big-tests
+(define-test-case float-ops misc-big-tests
   (check (list (+ 2.0 3.0) (- 1.0 2.0) (* 2.0 3.0) (/ 1.0 2.0))
 	 => '(5.0 -1.0 6.0 0.5)))
 
-(define-test-case integer-comparisons big-tests 
+(define-test-case integer-comparisons misc-big-tests 
   (let ((arg0 '(1 1 2)) (arg1 '(2 1 1)))
     (check (map = arg0 arg1) => '(#f #t #f))
     (check (map < arg0 arg1) => '(#t #f #f))

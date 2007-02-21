@@ -1,115 +1,133 @@
 ; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-; ,config ,load =scheme48/debug/test.scm
-; ,exec ,load =scheme48/big/inversion-list-check.scm
-; ,exec (done)
+(define-test-suite inversion-lists-tests)
 
-(load-package 'testing)
+(define-test-case creation/membership inversion-lists-tests
+  (check (not (inversion-list-member? 5 (make-empty-inversion-list 0 1000))))
+  (check (inversion-list-member? 5 (number->inversion-list 0 1000 5)))
+  (check (not (inversion-list-member? 4 (number->inversion-list 0 1000 5))))
+  (check (not (inversion-list-member? 6 (number->inversion-list 0 1000 5))))
+  (check (not (inversion-list-member? 6 (range->inversion-list 0 1000 500 1000))))
+  (check (not (inversion-list-member? 499 (range->inversion-list 0 1000 500 1000))))
+  (check (inversion-list-member? 500 (range->inversion-list 0 1000 500 1000)))
+  (check (inversion-list-member? 1000 (range->inversion-list 0 1000 500 1000))))
 
-(config '(run 
-(define-structure inversion-lists-test (export)
+(define-test-case complement/1 inversion-lists-tests
+  (check
+   (inversion-list-complement
+    (inversion-list-complement
+     (range->inversion-list 0 1000 5 10)))
+   (=> inversion-list=?)
+   (range->inversion-list 0 1000 5 10)))
 
-  (open scheme testing
-	inversion-lists)
+(define-test-case complement/2 inversion-lists-tests
+  (check
+   (inversion-list-complement
+    (inversion-list-complement
+     (range->inversion-list 0 1000 0 1000)))
+   (=> inversion-list=?)
+   (range->inversion-list 0 1000 0 1000)))
 
-  (begin
+(define-test-case union/1 inversion-lists-tests
+  (check
+   (inversion-list-union (range->inversion-list 0 1000 5 10)
+			 (range->inversion-list 0 1000 20 30))
+   (=> inversion-list=?)
+   
+   (ranges->inversion-list 0 1000 '(5 . 10) '(20 . 30))))
 
-(test "creation/membership" equal?
-      '(#f #t #f #f #f #f #t #t)
-      (list
-       (inversion-list-member? 5 (make-empty-inversion-list 0 1000))
-       (inversion-list-member? 5 (number->inversion-list 0 1000 5))
-       (inversion-list-member? 4 (number->inversion-list 0 1000 5))
-       (inversion-list-member? 6 (number->inversion-list 0 1000 5))
-       (inversion-list-member? 6 (range->inversion-list 0 1000 500 1000))
-       (inversion-list-member? 499 (range->inversion-list 0 1000 500 1000))
-       (inversion-list-member? 500 (range->inversion-list 0 1000 500 1000))
-       (inversion-list-member? 1000 (range->inversion-list 0 1000 500 1000))))
+(define-test-case union/2 inversion-lists-tests
+  (check
+   (inversion-list-union (range->inversion-list 0 1000 5 10)
+			 (range->inversion-list 0 1000 7 8))
+   (=> inversion-list=?)
+   (range->inversion-list 0 1000 5 10)))
+  
+(define-test-case union/3 inversion-lists-tests
+  (check
+   (inversion-list-union (range->inversion-list 0 1000 5 10)
+			 (range->inversion-list 0 1000 7 15))
+   (=> inversion-list=?)
+   (range->inversion-list 0 1000 5 15)))
 
-(test "complement/1" inversion-list=?
-      (range->inversion-list 0 1000 5 10)
-      (inversion-list-complement
-       (inversion-list-complement
-	(range->inversion-list 0 1000 5 10))))
+(define-test-case union/4 inversion-lists-tests
+  (check
+   (inversion-list-union (range->inversion-list 0 1000 500 1000)
+			 (range->inversion-list 0 1000 0 500))
+   (=> inversion-list=?)
+   (range->inversion-list 0 1000 0 1000)))
 
-(test "complement/2" inversion-list=?
-      (range->inversion-list 0 1000 0 1000)
-      (inversion-list-complement
-       (inversion-list-complement
-	(range->inversion-list 0 1000 0 1000))))
+(define-test-case intersection/1 inversion-lists-tests
+  (check
+   (inversion-list-intersection (range->inversion-list 0 1000 5 10)
+				(range->inversion-list 0 1000 20 30))
+   (=> inversion-list=?)
+   (make-empty-inversion-list 0 1000)))
+  
+(define-test-case intersection/2 inversion-lists-tests
+  (check
+   (inversion-list-intersection (range->inversion-list 0 1000 5 10)
+				(range->inversion-list 0 1000 7 8))
+   (=> inversion-list=?)
+   (range->inversion-list 0 1000 7 8)))
 
-(test "union/1" inversion-list=?
-      (ranges->inversion-list 0 1000 '(5 . 10) '(20 . 30))
-      (inversion-list-union (range->inversion-list 0 1000 5 10)
-			    (range->inversion-list 0 1000 20 30)))
+(define-test-case intersection/3 inversion-lists-tests
+  (check
+   (inversion-list-intersection (range->inversion-list 0 1000 5 10)
+				(range->inversion-list 0 1000 7 15))
+   (=> inversion-list=?)
+   (range->inversion-list 0 1000 7 10)))
 
-(test "union/2" inversion-list=?
-      (range->inversion-list 0 1000 5 10)
-      (inversion-list-union (range->inversion-list 0 1000 5 10)
-			    (range->inversion-list 0 1000 7 8)))
+(define-test-case intersection/4 inversion-lists-tests
+  (check
+   (inversion-list-intersection (range->inversion-list 0 1000 500 1000)
+				(range->inversion-list 0 1000 0 501))
+   (=> inversion-list=?)
+   (range->inversion-list 0 1000 500 501)))
 
-(test "union/3" inversion-list=?
-      (range->inversion-list 0 1000 5 15)
-      (inversion-list-union (range->inversion-list 0 1000 5 10)
-			    (range->inversion-list 0 1000 7 15)))
+(define-test-case intersection/5 inversion-lists-tests
+  (check
+   (inversion-list-intersection (range->inversion-list 0 1000 500 1000)
+				(range->inversion-list 0 1000 501 505))
+   (=> inversion-list=?)
+   (range->inversion-list 0 1000 501 505)))
 
-(test "union/4" inversion-list=?
-      (range->inversion-list 0 1000 0 1000)
-      (inversion-list-union (range->inversion-list 0 1000 500 1000)
-			    (range->inversion-list 0 1000 0 500)))
+(define-test-case adjoin inversion-lists-tests
+  (check
+   (inversion-list-adjoin (range->inversion-list 0 1000 0 999) 999)
+   (=> inversion-list=?)
+   (range->inversion-list 0 1000 0 1000)))
 
-(test "intersection/1" inversion-list=?
-      (make-empty-inversion-list 0 1000)
-      (inversion-list-intersection (range->inversion-list 0 1000 5 10)
-				   (range->inversion-list 0 1000 20 30)))
+(define-test-case remove inversion-lists-tests
+  (check
+   (inversion-list-remove (range->inversion-list 0 1000 0 1000) 999)
+   (=> inversion-list=?)
+   (range->inversion-list 0 1000 0 999)))
 
-(test "intersection/2" inversion-list=?
-      (range->inversion-list 0 1000 7 8)
-      (inversion-list-intersection (range->inversion-list 0 1000 5 10)
-				   (range->inversion-list 0 1000 7 8)))
+(define-test-case size inversion-lists-tests
+  (check
+   (inversion-list-size
+    (ranges->inversion-list 0 1000 '(5 . 10) '(15 . 20) '(500 . 1000)))
+   => 510))
 
-(test "intersection/3" inversion-list=?
-      (range->inversion-list 0 1000 7 10)
-      (inversion-list-intersection (range->inversion-list 0 1000 5 10)
-				   (range->inversion-list 0 1000 7 15)))
+(define-test-case copy inversion-lists-tests
+  (check
+   (inversion-list-copy
+    (ranges->inversion-list 0 1000 '(5 . 10) '(15 . 20) '(500 . 1000)))
+   (=> inversion-list=?)
+   (ranges->inversion-list 0 1000 '(5 . 10) '(15 . 20) '(500 . 1000))))
 
-(test "intersection/4" inversion-list=?
-      (range->inversion-list 0 1000 500 501)
-      (inversion-list-intersection (range->inversion-list 0 1000 500 1000)
-				   (range->inversion-list 0 1000 0 501)))
-
-(test "intersection/5" inversion-list=?
-      (range->inversion-list 0 1000 501 505)
-      (inversion-list-intersection (range->inversion-list 0 1000 500 1000)
-				   (range->inversion-list 0 1000 501 505)))
-
-(test "adjoin" inversion-list=?
-      (range->inversion-list 0 1000 0 1000)
-      (inversion-list-adjoin (range->inversion-list 0 1000 0 999) 999))
-
-(test "remove" inversion-list=?
-      (range->inversion-list 0 1000 0 999)
-      (inversion-list-remove (range->inversion-list 0 1000 0 1000) 999))
-
-(test "size" =
-      510
-      (inversion-list-size
-       (ranges->inversion-list 0 1000 '(5 . 10) '(15 . 20) '(500 . 1000))))
-
-(test "copy" inversion-list=?
-      (ranges->inversion-list 0 1000 '(5 . 10) '(15 . 20) '(500 . 1000))
-      (inversion-list-copy
-       (ranges->inversion-list 0 1000 '(5 . 10) '(15 . 20) '(500 . 1000))))
-
-(test "fold/done?" =
-      250781
-      (inversion-list-fold/done?
-       (lambda (n sum)
-	 (+ n sum))
-       0
-       (lambda (sum)
-	 (> sum 250000))
-       (ranges->inversion-list 0 1000 '(5 . 10) '(15 . 20) '(500 . 1000))))
+(define-test-case fold/done? inversion-lists-tests
+  (check
+   (inversion-list-fold/done?
+    (lambda (n sum)
+      (+ n sum))
+    0
+    (lambda (sum)
+      (> sum 250000))
+    (ranges->inversion-list 0 1000 '(5 . 10) '(15 . 20) '(500 . 1000)))
+   =>
+   250781))
 
 (define (i-list-sum i-list)
   (let loop ((cursor (inversion-list-cursor i-list))
@@ -120,20 +138,15 @@
 	      (+ (inversion-list-cursor-ref cursor)
 		 sum)))))
     
-(test "cursor" =
-      374870
-      (i-list-sum (ranges->inversion-list 0 1000 '(5 . 10) '(15 . 20) '(500 . 1000))))
+(define-test-case cursor inversion-lists-tests
+  (check
+   (i-list-sum (ranges->inversion-list 0 1000 '(5 . 10) '(15 . 20) '(500 . 1000)))
+   => 374870))
 
-(test "hash" (lambda (n1 n2) (not (= n1 n2)))
-      (inversion-list-hash (ranges->inversion-list 0 1000 '(5 . 10) '(15 . 20) '(500 . 1000)) 1031)
-      (inversion-list-hash (ranges->inversion-list 0 1000 '(5 . 10) '(500 . 1000)) 1031))
+(define-test-case hash inversion-lists-tests 
+  (check
+   (not
+    (= (inversion-list-hash (ranges->inversion-list 0 1000 '(5 . 10) '(15 . 20) '(500 . 1000)) 1031)
+       (inversion-list-hash (ranges->inversion-list 0 1000 '(5 . 10) '(500 . 1000)) 1031)))))
 
-))))
 
-(if (in 'testing '(run (lost?)))
-    (display "Some tests failed.")
-    (display "All tests succeeded."))
-(newline)
-
-(define (done)
-  (exit (if (in 'testing '(run (lost?))) 1 0)))
