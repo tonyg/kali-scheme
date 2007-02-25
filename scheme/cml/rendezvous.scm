@@ -313,7 +313,9 @@
    ((base? rv)
     (really-make-base-group (base-prim-rvs rv)))
    ((choose? rv)
-    (force-prim-rvs (choose-rvs rv) '()))))
+    (force-prim-rvs (choose-rvs rv) '()))
+   (else
+    (call-error "not a rendezvous" rv))))
 
 (define (sync-prim-rv prim-rv)
   (let ((poll-thunk (prim-rv-poll-thunk prim-rv))
