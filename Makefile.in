@@ -145,7 +145,7 @@ EXTERNAL_INITIALIZERS = s48_initialize_external s48_init_external_libs  \
 			$(POSIX_INITIALIZERS) $(SOCKET_INITIALIZERS)	\
 			$(DYNLINK_INITIALIZERS)				\
 			$(SYSEXITS_INITIALIZERS)			\
-                        $(LOOKUP_INITIALIZERS) $(ASM_INITIALIZERS)	\
+                        $(ASM_INITIALIZERS)				\
 			$(SRFI_INITIALIZERS)
 
 # Rules for any external code.
@@ -203,14 +203,6 @@ SYSEXITS_OBJECTS = c/unix/sysexits.o
 SYSEXITS_LD_FLAGS =
 SYSEXITS_INITIALIZERS = s48_init_sysexits
 
-# Lookup rules (this is just for compatibility with old code)
-
-c/unix/dynamo.o: $(SCHEME48HS)
-
-LOOKUP_OBJECTS = c/unix/dynamo.o
-LOOKUP_INITIALIZERS = 	s48_init_external_lookup
-
-# End of lookup rules
 # Native-code glue rules
 
 # Fake definitions if there is no support for native code
@@ -357,8 +349,6 @@ c/script-interpreter.o: c/sysdep.h $(FAKEHS) c/script-interpreter.c
 		$(CPPFLAGS) $(DEFS) \
 		-I ./c -I$(srcdir)/c \
 		$(srcdir)/c/script-interpreter.c
-c/fake/libdl1.o: c/fake/dlfcn.h
-c/fake/libdl2.o: c/fake/dlfcn.h
 c/fake/strerror.o: c/fake/strerror.h
 
 # --------------------

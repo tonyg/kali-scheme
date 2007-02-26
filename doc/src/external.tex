@@ -318,19 +318,6 @@ dynamic-externals.  It is best explained by its definition:
   (load-dynamic-externals name #t #f #t))
 \end{example}
 
-\section{Compatibility}
-
-% JAR says: give version number (I would if I knew what it was -RK)
-Scheme~48's old \code{external-call} function is still available in the
- structure
- \code{externals}, which now also includes \code{external-name} and
- \code{external-value}.
-The old \code{scheme48.h} file has been renamed \code{old-scheme48.h}.
-
-Also, the old code for loading external code dynamically is still
-available in the \code{dynamic-externals} structure, but will
-probably disappear in a future release.
-
 \section{Accessing Scheme data from C}
 \label{sec:scheme-data}
 

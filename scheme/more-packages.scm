@@ -316,16 +316,6 @@
   (files (big import-def)
 	 (big callback)))
 
-(define-structure dynamic-externals dynamic-externals-interface
-  (open scheme-level-2 define-record-types tables
-        signals          	;warn
-	primitives		;find-all-records
-	i/o			;current-error-port
-        code-vectors
-	os-strings text-codecs
-	external-calls)
-  (files (big external)))
-
 (define-structure shared-objects shared-objects-interface
   (open scheme-level-2
 	define-record-types
@@ -528,31 +518,6 @@
 (define-structure bigbit (export)
   (open scheme-level-2))
 
-; Externals - this is obsolete; use external-calls and dynamic-externals
-; instead.
-
-(define-structure externals (compound-interface
-			       dynamic-externals-interface
-			       (export external-call
-				       null-terminate))
-  (open scheme-level-2 dynamic-externals
-	(subset external-calls (import-lambda-definition)))
-  (begin
-   ; We fake the old external-call primitive using the new one and a
-   ; a C helper procedure from c/unix/dynamo.c.
-
-    (define (external-call proc . args)
-      (let ((args (apply vector args)))
-	(old-external-call (external-value proc) args)))
-    
-    (import-lambda-definition old-external-call
-			      (proc args)
-			      "s48_old_external_call")
-
-    ; All strings are now null terminated.
-    (define (null-terminate string) string)))
-
-;----------------
 ; ... end of package definitions.
 
 ; Temporary compatibility stuff

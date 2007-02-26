@@ -64,21 +64,6 @@ define(S48_PROG_CC, [dnl
 	fi
 ])dnl
 dnl
-dnl Linux/ELF systems need the -rdynamic flag when linking so that
-dnl dlsym() can find symbols in the executable.
-dnl Note, on some Sun's, you can link with -rdynamic but the resulting
-dnl a.out always core dumps.
-define(S48_RDYNAMIC, [dnl
-	AC_MSG_CHECKING([link with -rdynamic])
-	AC_TRY_COMPILE([],
-[#if (defined(__linux__) || defined(__FreeBSD__)) && defined(__ELF__)
-	this must not compile
-#endif],
-		[AC_MSG_RESULT(no)],
-		[AC_MSG_RESULT(yes)
-			LDFLAGS="$LDFLAGS -rdynamic"])
-])dnl
-dnl
 define(S48_INLINE, [dnl
 AC_MSG_CHECKING([for inline keyword])
 AC_COMPILE_IFELSE([#include <stdio.h>
@@ -128,19 +113,6 @@ if test "$ieee_endianness" = "most first"; then
   AC_DEFINE([IEEE_MOST_FIRST], 1, [Define if IEEE doubles are stored with most-significant byte first.])
 fi
 fi
-])dnl
-dnl
-define(S48_USCORE, [dnl
-	AC_MSG_CHECKING([underscore before symbols])
-	echo 'main() { return 0; } fnord() {}' >conftest.c
-	if ${CC} ${CFLAGS} ${CPPFLAGS} ${LDFLAGS} conftest.c ${LIBS} &&
-	nm a.out | grep _fnord >/dev/null; then
-		AC_MSG_RESULT([yes])
-		AC_DEFINE(USCORE)
-	else
-		AC_MSG_RESULT([no])
-	fi
-	rm -f conftest.c a.out
 ])dnl
 dnl
 define(S48_CREATE_BUILD_DIRS, [dnl
@@ -280,8 +252,6 @@ fail
 		AC_DEFINE(HAVE_SIGACTION)
 		AC_MSG_RESULT([yes]),
 		AC_MSG_RESULT([no]))
-     S48_USCORE
-     S48_RDYNAMIC
      S48_IEEE_ENDIANNESS
      S48_NATIVE_CODE
      AC_SUBST(CFLAGS)
