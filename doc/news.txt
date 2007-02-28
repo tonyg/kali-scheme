@@ -2,6 +2,53 @@
 
 Recent changes to Scheme 48.
 
+03/05/07 (version 1.6)
+	 Additions:
+	  An autogen.sh script for generating the various generated
+	   files from source was added.
+	  Infrastructure for creating, running and composing test
+	   suites was added.  As a result, "make check" now runs more
+	   tests than before.
+	  It is now possible for adventurous users to run the linker
+	   in PLT Scheme.
+	 Changes:
+	  "make image" now assumes a Unicode-capable Scheme 48.
+	 Bug fixes:
+	  A bug where automatic port-flushing would churn trying to
+	   write to a blocking socket was fixed.
+	  An infinite loop upon (/ 0.0 0.0) was fixed.	(reported by
+	   Taylor Campbell)
+	  A bug that made SYSTEM unusable was fixed.  (reported by
+	   Marco Benelli)
+	  A bug with package mutation, which made running the
+	   PreScheme compiler on the VM break was fixed.
+	  Bugs related to the conversion between OS strings and
+	   strings on command-line handling were fixed.	 (reported by
+	   Andreas Rottmann)
+
+01/12/07 (version 1.5)
+	 Additions:
+	  Comprehensive Unicode support was added.  See the manual for
+	   details.
+	  An implementation of SRFI 19 was added.  (thanks to Emilio
+	   Lopes)
+	  SYNTAX-RULES now supports vector patterns and templates.
+	  The ,bound? command now produces more output.	(thanks to
+	   Taylor Campbell)
+	 Changes:
+	  Many of the POSIX procedures that accepted or returned
+	   strings previously now accept or return OS strings.	See
+	   the manual for details.
+	  The ,build command now accepts a procedure that will be
+	   called with a list of OS strings rather than regular
+	   strings.
+	  The ASCII->CHAR and CHAR->ASCII procedures from the ASCII
+	   structure covers only ASCII (codes 0-127) now.
+	   (Previously, the range included 128-255 as well.)
+	 Bug fixes:
+	  A bug with package mutation was fixed.  (reported by Taylor
+	   Campbell)
+
 12/23/06 (version 1.4)
 	 Additions:
 	  REGEXP? is now exported from the REXEXPS structure.
