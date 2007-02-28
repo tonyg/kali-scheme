@@ -18,8 +18,8 @@
        
   <Product 
     Id="5dc91c36-df2e-11d9-817f-00111175eb9e"
-    Name="Scheme 48 1.6T"
-    Version="1.6"
+    Name="Scheme 48 1.7T"
+    Version="1.7"
     Manufacturer="The Scheme 48 Maintainers, s48-info@s48.org"
     Codepage="1252"
     Language="1033">
@@ -43,7 +43,7 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFilesFolder" Name="PFiles">
         <Directory Id="Scheme48" Name="Scheme48" LongName="Scheme 48">
-          <Directory Id="INSTALLDIR" Name="s48_1-6t" LongName="Scheme 48 1.6T">
+          <Directory Id="INSTALLDIR" Name="s48_1-7t" LongName="Scheme 48 1.7T">
 
             <Component Id="Main" Guid="74a1362f-df2e-11d9-817f-00111175eb9e">
 
@@ -55,8 +55,8 @@
 
               <Shortcut Id="start_menu_entry" Directory="ProgramMenuDir"
                 Description="Scheme 48 Console"
-                Name="s48_1-6" 
-                LongName="Scheme 48 1.6T"
+                Name="s48_1-7" 
+                LongName="Scheme 48 1.7T"
                 Target="[INSTALLDIR]scheme48"
                 WorkingDirectory="INSTALLDIR"
                 Icon="scheme48.ico" IconIndex="0"
@@ -64,15 +64,15 @@
 
               <Shortcut Id="doc_html_menu_entry" Directory="ProgramMenuDir"
                 Description="Scheme 48 HTML Documentation"
-                Name="s48h_1-6" 
-                LongName="Scheme 48 1.6T HTML Documentation"
+                Name="s48h_1-7" 
+                LongName="Scheme 48 1.7T HTML Documentation"
                 Target="[#doc_html_manual.html]"
                 Show="normal" />
 
               <Shortcut Id="doc_pdf_menu_entry" Directory="ProgramMenuDir"
                 Description="Scheme 48 PDF Documentation"
-                Name="s48p_1-6" 
-                LongName="Scheme 48 1.6T PDF Documentation"
+                Name="s48p_1-7" 
+                LongName="Scheme 48 1.7T PDF Documentation"
                 Target="[#doc_manual.pdf]"
                 Show="normal" />
 
@@ -163,8 +163,8 @@
     <Icon Id="scheme48.ico" src="build/scheme48.ico" />
 
     <Feature Id="Complete" Level="1"
-             Title="Scheme 48 1.6T"
-             Description="Scheme 48 1.6T main installation"
+             Title="Scheme 48 1.7T"
+             Description="Scheme 48 1.7T main installation"
              ConfigurableDirectory="INSTALLDIR">
       <ComponentRef Id="Main" />
       <ComponentRef Id="include_component" />
