@@ -5,7 +5,7 @@
 <!-- WiX source file for building a Windows .msi installer for Scheme 48 -->
 
 <!-- To build, fire up Cygwin, cd to the source directory, and do:
-     build/generate-scheme48-files-wxi.sh "./scheme48vm -i scheme48.image"
+     build/generate-scheme48-files-wxi.sh ./scheme48vm -i scheme48.image
      candle build/scheme48.wxs
      light scheme48.wixobj
 -->
@@ -43,7 +43,7 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFilesFolder" Name="PFiles">
         <Directory Id="Scheme48" Name="Scheme48" LongName="Scheme 48">
-          <Directory Id="INSTALLDIR" Name="s48_1-4t" LongName="Scheme 48 1.6T">
+          <Directory Id="INSTALLDIR" Name="s48_1-6t" LongName="Scheme 48 1.6T">
 
             <Component Id="Main" Guid="74a1362f-df2e-11d9-817f-00111175eb9e">
 
@@ -55,7 +55,7 @@
 
               <Shortcut Id="start_menu_entry" Directory="ProgramMenuDir"
                 Description="Scheme 48 Console"
-                Name="s48_1-4" 
+                Name="s48_1-6" 
                 LongName="Scheme 48 1.6T"
                 Target="[INSTALLDIR]scheme48"
                 WorkingDirectory="INSTALLDIR"
@@ -64,14 +64,14 @@
 
               <Shortcut Id="doc_html_menu_entry" Directory="ProgramMenuDir"
                 Description="Scheme 48 HTML Documentation"
-                Name="s48h_1-4" 
+                Name="s48h_1-6" 
                 LongName="Scheme 48 1.6T HTML Documentation"
                 Target="[#doc_html_manual.html]"
                 Show="normal" />
 
               <Shortcut Id="doc_pdf_menu_entry" Directory="ProgramMenuDir"
                 Description="Scheme 48 PDF Documentation"
-                Name="s48p_1-4" 
+                Name="s48p_1-6" 
                 LongName="Scheme 48 1.6T PDF Documentation"
                 Target="[#doc_manual.pdf]"
                 Show="normal" />
@@ -96,12 +96,12 @@
             <Directory Id="include" Name="INCLUDE" LongName="include" >
               <Component Id="include_component" Guid="78c33182-df2e-11d9-817f-00111175eb9e">
                 <File Id="include_scheme48.h"
-                      Name="SCHEME48.H" LongName="scheme48.h"
+                      Name="S48.H" LongName="scheme48.h"
                       src="c/scheme48.h"
                       DiskId="1" Vital="yes" />
 
-                <File Id="include_scheme48write-barrier.h"
-                      Name="SCHEME~1.H" LongName="scheme48write-barrier.h"
+                <File Id="include_scheme48write.barrier.h"
+                      Name="S48-WB.H" LongName="scheme48write-barrier.h"
                       src="c/scheme48write-barrier.h"
                       DiskId="1" Vital="yes" />
               </Component>
@@ -118,18 +118,18 @@
                       src="build/initial.scm" Vital="yes" />
 
                 <File Id="build_build_usual_image.bat"
-                      Name="BUILD-~1.BAT" LongName="build-usual-image.bat"
+                      Name="BUILD-UI.BAT" LongName="build-usual-image.bat"
                       src="build/build-usual-image.bat"
                       DiskId="1" Vital="yes" />
 
                 <!--- install a null file so it will be deleted again by rollback and uninstall -->
                 <File Id="build_usual_image.input"
-                      Name="BUILD-~1.INP" LongName="build-usual-image.input"
+                      Name="BUILD-UI.INP" LongName="build-usual-image.input"
                       src="build/dummy"
                       DiskId="1" Vital="yes" />
 
                 <File Id="generate_go.bat"
-                      Name="GENERA~1.BAT" LongName="generate-go.bat"
+                      Name="GENERAGO.BAT" LongName="generate-go.bat"
                       src="build/generate-go.bat"
                       DiskId="1" Vital="yes" />
               </Component>
@@ -159,7 +159,7 @@
                   FileKey="generate_go.bat"
                   ExeCommand='"[INSTALLDIR]scheme48.bat" "[INSTALLDIR]scheme48vm.exe" "[INSTALLDIR]scheme48.image"'
                   Return="check" />
-    
+
     <Icon Id="scheme48.ico" src="build/scheme48.ico" />
 
     <Feature Id="Complete" Level="1"

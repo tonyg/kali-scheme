@@ -5,6 +5,7 @@
 
 ; WINDOWS-FILE_NAME-SHORT-NAME implements the algorithm described on:
 ; http://support.microsoft.com/kb/142982/EN-US/
+; (Except we use _ instead of ~.)
 ; We need this to generate an installer, among other things.
 ; The silliness of this crap makes Mike's head spin.
 
@@ -52,7 +53,7 @@
 		(string-index file-name char-set:whitespace))
 	    (let ((prefix (string-append (substring base 0
 						    (min 6 (string-length base)))
-					 "~")))
+					 "_")))
 	      (let loop ((digit 1))
 		(if (> digit 9)
 		    #f
@@ -175,6 +176,14 @@
 	(display "</Directory>" port)
 	(newline port))))
 
+(define (quote-component comp)
+  (list->string
+    (map (lambda (ch)
+           (if (char=? ch #\-)
+               #\.
+               ch))
+         (string->list comp))))
+
 ; insert separators between the components
 (define (components->string directory separator)
   (let ((id #f))
@@ -185,17 +194,20 @@
 	      directory)
     id))
 
+(define (components->quoted-string dir sep)
+  (components->string (map quote-component dir) sep))
+
 (define (directory-id directory)
-  (components->string directory "_"))
+  (components->quoted-string directory "_"))
 
 (define (file-id directory base)
-  (components->string (append directory (list base)) "_"))
+  (components->quoted-string (append directory (list base)) "_"))
 
 (define (file-src directory base)
   (components->string (append directory (list base)) "/"))
 
 (define (component-id directory)
-  (components->string (append directory (list "component")) "_"))
+  (components->quoted-string (append directory (list "component")) "_"))
 
 (define (write-file-element port directory base-name used-file-names)
   (display "<File Id=\"" port)
