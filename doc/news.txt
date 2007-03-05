@@ -2,7 +2,7 @@
 
 Recent changes to Scheme 48.
 
-03/05/07 (version 1.6)
+03/09/07 (version 1.6)
 	 Additions:
 	  An autogen.sh script for generating the various generated
 	   files from source was added.
@@ -25,6 +25,11 @@ Recent changes to Scheme 48.
 	  Bugs related to the conversion between OS strings and
 	   strings on command-line handling were fixed.	 (reported by
 	   Andreas Rottmann)
+	  Compilation using gcc now uses the -munaligned-doubles flag
+	   where available, which is needed on SPARCs to make
+	   floating-point arithmetic work.
+	  Compilation older versions Cygwin that don't have langinfo.h
+	   should be fixed.
 
 01/12/07 (version 1.5)
 	 Additions:
