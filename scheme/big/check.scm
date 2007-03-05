@@ -342,8 +342,7 @@
 
 (define-test-case sockets misc-big-tests
   (check
-   (let ((server (open-socket))
-	 (name (get-host-name)))
+   (let ((server (open-socket)))
      (spawn (lambda ()
 	      (let loop ((i 100))
 		(if (= i 400)
@@ -362,7 +361,7 @@
 	   result
 	   (call-with-values
 	       (lambda ()
-		 (socket-client name (socket-port-number server)))
+		 (socket-client "localhost" (socket-port-number server)))
 	     (lambda (in out)
 	       (write i out)
 	       (write-char #\space out)
