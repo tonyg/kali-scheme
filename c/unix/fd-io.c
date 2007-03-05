@@ -11,7 +11,6 @@
 #include <errno.h>              /* for errno, (POSIX?/ANSI) */
 #include <string.h>		/* FD_ZERO sometimes needs this */
 #include <locale.h>		/* ISO C99 */
-#include <langinfo.h>		/* SUSv2 */
 #include "sysdep.h"
 #include "c-mods.h"
 #include "scheme48vm.h"
