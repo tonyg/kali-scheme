@@ -243,8 +243,10 @@
 	;; (specifically, if the user is member of wheel)
 	;; (check (not (group-id=? (file-info-group root-info)
 	;;		(group-info-id my-group))))
-	(check (os-string->string (user-info-name root-user))
-	       => "root")))))
+	(check (member (os-string->string (user-info-name root-user))
+		       '("root"
+			 "bin" ; AIX
+			 )))))))
 
 (define-test-case environment posix-core-tests
   (let ((env (reverse (environment-alist))))
