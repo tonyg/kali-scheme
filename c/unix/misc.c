@@ -9,7 +9,6 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <locale.h>		/* ISO C99 */
-#include <langinfo.h>		/* SUSv2 */
 #include "sysdep.h"
 #include "c-mods.h"
 
