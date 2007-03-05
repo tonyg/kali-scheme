@@ -5,8 +5,6 @@
 
 #include "sysdep.h"
 
-#if	defined(HAVE_LANGINFO_H)
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -21,5 +19,3 @@ nl_langinfo(nl_item item)
       exit(-1);
     }
 }
-
-#endif

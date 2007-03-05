@@ -112,8 +112,7 @@ LIBSCHEME48 = c/libscheme48.a
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
 OBJS =	c/scheme48vm.o \
 	c/extension.o c/free.o c/double_to_string.o \
-	c/external.o c/external-lib.o c/bignum.o c/init.o \
-	c/fake/langinfo.o
+	c/external.o c/external-lib.o c/bignum.o c/init.o
 
 FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
 		c/fake/sys-select.h c/fake/langinfo.h

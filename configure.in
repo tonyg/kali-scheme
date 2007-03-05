@@ -217,6 +217,7 @@ AC_INIT(c/prescheme.h)
      AC_CHECK_HEADERS(sys/select.h)
      AC_CHECK_HEADERS(sysexits.h)
      AC_CHECK_HEADERS(langinfo.h)
+     AC_CHECK_FUNC(nl_langinfo, [], [AC_LIBOBJ([c/fake/langinfo])])
      AC_CHECK_FUNCS(gettimeofday ftime nlist select setitimer sigaction)
      AC_CHECK_FUNC(dlopen, [AC_DEFINE(HAVE_DLOPEN, 
 				1, [Define to 1 if the interface to the dynamic linker exists])],
