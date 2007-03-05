@@ -1,6 +1,22 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
 dnl
+define(S48_MISALIGNED_DOUBLES, [dnl
+	if test "$GCC" = "yes"; then
+		AC_MSG_CHECKING([-munaligned-doubles])
+		oldCFLAGS="$CFLAGS"
+		CFLAGS="$CFLAGS -munaligned-doubles"
+		AC_TRY_RUN([int main() { return 0;}],
+			[AC_MSG_RESULT(yes)],
+			[AC_MSG_RESULT(no)
+				CFLAGS="$oldCFLAGS"],
+			[AC_MSG_RESULT(no)
+				CFLAGS="$oldCFLAGS"])
+	fi
+])dnl
+dnl
+dnl
+dnl
 define(S48_ENABLE_UNIVERSAL_BINARY, [dnl
 AC_MSG_CHECKING([whether we are building a Universal Binary])
 dnl
@@ -245,6 +261,7 @@ fail
 		AC_DEFINE(HAVE_SIGACTION)
 		AC_MSG_RESULT([yes]),
 		AC_MSG_RESULT([no]))
+     S48_MISALIGNED_DOUBLES
      S48_IEEE_ENDIANNESS
      S48_NATIVE_CODE
      AC_SUBST(CFLAGS)
