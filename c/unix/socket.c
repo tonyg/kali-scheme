@@ -113,7 +113,7 @@ s48_socket(s48_value udp_p, s48_value input_p)
   s48_value	channel;
   int on = 1;
 
-  RETRY_OR_RAISE_NEG(fd, socket(AF_INET,
+  RETRY_OR_RAISE_NEG(fd, socket(PF_INET,
 				(udp_p == S48_FALSE) ?
 				  SOCK_STREAM :
 				  SOCK_DGRAM,
