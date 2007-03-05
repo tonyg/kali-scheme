@@ -53,3 +53,4 @@
 #include "fake/sys-select.h"
 #include "fake/environ.h"
 #include "fake/sysexits.h"
+#include "fake/langinfo.h"
