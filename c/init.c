@@ -37,8 +37,6 @@ extern long s48_get_file_size(unsigned char *);
 extern void	s48_sysdep_init(void);
 extern void	s48_initialize_external_modules(void);
 
-char *s48_object_file;   /* specified via a command line argument */
-
 int
 s48_main(int argc, char *argv[])
 {
@@ -67,8 +65,6 @@ s48_main(int argc, char *argv[])
     s48_free_init();
   }
 
-  s48_object_file = NULL;
-
   argv++; argc--;		/* Skip program name. */
 
   for (; argc > 0; argc--, argv++)
@@ -96,11 +92,6 @@ s48_main(int argc, char *argv[])
 	vm_argc = argc;    /* remaining args are passed to the VM */
 	argc = 0;
 	break;
-      case 'o':
-        argc--; argv++;
-	if (argc == 0) { errors++; break; }
-        s48_object_file = *argv;
-	break;
       default:
 	fprintf(stderr, "Invalid argument: %s\n", *argv);
 	errors++;
@@ -114,8 +105,7 @@ s48_main(int argc, char *argv[])
 "Usage: %s [options] [-a arguments]\n\
 Options: -h <heap-size>    %s heap size in words (default %d).%s\n\
 	 -s <stack-size>   Stack buffer size in words.\n\
-         -i <file>         Load image from file (default \"%s\")\n\
-         -o <file>         Object file.\n",
+         -i <file>         Load image from file (default \"%s\")\n",
 	    me,
 #if S48_GC_BIBOP
 	    "Maximum",
