@@ -71,6 +71,7 @@ typedef struct {
       HANDLE handle;
       DWORD current_offset;
       DWORD current_offset_high;
+      psbool eof; /* readers only */
     } file_regular_data;
 
     struct {
@@ -195,7 +196,8 @@ initialize_stream_descriptor(stream_descriptor_t* stream_descriptor,
     {
     case STREAM_FILE_REGULAR:
       stream_descriptor->file_regular_data.current_offset_high = 0;
-	  stream_descriptor->file_regular_data.current_offset = 0;
+      stream_descriptor->file_regular_data.current_offset = 0;
+      stream_descriptor->file_regular_data.eof = PSFALSE;
       break;
     }
 
@@ -628,6 +630,8 @@ read_done(DWORD dwErr,
     {
       stream_descriptor->file_regular_data.current_offset += bytes_read;
       /* #### need to do offset_high as well */
+      stream_descriptor->file_regular_data.eof 
+	= ((dwErr == ERROR_HANDLE_EOF) ? PSTRUE : PSFALSE);
     }
 
   if (callback_data->checking) /* ps_check_fd */
@@ -635,7 +639,7 @@ read_done(DWORD dwErr,
     
   if (s48_is_pending(fd))
     {
-      if (dwErr != 0)
+      if ((dwErr != 0) && (dwErr != ERROR_HANDLE_EOF))
 	s48_add_ready_fd(fd, PSTRUE, PSTRUE, dwErr);
       else
 	s48_add_ready_fd(fd, PSTRUE, PSFALSE, (long)0); /* *not* bytes_read */
@@ -848,6 +852,12 @@ ps_read_fd(long fd, char *buffer, long max, psbool waitp,
     case STREAM_FILE_REGULAR:
       {
 	HANDLE handle = stream_descriptor->file_regular_data.handle;
+
+	if (stream_descriptor->file_regular_data.eof)
+	  {
+	    *eofp = PSTRUE;
+	    return 0;
+	  }
 	
 	/* There's nothing in the buffer---need to do an actual read. */
 	maybe_grow_callback_data_buffer(callback_data, (size_t)max);
