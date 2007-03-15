@@ -71,7 +71,7 @@ build\build-usual-image.bat
 
   Example (supposing the Scheme 48 root directory sits at c:\scheme48)
 
-  build\build-usual-image ".\" "C:\Program Files\Scheme 48\Scheme 48 1.3\scheme" scheme48vm.exe sche build\initial.image
+  build\build-usual-image ".\" "C:\Program Files\Scheme 48\Scheme 48 1.3\scheme" scheme48.image scheme48vm.exe build\initial.image
 
 build\build-initial-image.bat
   This builds build\initial.image from source.
