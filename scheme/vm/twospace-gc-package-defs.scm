@@ -17,10 +17,15 @@
 
 	  in-trouble?))
 
+; for the native-code compiler
+(define-interface heap-two-space-native-code-interface
+  (export s48-*hp* s48-*limit*))
+
 (define-structures ((heap heap-interface)
 		    (heap-gc-util heap-gc-util-interface)
 		    (heap-init heap-init-interface)
-		    (heap-two-space heap-two-space-interface))
+		    (heap-two-space heap-two-space-interface)
+		    (heap-two-space-native-code heap-two-space-native-code-interface))
   (open prescheme ps-receive vm-utilities vm-architecture memory data
 	ps-memory
 	debugging)
