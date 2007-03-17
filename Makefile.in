@@ -414,7 +414,7 @@ inst-script:
 	echo '#!/bin/sh'	>$$script &&				\
 	echo			>>$$script &&				\
 	echo 'lib=$(LIB)'	>>$$script &&				\
-	echo 'exec $$lib/$(VM) -o $$lib/$(VM) -i $$lib/$(IMAGE) "$$@"'	\
+	echo 'exec $$lib/$(VM) -i $$lib/$(IMAGE) "$$@"'	\
 				>>$$script &&				\
 	chmod +x $$script
 
