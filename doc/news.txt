@@ -2,7 +2,7 @@
 
 Recent changes to Scheme 48.
 
-03/09/07 (version 1.6)
+03/19/07 (version 1.6)
 	 Additions:
 	  An autogen.sh script for generating the various generated
 	   files from source was added.
@@ -30,6 +30,8 @@ Recent changes to Scheme 48.
 	   floating-point arithmetic work.
 	  Compilation older versions Cygwin that don't have langinfo.h
 	   should be fixed.
+	  Some problems with installing and running on Windows Vista
+	   were fixed.  (thanks to Axel T. Schreiner)
 
 01/12/07 (version 1.5)
 	 Additions:
