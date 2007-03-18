@@ -152,12 +152,14 @@
     <CustomAction Id="build_usual_image"
                   Directory="INSTALLDIR"
                   ExeCommand='[SystemFolder]cmd.exe /v:off /c build\build-usual-image.bat "[INSTALLDIR]" "[INSTALLDIR]scheme" "[INSTALLDIR]scheme48.image" "[INSTALLDIR]scheme48vm.exe" "[INSTALLDIR]build\initial.image"'
+		  Execute="deferred" Impersonate="no"
                   Return="check" />
 
     <!-- declare generation of front end -->
     <CustomAction Id="generate_go"
                   FileKey="generate_go.bat"
                   ExeCommand='"[INSTALLDIR]scheme48.bat" "[INSTALLDIR]scheme48vm.exe" "[INSTALLDIR]scheme48.image"'
+		  Execute="deferred" Impersonate="no"
                   Return="check" />
 
     <Icon Id="scheme48.ico" src="build/scheme48.ico" />
@@ -186,10 +188,10 @@
 
     <!-- schedule the building of scheme48.image -->
     <InstallExecuteSequence>
-      <Custom Action="build_usual_image" After="InstallFinalize">
+      <Custom Action="build_usual_image" Before="InstallFinalize">
         <![CDATA[(NOT Installed) OR (INSTALLMODE = "Repair")]]>
        </Custom>
-      <Custom Action="generate_go" After="InstallFinalize">
+      <Custom Action="generate_go" Before="InstallFinalize">
         <![CDATA[(NOT Installed) OR (INSTALLMODE = "Repair")]]>
       </Custom>
     </InstallExecuteSequence>
