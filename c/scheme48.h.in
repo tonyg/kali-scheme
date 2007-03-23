@@ -50,7 +50,6 @@ S48_EXTERN char *	s48_register_gc_rootB(char *);
 S48_EXTERN void		s48_unregister_gc_rootB(char *);
 S48_EXTERN void		s48_push_gc_rootsB(char *, long);
 S48_EXTERN char		s48_pop_gc_rootsB(void);
-S48_EXTERN char		s48_pop_gc_roots_up_to_markerB(char *);
 
 S48_EXTERN s48_value	s48_make_string(int, long);
 S48_EXTERN void		s48_string_set(s48_value s, long i, long c);
