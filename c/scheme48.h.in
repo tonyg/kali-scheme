@@ -232,14 +232,6 @@ S48_EXTERN void s48_raise_os_error(int the_errno);
 S48_EXTERN void s48_raise_string_os_error(char *reason);
 S48_EXTERN void s48_raise_out_of_memory_error();
 
-/* Old names retained for compatibility; use the versions with 'ument_'
-   after the '_arg'. */
-
-S48_EXTERN void s48_raise_argument_type_error(s48_value value);
-S48_EXTERN void s48_raise_argument_number_error(s48_value value,
-						s48_value min,
-						s48_value max);
-
 /* Type checking */
 
 #define S48_CHECK_PAIR(v) do { if (!S48_PAIR_P(v)) s48_raise_argument_type_error(v); } while (0)
@@ -261,8 +253,6 @@ S48_EXTERN void s48_raise_argument_number_error(s48_value value,
 #define S48_FALSE_P(v) ((v) == S48_FALSE)
 #define S48_EXTRACT_BOOLEAN(v) ((v) != S48_FALSE)
 #define S48_ENTER_BOOLEAN(v) ((v) ? S48_TRUE : S48_FALSE)
-
-S48_EXTERN void s48_check_record_type(s48_value record, s48_value type_binding);
 
 #define S48_SHARED_BINDING_CHECK(binding)					\
   do { if (S48_UNSPECIFIC == S48_SHARED_BINDING_REF(binding))		\

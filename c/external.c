@@ -506,23 +506,8 @@ s48_raise_argument_type_error(s48_value value) {
   s48_raise_scheme_exception(S48_EXCEPTION_WRONG_TYPE_ARGUMENT, 1, value);
 }
 
-/* Superceded name for preceding function, retained for compatibility. */
-
-void
-s48_raise_argtype_error(s48_value value) {
-  s48_raise_scheme_exception(S48_EXCEPTION_WRONG_TYPE_ARGUMENT, 1, value);
-}
-
 void
 s48_raise_argument_number_error(s48_value value, s48_value min, s48_value max) {
-  s48_raise_scheme_exception(S48_EXCEPTION_WRONG_NUMBER_OF_ARGUMENTS,
-			     3, value, min, max);
-}
-
-/* Superceded name for preceding function, retained for compatibility. */
-
-void
-s48_raise_argnumber_error(s48_value value, s48_value min, s48_value max) {
   s48_raise_scheme_exception(S48_EXCEPTION_WRONG_NUMBER_OF_ARGUMENTS,
 			     3, value, min, max);
 }
