@@ -1,0 +1,52 @@
+#! /usr/bin/env scheme-srfi-7
+
+(program
+  (requires srfi-37) ; args-fold
+  (code
+   (define (main args)
+     (call-with-current-continuation
+      (lambda (exit)
+
+	(define maybe-space
+	  (let ((first? #t))
+	    (lambda ()
+	      (if first?
+		  (set! first? #f)
+		  (write-char #\space)))))
+
+	(let ((options
+	       (list (option '(#\? #\h "help") #f #f
+			     (lambda (option name arg . stuff)
+			       (display "usage: ")
+			       (display (car args))
+			       (display " [--ld] [--cc] [--libs-external] [--cflags-external]")
+			       (newline)))
+		     (option '("ld") #f #f
+			     (lambda (option name arg . stuff)
+			       (maybe-space)
+			       (display "@LD@")))
+		     (option '("cc") #f #f
+			     (lambda (option name arg . stuff)
+			       (maybe-space)
+			       (display "@CC@")))
+		     (option '("libs-external") #f #f
+			     (lambda (option name arg . stuff)
+			       (maybe-space)
+			       (display "@DYNAMIC_EXTERNALS_LDFLAGS@")))
+		     (option '("cflags-external") #f #f
+			     (lambda (option name arg . stuff)
+			       (maybe-space)
+			       (display "@DYNAMIC_EXTERNALS_CFLAGS@")
+			       (display " -I@incdir@"))))))
+	  (args-fold (cdr args) options
+		     (lambda (option name arg . stuff)
+		       (display "unrecognized option: ")
+		       (display name)
+		       (newline)
+		       (exit -1))
+		    (lambda (operand . stuff)
+		      (display "extra command-line argument: ")
+		      (display operand)
+		      (newline)
+		      (exit -1))))))
+     0)))

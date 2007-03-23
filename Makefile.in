@@ -7,6 +7,7 @@ SHELL = /bin/sh
 srcdir = @srcdir@
 VPATH = @srcdir@
 CC = @CC@
+LD = @LD@
 DEFS = @DEFS@ -D__COMPILING_SCHEME48_ITSELF__
 LIBS = @LIBS@
 CFLAGS = @CFLAGS@
@@ -16,6 +17,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
 
 LDFLAGS = @LDFLAGS@
+LDFLAGS_VM = @LDFLAGS_VM@
 LIBOBJS = @LIBOBJS@
 
 GC_OBJS = @GC_OBJS@
@@ -34,6 +36,9 @@ incdir = $(exec_prefix)/include
 manext = 1
 mandir = $(prefix)/man/man$(manext)
 
+DYNAMIC_EXTERNALS_CFLAGS=@DYNAMIC_EXTERNALS_CFLAGS@
+DYNAMIC_EXTERNALS_LDFLAGS=@DYNAMIC_EXTERNALS_LDFLAGS@
+
 # HP 9000 series, if you don't have gcc
 #   CC = cc
 #   CFLAGS = -Aa -O +Obb1800
@@ -47,6 +52,7 @@ mandir = $(prefix)/man/man$(manext)
 
 # You might want to change RUNNABLE to "s48"
 RUNNABLE = scheme48
+CONFIG_SCRIPT = scheme48-config
 MANPAGE = $(RUNNABLE).$(manext)
 LIB = $(libdir)/$(RUNNABLE)
 
@@ -291,11 +297,11 @@ SRFI_INITIALIZERS = s48_init_srfi_27
 # End of external rules
 # --------------------
 
-$(VM): c/main.o $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
+$(VM): c/main.o $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS) c/scheme48.exp
 	rm -f /tmp/s48_external_$$$$.c &&				\
 	$(srcdir)/build/build-external-modules /tmp/s48_external_$$$$.c	\
 		$(EXTERNAL_INITIALIZERS) &&				\
-	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/main.o 			\
+	$(CC) $(LDFLAGS) $(LDFLAGS_VM) $(CFLAGS) -o $@ c/main.o		\
 		$(OBJS) $(GC_OBJS) $(UNIX_OBJS)				\
 		/tmp/s48_external_$$$$.c				\
 		$(LIBOBJS) $(LIBS)					\
@@ -372,7 +378,7 @@ $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 
 install: enough dirs \
 	 inst-script inst-vm inst-misc inst-man inst-inc inst-image \
-	 inst-script-interpreters
+	 inst-script-interpreters inst-config-script
 
 inst-vm:
 	$(INSTALL_PROGRAM) $(VM) $(LIB)
@@ -392,11 +398,13 @@ inst-man:
 	$(INSTALL_DATA) $(MANPAGE) $(mandir) &&			   \
 	rm $(MANPAGE);						   \
 
-inst-inc:
+inst-inc: c/scheme48.exp
 	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(incdir)
 	$(INSTALL_DATA) c/scheme48write-barrier.h $(incdir)
 	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier-twospace.h $(incdir)
 	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier-bibop.h $(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48.exp $(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48-external.exp $(incdir)
 
 inst-misc:
 	for stub in env big sort opt misc link posix cml srfi; do	\
@@ -423,6 +431,17 @@ inst-script-interpreters:
 		$(INSTALL_PROGRAM) script-interpreter $(bindir)/scheme-$$dialect; \
 	done
 
+inst-config-script:
+	config_script=$(bindir)/$(CONFIG_SCRIPT) &&			\
+	sed -e 's,@incdir\@,$(incdir),g'				\
+	    -e 's,@libdir\@,$(libdir),g'				\
+	    -e 's,@CC\@,$(CC),g'					\
+	    -e 's,@LD\@,$(LD),g'					\
+	    -e 's,@DYNAMIC_EXTERNALS_CFLAGS\@,$(DYNAMIC_EXTERNALS_CFLAGS),g' \
+	    -e 's,@DYNAMIC_EXTERNALS_LDFLAGS\@,$(DYNAMIC_EXTERNALS_LDFLAGS),g' \
+	< $(srcdir)/build/$(CONFIG_SCRIPT).in > $$config_script &&		\
+	chmod +x $$config_script
+
 # Script to run scheme48 in this directory.
 go:
 	echo '#!/bin/sh'	>$@ &&					\
@@ -431,6 +450,12 @@ go:
 	echo 'exec "$$lib"/$(VM) -i "$$lib"/$(IMAGE) "$$@"'		\
 				>>$@ &&					\
 	chmod +x $@
+
+# Exports file for AIX
+
+c/scheme48.exp: c/scheme48.h
+	echo '#!..' > $(srcdir)/c/scheme48.exp &&			\
+	egrep ^S48_EXTERN $(srcdir)/c/scheme48.h | sed 's,^S48_EXTERN.*\(s48_[a-zA-Z0-9_]*\)(.*$$,\1,' >> $(srcdir)/c/scheme48.exp
 
 dirs:
 	for dir in $(libdir) $(bindir) $(incdir); do			 \

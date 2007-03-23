@@ -1,22 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
 dnl
-define(S48_MISALIGNED_DOUBLES, [dnl
-	if test "$GCC" = "yes"; then
-		AC_MSG_CHECKING([-munaligned-doubles])
-		oldCFLAGS="$CFLAGS"
-		CFLAGS="$CFLAGS -munaligned-doubles"
-		AC_TRY_RUN([int main() { return 0;}],
-			[AC_MSG_RESULT(yes)],
-			[AC_MSG_RESULT(no)
-				CFLAGS="$oldCFLAGS"],
-			[AC_MSG_RESULT(no)
-				CFLAGS="$oldCFLAGS"])
-	fi
-])dnl
-dnl
-dnl
-dnl
 define(S48_ENABLE_UNIVERSAL_BINARY, [dnl
 AC_MSG_CHECKING([whether we are building a Universal Binary])
 dnl
@@ -78,6 +62,33 @@ define(S48_PROG_CC, [dnl
 			CFLAGS='-O2'
 		fi
 	fi
+])dnl
+dnl
+dnl -rdynamic is needed for loading external code
+define(S48_LDFLAGS, [dnl
+	AC_MSG_CHECKING([-rdynamic])
+	oldLDFLAGS="$LDFLAGS"
+	LDFLAGS="$LDFLAGS -rdynamic"
+	AC_TRY_RUN([int main() { return 0;}],
+		[AC_MSG_RESULT(yes)],
+		[AC_MSG_RESULT(no)
+			LDFLAGS="$oldLDFLAGS"],
+		[AC_MSG_RESULT(no)
+			LDFLAGS="$oldLDFLAGS"])
+	AC_MSG_CHECKING([LDFLAGS_VM])
+	case "$host_os" in
+		aix* )
+ 			if test "$GCC" = "yes"; then
+				LDFLAGS_VM="-Xlinker -brtl -Xlinker -bE:$srcdir/c/scheme48.exp"
+			else
+				LDFLAGS_VM="-brtl -bE:$srcdir/c/scheme48.exp"
+			fi
+		;;
+		* )
+			LDFLAGS_VM=
+		;;
+	esac
+ 	AC_MSG_RESULT([$LDFLAGS_VM])
 ])dnl
 dnl
 define(S48_INLINE, [dnl
@@ -173,13 +184,69 @@ define(S48_NATIVE_CODE, [dnl
         esac
 ])dnl
 dnl
+dnl
+dnl
+define(S48_DYNAMIC_EXTERNALS, [dnl
+	dnl
+	AC_CHECK_PROGS([LD], [ld cc gcc])
+	AC_MSG_CHECKING([compile and link flags for dynamic externals])
+	case "$host_os" in
+		hpux* )
+			dnl +z means position-independent code
+			DYNAMIC_EXTERNALS_CFLAGS='+z -D_HPUX_SOURCE'
+			DYNAMIC_EXTERNALS_LDFLAGS='-b'
+		;;
+		aix* )
+			DYNAMIC_EXTERNALS_CFLAGS=''
+			dnl -bM:SRE means shared object
+			dnl -brtl means run-time linking is enabled
+			dnl -bnoentry means no default entry point
+			DYNAMIC_EXTERNALS_LDFLAGS='-bM:SRE -brtl -bI:\$(incdir)/scheme48.exp -bnoentry -bE:\$(incdir)/scheme48-external.exp -lc'
+		;;
+		darwin*|macosx* )
+			DYNAMIC_EXTERNALS_CFLAGS='-fPIC -fno-common'
+			DYNAMIC_EXTERNALS_LDFLAGS='-bundle -flat_namespace -undefined suppress'
+		;;
+		solaris* )
+			DYNAMIC_EXTERNALS_CFLAGS='-fPIC'
+			dnl -G means shared object
+			DYNAMIC_EXTERNALS_LDFLAGS='-G'
+		;;
+		* )
+			DYNAMIC_EXTERNALS_CFLAGS='-fPIC'
+			DYNAMIC_EXTERNALS_LDFLAGS='-shared'
+		;;
+	esac
+	AC_MSG_RESULT([$DYNAMIC_EXTERNALS_CFLAGS, $DYNAMIC_EXTERNALS_LDFLAGS])
+])dnl
+dnl
+dnl must run after S48_DYNAMIC_EXTERNALS
+define(S48_MISALIGNED_DOUBLES, [dnl
+	if test "$GCC" = "yes"; then
+		AC_MSG_CHECKING([-munaligned-doubles])
+		oldCFLAGS="$CFLAGS"
+		CFLAGS="$CFLAGS -munaligned-doubles"
+		AC_TRY_RUN([int main() { return 0;}],
+			[AC_MSG_RESULT(yes)
+				DYNAMIC_EXTERNALS_CFLAGS="$DYNAMIC_EXTERNALS_CFLAGS -munaligned-doubles"],
+			[AC_MSG_RESULT(no)
+				CFLAGS="$oldCFLAGS"],
+			[AC_MSG_RESULT(no)
+				CFLAGS="$oldCFLAGS"])
+	fi
+])dnl
+dnl
+dnl
+dnl
 AC_INIT(c/prescheme.h)
      AC_CONFIG_HEADER(c/sysdep.h)
      AC_CONFIG_HEADER(c/scheme48write-barrier.h)
+     AC_CANONICAL_HOST
      S48_PICK_GC
      S48_ENABLE_UNIVERSAL_BINARY
      S48_CREATE_BUILD_DIRS
      S48_PROG_CC
+     S48_LDFLAGS
      AC_ISC_POSIX
      dnl set the cross-compile flag before we try anything.
      AC_TRY_RUN([int main() { return 0;}], [], [], [true])
@@ -263,11 +330,16 @@ fail
 		AC_DEFINE(HAVE_SIGACTION)
 		AC_MSG_RESULT([yes]),
 		AC_MSG_RESULT([no]))
-     S48_MISALIGNED_DOUBLES
      S48_IEEE_ENDIANNESS
      S48_NATIVE_CODE
+     S48_DYNAMIC_EXTERNALS
+     S48_MISALIGNED_DOUBLES
      AC_SUBST(CFLAGS)
      AC_SUBST(LDFLAGS)
+     AC_SUBST(LD)
+     AC_SUBST(LDFLAGS_VM)
+     AC_SUBST(DYNAMIC_EXTERNALS_CFLAGS)
+     AC_SUBST(DYNAMIC_EXTERNALS_LDFLAGS)
      AC_SUBST(GC_OBJS)
      AC_SUBST(ASM_OBJECTS)
      AC_SUBST(ASM_STYLE)
