@@ -48,21 +48,6 @@ if test -f /usr/posix/usr/lib/libc.a; then
 fi
 ])dnl
 dnl
-dnl Run AC_PROG_CC, but don't accept it's changes to CFLAGS.
-dnl For some insane reason, it sets CFLAGS to either `-O' or `-g -O' for gcc.
-dnl I don't want the silly -g (because if you are using nlist, you can't strip
-dnl the binary), I want -O2 for gcc and -O for other C compilers.
-define(S48_PROG_CC, [dnl
-	oldCFLAGS="$CFLAGS"
-	AC_PROG_CC
-	if test "z$oldCFLAGS" = z; then
-		if test "z$GCC" = z; then
-			CFLAGS='-O'
-		else
-			CFLAGS='-O2'
-		fi
-	fi
-])dnl
 dnl
 dnl -rdynamic is needed for loading external code
 define(S48_LDFLAGS, [dnl
@@ -259,8 +244,6 @@ AC_INIT(c/prescheme.h)
      AC_CHECK_LIB(gen, main)
      AC_CHECK_LIB(socket, main)
      AC_CHECK_LIB(sun, getpwnam)
-     dnl Solaris 2.3 seems to need -lelf for nlist().  (tnx Bryan O'Sullivan)
-     AC_CHECK_LIB(elf, main)
      S48_POSIX_LIBC
      AC_CONST
      AC_MSG_CHECKING(for socklen_t)
@@ -285,11 +268,9 @@ AC_INIT(c/prescheme.h)
      AC_CHECK_HEADERS(sysexits.h)
      AC_CHECK_HEADERS(langinfo.h)
      AC_CHECK_FUNC(nl_langinfo, [], [AC_LIBOBJ([c/fake/langinfo])])
-     AC_CHECK_FUNCS(gettimeofday ftime nlist select setitimer sigaction)
+     AC_CHECK_FUNCS(gettimeofday ftime select setitimer sigaction)
      AC_CHECK_FUNC(dlopen, [AC_DEFINE(HAVE_DLOPEN, 
-				1, [Define to 1 if the interface to the dynamic linker exists])],
-			   [AC_CHECK_FUNC(nlist, [AC_LIBOBJ([c/fake/libdl1])],
-	       					 [AC_LIBOBJ([c/fake/libdl2])])])
+				1, [Define to 1 if the interface to the dynamic linker exists])])
      AC_CHECK_FUNCS(socket chroot)
      AC_CHECK_FUNC(strerror, AC_DEFINE(HAVE_STRERROR),
 			      [AC_LIBOBJ([c/fake/strerror.o])])
