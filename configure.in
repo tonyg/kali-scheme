@@ -230,7 +230,6 @@ AC_INIT(c/prescheme.h)
      S48_PICK_GC
      S48_ENABLE_UNIVERSAL_BINARY
      S48_CREATE_BUILD_DIRS
-     S48_PROG_CC
      S48_LDFLAGS
      AC_ISC_POSIX
      dnl set the cross-compile flag before we try anything.
