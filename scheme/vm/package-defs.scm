@@ -335,14 +335,15 @@
 	  decode 
 	  decode-space-multiplier)
   (open prescheme ps-receive
+	vm-utilities ;; debug
 	vm-architecture 
 	memory 
 	data 
 	stob 
-	;allocation ; chnx takeout !try!
+	allocation 
 	enum-case
-	heap
-	;heap-internal ; chnx takeout !try!
+	heap ;(s48-available?))          ; chnx takeout !try!
+	heap-internal ; chnx takeout !try!
 	struct)
   (files (interp transmit)))
 
