@@ -55,8 +55,12 @@
     (enum-case message-type (car message)
       ((run)
        (spawn (lambda ()
-		(apply (car data)
-		       (cdr data)))))
+		(with-except-handler
+		 (lambda (c)
+		   'ignored-remote-run-error)
+		 (lambda ()
+		   (apply (car data)
+			  (cdr data)))))))
       ((uid-request)
        ;(debug-message "[uid request]")
        (send-admin-message (enum message-type uid-reply)
@@ -99,15 +103,49 @@
 		    aspace)))
 
 (define (remote-apply aspace proc . args)
-  (if (eq? aspace (local-address-space))
-      (apply proc args)
-      (let* ((placeholder (make-placeholder))
-	     (proxy (make-proxy placeholder)))
-	(remote-run! aspace
-	  (lambda ()
-	    (remote-run! (proxy-data-owner (proxy-data proxy))
-	       (lambda (value)
-		 (placeholder-set! (proxy-local-ref proxy)
-				   value))
-	       (apply proc args))))
-	(placeholder-value placeholder))))
+  (with-except-handler
+   (lambda (c)
+     (raise c))
+   (lambda ()
+     (if (eq? aspace (local-address-space))
+	 (apply proc args)
+	 (let* ((placeholder (make-placeholder))
+		(proxy (make-proxy placeholder)))
+	   (remote-run! aspace
+			(lambda ()
+			  (let ((other-aspace (proxy-data-owner (proxy-data proxy))))
+			    (with-except-handler
+			     (lambda (c)
+			       (let ((local-aspace (local-address-space)))
+				 (remote-run! other-aspace
+					      (lambda ()
+						(placeholder-set! 
+						 (proxy-local-ref proxy)
+						 (list #f 
+						       local-aspace
+						       proc
+						       args
+						       c))))))
+			     (lambda ()
+			       (let ((result (call-with-values
+						 (lambda ()
+						   (apply proc args))
+					       (lambda values
+						 (if (null? values)
+						     (list (unspecific))
+						     values)))))
+				 (remote-run! other-aspace
+					      (lambda (value)
+						(placeholder-set! (proxy-local-ref proxy)
+								  (cons #t value)))
+					      result)))))))
+	   (let* ((pair (placeholder-value placeholder))
+		  (all-right? (car pair))
+		  (result (cdr pair)))
+	     (if all-right?
+		 (apply values result)
+		 (raise (make-condition &kali-remote-apply-error
+					'aspace (car result)
+					'procedure (cadr result)
+					'arguments (caddr result)
+					'condition (cadddr result))))))))))

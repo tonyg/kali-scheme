@@ -1,3 +1,20 @@
+(define-interface kali-conditions-interface  
+  (export (with-continuation-handler :syntax)
+	  (with-except-handler :syntax)
+	  &kali-error kali-reader-error?
+	  &kali-reader-error              kali-reader-error?
+	  &kali-reader-eof-error          kali-reader-eof-error?
+	  &kali-reader-insufficient-error kali-reader-insufficient-error?
+	  &kali-remote-error              kali-remote-error?
+	  &kali-remote-apply-error        kali-remote-apply-error?))
+
+(define-structure kali-conditions kali-conditions-interface
+  (open scheme
+	srfi-34
+	srfi-35)
+  (files kali-conditions))
+
+;; =======================================================================
 
 (define-interface address-space-interface
   (export address-space?
@@ -144,7 +161,10 @@
   (open scheme
 	connect message-types uid-requests
 	proxy-count-requests
-	signals				; warn
+	(subset signals	(warn))
+	(subset primitives (unspecific))
+	srfi-34 srfi-35  ;; error handling
+	kali-conditions  ;; error handling
 	address-spaces
 	enumerated enum-case
 	threads	threads-internal
