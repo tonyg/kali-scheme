@@ -130,6 +130,7 @@
 		    (begin
 		      (spawn 
 		       (lambda () 
+			 (debug-message "calculate-mandel - spawned cal-res " i)
 			 (let ((calculate-res (remote-apply (list-ref aspaces i)
 						calculate-mandel 
 						(list-ref mandel-pieces
@@ -137,13 +138,15 @@
 						iter-limit
 						aspaces
 						(- divide 1))))
-			   (debug-message "calculate-mandel - got calculate-res - going to set!")
+			   (debug-message "calculate-mandel - got calculate-res - going to set! " i)
 			   (placeholder-set! (list-ref field-placeholders i)
 					     calculate-res))))
 		      (loop (+ i 1)))))
 	      (debug-message "calculate-mandel - going to combine")
 	      (apply combine (map (lambda (ph)
-				    (placeholder-value ph))
+				    (let ((phv (placeholder-value ph)))
+				      (debug-message "got phv")
+				      phv))
 				  field-placeholders))))))))
 
 ;; walk the pixel-field an fill it with colour-indices 
