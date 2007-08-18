@@ -4,7 +4,7 @@
 (define (endecode-id val aspace)
   (call-with-values
       (lambda ()
-	(encode (cons val '())
+	(encode val ;(cons val '())
 		aspace))
     (lambda (bytes need-counts)
       (if (not (null? need-counts))
@@ -17,7 +17,7 @@
 		     (for-each return-counts (adjust-proxy-counts! bad-count-proxies)))
 		    ((not (null? missing-uids))
 		     (error "endecode-id: missing uids! That can't be true"))
-		    (else (car val)))))))))
+		    (else val)))))))) ;(car val)))))))))
 
 (define (u8cdr bv)
   (list->u8vector 
@@ -260,3 +260,45 @@ that i can't stop writing, that i can't stop writing,
 
     (check ((endecode-id fak-c local-aspace) 6) 
 	   => 720)))
+
+;;
+(define (debug-message str)
+  (display str)
+  (newline))
+
+
+(define str " a quiet long string:
+can't stop writing, that i can't stop writing,
+that i can't stop writing, that i can't stop writing,
+that i can't stop writing, that i can't stop writing,
+that i can't stop writing, that i can't stop writing,
+that i can't stop writing, that i can't stop writing,
+that i can't stop writing, that i can't stop writing,
+...")
+
+(define str2 "here comes
+a new line, and
+a new line, and
+a new line, and
+a new")
+
+(define (string-test las)
+  
+  (check (endecode-id "a little string"  las) 
+	 => "a little string")
+  
+  (check (endecode-id "a specila string \\\"%!§$%&/()=~~#'^"  
+		      las) 
+	 => "a specila string \\\"%!§$%&/()=~~#'^")
+
+  (check (endecode-id str2 las) 
+	 => str2)
+)
+;  (check (endecode-id str las) 
+;	 => str))
+
+(define (make-string n)
+  (if (zero? n)
+      ""
+      (string-append "*"
+		     (make-string (- n 1)))))
