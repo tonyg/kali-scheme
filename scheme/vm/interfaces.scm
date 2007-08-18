@@ -23,7 +23,7 @@
 (define-interface memory-interface
   (export create-memory memory-begin memory-size
 
-	  address+ address- address1+ address2+
+	  address+ address- address1- address1+ address2+
 	  address-difference
 	  address= address< address<= address> address>=
 	  address->integer integer->address
