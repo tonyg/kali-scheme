@@ -60,7 +60,16 @@
   (list 'proxy						; kali
 	(proxy-data-owner (proxy-data obj))		; kali
 	(proxy-data-uid (proxy-data obj))))		; kali
-  
+
+(define-method &disclose ((obj :proxy-data))
+  (list 'proxy-data
+        (proxy-data-uid obj)
+        (proxy-data-owner obj)
+        (proxy-data-value obj)
+        (proxy-data-reference-count obj)
+        (proxy-data-self obj)
+        (proxy-data-waiters obj)))
+
 (define-method &disclose ((obj :code-vector))
   (list 'byte-vector (code-vector-length obj))
 ; (cons 'code-vector
