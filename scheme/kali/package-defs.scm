@@ -92,7 +92,8 @@
 ;; ============================================================================
 
 (define-structure connect (export connection-server
-				  send-message send-admin-message)
+				  send-message 
+				  send-admin-message)
   (open scheme ascii
 	code-vectors 
 	srfi-34 srfi-35    ;; error handling

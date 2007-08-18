@@ -38,8 +38,8 @@
     (call-with-current-continuation
      (lambda (k)
        (remote-run! aspace
-		    spawn
-		    (lambda ()
-		      (k #F))
-		    (thread-name (current-thread)))
+	 spawn
+	 (lambda ()
+	   (k #f))
+	 (thread-name (current-thread)))
        (terminate-current-thread)))))
