@@ -404,10 +404,10 @@
     (debug-msg "...finished reading " length " bytes.")
     (cond ((eof-object? got)
 	   (raise (make-condition &kali-reader-eof-error
-				  'channel port)))
+				  'port port)))
 	  ((< got length)
 	   (raise (make-condition &kali-reader-insufficient-error
-				  'channel port
+				  'port port
 				  'got got 
 				  'length length))))))
 

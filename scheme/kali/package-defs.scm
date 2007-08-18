@@ -58,7 +58,7 @@
   (begin
     (define-enumeration message-type
       (run			; (proc . proxy . args)
-       really-run               ; (proc . args)
+       remote-return            ; (proxy . results)
        uid-request      	; (element-type . uid)*
        uid-reply        	; #(aspace-uid uid element-type contents)
        proxy-counts-request	; proxy-id*
@@ -177,6 +177,7 @@
 
 (define-interface kali-interface
   (export socket-id->address-space
+	  local-address-space
 	  address-space?
 
 	  remote-run!

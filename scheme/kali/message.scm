@@ -57,37 +57,36 @@
 (define (process-message message other-aspace)
   (let ((data (cdr message)))
     (enum-case message-type (car message)
-      ((really-run)
-       (spawn (lambda ()
-		(apply (car data)
-		       (cdr data)))))
+      ((remote-return)
+       (placeholder-set! (proxy-local-ref (car data))
+			 (cdr data)))
       ((run)
        (spawn (lambda ()
 		(let* ((proc (car data))
-		       (proxy (cadr data))
-		       (args (cddr data))
-		       (aspace (local-address-space))
-		       (other-aspace (proxy-data-owner (proxy-data proxy))))
+		       (args (cadr data))
+		       (proxy (caddr data))
+		       (aspace (local-address-space)))
 		  (with-except-handler
 		   (lambda (c)
-		     (really-remote-run! other-aspace
-		       (lambda ()
-			 (placeholder-set! (proxy-local-ref proxy)
-					   (cons #f (make-condition &kali-remote-error
-								    'aspace aspace
-								    'procedure proc
-								    'arguments args
-								    'condition c))))))
+		     (send-admin-message (enum message-type remote-return)
+					 (cons proxy
+					       (cons #f 
+						     (make-condition &kali-remote-error
+								     'aspace aspace
+								     'procedure proc
+								     'arguments args
+								     'condition c)))
+					 other-aspace))
 		   (lambda ()
-		     (really-remote-run! other-aspace
-		       (lambda (results)
-			 (placeholder-set! (proxy-local-ref proxy)
-					   (cons #t results)))
-		       (call-with-values
-			   (lambda ()
-			     (apply proc args))
-			 (lambda results
-			   results)))))))))
+		     (send-admin-message (enum message-type remote-return)
+					 (cons proxy
+					       (cons #t
+						     (call-with-values
+							 (lambda ()
+							   (apply proc args))
+						       (lambda results
+							 results))))
+					 other-aspace)))))))
       ((uid-request)
        ;(debug-message "[uid request]")
        (send-admin-message (enum message-type uid-reply)
@@ -122,11 +121,6 @@
 ;----------------
 ; REMOTE-RUN! and friends.  These just send the appropriate messages.
 
-(define (really-remote-run! aspace proc . args)
-  (send-message (enum message-type really-run)
-		(cons proc args)
-		aspace))
-
 (define (remote-run-handler placeholder aspace proc args c)
   (placeholder-set! placeholder
 		    (cons #f (make-condition &kali-remote-error
@@ -149,7 +143,7 @@
       (let* ((placeholder (make-placeholder))
 	     (proxy (make-proxy placeholder)))
 	(send-message (enum message-type run)
-		      (cons proc (cons proxy args))
+		      (list proc args proxy)
 		      aspace)
 	placeholder)))
 
