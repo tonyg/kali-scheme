@@ -54,71 +54,6 @@
 ; nonpositive reference counts.  If it fails because of lack of space
 ; the returned message is FALSE.
 
-
-;; chnx try extensible
-
-(define-syntax define-extensible-proc
-  (syntax-rules ()
-    ((define-extensible-proc (proc arg ...) body-form extender temp)
-     (begin
-       (define (temp arg ...)
-	 body-form
-	 (unspecific))
-       (define (proc arg ...) (temp arg ...))
-       (define (extender more)
-	 (let ((old temp))
-	   (set! temp (lambda (arg ...)
-			(more arg ...)
-			(old arg ...)))))))))
-
-;; -------------------
-
-(define-extensible-proc (adjust-message-values offset old-size new-size)
-  (unspecific)
-  add-message-value!
-  *adjust-message-values-proc*)
-
-;; -------------------
-
-(define-syntax define-message-offset-value
-  (syntax-rules ()
-    ((define-message-offset-value value)
-     (begin
-       (define value)
-       (add-message-value! (lambda (offset old-size new-size)
-			    (set! value 
-				  (address+ value
-					    offset))))))))
-
-;; chnx try extensible end
-
-;; -------------------
-;; message-values:
-(define-message-offset-value *message-start*)    ;; offset-var
-(define-message-offset-value *message-pointer*)  ;; offset-var
-(define-message-offset-value *encode-next/addr*) ;; offset-var
-(define-message-offset-value *scan-to*)          ;; offset-var
-
-(define *message-limit*)
-(add-message-value! (lambda (offset old-size new-size)
-		      (set! *message-limit*
-			    (address+ *message-limit*
-				      (+ offset
-					 (- new-size
-					    old-size))))))
-
-(define *message-size*)
-(add-message-value! (lambda (offset old-size new-size)
-		      (set! *message-size* new-size)))
-
-;; ------------------
-;; hotel-values:
-
-(define *hotel-size*)
-
-(define *hotel-pointer*)
-(define *hotel-limit*)
-
 (define (encode thing address-space pair)
   (set! *message-size* 128)
   (set! *hotel-size* 128)
@@ -172,6 +107,71 @@
 			     (drop-new-ids! hotel-start)
 			     #f)))))))))))
 
+;; ----------------------------------------------------------
+;; this is also in package-defs perhaps it should be exported
+(define-syntax define-extensible-proc
+  (syntax-rules ()
+    ((define-extensible-proc (proc arg ...) body-form extender temp)
+     (begin
+       (define (temp arg ...)
+	 body-form
+	 (unspecific))
+       (define (proc arg ...) (temp arg ...))
+       (define (extender more)
+	 (let ((old temp))
+	   (set! temp (lambda (arg ...)
+			(more arg ...)
+			(old arg ...)))))))))
+
+;; -------------------
+
+(define-extensible-proc (adjust-message-values! offset old-size new-size)
+  (unspecific)
+  add-message-value!
+  *adjust-message-values-proc*)
+
+(define-syntax define-message-offset-value
+  (syntax-rules ()
+    ((define-message-offset-value value)
+     (begin
+       (define value)
+       (add-message-value! (lambda (offset old-size new-size)
+			    (set! value 
+				  (address+ value
+					    offset))))))))
+;; -------------------
+;; message-values:
+(define-message-offset-value *message-start*)
+(define-message-offset-value *message-pointer*)
+(define-message-offset-value *encode-next/addr*)
+(define-message-offset-value *scan-to*)
+
+(define *message-limit*)
+(add-message-value! (lambda (offset old-size new-size)
+		      (set! *message-limit*
+			    (address+ *message-limit*
+				      (+ offset
+					 (- new-size
+					    old-size))))))
+
+(define *message-size*)
+(add-message-value! (lambda (offset old-size new-size)
+		      (set! *message-size* new-size)))
+
+;; ------------------
+;; hotel-values:
+
+(define *hotel-size*)
+
+(define *hotel-pointer*)
+(define *hotel-limit*)
+
+(define (adjust-hotel-values! start end size)
+  (set! *hotel-pointer* start)
+  (set! *hotel-limit* end)
+  (set! *hotel-size* size))
+
+;; -----------------------------
 (define (make-message-vector start)
   (store! *message-vector-header-address*
 	  (make-header (enum stob byte-vector)
@@ -301,8 +301,6 @@
 		    (vm-set-symbol-uid! thing false))
 		   ((template)
 		    (set-template-uid! thing false))
-		   ;;((external)                        ;; taken out - there are no 
-		   ;; (set-external-uid! thing false))  ;; external-stobs in scheme48-1.4T
 		   ((address-space)
 		    (set-address-space-uid! thing false))
 		   ((address-space)
@@ -650,7 +648,7 @@
 		      ;(debug-message "really enlarging!")
 		      (copy-memory! old-start new-start 
 				    (address-difference *message-pointer* *message-start*)) ;; chnx *message-size* -> (address-difference *message-pointer* *message-start*)
-		      (adjust-message-values offset *message-size* want-space)
+		      (adjust-message-values! offset *message-size* want-space)
 		      #t))))))))
 
 ;; ----------------
@@ -679,9 +677,7 @@
 	    (if (null-address? new-start)
 		#f
 		(begin
-		  (set! *hotel-size* want-space)
-		  (set! *hotel-pointer* new-start)
-		  (set! *hotel-limit* new-end)
+		  (adjust-hotel-values! new-start new-end want-space)
 		  #t)))))))
 
 ;; ------------------
