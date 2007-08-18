@@ -32,22 +32,45 @@
     (record-set! r 4 field-names)
     (record-set! r 5 (length field-names))
     (record-set! r 6 (make-default-record-discloser name))
-    r))
+    (make-proxy r))) ;; kali - non-kali just returned r
+
+;; non-kali code was:
+
+;(define (record-type? obj)
+;  (and (record? obj)
+;       (eq? (record-type obj) *record-type*)))
+
+;; The various fields in a record type.
+
+;(define (record-type-resumer rt)          (record-ref rt 1))
+;(define (set-record-type-resumer! rt r)   (record-set! rt 1 r))
+;(define (record-type-uid rt)              (record-ref rt 2))
+;(define (record-type-name rt)             (record-ref rt 3))
+;(define (record-type-field-names rt)      (record-ref rt 4))
+;(define (record-type-number-of-fields rt) (record-ref rt 5))
+;(define (record-type-discloser rt)        (record-ref rt 6))
+;(define (set-record-type-discloser! rt d) (record-set! rt 6 d))
+
+;; kali code is:
 
 (define (record-type? obj)
-  (and (record? obj)
-       (eq? (record-type obj) *record-type*)))
+  (and (proxy? obj)
+       (record? (any-proxy-value obj))
+       (eq? (record-type (any-proxy-value obj)) *record-type*)))
 
-; The various fields in a record type.
+;; The various fields in a record type.
 
-(define (record-type-resumer rt)          (record-ref rt 1))
-(define (set-record-type-resumer! rt r)   (record-set! rt 1 r))
-(define (record-type-uid rt)              (record-ref rt 2))
-(define (record-type-name rt)             (record-ref rt 3))
-(define (record-type-field-names rt)      (record-ref rt 4))
-(define (record-type-number-of-fields rt) (record-ref rt 5))
-(define (record-type-discloser rt)        (record-ref rt 6))
-(define (set-record-type-discloser! rt d) (record-set! rt 6 d))
+(define (record-type-resumer rt)          (record-ref (any-proxy-value rt)  1))
+(define (set-record-type-resumer! rt r)   (record-set! (any-proxy-value rt) 1 r))
+(define (record-type-uid rt)              (record-ref (any-proxy-value rt)  2))
+(define (record-type-name rt)             (record-ref (any-proxy-value rt)  3))
+(define (record-type-field-names rt)      (record-ref (any-proxy-value rt)  4))
+(define (record-type-number-of-fields rt) (record-ref (any-proxy-value rt)  5))
+(define (record-type-discloser rt)        (record-ref (any-proxy-value rt)  6))
+(define (set-record-type-discloser! rt d) (record-set! (any-proxy-value rt) 6 d))
+
+;; kalil code end
+
 
 ; This is a hack; it is read by the script that makes c/scheme48.h.
 
@@ -191,7 +214,9 @@
 (set! *record-type*
       (make-record-type 'record-type record-type-fields))
 
-(record-set! *record-type* 0 *record-type*)
+(record-set! (any-proxy-value *record-type*)  ;; kali
+	     0 
+	     *record-type*)
 
 (define :record-type *record-type*)
 
