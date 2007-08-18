@@ -1,3 +1,9 @@
+;; writing a kali-interface for the cml-package is quiet
+;; a bit harder than i thought at first ->
+;; about pretty much in this file i'm not shure wether
+;; it will work or not... and even worse, about some things
+;; i'm shure they won't.
+;; -> chnx todo...
 
 (define-syntax make-proxy-remote-func
   (syntax-rules ()
@@ -10,6 +16,80 @@
 	   (org-func-name (proxy-local-ref p)
 			  rest ...))
 	 proxy)))))
+
+(define-syntax make-proxy-remote-func-rv
+  (syntax-rules ()
+    ((make-proxy-remote-func org-func-name
+			     proxy
+			     rest ...)
+     (lambda (proxy rest ...)
+       (rv->kml-rv (remote-apply (proxy-owner proxy)
+		     (lambda (p) 
+		       (org-func-name (proxy-local-ref p)
+				      rest ...))
+		     proxy))))))
+
+;; -------
+
+;; this is relating to the records
+;; from cml/rendezvous.scm
+
+(define rv->kml-rv make-proxy)
+
+(define (kml-rv->rv kml-rv)
+  (remote-apply (proxy-owner kml-rv)
+    (lambda (p)
+      (proxy-local-ref p))
+    kml-rv))
+
+;(define choose->kml-choose make-proxy)
+;(define guard->kml-guard make-proxy)
+;(define with-nack->kml-with-nack make-proxy)
+
+;; -------
+
+;; rendezvous:
+;; ===========
+
+(define kml-never-rv (rv->kml-rv never-rv))
+
+(define (kml-always-rv val)
+  (rv->kml-rv (always-rv val)))
+
+;; probably guard, with-nack, wrap
+;; and rv->kml-rv in special
+;; should run the server-side...
+;; chnx todo
+ 
+;; how do get server-side here?
+;; -> probably we need a complete other
+;; concept for such an interface...
+(define (kml-guard kml-rv-generator)
+  (rv->kml-rv 
+   (guard (lambda ()
+	    (kml-rv->rv (kml-rv-generator))))))
+
+;; again i can't find out server-side
+;; an perhaps there is not only one anyway!
+(define (kml-with-nack kml-rv-generator)
+  (rv->kml-rv 
+   (with-nack (lambda ()
+		(kml-rv->rv (kml-rv-generator))))))
+
+;; chnx todo:
+;; this won't work like this...
+;; there can be more server-sides again...
+(define (kml-choose . kml-rvs)
+  (rv->kml-rv (choose (map kml-rv->rv
+			   kml-rvs))))
+
+;; this looks quiet good again - i hope.
+(define (kml-wrap kml-rv procedure)
+  (remote-apply (proxy-owner kml-rv)
+    (lambda (p)
+      (make-proxy (wrap (proxy-local-ref p)
+			procedure)))
+    kml-rv))
 
 ;; sync-channels:
 ;; ==============
@@ -54,7 +134,7 @@
 ;; ===============
 
 ;; :: -> async-kml-channel
-(define make-kml-async-channel
+(define (make-kml-async-channel)
   (make-proxy (make-async-channel)))
 
 ;; :: obj -> boolean

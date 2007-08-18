@@ -273,7 +273,6 @@
 (define-interface kml-async-interface
   (export make-kml-async-channel
 	  kml-async-channel?
-	  kml-send-async-rv
 	  kml-send-async
 	  kml-receive-async-rv
 	  kml-receive-async))
