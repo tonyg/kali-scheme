@@ -90,7 +90,8 @@
 		  aspace))
 	(lambda (bytes need-counts)
 	  (if (not (null? need-counts))
-	      (error "MAKE-CONNECTION! encode needs proxy counts" need-counts))
+	      (raise (make-condition &kali-connect-error
+				     'need-counts need-counts)))
 	  (channel-write to-channel bytes 0 (code-vector-length bytes))
 	  (if (= 0 (channel-read-byte from-channel))
 	      (finish-connection! aspace from-channel to-channel reader)
@@ -105,7 +106,7 @@
       (placeholder-set! (address-space-placeholder aspace) #t))
   (release-lock (address-space-lock aspace))
   (spawn (lambda ()
-	   (with-handler (dispatch-handler aspace)
+	   (with-except-handler (dispatch-handler aspace)
 	     (lambda ()
 	       (*dispatch-procedure* aspace reader))))
 	 (string-append "dispatcher-"
@@ -134,23 +135,35 @@
 ; kill us.
 
 (define (dispatch-handler aspace)
-  (lambda (condition next-handler)
+  (lambda (condition)
     (cond ((warning? condition)
 	   (display-dispatcher-condition condition aspace)
 	   (unspecific))		;proceed
-; This would allow other dispatchers to keep running.
-;          ((or (error? condition)
-;	    (interrupt? condition))
-;           (display-dispatcher-condition condition aspace)
-;           (obtain-lock (address-space-lock aspace))
-;           (close-channel (address-space-in-channel aspace))
-;           (close-channel (address-space-out-channel aspace))
-;           (set-address-space-out-channel! aspace #f)
-;           (set-address-space-in-channel! aspace #f)
-;           (release-lock (address-space-lock aspace))
-;           (terminate-current-thread))
-	  (else                           
-	   (next-handler)))))
+	  (else 
+           (display-dispatcher-condition condition aspace)
+	   (let ((out (current-error-port)))
+	     (display "Terminating dipatcher!" out)
+	     (newline out))
+           (obtain-lock (address-space-lock aspace))
+           (close-channel (address-space-in-channel aspace))
+           (close-channel (address-space-out-channel aspace))
+           (set-address-space-out-channel! aspace #f)
+           (set-address-space-in-channel! aspace #f)
+           (release-lock (address-space-lock aspace))
+           (terminate-current-thread)))))
+
+;	   (let ((port (current-error-port)))
+;	     (display "Terminating dispatcher for address-space " port)
+;	     (display other-aspace port)
+;	     (newline port)
+;	     (display "because of ")
+;	     (display (if  (kali-reader-error? c)
+;			   "reader-error: "
+;			   "unknown error: ")
+;		      port)
+;	     (display c port)
+;	     (newline port)
+;	     (terminate-current-thread))))))
 
 (define (display-dispatcher-condition condition aspace)
   (let ((out (current-error-port)))
@@ -182,9 +195,9 @@
 	  (really-channel-read! in-channel size-buffer bytes-per-word)
 	  (let* ((size (my-get-size size-buffer))
 		 (buffer (make-code-vector (- size bytes-per-word) 0)))
-            (really-channel-read! in-channel buffer (code-vector-length buffer))
-	    ;(show-cv buffer)
-	    ;(force-output (current-output-port))
+	    (really-channel-read! in-channel buffer (code-vector-length buffer))
+	;(show-cv buffer)
+	;(force-output (current-output-port))
 	    (decode buffer aspace reverse?)))))))
 
 (define (make-memory-layout-vector)
@@ -236,9 +249,9 @@
 		 (vector->list alien-vector))
 	 #t)
 	(else
-	 (error "don't know how to convert alien memory model"
-		alien-vector
-		local-vector))))
+	 (raise (make-condition &kali-memory-layout-error
+				'alien-vector alien-vector
+				'local-vector local-vector)))))
 
 ;----------------
 ; Actually sending messages.
@@ -256,7 +269,9 @@
 
 (define (send-message type message aspace)
   (if (eq? aspace (local-address-space))
-      (error "attempt to send message to self" type message))
+      (raise (make-condition &kali-send-message-to-self-error
+			     'type type
+			     'message message)))
   (call-with-values
    (lambda ()
      (encode (cons type message)
@@ -355,16 +370,20 @@
 (define (really-channel-read! channel buffer length)
   (let ((got (channel-read channel buffer 0 length)))
     (cond ((eof-object? got)
-	   (error "unexpected EOF" channel))
+	   (raise (make-condition &kali-reader-eof-error
+				  'channel channel)))
 	  ((< got length)
-	   (error "insufficient characters from CHANNEL-READ" channel got length)))))
+	   (raise (make-condition &kali-reader-insufficient-error
+				  'channel channel 
+				  'got got 
+				  'length length))))))
 
 (define (channel-write-byte channel byte)
   (channel-write channel (make-code-vector 1 byte) 0 1))
 
  
 ;; chnx todo channel-read
-;; we implement channel-read _here_ because
+;; we implement channel-read here because
 ;; we will take it out again ... probably ...
 
 ; CHANNEL-READ returns the number of characters read or the EOF object.
@@ -404,7 +423,8 @@
 		    (lose)
 		    (cond ((maybe-commit-and-wait-for-condvar condvar)
 			   #t)
-			  (else (error "channel-read: condvar-commit failed"))))
+			  (else (raise (make-condition &kali-reader-condvar-error
+						       'port port)))))
 		   (let ((have (+ have (condvar-value condvar))))
 		     (if (and keep-trying? (< have need))
 			 (loop have)

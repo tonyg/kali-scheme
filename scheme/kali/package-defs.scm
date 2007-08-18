@@ -2,11 +2,16 @@
   (export (with-continuation-handler :syntax)
 	  (with-except-handler :syntax)
 	  &kali-error kali-reader-error?
-	  &kali-reader-error              kali-reader-error?
-	  &kali-reader-eof-error          kali-reader-eof-error?
-	  &kali-reader-insufficient-error kali-reader-insufficient-error?
-	  &kali-remote-error              kali-remote-error?
-	  &kali-remote-apply-error        kali-remote-apply-error?))
+	  &kali-reader-error               kali-reader-error?
+	  &kali-reader-eof-error           kali-reader-eof-error?
+	  &kali-reader-insufficient-error  kali-reader-insufficient-error?
+	  &kali-reader-condvar-error       kali-reader-condvar-error?
+	  &kali-unknown-reader-error       kali-unknown-reader-error?
+	  &kali-remote-error               kali-remote-error?
+	  &kali-send-message-to-self-error kali-send-message-to-self-error?
+	  &kali-connect-error              kali-connect-error?
+	  &kali-memory-layout-error        kali-memory-layout-error?))
+	  ;&kali-remote-apply-error        kali-remote-apply-error?))
 
 (define-structure kali-conditions kali-conditions-interface
   (open scheme
@@ -108,7 +113,12 @@
 (define-structure connect (export connection-server
 				  send-message send-admin-message)
   (open scheme ascii
-	code-vectors signals
+	code-vectors 
+	srfi-34 srfi-35    ;; error handling
+	kali-conditions    ;; error handling
+	display-conditions ;; error-handling
+	(subset conditions (warning?))
+	(subset i/o (current-error-port))
 	address-spaces
 	sockets channels
 	channel-i/o
@@ -120,7 +130,6 @@
 	proposals
 	interrupts			; call-after-gc!
 	bitwise				; arithmetic-shift
-	conditions handle i/o display-conditions  ; dealing with errors
 	threads			; spawn
 	(subset primitives (eof-object  ;; because of channel-read
 			    memory-status 

@@ -21,17 +21,17 @@
 ; have to wait.
 
 (define (dispatcher other-aspace reader)
-  (let loop ()
-    (call-with-values
-     (lambda ()
-       (reader other-aspace))
-     (lambda (message missing-uids bad-count-proxies)
-       (if (not (null? bad-count-proxies))
-	   (for-each return-counts (adjust-proxy-counts! bad-count-proxies)))
-       (if (null? missing-uids)
-	   (process-message message other-aspace)
-	   (process-missing-uids message missing-uids other-aspace))
-       (loop)))))
+    (let loop ()
+      (call-with-values
+	  (lambda ()
+	    (reader other-aspace))
+	(lambda (message missing-uids bad-count-proxies)
+	  (if (not (null? bad-count-proxies))
+	      (for-each return-counts (adjust-proxy-counts! bad-count-proxies)))
+	  (if (null? missing-uids)
+	      (process-message message other-aspace)
+	      (process-missing-uids message missing-uids other-aspace))
+	  (loop)))))
 
 ; UID replies are processed immediately (because of possible circular
 ; dependencies), all other messages have to wait.
