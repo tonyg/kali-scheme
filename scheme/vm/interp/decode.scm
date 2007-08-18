@@ -48,11 +48,11 @@
 
 (define (decode message aspace reverse? key)
 
-  (write-string "decode 0 going to check heap..." (current-error-port))
-  (newline (current-error-port))
-  (s48-check-heap 2)
-  (write-string "decode 0 ...checked heap!" (current-error-port))
-  (newline (current-error-port))
+;  (write-string "decode 0 going to check heap..." (current-error-port))
+;  (newline (current-error-port))
+;  (s48-check-heap 2)
+;  (write-string "decode 0 ...checked heap!" (current-error-port))
+;  (newline (current-error-port))
 
   (let ((start (address-at-header message))
 	(limit (address-after-stob message)))
@@ -68,7 +68,7 @@
     (let ((obj (address->stob-descriptor
 		(address+ *message-start* (element-info (fetch (address1+ start)))))))
 
-      (let ((out (current-error-port)))
+;      (let ((out (current-error-port)))
 ;	(write-string "stob:" out) (newline out)
 ;	(write-integer (address->integer (address-at-header obj)) out)
 ;	(newline out)
@@ -91,15 +91,15 @@
 ;	(newline out)
 	
 	
-	(write-string "decode 1 going to check heap..." out)
-	(newline out)
-	(s48-check-heap 2)
-	(write-string "decode 1 ...checked heap!" out)
-	(newline out))
-
-    (values obj
-	    *new-uids*
-	    *bad-count-proxies*))))
+;	(write-string "decode 1 going to check heap..." out)
+;	(newline out)
+;	(s48-check-heap 2)
+;	(write-string "decode 1 ...checked heap!" out)
+;	(newline out))
+;	)
+      (values obj
+	      *new-uids*
+	      *bad-count-proxies*))))
 
 ;; The following two procedures are taken from heap.scm.
 

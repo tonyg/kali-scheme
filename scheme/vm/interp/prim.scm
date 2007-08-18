@@ -623,7 +623,9 @@
   (lambda (ignore)
     vm-pair-size)
   (lambda (thing aspace key)
-    (let ((pair (vm-cons 512 512 key))) ;; initial size for remember-visit-vector in scan
+    (let ((pair (vm-cons (enter-fixnum 512)
+			 (enter-fixnum 512)
+			 key))) ;; initial size for remember-visit-vector in scan
     ;; scan for required space
     (let try-again ((thing thing)
 		    (aspace aspace)

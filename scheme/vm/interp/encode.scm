@@ -57,11 +57,15 @@
 
 (define (encode thing address-space pair)
   (debug-message 3 "encode start...")
-  (kali-check-heap-n 0 20)
-  (let ((encode-start (initialize-message-space! (vm-car pair)))
-	(hotel-start (initialize-hotel-space! (vm-cdr pair))))
+;  (kali-check-heap-n 0 20)
+  (let* ((gc-count (s48-gc-count))
+	 (encode-start (initialize-message-space! 
+			(extract-fixnum (vm-car pair))))
+	 (hotel-start (initialize-hotel-space! 
+		       (extract-fixnum (vm-cdr pair)))))
 
-    (if (or (null-address? encode-start)
+    (if (or (< gc-count (s48-gc-count))
+	    (null-address? encode-start)
 	    (null-address? hotel-start))
 	(begin
 	  (debug-message 0 "encoding-failed (1)")
@@ -76,14 +80,14 @@
 	  (store! (address2+ *message-start*)
 		  (encode-object thing))
 
-	  (kali-check-heap-n 1 20)
+;	  (kali-check-heap-n 1 20)
 	  
 	  (do-encoding encode-start);(address+ message-start
 				             ;(cells->a-units 3)))
 
 	  (let ((result (address->stob-descriptor (address1+ *message-start*))))
 	    (mend-hearts! *heartbreak-hotel*)
-	    (kali-check-heap-n 2 20)
+;	    (kali-check-heap-n 2 20)
 	    (if (update-decode-vectors! address-space hotel-start)
 		(let ((losers (get-losing-proxies)))
 		  (if (false? losers)
@@ -91,10 +95,10 @@
 			(debug-message 0 "encoding-failed (3)")
 			#f)
 		      (begin
-			(kali-check-heap-n 3 20)
+;			(kali-check-heap-n 3 20)
 			(vm-set-car! pair result)
 			(vm-set-cdr! pair losers)
-			(kali-check-heap-n 4 20)
+;			(kali-check-heap-n 4 20)
 			#t)))
 		(begin
 		  (drop-new-ids! hotel-start)
@@ -547,31 +551,31 @@
 (define *scan-lost*)
 
 (define (scan thing pair)
-  (debug-message 1 "scan")
-  (scan-check-heap 0 20)
-  (if (not (init-have-seen! (vm-car pair)))
+;  (debug-message 1 "scan")
+;  (scan-check-heap 0 20)
+  (if (not (init-have-seen! (extract-fixnum (vm-car pair))))
       #f
       (call-with-values
 	  (lambda ()
 	    (set! *scan-lost* #f)
 	    (scan-object thing))
 	(lambda (msg-size hotel-size)
-	  (scan-check-heap 1 20)
+;	  (scan-check-heap 1 20)
 	  (if *scan-lost*
 	      (begin
-		(vm-set-car! pair (* (vm-car pair) 2))
+		(vm-set-car! pair (enter-fixnum (* (vm-car pair) 2)))
 		#f)
 	      (begin
-		(scan-check-heap 2 20)
-		(write-error-string "msg/hotel-size: ")
-		(write-error-integer (+ msg-size 2))
-		(write-error-string "/")
-		(write-error-integer hotel-size)
-		(write-error-newline)
-		(scan-check-heap 3 20)
-		(vm-set-car! pair (+ msg-size 2))
-		(vm-set-cdr! pair hotel-size)
-		(scan-check-heap 4 20)
+;		(scan-check-heap 2 20)
+;		(write-error-string "msg/hotel-size: ")
+;		(write-error-integer (+ msg-size 2))
+;		(write-error-string "/")
+;		(write-error-integer hotel-size)
+;		(write-error-newline)
+;		(scan-check-heap 3 20)
+		(vm-set-car! pair (enter-fixnum (+ msg-size 2)))
+		(vm-set-cdr! pair (enter-fixnum hotel-size))
+;		(scan-check-heap 4 20)
 		#t))))))
 
 (define (scan-object thing)
