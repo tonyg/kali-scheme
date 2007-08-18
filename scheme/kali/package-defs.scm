@@ -35,6 +35,15 @@
 	(subset primitives (encode collect find-all)))		; vm-extension copy-bytes! find-all-xs encode
   (files aspace))
 
+(define-structure disclose-aspaces (export)
+  (open scheme-level-1 methods more-types
+	address-spaces)
+  (begin
+    (define-method &disclose ((obj :address-space))
+      (list 'address-space
+	    (address-space-ip-address obj)
+	    (address-space-socket obj)))))
+
 ;; ===========================================================================
 
 (define-structure message-types (export (message-type :syntax))
