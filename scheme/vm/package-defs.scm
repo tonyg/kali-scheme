@@ -332,7 +332,8 @@
 ;; kali - begin
 
 (define-structure encode/decode 
-  (export encode 
+  (export scan
+	  encode 
 	  decode 
 	  decode-space-multiplier
 	  kali-check-heap)
@@ -343,7 +344,8 @@
 	memory 
 	data 
 	stob 
-	allocation 
+	allocation
+	gc
 	enum-case
 	heap
 	struct)

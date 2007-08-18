@@ -1,38 +1,3 @@
-;; chnx - just for the time of development...:
-
-(define debug-prio-level 1)
-
-(define (debug-message prio str)
-  (if (< prio debug-prio-level)
-      (begin
-	(write-error-string str)
-	(write-error-newline)
-	(unspecific))
-      (unspecific)))
-
-;; =======================================
-
-
-(define (kali-check-heap x)
-  (write-error-string "kali going to check heap...")
-  (write-error-newline)
-  (s48-check-heap x)
-  (write-error-string "kali ...checked heap!")
-  (write-error-newline))
-
-
-(define (kali-check-heap-n n x)
-  (write-error-string "encode ")
-  (write-error-integer n)
-  (write-error-string " going to check heap...")
-  (write-error-newline)
-  (s48-check-heap x)
-  (write-error-string "encode ")
-  (write-error-integer n)
-  (write-error-string " ...checked heap!")
-  (write-error-newline))
-
-;; chnx end
 
 ; All of this file is only for Kali.
 
@@ -90,214 +55,77 @@
 ; nonpositive reference counts.  If it fails because of lack of space
 ; the returned message is FALSE.
 
-(define *actual-msg-size*)
-(define *actual-hotel-size*)
-
 (define (encode thing address-space pair)
   (debug-message 3 "encode start...")
+  (kali-check-heap-n 0 20)
+  (let ((encode-start (initialize-message-space! (vm-car pair)))
+	(hotel-start (initialize-hotel-space! (vm-cdr pair))))
 
-  (kali-check-heap-n 0 2)
+    (if (or (null-address? encode-start)
+	    (null-address? hotel-start))
+	(begin
+	  (debug-message 0 "encoding-failed (1)")
+	  #f)
+	(begin
+	  (set! *our-address-space* address-space)
 
-  (set! *message-size* (vm-car pair))
-  (set! *hotel-size* (vm-cdr pair))
+	  (set! *heartbreak-hotel* null-address)
+	  (set! *new-id-hotel* null-address)
+	  (set! *losing-proxy-hotel* null-address)
+	  
+	  (store! (address2+ *message-start*)
+		  (encode-object thing))
 
-  (call-with-values 
-      (lambda ()
-	(scan thing))
-    (lambda (msg-size hotel-size)
-      (write-error-string "msg/hotel-size: ")
-      (write-error-integer msg-size)
-      (write-error-string "/")
-      (write-error-integer hotel-size)
-      (write-error-newline)))
-  (set! *actual-msg-size* 3)
-  (set! *actual-hotel-size* 0)
+	  (kali-check-heap-n 1 20)
+	  
+	  (do-encoding encode-start);(address+ message-start
+				             ;(cells->a-units 3)))
 
-  (receive (hotel-start hotel-limit)
-      (allocate-hotel-space *hotel-size*)
-    (set! *hotel-pointer* hotel-start)
-    (set! *hotel-limit* hotel-limit)
-    (receive (message-start message-limit)
-	(allocate-message-space *message-size*)
-      (if (or (null-address? message-start)
-	      (null-address? hotel-start))
-	  (begin
-	    (debug-message 0 "encoding-failed (1)")
-	    #f)
-	  (begin
-	    (set! *message-start* message-start)
-	    (set! *scan-to* message-start)
-	    (set! *encode-next/addr* message-start)
-	    (set! *our-address-space* address-space)
-	    ;; add space for header, number of bytes, and THING
-	    (set! *message-pointer* (address+ *message-start* (cells->a-units 3)))
-	    ;; ADDRESS- accounts for room for the header of the last object
-	    (set! *message-limit* (address- message-limit
-				     (cells->a-units 1)))
-	    (set! *hotel-pointer* hotel-start)
-	    (set! *heartbreak-hotel* null-address)
-	    (set! *new-id-hotel* null-address)
-	    (set! *losing-proxy-hotel* null-address)
-	    (let ((code (encode-object thing)))
-	      (store! (address+ *message-start* (cells->a-units 2)) code)
-	      (cond ((or (waterloo? code)
-			 (not (do-encoding (address+ *message-start* (cells->a-units 3)))))
-		     (mend-hearts! *heartbreak-hotel*) ;; chnx
-		     (drop-new-ids! *new-id-hotel*) ;; chnx
-		     (debug-message 0 "encoding-failed (2)")
-		     (vm-set-car! pair (* 2 *message-size*)) 
-		     (vm-set-cdr! pair (* 2 *hotel-size*))
-		     #f)
-		    (else
-		     (let ((result (make-message-vector *message-start*)))
-		       (store! (address+ *message-start* (cells->a-units 1))
-			       (address-difference *message-pointer* (address1+ *message-start*)))
-		       (mend-hearts! *heartbreak-hotel*) ;; chnx
-		       (if (update-decode-vectors! address-space hotel-start)
-			   (let ((losers (get-losing-proxies)))
-			     (if (false? losers)
-				 (begin
-				   (debug-message 0 "encoding-failed (3)")
-				   (vm-set-car! pair (* 2 *message-size*))
-				   (vm-set-cdr! pair (* 2 *hotel-size*))
-				   #f)
-				 (begin
-				   
-				   (write-error-string "actual msg/hotel-size: ")
-				   (write-error-integer *actual-msg-size*)
-				   (write-error-string "/")
-				   (write-error-integer (a-units->cells (address-difference *message-pointer* 
-											    *message-start*)))
-				   (write-error-string "///")
-				   (write-error-integer *actual-hotel-size*)
-				   (write-error-string "/")
-				   (write-error-integer (a-units->cells (address-difference *hotel-pointer*
-											    hotel-start)))
-				   (write-error-newline)
-
-				   (vm-set-car! pair result)
-				   (vm-set-cdr! pair losers)
-				   (debug-message 5 "encode done.")
-
-				   (kali-check-heap-n 1 2)
-
-				   #t)))
-			   (begin
-			     (drop-new-ids! hotel-start)
-			     (debug-message 0 "encoding-failed (3)")
-			     (vm-set-car! pair (* 2 *message-size*))
-			     (vm-set-cdr! pair (* 2 *hotel-size*))
-			     #f)))))))))))
-
-;; ----------------------------------------------------------
-
-(define-extensible-proc (adjust-message-values! offset old-size new-size)
-  (unspecific)
-  add-message-value!
-  *adjust-message-values-proc*)
-
-(define-syntax define-message-offset-value
-  (syntax-rules ()
-    ((define-message-offset-value value)
-     (begin
-       (define value)
-       (add-message-value! (lambda (offset old-size new-size)
-			    (set! value 
-				  (address+ value
-					    offset))))))))
-
-
+	  (let ((result (address->stob-descriptor (address1+ *message-start*))))
+	    (mend-hearts! *heartbreak-hotel*)
+	    (kali-check-heap-n 2 20)
+	    (if (update-decode-vectors! address-space hotel-start)
+		(let ((losers (get-losing-proxies)))
+		  (if (false? losers)
+		      (begin
+			(debug-message 0 "encoding-failed (3)")
+			#f)
+		      (begin
+			(kali-check-heap-n 3 20)
+			(vm-set-car! pair result)
+			(vm-set-cdr! pair losers)
+			(kali-check-heap-n 4 20)
+			#t)))
+		(begin
+		  (drop-new-ids! hotel-start)
+		  (debug-message 0 "encoding-failed (3)")
+		  #f)))))))
 
 ;; -------------------
 
-(define-message-offset-value *message-pointer*)
+(define *message-pointer*)
 
 (define (store-next! descriptor)
   (debug-message 2 "store-next!")
   (store! *message-pointer* descriptor)
-  (set! *actual-msg-size* (+ *actual-msg-size* 1))
   (set! *message-pointer* (address1+ *message-pointer*)))
 
-
-
-(define *message-limit*)
-(add-message-value! (lambda (offset old-size new-size)
-		      (set! *message-limit*
-			    (address+ *message-limit*
-				      (+ offset
-					 (- new-size
-					    old-size))))))
-
-(define (ensure-message-space cells)
-  (or (address<= (address+ *message-pointer* (cells->a-units cells))
-		 *message-limit*)
-      (enlarge-message-space cells)))
-
-;; -----------------------------
-(define (make-message-vector start)
-  (debug-message 3 "make-message-vector")
-  (store! *message-vector-header-address*
-	  (make-header (enum stob byte-vector)
-		       0))
-  ;; clean up unused space:
-  (space->byte-vector *message-pointer*
-		      (address2+ *message-limit*))
-  ;; return the used space as a vector
-  (space->byte-vector start 
-		      *message-pointer*))
-  
-(define (space->byte-vector start end)
-  (store! start
-	  (make-header (enum stob byte-vector)
-		       (address-difference end (address1+ start))))
-  (address->stob-descriptor (address1+ start)))
-
-;----------------
-; Aspace decode vectors have two distinguished entries: the next index on the
-; free list and the address space itself.
+;; -------------------
+; Aspace decode vectors have two distinguished entries: 
+; the next index on the free list and the address space itself.
 
 (define freelist-index 0)
 (define aspace-id-in-self 1)
 
-;----------------
-; We use the currently unused half of the heap for various lists.
-;; not any more. We allocate "normal" heap-space for our hotels.
-
-(define-extensible-proc (adjust-hotel-values! start end size)
-  (unspecific)
-  add-hotel-value!
-  *adjust-hotel-value-proc*)
-
-(define *hotel-size*)
-(add-hotel-value! (lambda (start end size)
-		    (set! *hotel-size* size)))
-
-(define *hotel-pointer*)
-(add-hotel-value! (lambda (start end size)
-		    (set! *hotel-pointer* start)))
-
-(define *hotel-limit*)
-(add-hotel-value! (lambda (start end size)
-		    (set! *hotel-limit* end)))
-
-;; this only ensures the space as long as cells
-;; is <= 128 - that's ok since it is called with
-;; a maximum of 3.
-(define (ensure-hotel-space cells)
-  (or (address<= (address+ *hotel-pointer* (cells->a-units cells))
-		 *hotel-limit*)
-      (enlarge-hotel-space)))
+;; --------------------
+;; the "hotel-lists"
 
 (define (alloc-list-elt! cells old)
-  (debug-message 4 "alloc-list-elt!")
-  (if (not (ensure-hotel-space (+ cells 1)))
-      null-address
-      (let ((start *hotel-pointer*))
-	(store! (address+ start (cells->a-units cells))
-		(address->integer old))
-	(set! *actual-hotel-size* (+ *actual-hotel-size* (+ cells 1)))
-	(set! *hotel-pointer* (address+ start (cells->a-units (+ cells 1))))
-	start)))
+  (let ((start *hotel-pointer*))
+    (store! (address+ start (cells->a-units cells))
+	    (address->integer old))
+    (set! *hotel-pointer* (address+ start (cells->a-units (+ cells 1))))
+    start))
 
 (define (walk-list start cells proc)
   (do ((ptr start (list-elt-next ptr cells)))
@@ -323,13 +151,9 @@
 (define (remember-heartbreak thing header)
   (debug-message 1 "remember-heartbreak")
   (let ((room-number (alloc-list-elt! 2 *heartbreak-hotel*)))
-    (if (null-address? room-number)
-	*waterloo*
-	(begin
-	  (store! room-number thing)
-	  (store! (address1+ room-number) header)
-	  (set! *heartbreak-hotel* room-number)
-	  *success*))))
+    (store! room-number thing)
+    (store! (address1+ room-number) header)
+    (set! *heartbreak-hotel* room-number)))
 
 (define (mend-hearts! start)
   (debug-message 4 "mend-hearts!")
@@ -337,6 +161,7 @@
 	     2
 	     (lambda (ptr)
 	       (stob-header-set! (fetch ptr) (fetch (address1+ ptr))))))
+
 
 ;----------------
 ; Adding new UIDs.
@@ -369,18 +194,13 @@
 		   (let ((next (vm-vector-ref decode-vector extracted)))
 		     (vm-vector-set! decode-vector extracted thing)
 		     next)
-		   (let ((room-number (alloc-list-elt! 1 *new-id-hotel*)))
-		     (if (null-address? room-number)
-			 *waterloo*
-			 (begin
-			   (store! room-number thing)
-			   (set! *new-id-hotel* room-number)
-			   (enter-fixnum (+ extracted 1))))))))
-    (if (waterloo? next)
-	*waterloo*
-	(begin
-	  (vm-vector-set! decode-vector freelist-index next)
-	  next-available))))
+		   (let ((room-number (alloc-list-elt! 1 
+						       *new-id-hotel*)))
+		     (store! room-number thing)
+		     (set! *new-id-hotel* room-number)
+		     (enter-fixnum (+ extracted 1))))))
+    (vm-vector-set! decode-vector freelist-index next)
+    next-available))
 
 ; Set the UID slots of objects that just received new UID's back to false.
 ; Used when we don't have room to add the new objects to the decode vector.
@@ -491,63 +311,43 @@
 ; Scan the heap, encoding pointed to objects, starting from START.  Quit once
 ; the scanning pointer catches up with the heap pointer.
 
-(define-message-offset-value *scan-to*)
-
 (define (do-encoding start)
   (debug-message 1 "do-encoding")
   (let loop ((start start))
-    (set! *scan-to* *message-pointer*)
-    (cond ((not (encode-locations start)) ; lost
-	   #f)
-	  ((address< *scan-to* *message-pointer*)       ; still playing
-	   (loop *scan-to*))
-	  (else #t))))           ; won
+    (let ((end *message-pointer*))
+      (encode-locations start end)
+      (if (address< end *message-pointer*) ; still playing
+	  (loop end)))))
 
 ; Encode everything pointed to from somewhere between START and END.
 
-(define (encode-locations start)
+(define (encode-locations start end)
   (debug-message 1 "encode-locations")
   (let loop ((addr start))
-    (if (address< addr *scan-to*)
-	(let ((next (encode-next addr)))
-	  (if (null-address? next)
-	      #f
-	      (loop next)))
-	#t)))
+    (if (address< addr end)
+	(loop (encode-next addr)))))
 
 ; Encode the thing pointed to from ADDR, returning the next address to copy.
 
-(define-message-offset-value *encode-next/addr*)
-
 (define (encode-next addr)
   (debug-message 1 "encode-next")
-  (set! *encode-next/addr* addr)
-  (let ((thing (fetch *encode-next/addr*)))
+  (let ((thing (fetch addr))
+	(next (address1+ addr)))
     (cond ((b-vector-header? thing)
 	   (debug-message 2 "[b-vector-header]")
-	   (address+ (address1+ *encode-next/addr*) 
+	   (address+ next 
 		     (header-length-in-a-units thing)))
           ((stob? thing)
 	   (debug-message 2 "[stob]")
-	   (let ((encoded-thing (encode-object thing)))
-	     (if (waterloo? encoded-thing)
-		 null-address
-		 (begin
-		   (store! *encode-next/addr* encoded-thing)
-		   (address1+ *encode-next/addr*)))))
+	   (store! addr (encode-object thing))
+	   next)
           (else
 	   (debug-message 2 "[else]")
-	   (address1+ *encode-next/addr*)))))
+	   next))))
+
+
 
 ; Encode THING if it has not already been encoded.
-
-;; and return *success* or *waterloo*
-
-(define *success* 1)
-(define *waterloo* -1)
-
-(define (waterloo? val)
-  (= *waterloo* val))
 
 (define (encode-object thing)
   (debug-message 1 "encode-object")
@@ -575,10 +375,8 @@
 	      (get-uid thing location-uid set-location-uid!)))
 	  ((proxy)
 	   (debug-message 2 "[proxy]")
-	   (if (not (ensure-message-space 3))
-	       *waterloo*
-	       (let ((new (address->message-offset (enum element proxy)))
-		     (data (proxy-data thing)))
+	   (let ((new (address->message-offset (enum element proxy)))
+		 (data (proxy-data thing)))
 		 ;; Not extracted as this stuff is later scanned
 		 (store-next! (let ((owner (proxy-data-owner data)))
 				(if (false? owner)
@@ -586,51 +384,42 @@
 				    (address-space-uid owner))))
 		 (store-next! (get-proxy-uid data))
 		 (store-next! (debit-proxy-count! data))
-		 new)))
+		 new))
 	  (else
 	   (debug-message 2 "[else]")
 	   (encode-full-object h thing))))))
 
 (define (encode-two-part-uid uid)
   (debug-message 3 "encode-two-part-uid")
-  (if (not (ensure-message-space 2))
-      *waterloo*
-      (let ((new (address->message-offset (enum element uid+owner))))
-	;; Not extracted as this stuff is later scanned
-	(cond ((vm-pair? uid)
-	       (store-next! (vm-car uid))
-	       (store-next! (vm-cdr uid)))
-	      (else
-	       (store-next! (enter-fixnum aspace-id-in-self))
-	       (store-next! uid)))
-	new)))
+  (let ((new (address->message-offset (enum element uid+owner))))
+    ;; Not extracted as this stuff is later scanned
+    (cond ((vm-pair? uid)
+	   (store-next! (vm-car uid))
+	   (store-next! (vm-cdr uid)))
+	  (else
+	   (store-next! (enter-fixnum aspace-id-in-self))
+	   (store-next! uid)))
+    new))
 
 (define (encode-full-object header thing)
   (debug-message 1 "encode-full-object")
-  (if (not (ensure-message-space (header-length-in-a-units header)))
-      *waterloo*
-      (let ((new (address->message-offset (enum element local))))
-	(if (waterloo? (remember-heartbreak thing header))
-	    *waterloo*
-	    (begin
-	      (store-next! header)
-	      (stob-header-set! thing new)	;***Break heart
-;	      (write-string " " (current-error-port))
-;	      (write-integer (address->integer (address-at-header thing))
-;			     (current-error-port))
-;	      (newline (current-error-port))
-	      (let ((new-hp (address+ *message-pointer* (header-length-in-a-units header))))
-		(do ((o (address-after-header thing) (address1+ o)))
-		    ((address>= *message-pointer* new-hp))
-		  (store-next! (fetch o))))
-	      new)))))
-
-
-(define-message-offset-value *message-start*)
+  (let ((new (address->message-offset (enum element local))))
+    (remember-heartbreak thing header)
+    (store-next! header)
+    (stob-header-set! thing new)	;***Break heart
+    (let ((new-hp (address+ *message-pointer* 
+			    (header-length-in-a-units header))))
+      (do ((o (address-after-header thing) 
+	      (address1+ o)))
+	  ((address>= *message-pointer* new-hp))
+	(store-next! (fetch o))))
+    new))
 
 (define (address->message-offset type)
   (debug-message 3 "address->message-offset")
-  (make-element type (address-difference *message-pointer* *message-start*)))
+  (make-element type 
+		(address-difference *message-pointer* 
+				    *message-start*)))
 
 ; Utility for getting uids.
 
@@ -675,22 +464,16 @@
 	       (send (cond ((<= count 1)
 			    (let ((room-number
 				    (alloc-list-elt! 1 *losing-proxy-hotel*)))
-			      (if (null-address? room-number)
-				  *waterloo*
-				  (begin
-				    (store! room-number proxy-data)
-				    (set! *losing-proxy-hotel* room-number)
-				    1))))
+			      (store! room-number proxy-data)
+			      (set! *losing-proxy-hotel* room-number)
+			      1))
 			   ((< count (* 2 max-proxy-debit))
 			    (logical-shift-right count 1))
 			   (else
 			    max-proxy-debit))))
-	  (if (waterloo? send)
-	      *waterloo*
-	      (begin
-		(set-proxy-data-reference-count! proxy-data
-						 (enter-fixnum (- count send)))
-		(enter-fixnum send)))))))
+	  (set-proxy-data-reference-count! proxy-data
+					   (enter-fixnum (- count send)))
+	  (enter-fixnum send)))))
 
 ; Make a list of the proxies with non-positive reference counts.  This
 ; returns FALSE if it runs out of space.
@@ -707,130 +490,46 @@
 			      (ensure-space vm-pair-size))
 		     false))))
 
-;; -------------------------------------------
-;; getting rid of two-space--gc depependencies
-;; we allocate the space for message and the hotel
-;; ourself...
 
-;; ------------------
-;; the message-space:
+;; =========================================================================
 
-(define *message-size*)
-(add-message-value! (lambda (offset old-size new-size)
-		      (set! *message-size* new-size)))
+(define *message-start*) 
+(define *message-limit*)
 
-(define *message-vector-header-address*)
-
-(define (allocate-message-space bytes)
-  (debug-message 1 "allocate-message-space")
-  (if (not (bytes-available? (+ bytes 4))) ;; 4 for the header
-      (values null-address
-	      null-address)
-      (let ((message-vector (make-code-vector bytes 0)))
-	(set! *message-vector-header-address*
-	      (address-at-header message-vector))
-	(let ((out (current-error-port)))
-	  (write-string "allocated message space: " out)
-	  (newline out)
-	  (write-integer (address->integer (address-after-header message-vector)) out)
-	  (newline out)
-	  (write-integer (address->integer (address- (address-after-stob message-vector)
-						     (cells->a-units 1)))
-			 out)
-	  (newline out)
-	  (newline out))
-	(values (address-after-header message-vector)
-		(address- (address-after-stob message-vector)
-			  (cells->a-units 1))))))
-
-(define (enlarge-message-space needed-bytes)
-  (debug-message 0 "enlarge-message-space")
-  (let ((max-stob-size-in-bytes (cells->bytes max-stob-size-in-cells)))
-  ;;(debug-message 3 "no ENLARGING jet!!!")
-    (if (>= *message-size* max-stob-size-in-bytes)
+(define (initialize-message-space! cells)
+  (let ((start (s48-allocate-untraced+gc (cells->bytes cells)))) ;; one for the header
+    (if (null-address? start)
+	null-address
 	(begin
-	  (debug-message 0 "cannot enlarge-message-space (1)")
-	  #f)
-	(let ((old-start *message-start*)
-	      (want-space (let loop ((want-perhaps (* *message-size* 2)))
-			    (let ((want (if (<= want-perhaps
-						max-stob-size-in-bytes)
-					    want-perhaps
-					    max-stob-size-in-bytes)))
-			      (if (< (- want *message-size*)
-				     needed-bytes)
-				  (if (= want 
-					 max-stob-size-in-bytes)
-				      0
-				      (loop (* want 2)))
-				  want)))))
-	  (if (= want-space 0)
-	      (begin
-		(debug-message 0 "cannot enlarge-message-space (2)")
-		#f)
-	      (receive (new-start new-end)
-		  (allocate-message-space want-space)
-		(if (null-address? new-start)
-		    (begin
-		      (debug-message 0 "cannot enlarge-message-space (3)")
-		      #f)
-		    (let ((offset (address-difference new-start old-start)))
-		      ;(debug-message 3 "really enlarging!")
-		      (copy-memory! old-start new-start 
-				    (address-difference *message-pointer* *message-start*))
-		      (adjust-message-values! offset *message-size* want-space)
-		      #t))))))))
+	  (store! start 
+		  (make-header (enum stob byte-vector)
+			       (cells->bytes (- cells 1))))
+	  (store! (address1+ start)
+		  (cells->a-units (- cells 1)))
+	  
+	  (set! *message-start* start)
+	  (set! *message-limit* (address+ start 
+					  (cells->a-units cells)))
+	  (set! *message-pointer* (address+ start 
+					    (cells->a-units 3)))
+	  (address+ start
+		    (cells->a-units 3))))))
+;; -------------------
 
-;; ----------------
-;; the hotel-space:
+(define *hotel-pointer*)
 
-(define (allocate-hotel-space bytes)
-  (debug-message 1 "allocate-hotel-space")
-  (if (not (bytes-available? (+ bytes 4))) ;; 4 for the header
-      (values null-address
-	      null-address)
-      (let ((hotel-vector (make-code-vector bytes 0)))
-	(let ((out (current-error-port)))
-	  (write-string "allocated hotel space: " out)
-	  (newline out)
-	  (write-integer (address->integer (address-after-header hotel-vector)) out)
-	  (newline out)
-	  (write-integer (address->integer (address- (address-after-stob hotel-vector)
-						     (cells->a-units 1)))
-			 out)
-	  (newline out)
-	  (newline out))
-	(values (address-after-header hotel-vector)
-		(address- (address-after-stob hotel-vector)
-			  (cells->a-units 1))))))
-
-;; chnx ??? should have a get-what-you-can-feature
-(define (enlarge-hotel-space)
-  (debug-message 0 "enlarge-hotel-space")
-  (let ((max-stob-size-in-bytes (cells->bytes max-stob-size-in-cells)))
-    (if (= *hotel-size* max-stob-size-in-bytes)
+(define (initialize-hotel-space! cells)
+  (let ((start (s48-allocate-untraced+gc (cells->bytes (+ cells 1)))))
+    (store! start 
+	    (make-header (enum stob byte-vector)
+			 cells))
+    (if (null-address? start)
+	null-address
 	(begin
-	  (debug-message 0 "cannot enlarge-hotel-space (1)")
-	  #f)
-	(let ((want-space (let ((want (* *hotel-size* 2)))
-			    (if (< want max-stob-size-in-bytes)
-				want
-				max-stob-size-in-bytes))))
-	  (receive (new-start new-end)
-	      (allocate-hotel-space want-space)
-	    (if (null-address? new-start)
-		(begin
-		  (debug-message 0 "cannot enlarge-hotel-space (2)")
-		  #f)
-		(begin
-		  (adjust-hotel-values! new-start new-end want-space)
-		  #t)))))))
+	  (set! *hotel-pointer* (address1+ start))
+	  (address1+ start)))))
 
-;; --------------------
-
-(define (bytes-available? bytes)
-  (<= (a-units->cells (bytes->a-units bytes))
-      (s48-available)))
+;; -------------------
 
 (define (cells-available? cells)
   (<= cells
@@ -840,105 +539,182 @@
 ;; scan objects to determine the space required for encoding it...
 ;; ===============================================================
 
-(define (scan thing)
-  (debug-message 1 "scan")
-  (call-with-values
-      (lambda ()
-	(scan-object thing null))
-    (lambda (msg-size hotel-size broken-hearts)
-      (restore-headers! broken-hearts)
-      (values (+ msg-size 2) 
-	      hotel-size))))
+(define (scan-check-heap n x)
+  (write-error-string "scan ")
+  (write-error-integer n)
+  (write-error-string " going to check heap...")
+  (write-error-newline)
+  (s48-check-heap x)
+  (write-error-string "scan ")
+  (write-error-integer n)
+  (write-error-string " ...checked heap!")
+  (write-error-newline))
+	  
+;; -------------------------------------------------------------
 
-(define (scan-object thing broken-hearts)
-  (debug-message 1 "scan-object")
+(define *scan-lost*)
+
+(define (scan thing pair)
+  (debug-message 1 "scan")
+  (scan-check-heap 0 20)
+  (if (not (init-have-seen! (vm-car pair)))
+      #f
+      (call-with-values
+	  (lambda ()
+	    (set! *scan-lost* #f)
+	    (scan-object thing))
+	(lambda (msg-size hotel-size)
+	  (scan-check-heap 1 20)
+	  (if *scan-lost*
+	      (begin
+		(vm-set-car! pair (* (vm-car pair) 2))
+		#f)
+	      (begin
+		(scan-check-heap 2 20)
+		(write-error-string "msg/hotel-size: ")
+		(write-error-integer (+ msg-size 2))
+		(write-error-string "/")
+		(write-error-integer hotel-size)
+		(write-error-newline)
+		(scan-check-heap 3 20)
+		(vm-set-car! pair (+ msg-size 2))
+		(vm-set-cdr! pair hotel-size)
+		(scan-check-heap 4 20)
+		#t))))))
+
+(define (scan-object thing)
+  (debug-message 0 "scan-object")
   (let ((h (stob-header thing)))
-    (cond ((stob? h)
-	   (debug-message 2 "[header was stob]")
-	   (values 1 0 broken-hearts))
+    (cond ((have-seen? thing)
+	   (debug-message 0 "[header was stob]")
+	   (values 1 0))
 	  ((b-vector-header? h)
-	   (debug-message 2 "[header was b-vector-header]")
+	   (debug-message 0 "[header was b-vector-header]")
+	   (remember-visit! thing)
 	   (values (+ (a-units->cells (header-length-in-a-units h))
 		      2) ;; chnx ? warum 2 und nicht 1
-		   3
-		   (add-broken-heart! h thing broken-hearts)))
+		   3))
 	  (else
 	   (enum-case stob (header-type h)
 	     ((symbol)
-	      (debug-message 2 "[symbol]")
-	      (values 1 2 broken-hearts))
+	      (debug-message 0 "[symbol]")
+	      (values 1 2))
 	     ((address-space)
-	      (debug-message 2 "[address-space]") 
-	      (values 1 2 broken-hearts))
+	      (debug-message 0 "[address-space]") 
+	      (values 1 2))
 	     ((template)
-	      (debug-message 2 "[template]")
-	      (values 3 2 broken-hearts))
+	      (debug-message 0 "[template]")
+	      (values 3 2))
 	     ((location)
-	      (debug-message 2 "[location]")
-	      (values 3 2 broken-hearts))
+	      (debug-message 0 "[location]")
+	      (values 3 2))
 	     ((proxy)
-	      (debug-message 2 "[proxy]")
-	      (values 4 4 broken-hearts)) ;; chnx hotel 4 -> 5 ?
+	      (debug-message 0 "[proxy]")
+	      (values 4 4)) ;; chnx hotel 4 -> 5 ?
 	     (else
-	      (debug-message 2 "[else]")
-	      (scan-full-object h thing 1 3 broken-hearts)))))))
+	      (debug-message 0 "[else]")
+	      (scan-full-object thing 1 3)))))))
 
-(define (scan-full-object header thing msg-size hotel-size broken-hearts)
+(define (scan-full-object thing msg-size hotel-size)
   (debug-message 1 "scan-full-object")
   (let ((end (address-after-stob thing)))
+    (remember-visit! thing)
     (let loop ((start (address-after-header thing))
-	       (msg-size (+ msg-size 1)) ;; chnx ? +1 | 1 - 1/elem zu wenig
-	       (hotel-size hotel-size)
-	       (broken-hearts (add-broken-heart! header 
-						 thing 
-						 broken-hearts)))
+	       (msg-size (+ msg-size 1));; chnx ? +1 | 1 - 1/elem zu wenig
+	       (hotel-size hotel-size))
       (if (address< start end)
 	  (call-with-values
 	      (lambda ()
-		(scan-location start
-			       broken-hearts))
-	    (lambda (delta-msg-size delta-hotel-size broken-hearts)
+		(scan-location start))
+	    (lambda (delta-msg-size delta-hotel-size)
 	      (loop (address1+ start)
 		    (+ msg-size delta-msg-size) 
-		    (+ hotel-size delta-hotel-size)
-		    broken-hearts)))
-	  (values msg-size hotel-size broken-hearts)))))
+		    (+ hotel-size delta-hotel-size))))
+	  (values msg-size hotel-size)))))
 
-(define (scan-location addr broken-hearts)
+(define (scan-location addr)
   (let ((thing (fetch addr))
 	(next (address1+ addr)))
     (if (stob? thing)
-	(scan-object thing broken-hearts)
-	(values 1 0 broken-hearts))))
+	(scan-object thing)
+	(values 1 0))))
 
-(define (add-broken-heart! header thing broken-hearts)
-  (debug-message 1 "add-broken-heart")
-  (if (cells-available? (* vm-pair-size 2))
-      (let ((new (make-element (enum element uid)
-			       0))) ;; will never be used
-	  (stob-header-set! thing new)
-	  (vm-cons (vm-cons thing
-			    header 
-			    (ensure-space vm-pair-size))
-		   broken-hearts
-		   (ensure-space vm-pair-size)))
-;	(let ((bh (vm-cons (vm-cons thing
-;				    header 
-;				    (ensure-space vm-pair-size))
-;			   broken-hearts
-;			   (ensure-space vm-pair-size))))
-;	  (stob-header-set! thing new)
-;	  bh))
+;; -------------------------------
+
+(define *have-seen-start*)
+(define *have-seen-next*)
+(define *have-seen-limit*)
+
+(define (init-have-seen! cells)
+  (let ((gc-count (s48-gc-count))
+	(vector (maybe-make-b-vector+gc (enum stob byte-vector)
+					(cells->bytes cells))))
+      (if (or (false? vector)
+	      (> (s48-gc-count) gc-count))
+	  #f
+	  (begin
+	    (set! *have-seen-start* (address-after-header vector))
+	    (set! *have-seen-next* *have-seen-start*)
+	    (set! *have-seen-limit* (address-after-stob vector))
+	    #t))))
+
+(define (remember-visit! thing)
+  (if (address= *have-seen-next* *have-seen-limit*)
       (begin
-	(debug-message -1 "ADD-BROKEN-HEART!: Can't remember broken heart!")
-	null)))
+	(set! *scan-lost* #t)
+	#f)
+      (begin
+	(store! *have-seen-next* 
+		(address->integer (address-after-header thing)))
+	(set! *have-seen-next* 
+	      (address1+ *have-seen-next*)))))
 
-(define (restore-headers! broken-hearts)
-  (debug-message 1 "restore-headers!")
-  (let loop ((broken-hearts broken-hearts))
-    (if (vm-eq? broken-hearts null)
-	#t
-	(let ((pair (vm-car broken-hearts)))
-	  (stob-header-set! (vm-car pair)
-			    (vm-cdr pair))
-	  (loop (vm-cdr broken-hearts))))))
+(define (have-seen? thing)
+  (or *scan-lost*
+      (let ((thing-iaddr (address->integer (address-after-header thing))))
+	(let walk ((walker *have-seen-start*))
+	  (if (address= walker *have-seen-next*)
+	      #f
+	      (or (= thing-iaddr (fetch walker))
+		  (walk (address1+ walker))))))))
+
+
+
+;;==========================================================================
+
+
+;; chnx - just for the time of development...:
+
+(define debug-prio-level -1)
+
+(define (debug-message prio str)
+  (if (< prio debug-prio-level)
+      (begin
+	(write-error-string str)
+	(write-error-newline)
+	(unspecific))
+      (unspecific)))
+
+;; =======================================
+
+
+(define (kali-check-heap x)
+  (write-error-string "kali going to check heap...")
+  (write-error-newline)
+  (s48-check-heap x)
+  (write-error-string "kali ...checked heap!")
+  (write-error-newline))
+
+
+(define (kali-check-heap-n n x)
+  (write-error-string "encode ")
+  (write-error-integer n)
+  (write-error-string " going to check heap...")
+  (write-error-newline)
+  (s48-check-heap x)
+  (write-error-string "encode ")
+  (write-error-integer n)
+  (write-error-string " ...checked heap!")
+  (write-error-newline))
+
+;; chnx end

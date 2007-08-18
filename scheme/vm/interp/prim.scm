@@ -620,23 +620,34 @@
 ;; kali - begin
 
 (define-consing-primitive really-encode (any-> aspace->)
-  (lambda (ignore) vm-pair-size)
+  (lambda (ignore)
+    vm-pair-size)
   (lambda (thing aspace key)
-    (let ((pair (vm-cons 128 128  key)))
-	(if (encode thing aspace pair)
-	    (goto return pair)
-	    (begin
-	      (debug-message "gc while encoding!")
-	      (push aspace)
-	      (push pair)
-	      (push thing)
-	      (s48-collect #t)
-	      (let* ((thing (pop))
-		     (pair (pop))
-		     (aspace (pop)))
-		(if (encode thing aspace pair)
-		    (goto return pair)
-		    (raise-exception heap-overflow 0 thing aspace))))))))
+    (let ((pair (vm-cons 512 512 key))) ;; initial size for remember-visit-vector in scan
+    ;; scan for required space
+    (let try-again ((thing thing)
+		    (aspace aspace)
+		    (pair pair))
+      (push pair)
+      (push aspace)
+      (push thing)
+      (cond ((not (scan thing pair)) ;; gc or remember-visit-vector-size to small
+	     (debug-message "SCAN: try again")
+	     (let* ((thing (pop))
+		    (aspace (pop))
+		    (pair (pop)))
+	       (try-again thing aspace pair)))
+	    ((encode thing aspace pair)
+	     (pop) (pop) (pop) ;; return stack to original state
+	     (goto return pair))
+	    (else
+	     (s48-collect #t)
+	     (let* ((thing (pop))
+		    (aspace (pop))
+		    (pair (pop)))
+	       (if (encode thing aspace pair)
+		   (goto return pair)
+		   (raise-exception heap-overflow 0 thing aspace)))))))))
 
 (define-consing-primitive really-decode (aspace-> boolean-> code-vector->)
   (lambda (message)
