@@ -204,13 +204,13 @@
 (define (divide-mandel-piece mandel-piece n)
   (if (> (mandel-piece-x-res mandel-piece)
 	 (mandel-piece-y-res mandel-piece))
-	(values combine-pixel-field-horizontal
+	(values combine-pixel-field-columns
 		(reverse (cut-mandel-piece mandel-piece
-					   cut-piece-vertical
+					   cut-piece-into-columns
 					   n)))
-	(values combine-pixel-field-vertical
+	(values combine-pixel-field-rows
 		(reverse (cut-mandel-piece mandel-piece 
-					   cut-piece-horizontal
+					   cut-piece-into-rows
 					   n)))))
 
 (define (cut-mandel-piece mandel-piece cutter n)
@@ -227,7 +227,7 @@
 		  (cons piece pieces)
 		  rest-piece))))))
 
-(define (cut-piece-vertical mandel-piece n)
+(define (cut-piece-into-columns mandel-piece n)
   (let* ((pixel2point (make-pixel2point mandel-piece))
 	 (x-res (mandel-piece-x-res mandel-piece))
 	 (y-res (mandel-piece-y-res mandel-piece))
@@ -240,7 +240,7 @@
 			       (mandel-piece-lower-right mandel-piece)
 			       x-res2 y-res))))
 
-(define (cut-piece-horizontal mandel-piece n)
+(define (cut-piece-into-rows mandel-piece n)
   (let* ((pixel2point (make-pixel2point mandel-piece))
 	 (x-res (mandel-piece-x-res mandel-piece))
 	 (y-res (mandel-piece-y-res mandel-piece))
@@ -256,10 +256,10 @@
 ;; -------
 ;; combine
 
-(define (combine-pixel-field-horizontal pixel-field . rest)
+(define (combine-pixel-field-columns pixel-field . rest)
   (if (null? rest)
       pixel-field
-      (apply combine-pixel-field-horizontal
+      (apply combine-pixel-field-columns
 	     (apply vector
 		    (map (lambda (v1 v2)
 			   (apply vector 
@@ -269,10 +269,10 @@
 			 (vector->list (car rest))))
 	     (cdr rest))))
 
-(define (combine-pixel-field-vertical pixel-field . rest)
+(define (combine-pixel-field-rows pixel-field . rest)
   (if (null? rest)
       pixel-field
-      (apply combine-pixel-field-vertical 
+      (apply combine-pixel-field-rows
 	     (apply vector
 		    (append (vector->list pixel-field)
 			    (vector->list (car rest))))
