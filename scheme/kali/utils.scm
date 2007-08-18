@@ -18,13 +18,13 @@
 
 (define (set-handle! handle value)
   (remote-apply (handle-owner handle)
-		set-proxy-value! 
+		proxy-local-set! 
 		handle 
 		value))
 
 (define (handle-value handle)
   (remote-apply (handle-owner handle)
-		proxy-value 
+		proxy-local-ref
 		handle))
 
 ; To avoid circular module dependencies we provide PROXY-REMOTE-REF to
