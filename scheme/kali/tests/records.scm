@@ -57,7 +57,7 @@
 ;	     (display " *failed*"))
 ;	 (newline))))))
  
-(define (reall-y-record-test local-space other-aspace)
+(define (really-record-test local-space other-aspace)
   (let ((rec-0 (make-rec "string" 'symbol))
 	(rec-1 (remote-apply other-aspace make-rec 'symbol "string")))
 
