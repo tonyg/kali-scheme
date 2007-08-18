@@ -86,7 +86,6 @@
 	signals				; warn
 	debug-messages			; for debugging
 	interrupts)			; with-interrupts-inhibited
-  (optimize auto-integrate)
   (files proxy-count))
 
 ;; ============================================================================
@@ -116,7 +115,6 @@
 			    decode 
 			    unspecific))
 	(subset architecture (memory-status-option)))
-  (optimize auto-integrate)
   (files connect))
 
 ;; =======================================================================
@@ -139,7 +137,6 @@
 			    record 
 			    record-ref 
 			    set-enabled-interrupts!)))
-  (optimize auto-integrate)
   (files uid-request))
 
 ;; =======================================================================
