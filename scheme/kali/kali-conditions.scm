@@ -59,10 +59,6 @@
 (define-condition-type &kali-reader-condvar-error &kali-reader-error
   kali-reader-condvar-error?)
 
-(define-condition-type &kali-unknown-reader-error &kali-reader-error
-  kali-unknown-reader-error?
-  (condition kali-unknown-reader-error-condition))
-
 ;; -----------
 ;; remote
 (define-condition-type &kali-remote-error &kali-error
@@ -86,7 +82,7 @@
 ;; connect
 (define-condition-type &kali-connect-error &kali-error
   kali-connect-error?
-  (need-counts kali-connect-error-nedd-counts))
+  (need-counts kali-connect-error-need-counts))
 
 ;; ----------
 ;; memory
@@ -94,3 +90,21 @@
   kali-memory-layout-error?
   (alien-vector kali-memory-layout-error-alien-vector)
   (local-vector kali-memory-layout-error-local-vector))
+
+;; ----------
+;; server
+(define-condition-type &kali-no-server-started-error &kali-error
+  kali-no-server-started-error?)
+
+(define-condition-type &kali-server-already-started-error &kali-error
+  kali-server-already-started-error?)
+
+;; ----------
+;; bad-stob/object
+(define-condition-type &kali-bad-stob-type-error &kali-error
+  kali-bad-stob-type-error?
+  (type kali-bad-stob-type-error-type))
+
+(define-condition-type &kali-bad-object-error &kali-error
+  kali-bad-object-error?
+  (object kali-bad-object-error-object))

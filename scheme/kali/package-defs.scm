@@ -1,23 +1,3 @@
-(define-interface kali-conditions-interface  
-  (export (with-continuation-handler :syntax)
-	  (with-except-handler :syntax)
-	  &kali-error kali-reader-error?
-	  &kali-reader-error               kali-reader-error?
-	  &kali-reader-eof-error           kali-reader-eof-error?
-	  &kali-reader-insufficient-error  kali-reader-insufficient-error?
-	  &kali-reader-condvar-error       kali-reader-condvar-error?
-	  &kali-unknown-reader-error       kali-unknown-reader-error?
-	  &kali-remote-error               kali-remote-error?
-	  &kali-send-message-to-self-error kali-send-message-to-self-error?
-	  &kali-connect-error              kali-connect-error?
-	  &kali-memory-layout-error        kali-memory-layout-error?))
-	  ;&kali-remote-apply-error        kali-remote-apply-error?))
-
-(define-structure kali-conditions kali-conditions-interface
-  (open scheme
-	srfi-34
-	srfi-35)
-  (files kali-conditions))
 
 ;; =======================================================================
 
@@ -49,7 +29,8 @@
 	define-record-types
 	srfi-13			; string-drop-right
 	ascii tables
-	signals			; error
+	srfi-34 srfi-35         ;; error handling
+	kali-conditions         ;; error handling
 	architecture		; stob
 	templates locations	; set-template-id! set-location-uid!
 	interrupts		; with-interrupts-inhibited
@@ -104,7 +85,7 @@
 	placeholders
 	architecture			; max-proxy-count, max-proxy-debit
 	weak				; weak-pointer-ref
-	signals				; warn
+	(subset signals	(warn))
 	interrupts)			; with-interrupts-inhibited
   (files proxy-count))
 
@@ -147,7 +128,9 @@
 	  make-uid-reply))
 
 (define-structure uid-requests uid-request-interface
-  (open scheme receiving define-record-types signals
+  (open scheme receiving define-record-types
+	srfi-34 srfi-35         ;; error handling
+	kali-conditions         ;; error handling
 	enumerated enum-case architecture
 	connect message-types
 	closures locations templates
@@ -209,3 +192,54 @@
 	messages proxy-internals threads
 	fluids-internal)		; current-thread
   (files utils))
+
+;; ========================================================================
+
+(define-interface kali-conditions-interface  
+  (export (with-continuation-handler :syntax)
+	  (with-except-handler :syntax)
+	  &kali-error                         kali-error?
+
+	  &kali-reader-error                  kali-reader-error?
+	  kali-reader-error-channel
+
+	  &kali-reader-eof-error              kali-reader-eof-error?
+
+	  &kali-reader-insufficient-error     kali-reader-insufficient-error?
+	  kali-reader-insufficient-error-got
+	  kali-reader-insufficient-error-length
+
+	  &kali-reader-condvar-error          kali-reader-condvar-error?
+
+	  &kali-remote-error                  kali-remote-error?
+	  kali-remote-error-aspace
+	  kali-remote-error-procedure
+	  kali-remote-error-arguments
+	  kali-remote-error-condition
+	  
+	  &kali-send-message-to-self-error    kali-send-message-to-self-error?
+	  kali-send-message-to-self-error-type
+	  kali-send-message-to-self-error-message
+
+	  &kali-connect-error                 kali-connect-error?
+	  kali-connect-error-need-counts
+
+	  &kali-memory-layout-error           kali-memory-layout-error?
+	  kali-memory-layout-error-alien-vector
+	  kali-memory-layout-error-local-vector
+
+	  &kali-no-server-started-error       kali-no-server-started-error?
+	  
+	  &kali-server-already-started-error  kali-server-already-started-error?
+
+	  &kali-bad-stob-type-error           kali-bad-stob-type-error?
+	  kali-bad-stob-type-error-type
+
+	  &kali-bad-object-error              kali-bad-object-error?
+	  kali-bad-object-error-object))
+
+(define-structure kali-conditions kali-conditions-interface
+  (open scheme
+	srfi-34
+	srfi-35)
+  (files kali-conditions))

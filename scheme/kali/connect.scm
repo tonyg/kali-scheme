@@ -423,8 +423,7 @@
 		    (lose)
 		    (cond ((maybe-commit-and-wait-for-condvar condvar)
 			   #t)
-			  (else (raise (make-condition &kali-reader-condvar-error
-						       'port port)))))
+			  (else (raise (make-condition &kali-reader-condvar-error)))))
 		   (let ((have (+ have (condvar-value condvar))))
 		     (if (and keep-trying? (< have need))
 			 (loop have)
