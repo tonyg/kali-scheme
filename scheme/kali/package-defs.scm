@@ -55,7 +55,6 @@
     (define-enumeration message-type
       (run			; (proc . args)
        apply			; (return-id proc . args)
-       available		; (value . '())		;; chnx available!
        results			; (return-id . values)
        uid-request      	; (element-type . uid)*
        uid-reply        	; #(aspace-uid uid element-type contents)
@@ -84,7 +83,6 @@
 	architecture			; max-proxy-count, max-proxy-debit
 	weak				; weak-pointer-ref
 	signals				; warn
-	debug-messages			; for debugging
 	interrupts)			; with-interrupts-inhibited
   (files proxy-count))
 
@@ -106,8 +104,6 @@
 	interrupts			; call-after-gc!
 	bitwise				; arithmetic-shift
 	conditions handle i/o display-conditions  ; dealing with errors
-	;debug-messages
-	i/o ;; test-messages
 	threads			; spawn
 	(subset primitives (eof-object  ;; because of channel-read
 			    memory-status 
@@ -132,7 +128,6 @@
 	proxy-internals address-spaces
 	;weak
 	records			; record?, record-ref (abstraction breaking)
-	debug-messages		; (for debugging)
 	(subset primitives (untyped-indexed-set! 
 			    record 
 			    record-ref 
@@ -144,11 +139,6 @@
 (define-structure messages (export remote-run! 
 				   remote-apply 
 				   start-server
-				   ;; begin chnx available!
-				   make-available!
-				   last-received
-				   all-received
-				   ;; end chnx available!
 				   return-counts ;; just for encode-decode-test
 				   )
   (open scheme
@@ -160,9 +150,7 @@
 	threads	threads-internal
 	placeholders
 	interrupts			; with-interrupts-inhibited
-	proxy-internals			; (for debugging)
-	debug-messages			; (for debugging)
-	i/o)				; force-output (for debugging)
+	proxy-internals)
   (files message))
 
 ;; =======================================================================
@@ -174,11 +162,6 @@
 	  remote-run!
 	  remote-apply
 
-	  ;; begin chnx available!
-	  make-available!
-	  last-received
-	  all-received
-	  ;; end chnx available!
 	  make-proxy
 	  proxy?
 	  proxy-owner

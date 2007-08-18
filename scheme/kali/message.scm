@@ -50,20 +50,6 @@
 ; REMOTE-APPLY has its own type so that it works even when the two address
 ; spaces do not agree on the UID of REMOTE-RUN!.
 
-;; begin chnx available!
-
-(define *received-available-values* '())
-
-(define (all-received)
-  *received-available-values*)
-
-(define (last-received)
-  (if (null? *received-available-values*)
-      'nothing
-      (car *received-available-values*)))
-
-;; end chnx available!
-
 (define (process-message message other-aspace)
   (let ((data (cdr message)))
     (enum-case message-type (car message)
@@ -71,13 +57,6 @@
        (spawn (lambda ()
 		(apply (car data)
 		       (cdr data)))))
-      ;; begin chnx available!
-      ((available)
-       ;(debug-message "[available]")
-       (set! *received-available-values*
-	     (cons data ;(car data) ;; no integers any more...
-		   *received-available-values*)))
-      ;; end chnx available!
       ((uid-request)
        ;(debug-message "[uid request]")
        (send-admin-message (enum message-type uid-reply)
@@ -132,19 +111,3 @@
 				   value))
 	       (apply proc args))))
 	(placeholder-value placeholder))))
-
-;; begin chnx available!
-(define (make-available! aspace value)
-  (if (eq? aspace (local-address-space))
-      (begin
-	(display "already available here!")
-	(newline))
-      (if (number? value)
-	  (begin
-	    (display "no numbers! wrap them in a list or something.")
-	    (newline))
-	  (send-message (enum message-type available)
-			value ;(cons value '()) ;; no integers any more
-			aspace))))
-;; end chnx available!
-
