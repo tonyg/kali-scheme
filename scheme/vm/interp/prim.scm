@@ -627,14 +627,33 @@
 	    (goto return pair)
 	    (begin
 	      (write-out-string "doing gc while encoding") ;; chnx debug-message
-	      (write-out-newline) ;; chnx debug-message                    
-	      (push aspace)
-	      (push pair)
-	      (push thing)
+	      (write-out-newline) ;; chnx debug-message                
+	      ;(write-out-string "pushing aspace") ;; chnx debug-message
+	      ;(write-out-newline) ;; chnx debug-message
+	      (push aspace)                
+	      ;(write-out-string "pushing pair") ;; chnx debug-message
+	      ;(write-out-newline) ;; chnx debug-message
+	      (push pair)                
+	      ;(write-out-string "pushing thing") ;; chnx debug-message
+	      ;(write-out-newline) ;; chnx debug-message
+	      (push thing)                
+	      ;(write-out-string "collect") ;; chnx debug-message
+	      ;(write-out-newline) ;; chnx debug-message
 	      (s48-collect #t)
-	      (let* ((thing (pop))
-		     (pair (pop))
-		     (aspace (pop)))
+	      (let* ((thing ;(begin                
+			    ;  (write-out-string "poping thing") ;; chnx debug-message
+			    ;  (write-out-newline) ;; chnx debug-message
+			      (pop));)
+		     (pair ;(begin                
+			   ;  (write-out-string "poping pair") ;; chnx debug-message
+			   ;  (write-out-newline) ;; chnx debug-message
+			     (pop));)
+		     (aspace ;(begin                
+			     ;  (write-out-string "poping aspace") ;; chnx debug-message
+			     ;  (write-out-newline) ;; chnx debug-message
+			       (pop)));)                
+		;(write-out-string "going to encode...") ;; chnx debug-message
+		;(write-out-newline) ;; chnx debug-message
 		(if (encode thing aspace pair)
 		    (goto return pair)
 		    (raise-exception heap-overflow 0 thing aspace))))))))

@@ -110,6 +110,7 @@
 				 requests
 				 other-aspace))))
       ((return-proxy-counts)
+       (debug-message "[return-proxy-counts]") ;; chnx debug
        (for-each (lambda (p)
 		   (add-proxy-counts! (car p) (cdr p)))
 		 data))
@@ -205,3 +206,9 @@
 	      (set! *free-apply-ids* (cdr *free-apply-ids*))
 	      (vector-set! *apply-waiters* uid 'pending)
 	      uid))))))
+
+;; chnx debug
+(define (debug-message . args)
+  (for-each display 
+	    args)
+  (newline))

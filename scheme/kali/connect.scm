@@ -326,6 +326,8 @@
 ; should really just send an event, and not execute the code itself.
 
 (define (gc-proxies)
+  (display "gc-proxies") ;; chnx debug-message
+  (newline) ;; chnx debug-message
   (for-each (lambda (aspace)
 	      (if (eq? aspace (local-address-space))
 		  (find-dead-proxies aspace #t)
