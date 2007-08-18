@@ -80,14 +80,22 @@
 							       seconds2)
 			" seconds." #\newline))))
 			
-(define (test aspace1 aspace2)
-  (save-pixel-field-as-tga (calculate-mandel (make-mandel-piece (make-point -2 2)
-								(make-point 2 -2)
-								50 50)
-					     64
-					     `(,aspace1 ,aspace2)
-					     1)
-			   "MANDEL-TEST.tga"))
+(define (mandel-test aspace1 aspace2 . n)
+  (let* ((seconds1 (time-seconds (current-time)))
+	 (pixel-field (calculate-mandel (make-mandel-piece (make-point -2 2)
+							   (make-point 2 -2)
+							   50 50)
+					64
+					`(,aspace1 ,aspace2)
+					(if (null? n)
+					    1
+					    (car n))))
+	 (seconds2 (time-seconds (current-time))))
+    (for-each display
+	      `("Test finished in " ,(- seconds2 seconds1) " seconds."
+		#\newline #\newline))
+    (save-pixel-field-as-tga pixel-field
+			     "MANDEL-TEST.tga")))
 
 ;; ============================================================================
 ;; the actual calculation:
@@ -374,9 +382,20 @@
 		   ".tga")))
 
 (define (display-mandel-piece mandel-piece)
-  (let* ((upper-left  (mandel-piece-upper-left))
-	 (lower-right (mandel-piece-lower-right))
-	 (x-min (point-x upper-leftyaaa
+  (let* ((upper-left  (mandel-piece-upper-left mandel-piece))
+	 (lower-right (mandel-piece-lower-right mandel-piece))
+	 (x-min (point-x upper-left))
+	 (x-max (point-x lower-right))
+	 (y-min (point-y lower-right))
+	 (y-max (point-y upper-left))
+	 (x-res (mandel-piece-x-res mandel-piece))
+	 (y-res (mandel-piece-y-res mandel-piece)))
+    (for-each display
+	      `(#\newline
+		"range     : " ,x-min " <= x <= " ,x-max #\newline
+		"            " ,y-min " <= y <= " ,y-max #\newline
+		"resolution: " ,x-res " x " ,y-res #\newline
+		#\newline))))
 
 ;; ----------------------------------------------
 ;; colour stuff...

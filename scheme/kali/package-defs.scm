@@ -250,7 +250,7 @@
 
 (define-structure mandelbrot (export mandel
 				     mandel-bench
-				     test)
+				     mandel-test)
   (open scheme 
 	threads
 	kali
@@ -290,6 +290,7 @@
 		    (kml-placeholders kml-placeholders-interface))
   (open scheme
 	kali
+	rendezvous
 	rendezvous-channels
 	rendezvous-async-channels
 	rendezvous-placeholders)
