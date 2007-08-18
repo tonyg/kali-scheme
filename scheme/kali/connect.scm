@@ -326,8 +326,6 @@
 ; should really just send an event, and not execute the code itself.
 
 (define (gc-proxies)
-  (display "gc-proxies") ;; chnx debug-message
-  (newline) ;; chnx debug-message
   (for-each (lambda (aspace)
 	      (if (eq? aspace (local-address-space))
 		  (find-dead-proxies aspace #t)
@@ -368,10 +366,9 @@
 (define (channel-write-byte channel byte)
   (channel-write channel (make-code-vector 1 byte) 0 1))
 
-
-;; chnx kali 
+ 
 ;; chnx todo channel-read
-;; we implement channel-read here because
+;; we implement channel-read _here_ because
 ;; we will take it out again ... probably ...
 
 ; CHANNEL-READ returns the number of characters read or the EOF object.

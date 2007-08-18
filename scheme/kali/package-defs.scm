@@ -55,7 +55,7 @@
     (define-enumeration message-type
       (run			; (proc . args)
        apply			; (return-id proc . args)
-       available     ; chnx debug (value . '())
+       available		; (value . '())		;; chnx available!
        results			; (return-id . values)
        uid-request      	; (element-type . uid)*
        uid-reply        	; #(aspace-uid uid element-type contents)
@@ -147,19 +147,11 @@
 (define-structure messages (export remote-run! 
 				   remote-apply 
 				   start-server
-				   ;; begin chnx debug
-				   remote-available!
+				   ;; begin chnx available!
+				   make-available!
 				   last-received
 				   all-received
-				   ;; end chnx debug
-				   
-				   ;; chnx for testing:
-				   ;; chnx todo message-internal/test-package-structure
-				   ;; perhaps one should write a
-				   ;; messages-internal-structure
-				   ;; or a test-structure
-				   return-counts
-				   adjust-proxy-counts!
+				   ;; end chnx available!
 				   )
   (open scheme
 	connect message-types uid-requests
@@ -183,11 +175,11 @@
 	  remote-run!
 	  remote-apply
 
-	  ;; begin chnx debug
-	  remote-available!
+	  ;; begin chnx available!
+	  make-available!
 	  last-received
 	  all-received
-	  ;; end chnx debug
+	  ;; end chnx available!
 	  make-proxy
 	  proxy?
 	  proxy-owner

@@ -265,7 +265,6 @@
   (return-from-callback 2)	; return from an callback
   (really-encode 2)         ;; kali
   (really-decode 3)         ;; kali
-  (mguid 1)             ;; chnx mguid debug
 
   ;; Unnecessary primitives
   (string=? 2)

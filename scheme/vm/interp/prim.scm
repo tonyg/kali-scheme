@@ -626,34 +626,14 @@
 	(if (encode thing aspace pair)
 	    (goto return pair)
 	    (begin
-	      (write-out-string "doing gc while encoding") ;; chnx debug-message
-	      (write-out-newline) ;; chnx debug-message                
-	      ;(write-out-string "pushing aspace") ;; chnx debug-message
-	      ;(write-out-newline) ;; chnx debug-message
-	      (push aspace)                
-	      ;(write-out-string "pushing pair") ;; chnx debug-message
-	      ;(write-out-newline) ;; chnx debug-message
-	      (push pair)                
-	      ;(write-out-string "pushing thing") ;; chnx debug-message
-	      ;(write-out-newline) ;; chnx debug-message
-	      (push thing)                
-	      ;(write-out-string "collect") ;; chnx debug-message
-	      ;(write-out-newline) ;; chnx debug-message
+	      (debug-message "doing gc while encoding")
+	      (push aspace)
+	      (push pair)
+	      (push thing)
 	      (s48-collect #t)
-	      (let* ((thing ;(begin                
-			    ;  (write-out-string "poping thing") ;; chnx debug-message
-			    ;  (write-out-newline) ;; chnx debug-message
-			      (pop));)
-		     (pair ;(begin                
-			   ;  (write-out-string "poping pair") ;; chnx debug-message
-			   ;  (write-out-newline) ;; chnx debug-message
-			     (pop));)
-		     (aspace ;(begin                
-			     ;  (write-out-string "poping aspace") ;; chnx debug-message
-			     ;  (write-out-newline) ;; chnx debug-message
-			       (pop)));)                
-		;(write-out-string "going to encode...") ;; chnx debug-message
-		;(write-out-newline) ;; chnx debug-message
+	      (let* ((thing (pop))
+		     (pair (pop))
+		     (aspace (pop)))
 		(if (encode thing aspace pair)
 		    (goto return pair)
 		    (raise-exception heap-overflow 0 thing aspace))))))))
@@ -672,14 +652,6 @@
 	(vm-vector-set! result 2 low-count-proxies)
 	(goto return result)))))
 
-;; chnx mguid debug
-;(define (mguid thing) (my-get-uid thing))
-
-(define-primitive mguid (any->)
-  (lambda (thing)
-    (let ((uid (my-get-uid thing)))
-      (goto return uid))))
-
 ;; kali - end
 
 ; *** Our entry for the obscure comment of the year contest.
@@ -692,3 +664,10 @@
 ; in the usual way.
 ; For more on pclsring see `Pclsring: Keeping Process State Modular' by Alan
 ; Bawden (ftp.ai.mit.edu:pub/alan/pclsr.memo).
+
+
+;; debug-message
+;; open vm-utilities when uncommenting
+(define (debug-message str)
+  (write-out-string str)
+  (write-out-newline))

@@ -55,7 +55,6 @@
 ; the returned message is FALSE.
 
 (define (encode thing address-space pair)
-  ;(debug-message "BEGIN ENCODING ...") ;; chnx debug
   (receive (start-hp current-begin current-end other-begin other-end)
       (s48-heap-limits)
     (set! *our-address-space* address-space)
@@ -94,7 +93,6 @@
 			 (begin
 			   (vm-set-car! pair result)
 			   (vm-set-cdr! pair losers)
-			   ;(debug-message "... FINISHED ENCODING") ;; chnx debug
 			   #t)))
 		   (begin
 		     (drop-new-ids! other-begin)
@@ -105,13 +103,11 @@
 (define *start*)
 
 (define (make-message-vector start)
-  ;(debug-message "make-message-vector") ;; chnx debug
   (let ((size (address-difference *transmit-hp* (address1+ start))))
     (store! start (make-header (enum stob byte-vector) size))
     (address->stob-descriptor (address1+ start))))
 
 (define (encoding-lost!)
-  ;(debug-message "encoding-lost") ;; chnx debug
   (set! *transmit-hp* *max-hp*)
   0)   ; stored in encoded vector, which will never be used
 
@@ -128,7 +124,6 @@
 (define *other-hp*)
 
 (define (alloc-list-elt! cells old)
-  ;(debug-message "alloc-list-elt!") ;; chnx debug
   (let ((start *other-hp*))
     (store! (address+ start (cells->a-units cells))
 	    (address->integer old))
@@ -136,13 +131,11 @@
     start))
 
 (define (walk-list start cells proc)
-  ;(debug-message "walk-list") ;; chnx debug
   (do ((ptr start (list-elt-next ptr cells)))
       ((null-address? ptr))
     (proc ptr)))
 
 (define (reduce-list start cells data proc)
-  ;(debug-message "reduce-list") ;; chnx debug
   (do ((ptr start (list-elt-next ptr cells))
        (data data (proc ptr data)))
       ((null-address? ptr)
@@ -159,14 +152,12 @@
 (define *heartbreak-hotel*)
 
 (define (remember-heartbreak thing header)
-  ;(debug-message "remember-heartbreak") ;; chnx debug
   (let ((room-number (alloc-list-elt! 2 *heartbreak-hotel*)))
     (store! room-number thing)
     (store! (address1+ room-number) header)
     (set! *heartbreak-hotel* room-number)))
 
 (define (mend-hearts! start)
-  ;(debug-message "mend-hearts!") ;; chnx debug
   (walk-list *heartbreak-hotel*
 	     2
 	     (lambda (ptr)
@@ -196,7 +187,6 @@
 ; to the decode vector or put it in the *NEW-ID-HOTEL*.
 
 (define (real-next-id thing decode-vector)
-  ;(debug-message "real-next-id") ;; chnx debug
   (let* ((next-available (vm-vector-ref decode-vector freelist-index))
 	 (extracted (extract-fixnum next-available))
 	 (next (if (< extracted (vm-vector-length decode-vector))
@@ -214,7 +204,6 @@
 ; Used when we don't have room to add the new objects to the decode vector.
 
 (define (drop-new-ids! start)
-  ;(debug-message "drop-new-ids!") ;; chnx debug
   (walk-list *new-id-hotel*
 	     1
 	     (lambda (ptr)
@@ -224,7 +213,7 @@
 		    (vm-set-symbol-uid! thing false))
 		   ((template)
 		    (set-template-uid! thing false))
-		   ;;((external)                        ;; taken out - ther are no 
+		   ;;((external)                        ;; taken out - there are no 
 		   ;; (set-external-uid! thing false))  ;; external-stobs in scheme48-1.4T
 		   ((address-space)
 		    (set-address-space-uid! thing false))
@@ -241,7 +230,6 @@
 ; state if we cannot complete the update (because we ran out of room).
 
 (define (update-decode-vectors! address-space start)
-  ;(debug-message "update-decode-vectors!") ;; chnx debug
   (let ((old-decode (address-space-decode-vector address-space))
 	(old-proxy (address-space-proxy-vector address-space)))
     (let ((decode-okay? (<= (extract-fixnum
@@ -265,7 +253,6 @@
 ; decode vector.
 
 (define (extend-decode-vector address-space start proxies?)
-  ;(debug-message "extend-decode-vector") ;; chnx debug
   (let* ((decode-vector (if proxies?
 			    (address-space-proxy-vector address-space)
 			    (address-space-decode-vector address-space)))
@@ -295,7 +282,6 @@
 ; 3. Link any unused slots into a freelist.
 
 (define (setup-new-decode-vector! new-vector old-vector start proxies?)
-  ;(debug-message "setup-new-decode-vector!") ;; chnx debug
   (let ((old-length (vm-vector-length old-vector))
 	(new-length (vm-vector-length new-vector))
 	(next-uid (extract-fixnum (vm-vector-ref old-vector freelist-index))))
@@ -324,7 +310,6 @@
 ; the scanning pointer catches up with the heap pointer.
 
 (define (do-encoding start)
-  ;(debug-message "do-encoding") ;; chnx debug
   (let loop ((start start))
     (let ((end *transmit-hp*))
       (encode-locations start end)
@@ -337,7 +322,6 @@
 ; Encode everything pointed to from somewhere between START and END.
 
 (define (encode-locations start end)
-  ;(debug-message "encode-locations") ;; chnx debug
   (let loop ((addr start))
     (if (address< addr end)
 	(loop (encode-next addr)))))
@@ -345,7 +329,6 @@
 ; Encode the thing pointed to from ADDR, returning the next address to copy.
 
 (define (encode-next addr)
-  ;(debug-message "encode-next") ;; chnx debug
   (let ((thing (fetch addr))
 	(next (address1+ addr)))
     (cond ((b-vector-header? thing)
@@ -359,13 +342,12 @@
 ; Encode THING if it has not already been encoded.
 
 (define (encode-object thing)
-  ;(debug-message "encode-object") ;; chnx debug
   (let ((h (stob-header thing)))
     (if (stob? h)            ;***Broken heart
 	h
 	(enum-case stob (header-type h)
 	  ((symbol)
-	   ;(debug-message "[symbol]") ;; chnx debug
+	   ;(debug-message "[symbol]")
 	   (make-element (enum element uid)
 			 (extract-fixnum
 			  (get-uid thing vm-symbol-uid vm-set-symbol-uid!))))
@@ -374,20 +356,20 @@
 ;;			 (extract-fixnum                                     ;; in
 ;;			  (get-uid thing external-uid set-external-uid!))))  ;; scheme48-1.4T
 	  ((address-space)
-	   ;(debug-message "[address-space]") ;; chnx debug
+	   ;(debug-message "[address-space]") 
 	   (make-element (enum element uid)
 			 (extract-fixnum
 			  (get-uid thing address-space-uid set-address-space-uid!))))
 	  ((template)
-	   ;(debug-message "[template]") ;; chnx debug
+	   ;(debug-message "[template]")
 	   (encode-two-part-uid
 	     (get-uid thing template-uid set-template-uid!)))
 	  ((location)
-	   ;(debug-message "[location]") ;; chnx debug
+	   ;(debug-message "[location]")
 	   (encode-two-part-uid
 	      (get-uid thing location-uid set-location-uid!)))
 	  ((proxy)
-	   ;(debug-message "[proxy]") ;; chnx debug
+	   ;(debug-message "[proxy]")
 	   (if (address<= *max-hp*
 			  (address+ *transmit-hp* (cells->a-units 3)))
 	       (encoding-lost!)
@@ -402,11 +384,9 @@
 		 (store-next! (debit-proxy-count! data))
 		 new)))
 	  (else
-	   ;(debug-message "[else] -> encode-full-obj") ;; chnx debug
 	   (encode-full-object h thing))))))
 
 (define (encode-two-part-uid uid)
-  ;(debug-message "encode-two-part-uid") ;; chnx debug
   (if (address<= *max-hp*
 		 (address+ *transmit-hp* (cells->a-units 2)))
       (encoding-lost!)
@@ -421,7 +401,6 @@
 	new)))
 
 (define (encode-full-object header thing)
-  ;(debug-message "encode-full-object") ;; chnx debug
   (if (address<= *max-hp*
 		 (address+ *transmit-hp* (header-a-units header)))
       (encoding-lost!)
@@ -436,13 +415,11 @@
 	new)))
 
 (define (address->message-offset type)
-  ;(debug-message "address->message-offset") ;; chnx debug
   (make-element type (address-difference *transmit-hp* *start*)))
 
 ; Utility for getting uids.
 
 (define (get-uid thing accessor setter)
-  ;(debug-message "get-uid") ;; chnx debug
   (let ((uid (accessor thing)))
     (if (false? uid)
 	(let ((uid (next-id thing)))
@@ -451,7 +428,6 @@
 	uid)))
 
 (define (get-proxy-uid thing)
-  ;(debug-message "get-proxy-uid") ;; chnx debug
   (let ((uid (proxy-data-uid thing)))
     (if (false? uid)
 	(let ((uid (next-proxy-id thing)))
@@ -472,7 +448,6 @@
 (define shared-address-space-uid 2)
 
 (define (debit-proxy-count! proxy-data)
-  ;(debug-message "debit-proxy-count!") ;; chnx debug
   (let ((owner (proxy-data-owner proxy-data)))
     (if (and (not (eq? owner false))		; local proxies have #f as owner
 	     (= (address-space-uid owner)
@@ -497,7 +472,6 @@
 ; returns FALSE if it runs out of space.
 
 (define (get-losing-proxies)
-  ;(debug-message "get-losing-proxies") ;; chnx debug
   (reduce-list *losing-proxy-hotel*
 	       1     ; cells
 	       null  ; initial result list
@@ -556,7 +530,6 @@
 ; DECODE assumes that the size has been stripped off the front of the message.
 
 (define (decode message aspace reverse? key)
-  ;(debug-message "BEGIN DECODING ...") ;; chnx debug
   (let ((start (address-at-header message))
 	(limit (address-after-stob message)))
     (if reverse?
@@ -567,7 +540,6 @@
     (decode-message-body (address1+ (address1+ start)) limit aspace key)
     (stob-header-set! message (make-header (enum stob byte-vector)
 					   (cells->bytes 1)))
-    ;(debug-message "... FINISHED DECODING") ;; chnx debug
     (values (address->stob-descriptor
 	     (address+ *start* (element-info (fetch (address1+ start)))))
 	    *new-uids*
@@ -603,7 +575,6 @@
 ;; of descriptor vectors, looping over byte vectors.
 
 (define (decode-message-body start limit aspace key)
-  ;(debug-message "decode-message-body") ;; chnx debug
   (let loop ((addr start))
     (if (address< addr limit)
 	(let ((thing (fetch addr))
@@ -618,7 +589,6 @@
 ;; Loop throught the object.
 
 (define (decode-stob-contents start count aspace key)
-  ;(debug-message "decode-stob-contents") ;; chnx debug
   (let ((end (address+ start (cells->a-units count))))
     (do ((addr start (address1+ addr)))
 	((address= addr end))
@@ -631,17 +601,16 @@
 ; Dispatch on the type of the thing.
 
 (define (decode-object thing aspace addr stob-start key)
-  ;(debug-message "decode-object") ;; chnx debug
   (let ((data (element-info thing)))
     (enum-case element (element-type thing)
       ((local)
-       ;(debug-message "[local]") ;; chnx debug
+       ;(debug-message "[local]")
        (address->stob-descriptor (address+ *start* data)))
       ((uid)
-       ;(debug-message "[uid]") ;; chnx debug
+       ;(debug-message "[uid]")
        (decode-uid data aspace aspace-id-in-self addr stob-start key))
       ((uid+owner)
-       ;(debug-message "[uid+owner]") ;; chnx debug
+       ;(debug-message "[uid+owner]")
        (receive (aspace-uid uid)
 	   (get-full-uid-data data)
 	 (let ((aspace (lookup-uid aspace-uid aspace)))
@@ -649,7 +618,7 @@
 	       (decode-uid uid aspace aspace-uid addr stob-start key)
 	       (add-pending! aspace-uid uid addr stob-start key)))))
       (else   ; (proxy)   ; Type checker can't handler missing ELSE clause
-       ;(debug-message "[proxy] - (else)") ;; chnx debug
+       ;(debug-message "[proxy] - (else)")
        (receive (aspace-uid uid count)
 	   (get-proxy-data data)
 	 (let ((aspace (lookup-uid aspace-uid aspace)))
@@ -661,7 +630,6 @@
 ;; Get the address space and uid for a template or location.
 
 (define (get-full-uid-data data)
-  ;(debug-message "get-full-uid-data") ;; chnx debug
   (let* ((data-addr (address- (address+ *start* data)
 			      (cells->a-units 1)))
 	 (aspace (extract-fixnum (fetch data-addr)))
@@ -674,7 +642,6 @@
 ; Same deal, except that there are three values.
 
 (define (get-proxy-data data)
-  ;(debug-message "get-proxy-data") ;; chnx debug
   (let ((data-addr (address- (address+ *start* data)
 			     (cells->a-units 1))))
     (let ((aspace (extract-fixnum (fetch data-addr)))
@@ -689,7 +656,6 @@
 ; Getting proxies.
 
 (define (lookup-proxy aspace aspace-uid uid count addr stob-start key)
-  ;(debug-message "lookup-proxy") ;; chnx debug
   (let ((proxy-vector (address-space-proxy-vector aspace)))
     (if (< uid (vm-vector-length proxy-vector))
 	(let ((thing (vm-vector-ref proxy-vector uid)))
@@ -716,7 +682,6 @@
 (define *bad-count-proxies*)
 
 (define (add-to-proxy-count! proxy-data more key)
-  ;(debug-message "add-to-proxy-count!") ;; chnx debug
   (let ((count (extract-fixnum (proxy-data-reference-count proxy-data))))
     (if (< count 1)
 	(set! *bad-count-proxies*
@@ -736,7 +701,6 @@
 ; Make a proxy corresponding to PROXY-DATA.
 
 (define (rejuvenate-proxy! proxy-data key)
-  ;(debug-message "rejuvenate-proxy!") ;; chnx debug
   (let* ((proxy (really-make-proxy proxy-data key))
 	 (weak (make-weak-pointer proxy weak-pointer-size)))
     (set-proxy-data-self! proxy-data weak)
@@ -745,7 +709,6 @@
 ;----------------
 
 (define (decode-uid uid aspace aspace-uid addr stob-start key)
-  ;(debug-message "decode-uid") ;; chnx debug
   (let ((thing (lookup-uid uid aspace)))
     (if (stob? thing)
 	thing
@@ -754,7 +717,6 @@
 ;; Returns either the thing or false.
 
 (define (lookup-uid uid aspace)
-  ;(debug-message "lookup-uid") ;; chnx debug
   (let ((decode-vector (address-space-decode-vector aspace)))
     (if (>= uid (vm-vector-length decode-vector))
 	false
@@ -771,15 +733,12 @@
 (define *new-uids*)
 
 (define (add-pending! aspace-uid uid addr stob-start key)
-  ;(debug-message "!!! add-pending! !!!") ;; chnx debug
   (really-add-pending! aspace-uid uid false addr stob-start key))
 
 (define (add-pending-proxy! aspace-uid uid count addr stob-start key)
-  ;(debug-message "!!! add-pending-proxy! !!!") ;; chnx debug
   (really-add-pending! aspace-uid uid (enter-fixnum count) addr stob-start key))
 
 (define (really-add-pending! aspace-uid uid count addr stob-start key)
-  ;(debug-message "!!! really-add-pending! !!!") ;; chnx debug
   (let ((stob (address->stob-descriptor stob-start))
 	(offset (a-units->cells (address-difference addr stob-start)))
 	(vector (vm-make-vector 5 key)))
@@ -795,7 +754,6 @@
 ; Address utilities.
 
 (define (store-next! descriptor)
-  ;(debug-message "store-next!")
   (store! *transmit-hp* descriptor)
   (set! *transmit-hp* (address1+ *transmit-hp*)))
 
@@ -811,35 +769,3 @@
   (address+ (address-after-header stob)
 	    (bytes->a-units (header-length-in-bytes (stob-header stob)))))
 
-;; chnx debug
-(define (debug-message string)
-  (write-out-string string)
-  (write-out-newline))
-
-;; chnx mguid
-
-(define (my-get-uid thing)
-  (let ((id (lambda (x) x))
-        (h (stob-header thing)))
-    (if (stob? h)            ;***Broken heart
-        (debug-message "header was a STOB")
-        ((enum-case stob (header-type h)
-          ((symbol)
-           (debug-message "[symbol]")
-           vm-symbol-uid)
-          ((address-space)
-           (debug-message "[address-space]")
-           address-space-uid)
-          ((template)
-           (debug-message "[template]")
-           template-uid)
-          ((location)
-           (debug-message "[location]")
-           location-uid)
-          ((proxy)
-           (debug-message "[proxy]")
-           id)
-          (else
-           (debug-message "[else] -- don't know")
-           id))
-         thing))))

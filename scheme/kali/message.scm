@@ -37,7 +37,7 @@
 ; dependencies), all other messages have to wait.
 
 (define (process-missing-uids message missing-uids other-aspace)
-  ;(debug-message "[missing uids]") ;; chnx debug
+  ;(debug-message "[missing uids]")
   (if (eq? (car message)
 	   (enum message-type uid-reply))
       (process-uid-replies (cdr message) missing-uids other-aspace)
@@ -50,7 +50,7 @@
 ; REMOTE-APPLY has its own type so that it works even when the two address
 ; spaces do not agree on the UID of REMOTE-RUN!.
 
-;; begin chnx debug
+;; begin chnx available!
 
 (define *received-available-values* '())
 
@@ -62,7 +62,7 @@
       'nothing
       (car *received-available-values*)))
 
-;; end chnx debug
+;; end chnx available!
 
 (define (process-message message other-aspace)
   (let ((data (cdr message)))
@@ -72,7 +72,7 @@
 		(apply (car data)
 		       (cdr data)))))
       ((apply)
-       ;(debug-message "[apply]") ;; chnx debug
+       ;(debug-message "[apply]")
        (spawn (lambda ()
 		(call-with-values
 		  (lambda ()
@@ -81,23 +81,23 @@
 		    (send-message (enum message-type results)
 				  (cons (car data) values)
 				  other-aspace))))))
-      ;; begin chnx debug
+      ;; begin chnx available!
       ((available)
-       ;(debug-message "[available]")  ;; chnx debug
+       ;(debug-message "[available]")
        (set! *received-available-values*
 	     (cons data ;(car data) ;; no integers any more...
 		   *received-available-values*)))
-      ;; end chnx debug
+      ;; end chnx available!
       ((results)
-       ;(debug-message "[results]") ;; chnx debug
+       ;(debug-message "[results]")
        (remote-return (car data) (cdr data)))
       ((uid-request)
-       ;(debug-message "[uid request]") ;; chnx debug
+       ;(debug-message "[uid request]")
        (send-admin-message (enum message-type uid-reply)
 			   (map make-uid-reply data)
 			   other-aspace))
       ((uid-reply)
-       ;(debug-message "[uid reply]") ;; chnx debug
+       ;(debug-message "[uid reply]")
        (process-uid-replies data '() other-aspace))
       ((proxy-counts-request)
        (send-admin-message (enum message-type proxy-counts)
@@ -110,7 +110,7 @@
 				 requests
 				 other-aspace))))
       ((return-proxy-counts)
-       (debug-message "[return-proxy-counts]") ;; chnx debug
+       ;(debug-message "[return-proxy-counts]")
        (for-each (lambda (p)
 		   (add-proxy-counts! (car p) (cdr p)))
 		 data))
@@ -141,8 +141,8 @@
 		      target)
 	(wait-for-remote-return id))))
 
-;; begin chnx debug
-(define (remote-available! aspace value)
+;; begin chnx available!
+(define (make-available! aspace value)
   (if (eq? aspace (local-address-space))
       (begin
 	(display "already available here!")
@@ -154,7 +154,7 @@
 	  (send-message (enum message-type available)
 			value ;(cons value '()) ;; no integers any more
 			aspace))))
-;; end chnx debug
+;; end chnx available!
 
 (define (remote-return id return-values)
   (with-interrupts-inhibited
@@ -206,9 +206,3 @@
 	      (set! *free-apply-ids* (cdr *free-apply-ids*))
 	      (vector-set! *apply-waiters* uid 'pending)
 	      uid))))))
-
-;; chnx debug
-(define (debug-message . args)
-  (for-each display 
-	    args)
-  (newline))

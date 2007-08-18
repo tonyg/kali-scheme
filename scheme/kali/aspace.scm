@@ -155,7 +155,7 @@
 ; Initialize the server, using SOCKET-NUMBER as our socket.
 
 (define (initialize-local-address-space! socket-number)
-  (if (server-running?) ; chnx - was: *local-address-space*
+  (if (server-running?)
       (error "server already started"))
   (let ((my-machine (get-host-name)))
     (set! *address-space-table* (make-address-space-table))
