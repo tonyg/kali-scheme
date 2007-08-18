@@ -35,4 +35,22 @@
 	(subset primitives (encode collect find-all)))		; vm-extension copy-bytes! find-all-xs encode
   (files aspace))
 
+;; ===========================================================================
 
+(define-structure message-types (export (message-type :syntax))
+  (open scheme enumerated)
+  (begin
+    (define-enumeration message-type
+      (run			; (proc . args)
+       apply			; (return-id proc . args)
+       results			; (return-id . values)
+       uid-request      	; (element-type . uid)*
+       uid-reply        	; #(aspace-uid uid element-type contents)
+       proxy-counts-request	; proxy-id*
+       proxy-counts     	; proxy*
+       return-proxy-counts	; (id . counts)*
+       drop-proxy-values	; (key . #(aspace-id proxy-id count)*)
+       proxy-values-dropped     ; key
+       ))))
+
+;; ============================================================================
