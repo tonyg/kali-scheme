@@ -103,6 +103,8 @@
 	  s48-stob-in-heap?
 	  ))
 
+(define-interface extensible-procs-interface ;; kali
+  (export (define-extensible-proc :syntax))) ;; kali
 
 (define heap-gc-util-interface
   (export walk-impure-areas

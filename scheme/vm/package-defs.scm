@@ -229,7 +229,8 @@
 ; GC and allocation utilities for the interpreter.
 
 (define-structures ((interpreter-gc interpreter-gc-interface)
-		    (gc-roots gc-roots-interface))
+		    (gc-roots gc-roots-interface)
+		    (extensible-procs extensible-procs-interface)) ;; kali
   (open prescheme)
   (begin
     ; GC-ROOT and POST-GC-CLEANUP are defined incrementally.
@@ -337,6 +338,7 @@
   (open prescheme ps-receive
 	vm-utilities ;; debug
 	vm-architecture 
+	extensible-procs
 	memory 
 	data 
 	stob 
