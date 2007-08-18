@@ -89,8 +89,8 @@
 		   (not (do-encoding (address+ message-start (cells->a-units 3)))))
 	       (mend-hearts! hotel-start)
 	       (drop-new-ids! hotel-start)
-	       (kill-message-space) ;; chnx heap
-	       (clean-up-hotel-space) ;; chnx heap
+	       (space->byte-vector *message-start* *message-end*) ;; chnx heap
+	       (space->byte-vector *hotel-start* *hotel-end*) ;; chnx heap
 	       #f)
 	      (else
 	       (let ((result (make-message-vector message-start)))
@@ -100,7 +100,7 @@
 		 (mend-hearts! hotel-start)
 		 (if (update-decode-vectors! address-space hotel-start)
 		     (let ((losers (get-losing-proxies)))
-		       (clean-up-hotel-space) ;; chnx heap
+		       (space->byte-vector *hotel-start* *hotel-end*) ;; chnx heap
 		       (if (false? losers)
 			   #f
 			   (begin
@@ -110,7 +110,7 @@
 			     #t)))
 		     (begin
 		       (drop-new-ids! hotel-start)
-		       (clean-up-hotel-space)
+		       (space->byte-vector *hotel-start* *hotel-end*)
 		       #f)))))))))
      
 (define *message-space*) ;; chnx heap
@@ -128,7 +128,7 @@
   ;(debug-message "make-message-vector")
   (let ((size (address-difference *transmit-hp* (address1+ start))))
     (store! start (make-header (enum stob byte-vector) size))
-    (clean-up-message-space) ;; chnx heap
+    (space->byte-vector *transmit-hp* *message-end*) ;; chnx heap
     (address->stob-descriptor (address1+ start))))
 
 (define (encoding-lost!)
@@ -874,6 +874,13 @@
 	    (store! start h)
 	    (lp (address+ start
 			  (cells->a-units 1))))))))
+
+(define (space->byte-vector start end)
+  (let ((h (make-header (enum stob byte-vector)
+			(- (address-difference end start)
+			   (cells->a-units 1)))))
+    (store! start h)
+    (unspecific)))
 
 ;; -------------------
 
