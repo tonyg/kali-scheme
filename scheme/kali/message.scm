@@ -76,16 +76,14 @@
 								    'condition c))))))
 		   (lambda ()
 		     (really-remote-run! other-aspace
-		       (lambda (v)
+		       (lambda (results)
 			 (placeholder-set! (proxy-local-ref proxy)
-					   (cons #t v)))
+					   (cons #t results)))
 		       (call-with-values
 			   (lambda ()
 			     (apply proc args))
-			 (lambda values
-			   (if (null? values)
-			       (list (unspecific))
-			       values))))))))))
+			 (lambda results
+			   results)))))))))
       ((uid-request)
        ;(debug-message "[uid request]")
        (send-admin-message (enum message-type uid-reply)
@@ -151,4 +149,3 @@
 	   (if all-right?
 	       (apply values result)
 	       (raise result)))))))
-					

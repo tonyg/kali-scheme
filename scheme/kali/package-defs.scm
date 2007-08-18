@@ -148,6 +148,7 @@
 (define-structure messages (export remote-run! 
 				   remote-apply 
 				   start-server
+				   alive?
 				   return-counts ;; just for encode-decode-test
 				   )
   (open scheme
@@ -173,6 +174,7 @@
 
 	  remote-run!
 	  remote-apply
+	  alive?
 
 	  make-proxy
 	  proxy?

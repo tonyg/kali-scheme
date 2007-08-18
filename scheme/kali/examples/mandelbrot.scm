@@ -130,7 +130,11 @@
 ;; calculated with iterate
 
 (define (calculate-mandel-piece mandel-piece iter-limit)
-  (let* ((x-res (mandel-piece-x-res mandel-piece))
+  (display "Going to calculate mandel-piece: ")
+  (newline)
+  (display-mandel-piece mandel-piece)
+  (let* ((seconds1 (time-seconds (current-time)))
+	 (x-res (mandel-piece-x-res mandel-piece))
 	 (y-res (mandel-piece-y-res mandel-piece))
 	 (pixel2point (make-pixel2point mandel-piece))
 	 (pixel-field (make-pixel-field x-res y-res 0)))
@@ -148,7 +152,13 @@
 			   (if (= iter iter-limit)
 			       0
 			       (iter->colour-int1 iter iter-limit 50)))
-	      (y-loop (+ y 1))))))))
+	      (y-loop (+ y 1))))))
+    (let ((seconds2 (time-seconds (current-time))))
+      (display "Finished calculation in ")
+      (display (- seconds2 seconds1))
+      (display " seconds.")
+      (newline)
+      pixel-field)))
 
 ;; make a funtion that
 ;; transforms pixel-indices to point-coordinates in
@@ -362,6 +372,11 @@
 		   "_iter_" (number->string iter-limit)
 		   "_devi_" (number->string divide)
 		   ".tga")))
+
+(define (display-mandel-piece mandel-piece)
+  (let* ((upper-left  (mandel-piece-upper-left))
+	 (lower-right (mandel-piece-lower-right))
+	 (x-min (point-x upper-leftyaaa
 
 ;; ----------------------------------------------
 ;; colour stuff...
