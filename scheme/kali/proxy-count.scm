@@ -1,8 +1,10 @@
 ; Exports:
 ;  make-proxy-requests
 ;  make-proxy-rerequests
-;  release-proxy-count-waiters!
 ;  proxy-uid->proxy
+;  add-proxy-counts
+;  find-dead-proxies
+;  adjust-proxy-counts
 
 ; Threads waiting for proxy counts to arrive.
 
