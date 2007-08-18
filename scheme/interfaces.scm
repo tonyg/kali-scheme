@@ -672,6 +672,9 @@
 	  thread-name thread-uid        ;for debugging
 	  current-thread
 
+	  block      ;; kali
+	  make-ready ;; kali
+
 	  spawn
 	  relinquish-timeslice
 	  sleep
