@@ -205,6 +205,13 @@
 	  cell? cell-size make-cell cell-ref cell-set!
 	  weak-pointer? weak-pointer-size make-weak-pointer weak-pointer-ref
 
+	  ;; kali - begin
+	  address-space? make-address-space
+	  address-space-uid set-address-space-uid!
+	  address-space-decode-vector set-address-space-decode-vector!
+	  address-space-proxy-vector set-address-space-proxy-vector!
+	  ;; kali - end
+
 	  shared-binding? shared-binding-size make-shared-binding
 	  shared-binding-name shared-binding-is-import?
 	  shared-binding-ref shared-binding-set!
@@ -823,6 +830,7 @@
 	  write-descriptor
 	  write-image-block
 	  empty-image-buffer!))
+
 
 ; for debugging
 ; To activate/deactivate it, the flag 'debug-mode?' must be set in

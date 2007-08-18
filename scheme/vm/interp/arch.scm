@@ -538,6 +538,8 @@
    shared-binding
    unused-d-header1
 
+   address-space  ;; kali
+
    ;; B-vector types (not traced by GC)
    string        ; = least b-vector type
    byte-vector
@@ -593,5 +595,12 @@
       (channel-id)
       (channel-os-index)
       (channel-close-silently?))
+    ;; kali - begin
+    (address-space address-space? make-address-space
+      (address-space-uid set-address-space-uid!)
+      (address-space-decode-vector set-address-space-decode-vector!)
+      (address-space-proxy-vector  set-address-space-proxy-vector!)
+      (address-space-data))
+    ;; kali - end
     ))
 

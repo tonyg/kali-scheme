@@ -30,6 +30,7 @@
 		    (debug-messages (export debug-message))
 		    (silly (export reverse-list->string))
 		    (code-quote (export (code-quote :syntax)))
+		    (address-space-internals address-space-internals-interface)
 		    (structure-refs (export (structure-ref :syntax))))
   (define-all-operators)		; Primitive Scheme, in the LSC paper
   (usual-transforms and cond do let let* or)

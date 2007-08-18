@@ -232,7 +232,8 @@
 	   :structure)))
 
 (define-interface low-structures-interface
-  (export ((all-operators
+  (export ((address-space-internals   ;; kali
+	    all-operators
 	    ascii
 	    bitwise
 	    byte-vectors

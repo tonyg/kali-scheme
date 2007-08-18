@@ -114,6 +114,9 @@
 (define code-vector-> (input-type code-vector? no-coercion))
 (define vm-integer->  (input-type (lambda (x) (or (fixnum? x)
 						  (bignum? x))) no-coercion))
+(define aspace->      (input-type address-space? no-coercion))  ;; kali
+
+
 ; Output coercion
 
 (define (return val)

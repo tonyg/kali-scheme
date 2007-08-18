@@ -853,6 +853,19 @@
 	  set-translation!
 	  translations))
 
+;; kali - begin
+
+(define-interface address-space-internals-interface
+  (export make-address-space
+	  address-space?
+	  address-space-uid
+	  address-space-decode-vector set-address-space-decode-vector!
+	  address-space-proxy-vector set-address-space-proxy-vector!
+	  address-space-data))
+
+;; kali - end
+
+
 ; Things for the compiler.
 
 (define-interface general-tables-interface

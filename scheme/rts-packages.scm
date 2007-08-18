@@ -226,10 +226,12 @@
 
 (define-structure more-types (export :closure :code-vector :location :double
 				     :template :channel :port :weak-pointer
-				     :shared-binding :cell)
+				     :shared-binding :cell 
+				     :address-space) ;; kali  
   (open scheme-level-1 methods
 	closures code-vectors locations cells templates channels ports
-	primitives shared-bindings)
+	primitives shared-bindings
+	address-space-internals) ;; kali
   (begin (define-simple-type :closure     (:value) closure?)
 	 (define-simple-type :code-vector (:value) code-vector?)
 	 (define-simple-type :location    (:value) location?)
@@ -245,7 +247,11 @@
 	   (list (if (shared-binding-is-import? obj)
 		     'imported-binding
 		     'exported-binding)
-		 (shared-binding-name obj)))))
+		 (shared-binding-name obj)))
+	 ;; kali - begin
+	 (define-simple-type :address-space (:value) address-space?)
+	 ;; kali - end
+	 ))
 
 (define-structure enumerated enumerated-interface
   (open scheme-level-1 simple-signals)
