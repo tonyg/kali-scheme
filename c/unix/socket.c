@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>                /* Kali only: for TCP_NODELAY */
 #include <arpa/inet.h>
 
 #include "c-mods.h"
@@ -48,7 +49,8 @@ static s48_value	s48_socket(s48_value udp_p, s48_value input_p),
 				     s48_value buffer,
 				     s48_value length),
 			s48_udp_receive(s48_value channel, s48_value message),
-			s48_lookup_udp_address(s48_value name, s48_value port);
+                        s48_lookup_udp_address(s48_value name, s48_value port),
+                        s48_socket_nodelay(s48_value socket_channel, s48_value nodelay_p);
 
 /* Forward declaration. */
 static s48_value dup_socket_channel(int socket_fd);
@@ -92,6 +94,8 @@ s48_init_socket(void)
   S48_EXPORT_FUNCTION(s48_udp_send);
   S48_EXPORT_FUNCTION(s48_udp_receive);
   S48_EXPORT_FUNCTION(s48_lookup_udp_address);
+
+  S48_EXPORT_FUNCTION(s48_socket_nodelay); /* kali */
 
   S48_GC_PROTECT_GLOBAL(s48_udp_address_type_binding);
   s48_udp_address_type_binding = s48_get_imported_binding("s48-udp-address-type");
@@ -740,4 +744,31 @@ expand_and_rehash()
   connections = new_connections;
   connections_size = new_size;
   connections_index_mask = new_index_mask;
+}
+
+
+/* Given a channel associated to a file descriptor which is a TCP/IP
+ * socket, set the TCP_NODELAY appropriately.
+ * Note, file descriptors which share an origin (e.g., dup'd file
+ * descriptors) share a TCP_NODELAY mode, and thus setting one will
+ * set the other. 
+ */
+
+
+s48_value
+s48_socket_nodelay(s48_value channel, s48_value nodelay_p)
+{
+        int     stat;
+        int socket_fd;
+
+        S48_CHECK_CHANNEL(channel);
+        socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
+
+
+        nodelay_p = nodelay_p != 0;         /* just to be safe */
+        stat = setsockopt(socket_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay_p,
+                sizeof(nodelay_p));
+        if (stat != 0)
+          s48_raise_os_error(errno);
+        return S48_UNSPECIFIC;
 }

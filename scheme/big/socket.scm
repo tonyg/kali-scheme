@@ -270,3 +270,7 @@
 			  "s48_udp_receive")
 (import-lambda-definition lookup-udp-address (name port)
 			  "s48_lookup_udp_address")
+
+; socket options
+(import-lambda-definition set-tcp-nodelay! (socket-channel nodelay?) ;; kali
+                          "s48_socket_nodelay")

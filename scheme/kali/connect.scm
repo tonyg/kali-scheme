@@ -369,12 +369,6 @@
   (channel-write channel (make-code-vector 1 byte) 0 1))
 
 
-;; chnx todo tcp-nodelay
-
-(define (set-tcp-nodelay! ignore-channel ignore-state)
-  (display "no tcp-nodealy yet!!!") (newline)
-  (values))
-
 ;; chnx kali 
 ;; chnx todo channel-read
 ;; we implement channel-read here because

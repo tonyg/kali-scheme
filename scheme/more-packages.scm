@@ -396,7 +396,8 @@
 				     socket-client
 				     get-host-name
 				     get-host-by-name ;; kali
-				     
+                                     set-tcp-nodelay! ;; kali
+                                     
 				     ; From the old interface
 				     ; I would like to get rid of these.
 				     socket-listen
