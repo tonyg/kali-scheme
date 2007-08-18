@@ -37,7 +37,7 @@
 ; dependencies), all other messages have to wait.
 
 (define (process-missing-uids message missing-uids other-aspace)
-  ;(debug-message "[missing uids]")
+  ;(debug-message "[missing uids]") ;; chnx debug
   (if (eq? (car message)
 	   (enum message-type uid-reply))
       (process-uid-replies (cdr message) missing-uids other-aspace)
@@ -72,7 +72,7 @@
 		(apply (car data)
 		       (cdr data)))))
       ((apply)
-       ;(debug-message "[apply]")
+       ;(debug-message "[apply]") ;; chnx debug
        (spawn (lambda ()
 		(call-with-values
 		  (lambda ()
@@ -83,21 +83,21 @@
 				  other-aspace))))))
       ;; begin chnx debug
       ((available)
-       (debug-message "[available]")
+       ;(debug-message "[available]")  ;; chnx debug
        (set! *received-available-values*
 	     (cons data ;(car data) ;; no integers any more...
 		   *received-available-values*)))
       ;; end chnx debug
       ((results)
-       ;(debug-message "[results]")
+       ;(debug-message "[results]") ;; chnx debug
        (remote-return (car data) (cdr data)))
       ((uid-request)
-       ;(debug-message "[uid request]")
+       ;(debug-message "[uid request]") ;; chnx debug
        (send-admin-message (enum message-type uid-reply)
 			   (map make-uid-reply data)
 			   other-aspace))
       ((uid-reply)
-       ;(debug-message "[uid reply]")
+       ;(debug-message "[uid reply]") ;; chnx debug
        (process-uid-replies data '() other-aspace))
       ((proxy-counts-request)
        (send-admin-message (enum message-type proxy-counts)

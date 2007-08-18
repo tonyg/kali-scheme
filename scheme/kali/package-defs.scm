@@ -18,6 +18,8 @@
 	  address-space-in-channel set-address-space-in-channel!
 	  address-space-out-channel set-address-space-out-channel!
 	  address-space-placeholder set-address-space-placeholder!
+
+	  server-running?
 	  ))
 
 (define-structure address-spaces address-space-interface
@@ -149,6 +151,13 @@
 				   last-received
 				   all-received
 				   ;; end chnx debug
+				   
+				   ;; chnx for testing:
+				   ;; perhaps one should write a
+				   ;; messages-internal-structure
+				   ;; or a test-structure
+				   return-counts
+				   adjust-proxy-counts!
 				   )
   (open scheme
 	connect message-types uid-requests
@@ -186,7 +195,8 @@
 
 	  move-to!
 
-	  start-server))
+	  start-server
+	  server-running?))
 
 (define-structure kali kali-interface
   (open scheme address-spaces

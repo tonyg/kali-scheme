@@ -149,10 +149,13 @@
   (or *local-address-space*
       (error "no server has been started")))
 
+(define (server-running?)
+  (if *local-address-space* #t #f))
+
 ; Initialize the server, using SOCKET-NUMBER as our socket.
 
 (define (initialize-local-address-space! socket-number)
-  (if *local-address-space*
+  (if (server-running?) ; chnx - was: *local-address-space*
       (error "server already started"))
   (let ((my-machine (get-host-name)))
     (set! *address-space-table* (make-address-space-table))

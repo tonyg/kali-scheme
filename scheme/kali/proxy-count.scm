@@ -155,7 +155,8 @@
 			returns)
 		       ((assq aspace returns)
 			=> (lambda (p)
-			     (set-cdr! p (cons (cons uid returned) (cdr p)))))
+			     (set-cdr! p (cons (cons uid returned) (cdr p)))
+			     returns))
 		       (else
 			(cons (list aspace (cons uid returned)) returns))))))
 	   '()))))
