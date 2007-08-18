@@ -626,6 +626,7 @@
 	(if (encode thing aspace pair)
 	    (goto return pair)
 	    (begin
+	      (debug-message "gc while encoding!")
 	      (push aspace)
 	      (push pair)
 	      (push thing)
@@ -663,3 +664,10 @@
 ; in the usual way.
 ; For more on pclsring see `Pclsring: Keeping Process State Modular' by Alan
 ; Bawden (ftp.ai.mit.edu:pub/alan/pclsr.memo).
+
+
+;; debug-message
+;; open vm-utilities when uncommenting
+(define (debug-message str)
+  (write-out-string str)
+  (write-out-newline))

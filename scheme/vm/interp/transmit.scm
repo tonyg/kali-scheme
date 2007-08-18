@@ -67,7 +67,6 @@
 (define *hotel-limit*)
 
 (define (encode thing address-space pair)
-  (set! *encoding-lost?* #f)
   (set! *message-size* 128)
   (set! *hotel-size* 128)
 
@@ -96,10 +95,10 @@
 	    (set! *losing-proxy-hotel* null-address)
 	    (let ((code (encode-object thing)))
 	      (store! (address+ *message-start* (cells->a-units 2)) code)
-	      (cond ((or (and (address>= *message-pointer* *message-limit*)
-			      (not (enlarge-message-space 0)))
-			 (not (do-encoding (address+ *message-start* (cells->a-units 3))))
-			 (encoding-lost?))
+	      (cond ((or (waterloo? code)
+			 ;(and (address>= *message-pointer* *message-limit*)
+			 ;     (not (enlarge-message-space 0)))
+			 (not (do-encoding (address+ *message-start* (cells->a-units 3)))))
 		     (mend-hearts! hotel-start)
 		     (drop-new-ids! hotel-start)
 		     #f)
@@ -134,17 +133,6 @@
 		       (address-difference end (address1+ start))))
   (address->stob-descriptor (address1+ start)))
 
-;; -------------
-(define *encoding-lost?*)
-
-(define (encoding-lost!)
-  ;;(debug-message "encoding-lost!")
-  (set! *encoding-lost?* #t)
-  0)   ; stored in encoded vector, which will never be used
-
-(define (encoding-lost?)
-  *encoding-lost?*)
-
 ;----------------
 ; Aspace decode vectors have two distinguished entries: the next index on the
 ; free list and the address space itself.
@@ -160,9 +148,7 @@
 		      (address+ *hotel-pointer*
 				(cells->a-units (+ cells 1))))
 	   (not (enlarge-hotel-space)))
-      (begin
-	(encoding-lost!)
-	*hotel-pointer*)
+      null-address
       (let ((start *hotel-pointer*))
 	(store! (address+ start (cells->a-units cells))
 		(address->integer old))
@@ -192,9 +178,13 @@
 
 (define (remember-heartbreak thing header)
   (let ((room-number (alloc-list-elt! 2 *heartbreak-hotel*)))
-    (store! room-number thing)
-    (store! (address1+ room-number) header)
-    (set! *heartbreak-hotel* room-number)))
+    (if (null-address? room-number)
+	*waterloo*
+	(begin
+	  (store! room-number thing)
+	  (store! (address1+ room-number) header)
+	  (set! *heartbreak-hotel* room-number)
+	  *success*))))
 
 (define (mend-hearts! start)
   (walk-list *heartbreak-hotel*
@@ -233,11 +223,17 @@
 		     (vm-vector-set! decode-vector extracted thing)
 		     next)
 		   (let ((room-number (alloc-list-elt! 1 *new-id-hotel*)))
-		     (store! room-number thing)
-		     (set! *new-id-hotel* room-number)
-		     (enter-fixnum (+ extracted 1))))))
-    (vm-vector-set! decode-vector freelist-index next)
-    next-available))
+		     (if (null-address? room-number)
+			 *waterloo*
+			 (begin
+			   (store! room-number thing)
+			   (set! *new-id-hotel* room-number)
+			   (enter-fixnum (+ extracted 1))))))))
+    (if (waterloo? next)
+	*waterloo*
+	(begin
+	  (vm-vector-set! decode-vector freelist-index next)
+	  next-available))))
 
 ; Set the UID slots of objects that just received new UID's back to false.
 ; Used when we don't have room to add the new objects to the decode vector.
@@ -348,26 +344,26 @@
 ; Scan the heap, encoding pointed to objects, starting from START.  Quit once
 ; the scanning pointer catches up with the heap pointer.
 
-(define *scan-to*)
-
 (define (do-encoding start)
   ;;(debug-message "do-encoding")
   (let loop ((start start))
     (set! *scan-to* *message-pointer*)
-    (encode-locations start)
-    (cond ((and (address>= *message-pointer* *message-limit*) ; lost
-		(not (enlarge-message-space 0)))
-	     #f)
-	    ((address< *scan-to* *message-pointer*)       ; still playing
-	     (loop *scan-to*))
-	    (else #t))))           ; won
+    (cond ((not (encode-locations start))
+	   #f)
+	  ((address< *scan-to* *message-pointer*)       ; still playing
+	   (loop *scan-to*))
+	  (else #t))))           ; won
 
 ; Encode everything pointed to from somewhere between START and END.
 
 (define (encode-locations start)
   (let loop ((addr start))
     (if (address< addr *scan-to*)
-	(loop (encode-next addr)))))
+	(let ((next (encode-next addr)))
+	  (if (null-address? next)
+	      #f
+	      (loop next)))
+	#t)))
 
 ; Encode the thing pointed to from ADDR, returning the next address to copy.
 
@@ -381,13 +377,24 @@
           ((stob? thing)
 	   ;;(debug-message "encode-next: [stob]")
 	   (let ((encoded-thing (encode-object thing)))
-	     (store! *encode-next/addr* encoded-thing))
-	   (address1+ *encode-next/addr*))
+	     (if (waterloo? encoded-thing)
+		 null-address
+		 (begin
+		   (store! *encode-next/addr* encoded-thing)
+		   (address1+ *encode-next/addr*)))))
           (else
 	   ;;(debug-message "encode-next: [else]")
 	   (address1+ *encode-next/addr*)))))
 
 ; Encode THING if it has not already been encoded.
+
+;; and return *success* or *waterloo*
+
+(define *success* 1)
+(define *waterloo* -1)
+
+(define (waterloo? val)
+  (= *waterloo* val))
 
 (define (encode-object thing)
   (let ((h (stob-header thing)))
@@ -414,11 +421,10 @@
 	      (get-uid thing location-uid set-location-uid!)))
 	  ((proxy)
 	   ;;(debug-message "[proxy]")
-	   (if (or (encoding-lost?)
-		   (and (address<= *message-limit*
-				   (address+ *message-pointer* (cells->a-units 3)))
-			(not (enlarge-message-space 3))))
-	       (encoding-lost!)
+	   (if (and (address<= *message-limit*
+			       (address+ *message-pointer* (cells->a-units 3)))
+		    (not (enlarge-message-space 3)))
+	       *waterloo*
 	       (let ((new (address->message-offset (enum element proxy)))
 		     (data (proxy-data thing)))
 		 ;; Not extracted as this stuff is later scanned
@@ -434,11 +440,10 @@
 	   (encode-full-object h thing))))))
 
 (define (encode-two-part-uid uid)
-  (if (or (encoding-lost?)
-	  (and (address<= *message-limit*
-			  (address+ *message-pointer* (cells->a-units 2)))
-	       (not (enlarge-message-space 2))))
-      (encoding-lost!)
+  (if (and (address<= *message-limit*
+		      (address+ *message-pointer* (cells->a-units 2)))
+	   (not (enlarge-message-space 2)))
+      *waterloo*
       (let ((new (address->message-offset (enum element uid+owner))))
 	;; Not extracted as this stuff is later scanned
 	(cond ((vm-pair? uid)
@@ -451,20 +456,21 @@
 
 (define (encode-full-object header thing)
   (let ((thing-size (header-a-units header)))
-    (if (or (encoding-lost?)
-	    (and (address<= *message-limit*
-			    (address+ *message-pointer* thing-size))
-		 (not (enlarge-message-space thing-size))))
-	(encoding-lost!)
+    (if (and (address<= *message-limit*
+			(address+ *message-pointer* thing-size))
+	     (not (enlarge-message-space thing-size)))
+	*waterloo*
 	(let ((new (address->message-offset (enum element local))))
-	  (store-next! header)
-	  (stob-header-set! thing new)	;***Break heart
-	  (remember-heartbreak thing header)
-	  (let ((new-hp (address+ *message-pointer* (header-a-units header))))
-	    (do ((o (address-after-header thing) (address1+ o)))
-		((address>= *message-pointer* new-hp))
-	      (store-next! (fetch o))))
-	  new))))
+	  (if (waterloo? (remember-heartbreak thing header))
+	      *waterloo*
+	      (begin
+		(store-next! header)
+		(stob-header-set! thing new)	;***Break heart
+		(let ((new-hp (address+ *message-pointer* (header-a-units header))))
+		  (do ((o (address-after-header thing) (address1+ o)))
+		      ((address>= *message-pointer* new-hp))
+		    (store-next! (fetch o))))
+		new))))))
 
 (define (address->message-offset type)
   (make-element type (address-difference *message-pointer* *message-start*)))
@@ -509,16 +515,22 @@
 	       (send (cond ((<= count 1)
 			    (let ((room-number
 				    (alloc-list-elt! 1 *losing-proxy-hotel*)))
-			      (store! room-number proxy-data)
-			      (set! *losing-proxy-hotel* room-number)
-			      1))
+			      (if (null-address? room-number)
+				  *waterloo*
+				  (begin
+				    (store! room-number proxy-data)
+				    (set! *losing-proxy-hotel* room-number)
+				    1))))
 			   ((< count (* 2 max-proxy-debit))
 			    (logical-shift-right count 1))
 			   (else
 			    max-proxy-debit))))
-	  (set-proxy-data-reference-count! proxy-data
-					   (enter-fixnum (- count send)))
-	  (enter-fixnum send)))))
+	  (if (waterloo? send)
+	      *waterloo*
+	      (begin
+		(set-proxy-data-reference-count! proxy-data
+						 (enter-fixnum (- count send)))
+		(enter-fixnum send)))))))
 
 ; Make a list of the proxies with non-positive reference counts.  This
 ; returns FALSE if it runs out of space.
@@ -644,6 +656,7 @@
 (define (cells-available? cells)
   (<= cells
       (s48-available)))
+
 ;----------------------------------------------------------------
 ; Decoding messages.  We destroy the message in the process of
 ; decoding it.

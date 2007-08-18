@@ -24,7 +24,8 @@
 		       (loop #t))
 		      ((not (null? missing-uids))
 		       (display missing-uids)
-		       (display* "endecode-id: missing uids! That can't be true"))
+		       (display "endecode-id: missing uids! That can't be true")
+		       (newline))
 		      (else (car val))))))))))
 
 (define (u8cdr bv)
@@ -418,6 +419,23 @@ a new")
 )
 ;    (check (endecode-id str las) 
 ;	 => str))
+
+
+(define big-c #f)
+
+(define (make-deep-c n)
+  (let loop ((n n))
+    (if (zero? n)
+	(call-with-current-continuation
+	 (lambda (cc)
+	   (set! big-c cc)
+	   (display "setting!")(newline)
+	   n))
+	(begin 
+	  (display (loop (- n 1)))
+	  n))))
+
+(make-deep-c 100)
 
 (define (display* . args)
   (if (null? args)
