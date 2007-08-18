@@ -4,37 +4,60 @@
 
 ;;;; Extended number support
 
+
+;; kali hides the extended number types in proxies so that they will be
+;; shared between address spaces
+
 (define-simple-type :extended-number (:number) extended-number?)
 
 (define-record-type extended-number-type :extended-number-type
   (really-make-extended-number-type field-names supers priority predicate id)
   extended-number-type?
-  (field-names extended-number-type-field-names)
-  (supers      extended-number-type-supers)
-  (priority    extended-number-type-priority)
-  (predicate   extended-number-predicate)
-  (id	       extended-number-type-identity))
+  (field-names x-extended-number-type-field-names) ;; kali - added the x-
+  (supers      x-extended-number-type-supers)      ;; kali - added the x-
+  (priority    x-extended-number-type-priority)    ;; kali - added the x-
+  (predicate   x-extended-number-predicate)        ;; kali - added the x-
+  (id	       x-extended-number-type-identity))   ;; kali - added the x-
 
 (define-record-discloser :extended-number-type
   (lambda (e-n-t)
-    (list 'extended-number-type (extended-number-type-identity e-n-t))))
+    (list 'extended-number-type (x-extended-number-type-identity e-n-t)))) ;; kali - added the x-
 
 (define (make-extended-number-type field-names supers id)
-  (letrec ((t (really-make-extended-number-type
-	       field-names
-	       supers
-	       (+ (apply max
-			 (map type-priority
-			      (cons :extended-number supers)))
-		  10)
-	       (lambda (x)
-		 (and (extended-number? x)
-		      (eq? (extended-number-type x) t)))
-	       id)))
-    t))
+  (letrec ((t (make-proxy  ;; kali
+	       (really-make-extended-number-type
+		field-names
+		supers
+		(+ (apply max
+			  (map type-priority
+			       (cons :extended-number supers)))
+		   10)
+		(lambda (x)
+		  (and (extended-number? x)
+		       (eq? (extended-number-type x) t)))
+		id))))
+    t)) ;; kali
 
 (define (extended-number-type x) (extended-number-ref x 0))
 
+;; kali - begin
+
+(define (extended-number-type-field-names xn)
+  (x-extended-number-type-field-names (any-proxy-value xn)))
+
+(define (extended-number-type-supers xn)
+  (x-extended-number-type-supers (any-proxy-value xn)))
+
+(define (extended-number-type-priority xn)
+  (x-extended-number-type-priority (any-proxy-value xn)))
+
+(define (extended-number-predicate xn)
+  (x-extended-number-predicate (any-proxy-value xn)))
+
+(define (extended-number-type-identity xn)
+  (x-extended-number-type-identity (any-proxy-value xn)))
+
+;; kali - end
 
 ; DEFINE-EXTENDED-NUMBER-TYPE macro
 
@@ -82,10 +105,10 @@
 	    (define (?accessor3 n) (extended-number-ref n 3))))))
 
 (define-method &type-priority ((t :extended-number-type))
-  (extended-number-type-priority t))
+  (x-extended-number-type-priority t)) ;; kali - added x-
 
 (define-method &type-predicate ((t :extended-number-type))
-  (extended-number-predicate t))
+  (x-extended-number-predicate t))  ;; kali - added x-
 
 ; Make all the numeric instructions be extensible.
 

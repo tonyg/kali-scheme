@@ -36,7 +36,8 @@
         simple-signals
 	(subset vm-exceptions (extend-opcode!))
 	util
-        number-i/o)
+        number-i/o
+	proxy-internals)
   (files (rts xnum)))
 
 (define-structure innums (export )    ;inexact numbers
