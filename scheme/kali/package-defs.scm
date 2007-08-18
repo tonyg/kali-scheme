@@ -77,3 +77,33 @@
   (files proxy-count))
 
 ;; ============================================================================
+
+(define-structure connect (export connection-server
+				  send-message send-admin-message)
+  (open scheme ascii
+	code-vectors signals
+	address-spaces
+	sockets channels
+	channel-i/o
+	enumerated enum-case
+	message-types
+	proxy-count-requests
+	placeholders locks
+	condvars
+	proposals
+	interrupts			; call-after-gc!
+	bitwise				; arithmetic-shift
+	conditions handle i/o display-conditions  ; dealing with errors
+	;report
+	;debug-messages
+	threads			; spawn
+	(subset primitives (eof-object  ;; because of channel-read
+			    ; memory-status  ;; chnx takeout TODO
+			    encode 
+			    decode 
+			    unspecific))
+	(subset architecture (memory-status-option)))
+  (optimize auto-integrate)
+  (files connect))
+
+;; =======================================================================
