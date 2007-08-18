@@ -497,37 +497,29 @@
 (define *message-limit*)
 
 (define (initialize-message-space! cells)
-  (let ((start (s48-allocate-untraced+gc (cells->bytes cells)))) ;; one for the header
-    (if (null-address? start)
-	null-address
-	(begin
-	  (store! start 
-		  (make-header (enum stob byte-vector)
-			       (cells->bytes (- cells 1))))
-	  (store! (address1+ start)
-		  (cells->a-units (- cells 1)))
-	  
-	  (set! *message-start* start)
-	  (set! *message-limit* (address+ start 
-					  (cells->a-units cells)))
-	  (set! *message-pointer* (address+ start 
-					    (cells->a-units 3)))
-	  (address+ start
-		    (cells->a-units 3))))))
+  (let* ((vector (maybe-make-b-vector+gc (enum stob byte-vector)
+					 (cells->bytes (- cells 1))))
+	 (start (address-at-header vector)))
+    (store! (address1+ start)
+	    (cells->a-units (- cells 1)))
+    
+    (set! *message-start* start)
+    (set! *message-limit* (address+ start 
+				    (cells->a-units cells)))
+    (set! *message-pointer* (address+ start 
+				      (cells->a-units 3)))
+    (address+ start
+	      (cells->a-units 3))))
 ;; -------------------
 
 (define *hotel-pointer*)
 
 (define (initialize-hotel-space! cells)
-  (let ((start (s48-allocate-untraced+gc (cells->bytes (+ cells 1)))))
-    (store! start 
-	    (make-header (enum stob byte-vector)
-			 cells))
-    (if (null-address? start)
-	null-address
-	(begin
-	  (set! *hotel-pointer* (address1+ start))
-	  (address1+ start)))))
+  (let* ((vector (maybe-make-b-vector+gc (enum stob byte-vector)
+					 (cells->bytes cells)))
+	(start (address-at-header vector)))
+    (set! *hotel-pointer* (address1+ start))
+    *hotel-pointer*))
 
 ;; -------------------
 
