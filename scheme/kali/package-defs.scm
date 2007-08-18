@@ -157,6 +157,7 @@
 (define-structure messages (export remote-run! 
 				   remote-apply 
 				   start-server
+				   spawn-server
 				   alive?
 				   return-counts ;; just for encode-decode-test
 				   )
@@ -195,6 +196,7 @@
 	  move-to!
 
 	  start-server
+	  spawn-server
 	  server-running?))
 
 (define-structure kali kali-interface

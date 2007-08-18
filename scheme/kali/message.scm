@@ -14,6 +14,10 @@
 			   (newline))
 			 (car maybe-report-proc))))
 
+(define (spawn-server . maybe-report-proc)
+  (spawn (lambda ()
+	   (apply start-server maybe-report-proc))))
+
 ; Repeatedly reads and process messages sent by OTHER-ASPACE.  READER is
 ; called to read messages.  We check for proxies with too-low or too-high
 ; counts, releasing pending sends or returning counts as appropriate.
