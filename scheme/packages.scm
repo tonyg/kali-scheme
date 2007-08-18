@@ -498,6 +498,8 @@
 	    messages
 	    uid-requests
 	    address-spaces
+	    proxy-count-requests
+	    connect	    
 	    ; End Kali code
 
 	    ;; From link-packages.scm:
