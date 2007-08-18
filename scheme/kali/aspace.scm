@@ -172,7 +172,8 @@
 
 ;; get date and time
 (define (time-and-date-string)
-  (time->string (current-time)))
+  (string-drop-right (time->string (current-time)) 
+		     1))
 
 ; Returns the ip address of MACHINE-NAME as a string, for example "12.14.15.16".
 

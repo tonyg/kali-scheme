@@ -25,6 +25,7 @@
 (define-structure address-spaces address-space-interface
   (open scheme address-space-internals
 	define-record-types
+	srfi-13			; string-drop-right
 	ascii tables
 	signals			; error
 	architecture		; stob
