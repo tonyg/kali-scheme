@@ -24,12 +24,15 @@ $vm -i $initial -a batch <<EOF
 ,load =scheme48/cml/interfaces.scm
 ,load =scheme48/cml/packages.scm
 ,load =scheme48/srfi/packages.scm
+,load =scheme48/kali/package-defs.scm
 (ensure-loaded command-processor)
+(ensure-loaded kali)
 (ensure-loaded usual-commands)
 ,go ((*structure-ref command 'command-processor)
      (structure-package usual-commands)
      (list "batch"))
 (ensure-loaded usual-features)
+,in address-spaces (initialize-shared-address-space!)
 ,structure more-structures more-structures-interface
 ,in debuginfo (read-debug-info "$srcdir/build/initial.debug")
 ,keep maps source files

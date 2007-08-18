@@ -492,6 +492,14 @@
 
 	    big-scheme
 	    big-util
+
+	    ; Start Kali code
+	    kali
+	    messages
+	    uid-requests
+	    address-spaces
+	    ; End Kali code
+
 	    ;; From link-packages.scm:
 	    analysis
 	    debuginfo
