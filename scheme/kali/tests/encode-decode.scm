@@ -42,6 +42,20 @@
 	(cons m 
 	      (lp (+ m 1))))))
 
+(define (make-string n)
+  (if (zero? n)
+      ""
+      (string-append "*"
+		     (make-string (- n 1)))))
+
+(define (make-symbol n)
+  (string->symbol (string-append "number-"
+				 (number->string n))))
+
+(define (make-symbol-list n)
+  (map make-symbol
+       (make-list n)))
+
 ;;-------------------------------------------------------------------------
 
 (define-record-type :rec
@@ -100,24 +114,24 @@
 	(sleep 2000)))
   (let ((local-aspace (local-address-space)))
 
-        (report)
+    (report)
 
     (check (endecode-id #t local-aspace) => #t)
-        (report)
+    (report)
 
     (check (endecode-id #f local-aspace) => #f)
-        (report)
+    (report)
 
     (check (endecode-id '() local-aspace) => '())
 
-        (report)
+    (report)
 
     (check-ec (:range i 0 100) 
 	      ((lambda (x) 
 		 (endecode-id x local-aspace)) i)
 	      => i)
 
-        (report)
+    (report)
 
     (check-ec (:range i 
 		      100000000000000000000000000000000000000 
@@ -126,14 +140,14 @@
 		 (endecode-id x local-aspace)) i)
 	      => i)
 
-        (report)
+    (report)
 
     (check-ec (:real-range i 0.000000001 10.0 0.01) 
 	      ((lambda (x) 
 		 (endecode-id x local-aspace)) i)
 	      => i)
 
-        (report)
+    (report)
 
     (check-ec (:real-range i 
 			   10000000.01 
@@ -143,7 +157,7 @@
 		 (endecode-id x local-aspace)) i)
 	      => i)
 
-        (report)
+    (report)
 
     (check-ec (:real-range i 
 			   100000000000000000000000000000000000.01 
@@ -153,35 +167,35 @@
 		 (endecode-id x local-aspace)) i)
 	      => i)
 
-        (report)
+    (report)
 
     (check-ec (:range i 100 120) 
 	      ((lambda (x) 
 		 (endecode-id (/ 3 x) local-aspace)) i)
 	      => (/ 3 i))
 
-        (report)
+    (report)
 
     (check-ec (:range i 100 120) 
 	      ((lambda (x) 
 		 (endecode-id (/ x 3) local-aspace)) i)
 	      => (/ i 3))
 
-        (report)
+    (report)
 
     (check-ec (:range i 100 120) 
 	      ((lambda (x) 
 		 (endecode-id (/ 1999999999999999999999 x) local-aspace)) i)
 	      => (/ 1999999999999999999999 i))
 
-        (report)
+    (report)
 
     (check-ec (:range i 100 120) 
 	      ((lambda (x) 
 		 (endecode-id (/ x 19999999999999999999999) local-aspace)) i)
 	      => (/ i 19999999999999999999999))
 
-        (report)
+    (report)
 
     (check-ec (:range i 
 		      1000000000000000000000000000 
@@ -190,7 +204,7 @@
 		 (endecode-id (/ x 19999999999999999999999) local-aspace)) i)
 	      => (/ i 19999999999999999999999))
 
-        (report)
+    (report)
 
     (check-ec (:range i 
 		      1000000000000000000000000000 
@@ -199,48 +213,48 @@
 		 (endecode-id (/ 19999999999999999999999 x) local-aspace)) i)
 	      => (/ 19999999999999999999999 i))
 
-        (report)
+    (report)
 
     (check (endecode-id (vector 1 2 3)  
 			local-aspace) 
 	   =>  (vector 1 2 3))
 
-        (report)
+    (report)
 
     (check (endecode-id (vector 'a #f '() (vector 1 2 3) "str")  
 			local-aspace) 
 	   => (vector 'a #f '() (vector 1 2 3) "str"))
 
-        (report)
+    (report)
 
     (check (endecode-id (u8vector 0 123 233 10 23 34 55 56 76 123 103) 
 			local-aspace) 
 	   (=> u8vector=?) (u8vector 0 123 233 10 23 34 55 56 76 123 103))
 
-        (report)
+    (report)
 
     (check (endecode-id (list->u8vector (make-list 255)) 
 			local-aspace) 
 	   (=> u8vector=?) (list->u8vector (make-list 255)))
 
-        (report)
+    (report)
 
     (check (endecode-id (cons 1 2)  local-aspace) 
 	   => (cons 1 2))
 
-        (report)
+    (report)
 
     (check (endecode-id (cons 'symbol "string")  
 			local-aspace) 
 	   => (cons 'symbol "string"))
 
-        (report)
+    (report)
 
     (check (endecode-id '(hallo liste bla bla bla)  
 			local-aspace) 
 	   => '(hallo liste bla bla bla))
  
-        (report)
+    (report)
 
     (check-ec (:range i 1000 3000 500)
 	      ((lambda (x)
@@ -248,7 +262,7 @@
 	       i)
 	      => (make-list i))
 
-        (report)
+    (report)
 
     (check-ec (:char-range c #\space #\~)
 	      ((lambda (ch)
@@ -256,28 +270,35 @@
 	       c)
 	      => c)
 
-        (report)
+    (report)
 
     (check (endecode-id 'symbol  local-aspace) => 'symbol)
  
-        (report)
+    (report)
 
     (check (endecode-id 'a-longer-symbol-than-the-one-before  
 			local-aspace) 
 	   => 'a-longer-symbol-than-the-one-before)
 
-        (report)
+    (report)
+
+    (check (endecode-id (make-symbol-list 400) 
+			local-aspace)
+	   => (make-symbol-list 400))
+
+    (report)
 
     (check (endecode-id "a little string"  local-aspace) 
 	   => "a little string")
 
-        (report)
+    (report)
 
+	
     (check (endecode-id "a specila string \\\"%!§$%&/()=~~#'^"  
 			local-aspace) 
 	   => "a specila string \\\"%!§$%&/()=~~#'^")
 
-        (report)
+    (report)
 
     (check (endecode-id " a quiet long string:
 can't stop writing, that i can't stop writing,
@@ -296,47 +317,47 @@ that i can't stop writing, that i can't stop writing,
 that i can't stop writing, that i can't stop writing,
 ...")
 
-        (report)
+    (report)
 
     (check (endecode-id rec-1 local-aspace) 
 	   (=> rec-equal?) rec-1)
   
-        (report)
+    (report)
 
     (check (endecode-id rec-2 local-aspace) 
 	   (=> rec-equal?) rec-2)
 
-        (report)
+    (report)
 
     (check ((endecode-id + local-aspace) 1 2 3) 
 	   => 6)
  
-        (report)
+    (report)
 
     (check ((endecode-id list local-aspace) 1 2 3) 
 	   => '(1 2 3))
  
-        (report)
+    (report)
 
     (check ((endecode-id make-list local-aspace) 6) 
 	   => '(0 1 2 3 4 5 6))
  
-        (report)
+    (report)
 
     (check ((endecode-id rec-equal? local-aspace) rec-2 rec-2) 
 	   => #t)
 
-        (report)
+    (report)
 
     (check ((endecode-id add3 local-aspace) 5) 
 	   => 8)
 
-        (report)
+    (report)
 
     (check ((endecode-id add19 local-aspace) 23)
 	   => 42)
 
-        (report)
+    (report)
 
     (check ((endecode-id fak-c local-aspace) 6) 
 	   => 720)))
@@ -364,6 +385,9 @@ that i can't stop writing, that i can't stop writing,
   (display str)
   (newline))
 
+
+
+;; =================================================
 
 (define str " a quiet long string:
 can't stop writing, that i can't stop writing,
@@ -394,12 +418,6 @@ a new")
 )
 ;    (check (endecode-id str las) 
 ;	 => str))
-
-(define (make-string n)
-  (if (zero? n)
-      ""
-      (string-append "*"
-		     (make-string (- n 1)))))
 
 (define (display* . args)
   (if (null? args)
