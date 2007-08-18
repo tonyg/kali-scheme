@@ -106,8 +106,8 @@
 (define (template-byte-code tem) (template-ref tem 1))
 (define (template-name tem) (template-ref tem 2))
 (define (template-uid tem) (template-ref tem 3)) ;; kali 
-(define (set-template-uid tem uid)     ;; kali
-  (template-set! tem 3 uid))           ;; kali
+(define (set-template-uid! tem uid)              ;; kali
+  (template-set! tem 3 uid))                     ;; kali
 
 ; Code vectors
 

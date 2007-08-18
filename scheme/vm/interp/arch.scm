@@ -261,6 +261,8 @@
   (time 2)
   (vm-extension 2)		; access to extensions of the virtual machine
   (return-from-callback 2)	; return from an callback
+  (really-encode 2)         ;; kali
+  (really-decode 3)         ;; kali
 
   ;; Unnecessary primitives
   (string=? 2)

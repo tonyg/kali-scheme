@@ -7,7 +7,10 @@
 
 (in 'prescheme-compiler
     '(run (prescheme-compiler
-           '(allocation heap heap-init gc)
+           '(allocation heap 
+			heap-init 
+			heap-internal ;; kali
+			gc)
            '("../scheme/vm/interfaces.scm"
 	     "../scheme/vm/shared-interfaces.scm"
              "../scheme/vm/ps-package-defs.scm"

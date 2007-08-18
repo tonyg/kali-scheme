@@ -110,6 +110,10 @@
 	  d-vector-header? b-vector-header?
 	  max-stob-contents-size-in-cells
 
+	  make-element  ;; kali
+	  element-type  ;; kali
+	  element-info  ;; kali
+
 	  add-stob-tag remove-stob-tag
 	  ))
 

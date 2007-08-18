@@ -7,6 +7,10 @@
 ; (S48-TRACE-VALUE value) => copied value
 ; (S48-TRACE-STOB-CONTENTS! stob)
 
+
+;; KALI heap-pointer -> s48-heap-pointer
+;; KALI set-heap-pointer! -> s48-set-heap-pointer!
+
 (define *gc-count* 0)
 (define (s48-gc-count) *gc-count*)
 
@@ -14,7 +18,7 @@
   (set! *from-begin* (heap-begin))
   (set! *from-end* (heap-limit))
   (swap-spaces)
-  (set-heap-pointer! (heap-begin))
+  (s48-set-heap-pointer! (heap-begin))
   (set! *weak-pointer-hp* null-address)
   (s48-gc-root)			       ; trace the interpreter's roots
   (do-gc)
@@ -42,11 +46,11 @@
 
 (define (do-gc)
   (let loop ((start (heap-begin)))
-    (let ((end (heap-pointer)))
+    (let ((end (s48-heap-pointer)))
       (s48-trace-locations! start end)
       (cond ((< (s48-available) 0)
 	     (error "GC error: ran out of space in new heap"))
-	    ((address< end (heap-pointer))
+	    ((address< end (s48-heap-pointer))
 	     (loop end))))))
 
 (define (s48-trace-stob-contents! stob)
@@ -58,7 +62,7 @@
 ; and END (exclusive).
 
 (define (s48-trace-locations! start end)
-  (let loop ((addr start) (frontier (heap-pointer)))
+  (let loop ((addr start) (frontier (s48-heap-pointer)))
     (if (address< addr end)
 	(let ((thing (fetch addr))
 	      (next (address1+ addr)))
@@ -68,10 +72,10 @@
 			      frontier))
 		       ((continuation-header? thing)
 			(let ((size (header-length-in-a-units thing)))
-			  (set-heap-pointer! frontier)
+			  (s48-set-heap-pointer! frontier)
 			  (trace-continuation next size)
 			  (loop (address+ next size)
-				(heap-pointer))))
+				(s48-heap-pointer))))
 		       (else
 			(loop next frontier))))
 		((in-oldspace? thing)
@@ -81,15 +85,15 @@
 		   (loop next frontier)))
 		(else
 		 (loop next frontier))))
-	(set-heap-pointer! frontier))))
+	(s48-set-heap-pointer! frontier))))
 ;  0)  ; for the type-checker
 
 ; Copy THING if it has not already been copied.
 
 (define (copy-object thing)
   (receive (new-thing new-hp)
-      (real-copy-object thing (heap-pointer))
-    (set-heap-pointer! new-hp)
+      (real-copy-object thing (s48-heap-pointer))
+    (s48-set-heap-pointer! new-hp)
     new-thing))
 
 ; Non-heap-pointer version for better code in TRACE-LOCATIONS

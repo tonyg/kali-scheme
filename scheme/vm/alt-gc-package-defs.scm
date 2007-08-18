@@ -26,6 +26,8 @@
   (begin
     (define s48-available
       (external "s48_available" (=> () integer)))
+    (define s48-available?
+      (external "s48_availableP" (=> (integer) boolean)))
     (define s48-heap-size
       (external "s48_heap_size" (=> () integer)))
     (define s48-max-heap-size
@@ -43,8 +45,29 @@
 
     (define s48-stob-in-heap?
       (external "s48_stob_in_heapP" (=> (integer) boolean)))
+
+    (define s48-set-heap-pointer!                             ;;kali xox
+      (external "s48_set_heap_pointerB" (=> (address) null))) ;;kali xox
+    (define s48-heap-limits                                   ;; kali xox
+      (external "s48_heap_limits" (=> () address address address address address))) ;; kali xox    
     ))
 
+;; kali - begin 
+
+(define-structure heap-internal heap-internal-interface
+  (open prescheme)
+  
+  (begin
+    (define s48-heap-limits
+      (external "s48_heap_limits" (=> () address address address address address)))
+
+    (define s48-heap-pointer
+      (external "s48_heap_pointer" (=> () address)))
+
+    (define s48-set-heap-pointer!
+      (external "s48_set_heap_pointerB" (=> (address) null)))))
+
+;; kali - end
 
 (define-structure gc gc-interface
   (open prescheme)

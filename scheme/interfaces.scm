@@ -116,7 +116,9 @@
 	  write-char
 	  encode-char
 	  decode-char
-	  symbol-uid))  ;; kali
+	  symbol-uid  ;; kali
+	  encode      ;; kali
+	  decode))    ;; kali
 
 (define-interface bitwise-interface
   (export arithmetic-shift

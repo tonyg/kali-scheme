@@ -46,7 +46,8 @@
 	text-encodings
 	return-codes
 	gc-roots gc gc-util
-	heap stack external)
+	heap stack external
+	encode/decode)
   (for-syntax (open scheme destructuring signals))
   (files (interp interp)
 	 (interp call)
@@ -328,6 +329,26 @@
   (files (data defdata)
 	 (data struct)))
 
+;; kali - begin
+
+(define-structure encode/decode 
+  (export encode 
+	  decode 
+	  decode-space-multiplier)
+  (open prescheme ps-receive
+	vm-architecture 
+	memory 
+	data 
+	stob 
+	allocation
+	enum-case
+	heap
+	heap-internal 
+	struct)
+  (files transmit))
+
+;; kali - end
+
 (define-structure string-tables string-table-interface
   (open prescheme vm-utilities vm-architecture
 	data struct stob
@@ -520,6 +541,7 @@
 (define-structures ((heap heap-interface)
 		    (heap-gc-util heap-gc-util-interface)
 		    (heap-init heap-init-interface)
+		    (heap-internal heap-internal-interface)
 		    (gc gc-interface)
 		    (allocation allocation-interface)
 		    (read-image-gc-specific read-image-gc-specific-interface)

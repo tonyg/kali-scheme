@@ -25,14 +25,21 @@
 (define (get-new-heap-start-addr)
   *new-heap-start-addr*)
 
-(define (heap-pointer)
+(define (s48-heap-pointer) ;; kali s48-
   s48-*hp*)
 
-(define (set-heap-pointer! new)
+(define (s48-set-heap-pointer! new) ;; kali s48-
   (set! s48-*hp* new))
 
 (define (heap-limit)
   *newspace-end*)
+
+(define (s48-heap-limits)    ;; kali
+  (values s48-*hp*           ;; kali
+	  *newspace-begin*   ;; kali
+	  *newspace-end*     ;; kali
+	  *oldspace-begin*   ;; kali
+	  *oldspace-end*))   ;; kali
 
 ;----------------
 

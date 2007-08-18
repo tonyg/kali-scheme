@@ -588,6 +588,45 @@
 ; Eventually add make-table, table-ref, table-set! as primitives?
 ; No -- write a compiler instead.
 
+;; kali - begin
+
+(define-consing-primitive really-encode (any-> aspace->)
+  (lambda (ignore) vm-pair-size)
+  (lambda (thing aspace key)
+    (let ((pair (vm-cons false false key)))
+	(if (encode thing aspace pair)
+	    (goto return pair)
+	    (begin
+	      ;; TODO debug-message!!!
+	      ;(display "doing gc while encoding")  ;; for debugging - not nice!!!
+	      ;(newline)                            ;; but it will be taken out...
+	      (push aspace)
+	      (push pair)
+	      (push thing)
+	      (s48-collect #t)
+	      (let* ((thing (pop))
+		     (pair (pop))
+		     (aspace (pop)))
+		(if (encode thing aspace pair)
+		    (goto return pair)
+		    (raise-exception heap-overflow 0 thing aspace))))))))
+
+(define-consing-primitive really-decode (aspace-> boolean-> code-vector->)
+  (lambda (message)
+    (+ (* decode-space-multiplier
+	  (bytes->cells (code-vector-length message)))
+       (vm-vector-size 3)))  ; for the final return value
+  (lambda (aspace reverse? message key)
+    (receive (thing missing-uids low-count-proxies)
+	(decode message aspace reverse? key)
+      (let ((result (vm-make-vector 4 key)))
+	(vm-vector-set! result 0 thing)
+	(vm-vector-set! result 1 missing-uids)
+	(vm-vector-set! result 2 low-count-proxies)
+	(goto return result)))))
+
+;; kali - end
+
 ; *** Our entry for the obscure comment of the year contest.
 ;
 ; Pclsring is the term in ITS for the mechanism that makes the operating system
