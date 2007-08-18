@@ -107,3 +107,26 @@
   (files connect))
 
 ;; =======================================================================
+
+(define-interface uid-request-interface
+  (export wait-for-missing-uids
+	  process-uid-replies
+	  make-uid-reply))
+
+(define-structure uid-requests uid-request-interface
+  (open scheme receiving define-record-types signals
+	enumerated enum-case architecture
+	connect message-types
+	closures locations templates
+	proxy-internals address-spaces
+	;weak
+	records			; record?, record-ref (abstraction breaking)
+	debug-messages		; (for debugging)
+	(subset primitives (untyped-indexed-set! 
+			    record 
+			    record-ref 
+			    set-enabled-interrupts!)))
+  (optimize auto-integrate)
+  (files uid-request))
+
+;; =======================================================================
