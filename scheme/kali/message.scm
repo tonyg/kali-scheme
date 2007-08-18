@@ -71,16 +71,6 @@
        (spawn (lambda ()
 		(apply (car data)
 		       (cdr data)))))
-      ((apply)
-       ;(debug-message "[apply]")
-       (spawn (lambda ()
-		(call-with-values
-		  (lambda ()
-		    (apply (cadr data) (cddr data)))
-		  (lambda values
-		    (send-message (enum message-type results)
-				  (cons (car data) values)
-				  other-aspace))))))
       ;; begin chnx available!
       ((available)
        ;(debug-message "[available]")
@@ -88,9 +78,6 @@
 	     (cons data ;(car data) ;; no integers any more...
 		   *received-available-values*)))
       ;; end chnx available!
-      ((results)
-       ;(debug-message "[results]")
-       (remote-return (car data) (cdr data)))
       ((uid-request)
        ;(debug-message "[uid request]")
        (send-admin-message (enum message-type uid-reply)
@@ -132,14 +119,19 @@
 		    (cons proc args)
 		    aspace)))
 
-(define (remote-apply target proc . args)
-  (if (eq? target (local-address-space))
+(define (remote-apply aspace proc . args)
+  (if (eq? aspace (local-address-space))
       (apply proc args)
-      (let ((id (next-remote-apply-id)))
-	(send-message (enum message-type apply)
-		      (cons id (cons proc args))
-		      target)
-	(wait-for-remote-return id))))
+      (let* ((placeholder (make-placeholder))
+	     (proxy (make-proxy placeholder)))
+	(remote-run! aspace
+	  (lambda ()
+	    (remote-run! (proxy-data-owner (proxy-data proxy))
+	       (lambda (value)
+		 (placeholder-set! (proxy-local-ref proxy)
+				   value))
+	       (apply proc args))))
+	(placeholder-value placeholder))))
 
 ;; begin chnx available!
 (define (make-available! aspace value)
@@ -156,53 +148,3 @@
 			aspace))))
 ;; end chnx available!
 
-(define (remote-return id return-values)
-  (with-interrupts-inhibited
-   (lambda ()
-     (let ((status
-	    (vector-ref *apply-waiters* id)))
-       (vector-set! *apply-waiters*
-		    id
-		    (list return-values))
-       (if (not (eq? status 'pending))
-	   (make-ready status))))))
-
-(define (wait-for-remote-return id)
-  (with-interrupts-inhibited
-   (lambda ()
-     (let ((status (vector-ref *apply-waiters* id)))
-       (cond ((eq? status 'pending)
-	      (vector-set! *apply-waiters* id (current-thread))
-	      (block)
-	      (wait-for-remote-return id))
-	     (else
-	      (set! *free-apply-ids*
-		    (cons id *free-apply-ids*))
-	      (vector-set! *apply-waiters* id #F)
-	      (apply values (car status))))))))
-
-; A supply of UID's for remote calls.
-
-(define *free-apply-ids* '())
-(define *next-apply-id* 0)
-(define *apply-waiters* (make-vector 100 #f))
-
-(define (next-remote-apply-id)
-  (with-interrupts-inhibited
-   (lambda ()
-     (cond ((null? *free-apply-ids*)
-	    (let ((uid *next-apply-id*))
-	      (set! *next-apply-id* (+ 1 uid))
-	      (if (>= uid (vector-length *apply-waiters*))
-		  (let ((new (make-vector (+ uid 100) #f)))
-		    (do ((i 0 (+ i 1)))
-			((= i (vector-length *apply-waiters*)))
-		      (vector-set! new i (vector-ref *apply-waiters* i)))
-		    (set! *apply-waiters* new)))
-	      (vector-set! *apply-waiters* uid 'pending)
-	      uid))
-	   (else
-	    (let ((uid (car *free-apply-ids*)))
-	      (set! *free-apply-ids* (cdr *free-apply-ids*))
-	      (vector-set! *apply-waiters* uid 'pending)
-	      uid))))))

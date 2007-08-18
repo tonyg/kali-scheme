@@ -158,6 +158,7 @@
 	address-spaces
 	enumerated enum-case
 	threads	threads-internal
+	placeholders
 	interrupts			; with-interrupts-inhibited
 	proxy-internals			; (for debugging)
 	debug-messages			; (for debugging)
