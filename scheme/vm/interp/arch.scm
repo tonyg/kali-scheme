@@ -559,6 +559,7 @@
       (symbol-uid set-symbol-uid!)  ;; kali
       (symbol->string))
     (location location? make-location
+      (location-uid set-location-uid!)  ;; kali
       (location-id set-location-id!)
       (contents set-contents!))
     (cell cell? make-cell

@@ -74,7 +74,7 @@
 ; be confusing.  Here we just test it against other values.
 
 (define (make-undefined-location id)
-  (let ((loc (make-location id #f)))
+  (let ((loc (make-location #f id #f))) ;; kali - aaded #f as first argument as uid
     (set-location-defined?! loc #f)
     loc))
 

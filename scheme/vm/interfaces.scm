@@ -201,6 +201,7 @@
 	  closure? closure-size make-closure closure-template closure-env
 	  set-closure-template! set-closure-env!
 	  location? location-size make-location contents set-contents! location-id
+	  location-uid set-location-uid!   ;; kali
 	  cell? cell-size make-cell cell-ref cell-set!
 	  weak-pointer? weak-pointer-size make-weak-pointer weak-pointer-ref
 

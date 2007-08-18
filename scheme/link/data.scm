@@ -88,8 +88,10 @@
 (define closure-template-offset 0)
 (define closure-env-offset	1)
 
-(define location-contents-offset 1)
-(define location-id-offset     0)
+(define location-id-offset  0)
+(define location-uid-offset 1)      ;; kali
+(define location-contents-offset 2) ;; kali - was 1
+
 
 ; Procedures for manipulating bits
 

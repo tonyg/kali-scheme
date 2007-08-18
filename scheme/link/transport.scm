@@ -154,9 +154,10 @@
 ; when the location is unbound.
 
 (define (transport-location loc)
-  (let* ((data (allocate-d-vector (enum stob location) 2 #f))
+  (let* ((data (allocate-d-vector (enum stob location) 3 #f)) ;; kali - 2 -> 3
          (descriptor (car data))
          (vector (cdr data)))
+    (vector-set! vector location-uid-offset vm-false) ;; kali - no uid yet
     (vector-set! vector
                  location-contents-offset
                  (if (location-defined? loc)

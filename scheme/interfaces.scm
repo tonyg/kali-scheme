@@ -146,6 +146,8 @@
 	  location-assigned?
 	  location-id
 	  set-location-id!
+	  location-uid			;; kali
+	  set-location-uid!		;; kali
 	  make-undefined-location
 	  set-location-defined?!
 	  contents
