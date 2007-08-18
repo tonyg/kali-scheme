@@ -110,7 +110,11 @@
 (define (calculate-mandel mandel-piece iter-limit aspaces divide)
   (debug-message "calculate-mandel")
   (if (zero? divide)
-      (calculate-mandel-piece mandel-piece iter-limit)
+      (begin
+	(debug-message "calculate-mandel - really-calc!")
+	(let ((result (calculate-mandel-piece mandel-piece iter-limit)))
+	  (debug-message "calculate-mandel - really-calc returned!")
+	  result))
       (let ((number-pieces (length aspaces)))
 	(call-with-values
 	    (lambda ()
@@ -125,15 +129,17 @@
 		    (values)
 		    (begin
 		      (spawn 
-		       (lambda () (placeholder-set! 
-				   (list-ref field-placeholders i)
-				   (remote-apply (list-ref aspaces i)
-						 calculate-mandel 
-						 (list-ref mandel-pieces
-							   i)
-						 iter-limit
-						 aspaces
-						 (- divide 1)))))
+		       (lambda () 
+			 (let ((calculate-res (remote-apply (list-ref aspaces i)
+						calculate-mandel 
+						(list-ref mandel-pieces
+							  i)
+						iter-limit
+						aspaces
+						(- divide 1))))
+			   (debug-message "calculate-mandel - got calculate-res - going to set!")
+			   (placeholder-set! (list-ref field-placeholders i)
+					     calculate-res))))
 		      (loop (+ i 1)))))
 	      (debug-message "calculate-mandel - going to combine")
 	      (apply combine (map (lambda (ph)
@@ -329,7 +335,6 @@
     #t))
 
 (define (write-pixel-field-reversed pixel-field x-dim y-dim)
-  (debug-message "write-pixel-field-reversed")
   (let y-loop ((y (- y-dim 1)))
     (let x-loop ((x 0))
       (if (= x x-dim)
