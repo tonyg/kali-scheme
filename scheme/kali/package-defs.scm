@@ -52,6 +52,7 @@
     (define-enumeration message-type
       (run			; (proc . args)
        apply			; (return-id proc . args)
+       available     ; chnx debug (value . '())
        results			; (return-id . values)
        uid-request      	; (element-type . uid)*
        uid-reply        	; #(aspace-uid uid element-type contents)
@@ -140,7 +141,15 @@
 
 ;; =======================================================================
 
-(define-structure messages (export remote-run! remote-apply start-server)
+(define-structure messages (export remote-run! 
+				   remote-apply 
+				   start-server
+				   ;; begin chnx debug
+				   remote-available!
+				   last-received
+				   all-received
+				   ;; end chnx debug
+				   )
   (open scheme
 	connect message-types uid-requests
 	proxy-count-requests
@@ -163,6 +172,11 @@
 	  remote-run!
 	  remote-apply
 
+	  ;; begin chnx debug
+	  remote-available!
+	  last-received
+	  all-received
+	  ;; end chnx debug
 	  make-proxy
 	  proxy?
 	  proxy-owner

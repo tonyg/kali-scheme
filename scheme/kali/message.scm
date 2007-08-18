@@ -50,6 +50,20 @@
 ; REMOTE-APPLY has its own type so that it works even when the two address
 ; spaces do not agree on the UID of REMOTE-RUN!.
 
+;; begin chnx debug
+
+(define *received-available-values* '())
+
+(define (all-received)
+  *received-available-values*)
+
+(define (last-received)
+  (if (null? *received-available-values*)
+      'nothing
+      (car *received-available-values*)))
+
+;; end chnx debug
+
 (define (process-message message other-aspace)
   (let ((data (cdr message)))
     (enum-case message-type (car message)
@@ -67,6 +81,13 @@
 		    (send-message (enum message-type results)
 				  (cons (car data) values)
 				  other-aspace))))))
+      ;; begin chnx debug
+      ((available)
+       (debug-message "[available]")
+       (set! *received-available-values*
+	     (cons data ;(car data) ;; no integers any more...
+		   *received-available-values*)))
+      ;; end chnx debug
       ((results)
        ;(debug-message "[results]")
        (remote-return (car data) (cdr data)))
@@ -118,6 +139,21 @@
 		      (cons id (cons proc args))
 		      target)
 	(wait-for-remote-return id))))
+
+;; begin chnx debug
+(define (remote-available! aspace value)
+  (if (eq? aspace (local-address-space))
+      (begin
+	(display "already available here!")
+	(newline))
+      (if (number? value)
+	  (begin
+	    (display "no numbers! wrap them in a list or something.")
+	    (newline))
+	  (send-message (enum message-type available)
+			value ;(cons value '()) ;; no integers any more
+			aspace))))
+;; end chnx debug
 
 (define (remote-return id return-values)
   (with-interrupts-inhibited

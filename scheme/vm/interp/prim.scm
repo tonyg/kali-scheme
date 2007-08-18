@@ -597,9 +597,8 @@
 	(if (encode thing aspace pair)
 	    (goto return pair)
 	    (begin
-	      ;; TODO debug-message!!!
-	      ;(display "doing gc while encoding")  ;; for debugging - not nice!!!
-	      ;(newline)                            ;; but it will be taken out...
+	      (write-out-string "doing gc while encoding") ;; chnx debug-message
+	      (write-out-newline) ;; chnx debug-message                    
 	      (push aspace)
 	      (push pair)
 	      (push thing)
@@ -624,6 +623,14 @@
 	(vm-vector-set! result 1 missing-uids)
 	(vm-vector-set! result 2 low-count-proxies)
 	(goto return result)))))
+
+;; chnx mguid debug
+;(define (mguid thing) (my-get-uid thing))
+
+(define-primitive mguid (any->)
+  (lambda (thing)
+    (let ((uid (my-get-uid thing)))
+      (goto return uid))))
 
 ;; kali - end
 

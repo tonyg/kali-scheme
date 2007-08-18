@@ -334,9 +334,11 @@
 (define-structure encode/decode 
   (export encode 
 	  decode 
-	  decode-space-multiplier)
+	  decode-space-multiplier
+	  my-get-uid) ;; chnx mguid debug
   (open prescheme ps-receive
 	vm-architecture 
+	vm-utilities ;; chnx debug
 	memory 
 	data 
 	stob 

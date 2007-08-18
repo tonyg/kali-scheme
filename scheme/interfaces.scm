@@ -116,6 +116,7 @@
 	  write-char
 	  encode-char
 	  decode-char
+	  mguid ;; chnx mguid debug
 	  untyped-indexed-set! ;; kali
 	  symbol-uid  ;; kali
 	  encode      ;; kali

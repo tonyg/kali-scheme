@@ -265,8 +265,4 @@
 (define (initialize-any-proxy-value! proc)
   (set! proxy-remote-value proc))
 
-
-;; chnx mguid debug
-(define mguid mguid)
-
 ; kali - end
