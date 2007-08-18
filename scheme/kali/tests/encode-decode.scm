@@ -363,6 +363,11 @@ that i can't stop writing, that i can't stop writing,
     (check ((endecode-id fak-c local-aspace) 6) 
 	   => 720)))
 
+(define (conti-test)
+  (let ((local-aspace (local-address-space)))
+    (check ((endecode-id fak-c local-aspace) 6) 
+	   => 720)))
+
 (define (report) (values))
 (define _report
   (let ((i 0))

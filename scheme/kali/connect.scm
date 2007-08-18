@@ -1,9 +1,3 @@
-;; channels in read/write functions to front (1st argument)
-;;   ok
-
-;; remove memory-layout-stuff
-;;
-
 
 ; Exports:
 ;   connection-server
