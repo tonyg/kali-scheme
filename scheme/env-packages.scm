@@ -285,7 +285,8 @@
         low-level               ; vector-unassigned?
         locations
 	cells
-        weak)
+        weak
+        proxy-internals)
   (files (env menu)))
 
 ; Inspector

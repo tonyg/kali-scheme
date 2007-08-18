@@ -114,9 +114,20 @@
 		((location? thing)
 		 `((id ,(location-id thing))
 		   (contents ,(contents thing))))
+
+                ((proxy-data? thing)
+                 `((uid ,(proxy-data-uid thing))
+                   (owner ,(proxy-data-owner thing))
+                   (value ,(proxy-data-value thing))
+                   (ref-count ,(proxy-data-reference-count thing))
+                   (self ,(proxy-data-self thing))
+                   (waiters ,(proxy-data-waiters thing))))
+
+                ((proxy? thing)
+                 `((data ,(proxy-data thing))))
 		
-		((cell? thing)
-		 `((ref ,(cell-ref thing))))
+                ((cell? thing)
+                 `((ref ,(cell-ref thing))))
 		
 		((weak-pointer? thing)
 		 `((ref ,(weak-pointer-ref thing))))
