@@ -176,7 +176,7 @@
 
 ; Returns the ip address of MACHINE-NAME as a string, for example "12.14.15.16".
 
-;; chnx TODO
+;; chnx todo machine-name->ip-address
 (define (machine-name->ip-address machine-name)
   (let ((ip-assoc-list (list (cons "chimaera" "127.0.0.1")
 			     (cons "127.0.0.1" "127.0.0.1")

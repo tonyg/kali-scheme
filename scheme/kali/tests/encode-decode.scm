@@ -86,86 +86,132 @@
 	(sleep 2000)))
   (let ((local-aspace (local-address-space)))
 
-    (check-ec (endecode-id #t local-aspace) => #t)
+    (check (endecode-id #t local-aspace) => #t)
 
-    (check-ec (endecode-id #f local-aspace) => #f)
+    (check (endecode-id #f local-aspace) => #f)
 
-    (check-ec (endecode-id '() local-aspace) => '())
+    (check (endecode-id '() local-aspace) => '())
 
-    (check-ec (endecode-id 1 local-aspace) => 1)
+    (check-ec (:range i 0 100) 
+	      ((lambda (x) 
+		 (endecode-id x local-aspace)) i)
+	      => i)
 
-    (check-ec (endecode-id 2 local-aspace) => 2)
+    (check-ec (:range i 
+		      100000000000000000000000000000000000000 
+		      100000000000000000000000000000000001000) 
+	      ((lambda (x) 
+		 (endecode-id x local-aspace)) i)
+	      => i)
 
-    (check-ec (endecode-id 300 local-aspace) => 300)
+    (check-ec (:real-range i 0.000000001 10.0 0.01) 
+	      ((lambda (x) 
+		 (endecode-id x local-aspace)) i)
+	      => i)
 
-    (check-ec (endecode-id 12334 local-aspace) => 12334)
+    (check-ec (:real-range i 
+			   10000000.01 
+			   10000010.01 
+			   0.01) 
+	      ((lambda (x) 
+		 (endecode-id x local-aspace)) i)
+	      => i)
 
-    (check-ec (endecode-id 912189349087623783450986709823476534098234 
-			   local-aspace) 
-	      => 912189349087623783450986709823476534098234)
+    (check-ec (:real-range i 
+			   100000000000000000000000000000000000.01 
+			   100000000000000000000000000000010000.01 
+			   0.01) 
+	      ((lambda (x) 
+		 (endecode-id x local-aspace)) i)
+	      => i)
 
-    (check-ec (endecode-id 1.4554645 local-aspace) => 1.4554645)
+    (check-ec (:range i 100 120) 
+	      ((lambda (x) 
+		 (endecode-id (/ 3 x) local-aspace)) i)
+	      => (/ 3 i))
 
-    (check-ec (endecode-id 3453454.45645656 local-aspace) => 3453454.45645656)
+    (check-ec (:range i 100 120) 
+	      ((lambda (x) 
+		 (endecode-id (/ x 3) local-aspace)) i)
+	      => (/ i 3))
 
-    (check-ec (endecode-id 5/7 local-aspace) => 5/7)
+    (check-ec (:range i 100 120) 
+	      ((lambda (x) 
+		 (endecode-id (/ 1999999999999999999999 x) local-aspace)) i)
+	      => (/ 1999999999999999999999 i))
 
-    (check-ec (endecode-id 199/232432298723432423423 
-			   local-aspace) 
-	      => 199/232432298723432423423)
+    (check-ec (:range i 100 120) 
+	      ((lambda (x) 
+		 (endecode-id (/ x 19999999999999999999999) local-aspace)) i)
+	      => (/ i 19999999999999999999999))
 
-    (check-ec (endecode-id 132442896789623489756347899/178634908034981298721787623  
-			   local-aspace) 
-	      => 132442896789623489756347899/178634908034981298721787623)
+    (check-ec (:range i 
+		      1000000000000000000000000000 
+		      1000000000000000000000000020) 
+	      ((lambda (x) 
+		 (endecode-id (/ x 19999999999999999999999) local-aspace)) i)
+	      => (/ i 19999999999999999999999))
 
-    (check-ec (endecode-id (vector 1 2 3)  
-			   local-aspace) 
-	      =>  (vector 1 2 3))
+    (check-ec (:range i 
+		      1000000000000000000000000000 
+		      1000000000000000000000000020) 
+	      ((lambda (x) 
+		 (endecode-id (/ 19999999999999999999999 x) local-aspace)) i)
+	      => (/ 19999999999999999999999 i))
 
-    (check-ec (endecode-id (vector 'a #f '() (vector 1 2 3) "str")  
-			   local-aspace) 
-	      => (vector 'a #f '() (vector 1 2 3) "str"))
+    (check (endecode-id (vector 1 2 3)  
+			local-aspace) 
+	   =>  (vector 1 2 3))
 
-    (check-ec (endecode-id (u8vector 0 123 233 10 23 34 55 56 76 123 103) 
-			   local-aspace) 
-	      (=> u8vector=?) (u8vector 0 123 233 10 23 34 55 56 76 123 103))
+    (check (endecode-id (vector 'a #f '() (vector 1 2 3) "str")  
+			local-aspace) 
+	   => (vector 'a #f '() (vector 1 2 3) "str"))
 
-    (check-ec (endecode-id (list->u8vector (make-list 255)) 
-			   local-aspace) 
-	      (=> u8vector=?) (list->u8vector (make-list 255)))
+    (check (endecode-id (u8vector 0 123 233 10 23 34 55 56 76 123 103) 
+			local-aspace) 
+	   (=> u8vector=?) (u8vector 0 123 233 10 23 34 55 56 76 123 103))
 
-    (check-ec (endecode-id (cons 1 2)  local-aspace) 
-	      => (cons 1 2))
+    (check (endecode-id (list->u8vector (make-list 255)) 
+			local-aspace) 
+	   (=> u8vector=?) (list->u8vector (make-list 255)))
 
-    (check-ec (endecode-id (cons 'symbol "string")  
-			   local-aspace) 
-	      => (cons 'symbol "string"))
+    (check (endecode-id (cons 1 2)  local-aspace) 
+	   => (cons 1 2))
 
-    (check-ec (endecode-id '(hallo liste bla bla bla)  
-			   local-aspace) 
-	      => '(hallo liste bla bla bla))
+    (check (endecode-id (cons 'symbol "string")  
+			local-aspace) 
+	   => (cons 'symbol "string"))
+
+    (check (endecode-id '(hallo liste bla bla bla)  
+			local-aspace) 
+	   => '(hallo liste bla bla bla))
     
-    (check-ec (endecode-id (make-list 1400)  local-aspace) 
-	      => (make-list 1400))
+    (check-ec (:range i 1000 3000 500)
+	      ((lambda (x)
+		 (endecode-id (make-list x) local-aspace))
+	       i)
+	      => (make-list i))
 
-    (check-ec (endecode-id  #\a local-aspace) => #\a)
-    
-    (check-ec (endecode-id  #\~ local-aspace) => #\~)
+    (check-ec (:char-range c #\space #\~)
+	      ((lambda (ch)
+		 (endecode-id  ch local-aspace))
+	       c)
+	      => c)
 
-    (check-ec (endecode-id 'symbol  local-aspace) => 'symbol)
+    (check (endecode-id 'symbol  local-aspace) => 'symbol)
     
-    (check-ec (endecode-id 'a-longer-symbol-than-the-one-before  
-			   local-aspace) 
-	      => 'a-longer-symbol-than-the-one-before)
+    (check (endecode-id 'a-longer-symbol-than-the-one-before  
+			local-aspace) 
+	   => 'a-longer-symbol-than-the-one-before)
 
-    (check-ec (endecode-id "a little string"  local-aspace) 
-	      => "a little string")
+    (check (endecode-id "a little string"  local-aspace) 
+	   => "a little string")
     
-    (check-ec (endecode-id "a specila string \\\"%!§$%&/()=~~#'^"  
-			   local-aspace) 
-	      => "a specila string \\\"%!§$%&/()=~~#'^")
+    (check (endecode-id "a specila string \\\"%!§$%&/()=~~#'^"  
+			local-aspace) 
+	   => "a specila string \\\"%!§$%&/()=~~#'^")
     
-    (check-ec (endecode-id " a quiet long string:
+    (check (endecode-id " a quiet long string:
 can't stop writing, that i can't stop writing,
 that i can't stop writing, that i can't stop writing,
 that i can't stop writing, that i can't stop writing,
@@ -173,7 +219,7 @@ that i can't stop writing, that i can't stop writing,
 that i can't stop writing, that i can't stop writing,
 that i can't stop writing, that i can't stop writing,
 ..."  local-aspace) 
-	      => " a quiet long string:
+	   => " a quiet long string:
 can't stop writing, that i can't stop writing,
 that i can't stop writing, that i can't stop writing,
 that i can't stop writing, that i can't stop writing,
@@ -182,23 +228,23 @@ that i can't stop writing, that i can't stop writing,
 that i can't stop writing, that i can't stop writing,
 ...")
 
-    (check-ec (endecode-id rec-1 local-aspace) 
-	      (=> rec-equal?) rec-1)
+    (check (endecode-id rec-1 local-aspace) 
+	   (=> rec-equal?) rec-1)
     
-    (check-ec (endecode-id rec-2 local-aspace) 
-	      (=> rec-equal?) rec-2)
+    (check (endecode-id rec-2 local-aspace) 
+	   (=> rec-equal?) rec-2)
 
-    (check-ec ((endecode-id + local-aspace) 1 2 3) 
-	      => 6)
+    (check ((endecode-id + local-aspace) 1 2 3) 
+	   => 6)
     
-    (check-ec ((endecode-id list local-aspace) 1 2 3) 
-	      => '(1 2 3))
+    (check ((endecode-id list local-aspace) 1 2 3) 
+	   => '(1 2 3))
     
-    (check-ec ((endecode-id make-list local-aspace) 6) 
-	      => '(0 1 2 3 4 5 6))
+    (check ((endecode-id make-list local-aspace) 6) 
+	   => '(0 1 2 3 4 5 6))
     
-    (check-ec ((endecode-id rec-equal? local-aspace) rec-2 rec-2) 
-	      => #t)
+    (check ((endecode-id rec-equal? local-aspace) rec-2 rec-2) 
+	   => #t)
 
-    (check-ec ((endecode-id fak-c local-aspace) 6) 
-	      => 720)))
+    (check ((endecode-id fak-c local-aspace) 6) 
+	   => 720)))

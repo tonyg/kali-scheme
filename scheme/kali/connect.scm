@@ -194,7 +194,7 @@
 	    (decode buffer aspace reverse?)))))))
 
 (define (make-memory-layout-vector)
-  (vector 0 1 2 3)) ;; chnx todo
+  (vector 0 1 2 3)) ;; chnx todo memory-layout-stuff
 ;  (memory-status (enum memory-status-option ; chnx takeout
 ;		       memory-layout) ; chnx takeout
 ;		 #f))        ; ignored ; chnx takeout
@@ -368,13 +368,14 @@
   (channel-write channel (make-code-vector 1 byte) 0 1))
 
 
-;; chnx todo
+;; chnx todo tcp-nodelay
 
 (define (set-tcp-nodelay! ignore-channel ignore-state)
   (display "no tcp-nodealy yet!!!") (newline)
   (values))
 
 ;; chnx kali 
+;; chnx todo channel-read
 ;; we implement channel-read here because
 ;; we will take it out again ... probably ...
 

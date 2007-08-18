@@ -153,6 +153,7 @@
 				   ;; end chnx debug
 				   
 				   ;; chnx for testing:
+				   ;; chnx todo message-internal/test-package-structure
 				   ;; perhaps one should write a
 				   ;; messages-internal-structure
 				   ;; or a test-structure
