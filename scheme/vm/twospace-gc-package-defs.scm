@@ -7,8 +7,8 @@
 (define-interface heap-two-space-interface
   (export heap-begin
 
-	  s48-set-heap-pointer!
-	  s48-heap-pointer
+	  set-heap-pointer!
+	  heap-pointer
 	  swap-spaces
 	  heap-limit
 	  allocate
@@ -20,7 +20,6 @@
 (define-structures ((heap heap-interface)
 		    (heap-gc-util heap-gc-util-interface)
 		    (heap-init heap-init-interface)
-		    (heap-internal heap-internal-interface) ;; kali
 		    (heap-two-space heap-two-space-interface))
   (open prescheme ps-receive vm-utilities vm-architecture memory data
 	ps-memory

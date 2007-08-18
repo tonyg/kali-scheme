@@ -107,7 +107,6 @@
 		     (let ((result (make-message-vector *start-hp*)))
 		       (store! (address+ *start-hp* (cells->a-units 1))
 			       (address-difference *transmit-hp* (address1+ *start-hp*)))
-					;(s48-set-heap-pointer! *transmit-hp*)
 		       (mend-hearts! other-begin)
 		       (if (update-decode-vectors! address-space other-begin)
 			   (let ((losers (get-losing-proxies)))
@@ -307,9 +306,9 @@
 	 (next-uid (extract-fixnum (vm-vector-ref decode-vector freelist-index)))
 	 (minimum-new-length next-uid)
 	 (want-length (max (* old-length 2) minimum-new-length))
-	 (new-length (cond ((s48-available? (vm-vector-size want-length))
+	 (new-length (cond ((cells-available? (vm-vector-size want-length))
 			    want-length)
-			   ((s48-available? (vm-vector-size minimum-new-length))
+			   ((cells-available? (vm-vector-size minimum-new-length))
 			    minimum-new-length)
 			   (else
 			    0))))
@@ -546,7 +545,7 @@
 	       1     ; cells
 	       null  ; initial result list
 	       (lambda (ptr result)
-		 (if (s48-available? vm-pair-size)
+		 (if (cells-available? vm-pair-size)
 		     (vm-cons (fetch ptr)
 			      result
 			      (ensure-space vm-pair-size))
@@ -661,8 +660,12 @@
     (address->stob-descriptor (address1+ start))))
 
 (define (bytes-available? bytes)
-  (< (a-units->cells (bytes->a-units bytes))
-     (s48-available)))
+  (<= (a-units->cells (bytes->a-units bytes))
+      (s48-available)))
+
+(define (cells-available? cells)
+  (<= cells
+      (s48-available)))
 ;----------------------------------------------------------------
 ; Decoding messages.  We destroy the message in the process of
 ; decoding it.

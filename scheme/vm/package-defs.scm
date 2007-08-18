@@ -342,8 +342,7 @@
 	stob 
 	allocation 
 	enum-case
-	heap ;(s48-available?))          ; chnx takeout !try!
-	heap-internal ; chnx takeout !try!
+	heap
 	struct)
   (files (interp transmit)))
 
@@ -541,7 +540,6 @@
 (define-structures ((heap heap-interface)
 		    (heap-gc-util heap-gc-util-interface)
 		    (heap-init heap-init-interface)
-		    (heap-internal heap-internal-interface)
 		    (gc gc-interface)
 		    (allocation allocation-interface)
 		    (read-image-gc-specific read-image-gc-specific-interface)

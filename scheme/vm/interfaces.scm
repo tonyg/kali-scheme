@@ -88,7 +88,6 @@
 
 (define-interface heap-interface
   (export s48-available
-	  s48-available?  ;; kali
 	  s48-heap-size
 	  s48-max-heap-size
 
@@ -102,19 +101,8 @@
 	  ; for debugging
 	  s48-check-heap
 	  s48-stob-in-heap?
-
-	  s48-set-heap-pointer! ;; kali
-	  s48-heap-limits ;; kali
 	  ))
 
-;; kali -begin
-
-(define-interface heap-internal-interface
-  (export s48-heap-limits
-	  s48-heap-pointer
-	  s48-set-heap-pointer!))
-
-;; kali-end
 
 (define heap-gc-util-interface
   (export walk-impure-areas
