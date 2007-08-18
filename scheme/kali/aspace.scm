@@ -175,7 +175,10 @@
 
 ;; chnx TODO
 (define (machine-name->ip-address machine-name)
-  (let ((ip-assoc-list (list (cons "chimaera" "192.168.0.127"))))
+  (let ((ip-assoc-list (list ;(cons "chimaera" "127.0.0.1")
+			     (cons "127.0.0.1" "127.0.0.1")
+			     (cons "chimaera" "192.168.0.127")
+			     (cons "192.168.0.127" "192.168.0.127"))))
     (cdr (assoc machine-name
 		ip-assoc-list))))
 

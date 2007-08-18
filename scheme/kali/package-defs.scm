@@ -176,6 +176,7 @@
 
 (define-structure kali kali-interface
   (open scheme address-spaces
+	disclose-aspaces ;; just to make shure it loads
 	messages proxy-internals threads
 	fluids-internal)		; current-thread
   (begin
