@@ -61,7 +61,6 @@
 (define rec-1 (make-rec 'symbol "string"))
 (define rec-2 (make-rec + rec-1))
 
-
 ;;-------------------------------------------------------------------------
 
 (define (fak n) 
@@ -72,6 +71,15 @@
 (define fak-c)
 
 (reset (fak (shift k (begin (set! fak-c k) 6))))
+
+;;-------------------------------------------------------------------------
+
+(define (make-adder a)
+  (lambda (b)
+    (+ a b)))
+
+(define add3 (make-adder 3))
+(define add19 (make-adder 19))
 
 ;;-------------------------------------------------------------------------
 
@@ -243,6 +251,12 @@ that i can't stop writing, that i can't stop writing,
     
     (check ((endecode-id rec-equal? local-aspace) rec-2 rec-2) 
 	   => #t)
+
+    (check ((endecode-id add3 local-aspace) 5) 
+	   => 8)
+
+    (check ((endecode-id add19 local-aspace) 23)
+	   => 42)
 
     (check ((endecode-id fak-c local-aspace) 6) 
 	   => 720)))
