@@ -62,13 +62,13 @@
     (real-socket-listen channel)
     (make-socket 'socket channel)))
 
-(define (socket-accept socket)
+(define (socket-accept socket . maybe-buffer-size)
   (call-with-values
    (lambda ()
      (socket-listen-channels socket))
    (lambda (in out)
-     (values (input-channel+closer->port in close-socket-input-channel)
-	     (output-channel+closer->port out close-socket-output-channel)))))
+     (values (apply input-channel+closer->port in close-socket-input-channel maybe-buffer-size)
+	     (apply output-channel+closer->port out close-socket-output-channel maybe-buffer-size)))))
   
 (define socket-listen socket-accept)
 
@@ -98,13 +98,13 @@
 
 ; Connect to the socket and return input and output ports.
 
-(define (socket-client host-name port-number)
+(define (socket-client host-name port-number . maybe-buffer-size)
   (call-with-values
    (lambda ()
      (socket-client-channels host-name port-number))
    (lambda (in out)
-     (values (input-channel+closer->port in close-socket-input-channel)
-	     (output-channel+closer->port out close-socket-output-channel)))))
+     (values (apply input-channel+closer->port in close-socket-input-channel maybe-buffer-size)
+	     (apply output-channel+closer->port out close-socket-output-channel maybe-buffer-size)))))
 
 ; FreeBSD's connect() behaves oddly.  If you get told to wait, wait for select()
 ; to signal the all-clear, and then try to connect again, you get an `already
