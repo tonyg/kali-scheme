@@ -1,6 +1,6 @@
 ;; chnx - just for the time of development...:
 
-(define debug-prio-level 0)
+(define debug-prio-level 1)
 
 (define (debug-message prio str)
   (if (< prio debug-prio-level)
@@ -69,9 +69,10 @@
 ; the returned message is FALSE.
 
 (define (encode thing address-space pair)
-  (debug-message 5 "encode start...")
-  (set! *message-size* 128)
-  (set! *hotel-size* 128)
+  (debug-message 3 "encode start...")
+
+  (set! *message-size* (vm-car pair))
+  (set! *hotel-size* (vm-cdr pair))
 
   (receive (hotel-start hotel-limit)
       (allocate-hotel-space *hotel-size*)
@@ -81,7 +82,9 @@
 	(allocate-message-space *message-size*)
       (if (or (null-address? message-start)
 	      (null-address? hotel-start))
-	  #f
+	  (begin
+	    (debug-message 0 "encoding-failed (1)")
+	    #f)
 	  (begin
 	    (set! *message-start* message-start)
 	    (set! *scan-to* message-start)
@@ -102,6 +105,9 @@
 			 (not (do-encoding (address+ *message-start* (cells->a-units 3)))))
 		     (mend-hearts! hotel-start)
 		     (drop-new-ids! hotel-start)
+		     (debug-message 0 "encoding-failed (2)")
+		     (vm-set-car! pair (* 2 *message-size*))
+		     (vm-set-cdr! pair (* 2 *hotel-size*))
 		     #f)
 		    (else
 		     (let ((result (make-message-vector *message-start*)))
@@ -111,7 +117,11 @@
 		       (if (update-decode-vectors! address-space hotel-start)
 			   (let ((losers (get-losing-proxies)))
 			     (if (false? losers)
-				 #f
+				 (begin
+				   (debug-message 0 "encoding-failed (3)")
+				   (vm-set-car! pair (* 2 *message-size*))
+				   (vm-set-cdr! pair (* 2 *hotel-size*))
+				   #f)
 				 (begin
 				   (vm-set-car! pair result)
 				   (vm-set-cdr! pair losers)
@@ -119,6 +129,9 @@
 				   #t)))
 			   (begin
 			     (drop-new-ids! hotel-start)
+			     (debug-message 0 "encoding-failed (3)")
+			     (vm-set-car! pair (* 2 *message-size*))
+			     (vm-set-cdr! pair (* 2 *hotel-size*))
 			     #f)))))))))))
 
 ;; ----------------------------------------------------------
@@ -160,6 +173,7 @@
 
 ;; -----------------------------
 (define (make-message-vector start)
+  (debug-message 3 "make-message-vector")
   (store! *message-vector-header-address*
 	  (make-header (enum stob byte-vector)
 		       0))
@@ -213,6 +227,7 @@
       (enlarge-hotel-space)))
 
 (define (alloc-list-elt! cells old)
+  (debug-message 4 "alloc-list-elt!")
   (if (not (ensure-hotel-space (+ cells 1)))
       null-address
       (let ((start *hotel-pointer*))
@@ -243,6 +258,7 @@
 (define *heartbreak-hotel*)
 
 (define (remember-heartbreak thing header)
+  (debug-message 3 "remember-heartbreak")
   (let ((room-number (alloc-list-elt! 2 *heartbreak-hotel*)))
     (if (null-address? room-number)
 	*waterloo*
@@ -253,6 +269,7 @@
 	  *success*))))
 
 (define (mend-hearts! start)
+  (debug-message 4 "mend-hearts!")
   (walk-list *heartbreak-hotel*
 	     2
 	     (lambda (ptr)
@@ -282,6 +299,7 @@
 ; to the decode vector or put it in the *NEW-ID-HOTEL*.
 
 (define (real-next-id thing decode-vector)
+  (debug-message 4 "real-next-id")
   (let* ((next-available (vm-vector-ref decode-vector freelist-index))
 	 (extracted (extract-fixnum next-available))
 	 (next (if (< extracted (vm-vector-length decode-vector))
@@ -305,6 +323,7 @@
 ; Used when we don't have room to add the new objects to the decode vector.
 
 (define (drop-new-ids! start)
+  (debug-message 4 "drop-new-ids!")
   (walk-list *new-id-hotel*
 	     1
 	     (lambda (ptr)
@@ -329,6 +348,7 @@
 ; state if we cannot complete the update (because we ran out of room).
 
 (define (update-decode-vectors! address-space start)
+  (debug-message 4 "update-message-vectors!")
   (let ((old-decode (address-space-decode-vector address-space))
 	(old-proxy (address-space-proxy-vector address-space)))
     (let ((decode-okay? (<= (extract-fixnum
@@ -352,6 +372,7 @@
 ; decode vector.
 
 (define (extend-decode-vector address-space start proxies?)
+  (debug-message 4 "extend-decode-vector")
   (let* ((decode-vector (if proxies?
 			    (address-space-proxy-vector address-space)
 			    (address-space-decode-vector address-space)))
@@ -381,6 +402,7 @@
 ; 3. Link any unused slots into a freelist.
 
 (define (setup-new-decode-vector! new-vector old-vector start proxies?)
+  (debug-message 4 "setup-new-decode-vector!")
   (let ((old-length (vm-vector-length old-vector))
 	(new-length (vm-vector-length new-vector))
 	(next-uid (extract-fixnum (vm-vector-ref old-vector freelist-index))))
@@ -411,7 +433,7 @@
 (define-message-offset-value *scan-to*)
 
 (define (do-encoding start)
-  ;;(debug-message 3 "do-encoding")
+  (debug-message 1 "do-encoding")
   (let loop ((start start))
     (set! *scan-to* *message-pointer*)
     (cond ((not (encode-locations start)) ; lost
@@ -423,6 +445,7 @@
 ; Encode everything pointed to from somewhere between START and END.
 
 (define (encode-locations start)
+  (debug-message 3 "encode-locations")
   (let loop ((addr start))
     (if (address< addr *scan-to*)
 	(let ((next (encode-next addr)))
@@ -436,6 +459,7 @@
 (define-message-offset-value *encode-next/addr*)
 
 (define (encode-next addr)
+  (debug-message 3 "encode-next")
   (set! *encode-next/addr* addr)
   (let ((thing (fetch *encode-next/addr*)))
     (cond ((b-vector-header? thing)
@@ -465,30 +489,31 @@
   (= *waterloo* val))
 
 (define (encode-object thing)
+  (debug-message 3 "encode-object")
   (let ((h (stob-header thing)))
     (if (stob? h)            ;***Broken heart
 	h
 	(enum-case stob (header-type h)
 	  ((symbol)
-	   ;;(debug-message 3 "[symbol]")
+	   (debug-message 2 "[symbol]")
 	   (make-element (enum element uid)
 			 (extract-fixnum
 			  (get-uid thing vm-symbol-uid vm-set-symbol-uid!))))
 	  ((address-space)
-	   ;;(debug-message 3 "[address-space]") 
+	   (debug-message 2 "[address-space]") 
 	   (make-element (enum element uid)
 			 (extract-fixnum
 			  (get-uid thing address-space-uid set-address-space-uid!))))
 	  ((template)
-	   ;;(debug-message 3 "[template]")
+	   (debug-message 2 "[template]")
 	   (encode-two-part-uid
 	     (get-uid thing template-uid set-template-uid!)))
 	  ((location)
-	   ;;(debug-message 3 "[location]")
+	   (debug-message 2 "[location]")
 	   (encode-two-part-uid
 	      (get-uid thing location-uid set-location-uid!)))
 	  ((proxy)
-	   ;;(debug-message 3 "[proxy]")
+	   (debug-message 2 "[proxy]")
 	   (if (not (ensure-message-space 3))
 	       *waterloo*
 	       (let ((new (address->message-offset (enum element proxy)))
@@ -502,10 +527,11 @@
 		 (store-next! (debit-proxy-count! data))
 		 new)))
 	  (else
-	   ;;(debug-message 3 "[else]")
+	   (debug-message 2 "[else]")
 	   (encode-full-object h thing))))))
 
 (define (encode-two-part-uid uid)
+  (debug-message 3 "encode-two-part-uid")
   (if (not (ensure-message-space 2))
       *waterloo*
       (let ((new (address->message-offset (enum element uid+owner))))
@@ -519,6 +545,7 @@
 	new)))
 
 (define (encode-full-object header thing)
+  (debug-message 3 "encode-full-object")
   (if (not (ensure-message-space (header-a-units header)))
       *waterloo*
       (let ((new (address->message-offset (enum element local))))
@@ -537,11 +564,13 @@
 (define-message-offset-value *message-start*)
 
 (define (address->message-offset type)
+  (debug-message 3 "address->message-offset")
   (make-element type (address-difference *message-pointer* *message-start*)))
 
 ; Utility for getting uids.
 
 (define (get-uid thing accessor setter)
+  (debug-message 3 "get-uid")
   (let ((uid (accessor thing)))
     (if (false? uid)
 	(let ((uid (next-id thing)))
@@ -550,6 +579,7 @@
 	uid)))
 
 (define (get-proxy-uid thing)
+  (debug-message 3 "get-proxy-uid")
   (let ((uid (proxy-data-uid thing)))
     (if (false? uid)
 	(let ((uid (next-proxy-id thing)))
@@ -570,6 +600,7 @@
 (define shared-address-space-uid 2)
 
 (define (debit-proxy-count! proxy-data)
+  (debug-message 4 "debit-proxy-count")
   (let ((owner (proxy-data-owner proxy-data)))
     (if (and (not (eq? owner false))		; local proxies have #f as owner
 	     (= (address-space-uid owner)
@@ -600,6 +631,7 @@
 ; returns FALSE if it runs out of space.
 
 (define (get-losing-proxies)
+  (debug-message 4 "get-losing-proxies")
   (reduce-list *losing-proxy-hotel*
 	       1     ; cells
 	       null  ; initial result list
@@ -625,6 +657,7 @@
 (define *message-vector-header-address*)
 
 (define (allocate-message-space bytes)
+  (debug-message 1 "allocate-message-space")
   (if (not (bytes-available? (+ bytes 4))) ;; 4 for the header
       (values null-address
 	      null-address)
@@ -636,10 +669,13 @@
 			  (cells->a-units 1))))))
 
 (define (enlarge-message-space needed-bytes)
+  (debug-message 1 "enlarge-message-space")
   (let ((max-stob-size-in-bytes (cells->bytes max-stob-size-in-cells)))
   ;;(debug-message 3 "no ENLARGING jet!!!")
     (if (>= *message-size* max-stob-size-in-bytes)
-	#f
+	(begin
+	  (debug-message 0 "cannot enlarge-message-space (1)")
+	  #f)
 	(let ((old-start *message-start*)
 	      (want-space (let loop ((want-perhaps (* *message-size* 2)))
 			    (let ((want (if (<= want-perhaps
@@ -654,11 +690,15 @@
 				      (loop (* want 2)))
 				  want)))))
 	  (if (= want-space 0)
-	      #f
+	      (begin
+		(debug-message 0 "cannot enlarge-message-space (2)")
+		#f)
 	      (receive (new-start new-end)
 		  (allocate-message-space want-space)
 		(if (null-address? new-start)
-		    #f
+		    (begin
+		      (debug-message 0 "cannot enlarge-message-space (3)")
+		      #f)
 		    (let ((offset (address-difference new-start old-start)))
 		      ;(debug-message 3 "really enlarging!")
 		      (copy-memory! old-start new-start 
@@ -670,6 +710,7 @@
 ;; the hotel-space:
 
 (define (allocate-hotel-space bytes)
+  (debug-message 1 "allocate-hotel-space")
   (if (not (bytes-available? (+ bytes 4))) ;; 4 for the header
       (values null-address
 	      null-address)
@@ -680,9 +721,12 @@
 
 ;; chnx ??? should have a get-what-you-can-feature
 (define (enlarge-hotel-space)
+  (debug-message 1 "enlarge-hotel-space")
   (let ((max-stob-size-in-bytes (cells->bytes max-stob-size-in-cells)))
     (if (= *hotel-size* max-stob-size-in-bytes)
-	#f
+	(begin
+	  (debug-message 0 "cannot enlarge-hotel-space (1)")
+	  #f)
 	(let ((want-space (let ((want (* *hotel-size* 2)))
 			    (if (< want max-stob-size-in-bytes)
 				want
@@ -690,7 +734,9 @@
 	  (receive (new-start new-end)
 	      (allocate-hotel-space want-space)
 	    (if (null-address? new-start)
-		#f
+		(begin
+		  (debug-message 0 "cannot enlarge-hotel-space (2)")
+		  #f)
 		(begin
 		  (adjust-hotel-values! new-start new-end want-space)
 		  #t)))))))

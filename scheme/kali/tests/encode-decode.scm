@@ -357,7 +357,7 @@ that i can't stop writing, that i can't stop writing,
 
     (check ((endecode-id add19 local-aspace) 23)
 	   => 42)
-
+    
     (report)
 
     (check ((endecode-id fak-c local-aspace) 6) 
@@ -435,7 +435,7 @@ a new")
 	  (display (loop (- n 1)))
 	  n))))
 
-(make-deep-c 100)
+;(make-deep-c 100)
 
 (define (display* . args)
   (if (null? args)

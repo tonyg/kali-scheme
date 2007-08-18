@@ -622,7 +622,7 @@
 (define-consing-primitive really-encode (any-> aspace->)
   (lambda (ignore) vm-pair-size)
   (lambda (thing aspace key)
-    (let ((pair (vm-cons false false key)))
+    (let ((pair (vm-cons 128 128  key)))
 	(if (encode thing aspace pair)
 	    (goto return pair)
 	    (begin
