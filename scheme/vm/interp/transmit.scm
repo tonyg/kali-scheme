@@ -1,6 +1,6 @@
 ;; chnx - just for the time of development...:
 
-(define debug-prio-level 1)
+(define debug-prio-level 0)
 
 (define (debug-message prio str)
   (if (< prio debug-prio-level)
@@ -103,17 +103,17 @@
 	      (store! (address+ *message-start* (cells->a-units 2)) code)
 	      (cond ((or (waterloo? code)
 			 (not (do-encoding (address+ *message-start* (cells->a-units 3)))))
-		     (mend-hearts! hotel-start)
-		     (drop-new-ids! hotel-start)
+		     (mend-hearts! *heartbreak-hotel*) ;; chnx
+		     (drop-new-ids! *new-id-hotel*) ;; chnx
 		     (debug-message 0 "encoding-failed (2)")
-		     (vm-set-car! pair (* 2 *message-size*))
+		     (vm-set-car! pair (* 2 *message-size*)) 
 		     (vm-set-cdr! pair (* 2 *hotel-size*))
 		     #f)
 		    (else
 		     (let ((result (make-message-vector *message-start*)))
 		       (store! (address+ *message-start* (cells->a-units 1))
 			       (address-difference *message-pointer* (address1+ *message-start*)))
-		       (mend-hearts! hotel-start)
+		       (mend-hearts! *heartbreak-hotel*) ;; chnx
 		       (if (update-decode-vectors! address-space hotel-start)
 			   (let ((losers (get-losing-proxies)))
 			     (if (false? losers)
