@@ -64,7 +64,7 @@
 	    (stob-stuff stob-list stob-data)
 	    (newline)
 	    (enumeration-stuff record-type-fields
-			       "S48_RECORD_TYPE_~A(x) S48_RECORD_REF((x), ~D)")
+			       "S48_RECORD_TYPE_~A(x) S48_RECORD_REF((S48_PROXY_DATA_VALUE(S48_PROXY_DATA(x))), ~D)") ;; kali change
 	    (newline)
 	    (enumeration-stuff exception-list "S48_EXCEPTION_~A ~D")
 	    (newline)

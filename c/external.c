@@ -895,6 +895,7 @@ s48_make_record(s48_value type_shared_binding)
     int i, number_of_fields;
     s48_value record = S48_FALSE;
     s48_value record_type = S48_FALSE;
+
     S48_DECLARE_GC_PROTECT(1);
 
     S48_GC_PROTECT_1(record_type);
@@ -904,7 +905,11 @@ s48_make_record(s48_value type_shared_binding)
 
     record_type = S48_SHARED_BINDING_REF(type_shared_binding);
 
-    s48_check_record_type(record_type, the_record_type_binding);
+    // kali
+    // record-types are proxies now, so we have to extract the record
+    // before we pass it to s48_check_record_type
+    s48_check_record_type(S48_PROXY_DATA_VALUE(S48_PROXY_DATA(record_type)), // kali
+			  the_record_type_binding);
 
     number_of_fields =
       S48_UNSAFE_EXTRACT_FIXNUM(S48_RECORD_TYPE_NUMBER_OF_FIELDS(record_type));
@@ -924,18 +929,41 @@ s48_make_record(s48_value type_shared_binding)
  * Raise an exception if `record' is not a record whose type is the one
  * found in `type_binding'.
  */
+/* non-kali code was:
+   void
+   s48_check_record_type(s48_value record, s48_value type_binding)
+   {
+   if (! S48_RECORD_P(S48_SHARED_BINDING_REF(type_binding)))
+   s48_raise_scheme_exception(S48_EXCEPTION_UNBOUND_EXTERNAL_NAME, 1,
+   S48_SHARED_BINDING_NAME(type_binding));
+   
+   if ((! S48_RECORD_P(record)) ||
+   (S48_UNSAFE_SHARED_BINDING_REF(type_binding) !=
+   S48_UNSAFE_RECORD_REF(record, -1)))
+   s48_raise_argument_type_error(record);
+   }    
+*/
+
+// kali code is:
 void
 s48_check_record_type(s48_value record, s48_value type_binding)
 {
-  if (! S48_RECORD_P(S48_SHARED_BINDING_REF(type_binding)))
+  // kali TODO:
+  // S48_PROXY_DATA_VALUE should be something like any-proxy-value
+  
+  if (! S48_RECORD_P(S48_PROXY_DATA_VALUE(S48_PROXY_DATA(S48_SHARED_BINDING_REF(type_binding)))))
     s48_raise_scheme_exception(S48_EXCEPTION_UNBOUND_EXTERNAL_NAME, 1,
 			       S48_SHARED_BINDING_NAME(type_binding));
-
+    
   if ((! S48_RECORD_P(record)) ||
-      (S48_UNSAFE_SHARED_BINDING_REF(type_binding) !=
-       S48_UNSAFE_RECORD_REF(record, -1)))
+      (S48_PROXY_DATA_VALUE(S48_PROXY_DATA(S48_UNSAFE_SHARED_BINDING_REF(type_binding))) !=
+       S48_PROXY_DATA_VALUE(
+	S48_PROXY_DATA(
+	 S48_UNSAFE_RECORD_REF(record,
+			       -1)))))
     s48_raise_argument_type_error(record);
 }    
+// kali code end
 
 long
 s48_length(s48_value list)
