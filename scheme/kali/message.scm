@@ -27,7 +27,9 @@
        (reader other-aspace))
      (lambda (message missing-uids bad-count-proxies)
        (if (not (null? bad-count-proxies))
-	   (for-each return-counts (adjust-proxy-counts! bad-count-proxies)))
+	   (begin
+	     (debug-message "got bad-count-proxies: ...")
+	     (for-each return-counts (adjust-proxy-counts! bad-count-proxies))))
        (if (null? missing-uids)
 	   (process-message message other-aspace)
 	   (process-missing-uids message missing-uids other-aspace))
@@ -68,6 +70,7 @@
   (let ((data (cdr message)))
     (enum-case message-type (car message)
       ((run)
+       (debug-message "[run]")
        (spawn (lambda ()
 		(apply (car data)
 		       (cdr data)))))
@@ -79,25 +82,28 @@
 		   *received-available-values*)))
       ;; end chnx available!
       ((uid-request)
-       ;(debug-message "[uid request]")
+       (debug-message "[uid request]")
        (send-admin-message (enum message-type uid-reply)
 			   (map make-uid-reply data)
 			   other-aspace))
       ((uid-reply)
-       ;(debug-message "[uid reply]")
+       (debug-message "[uid reply]")
        (process-uid-replies data '() other-aspace))
       ((proxy-counts-request)
        (send-admin-message (enum message-type proxy-counts)
 			   (map proxy-uid->proxy data)
 			   other-aspace))
       ((proxy-counts)
+       (debug-message "[proxy-counts]!!!")
        (let ((requests (make-proxy-rerequests data)))
 	 (if (not (null? requests))
-	     (send-admin-message (enum message-type proxy-counts-request)
-				 requests
-				 other-aspace))))
+	     (begin
+	       (debug-message "still [proxy-counts] got requests from ...")
+	       (send-admin-message (enum message-type proxy-counts-request)
+				   requests
+				   other-aspace)))))
       ((return-proxy-counts)
-       ;(debug-message "[return-proxy-counts]")
+       (debug-message "[return-proxy-counts]")
        (for-each (lambda (p)
 		   (add-proxy-counts! (car p) (cdr p)))
 		 data))
@@ -148,3 +154,8 @@
 			aspace))))
 ;; end chnx available!
 
+;; ------------
+;; chnx debug
+(define (debuig-message str)
+  (display str (current-error-port))
+  (newline (current-error-port)))

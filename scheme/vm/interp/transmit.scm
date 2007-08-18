@@ -1,6 +1,6 @@
 ;; chnx - just for the time of development...:
 
-(define debug-prio-level 1)
+(define debug-prio-level 9)
 
 (define (debug-message prio str)
   (if (< prio debug-prio-level)
@@ -50,13 +50,14 @@
 ;----------------
 ; Encode THING as a message.  This is a simple two-finger GC.
 ; Pointers to copied objects and copies of their headers are kept
-; in the currently unused heap and are used to repair the object
-; once the message has been made.  The unused heap is also used to
-; keep a list of the objects that have received new UID's but for
-; which there is no room in the appropriate decode vector.  Once the
-; message is complete the vectors are enlarged and the objects are
-; added.  If there is insufficient space left in the (active) heap
-; to enlarge the decode vectors the list is used to remove the uids.
+; in the "hotel-space" ([old] currently unused heap) and are used 
+; to repair the object once the message has been made. The hotel-space 
+; ([old] unused heap) is also used to keep a list of the objects that 
+; have received new UID's but for which there is no room in the 
+; appropriate decode vector.  Once the message is complete the vectors 
+; are enlarged and the objects are added.  If there is insufficient 
+; space left in the (active) heap to enlarge the decode vectors the 
+; list is used to remove the uids.
 ;
 ; The first four bytes of the message are the length of the message in
 ; a-units, the second four are THING.
@@ -173,7 +174,7 @@
 
 ;; -----------------------------
 (define (make-message-vector start)
-  (debug-message 3 "make-message-vector")
+  (debug-message 30 "make-message-vector")
   (store! *message-vector-header-address*
 	  (make-header (enum stob byte-vector)
 		       0))
@@ -227,7 +228,7 @@
       (enlarge-hotel-space)))
 
 (define (alloc-list-elt! cells old)
-  (debug-message 4 "alloc-list-elt!")
+  (debug-message 40 "alloc-list-elt!")
   (if (not (ensure-hotel-space (+ cells 1)))
       null-address
       (let ((start *hotel-pointer*))
@@ -258,7 +259,7 @@
 (define *heartbreak-hotel*)
 
 (define (remember-heartbreak thing header)
-  (debug-message 3 "remember-heartbreak")
+  (debug-message 30 "remember-heartbreak")
   (let ((room-number (alloc-list-elt! 2 *heartbreak-hotel*)))
     (if (null-address? room-number)
 	*waterloo*
@@ -269,7 +270,7 @@
 	  *success*))))
 
 (define (mend-hearts! start)
-  (debug-message 4 "mend-hearts!")
+  (debug-message 40 "mend-hearts!")
   (walk-list *heartbreak-hotel*
 	     2
 	     (lambda (ptr)
@@ -299,7 +300,7 @@
 ; to the decode vector or put it in the *NEW-ID-HOTEL*.
 
 (define (real-next-id thing decode-vector)
-  (debug-message 4 "real-next-id")
+  (debug-message 40 "real-next-id")
   (let* ((next-available (vm-vector-ref decode-vector freelist-index))
 	 (extracted (extract-fixnum next-available))
 	 (next (if (< extracted (vm-vector-length decode-vector))
@@ -323,7 +324,7 @@
 ; Used when we don't have room to add the new objects to the decode vector.
 
 (define (drop-new-ids! start)
-  (debug-message 4 "drop-new-ids!")
+  (debug-message 40 "drop-new-ids!")
   (walk-list *new-id-hotel*
 	     1
 	     (lambda (ptr)
@@ -348,7 +349,7 @@
 ; state if we cannot complete the update (because we ran out of room).
 
 (define (update-decode-vectors! address-space start)
-  (debug-message 4 "update-message-vectors!")
+  (debug-message 40 "update-message-vectors!")
   (let ((old-decode (address-space-decode-vector address-space))
 	(old-proxy (address-space-proxy-vector address-space)))
     (let ((decode-okay? (<= (extract-fixnum
@@ -372,7 +373,7 @@
 ; decode vector.
 
 (define (extend-decode-vector address-space start proxies?)
-  (debug-message 4 "extend-decode-vector")
+  (debug-message 40 "extend-decode-vector")
   (let* ((decode-vector (if proxies?
 			    (address-space-proxy-vector address-space)
 			    (address-space-decode-vector address-space)))
@@ -402,7 +403,7 @@
 ; 3. Link any unused slots into a freelist.
 
 (define (setup-new-decode-vector! new-vector old-vector start proxies?)
-  (debug-message 4 "setup-new-decode-vector!")
+  (debug-message 40 "setup-new-decode-vector!")
   (let ((old-length (vm-vector-length old-vector))
 	(new-length (vm-vector-length new-vector))
 	(next-uid (extract-fixnum (vm-vector-ref old-vector freelist-index))))
@@ -433,7 +434,7 @@
 (define-message-offset-value *scan-to*)
 
 (define (do-encoding start)
-  (debug-message 1 "do-encoding")
+  (debug-message 10 "do-encoding")
   (let loop ((start start))
     (set! *scan-to* *message-pointer*)
     (cond ((not (encode-locations start)) ; lost
@@ -445,7 +446,7 @@
 ; Encode everything pointed to from somewhere between START and END.
 
 (define (encode-locations start)
-  (debug-message 3 "encode-locations")
+  (debug-message 30 "encode-locations")
   (let loop ((addr start))
     (if (address< addr *scan-to*)
 	(let ((next (encode-next addr)))
@@ -459,7 +460,7 @@
 (define-message-offset-value *encode-next/addr*)
 
 (define (encode-next addr)
-  (debug-message 3 "encode-next")
+  (debug-message 30 "encode-next")
   (set! *encode-next/addr* addr)
   (let ((thing (fetch *encode-next/addr*)))
     (cond ((b-vector-header? thing)
@@ -513,7 +514,7 @@
 	   (encode-two-part-uid
 	      (get-uid thing location-uid set-location-uid!)))
 	  ((proxy)
-	   (debug-message 2 "[proxy]")
+	   (debug-message 2 "!!![proxy]!!!")
 	   (if (not (ensure-message-space 3))
 	       *waterloo*
 	       (let ((new (address->message-offset (enum element proxy)))
@@ -531,7 +532,7 @@
 	   (encode-full-object h thing))))))
 
 (define (encode-two-part-uid uid)
-  (debug-message 3 "encode-two-part-uid")
+  (debug-message 30 "encode-two-part-uid")
   (if (not (ensure-message-space 2))
       *waterloo*
       (let ((new (address->message-offset (enum element uid+owner))))
@@ -545,7 +546,7 @@
 	new)))
 
 (define (encode-full-object header thing)
-  (debug-message 3 "encode-full-object")
+  (debug-message 30 "encode-full-object")
   (if (not (ensure-message-space (header-a-units header)))
       *waterloo*
       (let ((new (address->message-offset (enum element local))))
@@ -564,13 +565,13 @@
 (define-message-offset-value *message-start*)
 
 (define (address->message-offset type)
-  (debug-message 3 "address->message-offset")
+  (debug-message 30 "address->message-offset")
   (make-element type (address-difference *message-pointer* *message-start*)))
 
 ; Utility for getting uids.
 
 (define (get-uid thing accessor setter)
-  (debug-message 3 "get-uid")
+  (debug-message 30 "get-uid")
   (let ((uid (accessor thing)))
     (if (false? uid)
 	(let ((uid (next-id thing)))
@@ -579,7 +580,7 @@
 	uid)))
 
 (define (get-proxy-uid thing)
-  (debug-message 3 "get-proxy-uid")
+  (debug-message 30 "get-proxy-uid")
   (let ((uid (proxy-data-uid thing)))
     (if (false? uid)
 	(let ((uid (next-proxy-id thing)))
@@ -608,6 +609,7 @@
 	(enter-fixnum 0)
 	(let* ((count (extract-fixnum (proxy-data-reference-count proxy-data)))
 	       (send (cond ((<= count 1)
+			    (debug-message 4 "[<= 1] => 1 && losing-proxy!")
 			    (let ((room-number
 				    (alloc-list-elt! 1 *losing-proxy-hotel*)))
 			      (if (null-address? room-number)
@@ -617,8 +619,10 @@
 				    (set! *losing-proxy-hotel* room-number)
 				    1))))
 			   ((< count (* 2 max-proxy-debit))
+			    (debug-message 4 "[< (* 2 max-proxy-debit)] => (/ count 2)")
 			    (logical-shift-right count 1))
 			   (else
+			    (debug-message 4 "[else = >= max-proxy-debit] => max-proxy-debit")
 			    max-proxy-debit))))
 	  (if (waterloo? send)
 	      *waterloo*
@@ -789,6 +793,7 @@
 ; DECODE assumes that the size has been stripped off the front of the message.
 
 (define (decode message aspace reverse? key)
+  (debug-message 5 "start decode...")
   (let ((start (address-at-header message))
 	(limit (address-after-stob message)))
     (if reverse?
@@ -799,6 +804,7 @@
     (decode-message-body (address1+ (address1+ start)) limit aspace key)
     (stob-header-set! message (make-header (enum stob byte-vector)
 					   (cells->bytes 1)))
+    (debug-message 5 "decode done")
     (values (address->stob-descriptor
 	     (address+ *message-start* (element-info (fetch (address1+ start)))))
 	    *new-uids*
@@ -860,16 +866,17 @@
 ; Dispatch on the type of the thing.
 
 (define (decode-object thing aspace addr stob-start key)
+  (debug-message 4 "decode-object")
   (let ((data (element-info thing)))
     (enum-case element (element-type thing)
       ((local)
-       ;;;(debug-message 3 "[local]")
+       (debug-message 3 "[local]")
        (address->stob-descriptor (address+ *message-start* data)))
       ((uid)
-       ;;;(debug-message 3 "[uid]")
+       (debug-message 3 "[uid]")
        (decode-uid data aspace aspace-id-in-self addr stob-start key))
       ((uid+owner)
-       ;;;(debug-message 3 "[uid+owner]")
+       (debug-message 3 "[uid+owner]")
        (receive (aspace-uid uid)
 	   (get-full-uid-data data)
 	 (let ((aspace (lookup-uid aspace-uid aspace)))
@@ -877,7 +884,7 @@
 	       (decode-uid uid aspace aspace-uid addr stob-start key)
 	       (add-pending! aspace-uid uid addr stob-start key)))))
       (else   ; (proxy)   ; Type checker can't handler missing ELSE clause
-       ;;;(debug-message 3 "[proxy] - (else)")
+       (debug-message 3 "!!![proxy]!!! - (else)")
        (receive (aspace-uid uid count)
 	   (get-proxy-data data)
 	 (let ((aspace (lookup-uid aspace-uid aspace)))
@@ -901,6 +908,7 @@
 ; Same deal, except that there are three values.
 
 (define (get-proxy-data data)
+  (debug-message 4 "get-proxy-data")
   (let ((data-addr (address- (address+ *message-start* data)
 			     (cells->a-units 1))))
     (let ((aspace (extract-fixnum (fetch data-addr)))
@@ -915,11 +923,14 @@
 ; Getting proxies.
 
 (define (lookup-proxy aspace aspace-uid uid count addr stob-start key)
+  (debug-message 4 "lookup-proxy")
   (let ((proxy-vector (address-space-proxy-vector aspace)))
     (if (< uid (vm-vector-length proxy-vector))
 	(let ((thing (vm-vector-ref proxy-vector uid)))
+	  (debug-message 4 "[< uid proxy-vector]")
 	  (if (proxy-data? thing)
 	      (let ((proxy (weak-pointer-ref (proxy-data-self thing))))
+		(debug-message 4 "[we know proxy allready]")
 		(add-to-proxy-count! thing count key)
 		(if (proxy? proxy)
 		    proxy
@@ -941,19 +952,25 @@
 (define *bad-count-proxies*)
 
 (define (add-to-proxy-count! proxy-data more key)
+  (debug-message 4 "add-to-proxy-count!")
   (let ((count (extract-fixnum (proxy-data-reference-count proxy-data))))
     (if (< count 1)
-	(set! *bad-count-proxies*
-	      (vm-cons (vm-cons proxy-data more key)
-		       *bad-count-proxies*
-		       key))
 	(begin
+	  (debug-message 4 "[< count 1] add to bad-count-proxies")
+	  (set! *bad-count-proxies*
+		(vm-cons (vm-cons proxy-data more key)
+			 *bad-count-proxies*
+			 key)))
+	(begin
+	  (debug-message 4 "[>= count 1]")
 	  (if (and (< max-proxy-count (+ count more))
 		   (not (false? (proxy-data-owner proxy-data))))
-	      (set! *bad-count-proxies*
-		    (vm-cons proxy-data
-			     *bad-count-proxies*
-			     key)))
+	      (begin
+		(debug-message 4 "[(< max-proxy-count (+ count more)) and non-local] add to bad-count proxies")
+		(set! *bad-count-proxies*
+		      (vm-cons proxy-data
+			       *bad-count-proxies*
+			       key))))
 	  (set-proxy-data-reference-count! proxy-data
 					   (enter-fixnum (+ count more)))))))
 
@@ -992,9 +1009,11 @@
 (define *new-uids*)
 
 (define (add-pending! aspace-uid uid addr stob-start key)
+  (debug-message 4 "add-pending!")
   (really-add-pending! aspace-uid uid false addr stob-start key))
 
 (define (add-pending-proxy! aspace-uid uid count addr stob-start key)
+  (debug-message 4 "add-pending-proxy!")
   (really-add-pending! aspace-uid uid (enter-fixnum count) addr stob-start key))
 
 (define (really-add-pending! aspace-uid uid count addr stob-start key)

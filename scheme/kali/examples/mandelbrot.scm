@@ -83,8 +83,8 @@
 (define (test aspace1 aspace2)
   (save-pixel-field-as-tga (calculate-mandel (make-mandel-piece (make-point -2 2)
 								(make-point 2 -2)
-								50 50)
-					     64
+								10 10)
+					     32
 					     `(,aspace1 ,aspace2)
 					     1)
 			   "MANDEL-TEST.tga"))

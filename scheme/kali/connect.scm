@@ -273,16 +273,20 @@
   (just-send-message bvector aspace))
 
 (define (wait-for-proxy-counts need-counts)
+  (debug-message "wait-for-proxy-counts")
   (call-with-values
    (lambda ()
      (make-proxy-requests need-counts))
    (lambda (requests placeholder)
      (if (not (null? requests))
-	 (for-each (lambda (request)
-		     (send-admin-message (enum message-type proxy-counts-request)
-					 (cdr request)
-					 (car request)))
-		   requests))
+	 (begin 
+	   (debug-message "wait-for-proxy-counts got requests")
+	   (debug-meesage requests)
+	   (for-each (lambda (request)
+		       (send-admin-message (enum message-type proxy-counts-request)
+					   (cdr request)
+					   (car request)))
+		     requests)))
      (if placeholder
 	 (placeholder-value placeholder)))))
 
@@ -418,3 +422,9 @@
 (define buffer? code-vector?)
 
 (define buffer-length code-vector-length)
+
+;; ------------
+;; chnx debug
+(define (debuig-message str)
+  (display str (current-error-port))
+  (newline (current-error-port)))

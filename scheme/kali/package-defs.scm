@@ -84,8 +84,9 @@
 	architecture			; max-proxy-count, max-proxy-debit
 	weak				; weak-pointer-ref
 	signals				; warn
-	debug-messages			; for debugging
-	interrupts)			; with-interrupts-inhibited
+	debug-messages			; for debugging	
+	i/o              ;; chnx debugging
+	interrupts)			; with-interrupts-inhibited  
   (files proxy-count))
 
 ;; ============================================================================
@@ -107,7 +108,7 @@
 	bitwise				; arithmetic-shift
 	conditions handle i/o display-conditions  ; dealing with errors
 	;debug-messages
-	i/o ;; test-messages
+	i/o ;; chnx test-messages
 	threads			; spawn
 	(subset primitives (eof-object  ;; because of channel-read
 			    memory-status 
