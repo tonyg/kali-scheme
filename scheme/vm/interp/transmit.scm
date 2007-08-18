@@ -835,21 +835,6 @@
     (values message-start
 	    message-end)))
 
-(define (clean-up-message-space)
-  (let ((h (make-header (enum stob byte-vector)
-			0)))
-    (let lp ((start *transmit-hp*));(address- *transmit-hp*
-			;      (cells->bytes 1))))
-      (if (address= start *message-end*)
-	  (unspecific)
-	  (begin
-	    (store! start h)
-	    (lp (address+ start
-			  (cells->a-units 1))))))))
-
-(define (kill-message-space)
-  #t)
-
 (define (allocate-hotel-space hotel-space)
   (let* ((hotel-start
 	  (s48-allocate-untraced+gc hotel-space))
@@ -860,20 +845,6 @@
     (set! *hotel-end* hotel-end)
     (values hotel-start
 	    hotel-end)))
-	 
-(define (clean-up-hotel-space)
-  (kill-hotel-space))
-
-(define (kill-hotel-space)
-  (let ((h (make-header (enum stob byte-vector)
-			0)))
-    (let lp ((start *hotel-start*))
-      (if (address= start *hotel-end*)
-	  (unspecific)
-	  (begin
-	    (store! start h)
-	    (lp (address+ start
-			  (cells->a-units 1))))))))
 
 (define (space->byte-vector start end)
   (let ((h (make-header (enum stob byte-vector)
