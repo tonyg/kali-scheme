@@ -531,32 +531,32 @@
 
 (define-enumeration stob
   (;; D-vector types (traced by GC)
-   pair
-   symbol
-   vector
-   closure
-   location
-   cell
-   channel
-   port
-   ratnum
-   record
-   continuation
-   extended-number
-   template
-   weak-pointer
-   shared-binding
-   unused-d-header1
+   pair               ;;  0
+   symbol             ;;  1
+   vector             ;;  2
+   closure            ;;  3
+   location           ;;  4
+   cell               ;;  5
+   channel            ;;  6
+   port               ;;  7
+   ratnum             ;;  8
+   record             ;;  9
+   continuation       ;; 10
+   extended-number    ;; 11
+   template           ;; 12
+   weak-pointer       ;; 13
+   shared-binding     ;; 14
+   unused-d-header1   ;; 15
 
-   proxy          ;; kali
-   proxy-data     ;; kali
-   address-space  ;; kali
+   proxy          ;; kali ;; 16
+   proxy-data     ;; kali ;; 17
+   address-space  ;; kali ;; 18
 
    ;; B-vector types (not traced by GC)
-   string        ; = least b-vector type
-   byte-vector
-   double        ; double precision floating point
-   bignum
+   string        ; = least b-vector type           ;; 19
+   byte-vector                                     ;; 20
+   double        ; double precision floating point ;; 21
+   bignum                                          ;; 22
    ))
 
 ; This is here to try to ensure that it is changed when STOB changes.
