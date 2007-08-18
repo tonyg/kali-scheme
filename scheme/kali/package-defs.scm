@@ -27,18 +27,19 @@
 (define-structure address-spaces address-space-interface
   (open scheme address-space-internals
 	define-record-types
-	srfi-13			; string-drop-right
+	(subset srfi-13 (string-drop-right))
 	ascii tables
 	srfi-34 srfi-35         ;; error handling
 	kali-conditions         ;; error handling
-	architecture		; stob
-	templates locations	; set-template-id! set-location-uid!
-	interrupts		; with-interrupts-inhibited
-	proxy-internals		; set-proxy-uid! set-proxy-owner-uid!
-	locks			; make-lock
+	architecture            ; stob
+	templates
+	locations
+	(subset interrupts (with-interrupts-inhibited))
+	proxy-internals
+	(subset locks (make-lock))
 	(subset sockets (get-host-name get-host-by-name))
 	(subset posix-time (time->string current-time))
-	(subset primitives (encode collect find-all)))		; vm-extension copy-bytes! find-all-xs encode
+	(subset primitives (encode collect find-all)))
   (files aspace))
 
 (define-structure disclose-aspaces (export)
@@ -83,10 +84,11 @@
 	proxy-internals
 	address-spaces address-space-internals
 	placeholders
-	architecture			; max-proxy-count, max-proxy-debit
-	weak				; weak-pointer-ref
+	(subset architecture (max-proxy-count
+			      max-proxy-debit))
+	(subset weak (weak-pointer-ref))
 	(subset signals	(warn))
-	interrupts)			; with-interrupts-inhibited
+	(subset interrupts (with-interrupts-inhibited)))
   (files proxy-count))
 
 ;; ============================================================================
@@ -116,10 +118,10 @@
 	locks
 	condvars
 	proposals
-	interrupts			; call-after-gc!
-	bitwise				; arithmetic-shift
-	threads			; spawn
-	(subset primitives (eof-object  ;; because of channel-read
+	(subset interrupts (call-after-gc!))
+	(subset bitwise	(arithmetic-shift))
+	threads
+	(subset primitives (;eof-object  ;; because of channel-read
 			    memory-status 
 			    encode 
 			    decode 
@@ -169,7 +171,7 @@
 	enumerated enum-case
 	threads	threads-internal
 	placeholders
-	interrupts			; with-interrupts-inhibited
+	(subset interrupts (with-interrupts-inhibited))
 	proxy-internals)
   (files message))
 
@@ -199,7 +201,7 @@
   (open scheme address-spaces
 	disclose-aspaces ;; just to make shure it loads
 	messages proxy-internals threads
-	fluids-internal)		; current-thread
+	(subset fluids-internal (current-thread))); current-thread
   (files utils))
 
 ;; ========================================================================

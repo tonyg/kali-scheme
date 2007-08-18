@@ -298,9 +298,9 @@
 			       (+ (cells->a-units stob-overhead)
 				  (header-length-in-a-units d)))))
 	  (cond ((not (header? d))
-		 (check-lost "Heap-check: unexpected non-header."))
+		 (check-lost "Heap-check: unexpected non-header." addr))
 		((address< end next)
-		 (check-lost "Heap-check: header too large."))
+		 (check-lost "Heap-check: header too large." addr))
 		((b-vector-header? d)
 		 (loop next))
 		((check-stob-contents (address1+ addr) next)
@@ -318,7 +318,7 @@
 	#t
 	(let ((x (fetch addr)))
 	  (cond ((header? x)
-		 (check-lost "Heap-check: unexpected header."))
+		 (check-lost "Heap-check: unexpected header." addr))
 		((or (not (stob? x))
 		     (check-stob x))
 		 (loop (address1+ addr)))
@@ -332,9 +332,9 @@
   (let ((addr (address-at-header stob)))
     (cond ((or (address< addr *newspace-begin*)
 	       (address<= s48-*hp* addr))
-	   (check-lost "Heap-check: address out of bounds."))
+	   (check-lost "Heap-check: address out of bounds." addr))
 	  ((not (header? (fetch addr)))
-	   (check-lost "Heap-check: stob has no header."))
+	   (check-lost "Heap-check: stob has no header." addr))
 	  (else
 	   #t))))
 
@@ -345,8 +345,10 @@
   (= sd 0) (= ld 0) (= wd 0) ; for the typechecker
   (unspecific))
 
-(define (check-lost message)
+(define (check-lost message addr)
   (write-string message (current-error-port))
+  (write-string " At Address: " (current-error-port))
+  (write-integer (address->integer addr) (current-error-port))
   (newline (current-error-port))
   (set! *heap-errors-left* (- *heap-errors-left* 1))
   (< *heap-errors-left* 1))

@@ -334,7 +334,8 @@
 (define-structure encode/decode 
   (export encode 
 	  decode 
-	  decode-space-multiplier)
+	  decode-space-multiplier
+	  kali-check-heap)
   (open prescheme ps-receive
 	vm-utilities ;; debug
 	vm-architecture 

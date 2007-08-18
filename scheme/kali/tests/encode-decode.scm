@@ -2,7 +2,7 @@
 ; ,open i/o primitives kali address-spaces proxy-count-requests messages threads signals srfi-42 srfi-66 srfi-78 srfi-9 reset/shift
 ;(spawn start-server)
 ;(sleep 1000)
-;(define las (local-address-space))
+;(define local-aspace (local-address-space))
 ;(load "scheme/kali/tests/encode-decode.scm")
 
 (define (endecode-id val aspace)
@@ -18,9 +18,18 @@
 		(decode (u8cdr bytes) aspace #f)) ;; no reverse! 
 	    (lambda (val missing-uids bad-count-proxies)
 	      (let loop ((treated-bad-count-proxies #f))
+;		(display "endecode-id-loop check-heap" (current-error-port))
+;		(newline (current-error-port))
+;		(kali-check-heap 2)
 		(cond ((and (not treated-bad-count-proxies)
 			    (not (null? bad-count-proxies)))
+		       (display "goign to return counts" (current-error-port))
+		       (newline (current-error-port))
+		       (kali-check-heap 2)		       
 		       (for-each return-counts (adjust-proxy-counts! bad-count-proxies))
+;		       (display "returned counts ... check-heap" (current-error-port))
+;		       (newline (current-error-port))
+;		       (kali-check-heap 2)
 		       (loop #t))
 		      ((not (null? missing-uids))
 		       (display missing-uids)

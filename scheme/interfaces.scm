@@ -118,6 +118,7 @@
 	  decode-char
 	  untyped-indexed-set! ;; kali
 	  symbol-uid  ;; kali
+	  kali-check-heap ;; chnx kali
 	  encode      ;; kali
 	  decode))    ;; kali
 

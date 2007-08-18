@@ -265,4 +265,7 @@
 (define (initialize-any-proxy-value! proc)
   (set! proxy-remote-value proc))
 
+(define (kali-check-heap x)
+  (really-kali-check-heap x))
+
 ; kali - end

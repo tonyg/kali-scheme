@@ -640,7 +640,8 @@
 
 (define-consing-primitive really-decode (aspace-> boolean-> code-vector->)
   (lambda (message)
-    (+ (* decode-space-multiplier
+    (+ (* 2 ;; chnx !!!
+	  decode-space-multiplier
 	  (bytes->cells (code-vector-length message)))
        (vm-vector-size 3)))  ; for the final return value
   (lambda (aspace reverse? message key)
@@ -652,6 +653,14 @@
 	(vm-vector-set! result 2 low-count-proxies)
 	(goto return result)))))
 
+
+;; chnx:
+
+(define-primitive really-kali-check-heap (fixnum->)    
+  (lambda (x)
+    (kali-check-heap x))
+  return-unspecific)
+  
 ;; kali - end
 
 ; *** Our entry for the obscure comment of the year contest.

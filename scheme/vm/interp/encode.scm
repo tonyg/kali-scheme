@@ -1,6 +1,6 @@
 ;; chnx - just for the time of development...:
 
-(define debug-prio-level 0)
+(define debug-prio-level 1)
 
 (define (debug-message prio str)
   (if (< prio debug-prio-level)
@@ -9,6 +9,13 @@
 	(write-error-newline)
 	(unspecific))
       (unspecific)))
+
+;; =======================================
+
+(define (kali-check-heap x)
+  (debug-message 0 "kali going to check heap...")
+  (s48-check-heap x)
+  (debug-message 0 "kali ...checked heap!"))
 
 ;; chnx end
 
@@ -71,6 +78,10 @@
 (define (encode thing address-space pair)
   (debug-message 3 "encode start...")
 
+  (debug-message 0 "encode 0 going to check heap...")
+  (s48-check-heap 2)
+  (debug-message 0 "encode 0 ...checked heap!")
+
   (set! *message-size* (vm-car pair))
   (set! *hotel-size* (vm-cdr pair))
 
@@ -126,6 +137,11 @@
 				   (vm-set-car! pair result)
 				   (vm-set-cdr! pair losers)
 				   (debug-message 5 "encode done.")
+
+				   (debug-message 0 "encode 1 going to check heap...")
+				   (s48-check-heap 2)
+				   (debug-message 0 "encode 1 ...checked heap!")
+
 				   #t)))
 			   (begin
 			     (drop-new-ids! hotel-start)
@@ -557,6 +573,10 @@
 	    (begin
 	      (store-next! header)
 	      (stob-header-set! thing new)	;***Break heart
+;	      (write-string " " (current-error-port))
+;	      (write-integer (address->integer (address-at-header thing))
+;			     (current-error-port))
+;	      (newline (current-error-port))
 	      (let ((new-hp (address+ *message-pointer* (header-length-in-a-units header))))
 		(do ((o (address-after-header thing) (address1+ o)))
 		    ((address>= *message-pointer* new-hp))
@@ -667,12 +687,22 @@
       (let ((message-vector (make-code-vector bytes 0)))
 	(set! *message-vector-header-address*
 	      (address-at-header message-vector))
+	(let ((out (current-error-port)))
+	  (write-string "allocated message space: " out)
+	  (newline out)
+	  (write-integer (address->integer (address-after-header message-vector)) out)
+	  (newline out)
+	  (write-integer (address->integer (address- (address-after-stob message-vector)
+						     (cells->a-units 1)))
+			 out)
+	  (newline out)
+	  (newline out))
 	(values (address-after-header message-vector)
 		(address- (address-after-stob message-vector)
 			  (cells->a-units 1))))))
 
 (define (enlarge-message-space needed-bytes)
-  (debug-message 1 "enlarge-message-space")
+  (debug-message 0 "enlarge-message-space")
   (let ((max-stob-size-in-bytes (cells->bytes max-stob-size-in-cells)))
   ;;(debug-message 3 "no ENLARGING jet!!!")
     (if (>= *message-size* max-stob-size-in-bytes)
@@ -718,13 +748,23 @@
       (values null-address
 	      null-address)
       (let ((hotel-vector (make-code-vector bytes 0)))
+	(let ((out (current-error-port)))
+	  (write-string "allocated hotel space: " out)
+	  (newline out)
+	  (write-integer (address->integer (address-after-header hotel-vector)) out)
+	  (newline out)
+	  (write-integer (address->integer (address- (address-after-stob hotel-vector)
+						     (cells->a-units 1)))
+			 out)
+	  (newline out)
+	  (newline out))
 	(values (address-after-header hotel-vector)
 		(address- (address-after-stob hotel-vector)
 			  (cells->a-units 1))))))
 
 ;; chnx ??? should have a get-what-you-can-feature
 (define (enlarge-hotel-space)
-  (debug-message 1 "enlarge-hotel-space")
+  (debug-message 0 "enlarge-hotel-space")
   (let ((max-stob-size-in-bytes (cells->bytes max-stob-size-in-cells)))
     (if (= *hotel-size* max-stob-size-in-bytes)
 	(begin
@@ -753,3 +793,4 @@
 (define (cells-available? cells)
   (<= cells
       (s48-available)))
+
