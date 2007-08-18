@@ -55,14 +55,16 @@
 ; the returned message is FALSE.
 
 (define *message-space*)
+(define *hotel-space*)
 
 (define (encode thing address-space pair)
   (set! *message-space* 128)
+  (set! *hotel-space* 128)
   (set! *loosing-return* #f)
-  (receive (start-hp current-begin current-end other-begin other-end)
-       (s48-heap-limits)
+  (receive (other-begin other-end)
+      (allocate-hotel-space *hotel-space*)
     (receive (start-hp current-end)
-	 (allocate-message-space *message-space*)
+	(allocate-message-space *message-space*)
       (set! *our-address-space* address-space)
       (set! *start* start-hp)
       ;; add space for header, number of bytes, and THING
@@ -138,13 +140,25 @@
 ; We use the currently unused half of the heap for various lists.
 
 (define *other-hp*)
+(define *hotel-end*)
 
 (define (alloc-list-elt! cells old)
-  (let ((start *other-hp*))
-    (store! (address+ start (cells->a-units cells))
-	    (address->integer old))
-    (set! *other-hp* (address+ start (cells->a-units (+ cells 1))))
-    start))
+  (if (if (or (address<= *hotel-end*
+			 (address+ *other-hp* 
+				   (cells->a-units (+ cells 1))))
+	      *loosing-return*)
+	  (or *loosing-return*
+	      (not (enlarge-hotel-space!)))
+	  #f)
+      (begin
+	;; encoding lost!
+	(set! *loosing-return* #t)
+	*other-hp*)
+      (let ((start *other-hp*))
+	(store! (address+ start (cells->a-units cells))
+		(address->integer old))
+	(set! *other-hp* (address+ start (cells->a-units (+ cells 1))))
+	start)))
 
 (define (walk-list start cells proc)
   (do ((ptr start (list-elt-next ptr cells)))
@@ -552,14 +566,14 @@
 ;  (if (not (s48-available? size))
 ;      (debug-message "NOT available!")
 ;      (debug-message "IS  available!"))
-  (let* ((message-vector (make-code-vector size 0))
+  (let* ((message-vector (make-code-vector size null))
 	 (message-start (address-after-header message-vector))
-	 (message-end (address-after-stob message-vector)))
+	 (message-end (address- (address-after-stob message-vector)
+				(cells->a-units 1))))
     (set! *message-vector-header-address* 
 	  (address-at-header message-vector))
     (set! *start* message-start)
-    (set! *max-hp* (address- message-end
-			     (cells->a-units 1)))
+    (set! *max-hp* message-end)
     (values message-start
 	    message-end)))
 
@@ -587,6 +601,33 @@
 	    (set! *address* (address+ *address* offset))
 	    (set! *next-address* (address+ *next-address* offset))
 	    #t)))))
+
+;;-----------------
+;; the hotel-space:
+
+(define (allocate-hotel-space size)
+  (let* ((hotel-vector (make-code-vector size 0))
+	 (hotel-start (address-after-header hotel-vector))
+	 (hotel-end (address- (address-after-stob hotel-vector)
+			      (cells->a-units 1))))
+    (set! *other-hp* hotel-start)
+    (set! *hotel-end* hotel-end)
+    (values hotel-start
+	    hotel-end)))
+
+(define (enlarge-hotel-space!)
+  (let ((want-space (* *hotel-space* 2)))
+    (if (not (s48-available? want-space))
+	(begin 
+	  (debug-message "can't enlarge hotel-space!")
+	  (set! *loosing-return* #t)
+	  #f)
+	(begin
+	  (debug-message "going to enlarge hotel-space!")
+	  (allocate-hotel-space want-space)
+	  (set! *hotel-space* want-space)
+	  #t))))
+
 ;----------------------------------------------------------------
 ; Decoding messages.  We destroy the message in the process of
 ; decoding it.

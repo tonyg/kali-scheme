@@ -17,13 +17,15 @@
 	      (lambda ()
 		(decode (u8cdr bytes) aspace #f)) ;; no reverse! 
 	    (lambda (val missing-uids bad-count-proxies)
-	      (cond ((not (null? bad-count-proxies))
-		     (display "endecode-id: bad-count-proxies")
-		     (for-each return-counts (adjust-proxy-counts! bad-count-proxies)))
-		    ((not (null? missing-uids))
-		     (display missing-uids)
-		     (display "endecode-id: missing uids! That can't be true"))
-		    (else (car val)))))))))
+	      (let loop ((treated-bad-count-proxies #f))
+		(cond ((and (not treated-bad-count-proxies)
+			    (not (null? bad-count-proxies)))
+		       (for-each return-counts (adjust-proxy-counts! bad-count-proxies))
+		       (loop #t))
+		      ((not (null? missing-uids))
+		       (display missing-uids)
+		       (display "endecode-id: missing uids! That can't be true"))
+		      (else (car val))))))))))
 
 (define (u8cdr bv)
   (list->u8vector 
