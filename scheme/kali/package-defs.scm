@@ -57,7 +57,7 @@
   (begin
     (define-enumeration message-type
       (run			; (proc . proxy . args)
-       unsave-run               ; (proc . args)
+       really-run               ; (proc . args)
        results			; (return-id . values)
        uid-request      	; (element-type . uid)*
        uid-reply        	; #(aspace-uid uid element-type contents)
@@ -243,3 +243,53 @@
 	srfi-34
 	srfi-35)
   (files kali-conditions))
+
+;; ===============================================================================
+
+(define-structure mandelbrot (export mandel
+				     mandel-bench
+				     test)
+  (open scheme 
+	threads
+	kali
+	address-spaces
+	srfi-9
+	placeholders
+	posix-time)
+  (files (examples mandelbrot)))
+
+;; -------------------------------------------------
+
+(define-interface kml-sync-interface
+  (export make-kml-channel
+	  kml-channel?
+	  kml-send-rv
+	  kml-send
+	  kml-receive-rv
+	  kml-receive))
+
+(define-interface kml-async-interface
+  (export make-kml-async-channel
+	  kml-async-channel?
+	  kml-send-async-rv
+	  kml-send-async
+	  kml-receive-async-rv
+	  kml-receive-async))
+
+(define-interface kml-placeholders-interface
+  (export make-kml-placeholder
+	  kml-placeholder?
+	  kml-placeholder-value
+	  kml-placeholder-set!
+	  kml-placeholder-value-rv))
+
+
+(define-structures ((kml-sync         kml-sync-interface)
+		    (kml-async        kml-async-interface)
+		    (kml-placeholders kml-placeholders-interface))
+  (open scheme
+	kali
+	rendezvous-channels
+	rendezvous-async-channels
+	rendezvous-placeholders)
+  (files (examples kml)))

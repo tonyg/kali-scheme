@@ -499,7 +499,12 @@
 	    uid-requests
 	    address-spaces
 	    proxy-count-requests
-	    connect	    
+	    connect
+
+	    mandelbrot
+	    kml-sync
+	    kml-async
+	    kml-placeholders
 	    ; End Kali code
 
 	    ;; From link-packages.scm:

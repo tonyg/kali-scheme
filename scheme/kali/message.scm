@@ -53,7 +53,7 @@
 (define (process-message message other-aspace)
   (let ((data (cdr message)))
     (enum-case message-type (car message)
-      ((unsave-run)
+      ((really-run)
        (spawn (lambda ()
 		(apply (car data)
 		       (cdr data)))))
@@ -66,7 +66,7 @@
 		       (other-aspace (proxy-data-owner (proxy-data proxy))))
 		  (with-except-handler
 		   (lambda (c)
-		     (unsave-remote-run! other-aspace
+		     (really-remote-run! other-aspace
 		       (lambda ()
 			 (placeholder-set! (proxy-local-ref proxy)
 					   (cons #f (make-condition &kali-remote-error
@@ -75,7 +75,7 @@
 								    'arguments args
 								    'condition c))))))
 		   (lambda ()
-		     (unsave-remote-run! other-aspace
+		     (really-remote-run! other-aspace
 		       (lambda (v)
 			 (placeholder-set! (proxy-local-ref proxy)
 					   (cons #t v)))
@@ -120,10 +120,10 @@
 ;----------------
 ; REMOTE-RUN! and friends.  These just send the appropriate messages.
 
-(define (unsave-remote-run! aspace proc . args)
+(define (really-remote-run! aspace proc . args)
   (if (eq? aspace (local-address-space))
       (spawn (lambda () (apply proc args)))
-      (send-message (enum message-type unsave-run)
+      (send-message (enum message-type really-run)
 		    (cons proc args)
 		    aspace)))
 
