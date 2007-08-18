@@ -294,7 +294,7 @@
 	 (begin 
 	   (debug-message "wait-for-proxy-counts got requests:")
 	   (display "  " (current-error-port))
-	   (ebug-meesage requests)
+	   (debug-meesage requests)
 	   (for-each (lambda (request)
 		       (send-admin-message (enum message-type proxy-counts-request)
 					   (cdr request)

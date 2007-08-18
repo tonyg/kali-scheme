@@ -133,6 +133,7 @@
 	proxy-internals address-spaces
 	;weak
 	records			; record?, record-ref (abstraction breaking)
+	i/o              ;; chnx debugging
 	debug-messages		; (for debugging)
 	(subset primitives (untyped-indexed-set! 
 			    record 

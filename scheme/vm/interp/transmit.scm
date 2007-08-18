@@ -70,7 +70,7 @@
 ; the returned message is FALSE.
 
 (define (encode thing address-space pair)
-  (debug-message 3 "START ECODING...")
+  (debug-message 3 "START ENCODING...")
 
   (set! *message-size* (vm-car pair))
   (set! *hotel-size* (vm-cdr pair))

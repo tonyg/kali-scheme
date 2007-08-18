@@ -87,11 +87,13 @@
       ;; end chnx available!
       ((uid-request)
        (debug-message "[uid request]")
+       (debug-message data)
        (send-admin-message (enum message-type uid-reply)
 			   (map make-uid-reply data)
 			   other-aspace))
       ((uid-reply)
        (debug-message "[uid reply]")
+       (debug-message data)
        (process-uid-replies data '() other-aspace))
       ((proxy-counts-request)
        (send-admin-message (enum message-type proxy-counts)
