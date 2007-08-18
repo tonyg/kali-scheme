@@ -130,3 +130,19 @@
   (files uid-request))
 
 ;; =======================================================================
+
+(define-structure messages (export remote-run! remote-apply start-server)
+  (open scheme
+	connect message-types uid-requests
+	proxy-count-requests
+	signals				; warn
+	address-spaces
+	enumerated enum-case
+	threads	threads-internal
+	interrupts			; with-interrupts-inhibited
+	proxy-internals			; (for debugging)
+	debug-messages			; (for debugging)
+	i/o)				; force-output (for debugging)
+  (files message))
+
+;; =======================================================================
