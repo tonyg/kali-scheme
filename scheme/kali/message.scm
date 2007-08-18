@@ -53,14 +53,39 @@
 (define (process-message message other-aspace)
   (let ((data (cdr message)))
     (enum-case message-type (car message)
+      ((unsave-run)
+       (spawn (lambda ()
+		(apply (car data)
+		       (cdr data)))))
       ((run)
        (spawn (lambda ()
-		(with-except-handler
-		 (lambda (c)
-		   'ignored-remote-run-error)
-		 (lambda ()
-		   (apply (car data)
-			  (cdr data)))))))
+		(let* ((proc (car data))
+		       (proxy (cadr data))
+		       (args (cddr data))
+		       (aspace (local-address-space))
+		       (other-aspace (proxy-data-owner (proxy-data proxy))))
+		  (with-except-handler
+		   (lambda (c)
+		     (unsave-remote-run! other-aspace
+		       (lambda ()
+			 (placeholder-set! (proxy-local-ref proxy)
+					   (cons #f (make-condition &kali-remote-error
+								    'aspace aspace
+								    'procedure proc
+								    'arguments args
+								    'condition c))))))
+		   (lambda ()
+		     (unsave-remote-run! other-aspace
+		       (lambda (v)
+			 (placeholder-set! (proxy-local-ref proxy)
+					   (cons #t v)))
+		       (call-with-values
+			   (lambda ()
+			     (apply proc args))
+			 (lambda values
+			   (if (null? values)
+			       (list (unspecific))
+			       values))))))))))
       ((uid-request)
        ;(debug-message "[uid request]")
        (send-admin-message (enum message-type uid-reply)
@@ -95,57 +120,35 @@
 ;----------------
 ; REMOTE-RUN! and friends.  These just send the appropriate messages.
 
-(define (remote-run! aspace proc . args)
+(define (unsave-remote-run! aspace proc . args)
   (if (eq? aspace (local-address-space))
       (spawn (lambda () (apply proc args)))
-      (send-message (enum message-type run)
+      (send-message (enum message-type unsave-run)
 		    (cons proc args)
 		    aspace)))
 
+(define (remote-run! aspace proc . args)
+  (let* ((placeholder (make-placeholder))
+	 (proxy (make-proxy placeholder)))
+    (send-message (enum message-type run)
+		  (cons proc (cons proxy args))
+		  aspace)
+    placeholder))
+
 (define (remote-apply aspace proc . args)
-  (with-except-handler
-   (lambda (c)
-     (raise c))
-   (lambda ()
-     (if (eq? aspace (local-address-space))
-	 (apply proc args)
-	 (let* ((placeholder (make-placeholder))
-		(proxy (make-proxy placeholder)))
-	   (remote-run! aspace
-			(lambda ()
-			  (let ((other-aspace (proxy-data-owner (proxy-data proxy))))
-			    (with-except-handler
-			     (lambda (c)
-			       (let ((local-aspace (local-address-space)))
-				 (remote-run! other-aspace
-					      (lambda ()
-						(placeholder-set! 
-						 (proxy-local-ref proxy)
-						 (list #f 
-						       local-aspace
-						       proc
-						       args
-						       c))))))
-			     (lambda ()
-			       (let ((result (call-with-values
-						 (lambda ()
-						   (apply proc args))
-					       (lambda values
-						 (if (null? values)
-						     (list (unspecific))
-						     values)))))
-				 (remote-run! other-aspace
-					      (lambda (value)
-						(placeholder-set! (proxy-local-ref proxy)
-								  (cons #t value)))
-					      result)))))))
-	   (let* ((pair (placeholder-value placeholder))
-		  (all-right? (car pair))
-		  (result (cdr pair)))
-	     (if all-right?
-		 (apply values result)
-		 (raise (make-condition &kali-remote-apply-error
-					'aspace (car result)
-					'procedure (cadr result)
-					'arguments (caddr result)
-					'condition (cadddr result))))))))))
+  (if (eq? aspace (local-address-space))
+      (apply proc args)
+      (with-except-handler
+       (lambda (c)
+	 (raise c))
+       (lambda ()
+	 (let* ((pair (placeholder-value (apply remote-run! 
+						aspace
+						proc
+						args)))
+		(all-right? (car pair))
+		(result (cdr pair)))
+	   (if all-right?
+	       (apply values result)
+	       (raise result)))))))
+					

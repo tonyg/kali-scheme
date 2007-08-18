@@ -70,8 +70,8 @@
   (open scheme enumerated)
   (begin
     (define-enumeration message-type
-      (run			; (proc . args)
-       apply			; (return-id proc . args)
+      (run			; (proc . proxy . args)
+       unsave-run               ; (proc . args)
        results			; (return-id . values)
        uid-request      	; (element-type . uid)*
        uid-reply        	; #(aspace-uid uid element-type contents)
