@@ -40,16 +40,18 @@
   (let ((divide (if (null? divide)
 		    1
 		    (car divide))))
-    (save-pixel-field-as-tga (calculate-mandel (make-mandel-piece 
-						(make-point x-min y-max) ;; upper-left
-						(make-point x-max y-min) ;; lower-right
-						x-res y-res) ;; resulting tga size
+    (let ((mandel-piece (make-mandel-piece 
+			 (make-point x-min y-max) ;; upper-left
+			 (make-point x-max y-min) ;; lower-right
+			 x-res y-res))) ;; resulting tga size
+      (save-pixel-field-as-tga (calculate-mandel mandel-piece
+						 iter-limit
+						 aspaces
+						 divide)
+			       (make-file-name mandel-piece
 					       iter-limit
-					       aspaces
-					       divide)
-			     (make-file-name mandel-piece
-					     iter-limit
-					     divide))))
+					       (length aspaces)
+					       divide)))))
 
 (define (mandel-bench x-min x-max 
 		      y-min y-max 
@@ -60,7 +62,7 @@
 		     (car divide)))
 	 (mandel-piece (make-mandel-piece (make-point x-min y-max) ;; upper left
 					  (make-point x-max y-min) ;; lower right
-					  x-res y-res)) ;; resulting tga size
+					  x-res y-res)) ;; resolution resulting tga size
 	 (seconds1 (time-seconds (current-time)))
 	 (mandel-pixel-field (calculate-mandel mandel-piece 
 					       iter-limit 
@@ -68,8 +70,10 @@
 					       divide))
 	 (seconds2 (time-seconds (current-time)))
 	 (file-name (make-file-name mandel-piece 
-				    iter-limit 
-				    divide))
+				    iter-limit
+				    (length aspaces)
+				    divide
+				    (- seconds2 seconds1)))
 	 (save-stat (save-pixel-field-as-tga mandel-pixel-field 
 					     file-name))
 	 (seconds3 (time-seconds (current-time))))
@@ -104,6 +108,7 @@
 ;; first divide the piece in pieces for the address-spaces
 
 (define (calculate-mandel mandel-piece iter-limit aspaces divide)
+  (debug-message "calculate-mandel")
   (if (zero? divide)
       (calculate-mandel-piece mandel-piece iter-limit)
       (let ((number-pieces (length aspaces)))
@@ -130,6 +135,7 @@
 						 aspaces
 						 (- divide 1)))))
 		      (loop (+ i 1)))))
+	      (debug-message "calculate-mandel - going to combine")
 	      (apply combine (map (lambda (ph)
 				    (placeholder-value ph))
 				  field-placeholders))))))))
@@ -138,6 +144,7 @@
 ;; calculated with iterate
 
 (define (calculate-mandel-piece mandel-piece iter-limit)
+  (debug-message "calculate-amdel-piece")
   (display "Going to calculate mandel-piece: ")
   (newline)
   (display-mandel-piece mandel-piece)
@@ -275,6 +282,7 @@
 ;; combine
 
 (define (combine-pixel-field-columns pixel-field . rest)
+  (debug-message "combine-pixel-field-columns")
   (if (null? rest)
       pixel-field
       (apply combine-pixel-field-columns
@@ -288,6 +296,7 @@
 	     (cdr rest))))
 
 (define (combine-pixel-field-rows pixel-field . rest)
+  (debug-message "combine-pixel-field-rows")
   (if (null? rest)
       pixel-field
       (apply combine-pixel-field-rows
@@ -300,6 +309,7 @@
 ;; tga helpers
 
 (define (save-pixel-field-as-tga pixel-field path)
+  (debug-message "save-pixel-field-as-tga")
   (let ((x-dim (vector-length (vector-ref pixel-field 0)))
 	(y-dim (vector-length pixel-field)))
     (with-output-to-file path
@@ -315,9 +325,11 @@
 	(write-list 
 		  (list #x18 #x00))
 	(write-pixel-field-reversed pixel-field x-dim y-dim)))
+    (debug-message "save-pixel-field-as-tga - did it")
     #t))
 
 (define (write-pixel-field-reversed pixel-field x-dim y-dim)
+  (debug-message "write-pixel-field-reversed")
   (let y-loop ((y (- y-dim 1)))
     (let x-loop ((x 0))
       (if (= x x-dim)
@@ -363,7 +375,7 @@
 	(cons (constructor)
 	      (lp (- n 1))))))
 
-(define (make-file-name mandel-piece iter-limit divide)
+(define (make-file-name mandel-piece iter-limit no-as divide . time)
   (let* ((upper-left (mandel-piece-upper-left mandel-piece))
 	 (lower-right (mandel-piece-lower-right mandel-piece))
 	 (upper-left-x (point-x upper-left))
@@ -379,7 +391,12 @@
 		   "_res_" (number->string x-res)
 		   "x" (number->string y-res)
 		   "_iter_" (number->string iter-limit)
+		   "_no-as_" (number->string no-as)
 		   "_devi_" (number->string divide)
+		   (if (null? time)
+		       ""
+		       (string-append "_dt_"
+				      (number->string (car time))))
 		   ".tga")))
 
 (define (display-mandel-piece mandel-piece)
@@ -422,3 +439,9 @@
 	(blue (max 0
 		   (- integer 512))))
   (list blue yellow red)))
+
+;; ----------------
+
+(define (debug-message . objs)
+  (for-each display objs)
+  (newline))
