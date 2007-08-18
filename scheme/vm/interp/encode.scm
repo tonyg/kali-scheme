@@ -501,6 +501,7 @@
 	    (set! *scan-lost* #f)
 	    (scan-object thing))
 	(lambda (msg-size hotel-size)
+	  (restore-headers!)
 	  (if *scan-lost*
 	      (begin
 		(vm-set-car! pair 
@@ -517,10 +518,10 @@
   (let ((h (stob-header thing)))
     (cond (*scan-lost*
 	   (values 0 0))
-	  ((have-seen? thing)
+	  ((have-seen? h) ; thing -> h
 	   (values 1 0))
 	  ((b-vector-header? h)
-	   (remember-visit! thing)
+	   (remember-visit! thing h) ; + h 
 	   (values (+ (a-units->cells (header-length-in-a-units h))
 		      2) 
 		   3))
@@ -541,7 +542,7 @@
 
 (define (scan-full-object thing msg-size hotel-size)
   (let ((end (address-after-stob thing)))
-    (remember-visit! thing)
+    (remember-visit! thing (stob-header thing)) ; + stob-header
     (let loop ((start (address-after-header thing))
 	       (msg-size (+ msg-size 1))
 	       (hotel-size hotel-size))
@@ -581,22 +582,29 @@
 	    (set! *have-seen-limit* (address-after-stob vector))
 	    #t))))
 
-(define (remember-visit! thing)
+(define (remember-visit! thing header)
   (if (address= *have-seen-next* *have-seen-limit*)
       (begin
 	(set! *scan-lost* #t)
 	#f)
-      (begin
-	(store! *have-seen-next* 
-		(address->integer (address-after-header thing)))
-	(set! *have-seen-next* 
-	      (address1+ *have-seen-next*)))))
+      (begin 
+	(store! *have-seen-next*
+		thing)
+	(store! (address1+ *have-seen-next*)
+		header)
+	(stob-header-set! thing 
+			  (make-element (enum element local)
+					0))
+	(set! *have-seen-next* (address2+ *have-seen-next*)))))
 
-(define (have-seen? thing)
-  (or *scan-lost*
-      (let ((thing-iaddr (address->integer (address-after-header thing))))
-	(let walk ((walker *have-seen-start*))
-	  (if (address= walker *have-seen-next*)
-	      #f
-	      (or (= thing-iaddr (fetch walker))
-		  (walk (address1+ walker))))))))
+(define (have-seen? header)
+  (stob? header))
+
+(define (restore-headers!)
+  (let loop ((addr *have-seen-start*))
+    (if (address= addr *have-seen-next*)
+	#t
+	(begin
+	  (stob-header-set! (fetch addr)
+			    (fetch (address1+ addr)))
+	  (loop (address2+ addr))))))
