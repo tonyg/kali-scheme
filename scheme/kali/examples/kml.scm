@@ -31,9 +31,6 @@
 
 ;; -------
 
-;; this is relating to the records
-;; from cml/rendezvous.scm
-
 (define rv->kml-rv make-proxy)
 
 (define (kml-rv->rv kml-rv)
