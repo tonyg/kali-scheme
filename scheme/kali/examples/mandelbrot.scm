@@ -76,8 +76,8 @@
     (for-each display `("Calculated mandel-pixel-field in " ,(- seconds2
 								seconds1)
 			" seconds." #\newline
-			"Wrote file \"" file-name "\" in " ,(- seconds3 
-							       seconds2)
+			"Wrote file \"" ,file-name "\" in " ,(- seconds3 
+								seconds2)
 			" seconds." #\newline))))
 			
 (define (mandel-test aspace1 aspace2 . n)
@@ -314,7 +314,8 @@
 	;; header bits per pixel
 	(write-list 
 		  (list #x18 #x00))
-	(write-pixel-field-reversed pixel-field x-dim y-dim)))))
+	(write-pixel-field-reversed pixel-field x-dim y-dim)))
+    #t))
 
 (define (write-pixel-field-reversed pixel-field x-dim y-dim)
   (let y-loop ((y (- y-dim 1)))
