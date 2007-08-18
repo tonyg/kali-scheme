@@ -395,13 +395,15 @@
 				     socket-port-number
 				     socket-client
 				     get-host-name
-
+				     get-host-by-name ;; kali
+				     
 				     ; From the old interface
 				     ; I would like to get rid of these.
 				     socket-listen
 				     socket-listen-channels
 				     socket-client-channels))
 		    (udp-sockets (export get-host-name
+					 get-host-by-name ;; kali
 					 close-socket
 					 open-udp-socket
 					 udp-send

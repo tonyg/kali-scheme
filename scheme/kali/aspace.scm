@@ -176,14 +176,7 @@
 
 ; Returns the ip address of MACHINE-NAME as a string, for example "12.14.15.16".
 
-;; chnx todo machine-name->ip-address
-(define (machine-name->ip-address machine-name)
-  (let ((ip-assoc-list (list (cons "chimaera" "127.0.0.1")
-			     (cons "127.0.0.1" "127.0.0.1")
-			     ;(cons "chimaera" "192.168.0.127")
-			     (cons "192.168.0.127" "192.168.0.127"))))
-    (cdr (assoc machine-name
-		ip-assoc-list))))
+(define machine-name->ip-address get-host-by-name)
 
 ;----------------
 ; A common, pseudo address space (it has no socket) whose uids can be shared

@@ -133,6 +133,29 @@
 		 (enable-interrupts!)
 		 (loop #t))))))))
 
+;; kali
+
+(define (get-host-by-name host-name)
+  (let* ((buf (make-string 4 (integer->char 0))) ;; chnx hack - 4
+	 (len (real-get-host-by-name (host-name->byte-string
+				      (thing->host-name host-name))
+				     buf)))
+    (let lp ((i 0))
+      (if (= i (- len 1))
+	  (number->string (char->integer (string-ref buf i)))
+	  (string-append (number->string (save-char->integer (string-ref buf i)))
+			 "."
+			 (lp (+ i 1)))))))
+
+(define (save-char->integer ch)
+  (let ((i (char->integer ch)))
+    (if (< i 0)
+	(+ 256 i)
+	i)))
+
+
+;; kali end
+
 ;----------------
 ; UDP stuff
 ;
@@ -236,6 +259,9 @@
 (import-lambda-definition close-socket-half (socket input?)
 			  "s48_close_socket_half")
 (import-lambda-definition get-host-name () "s48_get_host_name")
+
+(import-lambda-definition real-get-host-by-name (name buffer)  ;; kali
+			  "s48_get_host_by_name")  ;; kali
 
 ; UDP calls
 (import-lambda-definition real-udp-send (socket address buffer count)

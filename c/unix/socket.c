@@ -42,6 +42,7 @@ static s48_value	s48_socket(s48_value udp_p, s48_value input_p),
 			s48_close_socket_half(s48_value socket_channel,
 					      s48_value input_p),
 			s48_get_host_name(void),
+			s48_get_host_by_name(s48_value name, s48_value buffer), /* kali */
 			s48_udp_send(s48_value channel,
 				     s48_value udp_address,
 				     s48_value buffer,
@@ -86,6 +87,7 @@ s48_init_socket(void)
   S48_EXPORT_FUNCTION(s48_dup_socket_channel);
   S48_EXPORT_FUNCTION(s48_close_socket_half);
   S48_EXPORT_FUNCTION(s48_get_host_name);
+  S48_EXPORT_FUNCTION(s48_get_host_by_name); /* kali */
   
   S48_EXPORT_FUNCTION(s48_udp_send);
   S48_EXPORT_FUNCTION(s48_udp_receive);
@@ -445,6 +447,29 @@ s48_get_host_name(void)
 
   return s48_enter_string_latin_1(mbuff);
 }
+
+/* begin kali code */
+
+static s48_value
+s48_get_host_by_name(s48_value name, s48_value buffer)
+{
+  int i;
+  //char * mbuf = s48_extract_byte_vector(buffer);
+  struct hostent * host = gethostbyname(s48_extract_byte_vector(name));
+  
+  if (host == NULL ||
+      host->h_addrtype != AF_INET ||	/* could happen, I suppose */
+      host->h_addr_list[0] == NULL)
+    s48_raise_os_error(errno);
+
+  for(i = 0; i < host->h_length; i++)
+    s48_string_set(buffer, i, host->h_addr_list[0][i]);
+
+  return s48_enter_fixnum(host->h_length);
+}
+
+/* end kali code */
+
 
 /*
  * UDP sockets.

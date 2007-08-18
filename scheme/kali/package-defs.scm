@@ -32,7 +32,7 @@
 	interrupts		; with-interrupts-inhibited
 	proxy-internals		; set-proxy-uid! set-proxy-owner-uid!
 	locks			; make-lock
-	(subset sockets (get-host-name))
+	(subset sockets (get-host-name get-host-by-name))
 	(subset posix-time (time->string current-time))
 	(subset primitives (encode collect find-all)))		; vm-extension copy-bytes! find-all-xs encode
   (files aspace))
