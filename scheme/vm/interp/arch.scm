@@ -493,6 +493,7 @@
    gc-count
    expand-heap!
    pointer-hash
+   memory-layout  ;; kali
    ))
 
 ; The two types of special channels cannot be used for normal I/O.

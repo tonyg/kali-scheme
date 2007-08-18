@@ -194,10 +194,9 @@
 	    (decode buffer aspace reverse?)))))))
 
 (define (make-memory-layout-vector)
-  (vector 0 1 2 3)) ;; chnx todo memory-layout-stuff
-;  (memory-status (enum memory-status-option ; chnx takeout
-;		       memory-layout) ; chnx takeout
-;		 #f))        ; ignored ; chnx takeout
+  (memory-status (enum memory-status-option
+		       memory-layout)
+		 #f))        ; ignored
 
 ; Writing and reading vectors of small integers.
 

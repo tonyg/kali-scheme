@@ -437,6 +437,9 @@
        (goto return-fixnum (s48-gc-count)))
       ((expand-heap!)
        (raise-exception unimplemented-instruction 0 (enter-fixnum key) other))
+      ((memory-layout)						   ; Kali code
+       (let ((key (ensure-space (vm-vector-size bytes-per-cell)))) ; Kali code
+	 (goto return (make-memory-layout-vector key))))	   ; Kali code
       (else
        (raise-exception bad-option 0 (enter-fixnum key) other)))))
 
@@ -456,6 +459,32 @@
       (else
        (raise-exception bad-option 0 (enter-fixnum option) other)))))
       
+; Begin Kali code
+
+; Returns a vector specifying the layout of bytes within a cell.  At index i
+; in the vector is the byte offset of address i within a word.
+;
+; The number #x0n-1...020100 is stored in memory, where n is the number of
+; bytes in a cell.  The n bytes are then fetched in address order and placed
+; in a vector
+
+(define (make-memory-layout-vector key)
+  (let ((vector (vm-make-vector bytes-per-cell key))
+	(map (do ((i 0 (+ i 1))
+		  (map 0 (bitwise-ior map (shift-left i (* i 8)))))
+		 ((= i bytes-per-cell)
+		  map))))
+    (vm-vector-set! vector 0 map)
+    (let ((addr (address-after-header vector)))
+      (do ((i 1 (+ i 1)))
+	  ((= i bytes-per-cell))
+	(vm-vector-set! vector i (enter-fixnum (fetch-byte (address+ addr i)))))
+      (vm-vector-set! vector 0 (enter-fixnum (fetch-byte addr))))
+    (make-immutable! vector)
+    vector))
+
+; End Kali code
+
 ; The largest number of seconds that can be converted into a fixnum number
 ; of milliseconds.
 

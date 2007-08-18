@@ -110,7 +110,7 @@
 	;debug-messages
 	threads			; spawn
 	(subset primitives (eof-object  ;; because of channel-read
-			    ; memory-status  ;; chnx takeout TODO
+			    memory-status 
 			    encode 
 			    decode 
 			    unspecific))
