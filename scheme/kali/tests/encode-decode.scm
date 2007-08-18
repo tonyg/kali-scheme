@@ -4,7 +4,7 @@
 (define (endecode-id val aspace)
   (call-with-values
       (lambda ()
-	(encode val ;(cons val '())
+	(encode (cons val '())
 		aspace))
     (lambda (bytes need-counts)
       (if (not (null? need-counts))
@@ -17,7 +17,7 @@
 		     (for-each return-counts (adjust-proxy-counts! bad-count-proxies)))
 		    ((not (null? missing-uids))
 		     (error "endecode-id: missing uids! That can't be true"))
-		    (else val)))))))) ;(car val)))))))))
+		    (else (car val)))))))))
 
 (define (u8cdr bv)
   (list->u8vector 

@@ -61,11 +61,8 @@
   (set! *loosing-return* #f)
 
   (set! *message-space* 128)
-  (set! *hotel-space* 512)
+  (set! *hotel-space* 128)
   
-  (set! *hotel-start* null-address)
-  (set! *hotel-end* null-address)
-
   (receive (hotel-start hotel-end)
 	   (allocate-hotel-space *hotel-space*) 
 
@@ -76,7 +73,7 @@
 		    ;; add space for header, number of bytes, and THING (*1)
 		    (set! *transmit-hp* (address+ *message-start* (cells->a-units 3))) ;; ensure space (*1)
 		    ;; ADDRESS- accounts for room for the header of the last object
-		    (set! *hotel-ptr* *hotel-start*)
+		    (set! *hotel-ptr* hotel-start)
 		    (set! *heartbreak-hotel* null-address)
 		    (set! *new-id-hotel* null-address)
 		    (set! *losing-proxy-hotel* null-address)
@@ -88,16 +85,16 @@
 					 (not (enlarge-message-space!)))
 				     #f)
 				 (not (do-encoding (address+ *message-start* (cells->a-units 3)))))
-			     (mend-hearts! *hotel-start*)
-			     (drop-new-ids! *hotel-start*)
-			     (space->byte-vector *message-start* *message-end*)
+			     (mend-hearts! hotel-start)
+			     (drop-new-ids! hotel-start)
+			     ;(space->byte-vector *message-start* *message-end*)
 			     #f)
 			    (else
 			     (let ((result (make-message-vector *message-start*)))
 			       (store! (address+ *message-start* (cells->a-units 1))
 				       (address-difference *transmit-hp* (address1+ *message-start*)))
-			       (mend-hearts! *hotel-start*)
-			       (if (update-decode-vectors! address-space *hotel-start*)
+			       (mend-hearts! hotel-start)
+			       (if (update-decode-vectors! address-space hotel-start)
 				   (let ((losers (get-losing-proxies)))
 				     (if (false? losers)
 					 #f
@@ -107,14 +104,15 @@
 					   (vm-set-cdr! pair losers)
 					   #t)))
 				   (begin
-				     (drop-new-ids! *hotel-start*)
+				     (drop-new-ids! hotel-start)
 				     #f)))))))))
      
+(define *message-vector-header-address*)
 (define *message-space*)
 (define *hotel-space*)
 (define *message-start*)
 (define *message-end*)
-(define *hotel-start*)
+;(define *hotel-start*)
 (define *hotel-end*)
 
 (define *transmit-hp*)
@@ -124,6 +122,8 @@
 (define (make-message-vector start)
   ;(debug-message "make-message-vector")
   (let ((size (address-difference *transmit-hp* (address1+ start))))
+    (store! *message-vector-header-address* 
+	    (make-header (enum stob byte-vector) 0))
     (store! start (make-header (enum stob byte-vector) size))
     (space->byte-vector *transmit-hp* *message-end*)
     (address->stob-descriptor (address1+ start))))
@@ -144,10 +144,8 @@
 ; We use the currently unused half of the heap for various lists.
 
 (define *hotel-ptr*)
-(define *old-room-number*)
 
 (define (alloc-list-elt! cells old)
-  (set! *old-room-number* old)
   (if (if (address<= *hotel-end*
 		     (address+ *hotel-ptr* (cells->a-units (+ cells 1))))
 	  (or *loosing-return*
@@ -158,7 +156,7 @@
 	*hotel-ptr*)
       (let ((start *hotel-ptr*))
 	(store! (address+ start (cells->a-units cells))
-		(address->integer *old-room-number*))
+		(address->integer old))
 	(set! *hotel-ptr* (address+ start (cells->a-units (+ cells 1))))
 	start)))
 
@@ -851,17 +849,16 @@
   (address+ (address-after-header stob)
 	    (bytes->a-units (header-length-in-bytes (stob-header stob)))))
 
-
 ;; --------------------
 ;; allocate memory for the "hotels" and message-vector
 ;; getting rid of the unused half of the heap...
 
 (define (allocate-message-space message-space)
-  (let* ((message-start
-	  (s48-allocate-untraced+gc message-space))
-	 (message-end
-	  (address+ message-start
-		    (bytes->a-units message-space))))
+  (let* ((message-vector (make-code-vector message-space 0))
+	 (message-start (address-after-header message-vector))
+	 (message-end (address- (address-after-stob message-vector)
+				(cells->a-units 1))))
+    (set! *message-vector-header-address* (address-at-header message-vector))
     (set! *message-start* message-start)
     (set! *message-end* message-end)
     (values message-start
@@ -872,7 +869,7 @@
 	 (hotel-start (address-after-header hotel-vector))
 	 (hotel-end (address- (address-after-stob hotel-vector)
 			      (cells->a-units 1))))
-    (set! *hotel-start* hotel-start)
+    (set! *hotel-ptr* hotel-start)
     (set! *hotel-end* hotel-end)
     (values hotel-start
 	    hotel-end)))
@@ -904,7 +901,7 @@
 	    (set! *finger-two* (address+ *finger-two* offset))
 	    (set! *address* (address+ *address* offset))
 	    (set! *next-address* (address+ *next-address* offset)))
-	  (space->byte-vector old-message-start old-message-end)
+	  ;(space->byte-vector old-message-start old-message-end)
 	  #t))))
 
 (define (enlarge-hotel-space!)
@@ -916,7 +913,7 @@
 	(begin
 	  (allocate-hotel-space want-space)
 	  (set! *hotel-space* want-space)
-	  (set! *hotel-ptr* *hotel-start*)
+	  ;(set! *hotel-ptr* *hotel-start*)
 	  #t))))
 
 ;; -------------------
