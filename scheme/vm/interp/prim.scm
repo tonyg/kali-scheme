@@ -623,33 +623,32 @@
   (lambda (ignore)
     vm-pair-size)
   (lambda (thing aspace key)
-    (let ((pair (vm-cons (enter-fixnum 512)
-			 (enter-fixnum 512)
-			 key))) ;; initial size for remember-visit-vector in scan
-    ;; scan for required space
-    (let try-again ((thing thing)
-		    (aspace aspace)
-		    (pair pair))
-      (push pair)
-      (push aspace)
-      (push thing)
-      (cond ((not (scan thing pair)) ;; gc or remember-visit-vector-size to small
-	     (debug-message "SCAN: try again")
-	     (let* ((thing (pop))
-		    (aspace (pop))
-		    (pair (pop)))
-	       (try-again thing aspace pair)))
-	    ((encode thing aspace pair)
-	     (pop) (pop) (pop) ;; return stack to original state
-	     (goto return pair))
-	    (else
-	     (s48-collect #t)
-	     (let* ((thing (pop))
-		    (aspace (pop))
-		    (pair (pop)))
-	       (if (encode thing aspace pair)
-		   (goto return pair)
-		   (raise-exception heap-overflow 0 thing aspace)))))))))
+    (let ((pair (vm-cons (enter-fixnum 512);; initial size for remember-visit-vector in scan
+			 false
+			 key)))
+      ;; scan for required space
+      (let try-again ((thing thing)
+		      (aspace aspace)
+		      (pair pair))
+	(push pair)
+	(push aspace)
+	(push thing)
+	(cond ((not (scan thing pair));; gc or remember-visit-vector-size to small
+	       (let* ((thing (pop))
+		      (aspace (pop))
+		      (pair (pop)))
+		 (try-again thing aspace pair)))
+	      ((encode thing aspace pair)
+	       (pop) (pop) (pop);; return stack to original state
+	       (goto return pair))
+	      (else
+	       (s48-collect #t)
+	       (let* ((thing (pop))
+		      (aspace (pop))
+		      (pair (pop)))
+		 (if (encode thing aspace pair)
+		     (goto return pair)
+		     (raise-exception heap-overflow 0 thing aspace)))))))))
 
 (define-consing-primitive really-decode (aspace-> boolean-> code-vector->)
   (lambda (message)
@@ -664,16 +663,6 @@
 	(vm-vector-set! result 1 missing-uids)
 	(vm-vector-set! result 2 low-count-proxies)
 	(goto return result)))))
-
-
-;; chnx:
-
-(define-primitive really-kali-check-heap (fixnum->)    
-  (lambda (x)
-    (kali-check-heap x))
-  return-unspecific)
-  
-;; kali - end
 
 ; *** Our entry for the obscure comment of the year contest.
 ;

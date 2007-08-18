@@ -56,53 +56,34 @@
 ; the returned message is FALSE.
 
 (define (encode thing address-space pair)
-  (debug-message 3 "encode start...")
-;  (kali-check-heap-n 0 20)
   (let* ((gc-count (s48-gc-count))
 	 (encode-start (initialize-message-space! 
 			(extract-fixnum (vm-car pair))))
 	 (hotel-start (initialize-hotel-space! 
 		       (extract-fixnum (vm-cdr pair)))))
 
-    (if (or (< gc-count (s48-gc-count))
-	    (null-address? encode-start)
-	    (null-address? hotel-start))
-	(begin
-	  (debug-message 0 "encoding-failed (1)")
-	  #f)
+    (if (< gc-count (s48-gc-count))
+	#f
 	(begin
 	  (set! *our-address-space* address-space)
-
-	  (set! *heartbreak-hotel* null-address)
-	  (set! *new-id-hotel* null-address)
-	  (set! *losing-proxy-hotel* null-address)
 	  
 	  (store! (address2+ *message-start*)
 		  (encode-object thing))
-
-;	  (kali-check-heap-n 1 20)
 	  
-	  (do-encoding encode-start);(address+ message-start
-				             ;(cells->a-units 3)))
+	  (do-encoding encode-start)
 
 	  (let ((result (address->stob-descriptor (address1+ *message-start*))))
 	    (mend-hearts! *heartbreak-hotel*)
-;	    (kali-check-heap-n 2 20)
 	    (if (update-decode-vectors! address-space hotel-start)
 		(let ((losers (get-losing-proxies)))
 		  (if (false? losers)
+		      #f
 		      (begin
-			(debug-message 0 "encoding-failed (3)")
-			#f)
-		      (begin
-;			(kali-check-heap-n 3 20)
 			(vm-set-car! pair result)
 			(vm-set-cdr! pair losers)
-;			(kali-check-heap-n 4 20)
 			#t)))
 		(begin
 		  (drop-new-ids! hotel-start)
-		  (debug-message 0 "encoding-failed (3)")
 		  #f)))))))
 
 ;; -------------------
@@ -110,7 +91,6 @@
 (define *message-pointer*)
 
 (define (store-next! descriptor)
-  (debug-message 2 "store-next!")
   (store! *message-pointer* descriptor)
   (set! *message-pointer* (address1+ *message-pointer*)))
 
@@ -153,14 +133,12 @@
 (define *heartbreak-hotel*)
 
 (define (remember-heartbreak thing header)
-  (debug-message 1 "remember-heartbreak")
   (let ((room-number (alloc-list-elt! 2 *heartbreak-hotel*)))
     (store! room-number thing)
     (store! (address1+ room-number) header)
     (set! *heartbreak-hotel* room-number)))
 
 (define (mend-hearts! start)
-  (debug-message 4 "mend-hearts!")
   (walk-list *heartbreak-hotel*
 	     2
 	     (lambda (ptr)
@@ -191,7 +169,6 @@
 ; to the decode vector or put it in the *NEW-ID-HOTEL*.
 
 (define (real-next-id thing decode-vector)
-  (debug-message 4 "real-next-id")
   (let* ((next-available (vm-vector-ref decode-vector freelist-index))
 	 (extracted (extract-fixnum next-available))
 	 (next (if (< extracted (vm-vector-length decode-vector))
@@ -210,7 +187,6 @@
 ; Used when we don't have room to add the new objects to the decode vector.
 
 (define (drop-new-ids! start)
-  (debug-message 4 "drop-new-ids!")
   (walk-list *new-id-hotel*
 	     1
 	     (lambda (ptr)
@@ -233,7 +209,6 @@
 ; state if we cannot complete the update (because we ran out of room).
 
 (define (update-decode-vectors! address-space start)
-  (debug-message 4 "update-message-vectors!")
   (let ((old-decode (address-space-decode-vector address-space))
 	(old-proxy (address-space-proxy-vector address-space)))
     (let ((decode-okay? (<= (extract-fixnum
@@ -257,7 +232,6 @@
 ; decode vector.
 
 (define (extend-decode-vector address-space start proxies?)
-  (debug-message 4 "extend-decode-vector")
   (let* ((decode-vector (if proxies?
 			    (address-space-proxy-vector address-space)
 			    (address-space-decode-vector address-space)))
@@ -287,7 +261,6 @@
 ; 3. Link any unused slots into a freelist.
 
 (define (setup-new-decode-vector! new-vector old-vector start proxies?)
-  (debug-message 4 "setup-new-decode-vector!")
   (let ((old-length (vm-vector-length old-vector))
 	(new-length (vm-vector-length new-vector))
 	(next-uid (extract-fixnum (vm-vector-ref old-vector freelist-index))))
@@ -316,7 +289,6 @@
 ; the scanning pointer catches up with the heap pointer.
 
 (define (do-encoding start)
-  (debug-message 1 "do-encoding")
   (let loop ((start start))
     (let ((end *message-pointer*))
       (encode-locations start end)
@@ -326,7 +298,6 @@
 ; Encode everything pointed to from somewhere between START and END.
 
 (define (encode-locations start end)
-  (debug-message 1 "encode-locations")
   (let loop ((addr start))
     (if (address< addr end)
 	(loop (encode-next addr)))))
@@ -334,19 +305,15 @@
 ; Encode the thing pointed to from ADDR, returning the next address to copy.
 
 (define (encode-next addr)
-  (debug-message 1 "encode-next")
   (let ((thing (fetch addr))
 	(next (address1+ addr)))
     (cond ((b-vector-header? thing)
-	   (debug-message 2 "[b-vector-header]")
 	   (address+ next 
 		     (header-length-in-a-units thing)))
           ((stob? thing)
-	   (debug-message 2 "[stob]")
 	   (store! addr (encode-object thing))
 	   next)
           (else
-	   (debug-message 2 "[else]")
 	   next))))
 
 
@@ -354,31 +321,25 @@
 ; Encode THING if it has not already been encoded.
 
 (define (encode-object thing)
-  (debug-message 1 "encode-object")
   (let ((h (stob-header thing)))
     (if (stob? h)            ;***Broken heart
 	h
 	(enum-case stob (header-type h)
 	  ((symbol)
-	   (debug-message 2 "[symbol]")
 	   (make-element (enum element uid)
 			 (extract-fixnum
 			  (get-uid thing vm-symbol-uid vm-set-symbol-uid!))))
 	  ((address-space)
-	   (debug-message 2 "[address-space]") 
 	   (make-element (enum element uid)
 			 (extract-fixnum
 			  (get-uid thing address-space-uid set-address-space-uid!))))
 	  ((template)
-	   (debug-message 2 "[template]")
 	   (encode-two-part-uid
 	     (get-uid thing template-uid set-template-uid!)))
 	  ((location)
-	   (debug-message 2 "[location]")
 	   (encode-two-part-uid
 	      (get-uid thing location-uid set-location-uid!)))
 	  ((proxy)
-	   (debug-message 2 "[proxy]")
 	   (let ((new (address->message-offset (enum element proxy)))
 		 (data (proxy-data thing)))
 		 ;; Not extracted as this stuff is later scanned
@@ -390,11 +351,9 @@
 		 (store-next! (debit-proxy-count! data))
 		 new))
 	  (else
-	   (debug-message 2 "[else]")
 	   (encode-full-object h thing))))))
 
 (define (encode-two-part-uid uid)
-  (debug-message 3 "encode-two-part-uid")
   (let ((new (address->message-offset (enum element uid+owner))))
     ;; Not extracted as this stuff is later scanned
     (cond ((vm-pair? uid)
@@ -406,7 +365,6 @@
     new))
 
 (define (encode-full-object header thing)
-  (debug-message 1 "encode-full-object")
   (let ((new (address->message-offset (enum element local))))
     (remember-heartbreak thing header)
     (store-next! header)
@@ -420,7 +378,6 @@
     new))
 
 (define (address->message-offset type)
-  (debug-message 3 "address->message-offset")
   (make-element type 
 		(address-difference *message-pointer* 
 				    *message-start*)))
@@ -428,7 +385,6 @@
 ; Utility for getting uids.
 
 (define (get-uid thing accessor setter)
-  (debug-message 3 "get-uid")
   (let ((uid (accessor thing)))
     (if (false? uid)
 	(let ((uid (next-id thing)))
@@ -437,7 +393,6 @@
 	uid)))
 
 (define (get-proxy-uid thing)
-  (debug-message 3 "get-proxy-uid")
   (let ((uid (proxy-data-uid thing)))
     (if (false? uid)
 	(let ((uid (next-proxy-id thing)))
@@ -458,7 +413,6 @@
 (define shared-address-space-uid 2)
 
 (define (debit-proxy-count! proxy-data)
-  (debug-message 4 "debit-proxy-count")
   (let ((owner (proxy-data-owner proxy-data)))
     (if (and (not (eq? owner false))		; local proxies have #f as owner
 	     (= (address-space-uid owner)
@@ -483,7 +437,6 @@
 ; returns FALSE if it runs out of space.
 
 (define (get-losing-proxies)
-  (debug-message 4 "get-losing-proxies")
   (reduce-list *losing-proxy-hotel*
 	       1     ; cells
 	       null  ; initial result list
@@ -498,7 +451,7 @@
 ;; =========================================================================
 
 (define *message-start*) 
-(define *message-limit*)
+;(define *message-limit*)
 
 (define (initialize-message-space! cells)
   (let* ((vector (maybe-make-b-vector+gc (enum stob byte-vector)
@@ -508,8 +461,6 @@
 	    (cells->a-units (- cells 1)))
     
     (set! *message-start* start)
-    (set! *message-limit* (address+ start 
-				    (cells->a-units cells)))
     (set! *message-pointer* (address+ start 
 				      (cells->a-units 3)))
     (address+ start
@@ -523,6 +474,11 @@
 					 (cells->bytes cells)))
 	(start (address-at-header vector)))
     (set! *hotel-pointer* (address1+ start))
+
+    (set! *heartbreak-hotel* null-address)
+    (set! *new-id-hotel* null-address)
+    (set! *losing-proxy-hotel* null-address)
+
     *hotel-pointer*))
 
 ;; -------------------
@@ -535,24 +491,9 @@
 ;; scan objects to determine the space required for encoding it...
 ;; ===============================================================
 
-(define (scan-check-heap n x)
-  (write-error-string "scan ")
-  (write-error-integer n)
-  (write-error-string " going to check heap...")
-  (write-error-newline)
-  (s48-check-heap x)
-  (write-error-string "scan ")
-  (write-error-integer n)
-  (write-error-string " ...checked heap!")
-  (write-error-newline))
-	  
-;; -------------------------------------------------------------
-
 (define *scan-lost*)
 
 (define (scan thing pair)
-;  (debug-message 1 "scan")
-;  (scan-check-heap 0 20)
   (if (not (init-have-seen! (extract-fixnum (vm-car pair))))
       #f
       (call-with-values
@@ -560,65 +501,52 @@
 	    (set! *scan-lost* #f)
 	    (scan-object thing))
 	(lambda (msg-size hotel-size)
-;	  (scan-check-heap 1 20)
 	  (if *scan-lost*
 	      (begin
-		(vm-set-car! pair (enter-fixnum (* (vm-car pair) 2)))
+		(vm-set-car! pair 
+			     (enter-fixnum 
+			      (* (extract-fixnum (vm-car pair)) 
+				 2)))
 		#f)
 	      (begin
-;		(scan-check-heap 2 20)
-;		(write-error-string "msg/hotel-size: ")
-;		(write-error-integer (+ msg-size 2))
-;		(write-error-string "/")
-;		(write-error-integer hotel-size)
-;		(write-error-newline)
-;		(scan-check-heap 3 20)
 		(vm-set-car! pair (enter-fixnum (+ msg-size 2)))
 		(vm-set-cdr! pair (enter-fixnum hotel-size))
-;		(scan-check-heap 4 20)
 		#t))))))
 
 (define (scan-object thing)
-  (debug-message 0 "scan-object")
   (let ((h (stob-header thing)))
-    (cond ((have-seen? thing)
-	   (debug-message 0 "[header was stob]")
+    (cond (*scan-lost*
+	   (values 0 0))
+	  ((have-seen? thing)
 	   (values 1 0))
 	  ((b-vector-header? h)
-	   (debug-message 0 "[header was b-vector-header]")
 	   (remember-visit! thing)
 	   (values (+ (a-units->cells (header-length-in-a-units h))
-		      2) ;; chnx ? warum 2 und nicht 1
+		      2) 
 		   3))
 	  (else
 	   (enum-case stob (header-type h)
 	     ((symbol)
-	      (debug-message 0 "[symbol]")
 	      (values 1 2))
 	     ((address-space)
-	      (debug-message 0 "[address-space]") 
 	      (values 1 2))
 	     ((template)
-	      (debug-message 0 "[template]")
 	      (values 3 2))
 	     ((location)
-	      (debug-message 0 "[location]")
 	      (values 3 2))
 	     ((proxy)
-	      (debug-message 0 "[proxy]")
-	      (values 4 4)) ;; chnx hotel 4 -> 5 ?
+	      (values 4 4))
 	     (else
-	      (debug-message 0 "[else]")
 	      (scan-full-object thing 1 3)))))))
 
 (define (scan-full-object thing msg-size hotel-size)
-  (debug-message 1 "scan-full-object")
   (let ((end (address-after-stob thing)))
     (remember-visit! thing)
     (let loop ((start (address-after-header thing))
-	       (msg-size (+ msg-size 1));; chnx ? +1 | 1 - 1/elem zu wenig
+	       (msg-size (+ msg-size 1))
 	       (hotel-size hotel-size))
-      (if (address< start end)
+      (if (and (address< start end)
+	       (not *scan-lost*))
 	  (call-with-values
 	      (lambda ()
 		(scan-location start))
@@ -629,8 +557,7 @@
 	  (values msg-size hotel-size)))))
 
 (define (scan-location addr)
-  (let ((thing (fetch addr))
-	(next (address1+ addr)))
+  (let ((thing (fetch addr)))
     (if (stob? thing)
 	(scan-object thing)
 	(values 1 0))))
@@ -673,44 +600,3 @@
 	      #f
 	      (or (= thing-iaddr (fetch walker))
 		  (walk (address1+ walker))))))))
-
-
-
-;;==========================================================================
-
-
-;; chnx - just for the time of development...:
-
-(define debug-prio-level -1)
-
-(define (debug-message prio str)
-  (if (< prio debug-prio-level)
-      (begin
-	(write-error-string str)
-	(write-error-newline)
-	(unspecific))
-      (unspecific)))
-
-;; =======================================
-
-
-(define (kali-check-heap x)
-  (write-error-string "kali going to check heap...")
-  (write-error-newline)
-  (s48-check-heap x)
-  (write-error-string "kali ...checked heap!")
-  (write-error-newline))
-
-
-(define (kali-check-heap-n n x)
-  (write-error-string "encode ")
-  (write-error-integer n)
-  (write-error-string " going to check heap...")
-  (write-error-newline)
-  (s48-check-heap x)
-  (write-error-string "encode ")
-  (write-error-integer n)
-  (write-error-string " ...checked heap!")
-  (write-error-newline))
-
-;; chnx end

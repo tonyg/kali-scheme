@@ -17,8 +17,8 @@
 	  address-space-decode-vector set-address-space-decode-vector!
 	  address-space-proxy-vector set-address-space-proxy-vector!
 	  address-space-pending-vector set-address-space-pending-vector!
-	  address-space-in-channel set-address-space-in-channel!
-	  address-space-out-channel set-address-space-out-channel!
+	  address-space-in-port set-address-space-in-port!
+	  address-space-out-port set-address-space-out-port!
 	  address-space-placeholder set-address-space-placeholder!
 
 	  server-running?
@@ -99,7 +99,6 @@
 	kali-conditions    ;; error handling
 	display-conditions ;; error-handling
 	(subset conditions (warning?))
-	;spatial ;; chnx
 	srfi-66
 	address-spaces
 	sockets 
@@ -118,8 +117,7 @@
 	(subset interrupts (call-after-gc!))
 	(subset bitwise	(arithmetic-shift))
 	threads
-	(subset primitives (;eof-object  ;; because of channel-read
-			    memory-status 
+	(subset primitives (memory-status 
 			    encode 
 			    decode 
 			    unspecific))
@@ -142,7 +140,7 @@
 	closures locations templates
 	proxy-internals address-spaces
 	;weak
-	records			; record?, record-ref (abstraction breaking)
+	records		; record?, record-ref (abstraction breaking)
 	(subset primitives (untyped-indexed-set! 
 			    record 
 			    record-ref 
@@ -156,8 +154,7 @@
 				   start-server
 				   spawn-server
 				   alive?
-				   return-counts ;; just for encode-decode-test
-				   )
+				   return-counts) ;; just for encode-decode-test
   (open scheme
 	connect message-types uid-requests
 	proxy-count-requests

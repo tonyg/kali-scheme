@@ -61,12 +61,12 @@
   set-address-space-placeholder!)
 
 (define-address-space-slot in-channel
-  address-space-in-channel
-  set-address-space-in-channel!)
+  address-space-in-port
+  set-address-space-in-port!)
 
 (define-address-space-slot out-channel
-  address-space-out-channel
-  set-address-space-out-channel!)
+  address-space-out-port
+  set-address-space-out-port!)
 
 ;----------------
 ; Used to break symmetry when making connections.

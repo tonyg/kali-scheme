@@ -3,7 +3,6 @@
 ;; about pretty much in this file i'm not shure wether
 ;; it will work or not... and even worse, about some things
 ;; i'm shure they won't.
-;; -> chnx todo...
 
 (define-syntax make-proxy-remote-func
   (syntax-rules ()

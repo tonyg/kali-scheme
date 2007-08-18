@@ -61,8 +61,6 @@
   (let ((rec-0 (make-rec "string" 'symbol))
 	(rec-1 (remote-apply other-aspace make-rec 'symbol "string")))
 
-    ;; chnx todo(?): hmm don't know why but without it wont work
-    ;; perhaps this is because of tcp-nodelay (???)
     ;(sleep 500)
 
     (check (rec? rec-0) 

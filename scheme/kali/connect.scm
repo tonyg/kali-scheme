@@ -18,7 +18,6 @@
 ; This also installs a post-gc-hook for GCing proxies.
 
 (define (connection-server dispatcher report-proc)
-  ;(debug-msg "connectin-server")
   (set! *dispatch-procedure* dispatcher)
   (let ((socket (open-socket 0)))
     (report-proc (socket-port-number socket))
@@ -45,7 +44,6 @@
 ;     and then tries again.
 
 (define (server-make-connection! from-port to-port)
-  ;(debug-msg "server-make-connection")
   (let ((reader (make-message-reader from-port to-port)))
     (call-with-values
      (lambda () (reader (local-address-space))) ; aspace won't be used
@@ -68,7 +66,7 @@
 		 (close-channel (port->channel from-port))
 		 (close-channel (port->channel to-port))
 		 (obtain-lock lock)
-		 (if (not (address-space-out-channel aspace))
+		 (if (not (address-space-out-port aspace))
 		     (make-connection! aspace))
 		 (release-lock lock)))))))))
 
@@ -81,16 +79,13 @@
 ; our aspace is busy over there and we should wait.
 
 (define (make-connection! aspace)
-  ;(debug-msg "make-connection!")
   (call-with-values
    (lambda ()
      (socket-client (address-space-ip-address aspace)
 		    (address-space-socket aspace)
 		    kali-port-buffer-size))
    (lambda (from-port to-port)
-     (let (;(from-port (input-channel->port from-channel 200000))
-	   ;(to-port (output-channel->port to-channel 200000))
-	   (reader (make-message-reader from-port to-port)))
+     (let ((reader (make-message-reader from-port to-port)))
        (call-with-values
 	(lambda ()
 	  (encode (vector (address-space< (local-address-space) aspace)
@@ -98,26 +93,18 @@
 			  (address-space-socket (local-address-space)))
 		  aspace))
 	(lambda (bytes need-counts)
-;	  ;(debug-msg "encoded-to: " (u8vector->list bytes))
 	  (if (not (null? need-counts))
 	      (raise (make-condition &kali-connect-error
 				     'need-counts need-counts)))
-	  ;(write-block bytes 0 (code-vector-length bytes) to-port)
 	  (let ((n (code-vector-length bytes)))
-	    ;;(debug-msg "write: " n " bytes")
-	    (really-port-write! bytes n to-port)) ;;(write-block bytes 0 n to-port)) ;; (code-vector-length bytes) to-port)
+	    (really-port-write! bytes n to-port))
 	  (if (= 0 (port-read-byte from-port))
 	      (finish-connection! aspace from-port to-port reader)
 	      (retry-connection! aspace from-port to-port))))))))
 
 (define (finish-connection! aspace from-port to-port reader)
-  ;(debug-msg "finish-connection!")
-;  (set-tcp-nodelay! (port->channel from-port)
-;		    tcp-nodelay?)
-;  (set-tcp-nodelay! (port->channel to-port)
-;		    tcp-nodelay?)
-  (set-address-space-out-channel! aspace to-port)
-  (set-address-space-in-channel! aspace from-port)
+  (set-address-space-out-port! aspace to-port)
+  (set-address-space-in-port! aspace from-port)
   (if (address-space-placeholder aspace)
       (placeholder-set! (address-space-placeholder aspace) #t))
   (release-lock (address-space-lock aspace))
@@ -131,7 +118,6 @@
 			(number->string (address-space-socket aspace)))))
 
 (define (retry-connection! aspace from-port to-port)
-  ;(debug-msg "retry-connection!")
   (let ((placeholder (or (address-space-placeholder aspace)
 			 (let ((ph (make-placeholder)))
 			   (set-address-space-placeholder! aspace ph)
@@ -162,10 +148,10 @@
 	     (display "Terminating dipatcher!" out)
 	     (newline out))
            (obtain-lock (address-space-lock aspace))
-           (close-input-port (address-space-in-channel aspace))
-           (close-output-port (address-space-out-channel aspace))
-           (set-address-space-out-channel! aspace #f)
-           (set-address-space-in-channel! aspace #f)
+           (close-input-port (address-space-in-port aspace))
+           (close-output-port (address-space-out-port aspace))
+           (set-address-space-out-port! aspace #f)
+           (set-address-space-in-port! aspace #f)
            (release-lock (address-space-lock aspace))
            (terminate-current-thread)))))
 
@@ -201,7 +187,6 @@
 ; of bytes before either receives anything.
 
 (define (make-message-reader in-port out-port)
-  ;(debug-msg "make-message-reader")
   (let* ((my-vector (make-memory-layout-vector))
 	 (bytes-per-word (vector-length my-vector)))
     (write-memory-layout-vector my-vector out-port)
@@ -210,7 +195,6 @@
 	    (reverse? (need-to-reverse? my-vector alien-vector))
 	    (size-buffer (make-code-vector bytes-per-word 0)))
 	(lambda (aspace)
-	  ;(debug-msg "message-reader")
 	  (really-port-read! in-port size-buffer bytes-per-word)
 	  (let* ((size (my-get-size size-buffer))
 		 (buffer (make-code-vector (- size bytes-per-word) 0)))
@@ -220,7 +204,6 @@
 	    (decode buffer aspace reverse?)))))))
 
 (define (make-memory-layout-vector)
-  ;(debug-msg "make-memory-layout-vector")
   (memory-status (enum memory-status-option
 		       memory-layout)
 		 #f))        ; ignored
@@ -228,14 +211,12 @@
 ; Writing and reading vectors of small integers.
 
 (define (write-memory-layout-vector vector port)
-  ;(debug-msg "write-memory-layout-vector")
   (port-write-byte port (vector-length vector))
   (do ((i 0 (+ i 1)))
       ((= i (vector-length vector)))
     (port-write-byte port (vector-ref vector i))))
 
 (define (read-memory-layout-vector port)
-  ;(debug-msg "read-memory-layout-vector")
   (let* ((size (port-read-byte port))
 	 (vector (make-vector size)))
     (do ((i 0 (+ i 1)))
@@ -248,14 +229,12 @@
 ; a word-sized integer from the beginning of a code vector.
 
 (define (memory-layout-vector->get-size layout-vector)
-  ;(debug-msg "memory-layout-vector->get-size")
   (let* ((bytes-per-word (vector-length layout-vector))
 	 (bit-offset-vector (make-vector bytes-per-word)))
     (do ((i 0 (+ i 1)))
 	((= i bytes-per-word))
       (vector-set! bit-offset-vector i (* 8 (vector-ref layout-vector i))))
     (lambda (buffer)
-      ;(debug-msg "get-size")
       (do ((i 0 (+ i 1))
 	   (res 0 (+ res
 		     (arithmetic-shift (code-vector-ref buffer i)
@@ -267,7 +246,6 @@
 ; are the same.  Signals an error if neither is the case.
 
 (define (need-to-reverse? local-vector alien-vector)
-  ;(debug-msg "need-to-reverse?")
   (cond ((equal? local-vector alien-vector)
 	 #f)
 	((equal? (reverse (vector->list local-vector))
@@ -293,7 +271,6 @@
 ; with another dispatcher.
 
 (define (send-message type message aspace)
-  ;(debug-msg "send-message")
   (if (eq? aspace (local-address-space))
       (raise (make-condition &kali-send-message-to-self-error
 			     'type type
@@ -303,20 +280,17 @@
      (encode (cons type message)
 	     (local-address-space)))
    (lambda (bvector need-counts)
-;     ;(debug-msg "encoded to: " (u8vector->list bvector))
      (really-send-message bvector need-counts aspace))))
 
 (define (really-send-message bvector need-counts aspace)
-  ;(debug-msg "really-send-message")
   (if (not (null? need-counts))
       (wait-for-proxy-counts need-counts))
   (obtain-lock (address-space-lock aspace))
-  (if (not (address-space-out-channel aspace))
+  (if (not (address-space-out-port aspace))
       (make-connection! aspace))
   (just-send-message bvector aspace))
 
 (define (wait-for-proxy-counts need-counts)
-  ;(debug-msg "wait-for-proxy-counts")
   (call-with-values
    (lambda ()
      (make-proxy-requests need-counts))
@@ -333,27 +307,23 @@
 ; Whomever called us obtained the lock.
 
 (define (just-send-message bvector aspace)
-  ;(debug-msg "just-send-message")
-  ;;(debug-msg "write: " (code-vector-length bvector) " bytes")
   (really-port-write!  bvector
 		       (code-vector-length bvector)
-		       (address-space-out-channel aspace))
+		       (address-space-out-port aspace))
   (release-lock (address-space-lock aspace)))
 
 ; Same as the above except that it will spawn instead of blocking.
 ; This is used by dispatchers to avoid deadlocking.
 
 (define (send-admin-message type message aspace)
-  ;(debug-msg "send-admin-message")
   (call-with-values
    (lambda ()
      (encode (cons type message)
 	     (local-address-space)))
    (lambda (bvector need-counts)
-;     ;(debug-msg "ecoded to: " (u8vector->list bvector))
      (if (and (null? need-counts)
 	      (maybe-obtain-lock (address-space-lock aspace))
-	      (address-space-out-channel aspace))
+	      (address-space-out-port aspace))
 	 (just-send-message bvector aspace)
 	 (spawn (lambda ()
 		  (really-send-message bvector need-counts aspace)))))))
@@ -367,8 +337,6 @@
 ; should really just send an event, and not execute the code itself.
 
 (define (gc-proxies)
-;  (display "gc-proxies" (current-error-port)) ;; test-message
-;  (newline (current-error-port)) ;; test-message
   (for-each (lambda (aspace)
 	      (if (eq? aspace (local-address-space))
 		  (find-dead-proxies aspace #t)
@@ -395,13 +363,10 @@
 ; Utilities for reading and writing single bytes on channels.
 
 (define (port-read-byte port)
-  ;(debug-msg "read: 1 bytes")
   (char->integer (read-char port)))
 
 (define (really-port-read! port buffer length)
-  (debug-msg "going to read " length " bytes...")
   (let ((got (read-block buffer 0 length port)))
-    (debug-msg "...finished reading " length " bytes.")
     (cond ((eof-object? got)
 	   (raise (make-condition &kali-reader-eof-error
 				  'port port)))
@@ -412,94 +377,8 @@
 				  'length length))))))
 
 (define (really-port-write! buffer length port)
-  (debug-msg "going to write " length " bytes...")
-  (write-block buffer 0 length port)
-  (debug-msg "...finished writing " length " bytes."))
+  (write-block buffer 0 length port))
 
 (define (port-write-byte port byte)
-  ;(debug-msg "write: 1 bytes: " byte)
   (write-block (make-code-vector 1 byte) 0 1 port))
 
-;; ==================================================================
-
-;(define (channel-read-byte channel)
-;  (let ((buffer (make-code-vector 1 0)))
-;    (really-channel-read! channel buffer 1)
-;    (code-vector-ref buffer 0)))
-
-;(define (really-channel-read! channel buffer length)
-;  (let ((got (channel-read channel buffer 0 length)))
-;    (cond ((eof-object? got)
-;	   (raise (make-condition &kali-reader-eof-error
-;				  'channel channel)))
-;	  ((< got length)
-;	   (raise (make-condition &kali-reader-insufficient-error
-;				  'channel channel 
-;				  'got got 
-;				  'length length))))))
-
-;(define (channel-write-byte channel byte)
-;  (channel-write channel (make-code-vector 1 byte) 0 1))
-
- 
-;; chnx todo channel-read
-;; we implement channel-read here because
-;; we will take it out again ... probably ...
-
-; CHANNEL-READ returns the number of characters read or the EOF object.
-; BUFFER is either a string or code vector and START is the index at which
-; to place the first character read.  NEEDED is one of
-;  <integer> : the call returns when this many characters has been read or
-;     an EOF is reached.
-;  'IMMEDIATE : the call reads as many characters as are available and
-;     returns immediately.
-;  'ANY : the call returns as soon as at least one character has been read
-;     or an EOF is reached.
-
-;(define (channel-read channel buffer start needed)
-;  (call-with-values
-;      (lambda ()
-;	(cond ((eq? needed 'immediate)
-;	       (values #f 0 (- (buffer-length buffer) start)))
-;	      ((eq? needed 'any)
-;	       (values #t 1 (- (buffer-length buffer) start)))
-;	      (else
-;	       (values #t needed needed))))
-;    (lambda (keep-trying? need max-chars)
-;      (let loop ((have 0))
-;	(let ((got (channel-maybe-read channel
-;				       buffer
-;				       (+ start have)
-;				       (- max-chars have)
-;				       keep-trying?)))
-;	  (cond ((eof-object? got)
-;		 (if (= have 0)
-;		     (eof-object)
-;		     have))
-;		((not got)
-;		 (let ((condvar (make-condvar)))
-;		   (wait-for-channel channel condvar)
-;		   (with-new-proposal 
-;		    (lose)
-;		    (cond ((maybe-commit-and-wait-for-condvar condvar)
-;			   #t)
-;			  (else (raise (make-condition &kali-reader-condvar-error)))))
-;		   (let ((have (+ have (condvar-value condvar))))
-;		     (if (and keep-trying? (< have need))
-;			 (loop have)
-;			 have))))
-;		(else
-;		 (let ((have (+ have got)))
-;		   (if (and keep-trying? (< have need))
-;		       (loop have)
-;		       have)))))))))
-
-;(define buffer? code-vector?)
-
-;(define buffer-length code-vector-length)
-
-(define (debug-msg . args)
-  (for-each (lambda (arg)
-	      (display arg (current-error-port)))
-	    args)
-  (newline (current-error-port)))

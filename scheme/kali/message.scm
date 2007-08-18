@@ -41,7 +41,6 @@
 ; dependencies), all other messages have to wait.
 
 (define (process-missing-uids message missing-uids other-aspace)
-  ;(debug-message "[missing uids]")
   (if (eq? (car message)
 	   (enum message-type uid-reply))
       (process-uid-replies (cdr message) missing-uids other-aspace)

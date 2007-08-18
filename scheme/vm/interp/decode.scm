@@ -47,13 +47,6 @@
 ; DECODE assumes that the size has been stripped off the front of the message.
 
 (define (decode message aspace reverse? key)
-
-;  (write-string "decode 0 going to check heap..." (current-error-port))
-;  (newline (current-error-port))
-;  (s48-check-heap 2)
-;  (write-string "decode 0 ...checked heap!" (current-error-port))
-;  (newline (current-error-port))
-
   (let ((start (address-at-header message))
 	(limit (address-after-stob message)))
     (if reverse?
@@ -67,36 +60,6 @@
 
     (let ((obj (address->stob-descriptor
 		(address+ *message-start* (element-info (fetch (address1+ start)))))))
-
-;      (let ((out (current-error-port)))
-;	(write-string "stob:" out) (newline out)
-;	(write-integer (address->integer (address-at-header obj)) out)
-;	(newline out)
-;	(write-integer (address->integer (address-after-stob obj)) out)
-;	(newline out)
-;	(newline out)
-       
-;	(write-string "*new-uids*:" out) (newline out)
-;	(write-integer (address->integer (address-at-header *new-uids*)) out)
-;	(newline out)
-;	(write-integer (address->integer (address-after-stob *new-uids*)) out)
-;	(newline out)
-;	(newline out)
-
-;	(write-string "*bad-count-proxies*:" out) (newline out)
-;	(write-integer (address->integer (address-at-header *bad-count-proxies*)) out)
-;	(newline out)
-;	(write-integer (address->integer (address-after-stob *bad-count-proxies*)) out)
-;	(newline out)
-;	(newline out)
-	
-	
-;	(write-string "decode 1 going to check heap..." out)
-;	(newline out)
-;	(s48-check-heap 2)
-;	(write-string "decode 1 ...checked heap!" out)
-;	(newline out))
-;	)
       (values obj
 	      *new-uids*
 	      *bad-count-proxies*))))
@@ -160,21 +123,17 @@
   (let ((data (element-info thing)))
     (enum-case element (element-type thing)
       ((local)
-       ;;;(debug-message 3 "[local]")
        (address->stob-descriptor (address+ *message-start* data)))
       ((uid)
-       ;;;(debug-message 3 "[uid]")
        (decode-uid data aspace aspace-id-in-self addr stob-start key))
       ((uid+owner)
-       ;;;(debug-message 3 "[uid+owner]")
        (receive (aspace-uid uid)
 	   (get-full-uid-data data)
 	 (let ((aspace (lookup-uid aspace-uid aspace)))
 	   (if (address-space? aspace)
 	       (decode-uid uid aspace aspace-uid addr stob-start key)
 	       (add-pending! aspace-uid uid addr stob-start key)))))
-      (else   ; (proxy)   ; Type checker can't handler missing ELSE clause
-       ;;;(debug-message 3 "[proxy] - (else)")
+      (else   ; (proxy)   ; Type checker can't handle missing ELSE clause
        (receive (aspace-uid uid count)
 	   (get-proxy-data data)
 	 (let ((aspace (lookup-uid aspace-uid aspace)))

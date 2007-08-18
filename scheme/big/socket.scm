@@ -136,7 +136,7 @@
 ;; kali
 
 (define (get-host-by-name host-name)
-  (let* ((buf (make-string 4 (integer->char 0))) ;; chnx hack - 4
+  (let* ((buf (make-string 4 (integer->char 0)))
 	 (len (real-get-host-by-name (host-name->byte-string
 				      (thing->host-name host-name))
 				     buf)))

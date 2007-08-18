@@ -11,12 +11,6 @@
 (define (s48-gc-count) *gc-count*)
 
 (define (s48-collect force-major?)
-  (write-error-integer (s48-gc-count))
-  (write-error-string ". GC:")          ;; chnx
-  (write-error-newline)                 ;; chnx
-  (write-error-string "Before: ")       ;; chnx
-  (write-error-integer (s48-available)) ;; chnx 
-  (write-error-newline)                 ;; chnx
   (set! *from-begin* (heap-begin))
   (set! *from-end* (heap-limit))
   (swap-spaces)
@@ -27,10 +21,6 @@
   (clean-weak-pointers)
   (s48-post-gc-cleanup #t ; it's always a major collection
 		       (in-trouble?))
-  (write-error-string "After : ")       ;; chnx
-  (write-error-integer (s48-available)) ;; chnx 
-  (write-error-newline)                 ;; chnx
-  (write-error-newline)                 ;; chnx
   (set! *gc-count* (+ *gc-count* 1)))
 
 (define *from-begin*)
