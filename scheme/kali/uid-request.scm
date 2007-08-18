@@ -101,7 +101,6 @@
 ;      <pending-message>s.
 
 (define (wait-for-missing-uids missing-uids thunk from-aspace)
-  (debug-message "wait-for-missing-uids")
   (process-missing-uids missing-uids from-aspace
     (lambda (pending-requests requests)
       (if (null? pending-requests)
@@ -110,7 +109,6 @@
       (send-uid-requests requests from-aspace))))
 
 (define (process-uid-replies replies missing-uids from-aspace)
-  (debug-message "process-uid-replies")
   (process-missing-uids missing-uids from-aspace
     (lambda (pending-requests requests)
       (let* ((our-objects (map (lambda (reply)
@@ -134,19 +132,14 @@
 			  '()))))
 	(enable-interrupts! interrupts)
 	(if (null? skeletons)
-	    (begin
-	      (debug-message "[null? skeletons]")
-	      (for-each (lambda (message)
-			  ((pending-message-thunk message)))
-			ready))
-	    (begin
-	      (debug-message "[not (null? skeletons)]")
-	      (send-uid-requests requests from-aspace)))))))
+	    (for-each (lambda (message)
+			((pending-message-thunk message)))
+		      ready)
+	    (send-uid-requests requests from-aspace))))))
 
 ; Use the uids from the reply to get the missing object.
 
 (define (uid-reply->missing-object reply from-aspace)
-  (debug-message "uid-reply->missing-object")
   (vector-ref (address-space-pending-vector
 	         (uid-reply-aspace reply from-aspace))
 	      (uid-reply-uid reply)))
@@ -159,7 +152,6 @@
 ; and install it in the pending vector.
 
 (define (make-reply-objects replies missing-objects from-aspace no-wait?)
-  (debug-message "make-reply-objects")
   (fold2 replies
 	 missing-objects
 	 (lambda (reply missing-object skeletons)
@@ -184,14 +176,12 @@
 ; Putting values in the decode and pending vectors of address spaces.
 
 (define (install-value! from-aspace uid-reply value)
-  (debug-message "install-value!")
   (let ((aspace (uid-reply-aspace uid-reply from-aspace))
 	(uid (uid-reply-uid uid-reply)))
     (vector-set! (address-space-decode-vector aspace) uid value)
     (vector-set! (address-space-pending-vector aspace) uid #f)))
 
 (define (install-pending-value! from-aspace uid-reply value)
-  (debug-message "install-pending-value!")
   (let ((aspace (uid-reply-aspace uid-reply from-aspace)))
     (vector-set! (address-space-pending-vector aspace)
 		 (uid-reply-uid uid-reply)
@@ -203,7 +193,6 @@
 ; MISSING-UID records for them and start again from the top.
 
 (define (get-address-spaces missing-uids from-aspace thunk)
-  (debug-message "get-address-spaces")
   (let* ((interrupts (disable-interrupts!))
 	 (missing-aspaces (find-missing-address-spaces missing-uids from-aspace)))
     (enable-interrupts! interrupts)
@@ -217,7 +206,6 @@
 ; MISSING-UIDS along with any requests that need to be sent.
 
 (define (find-missing-address-spaces missing-uids from-aspace)
-  (debug-message "find-missing-address-space")
   (let ((decode (address-space-decode-vector from-aspace)))
     (fold missing-uids
 	  (lambda (missing-uid missing-aspaces)
@@ -233,7 +221,6 @@
 ; This uses SEND-ADMIN-MESSAGE to avoid deadlock.
 
 (define (send-uid-requests requests aspace)
-  (debug-message "send-uid-request")
   ; (apply debug-message "requests " requests)
   (if (not (null? requests))
       (send-admin-message (enum message-type uid-request)
@@ -246,7 +233,6 @@
 ; to catch the results.
 
 (define (process-missing-uids missing-uids from-aspace proc)
-  (debug-message "process-missing-uids")
   (get-address-spaces missing-uids from-aspace
     (lambda ()
       (let ((interrupts (disable-interrupts!))) ;maintain shared data's integrity
@@ -266,7 +252,6 @@
 ; found.
 
 (define (really-find-missing-uids missing-uids from-aspace)
-  (debug-message "really-find-missing-uids")
   (let ((key (cons 'key 'key)))
     (fold->2 missing-uids
 	     (lambda (missing-uid pending-requests requests)
@@ -297,30 +282,24 @@
 ;    request.
 
 (define (process-missing-uid missing-uid from-aspace so-far key)
-  (debug-message "process-missing-uid")
-  ;(debug-message missing-uid)
   (let ((aspace (missing-uid-aspace missing-uid from-aspace))
 	(uid (missing-uid-uid missing-uid)))
     (maybe-extend-decode-vectors! aspace uid)
     (cond ((missing-uid-is-proxy? missing-uid)
-	   (debug-message "[proxy]")
 	   (fill-missing-uid! (find-missing-proxy missing-uid aspace)
 			      missing-uid)
 	   (values so-far #f))
 	  ((vector-ref (address-space-decode-vector aspace) uid)
 	   => (lambda (thing)
-		(debug-message "[uid-object is there]")
 		(fill-missing-uid! thing missing-uid)
 		(values so-far #f)))
 	  ((vector-ref (address-space-pending-vector aspace) uid)
 	   => (lambda (partial)
-		(debug-message "[we allready asked for it]")
 		(values (if (skeleton? partial)
 			    (process-skeleton partial missing-uid key so-far)
 			    (process-missing-object partial missing-uid key so-far))
 			#f)))
 	  (else
-	   (debug-message "[we ask for missing-uid]")
 	   (let ((missing (make-missing-object)))
 	     (add-missing-object-hole! missing missing-uid)
 	     (vector-set! (address-space-pending-vector aspace)
@@ -334,7 +313,6 @@
 ; and add any new pending-requests to SO-FAR.
 
 (define (process-skeleton skeleton missing-uid key so-far)
-  (debug-message "process-skeleton")
   (let ((closet (skeleton-closet skeleton)))
     (fill-missing-uid! (skeleton-value skeleton) missing-uid)
     (if (eq? key (closet-key closet))
@@ -350,7 +328,6 @@
 ; If the missing object were just found it won't have a pending-request yet.
 
 (define (process-missing-object missing-object missing-uid key so-far)
-  (debug-message "process-missing-object")
   (add-missing-object-hole! missing-object missing-uid)
   (if (missing-object-pending-request missing-object)
       (key-cons (missing-object-pending-request missing-object)
@@ -361,7 +338,6 @@
 ; Make the missing proxy if we don't already have it.
 
 (define (find-missing-proxy missing-uid aspace)
-  (debug-message "find-missing-proxy")
   (let ((uid (missing-uid-uid missing-uid)))
     (maybe-extend-proxy-vector! aspace uid)
     (let ((proxy-data (vector-ref (address-space-proxy-vector aspace) uid)))
@@ -376,8 +352,6 @@
 ; Make a missing proxy and put it into the appropriate decode vector.
 
 (define (make-missing-proxy missing-uid aspace)
-  (debug-message "make-missing-proxy")
-  (debug-message missing-uid)
   (let* ((uid (missing-uid-uid missing-uid))
 	 (new (make-nonlocal-proxy aspace
 				   uid
@@ -423,7 +397,6 @@
   (count pending-message-count set-pending-message-count!))
 
 (define (make-pending-message thunk pending-requests)
-  (debug-message "make-pending-message")
   (let ((message (really-make-pending-message thunk (length pending-requests))))
     (for-each (lambda (pending-request)
 		(set-pending-request-messages!
@@ -437,7 +410,6 @@
     (list 'pending-message (pending-message-thunk pm))))
 
 (define (decrement-messages! messages)
-  (debug-message "decrement-messages!")
   (fold messages
 	(lambda (message ready)
 	  (let ((count (pending-message-count message)))
@@ -471,14 +443,12 @@
   (offset hole-offset))
 
 (define (add-missing-object-hole! missing-object missing-uid)
-  (debug-message "add-missing-object-hole!")
   (set-missing-object-holes! missing-object
 			     (cons (make-hole (missing-uid-stob missing-uid)
 					      (missing-uid-offset missing-uid))
 				   (missing-object-holes missing-object))))
 
 (define (fill-hole! hole thing)
-  (debug-message "fill-hole!")
   (untyped-indexed-set! (hole-stob hole)
 			(hole-offset hole)
 			thing))
@@ -498,7 +468,6 @@
     (list 'pending-request (pending-request-requests var))))
 
 (define (make-pending-request requests from-aspace)
-  (debug-message "make-pending-request")
   (let ((pending-request (really-make-pending-request requests '() '())))
     (for-each (lambda (request)
 		(set-missing-object-pending-request!
@@ -508,14 +477,12 @@
     pending-request))
 
 (define (request->missing-object request from-aspace)
-  (debug-message "request->missing-object")
   (let ((aspace (vector-ref (address-space-decode-vector from-aspace)
 			    (car request))))
     (vector-ref (address-space-pending-vector aspace)
 		(cdr request))))
 
 (define (add-pending-request-closet! pending-request closet)
-  (debug-message "add-pending-request-closet!")
   (set-pending-request-closets! pending-request
 			      (cons closet
 				    (pending-request-closets pending-request))))
@@ -524,7 +491,6 @@
 ; pending-requests in WAITING-FOR instead.
 
 (define (advance-closets! pending-request waiting-for)
-  (debug-message "advance-closets!")
   (for-each (lambda (closet)
 	      (let* ((old (delete pending-request (closet-pending-requests closet)))
 		     (new (difference waiting-for old)))
@@ -538,7 +504,6 @@
 ; be released.
 
 (define (find-ready pending-request)
-  (debug-message "find-ready")
   (fold (pending-request-closets pending-request)
 	(lambda (closet messages)
 	  (let ((waiting-for (delete pending-request (closet-pending-requests closet))))
@@ -567,8 +532,7 @@
       ((null? list1)
        res)))
 
-(define (mark-pending-requests! pending-requests key)
-  (debug-message "mark-pending-request")
+(define (mark-pending-requests! pending-requests key)    
   (for-each (lambda (object)
 	      (set-pending-request-key! object key))
 	    pending-requests))
@@ -628,7 +592,6 @@
     (list 'closet (closet-requests var))))
 
 (define (make-closet requests skeletons messages pending-requests)
-  (debug-message "make-closet")
   (let ((closet (really-make-closet requests skeletons messages pending-requests)))
     (for-each (lambda (pending-request)
 		(add-pending-request-closet! pending-request closet))
@@ -639,7 +602,6 @@
     closet))
 
 (define (finish-closet closet)
-  (debug-message "finish-closet")
 ;  (debug-message "finishing " closet)
   (for-each (lambda (skeleton)
 	      ((skeleton-finish skeleton)))
@@ -652,23 +614,19 @@
 ; filling in may have to wait until other objects have arrived.
 
 (define (make-uid-object reply from-aspace)
-  (debug-message "make-uid-object")
   (let ((data (uid-reply-data reply))
 	(uid  (uid-reply-uid  reply))
 	(aspace-uid (address-space-uid (uid-reply-aspace reply from-aspace))))
     (enum-case stob (uid-reply-type reply)
       ((symbol)
-       (debug-message "[symbol]")
        (values (string->symbol data)
 	       #f))
  ;     ((external)     ;; no external in scheme 1.4
  ;      (error "don't know how to send externals yet"))
       ((address-space)
-       (debug-message "[address-space]")
        (values (socket-id->address-space (car data) (cdr data))
 	       #f))
       ((template)
-       (debug-message "[template]")
        (let ((template (make-template (vector-length data) 0)))
 	 (values template
 		 (lambda ()
@@ -678,7 +636,6 @@
 		     (template-set! template i (vector-ref data i)))
 		   (set-template-id! template (cons aspace-uid uid))))))
       ((location)
-       (debug-message "[location]")
        (let ((location (make-undefined-location #f))) ; no ID
 	 (values location
 		 (lambda ()
@@ -687,7 +644,6 @@
 		   (set-contents! location data)
 		   (set-location-uid! location (cons aspace-uid uid))))))
       (else
-       (debug-message "[else] -> error")
        (error "bad stob type in MAKE-UID-OBJECT" (uid-reply-type reply))))))
   
 ;----------------
@@ -729,7 +685,6 @@
 ; A uid-reply is a vector of: aspace-uid, uid, type, contents
 
 (define (make-uid-reply pair)
-  (debug-message "make-uid-reply")
   (let ((aspace-uid (car pair))
 	(uid (cdr pair)))
     (let ((thing (vector-ref (address-space-decode-vector
@@ -743,26 +698,20 @@
 	(really-make-uid-reply aspace-uid uid type data)))))
 
 (define (encode-uid-reply thing)
-  (debug-message "encode-uid-reply")
   (cond ((symbol? thing)
-	 (debug-message "[symbol]")
 	 (values (enum stob symbol)
 		 (symbol->string thing)))
 	((address-space? thing)
-	 (debug-message "[address-space]")
 	 (values (enum stob address-space)
 		 (cons (address-space-ip-address thing)
 		       (address-space-socket thing))))
 	((location? thing)
-	 (debug-message "[location]")
 	 (values (enum stob location)
 		 (contents thing)))
 	((template? thing)
-	 (debug-message "[template]")
 	 (values (enum stob template)
 		 (template->vector thing)))
 	(else
-	 (debug-message "[else] -> error")
 	 (error "bad object for uid reply"
 		thing))))
 
@@ -770,7 +719,6 @@
 ; be an inconveniently large record.
 
 (define (template->vector template)
-  (debug-message "template->vector")
   (let ((contents (make-vector (template-length template) 0)))
     (vector-set! contents 0 (template-ref template 0))  ; code vector
     (vector-set! contents 1 (template-id template))
@@ -836,10 +784,3 @@
 	   (function (car list) state1 state2))
 	 (lambda (state1 state2)
 	   (loop (cdr list) state1 state2))))))
-
-
-;; ------------
-;; chnx debug
-(define (debug-message str)
-  (display str (current-error-port))
-  (newline (current-error-port)))

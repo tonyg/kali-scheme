@@ -26,7 +26,6 @@
 ; I am not going to mess about making the change now.
 
 (define (make-proxy-requests proxies)
-  (debug-message "make-proxy-requests")
   (let* ((placeholder (make-placeholder))
 	 (waiter (make-count-waiter (length proxies) placeholder)))
     (values (with-interrupts-inhibited
@@ -34,22 +33,18 @@
 	       (really-make-proxy-requests proxies waiter)))
 	    placeholder)))
 
-(define (really-make-proxy-requests proxies waiter)
-  (debug-message "really-make-proxy-requests")
+(define (really-make-proxy-requests proxies waiter)	    
   (fold proxies
 	(lambda (proxy-data requests)
 	  (let ((waiters (proxy-data-waiters proxy-data)))
 	    (case waiters
 	      ((#t)
-	       (debug-message "[#t]")
 	       (set-proxy-data-waiters! proxy-data (list waiter))
 	       requests)
 	      ((())
-	       (debug-message "['()]")
 	       (set-proxy-data-waiters! proxy-data (list waiter))
 	       (add-request proxy-data requests))
 	      (else
-	       (debug-message "[count-waiter*]")
 	       (set-proxy-data-waiters! proxy-data (cons waiter waiters))
 	       requests))))
 	'()))
@@ -58,7 +53,6 @@
 ; (<address-space> . <proxy-uids>)*
 
 (define (add-request proxy-data requests)
-  (debug-message "add-request")
   (let ((aspace (proxy-data-owner proxy-data))
 	(uid (proxy-data-uid proxy-data)))
     (let ((have (assq aspace requests)))
@@ -73,8 +67,6 @@
 ; of PROXIES for which there are still waiting messages.
 
 (define (make-proxy-rerequests proxies)
-  (debug-message "make-proxy-rerequests")
-  (debug-message proxies)
   (with-interrupts-inhibited
    (lambda ()
      (fold proxies
@@ -82,15 +74,12 @@
 	     (let ((proxy-data (proxy-data proxy)))
 	       (case (proxy-data-waiters proxy-data)
 		 ((#t)
-		  (debug-message "[#t] => set! '()")
 		  (set-proxy-data-waiters! proxy-data '())
 		  requests)
 		 ((())
-		  (debug-message "['()] => warn!")
 		  (warn "proxy count reply finds no waiters!" proxy)
 		  requests)
 		 (else
-		  (debug-message "[else] ...")
 		  (cons (proxy-data-uid proxy-data) requests)))))
 	   '()))))
 
@@ -107,7 +96,6 @@
 ; proxy.
 
 (define (adjust-proxy-counts! proxies)
-  (debug-message "adjust-proxy-counts!")
   (call-with-values
     (lambda ()
       (partition-list pair? proxies))
@@ -116,8 +104,6 @@
       (make-return-messages proxies))))
 
 (define (release-proxy-count-waiters! pairs)
-  (debug-message "release-proxy-count-waiters!")
-  (debug-message pairs)
   (for-each (lambda (placeholder)
 	      (placeholder-set! placeholder #f))
 	    (with-interrupts-inhibited
@@ -132,39 +118,30 @@
 ; in the order they were added (or we could just use a queue).
 
 (define (check-proxy-waiters data count)
-  (debug-message "check-proxy-waiters")
-  (let ((perhaps-waiters (proxy-data-waiters data)))
-    (if (eq? perhaps-waiters #t)
+  (let loop ((waiters (reverse (proxy-data-waiters data)))
+	     (count count)
+	     (ready '()))
+    (if (or (null? waiters)
+	    (= count 0))
 	(begin
-	  (display "HERE WAS THE ERROR - hope i gonna see you.." (current-error-port))
-	  (newline (current-error-port))
-	  (set! proxy-data-reference-count! data count)
-	  '())
-	(let loop ((waiters (reverse (proxy-data-waiters data)))
-		   (count count)
-		   (ready '()))
-	  (if (or (null? waiters)
-		  (= count 0))
-	      (begin
-		(set-proxy-data-reference-count! data count)
-		(set-proxy-data-waiters! data (if (null? waiters)
-						  #t
-						  (reverse waiters)))
-		ready)
-	      (loop (cdr waiters)
-		    (- count 1)
-		    (let* ((next (car waiters))
-			   (wait-count (count-waiter-count next)))
-		      (if (= wait-count 1)
-			  (cons (count-waiter-placeholder next) ready)
-			  (begin
-			    (set-count-waiter-count! next (- wait-count 1))
-			    ready)))))))))
+	  (set-proxy-data-reference-count! data count)
+	  (set-proxy-data-waiters! data (if (null? waiters)
+					    #t
+					    (reverse waiters)))
+	  ready)
+	(loop (cdr waiters)
+	      (- count 1)
+	      (let* ((next (car waiters))
+		     (wait-count (count-waiter-count next)))
+		(if (= wait-count 1)
+		    (cons (count-waiter-placeholder next) ready)
+		    (begin
+		      (set-count-waiter-count! next (- wait-count 1))
+		      ready)))))))
 
 ; Make messages for returning any excess counts for PROXY-DATAS.
 
 (define (make-return-messages proxy-datas)
-  (debug-message "make-return-message")
   (with-interrupts-inhibited
    (lambda ()
      (fold proxy-datas
@@ -203,7 +180,6 @@
 ; COUNTS reference counts have arrived for PROXY-UID, so we update its counts.
 
 (define (add-proxy-counts! proxy-uid counts)
-  (debug-message "add-proxy-counts")
   (let* ((proxy-vector (address-space-proxy-vector (local-address-space)))
 	 (data (vector-ref proxy-vector proxy-uid))
 	 (counts (+ counts (proxy-data-reference-count data))))
@@ -284,9 +260,3 @@
            (loop (cdr l) yes (cons (car l) no))))))
 
 
-
-;; ------------
-;; chnx debug
-(define (debuig-message str)
-  (display str (current-error-port))
-  (newline (current-error-port)))

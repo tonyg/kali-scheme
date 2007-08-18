@@ -6,7 +6,6 @@
 ; Dispatcher is passed avoid module circularities.
 
 (define (start-server . maybe-report-proc)
-  (debug-message "start-server")
   (connection-server dispatcher
 		     (if (null? maybe-report-proc)
 			 (lambda (port-number)
@@ -22,17 +21,13 @@
 ; have to wait.
 
 (define (dispatcher other-aspace reader)
-  (debug-message "dispatcher")
   (let loop ()
-    (debug-message "dispatcher -- loop")
     (call-with-values
      (lambda ()
        (reader other-aspace))
      (lambda (message missing-uids bad-count-proxies)
        (if (not (null? bad-count-proxies))
-	   (begin
-	     (debug-message "got bad-count-proxies: ...")
-	     (for-each return-counts (adjust-proxy-counts! bad-count-proxies))))
+	   (for-each return-counts (adjust-proxy-counts! bad-count-proxies)))
        (if (null? missing-uids)
 	   (process-message message other-aspace)
 	   (process-missing-uids message missing-uids other-aspace))
@@ -42,7 +37,7 @@
 ; dependencies), all other messages have to wait.
 
 (define (process-missing-uids message missing-uids other-aspace)
-  (debug-message "[missing uids]")
+  ;(debug-message "[missing uids]")
   (if (eq? (car message)
 	   (enum message-type uid-reply))
       (process-uid-replies (cdr message) missing-uids other-aspace)
@@ -70,11 +65,9 @@
 ;; end chnx available!
 
 (define (process-message message other-aspace)
-  (debug-message "process-message")
   (let ((data (cdr message)))
     (enum-case message-type (car message)
       ((run)
-       (debug-message "[run]")
        (spawn (lambda ()
 		(apply (car data)
 		       (cdr data)))))
@@ -86,30 +79,25 @@
 		   *received-available-values*)))
       ;; end chnx available!
       ((uid-request)
-       (debug-message "[uid request]")
-       (debug-message data)
+       ;(debug-message "[uid request]")
        (send-admin-message (enum message-type uid-reply)
 			   (map make-uid-reply data)
 			   other-aspace))
       ((uid-reply)
-       (debug-message "[uid reply]")
-       (debug-message data)
+       ;(debug-message "[uid reply]")
        (process-uid-replies data '() other-aspace))
       ((proxy-counts-request)
        (send-admin-message (enum message-type proxy-counts)
 			   (map proxy-uid->proxy data)
 			   other-aspace))
       ((proxy-counts)
-       (debug-message "[proxy-counts]!!!")
        (let ((requests (make-proxy-rerequests data)))
 	 (if (not (null? requests))
-	     (begin
-	       (debug-message "still [proxy-counts] got requests from ...")
-	       (send-admin-message (enum message-type proxy-counts-request)
-				   requests
-				   other-aspace)))))
+	     (send-admin-message (enum message-type proxy-counts-request)
+				 requests
+				 other-aspace))))
       ((return-proxy-counts)
-       (debug-message "[return-proxy-counts]")
+       ;(debug-message "[return-proxy-counts]")
        (for-each (lambda (p)
 		   (add-proxy-counts! (car p) (cdr p)))
 		 data))
@@ -125,7 +113,6 @@
 ; REMOTE-RUN! and friends.  These just send the appropriate messages.
 
 (define (remote-run! aspace proc . args)
-  (debug-message "remote-run!")
   (if (eq? aspace (local-address-space))
       (spawn (lambda () (apply proc args)))
       (send-message (enum message-type run)
@@ -133,7 +120,6 @@
 		    aspace)))
 
 (define (remote-apply aspace proc . args)
-  (debug-message "remote-apply")
   (if (eq? aspace (local-address-space))
       (apply proc args)
       (let* ((placeholder (make-placeholder))
@@ -162,8 +148,3 @@
 			aspace))))
 ;; end chnx available!
 
-;; ------------
-;; chnx debug
-(define (debug-message str)
-  (display str (current-error-port))
-  (newline (current-error-port)))

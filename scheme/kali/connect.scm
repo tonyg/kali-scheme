@@ -15,14 +15,12 @@
 ; This also installs a post-gc-hook for GCing proxies.
 
 (define (connection-server dispatcher report-proc)
-  (debug-message "connect-server")
   (set! *dispatch-procedure* dispatcher)
   (let ((socket (open-socket 0)))
     (report-proc (socket-port-number socket))
     (initialize-local-address-space! (socket-port-number socket))
     (call-after-gc! gc-proxies)
     (let loop ()
-      (debug-message "connect-server -- loop")
       (call-with-values
        (lambda ()
 	 (socket-listen-channels socket))
@@ -43,7 +41,6 @@
 ;     and then tries again.
 
 (define (server-make-connection! from-channel to-channel)
-  (debug-message "server-make-connection!")
   (let ((reader (make-message-reader from-channel to-channel)))
     (call-with-values
      (lambda () (reader (local-address-space))) ; aspace won't be used
@@ -79,7 +76,6 @@
 ; our aspace is busy over there and we should wait.
 
 (define (make-connection! aspace)
-  (debug-message "make-connection!")
   (call-with-values
    (lambda ()
      (socket-client-channels (address-space-ip-address aspace)
@@ -101,7 +97,6 @@
 	      (retry-connection! aspace from-channel to-channel))))))))
 
 (define (finish-connection! aspace from-channel to-channel reader)
-  (debug-message "finish-connection!")
   (set-tcp-nodelay! from-channel tcp-nodelay?)
   (set-tcp-nodelay! to-channel tcp-nodelay?)
   (set-address-space-out-channel! aspace to-channel)
@@ -119,7 +114,6 @@
 			(number->string (address-space-socket aspace)))))
 
 (define (retry-connection! aspace from-channel to-channel)
-  (debug-message "retry-connection!")
   (let ((placeholder (or (address-space-placeholder aspace)
 			 (let ((ph (make-placeholder)))
 			   (set-address-space-placeholder! aspace ph)
@@ -177,7 +171,6 @@
 ; of bytes before either receives anything.
 
 (define (make-message-reader in-channel out-channel)
-  (debug-message "make-message-reader")
   (let* ((my-vector (make-memory-layout-vector))
 	 (bytes-per-word (vector-length my-vector)))
     (write-memory-layout-vector my-vector out-channel)
@@ -186,7 +179,6 @@
 	    (reverse? (need-to-reverse? my-vector alien-vector))
 	    (size-buffer (make-code-vector bytes-per-word 0)))
 	(lambda (aspace)
-	  (debug-message "reader -- generated")
 	  (really-channel-read! in-channel size-buffer bytes-per-word)
 	  (let* ((size (my-get-size size-buffer))
 		 (buffer (make-code-vector (- size bytes-per-word) 0)))
@@ -239,11 +231,9 @@
 
 (define (need-to-reverse? local-vector alien-vector)
   (cond ((equal? local-vector alien-vector)
-	 (debug-message "don't need to reverse")
 	 #f)
 	((equal? (reverse (vector->list local-vector))
 		 (vector->list alien-vector))
-	 (debug-message "NEED TO REVERSE!!!")
 	 #t)
 	(else
 	 (error "don't know how to convert alien memory model"
@@ -265,7 +255,6 @@
 ; with another dispatcher.
 
 (define (send-message type message aspace)
-  (debug-message "send-message")
   (if (eq? aspace (local-address-space))
       (error "attempt to send message to self" type message))
   (call-with-values
@@ -276,7 +265,6 @@
      (really-send-message bvector need-counts aspace))))
 
 (define (really-send-message bvector need-counts aspace)
-  (debug-message "really-send-message")
   (if (not (null? need-counts))
       (wait-for-proxy-counts need-counts))
   (obtain-lock (address-space-lock aspace))
@@ -285,28 +273,22 @@
   (just-send-message bvector aspace))
 
 (define (wait-for-proxy-counts need-counts)
-  (debug-message "wait-for-proxy-counts")
   (call-with-values
    (lambda ()
      (make-proxy-requests need-counts))
    (lambda (requests placeholder)
      (if (not (null? requests))
-	 (begin 
-	   (debug-message "wait-for-proxy-counts got requests:")
-	   (display "  " (current-error-port))
-	   (debug-meesage requests)
-	   (for-each (lambda (request)
-		       (send-admin-message (enum message-type proxy-counts-request)
-					   (cdr request)
-					   (car request)))
-		     requests)))
+	 (for-each (lambda (request)
+		     (send-admin-message (enum message-type proxy-counts-request)
+					 (cdr request)
+					 (car request)))
+		   requests))
      (if placeholder
 	 (placeholder-value placeholder)))))
 
 ; Whomever called us obtained the lock.
 
 (define (just-send-message bvector aspace)
-  (debug-message "just-send-message")
   (channel-write (address-space-out-channel aspace)
 		 bvector
 		 0
@@ -317,7 +299,6 @@
 ; This is used by dispatchers to avoid deadlocking.
 
 (define (send-admin-message type message aspace)
-  (debug-message "send-admin-message")
   (call-with-values
    (lambda ()
      (encode (cons type message)
@@ -437,9 +418,3 @@
 (define buffer? code-vector?)
 
 (define buffer-length code-vector-length)
-
-;; ------------
-;; chnx debug
-(define (debug-message str)
-  (display str (current-error-port))
-  (newline (current-error-port)))
