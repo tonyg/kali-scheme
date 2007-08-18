@@ -345,7 +345,7 @@
 	heap
 	heap-internal 
 	struct)
-  (files transmit))
+  (files (interp transmit)))
 
 ;; kali - end
 
