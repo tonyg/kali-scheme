@@ -59,14 +59,11 @@
     (define-enumeration message-type
       (run			; (proc . proxy . args)
        really-run               ; (proc . args)
-       results			; (return-id . values)
        uid-request      	; (element-type . uid)*
        uid-reply        	; #(aspace-uid uid element-type contents)
        proxy-counts-request	; proxy-id*
        proxy-counts     	; proxy*
        return-proxy-counts	; (id . counts)*
-       drop-proxy-values	; (key . #(aspace-id proxy-id count)*)
-       proxy-values-dropped     ; key
        ))))
 
 ;; ============================================================================
