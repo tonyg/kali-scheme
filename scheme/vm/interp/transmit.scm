@@ -738,7 +738,7 @@
 (define (rejuvenate-proxy! proxy-data key)
   ;(debug-message "rejuvenate-proxy!") ;; chnx debug
   (let* ((proxy (really-make-proxy proxy-data key))
-	 (weak (make-weak-pointer proxy key)))
+	 (weak (make-weak-pointer proxy weak-pointer-size)))
     (set-proxy-data-self! proxy-data weak)
     proxy))
 
