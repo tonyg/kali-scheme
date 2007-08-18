@@ -149,3 +149,34 @@
 	   (if all-right?
 	       (apply values result)
 	       (raise result)))))))
+
+;; =====================================================================
+
+(define (alive? aspace . maybe-timeout)
+  (if (eq? aspace (local-address-space))
+      #t
+      (let* ((timeout (if (null? maybe-timeout)
+			  3000
+			  (car maybe-timeout)))
+	     (placeholder (make-placeholder))
+	     (thread-no (spawn (lambda ()
+				 (with-except-handler
+				  (lambda (c)
+				    'ignor)
+				  (lambda ()
+				    (sleep timeout)
+				    (placeholder-set! placeholder
+						      #f))))))
+	     (thread-yes (spawn (lambda ()
+				  (with-except-handler
+				   (lambda (c)
+				     'ignore)
+				   (lambda ()
+				     (if (remote-run! aspace +)
+					 (placeholder-set! placeholder
+							   #t)))))))
+	     (result (placeholder-value placeholder)))
+	(if result
+	    (terminate-thread! thread-no)
+	    (terminate-thread! thread-yes))
+	result)))
