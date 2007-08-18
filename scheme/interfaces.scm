@@ -827,10 +827,12 @@
 	  template-length
 	  template-ref
 	  template-overhead
+	  template-id ;; kali
 	  set-template-code!
 	  set-template-byte-code!
 	  set-template-info!
 	  set-template-package-id!
+	  set-template-id! ;; kali
 	  template-set!
 	  template?))
 

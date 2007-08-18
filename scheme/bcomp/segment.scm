@@ -37,6 +37,7 @@
     (set-template-byte-code! template cv)
     (set-template-info! template debug-data)
     (set-template-package-id! template (fluid $package-key))
+    (set-template-id! template #f) ;; kali
     (do ((lits literals (cdr lits))
 	 (i template-overhead (+ i 1)))
 	((null? lits) template)

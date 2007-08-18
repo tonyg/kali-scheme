@@ -261,6 +261,7 @@
 	  template? template-size make-template template-length
 	  template-ref template-set!
 	  template-code template-byte-code template-name
+	  template-uid set-template-uid!
 
 	  vm-make-string vm-make-string+gc
 	  vm-string? vm-string-size vm-string-length

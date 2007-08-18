@@ -18,14 +18,15 @@
 ;(define template-ref vector-ref)
 ;(define template-set! vector-set!)
 
-(define template-overhead 4)
+(define template-overhead 5)  ;; kali - was 4
 
 (define (template-code       tem) (template-ref tem 0))
 (define (template-byte-code  tem) (template-ref tem 1))
 (define (template-info       tem) (template-ref tem 2))
-(define (template-package-id tem) (template-ref tem 3))
+(define (template-id         tem) (template-ref tem 3)) ;; kali - has to be at 3... scheme/vm/data/struct.scm
+(define (template-package-id tem) (template-ref tem 4))
 (define (set-template-code!       tem cv)   (template-set! tem 0 cv))
 (define (set-template-byte-code!  tem cv)   (template-set! tem 1 cv))
 (define (set-template-info!       tem info) (template-set! tem 2 info))
-(define (set-template-package-id! tem id)   (template-set! tem 3 id))
-
+(define (set-template-id!         tem id)   (template-set! tem 3 id)) ;; kali
+(define (set-template-package-id! tem id)   (template-set! tem 4 id))
