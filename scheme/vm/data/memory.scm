@@ -7,6 +7,9 @@
 (define (address2+ x)
   (address1+ (address1+ x)))
 
+(define (address1- x)
+  (address- x addressing-units-per-cell))
+
 ; Memory access
 
 (define *memory*)
@@ -61,3 +64,7 @@
 
 (define (stob-header-set! stob header)
   (store! (address-at-header stob) header))
+
+(define (address-after-stob stob)
+  (address+ (address-after-header stob)
+	    (header-length-in-a-units (stob-header stob))))

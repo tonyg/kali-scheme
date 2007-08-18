@@ -346,7 +346,8 @@
 	enum-case
 	heap
 	struct)
-  (files (interp transmit)))
+  (files (interp encode)
+	 (interp decode)))
 
 ;; kali - end
 

@@ -41,6 +41,7 @@
 	  address->stob-descriptor
 	  address-at-header
 	  address-after-header
+	  address-after-stob
 	  stob-header stob-header-set!
 	  stob-overhead
 	  ))
