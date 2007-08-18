@@ -24,7 +24,7 @@
 		       (loop #t))
 		      ((not (null? missing-uids))
 		       (display missing-uids)
-		       (display "endecode-id: missing uids! That can't be true"))
+		       (display* "endecode-id: missing uids! That can't be true"))
 		      (else (car val))))))))))
 
 (define (u8cdr bv)
@@ -400,3 +400,10 @@ a new")
       ""
       (string-append "*"
 		     (make-string (- n 1)))))
+
+(define (display* . args)
+  (if (null? args)
+      (newline (current-error-port))
+      (begin
+	(display (car args) (current-error-port))
+	(apply display* (cdr args)))))
