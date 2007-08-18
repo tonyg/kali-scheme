@@ -54,3 +54,26 @@
        ))))
 
 ;; ============================================================================
+
+(define-interface proxy-count-requests-interface
+  (export make-proxy-requests
+	  make-proxy-rerequests
+	  adjust-proxy-counts!
+	  proxy-uid->proxy
+	  add-proxy-counts!
+	  find-dead-proxies))
+
+(define-structure proxy-count-requests proxy-count-requests-interface
+  (open scheme define-record-types
+	proxy-internals
+	address-spaces address-space-internals
+	placeholders
+	architecture			; max-proxy-count, max-proxy-debit
+	weak				; weak-pointer-ref
+	signals				; warn
+	debug-messages			; for debugging
+	interrupts)			; with-interrupts-inhibited
+  (optimize auto-integrate)
+  (files proxy-count))
+
+;; ============================================================================
