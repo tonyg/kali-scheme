@@ -23,6 +23,10 @@
 	  (port-status-options :syntax)
 	  (current-port-marker :syntax)
 	  (text-encoding-option :syntax)
+	  
+	  proxy-base-count  ;; kali
+	  max-proxy-debit   ;; kali
+	  max-proxy-count   ;; kali
 
 	  maximum-stack-args
 	  two-byte-nargs-protocol

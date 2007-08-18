@@ -206,3 +206,63 @@
 
 (define (make-proposal)
   (vector #f empty-log empty-log #f))
+
+; kali begin
+; proxies:
+
+; also in arch.scm because we can't open it here.
+(define proxy-base-count 67108864)  ; (arithmetic-shift 1 26))	; kali
+
+(define (make-nonlocal-proxy aspace uid count . maybe-value)
+  (let ((data (make-proxy-data uid
+			       aspace
+			       (if (pair? maybe-value)
+				   (car maybe-value)
+				   (unassigned))
+			       count
+			       #f   ; actual proxy made below
+			       '()  ; waiters
+			       )))
+    (let ((proxy (really-make-proxy data)))
+      (set-proxy-data-self! data (make-weak-pointer proxy))
+      proxy)))
+
+(define (make-proxy value)
+  (make-nonlocal-proxy #f	; no address space means it's local
+		       #f	; no uid yet
+		       proxy-base-count
+		       value))
+
+(define (proxy-data->proxy proxy-data)
+  (or (weak-pointer-ref (proxy-data-self proxy-data))
+      (let ((proxy (really-make-proxy proxy-data)))
+	(set-proxy-data-self! proxy-data (make-weak-pointer proxy))
+	proxy)))
+
+(define (proxy-has-local-value? proxy)
+  (proxy-data-has-local-value? (proxy-data proxy)))  
+
+(define (proxy-local-ref proxy)
+  (proxy-data-local-ref (proxy-data proxy)))
+
+(define (proxy-local-set! proxy value)
+  (set-proxy-data-value! (proxy-data proxy) value))
+
+; We need to provide ANY-PROXY-VALUE but have no way to get the remote value
+; this early.
+
+(define (any-proxy-value proxy)
+  (if (proxy-has-local-value? proxy)
+      (proxy-local-ref proxy)
+      (proxy-remote-value proxy)))
+
+; It is too early to define this.
+
+(define proxy-remote-value)
+
+; So someone provides it later.
+
+(define (initialize-any-proxy-value! proc)
+  (set! proxy-remote-value proc))
+
+; kali - end

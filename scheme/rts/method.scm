@@ -54,6 +54,8 @@
 	 (simple-type-priority type))
 	((record-type? type)
 	 (record-type-priority type))
+	((proxy? type)	                          ;; kali
+	 (%type-priority (any-proxy-value type))) ;; kali
 	(else (type-priority type))))	;generic
 
 (define (%type-predicate type)
@@ -61,6 +63,8 @@
 	 (simple-type-predicate type))
 	((record-type? type)
 	 (record-predicate type))
+	((proxy? type)	                           ;; kali
+	 (%type-predicate (any-proxy-value type))) ;; kali
 	(else (type-predicate type))))  ;generic
 
 (define (%same-type? t1 t2)

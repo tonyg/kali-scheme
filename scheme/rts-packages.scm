@@ -49,7 +49,8 @@
 	define-record-types
 	records record-types records-internal
 	bitwise util primitives
-	simple-signals)
+	simple-signals
+	proxy-internals)  ;; kali
   (files (rts method))
   (optimize auto-integrate))
 
@@ -227,11 +228,11 @@
 (define-structure more-types (export :closure :code-vector :location :double
 				     :template :channel :port :weak-pointer
 				     :shared-binding :cell 
-				     :address-space) ;; kali  
+				     :proxy :proxy-data :address-space) ;; kali  
   (open scheme-level-1 methods
 	closures code-vectors locations cells templates channels ports
 	primitives shared-bindings
-	address-space-internals) ;; kali
+	proxy-internals address-space-internals) ;; kali
   (begin (define-simple-type :closure     (:value) closure?)
 	 (define-simple-type :code-vector (:value) code-vector?)
 	 (define-simple-type :location    (:value) location?)
@@ -249,6 +250,16 @@
 		     'exported-binding)
 		 (shared-binding-name obj)))
 	 ;; kali - begin
+	 (define-simple-type :proxy	  (:value) proxy?)
+	 (define-method &disclose ((obj :proxy))
+	   (cond ((not (proxy-has-local-value? obj))
+		  (list 'proxy (proxy-data-uid (proxy-data obj))))
+		 ((or (record-type? obj)
+		      (fluid? (proxy-local-ref obj)))
+		  (disclose (proxy-local-ref obj)))
+		 (else
+		  (list 'proxy (proxy-data-uid (proxy-data obj))))))
+	 (define-simple-type :proxy-data (:value) proxy-data?)
 	 (define-simple-type :address-space (:value) address-space?)
 	 ;; kali - end
 	 ))

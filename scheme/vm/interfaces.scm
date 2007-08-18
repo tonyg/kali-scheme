@@ -206,6 +206,16 @@
 	  weak-pointer? weak-pointer-size make-weak-pointer weak-pointer-ref
 
 	  ;; kali - begin
+	  proxy? proxy-size really-make-proxy
+	  proxy-data
+
+	  proxy-data? proxy-data-size make-proxy-data
+	  proxy-data-uid set-proxy-data-uid!
+	  proxy-data-owner
+	  proxy-data-value set-proxy-data-value!
+	  proxy-data-reference-count set-proxy-data-reference-count!
+	  proxy-data-self set-proxy-data-self!
+
 	  address-space? make-address-space
 	  address-space-uid set-address-space-uid!
 	  address-space-decode-vector set-address-space-decode-vector!

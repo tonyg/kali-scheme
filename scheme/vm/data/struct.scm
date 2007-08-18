@@ -49,6 +49,9 @@
   (channel-os-status set-channel-os-status!)
   (channel-error?    set-channel-error?!))
 
+
+(define-shared-primitive-data-type proxy)          ;; kali
+(define-shared-primitive-data-type proxy-data)     ;; kali
 (define-shared-primitive-data-type address-space)  ;; kali
 
 

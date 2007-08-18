@@ -213,6 +213,9 @@
   (channel-abort 1)             ; stop channel operation
   (open-channels-list)		; return a list of the open channels
 
+  (proxy-data-has-local-value? 1)  ;; kali
+  (proxy-data-local-ref 1)         ;; kali
+
   ;; weak-pointers
   (make-weak-pointer 1)
 
@@ -332,6 +335,7 @@
    no-current-proposal
    native-code-not-supported
    illegal-exception-return
+   unassigned-proxy-data  ;; kali
    ))
 
 ; Used by (READ-BYTE) and (WRITE-BYTE) to get the appropriate ports from
@@ -538,6 +542,8 @@
    shared-binding
    unused-d-header1
 
+   proxy          ;; kali
+   proxy-data     ;; kali
    address-space  ;; kali
 
    ;; B-vector types (not traced by GC)
@@ -596,6 +602,15 @@
       (channel-os-index)
       (channel-close-silently?))
     ;; kali - begin
+    (proxy proxy? really-make-proxy
+      (proxy-data))
+    (proxy-data proxy-data? make-proxy-data
+      (proxy-data-uid set-proxy-data-uid!)
+      (proxy-data-owner set-proxy-data-owner!)
+      (proxy-data-value set-proxy-data-value!)
+      (proxy-data-reference-count set-proxy-data-reference-count!)
+      (proxy-data-self set-proxy-data-self!)
+      (proxy-data-waiters set-proxy-data-waiters!))
     (address-space address-space? make-address-space
       (address-space-uid set-address-space-uid!)
       (address-space-decode-vector set-address-space-decode-vector!)
@@ -604,3 +619,6 @@
     ;; kali - end
     ))
 
+(define proxy-base-count 67108864)  ; (arithmetic-shift 1 26))	; kali
+(define max-proxy-debit 4096)	    ; (arithmetic-shift 1 12))	; kali
+(define max-proxy-count (* max-proxy-debit 32))			; kali

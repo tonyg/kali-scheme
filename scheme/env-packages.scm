@@ -164,6 +164,7 @@
         closures
         packages-internal       ; location-info-tables
         debug-data
+	proxy-internals    ;; kali
 	segments                ; get-debug-data
         enumerated              ; enumerand->name
         weak                    ; weak-pointer?

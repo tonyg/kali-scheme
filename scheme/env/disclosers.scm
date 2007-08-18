@@ -55,6 +55,11 @@
 	      (or (template-print-name tem) ; <-- the original method doesn't have this
 		  (template-id tem))
 	      '?))))
+
+(define-method &disclose ((obj :proxy))			; kali
+  (list 'proxy						; kali
+	(proxy-data-owner (proxy-data obj))		; kali
+	(proxy-data-uid (proxy-data obj))))		; kali
   
 (define-method &disclose ((obj :code-vector))
   (list 'byte-vector (code-vector-length obj))

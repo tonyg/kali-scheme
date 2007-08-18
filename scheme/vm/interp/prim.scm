@@ -318,6 +318,23 @@
 	   (set-contents! loc unassigned-marker))))
   return-unspecific)
 
+;; kali - begin
+
+(define-primitive proxy-data-has-local-value? (proxy-data->)
+  (lambda (proxy-data)
+    (goto return-boolean
+	  (not (vm-eq? (proxy-data-value proxy-data)
+		       unassigned-marker)))))
+
+(define-primitive proxy-data-local-ref (proxy-data->)
+  (lambda (proxy-data)
+    (let ((value (proxy-data-value proxy-data)))
+    (if (vm-eq? value unassigned-marker)
+	(raise-exception unassigned-proxy-data 0 proxy-data)
+        (goto return value)))))
+
+;; kali - end
+
 (define-primitive immutable? (any->) immutable? return-boolean)
 
 (define-primitive make-immutable! (any->)

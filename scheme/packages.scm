@@ -254,6 +254,7 @@
 	    low-level
 	    ports
 	    primitives
+	    proxy-internals  ;; kali
 	    low-proposals
 	    scheme-level-0
 	    shared-bindings
