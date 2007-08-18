@@ -70,7 +70,7 @@
 ; the returned message is FALSE.
 
 (define (encode thing address-space pair)
-  (debug-message 3 "encode start...")
+  (debug-message 3 "START ECODING...")
 
   (set! *message-size* (vm-car pair))
   (set! *hotel-size* (vm-cdr pair))
@@ -126,7 +126,7 @@
 				 (begin
 				   (vm-set-car! pair result)
 				   (vm-set-cdr! pair losers)
-				   (debug-message 5 "encode done.")
+				   (debug-message 5 "ENCODING DONE.")
 				   #t)))
 			   (begin
 			     (drop-new-ids! hotel-start)
@@ -793,7 +793,7 @@
 ; DECODE assumes that the size has been stripped off the front of the message.
 
 (define (decode message aspace reverse? key)
-  (debug-message 5 "start decode...")
+  (debug-message 5 "START DECODING...")
   (let ((start (address-at-header message))
 	(limit (address-after-stob message)))
     (if reverse?
@@ -804,7 +804,7 @@
     (decode-message-body (address1+ (address1+ start)) limit aspace key)
     (stob-header-set! message (make-header (enum stob byte-vector)
 					   (cells->bytes 1)))
-    (debug-message 5 "decode done")
+    (debug-message 5 "DECODING DONE.")
     (values (address->stob-descriptor
 	     (address+ *message-start* (element-info (fetch (address1+ start)))))
 	    *new-uids*

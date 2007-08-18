@@ -6,6 +6,7 @@
 ; Dispatcher is passed avoid module circularities.
 
 (define (start-server . maybe-report-proc)
+  (debug-message "start-server")
   (connection-server dispatcher
 		     (if (null? maybe-report-proc)
 			 (lambda (port-number)
@@ -21,7 +22,9 @@
 ; have to wait.
 
 (define (dispatcher other-aspace reader)
+  (debug-message "dispatcher")
   (let loop ()
+    (debug-message "dispatcher -- loop")
     (call-with-values
      (lambda ()
        (reader other-aspace))
@@ -39,7 +42,7 @@
 ; dependencies), all other messages have to wait.
 
 (define (process-missing-uids message missing-uids other-aspace)
-  ;(debug-message "[missing uids]")
+  (debug-message "[missing uids]")
   (if (eq? (car message)
 	   (enum message-type uid-reply))
       (process-uid-replies (cdr message) missing-uids other-aspace)
@@ -67,6 +70,7 @@
 ;; end chnx available!
 
 (define (process-message message other-aspace)
+  (debug-message "process-message")
   (let ((data (cdr message)))
     (enum-case message-type (car message)
       ((run)
@@ -119,6 +123,7 @@
 ; REMOTE-RUN! and friends.  These just send the appropriate messages.
 
 (define (remote-run! aspace proc . args)
+  (debug-message "remote-run!")
   (if (eq? aspace (local-address-space))
       (spawn (lambda () (apply proc args)))
       (send-message (enum message-type run)
@@ -126,6 +131,7 @@
 		    aspace)))
 
 (define (remote-apply aspace proc . args)
+  (debug-message "remote-apply")
   (if (eq? aspace (local-address-space))
       (apply proc args)
       (let* ((placeholder (make-placeholder))
@@ -156,6 +162,6 @@
 
 ;; ------------
 ;; chnx debug
-(define (debuig-message str)
+(define (debug-message str)
   (display str (current-error-port))
   (newline (current-error-port)))
