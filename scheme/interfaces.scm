@@ -507,7 +507,9 @@
 	  get-dynamic-env		; wind.scm, env/command-level.scm
 	  set-dynamic-env!		; wind.scm, env/command-level.scm
 	  get-dynamic-point		; wind.scm
-	  set-dynamic-point!))		; wind.scm
+	  set-dynamic-point!		; wind.scm
+	  real-fluid-lookup       ;; kali
+	  fluid?))                ;; kali
 
 (define-interface enumerated-interface
   (export (define-enumeration :syntax)

@@ -63,22 +63,78 @@
 
 (define (empty-dynamic-env) '())
 
+
+;; kali - begin
+
 ; Each fluid has a top-level value that is used when the fluid is unbound
 ; in the current dynamic environment.
 
+; Kali needs prevent the base of fluid environments, which is shared between
+; all threads, from being sent between address spaces.  To do so we put that
+; base in the session-data record and make (FLUID ...) look there after
+; reaching the top of the fluid state.
+
 (define-record-type fluid :fluid
-  (make-fluid top)
-  (top fluid-top-level-value set-fluid-top-level-value!))
+  (really-make-fluid top)
+  fluid?
+  (top really-fluid-top-level-value really-set-fluid-top-level-value!))
+
+(define (make-fluid top)
+  (make-proxy (really-make-fluid top)))
+
+(define (fluid-top-level-value fluid)
+  (really-fluid-top-level-value (proxy-local-ref fluid)))
+
+(define (set-fluid-top-level-value! fluid-proxy value)
+  (let ((fluid (any-proxy-value fluid-proxy)))
+    (really-set-fluid-top-level-value! fluid value)
+    (proxy-local-set! fluid-proxy fluid)))
+
+; Extending fluid environments to allow intervening procedures.
+
+(define (real-fluid-lookup fluid-env fluid)
+  (let loop ((env fluid-env))
+    (cond ((null? env)
+	   #f)
+	  ((procedure? env)
+	   (env fluid))
+	  ((eq? (caar env) fluid)
+	   (car env))
+	  (else
+	   (loop (cdr env))))))
 
 (define (fluid f)
-  (let ((probe (assq f (get-dynamic-env))))
+  (let ((probe (real-fluid-lookup (get-dynamic-env) f)))
     (if probe (cdr probe) (fluid-top-level-value f))))
 
 ; Deprecated.
 
 (define (set-fluid! f val)
-  (let ((probe (assq f (get-dynamic-env))))
+  (let ((probe (real-fluid-lookup (get-dynamic-env) f)))
     (if probe (set-cdr! probe val) (set-fluid-top-level-value! f val))))
+
+;; kali - end
+
+;; non-kali was - begin
+
+;; Each fluid has a top-level value that is used when the fluid is unbound
+;; in the current dynamic environment.
+
+;(define-record-type fluid :fluid
+;  (make-fluid top)
+;  (top fluid-top-level-value set-fluid-top-level-value!))
+
+;(define (fluid f)
+;  (let ((probe (assq f (get-dynamic-env))))
+;    (if probe (cdr probe) (fluid-top-level-value f))))
+
+;; Deprecated.
+
+;(define (set-fluid! f val)
+;  (let ((probe (assq f (get-dynamic-env))))
+;    (if probe (set-cdr! probe val) (set-fluid-top-level-value! f val))))
+
+;; non-kali was - end
 
 (define (let-fluid f val thunk)
   (with-dynamic-env (cons (cons f val) (get-dynamic-env)) thunk))
@@ -90,6 +146,15 @@
 	(with-dynamic-env env (car args))
 	(loop (cddr args)
 	      (cons (cons (car args) (cadr args)) env)))))
+
+
+;; kali - begin - probably unnecessary
+
+(define (fluid-lookup env fluid)
+  (let ((probe (real-fluid-lookup (get-dynamic-env) fluid)))
+    (if probe (cdr probe) (fluid-top-level-value fluid))))
+
+;; kali - end - probably unnecessary
 
 ; Handy utilities.
 

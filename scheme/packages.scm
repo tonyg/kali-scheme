@@ -257,6 +257,7 @@
 	    proxy-internals  ;; kali
 	    low-proposals
 	    scheme-level-0
+	    session-data   ;; kali
 	    shared-bindings
 	    silly
 	    source-file-names

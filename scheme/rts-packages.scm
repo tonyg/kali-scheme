@@ -61,7 +61,8 @@
 
 (define-structures ((fluids fluids-interface)
 		    (fluids-internal fluids-internal-interface))
-  (open scheme-level-1 define-record-types primitives cells)
+  (open scheme-level-1 define-record-types primitives cells
+	proxy-internals)  ;; kali 
   (files (rts fluid))
   (optimize auto-integrate))
 

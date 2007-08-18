@@ -56,6 +56,7 @@
 	handle
 	display-conditions	; display-condition
 	weak
+	static-fluid-env     ;; kali
 	debug-messages		; for debugging
 	signals			; error
 	signals-internal	; coerce-to-condition, coerce-to-simple-condition
@@ -71,6 +72,25 @@
 
   (files (env user)
 	 (env command-level)))
+
+;; kali - begin
+
+;; for not copying the shared base of the fluid environment between
+;; address spaces, it's chopped  off.
+
+(define-structure static-fluid-env (export save-base-fluid-env! fluid-env-link)
+  (open scheme session-data fluids-internal)
+  (begin
+    (define base-fluid-env-slot
+      (make-session-data-slot! '()))
+
+    (define (save-base-fluid-env! env)
+      (session-data-set! base-fluid-env-slot env))
+
+    (define (fluid-env-link fluid)
+      (real-fluid-lookup (session-data-ref base-fluid-env-slot) fluid))))
+
+; kali - end
 
 (define-structure basic-commands basic-commands-interface
   (open scheme-level-2
