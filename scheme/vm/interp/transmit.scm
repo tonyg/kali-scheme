@@ -73,8 +73,8 @@
 		    (allocate-message-space *message-space*)
 
 		    (set! *our-address-space* address-space)
-		    ;; add space for header, number of bytes, and THING
-		    (set! *transmit-hp* (address+ *message-start* (cells->a-units 3)))
+		    ;; add space for header, number of bytes, and THING (*1)
+		    (set! *transmit-hp* (address+ *message-start* (cells->a-units 3))) ;; ensure space (*1)
 		    ;; ADDRESS- accounts for room for the header of the last object
 		    ;; add space for last hotel-fragment
 		    (set! *hotel-ptr* (address+ *hotel-start* (cells->a-units 2))) 
@@ -83,7 +83,7 @@
 		    (set! *losing-proxy-hotel* null-address)
 		    (let ((code (encode-object thing)))
 		      (debug-message "returned from encode-object!!!")
-		      (store! (address+ *message-start* (cells->a-units 2)) code)
+		      (store! (address+ *message-start* (cells->a-units 2)) code) ;; the space is ensured by (*1)
 		      (cond ((or (if (address>= *transmit-hp* *message-end*)
 				     (or *loosing-return*
 					 (not (enlarge-message-space!)))
@@ -155,7 +155,7 @@
   (if (if (address<= *hotel-end*
 		     (address+ *hotel-ptr* (cells->a-units (+ cells 1))))
 	  (or *loosing-return*
-	      (not (enlarge-hotel-space!)))
+	      (not (enlarge-hotel-space!))) ;; no try-again-loop then, because cell has max of 2...
 	  #f)
       (begin
 	(encoding-lost!)
@@ -476,13 +476,15 @@
 
 (define (encode-full-object header thing)
   (debug-message "encode-full-object")
-  (if (if (address<= *message-end*
-			      (address+ *transmit-hp* 
-					(header-a-units header)))
-	  (or (not (enlarge-message-space!))
-	      *loosing-return*)
-	  #f)
-      (encoding-lost!)
+  (if (or (address<= *message-end*
+		     (address+ *transmit-hp* 
+			       (header-a-units header)))
+	  *loosing-return*)
+      (if *loosing-return*
+	  (encoding-lost!)
+	  (if (enlarge-message-space!)
+	      (encode-full-object header thing)
+	      (encoding-lost!)))
       (let ((new (address->message-offset (enum element local))))
 	(store-next! header)
 	(stob-header-set! thing new) ;***Break heart
