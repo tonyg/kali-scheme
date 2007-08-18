@@ -278,6 +278,24 @@
 	     (raise-exception index-out-of-range 2
 			      stob (enter-fixnum type) index value))))))
 
+; Begin Kali code
+
+(define-primitive untyped-indexed-set! (any-> fixnum-> any->)
+  (lambda (stob index value)
+    (cond ((or (not (stob? stob))
+	       (not (d-vector-header? (stob-header stob))))
+	       ; (immutable? stob)  ; has to be able to work on immutable objects
+	   (raise-exception wrong-type-argument 0
+			    stob (enter-fixnum index) value))
+	  ((valid-index? index (d-vector-length stob))
+	   (d-vector-set! stob index value)
+	   (goto return unspecific-value))
+	  (else
+	   (raise-exception index-out-of-range 0
+			    stob (enter-fixnum index) value)))))
+
+; End Kali code
+
 ; Byte vectors
 
 (define-primitive byte-vector-logging-ref (code-vector-> fixnum->)

@@ -184,6 +184,8 @@
   (stored-object-indexed-ref  stob index 2)	; vector + offset
   (stored-object-indexed-set! stob index 3)	; vector + offset + value
 
+  (untyped-indexed-set! 3) ; vector + offset + value ;; kali
+
   (make-double)
 
   (make-byte-vector 2)
