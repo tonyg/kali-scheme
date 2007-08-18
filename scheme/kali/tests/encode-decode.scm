@@ -443,8 +443,6 @@ a new")
 ;(make-deep-c 100)
 
 (define (display* . args)
-  (if (null? args)
-      (newline (current-error-port))
-      (begin
-	(display (car args) (current-error-port))
-	(apply display* (cdr args)))))
+  (for-each display args)
+  (newline))
+

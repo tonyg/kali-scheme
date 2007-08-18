@@ -142,7 +142,7 @@
 				     buf)))
     (let lp ((i 0))
       (if (= i (- len 1))
-	  (number->string (char->integer (string-ref buf i)))
+	  (number->string (save-char->integer (string-ref buf i)))
 	  (string-append (number->string (save-char->integer (string-ref buf i)))
 			 "."
 			 (lp (+ i 1)))))))
