@@ -100,14 +100,20 @@
 	kali-conditions    ;; error handling
 	display-conditions ;; error-handling
 	(subset conditions (warning?))
-	(subset i/o (current-error-port))
+	;spatial ;; chnx
+	srfi-66
 	address-spaces
-	sockets channels
+	sockets 
+	channels
 	channel-i/o
-	enumerated enum-case
+	channel-ports
+	i/o
+	enumerated 
+	enum-case
 	message-types
 	proxy-count-requests
-	placeholders locks
+	placeholders 
+	locks
 	condvars
 	proposals
 	interrupts			; call-after-gc!

@@ -335,8 +335,6 @@
 		    (set-template-uid! thing false))
 		   ((address-space)
 		    (set-address-space-uid! thing false))
-		   ((address-space)
-		    (set-address-space-uid! thing false))
 		   ((location)
 		    (set-location-uid! thing false))
 		   ((proxy)
