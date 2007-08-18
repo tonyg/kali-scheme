@@ -265,7 +265,16 @@
 (define (initialize-any-proxy-value! proc)
   (set! proxy-remote-value proc))
 
-(define (kali-check-heap x)
-  (really-kali-check-heap x))
+; Hide the fact that the primitives can only return one value.
+
+(define (encode message address-space)
+  (let ((pair (really-encode message address-space)))
+    (values (car pair) (cdr pair))))
+
+(define (decode buffer aspace reverse?)
+  (let ((vector (really-decode aspace reverse? buffer)))
+    (values (vector-ref vector 0)
+	    (vector-ref vector 1)
+	    (vector-ref vector 2))))
 
 ; kali - end

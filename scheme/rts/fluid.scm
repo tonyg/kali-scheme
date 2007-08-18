@@ -83,7 +83,7 @@
   (make-proxy (really-make-fluid top)))
 
 (define (fluid-top-level-value fluid)
-  (really-fluid-top-level-value (proxy-local-ref fluid)))
+  (really-fluid-top-level-value (any-proxy-value fluid)))
 
 (define (set-fluid-top-level-value! fluid-proxy value)
   (let ((fluid (any-proxy-value fluid-proxy)))
