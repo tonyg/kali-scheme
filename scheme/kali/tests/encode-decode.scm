@@ -1,5 +1,5 @@
 ;; ,config ,load kali/scheme/misc/packages.scm
-;; ,open primitives kali address-spaces messages threads signals srfi-66 srfi-78 srfi-9 reset/shift
+;; ,open primitives kali address-spaces messages threads signals srfi-42 srfi-66 srfi-78 srfi-9 reset/shift
 
 (define (endecode-id val aspace)
   (call-with-values
@@ -15,8 +15,6 @@
 	    (lambda (val missing-uids bad-count-proxies)
 	      (cond ((not (null? bad-count-proxies))
 		     (for-each return-counts (adjust-proxy-counts! bad-count-proxies)))
-		     ;(error "endecode-id: bad count proxies! That can't be true"))
-		     
 		    ((not (null? missing-uids))
 		     (error "endecode-id: missing uids! That can't be true"))
 		    (else (car val)))))))))
