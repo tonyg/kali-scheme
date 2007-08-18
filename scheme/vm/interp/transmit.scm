@@ -54,14 +54,67 @@
 ; nonpositive reference counts.  If it fails because of lack of space
 ; the returned message is FALSE.
 
-(define *message-size*)
-(define *hotel-size*)
 
-(define *message-start*)    ;; offset-var
-(define *message-pointer*)  ;; offset-var
+;; chnx try extensible
+
+(define-syntax define-extensible-proc
+  (syntax-rules ()
+    ((define-extensible-proc (proc arg ...) body-form extender temp)
+     (begin
+       (define (temp arg ...)
+	 body-form
+	 (unspecific))
+       (define (proc arg ...) (temp arg ...))
+       (define (extender more)
+	 (let ((old temp))
+	   (set! temp (lambda (arg ...)
+			(more arg ...)
+			(old arg ...)))))))))
+
+;; -------------------
+
+(define-extensible-proc (adjust-message-values offset old-size new-size)
+  (unspecific)
+  add-message-value!
+  *adjust-message-values-proc*)
+
+;; -------------------
+
+(define-syntax define-message-offset-value
+  (syntax-rules ()
+    ((define-message-offset-value value)
+     (begin
+       (define value)
+       (add-message-value! (lambda (offset old-size new-size)
+			    (set! value 
+				  (address+ value
+					    offset))))))))
+
+;; chnx try extensible end
+
+;; -------------------
+;; message-values:
+(define-message-offset-value *message-start*)    ;; offset-var
+(define-message-offset-value *message-pointer*)  ;; offset-var
+(define-message-offset-value *encode-next/addr*) ;; offset-var
+(define-message-offset-value *scan-to*)          ;; offset-var
+
 (define *message-limit*)
-(define *encode-next/addr*) ;; offset-var
-(define *scan-to*)          ;; offset-var
+(add-message-value! (lambda (offset old-size new-size)
+		      (set! *message-limit*
+			    (address+ *message-limit*
+				      (+ offset
+					 (- new-size
+					    old-size))))))
+
+(define *message-size*)
+(add-message-value! (lambda (offset old-size new-size)
+		      (set! *message-size* new-size)))
+
+;; ------------------
+;; hotel-values:
+
+(define *hotel-size*)
 
 (define *hotel-pointer*)
 (define *hotel-limit*)
@@ -595,18 +648,9 @@
 		    #f
 		    (let ((offset (address-difference new-start old-start)))
 		      ;(debug-message "really enlarging!")
-		      (copy-memory! old-start new-start *message-size*)
-
-		      (set! *message-size* want-space)
-
-		      ;; (adjust-offsets!)
-		      (set! *message-start* (address+ *message-start* offset))
-		      (set! *message-pointer* (address+ *message-pointer* offset))
-		      (set! *scan-to* (address+ *scan-to* offset))
-		      (set! *encode-next/addr* (address+ *encode-next/addr* offset))
-
-		      (set! *message-limit* (address- new-end 
-						      (cells->a-units 1)))
+		      (copy-memory! old-start new-start 
+				    (address-difference *message-pointer* *message-start*)) ;; chnx *message-size* -> (address-difference *message-pointer* *message-start*)
+		      (adjust-message-values offset *message-size* want-space)
 		      #t))))))))
 
 ;; ----------------
