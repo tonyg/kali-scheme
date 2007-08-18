@@ -176,17 +176,19 @@
 
 ; Symbols have two slots, the string containing the symbol's name and a slot
 ; used in building the symbol table.
+; and one for the uid - so there are three slots now - kali
 ; Characters in the symbol name are made to be lower case.
 
 (define (transport-symbol symbol)
-  (let* ((data (allocate-d-vector (enum stob symbol) 2 #t))
+  (let* ((data (allocate-d-vector (enum stob symbol) 3 #t)) ;; kali 2 -> 3
          (descriptor (car data))
          (vector (cdr data)))
+    (vector-set! vector 0 vm-false) ;; kali - no uid yet
     (vector-set! vector
-                 0
+                 1  ;; kali - was 0
                  (transport-string (symbol-case-converter (symbol->string symbol))))
     (vector-set! vector
-                 1
+                 2  ;; kali - was 1
                  (transport #f))
     descriptor))
 

@@ -556,6 +556,7 @@
   '((pair pair? cons
       (car set-car!) (cdr set-cdr!))
     (symbol symbol? #f       ; RTS calls op/intern/string->symbol
+      (symbol-uid set-symbol-uid!)  ;; kali
       (symbol->string))
     (location location? make-location
       (location-id set-location-id!)

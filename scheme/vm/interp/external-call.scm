@@ -123,10 +123,19 @@
 (define (s48-imported-bindings)
   *imported-bindings*)
 
+
+;; ----------------
+;; begin (*)
+;; kali - for inported/exported bindings:
+;; added ignore as extra argument to maker, 
+;; because table-searcher passes "false" here,
+;; as it has to set symbol-uid also now
+;; end (*)
+;
 ; Imported bindings.
 
 (define lookup-imported-binding
-  (let* ((maker (lambda (string next key)
+  (let* ((maker (lambda (ignore string next key)  ;; kali -  (*) 
 		  (make-shared-binding string true unspecific-value next key)))
 	 (lookup (table-searcher shared-binding-name
 				 shared-binding-next
@@ -137,7 +146,7 @@
 ; Exporting bindings.
 
 (define lookup-exported-binding
-  (let* ((maker (lambda (string next key)
+  (let* ((maker (lambda (ignore string next key)  ;; kali - (*)
 		  (make-shared-binding string false unspecific-value next key)))
 	 (lookup (table-searcher shared-binding-name
 				 shared-binding-next

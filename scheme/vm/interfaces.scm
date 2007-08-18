@@ -196,6 +196,7 @@
 (define-interface struct-interface
   (export vm-pair? vm-pair-size vm-cons vm-car vm-set-car! vm-cdr vm-set-cdr!
 	  vm-symbol? vm-symbol-size vm-make-symbol vm-symbol->string
+	  vm-symbol-uid vm-set-symbol-uid!   ;; kali
 	  vm-symbol-next vm-set-symbol-next!
 	  closure? closure-size make-closure closure-template closure-env
 	  set-closure-template! set-closure-env!

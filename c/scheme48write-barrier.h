@@ -7,10 +7,10 @@
  */
 
 /* Define if building with BIBOP GC. */
-#define S48_GC_BIBOP 1
+/* #undef S48_GC_BIBOP */
 
 /* Define if building with two-space GC. */
-/* #undef S48_GC_TWOSPACE */
+#define S48_GC_TWOSPACE 1
 
 #if defined(S48_GC_BIBOP)
 #include "scheme48write-barrier-bibop.h"

@@ -66,7 +66,7 @@
            (bucket (hash-table-ref table index)))
       (let loop ((foo bucket))
         (cond ((vm-eq? foo false)
-               (let ((new (make-foo string (value->link bucket) key)))
+               (let ((new (make-foo false string (value->link bucket) key)))  ;; kali - added false as first argument for make-foo
                  (vm-vector-set! table index (value->link new))
                  new))
               ((vm-string=? string (foo-string foo))
