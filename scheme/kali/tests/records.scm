@@ -63,7 +63,7 @@
 
     ;; chnx todo(?): hmm don't know why but without it wont work
     ;; perhaps this is because of tcp-nodelay (???)
-    (sleep 500)
+    ;(sleep 500)
 
     (check (rec? rec-0) 
 	   => 

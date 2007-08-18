@@ -5,6 +5,7 @@
 	kali 
 	address-spaces 
 	messages 
+	proxy-count-requests
 	threads 
 	signals 
 	srfi-42 
@@ -42,15 +43,20 @@
 	srfi-78)
   (files fluids))
 
-;; there is no structure for the gc test,
-;; because it probably will lead to a 
-;; stack-overflow...
+(define-structure gc-tests (export gc-test)
+  (open scheme
+	kali
+	address-spaces
+	threads
+	primitives)
+  (files gc))
 
 (define-structure kali-tests (export test-all)
   (open scheme
 	encode-decode-tests
 	remote-tests
 	record-tests
-	fluid-tests)
-  (files do-them-all.scm))
+	fluid-tests
+	gc-tests)
+  (files do-them-all))
 

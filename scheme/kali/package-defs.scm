@@ -106,8 +106,8 @@
 	interrupts			; call-after-gc!
 	bitwise				; arithmetic-shift
 	conditions handle i/o display-conditions  ; dealing with errors
-	;report
 	;debug-messages
+	i/o ;; test-messages
 	threads			; spawn
 	(subset primitives (eof-object  ;; because of channel-read
 			    memory-status 
@@ -149,6 +149,7 @@
 				   last-received
 				   all-received
 				   ;; end chnx available!
+				   return-counts ;; just for encode-decode-test
 				   )
   (open scheme
 	connect message-types uid-requests

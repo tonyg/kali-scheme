@@ -1,5 +1,5 @@
 ;; ,config ,load kali/scheme/misc/packages.scm
-;; ,open primitives kali address-spaces messages threads signals srfi-42 srfi-66 srfi-78 srfi-9 reset/shift
+;; ,open primitives kali address-spaces proxy-count-requests messages threads signals srfi-42 srfi-66 srfi-78 srfi-9 reset/shift
 
 (define (endecode-id val aspace)
   (call-with-values

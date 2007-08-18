@@ -1,67 +1,92 @@
 ;; open kali threads primitives
 ;; (spawn start-server)
-;; (define as (socket-id->address-space <machine-name> <port>))
 
 
+(define (gc-test machine-name port)
+  (if (not (server-running?))
+      (begin 
+	(display "starting server now...")
+	(newline)
+	(spawn start-server 'test-server)
+	(sleep 2000)))
+  (let ((local-aspace (local-address-space))
+	(other-aspace (socket-id->address-space machine-name
+						port)))
+    (display "1...")(newline)
+    (remote-apply other-aspace display "1...")
+    (remote-apply other-aspace newline)
+    (gc-test-vector other-aspace)
+    (display "2...")(newline)
+    (remote-apply other-aspace display "2...")
+    (remote-apply other-aspace newline)
+    (gc-test-proxy other-aspace)
+    (display "3...")(newline)
+    (remote-apply other-aspace display "3...")
+    (remote-apply other-aspace newline)
+    (remote-apply other-aspace gc-test-vector local-aspace)
+    (display "4...")(newline)
+    (remote-apply other-aspace display "4...")
+    (remote-apply other-aspace newline)
+    (remote-apply other-aspace gc-test-proxy local-aspace)
+    'finished))
 
-(define (gc-test-vector)
+;; =======================================================================
+
+(define (id x) x)
+
+;; =======================================================================
+
+(define (gc-test-vector as)
   (let lp ((i 10000))
     (if (zero? i)
-	(collect)
+	(begin
+	  (display (address-space-proxy-vector (local-address-space)))
+	  (newline)
+	  (remote-apply as
+			(lambda ()
+			  (display (address-space-proxy-vector (local-address-space)))
+			  (newline)))
+	  (display "collect") (newline)
+	  (remote-apply as display "collect")
+	  (remote-apply as newline)
+	  (collect)
+	  (remote-apply as collect)
+	  (display (address-space-proxy-vector (local-address-space)))
+	  (newline)
+	  (remote-apply as
+			(lambda ()
+			  (display (address-space-proxy-vector (local-address-space)))
+			  (newline))))	  
 	(begin
 	  (let ((v (vector 1 2 3 4 5 6 7 8 9 10)))
-	    (remote-apply as display v)
+	    (remote-apply as id v)
 	    (lp (- i 1)))))))
-;; -> 
-;; server called 6 times gc-proxies
-;; client called 3 times gc-proxies + the one forced by (collect)
-;;
-;; -> after (gc-test-proxy) with 1000 - after it went wrong
-;; server called 7 times gc-proxies
-;;         everytime with ... (wnet wrong)
-;;
-;; client called 3 times gc-proxies + the one forced by (collect)
 
-
-;; =======================================================================
-;; =======================================================================
-
-
-(define (gc-test-proxy)
-  (let lp ((i 1000)) ;; was 10000
+(define (gc-test-proxy as)
+  (let lp ((i 10000))
     (if (zero? i)
-	(collect)
+	(begin
+	  (display (address-space-proxy-vector (local-address-space)))
+	  (newline)
+	  (remote-apply as
+			(lambda ()
+			  (display (address-space-proxy-vector (local-address-space)))
+			  (newline)))
+	  (display "collect") (newline)
+	  (remote-apply as display "collect")
+	  (remote-apply as newline)
+	  (collect)
+	  (remote-apply as collect)
+	  (display (address-space-proxy-vector (local-address-space)))
+	  (newline)
+	  (remote-apply as
+			(lambda ()
+			  (display (address-space-proxy-vector (local-address-space)))
+			  (newline))))	
 	(begin
 	  (let ((pv (make-proxy (vector 1 2 3 4 5 6 7 8 9 10))))
 	    (remote-apply as 
 			  (lambda (p)
-			    (display (any-proxy-value p)))
+			    (id (any-proxy-value p)))
 			  pv)
 	    (lp (- i 1)))))))
-;; -> after (gc-test-vector) i=10000 i=1000
-;; segmentation fault (core dumped)
-;;
-;; =======================================================================
-;;
-;; -> called with "fresh heap" i=10000
-;; server called 4 times gc-proxies 
-;;        everytime there was a
-;; Error while running root thread, thread killed: #{Thread 10950 post-gc-handler}
-;;
-;; VM Exception: 102
-;;     wrong-type-argument
-;;     #((1 0 #{Procedure 9786 (unnamed in lp in gc-test-proxy)} #{Proxy #{Address-space 192.168.0.127 1479} 3}) () () 0)
-;;     13
-;;     0
-;;
-;; before
-;; then "segmentation fault (corde dumped)" again
-;;
-;; client called 3 times gc-proxies
-;;
-;; =======================================================================
-;;
-;; -> with "fresh heap" and i = 1000
-;; server called 1 time gc-proxies - went wrong...
-;; clinet called 0 times gc-proxies + the one forced by (collect)
-
