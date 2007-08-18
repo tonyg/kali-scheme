@@ -25,7 +25,7 @@
   (open prescheme ps-receive vm-utilities vm-architecture memory data
 	ps-memory
 	debugging)
-  (files (gc-twospace heap))) ;; kali xox
+  (files (gc-twospace heap)))
 
 (define-structure gc gc-interface
   (open prescheme ps-receive vm-utilities vm-architecture

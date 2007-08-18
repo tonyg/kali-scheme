@@ -46,10 +46,10 @@
     (define s48-stob-in-heap?
       (external "s48_stob_in_heapP" (=> (integer) boolean)))
 
-    (define s48-set-heap-pointer!                             ;;kali xox
-      (external "s48_set_heap_pointerB" (=> (address) null))) ;;kali xox
-    (define s48-heap-limits                                   ;; kali xox
-      (external "s48_heap_limits" (=> () address address address address address))) ;; kali xox    
+    (define s48-set-heap-pointer!                             ;;kali
+      (external "s48_set_heap_pointerB" (=> (address) null))) ;;kali 
+    (define s48-heap-limits                                   ;; kali 
+      (external "s48_heap_limits" (=> () address address address address address))) ;; kali
     ))
 
 ;; kali - begin 

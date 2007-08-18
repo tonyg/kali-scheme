@@ -53,8 +53,7 @@
 	 (interp call)
 	 (interp define-primitive)
 	 (interp prim)
-	 (interp interrupt)
-	 )
+	 (interp interrupt))
   ;(optimize auto-integrate)
   )
 
@@ -340,10 +339,10 @@
 	memory 
 	data 
 	stob 
-	allocation
+	;allocation ; chnx takeout !try!
 	enum-case
 	heap
-	heap-internal 
+	;heap-internal ; chnx takeout !try!
 	struct)
   (files (interp transmit)))
 

@@ -103,8 +103,8 @@
 	  s48-check-heap
 	  s48-stob-in-heap?
 
-	  s48-set-heap-pointer! ;; kali ... xox
-	  s48-heap-limits ;; kali ... xox
+	  s48-set-heap-pointer! ;; kali
+	  s48-heap-limits ;; kali
 	  ))
 
 ;; kali -begin

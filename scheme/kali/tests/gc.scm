@@ -40,53 +40,49 @@
   (let lp ((i 10000))
     (if (zero? i)
 	(begin
-	  (display (address-space-proxy-vector (local-address-space)))
-	  (newline)
-	  (remote-apply as
-			(lambda ()
-			  (display (address-space-proxy-vector (local-address-space)))
-			  (newline)))
+	  (gimme-stat as)
+
 	  (display "collect") (newline)
+	  (collect)
+
 	  (remote-apply as display "collect")
 	  (remote-apply as newline)
-	  (collect)
 	  (remote-apply as collect)
-	  (display (address-space-proxy-vector (local-address-space)))
-	  (newline)
-	  (remote-apply as
-			(lambda ()
-			  (display (address-space-proxy-vector (local-address-space)))
-			  (newline))))	  
+
+	  (gimme-stat as))
 	(begin
 	  (let ((v (vector 1 2 3 4 5 6 7 8 9 10)))
 	    (remote-apply as id v)
 	    (lp (- i 1)))))))
 
 (define (gc-test-proxy as)
-  (let lp ((i 10000))
+  (let lp ((i 5000))
     (if (zero? i)
 	(begin
-	  (display (address-space-proxy-vector (local-address-space)))
-	  (newline)
-	  (remote-apply as
-			(lambda ()
-			  (display (address-space-proxy-vector (local-address-space)))
-			  (newline)))
+	  (gimme-stat as)
+
 	  (display "collect") (newline)
+	  (collect)
+
 	  (remote-apply as display "collect")
 	  (remote-apply as newline)
-	  (collect)
 	  (remote-apply as collect)
-	  (display (address-space-proxy-vector (local-address-space)))
-	  (newline)
-	  (remote-apply as
-			(lambda ()
-			  (display (address-space-proxy-vector (local-address-space)))
-			  (newline))))	
+
+	  (gimme-stat as))
 	(begin
+	  (if (zero? (modulo i 500))
+	      (gimme-stat as))
 	  (let ((pv (make-proxy (vector 1 2 3 4 5 6 7 8 9 10))))
 	    (remote-apply as 
 			  (lambda (p)
 			    (id (any-proxy-value p)))
 			  pv)
 	    (lp (- i 1)))))))
+
+(define (gimme-stat oas)
+  (display (address-space-proxy-vector (local-address-space)))
+  (newline)
+  (remote-apply oas
+		(lambda ()
+		  (display (address-space-proxy-vector (local-address-space)))
+		  (newline))))
