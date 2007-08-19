@@ -1,3 +1,26 @@
+syntax: regexp
 (^|/)\.svn($|/)
 (^|/)\.hg($|/)
 (^|/)\.hgtags($|/)
+.*~$
+^autom4te\.cache
+^config\.status$
+^configure$
+^build/filenames\.(bat|make)$
+^build/initial\.(debug|image)$
+^build/scheme48-files\.wxi$
+^doc/html
+^doc/manual.(pdf|ps)$
+^doc/manual.ps$
+^doc/src/.*\.(aux|dvi|hlog|idx|ind|log|ilg|eval4tex|out|toc)$
+^doc/src/manual-Z-G
+^scheme/debug/.*\.(debug|image)$
+^scheme/env/unicode-info\.scm$
+^scheme/rts/syntax-info\.scm$
+^scheme/big/unicode-normalization-info\.scm$
+^scheme/srfi/srfi-14-base-char-sets\.scm$
+^c/scheme48\.h$
+^c/scheme48vm\.c$
+^c/scheme48heap\.c$
+^c/scheme48(read|write)-image\.c$
+^c/sysdep\.h\.in$
