@@ -262,9 +262,10 @@
 	     (else
 	      (punt))))
 	  (lambda ()
-	    (open-channel (os-string->byte-vector (x->os-string file-name))
-			  file-name
-			  option close-silently?)))))
+	    (let ((file-name/os (x->os-string file-name)))
+	      (open-channel (os-string->byte-vector file-name/os)
+			    (os-string->string file-name/os)
+			    option close-silently?))))))
     (if (channel? thing)
 	(coercion thing (channel-buffer-size))
 	(signal-condition thing))))

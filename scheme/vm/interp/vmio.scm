@@ -223,9 +223,13 @@
   (write-error-string (error-string status))
   (write-error-newline)
   (write-error-string " while closing port ")
-  (if (vm-string? id)
-      (write-error-string (extract-low-string id))
-      (write-error-integer (extract-fixnum index)))
+  (cond
+   ((vm-string? id)
+    (write-error-string (extract-low-string id)))
+   ((fixnum? id)
+    (write-error-integer (extract-fixnum index)))
+   (else
+    (write-error-string "<strange id>")))
   (write-error-newline)
   (unspecific))
 
@@ -365,9 +369,13 @@
 (define (notify-channel-closed channel)
   (let ((id (channel-id channel)))
     (write-error-string "Channel closed: ")
-    (if (fixnum? id)
-	(write-error-integer (extract-fixnum id))
-	(write-vm-string id (current-error-port)))
+    (cond
+     ((fixnum? id)
+      (write-error-integer (extract-fixnum id)))
+     ((vm-string? id)
+      (write-vm-string id (current-error-port)))
+     (else
+      (write-error-string "<strange id>")))
     (write-error-string " ")
     (write-error-integer (extract-fixnum (channel-os-index channel)))
     (write-error-newline)
