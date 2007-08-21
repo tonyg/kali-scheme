@@ -239,13 +239,13 @@ AC_INIT(c/prescheme.h)
      AC_CONFIG_HEADER(c/sysdep.h)
      AC_CONFIG_HEADER(c/scheme48write-barrier.h)
      AC_CANONICAL_HOST
+     dnl set the cross-compile flag before we try anything.
+     AC_TRY_RUN([int main() { return 0;}], [], [], [true])
      S48_PICK_GC
      S48_ENABLE_UNIVERSAL_BINARY
      S48_CREATE_BUILD_DIRS
      S48_LDFLAGS
      AC_ISC_POSIX
-     dnl set the cross-compile flag before we try anything.
-     AC_TRY_RUN([int main() { return 0;}], [], [], [true])
      S48_INLINE
      AC_PROG_INSTALL
      AC_CHECK_LIB(m, main)
