@@ -788,7 +788,7 @@ compile-vm:
 		echo ',exec ,load load-ps-compiler.scm';		     \
 		echo ',exec ,load compile-vm-no-gc.scm';		     \
 		echo ',exit'						     \
-	) | $(RUNNABLE) -h 8000000 &&					     \
+	) | $(RUNNABLE) -h 12000000 &&					     \
 		mv ../scheme/vm/scheme48vm.c ../c
 
 
