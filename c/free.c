@@ -398,9 +398,9 @@ int s48_dragon(buf, v) char *buf; double v; {
    if (e == exp_max) {
      /* infinity or NaN */
      if (f == 0)
-       strcpy(buf, sign ? "#{-Inf}" : "#{Inf}");
+       strcpy(buf, sign ? "-inf.0" : "+inf.0");
      else
-       strcpy(buf, "#{NaN}");
+       strcpy(buf, "+nan.0");
      return 0;
    }
 

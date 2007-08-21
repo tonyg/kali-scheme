@@ -274,6 +274,13 @@
     (float->string n))
    ((zero? n)
     (string-copy "#i0"))
+   ((not (= n n))
+    (string-copy "+nan.0"))
+   ;; awkward, so we don't get IEEE representations into the image
+   ((= n (/ 1 (exact->inexact 0)))
+    (string-copy "+inf.0"))
+   ((= n (/ -1 (exact->inexact 0)))
+    (string-copy "-inf.0"))
    (else
     (let* ((p (abs (inexact->exact (numerator n))))
 	   (q (inexact->exact (denominator n))))
@@ -297,8 +304,12 @@
 		 (digits 1 #f #f)
 		 (case first
 		   ((#\+ #\-)
-		    (and (char-numeric? second)
-			 (digits 2 #f #f)))
+		    (or (and (char-numeric? second)
+			     (digits 2 #f #f))
+			(string=? s "+nan.0")
+			(string=? s "-nan.0")
+			(string=? s "+inf.0")
+			(string=? s "-inf.0")))
 		   ((#\.)
 		    (and (char-numeric? second)
 			 (digits 2 #t #f)))
