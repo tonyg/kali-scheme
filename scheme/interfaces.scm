@@ -604,7 +604,8 @@
   (export os-string?
 	  string->os-string byte-vector->os-string x->os-string
 	  os-string->string os-string->byte-vector
-	  call-with-os-string-text-codec))
+	  call-with-os-string-text-codec
+	  current-os-string-text-codec))
 
 (define-interface i/o-internal-interface
   (export input-port-option		;read.scm
