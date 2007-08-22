@@ -19,7 +19,6 @@ s48_init_asm_glue(void)
 static s48_value
 s48_provide_asm_values(s48_value asm_vector)
 {
-  extern void s48_stack_gc();
   extern long s48_unknown_call();
   extern long s48_unknown_return();
   extern long s48_unknown_return_values();
@@ -58,7 +57,7 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 1, s48_enter_fixnum((long) &ScontS));
   /* 2 *stack*      */
   S48_VECTOR_SET(asm_vector, 3, s48_enter_fixnum((long) &s48_Sstack_limitS));
-  S48_VECTOR_SET(asm_vector, 4, s48_enter_fixnum((long) &s48_stack_gc));
+  // S48_VECTOR_SET(asm_vector, 4, s48_enter_fixnum((long) &s48_stack_gc));
   S48_VECTOR_SET(asm_vector, 5, s48_enter_fixnum((long) &s48_ShpS));
   S48_VECTOR_SET(asm_vector, 6, s48_enter_fixnum((long) &s48_SlimitS));
   S48_VECTOR_SET(asm_vector, 7, s48_enter_fixnum((long) &s48_unknown_call));
