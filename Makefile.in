@@ -381,44 +381,44 @@ install: enough dirs \
 	 inst-script-interpreters inst-config-script
 
 inst-vm:
-	$(INSTALL_PROGRAM) $(VM) $(LIB)
+	$(INSTALL_PROGRAM) $(VM) $(DESTDIR)$(LIB)
 
 inst-image:
 	rm -f '/tmp/$(IMAGE)' &&					\
 	$(srcdir)/build/build-usual-image $(srcdir) '$(LIB)'            \
 	         '/tmp/$(IMAGE)' './$(VM)' '$(INITIAL)' &&		\
-	$(INSTALL_DATA) /tmp/$(IMAGE) $(LIB) &&				\
+	$(INSTALL_DATA) /tmp/$(IMAGE) $(DESTDIR)$(LIB) &&				\
 	rm /tmp/$(IMAGE)
 
 inst-man:
-	$(srcdir)/mkinstalldirs $(mandir)
+	$(srcdir)/mkinstalldirs $(DESTDIR)$(mandir)
 	sed 's=LBIN=$(bindir)=g' $(srcdir)/doc/scheme48.man |	   \
 		sed 's=LLIB=$(LIB)=g' |				   \
 		sed 's=LS48=$(RUNNABLE)=g' >$(MANPAGE) &&	   \
-	$(INSTALL_DATA) $(MANPAGE) $(mandir) &&			   \
+	$(INSTALL_DATA) $(MANPAGE) $(DESTDIR)$(mandir) &&			   \
 	rm $(MANPAGE);						   \
 
 inst-inc: c/scheme48.exp
-	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(incdir)
-	$(INSTALL_DATA) c/scheme48write-barrier.h $(incdir)
-	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier-twospace.h $(incdir)
-	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier-bibop.h $(incdir)
-	$(INSTALL_DATA) $(srcdir)/c/scheme48.exp $(incdir)
-	$(INSTALL_DATA) $(srcdir)/c/scheme48-external.exp $(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(DESTDIR)$(incdir)
+	$(INSTALL_DATA) c/scheme48write-barrier.h $(DESTDIR)$(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier-twospace.h $(DESTDIR)$(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier-bibop.h $(DESTDIR)$(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48.exp $(DESTDIR)$(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48-external.exp $(DESTDIR)$(incdir)
 
 inst-misc:
 	for stub in env big sort opt misc link posix cml srfi; do	\
 		for f in $(srcdir)/scheme/$$stub/*.scm; do		\
-			$(INSTALL_DATA) $$f $(LIB)/$$stub || exit 1;	\
+			$(INSTALL_DATA) $$f $(DESTDIR)$(LIB)/$$stub || exit 1;	\
 		done;							\
 	done &&								\
 	for f in $(srcdir)/scheme/rts/*num.scm 				\
 		 $(srcdir)/scheme/rts/jar-defrecord.scm; do		\
-		$(INSTALL_DATA) $$f $(LIB)/rts || exit 1;		\
+		$(INSTALL_DATA) $$f $(DESTDIR)$(LIB)/rts || exit 1;		\
 	done
 
 inst-script:
-	script=$(bindir)/$(RUNNABLE) &&					\
+	script=$(DESTDIR)$(bindir)/$(RUNNABLE) &&					\
 	echo '#!/bin/sh'	>$$script &&				\
 	echo			>>$$script &&				\
 	echo 'lib=$(LIB)'	>>$$script &&				\
@@ -428,11 +428,12 @@ inst-script:
 
 inst-script-interpreters:
 	for dialect in r5rs srfi-7; do					\
-		$(INSTALL_PROGRAM) script-interpreter $(bindir)/scheme-$$dialect; \
+		$(INSTALL_PROGRAM) script-interpreter			\
+			$(DESTDIR)$(bindir)/scheme-$$dialect;		\
 	done
 
 inst-config-script:
-	config_script=$(bindir)/$(CONFIG_SCRIPT) &&			\
+	config_script=$(DESTDIR)$(bindir)/$(CONFIG_SCRIPT) &&			\
 	sed -e 's,@incdir\@,$(incdir),g'				\
 	    -e 's,@libdir\@,$(libdir),g'				\
 	    -e 's,@CC\@,$(CC),g'					\
@@ -459,11 +460,11 @@ c/scheme48.exp: c/scheme48.h
 
 dirs:
 	for dir in $(libdir) $(bindir) $(incdir); do			 \
-		$(srcdir)/mkinstalldirs $$dir || exit 1;	 		 \
+		$(srcdir)/mkinstalldirs $(DESTDIR)$$dir || exit 1;	 \
 	done
-	$(srcdir)/mkinstalldirs $(LIB)
+	$(srcdir)/mkinstalldirs $(DESTDIR)$(LIB)
 	for dir in rts env big sort opt misc link posix cml srfi; do	  \
-		$(srcdir)/mkinstalldirs $(LIB)/$$dir || exit 1;	 	  \
+		$(srcdir)/mkinstalldirs $(DESTDIR)$(LIB)/$$dir || exit 1; \
 	done
 
 configure: configure.in
