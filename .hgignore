@@ -21,7 +21,7 @@ syntax: regexp
 ^scheme/srfi/srfi-14-base-char-sets\.scm$
 ^c/scheme48\.h$
 ^c/scheme48vm\.c$
-^c/scheme48heap\.c$
+^c/scheme48.*heap\.c$
 ^c/scheme48(read|write)-image\.c$
 ^c/sysdep\.h\.in$
 ^Release
