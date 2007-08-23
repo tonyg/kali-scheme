@@ -220,17 +220,24 @@
 	      (loop (cons char rev-chars)
 		    (+ 1 char-count)
 		    (+ count source-index)))
+	     ((not count)
+	      (if maybe-error-char
+		  (loop (cons maybe-error-char rev-chars)
+			(+ 1 char-count)
+			(+ 1 source-index))
+		  (decoding-error enc	; ####
+				  "invalid encoding"
+				  source (+ start source-index))))
+	     ;; it's incomplete from here
 	     (maybe-error-char
-	      (loop (cons maybe-error-char rev-chars)
-		    (+ 1 char-count)
-		    (+ 1 source-index)))
-	     (count
-	      (decoding-error enc	; ####
-			      "incomplete encoding"
-			      source (+ start source-index)))
+	      (let loop ((error-char-count (- source-count count))
+			 (rev-chars '()))
+		(if (zero? error-char-count)
+		    (reverse-list->string rev-chars (+ 1 char-count))
+		    (loop (- error-char-count 1) (cons maybe-error-char rev-chars)))))
 	     (else
 	      (decoding-error enc	; ####
-			      "invalid encoding"
+			      "incomplete encoding"
 			      source (+ start source-index)))))))))
 
 ))))
