@@ -33,7 +33,6 @@
 	     (begin
 	       (send channel i)
 	       (loop (+ 1 i)))))))
-
     
     (let loop ((count 0)
 	       (values '()))
@@ -41,7 +40,7 @@
 	  (check values
 		 (=> lset=)
 		 (iota 2000))
-	  (loop (+ 1 count 1)
+	  (loop (+ 1 count)
 		(cons (receive channel) values))))))
 
 (define-test-case select-1 rendezvous-channels-tests
@@ -70,7 +69,7 @@
 	  (check values
 		 (=> lset=)
 		 (iota 2000))
-	  (loop (+ 1 count 1)
+	  (loop (+ 1 count)
 		(cons (select (receive-rv channel-1)
 			      (receive-rv channel-2))
 		      values))))))
@@ -113,7 +112,7 @@
 	    (if (< n 1000)
 		(check chan => 1)
 		(check chan => 2))
-	    (loop (+ 1 count 1)
+	    (loop (+ 1 count)
 		  (cons n values)))))))
 
 (define (make-rv-notifier rv ack-message nack-message callback)
@@ -136,17 +135,25 @@
      (lambda ()
        (sleep 500)
        (send channel-1 'ignore)))
-    (select (make-rv-notifier (receive-rv channel-1)
-			      "ch1" "not ch1"
-			      (lambda (message)
-				(set! message-1 message)))
-	    (make-rv-notifier (receive-rv channel-2)
-			      "ch2" "not ch2"
-			      (lambda (message)
-				(set! message-2 message))))
-    (sleep 500)
-    (check message-1 => "ch1")
-    (check message-2 => "not ch2")))
+    (let ((notifier-1
+	   (make-rv-notifier (receive-rv channel-1)
+			     "ch1" "not ch1"
+			     (lambda (message)
+			       (set! message-1 message))))
+	  (notifier-2
+	   (make-rv-notifier (receive-rv channel-2)
+			     "ch2" "not ch2"
+			     (lambda (message)
+			       (set! message-2 message)))))
+      (select notifier-1 notifier-2)
+      (sleep 500)
+      (check message-1 => "ch1")
+      (check message-2 => "not ch2")
+      ;; kill off remaining thread
+      (spawn
+       (lambda ()
+	 (send channel-2 'ignore)))
+      (select notifier-1 notifier-2))))
 
 (define-test-case with-nack-2 rendezvous-channels-tests
   (let ((channel-1 (make-channel))
@@ -157,17 +164,25 @@
      (lambda ()
        (send channel-1 'ignore)))
     (sleep 500)
-    (select (make-rv-notifier (receive-rv channel-1)
-			      "ch1" "not ch1"
-			      (lambda (message)
-				(set! message-1 message)))
-	    (make-rv-notifier (receive-rv channel-2)
+    (let ((notifier-1
+	   (make-rv-notifier (receive-rv channel-1)
+			     "ch1" "not ch1"
+			     (lambda (message)
+			       (set! message-1 message))))
+	  (notifier-2
+	   (make-rv-notifier (receive-rv channel-2)
 			      "ch2" "not ch2"
 			      (lambda (message)
-				(set! message-2 message))))
-    (sleep 500)
-    (check message-1 => "ch1")
-    (check message-2 => "not ch2")))
+				(set! message-2 message)))))
+      (select notifier-1 notifier-2)
+      (sleep 500)
+      (check message-1 => "ch1")
+      (check message-2 => "not ch2")
+      ;; kill off remaining thread
+      (spawn
+       (lambda ()
+	 (send channel-2 'ignore)))
+      (select notifier-1 notifier-2))))
 
 (define-test-suite rendezvous-jars-tests)
 
@@ -211,11 +226,14 @@
 	  (ensure
 	   (lambda (res)
 	     (check (member res '((1 . 17)
-				  (2 . 17)
+				  (2 .  17)
 				  (3 . 17)
 				  (1 . 23)
 				  (2 . 23)
 				  (3 . 23)))))))
+      ;; kill off remaining thread
+      (jar-put! jar-1 #f)
+      (receive result-channel)
       (ensure res-1)
       (ensure res-2))))
 
@@ -474,6 +492,7 @@
   (rendezvous-channels-tests
    rendezvous-jars-tests
    rendezvous-placeholders-tests
-   with-nack-tests))
+   with-nack-tests
+   ))
   
   

@@ -10,6 +10,6 @@ echo ,exec ,load load-ps-compiler.scm >> compile-vm.input
 echo ,exec ,load compile-vm-no-gc.scm >> compile-vm.input
 echo ,exit >> compile-vm.input
 
-call %runnable% -h 10000000 < compile-vm.input
+call %runnable% -h 12000000 < compile-vm.input
 cd ..
 move /Y scheme\vm\scheme48vm.c c

@@ -52,7 +52,10 @@
 ; started.
 
 (define (command-loop condition)
-  (push-command-level condition #f))
+  ;; The handler may have gotten unwound by `raise'
+  (with-handler command-loop-condition-handler
+    (lambda ()
+      (push-command-level condition #f))))
 
 ; Install the handler, bind $NOTE-UNDEFINED to keep from annoying the user,
 ; bind $FOCUS-BEFORE to avoid keeping state on the stack where it can be

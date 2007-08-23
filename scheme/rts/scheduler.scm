@@ -138,3 +138,6 @@
 
 (define (decrement-counter! count)
   (set-car! count (- (car count) 1)))
+
+(define (set-counter! count val)
+  (set-car! count val))

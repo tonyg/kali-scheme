@@ -733,7 +733,7 @@
 	  round-robin-event-handler
 
 	  make-counter            ; for thread counts
-	  counter-value
+	  counter-value set-counter!
           increment-counter!
           decrement-counter!))
 
