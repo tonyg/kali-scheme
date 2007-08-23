@@ -101,16 +101,23 @@
 	((= 1 (counter-value (command-level-thread-counter level)))
 	 (list (command-level-repl-thread level)))
 	(else
-	 (let ((threads (all-threads)))
-	   (do ((i 0 (+ i 1))
-		(es '() (let ((thread (vector-ref threads i)))
-			  (if (and (thread-continuation thread)
-				   (eq? level (thread-data thread)))
-			      (cons thread es)
-			      es))))
-	       ((= i (vector-length threads))
-		(set-command-level-threads! level (make-weak-pointer es))
-		es))))))
+	 (exact-command-level-threads level))))
+
+; Use this when you really have to know.  It's still somewhat
+; imprecise as we may get threads that are already dead, but at least
+; it doesn't leave anything out.
+
+(define (exact-command-level-threads level)
+  (let ((threads (all-threads)))
+    (do ((i 0 (+ i 1))
+	 (es '() (let ((thread (vector-ref threads i)))
+		   (if (and (thread-continuation thread)
+			    (eq? level (thread-data thread)))
+		       (cons thread es)
+		       es))))
+	((= i (vector-length threads))
+	 (set-command-level-threads! level (make-weak-pointer es))
+	 es))))
 
 ;----------------------------------------------------------------
 ; Entry point
@@ -266,7 +273,7 @@
 (define $current-level (make-fluid #f))
 
 (define (terminate-level level)
-  (let ((threads (command-level-threads level))
+  (let ((threads (exact-command-level-threads level))
 	(*out?* #f))
     (for-each (lambda (thread)
 		(if (thread-continuation thread)
@@ -277,7 +284,7 @@
        (if *out?*
 	   (error "trying to throw back into a command level" level)))
      (lambda ()
-       (run-command-level level #t))
+       (run-command-level level (length threads)))
      (lambda ()
        (set! *out?* #t)
        (let ((levels (command-level-levels level)))
@@ -311,17 +318,27 @@
 ; Make sure the input and output ports are available and then run the threads
 ; on LEVEL's queue.
 
-(define (run-command-level level terminating?)
-  (if (not terminating?)
-      (set-exit-status! #f))
-  (run-threads
-    (round-robin-event-handler (command-level-queue level)
-			       command-quantum
-			       (unspecific)
-			       (command-level-thread-counter level)
-			       (command-level-event-handler level terminating?)
-			       command-level-upcall-handler
-			       (command-level-wait level terminating?))))
+; TERMINATE-COUNT is a number if we're terminating, indicating the
+; exact number of threads that must still terminate.  Note that the
+; current value of the thread counter is not a good indication, as it
+; includes threads that have died a quiet death by garbage collection:
+; We'll never see them again, but if they were included in the count,
+; the thread system would falsely detect deadlock.
+
+(define (run-command-level level terminate-count)
+  (let ((counter (command-level-thread-counter level))
+	(terminating? (and terminate-count #t)))
+    (if terminating?
+	(set-counter! counter terminate-count)
+	(set-exit-status! #f))
+    (run-threads
+     (round-robin-event-handler (command-level-queue level)
+				command-quantum
+				(unspecific)
+				counter
+				(command-level-event-handler level terminating?)
+				command-level-upcall-handler
+				(command-level-wait level terminating?)))))
 
 ; The number of milliseconds per timeslice in the command interpreter
 ; scheduler.  Should be elsewhere?
@@ -379,7 +396,7 @@
 
 (define (command-level-wait level terminating?)
   (lambda ()
-    (cond ((< 0 (counter-value (command-level-thread-counter level)))
+    (cond ((positive? (counter-value (command-level-thread-counter level)))
 	   (wait)
 	   #t)
 	  (terminating?
