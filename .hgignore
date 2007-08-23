@@ -24,3 +24,10 @@ syntax: regexp
 ^c/scheme48heap\.c$
 ^c/scheme48(read|write)-image\.c$
 ^c/sysdep\.h\.in$
+^Release
+^Debug
+^build/.*\.input$
+^generate-c-header\.input$
+^ps-compiler/.*\.input$
+^scheme48\.(ncb|res|suo|vcproj.*)$
+^scheme48vm\.(exe|exp|lib)$
