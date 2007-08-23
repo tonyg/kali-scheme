@@ -102,7 +102,7 @@
 
                 <File Id="include_scheme48write.barrier.h"
                       Name="S48-WB.H" LongName="scheme48write-barrier.h"
-                      src="c/scheme48write-barrier.h"
+                      src="c/win32/scheme48write-barrier.h"
                       DiskId="1" Vital="yes" />
               </Component>
             </Directory>

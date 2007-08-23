@@ -44,7 +44,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="c,c/bibop"
+				AdditionalIncludeDirectories="c,c/bibop,c/win32"
 				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE;__COMPILING_SCHEME48_ITSELF__"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -134,7 +134,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="c,c/bibop"
+				AdditionalIncludeDirectories="c,c/bibop,c/win32"
 				PreprocessorDefinitions="_DEBUG;WIN32;_CONSOLE;__COMPILING_SCHEME48_ITSELF__"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
