@@ -1,7 +1,7 @@
 #! /bin/sh 
 
-echo "This script requires an installed scheme48 executable in the path"
-echo "The executable should be Scheme 48 1.3 or 1.4 (but not 1.5!)" &&
+echo "This script requires an installed scheme48 executable in the path."
+echo "The executable should be Scheme 48 1.6 or later." &&
 sleep 3 &&
 autoheader &&
 autoconf &&
