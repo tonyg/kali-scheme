@@ -331,7 +331,8 @@ static BOOL is_STD_INPUT_console,
   is_STD_OUTPUT_console,
   is_STD_ERROR_console;
 
-HANDLE s48_main_thread;
+/* defined and initialized in event.c */
+extern HANDLE s48_main_thread;
 
 DWORD WINAPI
 reader_thread_proc(LPVOID lpParameter)
@@ -1230,18 +1231,6 @@ s48_fd_io_init()
   HANDLE handle;
 
   initialize_stream_descriptors();
-
-  /* Yes, this is the official hoopla to get at an absolute handle for
-     the current thread.  GetCurrentThread() returns a *constant*. */
-     
-  if (!DuplicateHandle(GetCurrentProcess(),
-		       GetCurrentThread(), GetCurrentProcess(),
-		       &s48_main_thread,
-		       THREAD_ALL_ACCESS, FALSE, 0))
-    {
-      fprintf(stderr, "DuplicateHandle failed\n");
-      exit(-1);
-    }
 
   /* these Unix-style indices are hard-wired into the VM */
   handle = GetStdHandle(STD_INPUT_HANDLE);

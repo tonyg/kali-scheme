@@ -13,8 +13,6 @@
 #include "scheme48vm.h"
 #include "event.h"
 
-/* from Lars Bergstrom's port */
-
 static void
 set_signal_catcher(int signum, void (*catcher)(int))
 {
@@ -23,12 +21,24 @@ set_signal_catcher(int signum, void (*catcher)(int))
 
 static long keyboard_interrupt_count = 0;
 
-static void
-when_keyboard_interrupt(int ign)
+static VOID CALLBACK
+keyboard_interrupt_callback(DWORD dwParam)
 {
   keyboard_interrupt_count += 1;
   NOTE_EVENT;
-  return;
+}
+
+HANDLE s48_main_thread;
+
+when_keyboard_interrupt(int ign)
+{
+  if (!QueueUserAPC(keyboard_interrupt_callback,
+		    s48_main_thread,
+		    (DWORD) 0))
+    {
+      fprintf(stderr, "QueueUserAPC failed\n");
+      exit(-1);
+    }
 }
 
 static void
@@ -495,6 +505,18 @@ void
 s48_sysdep_init(void)
 {
   startup_real_time_ticks = GetTickCount();
+
+  /* Yes, this is the official hoopla to get at an absolute handle for
+     the current thread.  GetCurrentThread() returns a *constant*. */
+     
+  if (!DuplicateHandle(GetCurrentProcess(),
+		       GetCurrentThread(), GetCurrentProcess(),
+		       &s48_main_thread,
+		       THREAD_ALL_ACCESS, FALSE, 0))
+    {
+      fprintf(stderr, "DuplicateHandle failed\n");
+      exit(-1);
+    }
 
   start_control_c_interrupts();
 
