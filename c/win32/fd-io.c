@@ -571,7 +571,7 @@ ps_close_fd(long fd)
     case STREAM_FILE_REGULAR:
       {
 	HANDLE handle = stream_descriptor->file_regular_data.handle;
-	
+
 	if (CloseHandle(handle))
 	  status = NO_ERRORS;
 	else
@@ -594,7 +594,7 @@ ps_close_fd(long fd)
     case STREAM_SOCKET:
       {
 	SOCKET socket = stream_descriptor->socket_data.socket;
-	
+
 	if (closesocket(socket) == 0)
 	  status = NO_ERRORS;
 	else
@@ -957,7 +957,7 @@ ps_read_fd(long fd, char *buffer, long max, psbool waitp,
 
 	if ((wsa_status == 0)
 	    && (numberOfBytesRecvd == 0))
-	  *eofp = PSTRUE;
+	    *eofp = PSTRUE;
 
 	if ((wsa_status == 0)
 	    || (WSAGetLastError() == WSA_IO_PENDING))
@@ -1169,10 +1169,41 @@ long
 ps_abort_fd_op(long fd_as_long)
 {
   int fd = (int)fd_as_long;
+  stream_descriptor_t* stream_descriptor = &(stream_descriptors[fd]);
+  psbool pending_p = s48_is_pending(fd);
 
   if (!s48_remove_fd(fd))
     fprintf(stderr, "Error: ps_abort_fd_op, no pending operation on fd %d\n",
 	            fd);
+
+  switch (stream_descriptor->type)
+    {
+    case STREAM_FILE_REGULAR:
+      {
+	HANDLE handle = stream_descriptor->file_regular_data.handle;
+	CancelIo(handle);
+
+	/* flush any pending completion routines */
+	if (pending_p)
+	  while (SleepEx(0, TRUE) == IO_COMPLETION_EVENT)
+	    ;
+
+	break;
+      }
+    case STREAM_SOCKET:
+      {
+	SOCKET socket = stream_descriptor->socket_data.socket;
+	CancelIo((HANDLE) socket);
+
+	/* flush any pending completion routines */
+	if (pending_p)
+	  while (SleepEx(0, TRUE) == IO_COMPLETION_EVENT)
+	    ;
+
+	break;
+      }
+    }
+
   return 0;      /* because we do not actually do any I/O in parallel the
 		    status is always zero: no characters transfered. */
 }

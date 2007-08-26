@@ -123,7 +123,11 @@
 	  (goto return
 		(cond ((error? status)
 		       (make-cell (enter-fixnum status) key))
-		      (eof? eof-object)
+		      (eof?
+		       ;; possible on Windows
+		       (if pending?
+			   (set-channel-os-status! channel true))
+		       eof-object)
 		      (pending?
 		       (set-channel-os-status! channel true)
 		       false)
