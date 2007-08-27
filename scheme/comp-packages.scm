@@ -54,19 +54,20 @@
 
 ; Nodes
 
-(define-structure nodes nodes-interface
-  (open scheme-level-2
-	meta-types names
-	simple-signals define-record-types tables
-	util)
-  (files (bcomp node)
-	 (bcomp schemify))
-  (optimize auto-integrate))
-
 (define-structure compiler-envs compiler-envs-interface
   (open scheme-level-2
 	meta-types names bindings)
   (files (bcomp cenv))
+  (optimize auto-integrate))
+
+(define-structure nodes nodes-interface
+  (open scheme-level-2
+	meta-types names packages packages-internal
+	compiler-envs bindings transforms
+	simple-signals define-record-types tables
+	util)
+  (files (bcomp node)
+	 (bcomp schemify))
   (optimize auto-integrate))
 
 ;--------------------------------

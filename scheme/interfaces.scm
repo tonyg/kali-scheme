@@ -975,11 +975,11 @@
 
 	  make-name-table
 
+	  make-qualified
 	  qualified?
 	  qualified-parent-name
 	  qualified-symbol
 	  qualified-uid
-	  name->qualified
 
           desyntaxify
 	  ))
@@ -1054,6 +1054,8 @@
 	  make-similar-node
 	  force-node
 	  schemify
+
+	  name->qualified
 
 	  get-operator
 	  make-operator-table
@@ -1242,6 +1244,7 @@
 	  location-info-table		;debuginfo, disclosers
 	  package-definition
 	  package-unstable?		;env/pacman.scm
+	  environment-stable?           ;comp/schemify.scm
 	  package-integrate?		;env/debug.scm
 	  package-add-static!		;opt/analyze.scm
 	  package-refine-type!		;opt/usage.scm

@@ -63,6 +63,53 @@
               (schemify-node form env)
               (desyntaxify form))))))
 
+; Convert an alias (generated name) to S-expression form ("qualified name").
+
+(define (name->qualified name env)
+  (cond ((not (generated? name))
+	 name)
+	((let ((d0 (lookup env name))
+	       (d1 (lookup env (generated-name name))))
+	   (and d0 d1 (same-denotation? d0 d1)))
+	 (generated-name name))   ;+++
+	(else
+	 (make-qualified (qualify-parent (generated-parent-name name)
+					 env)
+			 (generated-name name)
+			 (generated-uid name)))))
+
+; As an optimization, we elide intermediate steps in the lookup path
+; when possible.  E.g.
+;     #(>> #(>> #(>> define-record-type define-accessors)
+;              define-accessor)
+;         record-ref)
+; is replaced with
+;     #(>> define-record-type record-ref)
+
+(define (qualify-parent name env)
+  (let recur ((name name) (env env))
+    (if (generated? name)
+	(let ((parent (generated-parent-name name)))
+	  (if (and (environment-stable? env) 
+		   (let ((b1 (generic-lookup env name))
+			 (b2 (generic-lookup env parent)))
+		     (and b1
+			  b2
+			  (or (same-denotation? b1 b2)
+			      (and (binding? b1)
+				   (binding? b2)
+				   (let ((s1 (binding-static b1))
+					 (s2 (binding-static b2)))
+				     (and (transform? s1)
+					  (transform? s2)
+					  (eq? (transform-env s1)
+					       (transform-env s2)))))))))
+	      (recur parent env)	;+++
+	      (make-qualified (recur parent (generated-env name))
+			      (generated-name name)
+			      (generated-uid name))))
+	name)))
+
 (define-schemifier 'quote syntax-type
   (lambda (node env)
     (let ((form (node-form node)))

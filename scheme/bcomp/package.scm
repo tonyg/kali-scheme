@@ -91,6 +91,21 @@
 (define (structure-unstable? struct)
   (package-unstable? (structure-package struct)))
 
+; The #F returned for compile-time environments is conservative.  You could
+; look up the name of interest and see where it came from.  It might come
+; from a lexical binding or a stable package or structure.  A procedure to
+; do this could go in cenv.scm.
+
+(define (environment-stable? env)
+  (cond ((package? env)
+         (not (package-unstable? env)))
+        ((structure? env)
+         (not (structure-unstable? env)))
+        ((procedure? env)
+         #f)                    ; conservative
+        (else
+         (error "invalid environment" env))))
+
 ; Map PROC down the the [name type binding] triples provided by STRUCT.
 
 (define (for-each-export proc struct)

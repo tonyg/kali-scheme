@@ -118,54 +118,6 @@
 (define (qualified-symbol q) (vector-ref q 2))
 (define (qualified-uid q) (vector-ref q 3))
 
-; Convert an alias (generated name) to S-expression form ("qualified name").
-
-(define (name->qualified name env)
-  (cond ((not (generated? name))
-	 name)
-	((let ((d0 (cenv-lookup env name))
-	       (d1 (cenv-lookup env (generated-name name))))
-	   (and d0 d1 (same-denotation? d0 d1)))
-	 (generated-name name))   ;+++
-	(else
-	 (make-qualified (qualify-parent (generated-parent-name name)
-					 env)
-			 (generated-name name)
-			 (generated-uid name)))))
-	 
-; As an optimization, we elide intermediate steps in the lookup path
-; when possible.  E.g.
-;     #(>> #(>> #(>> define-record-type define-accessors)
-;		define-accessor)
-;	   record-ref)
-; is replaced with
-;     #(>> define-record-type record-ref)
-;
-; I think that this is buggy.  The RECUR calls are using the wrong environment.
-; ENV is not the environment in which the names will be looked up.
-
-(define (qualify-parent name env)
-  (let recur ((name name))
-    (if (generated? name)
-	(let ((parent (generated-parent-name name)))
-	  (if (let ((b1 (cenv-lookup env name))
-		    (b2 (cenv-lookup env parent)))
-		(and b1
-		     b2
-		     (or (same-denotation? b1 b2)
-			 (and (binding? b1)
-			      (binding? b2)
-			      (let ((s1 (binding-static b1))
-				    (s2 (binding-static b2)))
-				(and (transform? s1)
-				     (transform? s2)
-				     (eq? (transform-env s1)
-					  (transform-env s2))))))))
-	      (recur parent) ;+++
-	      (make-qualified (recur parent)
-			      (generated-name name)
-			      (generated-uid name))))
-	name)))
   
 
 
