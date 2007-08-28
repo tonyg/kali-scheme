@@ -472,16 +472,19 @@ configure: configure.in
 
 clean:
 	-rm -f $(VM) script-interpreter					\
-		*.o c/unix/*.o c/posix/*.o c/*.o c/fake/*.o c/bibop/*.o\
-		c/glue_gnu.s c/glue_darwin.s				\
+		*.o c/unix/*.o c/posix/*.o c/*.o c/fake/*.o c/bibop/*.o	\
+		c/*.a c/glue_gnu.s c/glue_darwin.s c/scheme48.exp 	\
 		TAGS $(IMAGE)						\
-		build/*.tmp $(MANPAGE) build/linker.image		\
-		scheme/debug/*.image scheme/debug/*.debug config.cache	\
-		scheme/vm/scheme48vm.c scheme/vm/scheme48heap.c		\
+		$(srcdir)/build/*.tmp $(srcdir)/$(MANPAGE) 		\
+		$(srcdir)/scheme/debug/*.image 				\
+		$(srcdir)/scheme/debug/*.debug 				\
+		$(srcdir)/scheme/vm/scheme48vm.c 			\
+		$(srcdir)/scheme/vm/scheme48*heap.c			\
 		go $(distname)
 
 distclean: clean
-	rm -f Makefile config.log config.status c/sysdep.h
+	rm -f Makefile config.log config.status config-cache \
+		c/sysdep.h c/scheme48write-barrier.h
 
 check:	$(VM) $(IMAGE) scheme/debug/check.scm
 	(								\
