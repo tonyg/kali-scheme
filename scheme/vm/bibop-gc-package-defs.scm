@@ -7,6 +7,7 @@
 (define-interface heap-bibop-interface
   (export s48-set-max-heap-size!
 	  s48-max-heap-size
+	  s48-min-heap-size
 
 	  s48-set-new-small-start-addr!
 	  s48-get-new-small-start-addr

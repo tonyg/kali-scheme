@@ -790,7 +790,7 @@ void s48_collect(psbool force_major) {
 
     -h <heap_size> : means <heap_size> cells (0 means no size limit).
 
-    Without the -h flag, the heap size is 3000000 cells per default
+    Without the -h flag, the heap size gets a default value
     (init.c).  We have to calculate a minimal heap size, set by the
     special configuration of BIBOP (gc_config.h), to decide during the
     initialization (s48_initialize_bibop_heap()) if the given
@@ -1784,23 +1784,18 @@ void s48_initialize_image_areas(long small_bytes, long small_hp_d,
  void s48_check_heap_sizeB() {
 /*********************************************************************/
 
-   unsigned long tmp_hsize; /* cells */
-   unsigned long tmp_ahsize; /* cells */
-   
+   unsigned long max_size = s48_max_heap_size(); /* cells */
+   extern long s48_min_heap_size(void);
+   unsigned long min_size = s48_min_heap_size(); /* cells */
    
    /*Check the given heap size (flag -h) and the actual one */
    
-   tmp_hsize = s48_max_heap_size();
-   tmp_ahsize = S48_BYTES_TO_CELLS(s48_heap_size());
-   
-   if (tmp_hsize == 0) {
+   if (max_size == 0) {
      printf("Warning: Without a maximum heap size, infinite recursions can cause the system to run out of memory.\n");
-   } else if ((tmp_hsize > 0) && (tmp_ahsize > tmp_hsize)) {
-     s48_set_max_heap_sizeB( 2 * tmp_ahsize );
-     printf("Maximum heap size %i is too small, using %i cells instead.\n", tmp_hsize,
+   } else if (min_size > max_size) {
+     s48_set_max_heap_sizeB( min_size );
+     printf("Maximum heap size %i is too small, using %i cells instead.\n", max_size,
 	    s48_max_heap_size());
    }
-
-   return;
  }
 

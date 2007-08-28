@@ -10,6 +10,11 @@
 (define (s48-set-max-heap-size! size)
   (set! *max-heap-size* size))
 
+(define *min-heap-size* 0)
+
+(define (s48-min-heap-size)
+  *min-heap-size*)
+
 ; addresses of the new allocated heap areas
 ; <= s48_initialize_heap()
 (define *new-small-start-addr* null-address)
@@ -57,6 +62,7 @@
   (= image-size 0)			; for the type checker
 
   (set! *max-heap-size* max-heap-size)
+  (set! *min-heap-size* (* 4 image-size))
 
   (s48-initialize-bibop-heap)
 
