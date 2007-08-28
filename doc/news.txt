@@ -7,7 +7,7 @@ Recent changes to Scheme 48.
 	   A new, experimental garbage collector written by David
 	    Frese has been added.  It can be enabled by specifying
 	    "--enable-gc=bibop" on the configure command line.  (It is
-	    disabled by default.)
+	    disabled by default on Unix, but enabled on Windows.)
 	   DESTDIR support has been added to the Makefile (thanks to
 	    Markus Weissmann, Ivan Shmakov, Will Job von Foo)
 	  Bug fixes:
