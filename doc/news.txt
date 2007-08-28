@@ -2,6 +2,29 @@
 
 Recent changes to Scheme 48.
 
+09/01/07 (version 1.7)
+	 Additions:
+	   A new, experimental garbage collector written by David
+	    Frese has been added.  It can be enabled by specifying
+	    "--enable-gc=bibop" on the configure command line.  (It is
+	    disabled by default.)
+	   DESTDIR support has been added to the Makefile (thanks to
+	    Markus Weissmann, Ivan Shmakov, Will Job von Foo)
+	  Bug fixes:
+	   Ctrl-C now works more reliably on Windows.
+	   An I/O bug on Windows where an EOF on read would cause a
+	   crash has been fixed.  (reported by Christoph Bauer)
+	   A bug that would cause spurious deadlocks with the
+	    interactive REPL was fixed.
+	   A bug where the last exception handler would get
+	    de-installed has been fixed (reported by Emilio Lopes)
+	   A bug in BYTES->STRING-N that would cause it to break on
+	    incomplete incodings was fixed (reported by Emilio Lopes)
+	   CURRENT-OS-STRING-TEXT-CODEC is now exported from
+	    OS-STRINGS as documented (reported by Emilio Lopes)
+	   A bug where random text would be printed when a port was
+	    closed by GC was fixed.  (reported by Will Clinger)
+
 03/19/07 (version 1.6)
 	 Additions:
 	  An autogen.sh script for generating the various generated
