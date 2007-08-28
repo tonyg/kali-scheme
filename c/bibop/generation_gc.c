@@ -1788,14 +1788,12 @@ void s48_initialize_image_areas(long small_bytes, long small_hp_d,
    extern long s48_min_heap_size(void);
    unsigned long min_size = s48_min_heap_size(); /* cells */
    
-   /*Check the given heap size (flag -h) and the actual one */
-   
-   if (max_size == 0) {
-     printf("Warning: Without a maximum heap size, infinite recursions can cause the system to run out of memory.\n");
-   } else if (min_size > max_size) {
+   /* Check the given heap size (flag -h) and the actual one */
+   if ((max_size != 0) && (min_size > max_size)) {
      s48_set_max_heap_sizeB( min_size );
-     printf("Maximum heap size %i is too small, using %i cells instead.\n", max_size,
-	    s48_max_heap_size());
+     fprintf(stderr,
+	     "Maximum heap size %i is too small, using %i cells instead.\n", max_size,
+	     s48_max_heap_size());
    }
  }
 
