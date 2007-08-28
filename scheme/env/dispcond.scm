@@ -6,15 +6,21 @@
 
 (define display-condition
   (let ((display display) (newline newline))
-    (lambda (c port)
-      (if (ignore-errors (lambda ()
-			   (newline port)
-			   (really-display-condition c port)
-			   #f))
-	  (begin (display "<Error while displaying condition.>" port)
-		 (newline port))))))
+    (lambda (c port . rest)
+      (let ((depth (if (pair? rest)
+		       (car rest)
+		       5))
+	    (length (if (and (pair? rest) (pair? (cdr rest)))
+			(cadr rest)
+			6)))
+	(if (ignore-errors (lambda ()
+			     (newline port)
+			     (really-display-condition c port depth length)
+			     #f))
+	    (begin (display "<Error while displaying condition.>" port)
+		   (newline port)))))))
 
-(define (really-display-condition c port)
+(define (really-display-condition c port depth length)
   (let* ((stuff (disclose-condition c))
 	 (stuff (if (and (list? stuff)
 			 (not (null? stuff))
@@ -27,7 +33,7 @@
 	       (let ((message (cadr stuff)))
 		 (if (string? message)
 		     (display message port)
-		     (limited-write message port *depth* *length*)))
+		     (limited-write message port depth length)))
 	       (let ((spaces
 		      (make-string (+ (string-length
 				       (symbol->string (car stuff)))
@@ -36,19 +42,9 @@
 		 (for-each (lambda (irritant)
 			     (newline port)
 			     (display spaces port)
-			     (limited-write irritant port *depth* *length*))
+			     (limited-write irritant port depth length))
 			   (cddr stuff)))))
     (newline port)))
-
-(define *depth* 5)
-(define (condition-display-depth) *depth*)
-(define (set-condition-display-depth! new)
-  (set! *depth* new))
-
-(define *length* 6)
-(define (condition-display-length) *length*)
-(define (set-condition-display-length! new)
-  (set! *length* new))
 
 (define-generic disclose-condition &disclose-condition)
 

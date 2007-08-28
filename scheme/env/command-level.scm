@@ -215,11 +215,13 @@
     (cond ((or (warning? c)
 	       (note? c))
 	   (force-output (current-output-port))	; keep synchronous
-	   (display-condition c (current-error-port))
+	   (display-condition c (current-error-port)
+			      (condition-writing-depth) (condition-writing-length))
 	   (unspecific))		; proceed
 	  ((or (error? c) (bug? c))
 	   (force-output (current-output-port))	; keep synchronous
-	   (display-condition c (current-error-port))
+	   (display-condition c (current-error-port)
+			      (condition-writing-depth) (condition-writing-length))
 	   (scheme-exit-now 1))
 	  (else
 	   (next-handler)))))

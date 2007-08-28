@@ -93,6 +93,14 @@
 (define inspector-writing-length (user-context-accessor 'inspector-writing-length
 							(lambda () 5)))
 (define set-inspector-writing-length! (user-context-modifier 'inspector-writing-length))
+
+(define condition-writing-depth (user-context-accessor 'condition-writing-depth
+						       (lambda () 5)))
+(define set-condition-writing-depth! (user-context-modifier 'condition-writing-depth))
+
+(define condition-writing-length (user-context-accessor 'condition-writing-length
+							(lambda () 6)))
+(define set-condition-writing-length! (user-context-modifier 'condition-writing-length))
   
 ;----------------
 ; User session state.
