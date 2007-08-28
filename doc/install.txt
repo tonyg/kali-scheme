@@ -2,29 +2,22 @@
 
 Here are some remarks to complement what's in the INSTALL file.
 
-Customizing the installation
+-----
 
-  1. If you don't believe in configure scripts, or don't have a
-     /bin/sh that can handle the configure script, you can make
-     sysdep.h and Makefile manually from sysdep.h.in and Makefile.in.
-     The technique is fairly obvious.  For Makefile, just give
-     reasonable values for all of the variables at the top that are
-     defined as "foo = @foo@", e.g. srcdir=., CC=cc, LIBS=-lm,
-     INSTALL=cp, etc.  For sysdep.h, read the comments.  If your OS is
-     Posix compliant, you should be able to copy sysdep.h.in to
-     sysdep.h unmodified and everything should work.
+Building packages
 
-  2. If you definitely won't be installing Scheme 48, you should set
-     libdir to the distribution directory (e.g. "make libdir=`pwd`").
-     This will make the ,open and ,load-package commands work for the
-     library packages defined in more-packages.scm.
+The Makefile uses the DESTDIR variable to indicate where the installed
+files actually go.  So, for example
 
-  3. If desired, customize the contents of the development environment
-     heap image by editing the definitions of USUAL-COMMANDS and/or
-     USUAL-FEATURES in more-packages.scm; see below.
+make DESTDIR=/usr/local/build/scheme48
 
-  4. If you're using a DEC MIPS, and want to use the foreign function
-     interface, specify LDFLAGS=-N (with e.g. "make LDFLAGS=-N").
+allows populating /usr/local/build/scheme48 with an installation of
+Scheme 48, regardless of where it goes when actually installed.  Note
+that, if DESTDIR is not the same as the --prefix option specified with
+the 'configure' script, the Scheme 48 installation in $(DESTDIR) will
+not actually run from there---it needs to be moved to the prefix
+directory to work correctly, as several paths are compiled into the
+scheme48 script as well as scheme48.image.
 
 -----
 
@@ -58,39 +51,63 @@ to rebuild the image.
 
 Deeper changes to the system -- for example, edits to most of the
 files in the rts/ directory -- will require using the static linker to
-make a new initial.image.  After you have a working scheme48.image
-(perhaps a previous version of Scheme 48), you can create a linker
-image with
-
-        make linker
-
-after which you can say
+make a new initial.image.  Say
 
         make image
 
 to get the linker to build a new initial.image and initial.debug.
-scheme48.image will then be built from those.
+scheme48.image will then be built from those.  You need a working
+installation of Scheme 48 in your path for this to work.  This
+installation should be Scheme 48 1.5 or later.  If your installed
+Scheme 48 is version 1.4 or earlier, you can still build, but need to
+make a small change to the Makefile.  Instructions are in the
+Makefile---look for "LINKER_WRITEBYTE".
 
 You might think that "make scheme48.image" ought to do this, but the
-circular dependencies
+circular dependency between scheme48.image and initial.image needs to
+be broken somewhere, or else make will (justifiably) barf.  I chose to
+break the cycle by making scheme48.image not depend on initial.image,
+since this is most robust for installation purposes.
 
-  scheme48.image on initial.image
-  initial.image on link/linker.image
-  link/linker.image on scheme48.image
+-----
 
-needs to be broken somewhere, or else make will (justifiably) barf.  I
-chose to break the cycle by making scheme48.image not depend on
-initial.image, since this is most robust for installation purposes.
+Changes to the VM require compiling the Scheme code to C code using
+the PreScheme compiler.  Use
+
+        make i-know-what-i-am-doing
+
+to rebuild the C sources from the Scheme sources.  (And you should
+know what you're doing when attempting this.)  This requires a working
+installation of Scheme 48 in the path.
+
+-----
+
+Other generated files:
+
+filenames.make is "include"d by the Makefile, but is automatically
+generated from the module dependencies laid out in the various
+configuration files (*-packages.scm).  If you edit any of these .scm
+files, you may want to do a "make filenames.make" before you do any
+further "make"s in order to update the depedencies.  This step isn't
+necessary if you're using GNU make, because GNU make will make
+included files automatically.
+
+Various tables for handling Unicode are also automatically generated
+by the default make target.  However, the generated files ship with
+the system, so you shouldn't need to do this unless you change the
+input files or the code generating them.
+
 
 -----
 
 Editor support
 
-We recommend interacting with the Scheme 48 command processor using the
-emacs/scheme interface written by Olin Shivers at CMU.  Copies of the
-relevant .el files, together with a "cmuscheme48.el", are in the
-emacs/ subdirectory of the release.  Usage information is in
-doc/user-guide.txt.
+We recommend interacting with the Scheme 48 command processor using
+the emacs/scheme interface written by Olin Shivers at CMU.  Copies of
+the relevant .el files, together with a "cmuscheme48.el", are in the
+emacs/ subdirectory of the release.  If you're an XEmacs user, note
+that cmuscheme48.el is part of the scheme XEmacs package, and is thus
+probably installed already.
 
 You will probably want to byte-compile the .el files to get .elc
 files.  Use M-x byte-compile-file to do this.
@@ -136,12 +153,3 @@ release comes along.
 See the user's guide for information on the ,bench command, which
 makes programs run faster.
 
------
-
-filenames.make is "include"d by the Makefile, but is automatically
-generated from the module dependencies laid out in the various
-configuration files (*-packages.scm).  If you edit any of these .scm
-files, you may want to do a "make filenames.make" before you do any
-further "make"s in order to update the depedencies.  This step isn't
-necessary if you're using Gnu make, because Gnu make will make
-included files automatically.

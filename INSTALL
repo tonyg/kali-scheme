@@ -8,8 +8,8 @@ file to your /tmp directory, and then issue the following shell
 commands:
 
   cd /usr/local/src
-  gunzip </tmp/scheme48-1.1.tgz | tar xf -
-  cd scheme48-1.1
+  gunzip </tmp/scheme48-1.7.tgz | tar xf -
+  cd scheme48-1.7
   ./configure
   make install
 
@@ -29,8 +29,28 @@ issue the command "make" instead of "make install" to build it, and
 
 to run it.
 
-What follows is generic information about the 'configure' script.
-For installation information specific to Scheme 48, see doc/install.txt.
+Attached to this file is generic information about the 'configure'
+script.  The 'configure' script that ships with Scheme 48 has some
+specific options, however:
+
+--enable-gc=<gc>
+
+configures Scheme 48 with a specific garbage collector (GC).  Two GCs
+ship with the system "twospace" and "bibop": The twospace GC is the
+default---it is simple, but has inferior performance and requires a
+fixed limit on the heap size.  The bibop GC is much more sophisticated
+and faster, and it allows specifying "-h 0" on the command line,
+meaning that the heap will expand as necessary to accomodate the
+program.  Note that this means that a program with, say, infinite
+non-tail recursion will grow the heap indefinitely.
+
+--enable-universal-binary
+
+works only on Apple Macs and means that Scheme 48 will be built as a
+Universal Binary that can run on both PowerPC and Intel Macs.
+
+For more information on how to customize an installation of Scheme 48,
+see doc/install.txt.
 
 ----------------
 
