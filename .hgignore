@@ -15,6 +15,7 @@ syntax: regexp
 ^script-interpreter$
 ^build/filenames\.(bat|make)$
 ^build/initial\.(debug|image)$
+^build/reify-debug\.tmp$
 ^build/scheme48-files\.wxi$
 ^doc/html
 ^doc/manual.(pdf|ps)$
@@ -34,8 +35,10 @@ syntax: regexp
 ^c/sysdep\.h(\.in)?$
 ^Release
 ^Debug
+^check\.input$
 ^build/.*\.input$
 ^generate-c-header\.input$
 ^ps-compiler/.*\.input$
+^go\.bat$
 ^scheme48\.(ncb|res|suo|vcproj.*)$
 ^scheme48vm\.(exe|exp|lib)$
