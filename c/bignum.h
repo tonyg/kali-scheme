@@ -82,14 +82,14 @@ extern bignum_type s48_bignum_length_in_bits(bignum_type);
 extern bignum_type s48_bignum_length_upper_limit(void);
 extern bignum_type s48_digit_stream_to_bignum
        (unsigned int n_digits,
-	unsigned int (*producer(bignum_procedure_context)),
+	unsigned int (*producer)(bignum_procedure_context),
 	bignum_procedure_context context,
 	unsigned int radix,
 	int negative_p);
 extern void s48_bignum_to_digit_stream
 	    (bignum_type,
 	     unsigned int radix,
-	     void *consumer(bignum_procedure_context, long),
+	     void (*consumer)(bignum_procedure_context, long),
 	     bignum_procedure_context context);
 extern long s48_bignum_max_digit_stream_radix(void);
 

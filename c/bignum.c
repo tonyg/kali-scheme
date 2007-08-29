@@ -486,7 +486,7 @@ s48_bignum_to_long(bignum_type bignum)
 }
 
 bignum_type
-ulong_to_bignum(unsigned long n)
+s48_ulong_to_bignum(unsigned long n)
 {
   bignum_digit_type result_digits [BIGNUM_DIGITS_FOR_LONG];
   bignum_digit_type * end_digits = result_digits;
@@ -639,7 +639,7 @@ s48_bignum_length_upper_limit(void)
 
 bignum_type
 s48_digit_stream_to_bignum(unsigned int n_digits,
-			   unsigned int *producer(bignum_procedure_context),
+			   unsigned int (*producer)(bignum_procedure_context),
 			   bignum_procedure_context context,
 			   unsigned int radix,
 			   int negative_p)
@@ -681,8 +681,8 @@ s48_digit_stream_to_bignum(unsigned int n_digits,
 void
 s48_bignum_to_digit_stream(bignum_type bignum,
 			   unsigned int radix,
-			   void *consumer(bignum_procedure_context,
-					  bignum_digit_type),
+			   void (*consumer)(bignum_procedure_context,
+					    bignum_digit_type),
 			   bignum_procedure_context context)
 {
   BIGNUM_ASSERT ((radix > 1) && (radix <= BIGNUM_RADIX_ROOT));
