@@ -145,7 +145,7 @@
 	  (else 
            (display-dispatcher-condition condition aspace)
 	   (let ((out (current-error-port)))
-	     (display "Terminating dipatcher!" out)
+	     (display "Terminating dispatcher!" out)
 	     (newline out))
            (obtain-lock (address-space-lock aspace))
            (close-input-port (address-space-in-port aspace))
