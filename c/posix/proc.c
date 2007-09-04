@@ -399,15 +399,6 @@ add_dot_slash(char *name)
  */
 
 /*
- * These need to be replaced with something that really blocks interrupts.
- * I don't know what that should be.  This is needed in c/unix/events.c as
- * well.
- */
-
-#define block_interrupts()
-#define allow_interrupts()
-
-/*
  * Simple front for kill().  We have to retry if interrupted.
  */
 
