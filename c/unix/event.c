@@ -1,7 +1,7 @@
 /* Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
-#include <signal.h>		/* for sigaction() (POSIX.1) */
+#include <signal.h> /* for sigaction(), pthread_sigmask() / sigprocmask() (POSIX.1) */
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -11,20 +11,42 @@
 #include <errno.h>              /* for errno, (POSIX?/ANSI) */
 #include <string.h>		/* FD_ZERO sometimes needs this */
 #include "sysdep.h"
+#ifdef HAVE_PTHREAD_H
+#include <pthread.h>
+#endif
 #include "c-mods.h"
 #include "scheme48vm.h"
 #include "event.h"
 
 /* turning interrupts and I/O readiness into events */
 
-#define block_interrupts()
-#define allow_interrupts()
-
 void		s48_when_keyboard_interrupt(int ign);
 void		s48_when_alarm_interrupt(int ign);
 static void     when_sigpipe_interrupt(int ign);
 psbool		s48_setcatcher(int signum, void (*catcher)(int));
 void		s48_start_alarm_interrupts(void);
+
+static sigset_t interrupt_mask;
+
+/*
+ * They're basically the same, but the behavior of sigprocmask is
+ * undefined in the presence of Pthreads.
+ */
+#ifdef HAVE_PTHREAD_H
+#define SIGMASK pthread_sigmask
+#else
+/* sigprocmask can be interrupted, while pthread_sigmask cannot */
+static int
+our_sigmask(int how, const sigset_t *set, sigset_t *oset)
+{
+  int retval;
+  while ((retval = sigprocmask(how, set, oset))
+	 && (errno == EINTR))
+    ;
+  return retval;
+}
+#define SIGMASK our_sigmask
+#endif
 
 void
 s48_sysdep_init(void)
@@ -53,7 +75,36 @@ s48_sysdep_init(void)
 	    errno);
     exit(1);
   }
+
+  sigemptyset(&interrupt_mask);
+  sigaddset(&interrupt_mask, SIGINT);
+  sigaddset(&interrupt_mask, SIGALRM);
+
   s48_start_alarm_interrupts();
+}
+
+static void
+block_keyboard_n_alarm_interrupts(void)
+{
+  if (SIGMASK(SIG_BLOCK, &interrupt_mask, NULL))
+    {
+      fprintf(stderr,
+	      "Failed to block SIGINT/SIGALRM, errno = %d\n",
+	      errno);
+      exit(1);
+    }
+}
+
+static void
+allow_keyboard_n_alarm_interrupts(void)
+{
+  if (SIGMASK(SIG_UNBLOCK, &interrupt_mask, NULL))
+    {
+      fprintf(stderr,
+	      "Failed to unblock SIGINT/SIGALRM, errno = %d\n",
+	      errno);
+      exit(1);
+    }
 }
 
 /*
@@ -274,9 +325,9 @@ s48_get_next_event(long *ready_fd, long *status)
     fprintf(stderr, "[poll at %d (waiting for %d)]\n", s48_current_time, alarm_time);
     */
   if (keyboard_interrupt_count > 0) {
-    block_interrupts();
+    block_keyboard_n_alarm_interrupts();
     --keyboard_interrupt_count;
-    allow_interrupts();
+    allow_keyboard_n_alarm_interrupts();
     /* fprintf(stderr, "[keyboard interrupt]\n"); */
     return (KEYBOARD_INTERRUPT_EVENT);
   }
@@ -302,12 +353,12 @@ s48_get_next_event(long *ready_fd, long *status)
   }
   if (s48_os_signal_pending())
     return (OS_SIGNAL_EVENT);
-  block_interrupts();
+  block_keyboard_n_alarm_interrupts();
   if ((keyboard_interrupt_count == 0)
       &&  (alarm_time == -1 || s48_current_time < alarm_time)
       &&  (poll_time == -1 || s48_current_time < poll_time))
     s48_Spending_eventsPS = PSFALSE;
-  allow_interrupts();
+  allow_keyboard_n_alarm_interrupts();
   return (NO_EVENT);
 }
 
