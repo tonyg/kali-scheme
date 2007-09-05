@@ -14,6 +14,7 @@
 	vmio
 	arithmetic-opcodes
 	external-opcodes
+	shared-bindings
 	symbols
 	io-opcodes
 	external-gc-roots
@@ -110,8 +111,16 @@
 	gc gc-roots gc-util
 	heap ; S48-GATHER-OBJECTS
 	string-tables
-	external)
+	external
+	shared-bindings)
   (files (interp external-call)))
+
+(define-structure shared-bindings shared-bindings-interface
+  (open prescheme
+	vm-architecture data struct
+	string-tables
+	gc gc-roots gc-util)
+  (files (interp shared-binding)))
 
 (define-structure io-opcodes (export)
   (open prescheme vm-utilities vm-architecture ps-receive enum-case

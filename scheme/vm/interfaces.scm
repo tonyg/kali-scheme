@@ -140,18 +140,26 @@
 	  ))
 
 (define external-opcodes-interface
-  (export ; called from outside
+  (export s48-setup-external-exception
+	  s48-resetup-external-exception))
+
+(define shared-bindings-interface
+  (export ;; called from outside	
           s48-define-exported-binding
 	  s48-get-imported-binding
-	  s48-setup-external-exception
-	  s48-resetup-external-exception
 
-	  ; called on startup
+	  ;; called on startup
 	  install-shared-bindings!+gc
 	  
-	  ; for writing images
+	  ;; for writing images
 	  s48-imported-bindings
 	  s48-exported-bindings
+
+	  ;; for the primitives
+	  undefine-shared-binding!
+	  lookup-imported-binding lookup-exported-binding
+	  shared-binding-undefined? for-each-imported-binding
+	  shared-binding-size
 	  ))
 
 (define-interface external-gc-roots-interface
