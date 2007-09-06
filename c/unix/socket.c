@@ -35,19 +35,21 @@ static s48_value	s48_socket(s48_value udp_p, s48_value input_p),
 			s48_listen(s48_value socket_channel),
 			s48_accept(s48_value socket_channel, s48_value retry_p),
 			s48_connect(s48_value socket_channel,
-				    s48_value machine,
+				    s48_value address,
 				    s48_value port,
 				    s48_value retry_p),
                         s48_dup_socket_channel(s48_value socket_fd),
 			s48_close_socket_half(s48_value socket_channel,
 					      s48_value input_p),
+                        s48_get_host_by_name(s48_value machine),
+                        s48_get_host_by_address(s48_value address),
 			s48_get_host_name(void),
 			s48_udp_send(s48_value channel,
 				     s48_value udp_address,
 				     s48_value buffer,
 				     s48_value length),
 			s48_udp_receive(s48_value channel, s48_value message),
-			s48_lookup_udp_address(s48_value name, s48_value port);
+			s48_lookup_udp_address(s48_value address, s48_value port);
 
 /* Forward declaration. */
 static s48_value dup_socket_channel(int socket_fd);
@@ -85,6 +87,8 @@ s48_init_socket(void)
   S48_EXPORT_FUNCTION(s48_connect);
   S48_EXPORT_FUNCTION(s48_dup_socket_channel);
   S48_EXPORT_FUNCTION(s48_close_socket_half);
+  S48_EXPORT_FUNCTION(s48_get_host_by_name);
+  S48_EXPORT_FUNCTION(s48_get_host_by_address);
   S48_EXPORT_FUNCTION(s48_get_host_name);
   
   S48_EXPORT_FUNCTION(s48_udp_send);
@@ -287,6 +291,40 @@ s48_accept(s48_value channel, s48_value retry_p)
   return S48_FALSE;
 }
 
+static s48_value
+s48_get_host_by_name(s48_value machine)
+{
+  struct hostent *host;
+  char* machine_name = s48_extract_byte_vector(machine);
+  RETRY_NULL(host, gethostbyname(machine_name));
+  if (host == NULL)
+    s48_raise_os_error(h_errno);
+  return s48_enter_byte_vector(host->h_addr, host->h_length);
+}
+
+/*
+ * Get the name of the `sch_addr''s host.  If we can't get the real
+ * host name we use the numbers-and-dots representation of the
+ * address.
+ */
+ 
+static s48_value
+s48_get_host_by_address(s48_value sch_addr)
+{
+  char		*hostname;
+  struct hostent *hostdata;
+  
+  hostdata = gethostbyaddr((char *) s48_extract_byte_vector(sch_addr),
+			   sizeof(struct in_addr),
+			   AF_INET);
+  if (hostdata == NULL)
+    hostname  = inet_ntoa(*((struct in_addr *) s48_extract_byte_vector(sch_addr)));
+  else
+    hostname = hostdata->h_name;
+  
+  return s48_enter_string_latin_1(hostname);
+}
+
 /*
  * Given an internet-domain stream socket, a machine name and a port number,
  * connect the socket to that machine/port.
@@ -299,40 +337,34 @@ s48_accept(s48_value channel, s48_value retry_p)
 
 static s48_value
 s48_connect(s48_value channel,
-	    s48_value machine,
+	    s48_value sch_address,
 	    s48_value port,
 	    s48_value retry_p)
 {
   int			socket_fd,
     			port_number;
-  char			*machine_name;
-  struct hostent	*host;
   struct sockaddr_in	address;
 
   S48_CHECK_CHANNEL(channel);
   socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
 
-  machine_name = s48_extract_byte_vector(machine);
-  
   S48_CHECK_FIXNUM(port);
   port_number = S48_UNSAFE_EXTRACT_FIXNUM(port);
   
   /*
-   * Get the host and initialize `address'.
+   * Initialize `address'.
    */
 
-  RETRY_NULL(host, gethostbyname(machine_name));
-  if (host == NULL)
-    s48_raise_os_error(h_errno);
-  
   memset((void *)&address, 0, sizeof(address));
-  address.sin_family = host->h_addrtype;
+  address.sin_family = AF_INET;
 
-  if (host->h_length > sizeof(address.sin_addr))
-    s48_raise_range_error(s48_enter_fixnum(host->h_length),
+  if (S48_BYTE_VECTOR_LENGTH(sch_address) > sizeof(address.sin_addr))
+    s48_raise_range_error(s48_enter_fixnum(S48_BYTE_VECTOR_LENGTH(sch_address)),
 			  S48_UNSAFE_ENTER_FIXNUM(0),
 			  s48_enter_fixnum(sizeof(address.sin_addr)));
-  memcpy((void *)&address.sin_addr, (void *)host->h_addr, host->h_length);
+  memcpy((void *)&address.sin_addr,
+	 (void *)s48_extract_byte_vector(sch_address),
+	 S48_BYTE_VECTOR_LENGTH(sch_address));
   address.sin_port = htons(port_number);
 
   /*
@@ -586,19 +618,10 @@ address_connection(struct sockaddr_in *addr)
 }
 
 static s48_value
-s48_lookup_udp_address(s48_value name, s48_value port)
+s48_lookup_udp_address(s48_value address, s48_value port)
 {
-  struct hostent *	host = gethostbyname(s48_extract_byte_vector(name));
-  struct in_addr	address;
-  
-  if (host == NULL ||
-      host->h_addrtype != AF_INET ||	/* could happen, I suppose */
-      host->h_addr_list[0] == NULL)
-    s48_raise_os_error(errno);
-    
-  address = *((struct in_addr *) host->h_addr_list[0]);
-
-  return lookup_connection(address, s48_extract_fixnum(port));
+  return lookup_connection(*((struct in_addr *) s48_extract_byte_vector(address)),
+			   s48_extract_fixnum(port));
 }
 
 /*
@@ -648,16 +671,13 @@ add_new_connection(int index, struct in_addr address, unsigned long port)
 
   S48_GC_PROTECT_1(udp_address);
 
-  sch_address = S48_MAKE_VALUE(struct in_addr);		/* may GC */
+  sch_address
+    = s48_enter_byte_vector((char*) (&address), sizeof(struct in_addr)); /* may GC */
   
-  S48_UNSAFE_EXTRACT_VALUE(sch_address, struct in_addr) = address;
-
   S48_UNSAFE_RECORD_SET(udp_address, 0, sch_address);
   S48_UNSAFE_RECORD_SET(udp_address, 1, S48_UNSAFE_ENTER_FIXNUM(port));
   
-  name = get_hostname(address);				/* may GC */
-
-  S48_UNSAFE_RECORD_SET(udp_address, 2, name);
+  S48_UNSAFE_RECORD_SET(udp_address, 2, S48_FALSE);
 
   S48_UNSAFE_VECTOR_SET(connections, index, udp_address);
   connection_count += 1;
@@ -667,26 +687,6 @@ add_new_connection(int index, struct in_addr address, unsigned long port)
   S48_GC_UNPROTECT();
   
   return udp_address;
-}
-
-/*
- * Get the name of the `addr''s host.  If we can't get the real host name
- * we use the numbers-and-dots representation of the address.
- */
- 
-static s48_value
-get_hostname(struct in_addr addr)
-{
-  char		*hostname;
-  struct hostent *hostdata;
-  
-  hostdata = gethostbyaddr((char *) &addr, sizeof(struct in_addr), AF_INET);
-  if (hostdata == NULL)
-    hostname = inet_ntoa(addr);
-  else
-    hostname = hostdata->h_name;
-  
-  return s48_enter_string_latin_1(hostname);
 }
 
 /*

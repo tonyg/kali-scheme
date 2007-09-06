@@ -10,6 +10,9 @@
 ; Client interface
 ;   (socket-client host-name socket-number) -> [input-port output-port]
 
+; (get-host-by-name name) -> address
+; (get-host-by-address address) -> name
+
 ; Old calls I would like to get rid off.
 ;   (socket-listen socket) -> [input-port output-port]
 ;   (socket-listen-channels socket) -> [input-channel output-channel]
@@ -116,7 +119,7 @@
     (let loop ((retry? #f))
       (disable-interrupts!)
       (let ((output-channel (real-socket-connect channel
-						 (host-name->byte-vector host-name)
+						 (get-host-by-name host-name)
 						 port-number
 						 retry?)))
 	(cond ((channel? output-channel)
@@ -131,6 +134,9 @@
 		   (maybe-commit-and-wait-for-condvar condvar))
 		 (enable-interrupts!)
 		 (loop #t))))))))
+
+(define (get-host-by-name name)
+  (real-get-host-by-name (host-name->byte-vector name)))
 
 ;; #### This needs to be IDNA
 
@@ -154,9 +160,15 @@
 (define-record-type udp-address :udp-address
   (udp-addresses-are-made-from-c-code)
   udp-address?
-  (address  udp-address-address)	; C value
+  (address  udp-address-address)	; byte vector
   (port     udp-address-port)		; port number
-  (hostname udp-address-hostname))	; string
+  (hostname real-udp-address-hostname set-udp-address-hostname!))	; string
+
+(define (udp-address-hostname addr)
+  (or (real-udp-address-hostname addr)
+      (let ((name (get-host-by-address addr)))
+	(set-udp-address-hostname! addr name)
+	name)))
 
 (define-record-discloser :udp-address
   (lambda (s)
@@ -204,6 +216,9 @@
   (real-lookup-udp-address (host-name->byte-vector name)
 			   port))
 
+(define (lookup-udp-address name port)
+  (real-lookup-udp-address (get-host-by-name name)
+			   port))
 ;----------------
 ; We need to explicitly close socket channels.
 
@@ -224,7 +239,7 @@
 (import-lambda-definition real-socket-listen (socket) "s48_listen")
 (import-lambda-definition real-socket-accept (socket retry?) "s48_accept")
 (import-lambda-definition real-socket-connect (socket
-					       machine
+					       address
 					       port-number
 					       retry?)
 			  "s48_connect")
@@ -232,6 +247,8 @@
 			  "s48_dup_socket_channel")
 (import-lambda-definition close-socket-half (socket input?)
 			  "s48_close_socket_half")
+(import-lambda-definition real-get-host-by-name (name) "s48_get_host_by_name")
+(import-lambda-definition get-host-by-address (address) "s48_get_host_by_address")
 (import-lambda-definition get-host-name () "s48_get_host_name")
 
 ; UDP calls
@@ -239,5 +256,5 @@
 			  "s48_udp_send")
 (import-lambda-definition real-udp-receive (socket buffer)
 			  "s48_udp_receive")
-(import-lambda-definition real-lookup-udp-address (name port)
+(import-lambda-definition real-lookup-udp-address (address port)
 			  "s48_lookup_udp_address")

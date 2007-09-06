@@ -380,6 +380,8 @@
 				     socket-port-number
 				     socket-client
 				     get-host-name
+				     get-host-by-name
+				     get-host-by-address
 
 				     ; From the old interface
 				     ; I would like to get rid of these.
