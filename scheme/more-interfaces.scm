@@ -626,6 +626,7 @@
 	  obtain-lock
 	  maybe-obtain-lock
 	  release-lock
+	  with-lock
 	  lock-owner))		;really should be internal
 
 (define-interface value-pipes-interface

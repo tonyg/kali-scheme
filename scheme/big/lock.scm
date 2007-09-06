@@ -59,6 +59,9 @@
 	     (or (maybe-commit)
 		 (lose)))))))
 
-
-
+(define (with-lock lock thunk)
+  (dynamic-wind
+      (lambda () (obtain-lock lock))
+      thunk
+      (lambda () (release-lock lock))))
 

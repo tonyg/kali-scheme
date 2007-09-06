@@ -104,7 +104,7 @@
   (optimize auto-integrate))
 
 (define-structure locks locks-interface
-  (open scheme-level-1 queues
+  (open scheme-level-2 queues
 	threads threads-internal
 	interrupts
 	proposals)
