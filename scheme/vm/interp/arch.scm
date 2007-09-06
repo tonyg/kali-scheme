@@ -320,6 +320,7 @@
    post-minor-gc post-major-gc ; handler is passed a list of finalizers
    i/o-completion  ; handler is passed channel, error flag and status
    os-signal
+   external-event  ; handler is passed event type uid
    ))
 
 ; Possible problems

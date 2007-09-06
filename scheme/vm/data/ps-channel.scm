@@ -105,6 +105,7 @@
    alarm-event                  ; scheduled interrupt
    os-signal-event		; some OS signal of no interest to the VM occured
    error-event                  ; OS error occurred
+   external-event		; custom external event
    no-event                     ; no more pending events
    ))
 

@@ -399,15 +399,6 @@ add_dot_slash(char *name)
  */
 
 /*
- * These need to be replaced with something that really blocks interrupts.
- * I don't know what that should be.  This is needed in c/unix/events.c as
- * well.
- */
-
-#define block_interrupts()
-#define allow_interrupts()
-
-/*
  * Simple front for kill().  We have to retry if interrupted.
  */
 
@@ -625,6 +616,10 @@ generic_interrupt_catcher(int signum)
   case SIGALRM: {
     extern void		s48_when_alarm_interrupt(int ign);
     s48_when_alarm_interrupt(0);
+    break; }
+  case SIG_EXTERNAL_EVENT: {
+    extern void		s48_when_external_event_interrupt(int ign);
+    s48_when_external_event_interrupt(0);
     break; }
   default:
     NOTE_EVENT; }

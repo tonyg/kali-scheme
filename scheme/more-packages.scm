@@ -104,7 +104,7 @@
   (optimize auto-integrate))
 
 (define-structure locks locks-interface
-  (open scheme-level-1 queues
+  (open scheme-level-2 queues
 	threads threads-internal
 	interrupts
 	proposals)
@@ -380,6 +380,8 @@
 				     socket-port-number
 				     socket-client
 				     get-host-name
+				     get-host-by-name
+				     get-host-by-address
 
 				     ; From the old interface
 				     ; I would like to get rid of these.
@@ -406,6 +408,7 @@
 	channel-ports		; {in|out}put-channel->port
 	channel-i/o		; wait-for-channel
 	condvars		; for wait-for-channel
+	locks external-events
 	byte-vectors)
   (files (big socket)))
 

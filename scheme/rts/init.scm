@@ -50,6 +50,8 @@
      (initialize-interrupts!
       spawn-on-root
       (lambda ()
+	(initialize-external-events!)
+
 	(let ((in-port (input-channel->port in))
 	      (out-port (output-channel->port out))
 	      (error-port (output-channel->port error 0))) ; zero-length buffer

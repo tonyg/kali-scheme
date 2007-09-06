@@ -93,6 +93,8 @@
 	  inspector-menu-limit set-inspector-menu-limit!
 	  inspector-writing-depth set-inspector-writing-depth!
 	  inspector-writing-length set-inspector-writing-length!
+	  condition-writing-depth set-condition-writing-depth!
+	  condition-writing-length set-condition-writing-length!
 
 	  maybe-menu
 	  set-menu!
@@ -213,9 +215,7 @@
 (define-interface display-conditions-interface
   (export display-condition		;command.scm
 	  &disclose-condition      	;env/disclosers.scm
-	  limited-write
-	  condition-display-depth set-condition-display-depth!
-	  condition-display-length set-condition-display-length!))
+	  limited-write))
 
 (define-interface debuginfo-interface
   (export read-debug-info
@@ -626,6 +626,7 @@
 	  obtain-lock
 	  maybe-obtain-lock
 	  release-lock
+	  with-lock
 	  lock-owner))		;really should be internal
 
 (define-interface value-pipes-interface

@@ -339,38 +339,7 @@
       (check (show (mask-negate m0)) => '(maroon))
       (check (show (mask-negate m1)) => '(white purple))
       (check (show (mask-negate m2)) => '(black white purple maroon)))))
-
-(define-test-case sockets misc-big-tests
-  (check
-   (let ((server (open-socket)))
-     (spawn (lambda ()
-	      (let loop ((i 100))
-		(if (= i 400)
-		    (close-socket server)
-		    (call-with-values (lambda ()
-					(socket-accept server))
-		      (lambda (in out)
-			(spawn (lambda ()
-				 (write (+ i (read in)) out)
-				 (write-char #\space out)
-				 (close-input-port in)
-				 (close-output-port out)))
-			(loop (+ i 100))))))))
-     (let loop ((i 1) (result '()))
-       (if (= i 4)
-	   result
-	   (call-with-values
-	       (lambda ()
-		 (socket-client "localhost" (socket-port-number server)))
-	     (lambda (in out)
-	       (write i out)
-	       (write-char #\space out)
-	       (let ((result (cons (read in) result)))
-		 (close-input-port in)
-		 (close-output-port out)
-		 (loop (+ i 1) result)))))))
-   => '(303 202 101)))
-
+ 
 (define-test-case float misc-big-tests
  (let* ((one (exact->inexact 1))
 	(three (exact->inexact 3))

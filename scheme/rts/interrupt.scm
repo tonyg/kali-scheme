@@ -110,3 +110,4 @@
 
 (define (call-before-heap-overflow! handler . maybe-required-space-percentage)
   (session-data-set! space-shortage-handler handler))
+

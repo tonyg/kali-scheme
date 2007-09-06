@@ -35,19 +35,23 @@ static s48_value	s48_socket(s48_value udp_p, s48_value input_p),
 			s48_listen(s48_value socket_channel),
 			s48_accept(s48_value socket_channel, s48_value retry_p),
 			s48_connect(s48_value socket_channel,
-				    s48_value machine,
+				    s48_value address,
 				    s48_value port,
 				    s48_value retry_p),
                         s48_dup_socket_channel(s48_value socket_fd),
 			s48_close_socket_half(s48_value socket_channel,
 					      s48_value input_p),
+                        s48_get_host_by_name(s48_value machine),
+                        s48_get_host_by_name_result(void),
+                        s48_get_host_by_address(s48_value address),
+                        s48_get_host_by_address_result(void),
 			s48_get_host_name(void),
 			s48_udp_send(s48_value channel,
 				     s48_value udp_address,
 				     s48_value buffer,
 				     s48_value length),
 			s48_udp_receive(s48_value channel, s48_value message),
-			s48_lookup_udp_address(s48_value name, s48_value port);
+			s48_lookup_udp_address(s48_value address, s48_value port);
 
 /* Forward declaration. */
 static s48_value dup_socket_channel(int socket_fd);
@@ -71,6 +75,13 @@ static long		connections_index_mask = INITIAL_CONNECTIONS_SIZE - 1;
 static long		connection_count = 0;
 
 /*
+ * For asynch gethostbyname.
+ */
+
+long gethostby_event_uid;
+
+
+/*
  * Install all exported functions in Scheme48.
  */
 
@@ -85,11 +96,18 @@ s48_init_socket(void)
   S48_EXPORT_FUNCTION(s48_connect);
   S48_EXPORT_FUNCTION(s48_dup_socket_channel);
   S48_EXPORT_FUNCTION(s48_close_socket_half);
+  S48_EXPORT_FUNCTION(s48_get_host_by_name);
+  S48_EXPORT_FUNCTION(s48_get_host_by_name_result);
+  S48_EXPORT_FUNCTION(s48_get_host_by_address);
+  S48_EXPORT_FUNCTION(s48_get_host_by_address_result);
   S48_EXPORT_FUNCTION(s48_get_host_name);
   
   S48_EXPORT_FUNCTION(s48_udp_send);
   S48_EXPORT_FUNCTION(s48_udp_receive);
   S48_EXPORT_FUNCTION(s48_lookup_udp_address);
+
+  /* we need this even if we don't do asynch lookups */
+  gethostby_event_uid = s48_external_event_uid("s48_event_gethostby");
 
   S48_GC_PROTECT_GLOBAL(s48_udp_address_type_binding);
   s48_udp_address_type_binding = s48_get_imported_binding("s48-udp-address-type");
@@ -287,6 +305,173 @@ s48_accept(s48_value channel, s48_value retry_p)
   return S48_FALSE;
 }
 
+static s48_value
+call_gethostbyaddr(s48_value sch_addr)
+{
+  char *addr = s48_extract_byte_vector(sch_addr);
+  char		*hostname;
+  struct hostent *hostdata;
+  
+  hostdata = gethostbyaddr(addr,
+			   sizeof(struct in_addr),
+			   AF_INET);
+  if (hostdata == NULL)
+    hostname = inet_ntoa(*((struct in_addr *) addr));
+  else
+    hostname = hostdata->h_name;
+  
+  return s48_enter_string_latin_1(hostname);
+}
+
+#ifdef HAVE_PTHREAD_H
+#define S48_MAX_HOST_NAME_LENGTH 128
+static char host_name[S48_MAX_HOST_NAME_LENGTH + 1]; /* is enough */
+static char host_address[128]; /* should be enough */
+int host_address_size;
+int host_address_errno;
+
+/*
+ * Only one call can be active at any given time:
+ * We expect mutual exclusion at the Scheme end
+ */
+
+static void
+gethostbyname_thread(void *ignore)
+{
+  static struct hostent *host; /* will be thread-local */
+
+  RETRY_NULL(host, gethostbyname(host_name));
+  if (host == NULL)
+      host_address_errno = h_errno;
+  else
+    {
+      host_address_errno = 0;
+      host_address_size = host->h_length;
+      memcpy(host_address, host->h_addr, host_address_size);
+    }
+  s48_note_external_event(gethostby_event_uid);
+}
+
+static s48_value
+s48_get_host_by_name(s48_value machine)
+{
+  pthread_t t;
+
+  int machine_length = S48_BYTE_VECTOR_LENGTH(machine);
+  if (machine_length > S48_MAX_HOST_NAME_LENGTH)
+    s48_raise_argument_type_error(machine);
+
+  memcpy(host_name, s48_extract_byte_vector(machine), machine_length);
+  host_name[machine_length] = '\0';
+
+  if (pthread_create(&t, NULL, gethostbyname_thread, NULL))
+    {
+      static struct hostent *host;
+      RETRY_NULL(host, gethostbyname(host_name));
+      if (host == NULL)
+	s48_raise_os_error(h_errno);
+      return s48_enter_byte_vector(host->h_addr, host->h_length);
+    }
+  else
+    {
+      pthread_detach(t);
+      return S48_FALSE;
+    }
+}
+
+static s48_value
+s48_get_host_by_name_result(void)
+{
+  if (host_address_errno)
+    s48_raise_os_error(host_address_errno);
+  return s48_enter_byte_vector(host_address, host_address_size);
+}
+
+/*
+ * Get the name of the `sch_addr''s host.  If we can't get the real
+ * host name we use the numbers-and-dots representation of the
+ * address.
+ */
+
+
+static void
+gethostbyaddr_thread(void *ignore)
+{
+  struct in_addr addr;
+  struct hostent *hostdata;
+  
+  hostdata = gethostbyaddr(host_address,
+			   sizeof(struct in_addr),
+			   AF_INET);
+  if (hostdata == NULL)
+    strcpy(host_name, inet_ntoa(*((struct in_addr *) host_address)));
+  else
+    strcpy(host_name, hostdata->h_name);
+
+  s48_note_external_event(gethostby_event_uid);
+}
+ 
+static s48_value
+s48_get_host_by_address(s48_value sch_addr)
+{
+  pthread_t t;
+
+  host_address_size = sizeof(struct in_addr);
+  memcpy(host_address,
+	 (char *) s48_extract_byte_vector(sch_addr), host_address_size);
+
+  if (pthread_create(&t, NULL, gethostbyaddr_thread, NULL))
+      return call_gethostbyaddr(sch_addr);
+  else
+    {
+      pthread_detach(t);
+      return S48_FALSE;
+    }
+}
+	 
+static s48_value 
+s48_get_host_by_address_result(void)
+{
+  return s48_enter_string_latin_1(host_name);
+}
+#else
+static s48_value
+s48_get_host_by_name(s48_value machine)
+{
+  struct hostent *host;
+  char* machine_name = s48_extract_byte_vector(machine);
+  RETRY_NULL(host, gethostbyname(machine_name));
+  if (host == NULL)
+    s48_raise_os_error(h_errno);
+  return s48_enter_byte_vector(host->h_addr, host->h_length);
+}
+
+static s48_value
+s48_get_host_by_name_result(void)
+{
+  /* won't be used here */
+}
+
+/*
+ * Get the name of the `sch_addr''s host.  If we can't get the real
+ * host name we use the numbers-and-dots representation of the
+ * address.
+ */
+ 
+static s48_value
+s48_get_host_by_address(s48_value sch_addr)
+{
+  return call_gethostbyaddr(sch_addr);
+}
+
+static s48_value
+s48_get_host_by_address_result(void)
+{
+  /* won't be used here */
+}
+#endif
+
+
 /*
  * Given an internet-domain stream socket, a machine name and a port number,
  * connect the socket to that machine/port.
@@ -299,40 +484,34 @@ s48_accept(s48_value channel, s48_value retry_p)
 
 static s48_value
 s48_connect(s48_value channel,
-	    s48_value machine,
+	    s48_value sch_address,
 	    s48_value port,
 	    s48_value retry_p)
 {
   int			socket_fd,
     			port_number;
-  char			*machine_name;
-  struct hostent	*host;
   struct sockaddr_in	address;
 
   S48_CHECK_CHANNEL(channel);
   socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
 
-  machine_name = s48_extract_byte_vector(machine);
-  
   S48_CHECK_FIXNUM(port);
   port_number = S48_UNSAFE_EXTRACT_FIXNUM(port);
   
   /*
-   * Get the host and initialize `address'.
+   * Initialize `address'.
    */
 
-  RETRY_NULL(host, gethostbyname(machine_name));
-  if (host == NULL)
-    s48_raise_os_error(h_errno);
-  
   memset((void *)&address, 0, sizeof(address));
-  address.sin_family = host->h_addrtype;
+  address.sin_family = AF_INET;
 
-  if (host->h_length > sizeof(address.sin_addr))
-    s48_raise_range_error(s48_enter_fixnum(host->h_length),
+  if (S48_BYTE_VECTOR_LENGTH(sch_address) > sizeof(address.sin_addr))
+    s48_raise_range_error(s48_enter_fixnum(S48_BYTE_VECTOR_LENGTH(sch_address)),
 			  S48_UNSAFE_ENTER_FIXNUM(0),
 			  s48_enter_fixnum(sizeof(address.sin_addr)));
-  memcpy((void *)&address.sin_addr, (void *)host->h_addr, host->h_length);
+  memcpy((void *)&address.sin_addr,
+	 (void *)s48_extract_byte_vector(sch_address),
+	 S48_BYTE_VECTOR_LENGTH(sch_address));
   address.sin_port = htons(port_number);
 
   /*
@@ -586,19 +765,10 @@ address_connection(struct sockaddr_in *addr)
 }
 
 static s48_value
-s48_lookup_udp_address(s48_value name, s48_value port)
+s48_lookup_udp_address(s48_value address, s48_value port)
 {
-  struct hostent *	host = gethostbyname(s48_extract_byte_vector(name));
-  struct in_addr	address;
-  
-  if (host == NULL ||
-      host->h_addrtype != AF_INET ||	/* could happen, I suppose */
-      host->h_addr_list[0] == NULL)
-    s48_raise_os_error(errno);
-    
-  address = *((struct in_addr *) host->h_addr_list[0]);
-
-  return lookup_connection(address, s48_extract_fixnum(port));
+  return lookup_connection(*((struct in_addr *) s48_extract_byte_vector(address)),
+			   s48_extract_fixnum(port));
 }
 
 /*
@@ -648,16 +818,13 @@ add_new_connection(int index, struct in_addr address, unsigned long port)
 
   S48_GC_PROTECT_1(udp_address);
 
-  sch_address = S48_MAKE_VALUE(struct in_addr);		/* may GC */
+  sch_address
+    = s48_enter_byte_vector((char*) (&address), sizeof(struct in_addr)); /* may GC */
   
-  S48_UNSAFE_EXTRACT_VALUE(sch_address, struct in_addr) = address;
-
   S48_UNSAFE_RECORD_SET(udp_address, 0, sch_address);
   S48_UNSAFE_RECORD_SET(udp_address, 1, S48_UNSAFE_ENTER_FIXNUM(port));
   
-  name = get_hostname(address);				/* may GC */
-
-  S48_UNSAFE_RECORD_SET(udp_address, 2, name);
+  S48_UNSAFE_RECORD_SET(udp_address, 2, S48_FALSE);
 
   S48_UNSAFE_VECTOR_SET(connections, index, udp_address);
   connection_count += 1;
@@ -667,26 +834,6 @@ add_new_connection(int index, struct in_addr address, unsigned long port)
   S48_GC_UNPROTECT();
   
   return udp_address;
-}
-
-/*
- * Get the name of the `addr''s host.  If we can't get the real host name
- * we use the numbers-and-dots representation of the address.
- */
- 
-static s48_value
-get_hostname(struct in_addr addr)
-{
-  char		*hostname;
-  struct hostent *hostdata;
-  
-  hostdata = gethostbyaddr((char *) &addr, sizeof(struct in_addr), AF_INET);
-  if (hostdata == NULL)
-    hostname = inet_ntoa(addr);
-  else
-    hostname = hostdata->h_name;
-  
-  return s48_enter_string_latin_1(hostname);
 }
 
 /*

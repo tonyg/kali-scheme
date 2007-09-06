@@ -26,6 +26,10 @@ extern void		s48_disable_interruptsB(void);
 extern void		s48_enable_interruptsB(void);
 extern void		s48_set_os_signals(s48_value list);
 extern void		s48_reset_interruptsB();
+extern char		s48_os_signal_pending(void);
+extern void		s48_note_external_eventUunsafeB(long);
+extern char		s48_external_event_pendingUunsafeP(void);
+extern long		s48_dequeue_external_eventUunsafeB(char*);
 
 /* imported and exported bindings */	  
 S48_EXTERN void		s48_define_exported_binding(char *, s48_value);

@@ -99,7 +99,8 @@
 
 (define (display-command-level-condition condition)
   (if condition
-      (display-condition condition (command-output))))
+      (display-condition condition (command-output)
+			 (condition-writing-depth) (condition-writing-length))))
 
 ; If #T anything that doesn't start with the command prefix (a comma) is
 ; treated as an argument to RUN.  If #F no commas are needed and RUN
@@ -147,12 +148,14 @@
 	   (if (break-on-warnings?)
 	       (deal-with-condition c)
 	       (begin (force-output (current-output-port)) ; keep synchronous
-		      (display-condition c (current-error-port))
+		      (display-condition c (current-error-port)
+					 (condition-writing-depth) (condition-writing-length))
 		      (unspecific))))	;proceed
 	  ((or (error? c) (bug? c) (interrupt? c))
 	   (if (batch-mode?)
 	       (begin (force-output (current-output-port)) ; keep synchronous
-		      (display-condition c (current-error-port))
+		      (display-condition c (current-error-port)
+					 (condition-writing-depth) (condition-writing-length))
 		      (let ((status
 			     (cond
 			      ((error? c) 1)
@@ -174,7 +177,8 @@
       (command-loop c)
       (let ((level (car (command-levels))))
 	(set-focus-object! level)
-	(display-condition c (command-output))
+	(display-condition c (command-output)
+			   (condition-writing-depth) (condition-writing-length))
 	(restart-command-level level))))
 
 (define (abort-to-command-level level)
@@ -250,7 +254,8 @@
 	(let ((c (coerce-to-condition c)))
 	  (if (or (error? c) (bug? c))
 	      (begin
-		(display-condition c (current-error-port))
+		(display-condition c (current-error-port)
+				   (condition-writing-depth) (condition-writing-length))
 		(k (EX_SOFTWARE)))
 	      (punt))))
       (lambda ()

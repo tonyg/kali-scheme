@@ -1,6 +1,6 @@
-/* must be synchronized with EVENTS enumeration in ps-channel.scm */
+/* must be synchronized with EVENTS enumeration in ps-channel.scm and s48-channel.scm */
 enum event_enum { KEYBOARD_INTERRUPT_EVENT, IO_COMPLETION_EVENT, IO_ERROR_EVENT,
-		  ALARM_EVENT, OS_SIGNAL_EVENT, ERROR_EVENT, NO_EVENT };
+		  ALARM_EVENT, OS_SIGNAL_EVENT, ERROR_EVENT, EXTERNAL_EVENT, NO_EVENT };
 
 extern psbool s48_add_pending_fd(int fd, psbool is_input);
 extern psbool s48_remove_fd(int fd);
@@ -13,6 +13,7 @@ extern long s48_run_time(long *mseconds);
 extern long s48_real_time(long *mseconds);
 extern int  s48_wait_for_event(long max_wait, psbool is_minutes);
 extern int  s48_get_next_event(long *ready_fd, long *status);
+extern long s48_dequeue_external_event(char *pendingp);
 
 /* these are here only for the CHEAP_TIME() macro */
 #define TICKS_PER_SECOND 1000	/* clock resolution */
@@ -32,3 +33,9 @@ extern long s48_current_time;
              s48_Sstack_limitS = (((char *) -1));	\
 	} while (0)
 
+/*
+ * For Unix.
+ */
+#ifdef SIGUSR1
+#define SIG_EXTERNAL_EVENT SIGUSR1
+#endif

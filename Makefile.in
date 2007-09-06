@@ -492,6 +492,7 @@ check:	$(VM) $(IMAGE) scheme/debug/check.scm
 		echo ',exec ,load =scheme48/debug/check.scm';		\
 		echo ',config ,load =scheme48/test-packages.scm';	\
 		echo ',open big-test';					\
+		echo ',open sockets-test';				\
 		echo ',config ,load =scheme48/misc/packages.scm';	\
 		echo ',config ,load =scheme48/misc/test-packages.scm';	\
 		echo ',open misc-test';					\
@@ -500,9 +501,9 @@ check:	$(VM) $(IMAGE) scheme/debug/check.scm
 		echo ',config ,load =scheme48/srfi/test-packages.scm';	\
 		echo ',open srfi-test';					\
 		echo ',config ,load =scheme48/posix/test-packages.scm';	\
-		echo ',open posix-test';					\
+		echo ',open posix-test';				\
 		echo ',open test-suites';				\
-		echo '(define-test-suite all-tests (compiler-tests big-tests misc-tests cml-tests srfi-tests posix-tests))'; \
+		echo '(define-test-suite all-tests (compiler-tests big-tests tcp-sockets-tests udp-sockets-tests misc-tests cml-tests srfi-tests posix-tests))'; \
 		echo '(run-test-suite all-tests)'			\
 	) | ./$(VM) -i $(IMAGE) -h 8000000
 
