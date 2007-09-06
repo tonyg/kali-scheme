@@ -2,7 +2,7 @@
 
 Recent changes to Scheme 48.
 
-09/01/07 (version 1.7)
+09/06/07 (version 1.7)
 	 Additions:
 	   A new, experimental garbage collector written by David
 	    Frese has been added.  It can be enabled by specifying
@@ -24,6 +24,7 @@ Recent changes to Scheme 48.
 	    OS-STRINGS as documented (reported by Emilio Lopes)
 	   A bug where random text would be printed when a port was
 	    closed by GC was fixed.  (reported by Will Clinger)
+	   A bug in the UDP sockets was fixed.
 
 03/19/07 (version 1.6)
 	 Additions:
