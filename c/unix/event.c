@@ -20,12 +20,6 @@
 
 /* turning interrupts and I/O readiness into events */
 
-void		s48_when_keyboard_interrupt(int ign);
-void		s48_when_alarm_interrupt(int ign);
-static void     when_sigpipe_interrupt(int ign);
-psbool		s48_setcatcher(int signum, void (*catcher)(int));
-void		s48_start_alarm_interrupts(void);
-
 static sigset_t interrupt_mask;
 
 /*
@@ -47,41 +41,6 @@ our_sigmask(int how, const sigset_t *set, sigset_t *oset)
 }
 #define SIGMASK our_sigmask
 #endif
-
-void
-s48_sysdep_init(void)
-{
-#ifdef HAVE_SIGALTSTACK 
-  stack_t ss;
-  
-  ss.ss_sp = malloc(SIGSTKSZ);
-  if (ss.ss_sp == NULL)
-    fprintf(stderr,
-	    "Failed to malloc alt stack, errno = %d\n",
-	    errno);
-  ss.ss_size = SIGSTKSZ;
-  ss.ss_flags = 0;
-  if (sigaltstack(&ss, NULL) == -1)
-    fprintf(stderr,
-	    "Failed to sigaltstack, errno = %d\n",
-	    errno);
-#endif
-
-  if (!s48_setcatcher(SIGINT, s48_when_keyboard_interrupt)
-      || !s48_setcatcher(SIGALRM, s48_when_alarm_interrupt)
-      || !s48_setcatcher(SIGPIPE, when_sigpipe_interrupt)) {
-    fprintf(stderr,
-	    "Failed to install signal handlers, errno = %d\n",
-	    errno);
-    exit(1);
-  }
-
-  sigemptyset(&interrupt_mask);
-  sigaddset(&interrupt_mask, SIGINT);
-  sigaddset(&interrupt_mask, SIGALRM);
-
-  s48_start_alarm_interrupts();
-}
 
 static void
 block_keyboard_n_alarm_interrupts(void)
@@ -275,6 +234,74 @@ s48_stop_alarm_interrupts(void)
     exit(-1); }
 }
 
+/*
+ * We ensure single-threadedness by sending a signal to the main
+ * thread, and doing everthing critical there.  This is all probably
+ * quite useless without OS threads.
+ */
+
+#ifdef HAVE_PTHREAD_H
+static pthread_mutex_t external_event_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_t main_thread;
+#define LOCK_EXTERNAL_EVENTS pthread_mutex_lock(&external_event_mutex)
+#define UNLOCK_EXTERNAL_EVENTS pthread_mutex_unlock(&external_event_mutex)
+#else
+#define LOCK_EXTERNAL_EVENTS
+#define UNLOCK_EXTERNAL_EVENTS
+#endif
+
+long
+s48_dequeue_external_event(char* readyp)
+{
+  long retval;
+  LOCK_EXTERNAL_EVENTS;
+  retval = s48_dequeue_external_eventBUunsafe(readyp);
+  UNLOCK_EXTERNAL_EVENTS;
+  return retval;
+}
+
+static char
+external_event_pending()
+{
+  char retval;
+  LOCK_EXTERNAL_EVENTS;
+  retval = s48_external_event_pendingPUunsafe();
+  UNLOCK_EXTERNAL_EVENTS;
+  return retval;
+}
+
+/* no side effect */
+static char
+external_event_ready()
+{
+  char retval;
+  LOCK_EXTERNAL_EVENTS;
+  retval = s48_external_event_readyPUunsafe();
+  UNLOCK_EXTERNAL_EVENTS;
+  return retval;
+}
+
+void
+s48_note_external_event(long uid)
+{
+  LOCK_EXTERNAL_EVENTS;
+  s48_note_external_eventBUunsafe(uid);
+  UNLOCK_EXTERNAL_EVENTS;
+  NOTE_EVENT;
+#ifdef HAVE_PTHREAD_H
+  pthread_kill(main_thread, SIG_EXTERNAL_EVENT);
+#else
+  /* pretty useless probably */
+  raise(SIG_EXTERNAL_EVENT);
+#endif
+}
+
+void
+s48_when_external_event_interrupt(int ign)
+{
+  /* do nothing, except possibly interrupt the running select */
+}
+
 
 /*
  *  ; Scheme version of the get-next-event procedure
@@ -318,8 +345,6 @@ static int	queue_ready_ports(psbool wait, long seconds, long ticks);
 int
 s48_get_next_event(long *ready_fd, long *status)
 {
-  extern int s48_os_signal_pending(void);
-
   int io_poll_status;
   /*
     fprintf(stderr, "[poll at %d (waiting for %d)]\n", s48_current_time, alarm_time);
@@ -353,6 +378,8 @@ s48_get_next_event(long *ready_fd, long *status)
   }
   if (s48_os_signal_pending())
     return (OS_SIGNAL_EVENT);
+  if (external_event_pending())
+    return (EXTERNAL_EVENT);
   block_keyboard_n_alarm_interrupts();
   if ((keyboard_interrupt_count == 0)
       &&  (alarm_time == -1 || s48_current_time < alarm_time)
@@ -584,7 +611,8 @@ s48_wait_for_event(long max_wait, psbool is_minutes)
     status = NO_ERRORS;
   else {
     status = queue_ready_ports(PSTRUE, seconds, ticks);
-    if (there_are_ready_ports())
+    if (there_are_ready_ports()
+	|| external_event_ready())
       NOTE_EVENT;
   }
   s48_start_alarm_interrupts();
@@ -654,6 +682,8 @@ queue_ready_ports(psbool wait, long seconds, long ticks)
     else if (left == 0)
       return NO_ERRORS;
     else if (errno == EINTR) {
+      if (external_event_ready())
+	return NO_ERRORS;
       tvp = &tv;		/* turn off blocking and try again */
       timerclear(tvp);
     }	      
@@ -661,3 +691,44 @@ queue_ready_ports(psbool wait, long seconds, long ticks)
       return errno;
   }
 }
+
+void
+s48_sysdep_init(void)
+{
+#ifdef HAVE_PTHREAD_H
+  main_thread = pthread_self();
+#endif
+
+#ifdef HAVE_SIGALTSTACK 
+  stack_t ss;
+  
+  ss.ss_sp = malloc(SIGSTKSZ);
+  if (ss.ss_sp == NULL)
+    fprintf(stderr,
+	    "Failed to malloc alt stack, errno = %d\n",
+	    errno);
+  ss.ss_size = SIGSTKSZ;
+  ss.ss_flags = 0;
+  if (sigaltstack(&ss, NULL) == -1)
+    fprintf(stderr,
+	    "Failed to sigaltstack, errno = %d\n",
+	    errno);
+#endif
+
+  if (!s48_setcatcher(SIGINT, s48_when_keyboard_interrupt)
+      || !s48_setcatcher(SIGALRM, s48_when_alarm_interrupt)
+      || !s48_setcatcher(SIGPIPE, when_sigpipe_interrupt)
+      || !s48_setcatcher(SIG_EXTERNAL_EVENT, s48_when_external_event_interrupt)) {
+    fprintf(stderr,
+	    "Failed to install signal handlers, errno = %d\n",
+	    errno);
+    exit(1);
+  }
+
+  sigemptyset(&interrupt_mask);
+  sigaddset(&interrupt_mask, SIGINT);
+  sigaddset(&interrupt_mask, SIGALRM);
+
+  s48_start_alarm_interrupts();
+}
+

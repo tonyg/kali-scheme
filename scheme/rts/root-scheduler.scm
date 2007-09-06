@@ -102,7 +102,8 @@
 	      (set-enabled-interrupts! all-interrupts)
 	      #t)
 	     ((or time-until-wakeup
-		  (waiting-for-i/o?))
+		  (waiting-for-i/o?)
+		  (waiting-for-external-events?))
 	      (do-some-waiting time-until-wakeup)
 	      (set-enabled-interrupts! all-interrupts)
 	      (root-wait))

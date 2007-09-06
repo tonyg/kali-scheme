@@ -777,6 +777,11 @@
 	  call-before-heap-overflow!
 	  (interrupt :syntax)))
 
+(define-interface external-events-interface
+  (export initialize-external-events!	;init.scm
+	  waiting-for-external-events?  ;root-scheduler.scm
+	  wait-for-external-event))
+
 (define-interface writing-interface
   (export write
 	  display

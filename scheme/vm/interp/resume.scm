@@ -7,6 +7,7 @@
   (install-symbols!+gc (s48-initial-symbols))
   (install-shared-bindings!+gc (s48-initial-imported-bindings)
 			       (s48-initial-exported-bindings))
+  (initialize-external-events)
   (initialize-stack+gc stack-begin stack-size)
   (initialize-interpreter+gc)
   (initialize-bignums)

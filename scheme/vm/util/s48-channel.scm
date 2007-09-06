@@ -140,6 +140,7 @@
    alarm-event
    os-signal-event
    error-event
+   external-event
    no-event
    ))
 

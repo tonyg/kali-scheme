@@ -14,6 +14,7 @@
 	vmio
 	arithmetic-opcodes
 	external-opcodes
+	external-events
 	shared-bindings
 	symbols
 	io-opcodes
@@ -47,7 +48,7 @@
 	text-encodings
 	return-codes
 	gc-roots gc gc-util
-	heap stack external)
+	heap stack external external-events)
   (for-syntax (open scheme destructuring signals))
   (files (interp interp)
 	 (interp call)
@@ -114,6 +115,13 @@
 	external
 	shared-bindings)
   (files (interp external-call)))
+
+(define-structure external-events external-events-interface
+  (open prescheme ps-record-types ps-memory
+	data struct
+	vm-utilities
+	shared-bindings)
+  (files (interp external-event)))
 
 (define-structure shared-bindings shared-bindings-interface
   (open prescheme

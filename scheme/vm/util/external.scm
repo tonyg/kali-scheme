@@ -12,6 +12,7 @@
 (define external-call      (fake-it 'call-external-value))
 (define schedule-interrupt (fake-it 'schedule-interrupt))
 
+(define dequeue-external-event! (fake-it 'dequeue-external-event!))
 
 ;; The following code "implements" bignums using the integers of the
 ;; host system. It stores these integers in the byte-vector of the

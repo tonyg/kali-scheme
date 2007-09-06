@@ -302,6 +302,7 @@
 	    methods
 	    meta-methods
 	    interrupts
+	    external-events
 	    low-level
 	    more-types
 	    number-i/o

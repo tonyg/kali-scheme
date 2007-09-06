@@ -334,6 +334,15 @@
   (files (rts interrupt))
   (optimize auto-integrate)) ;mostly for threads package...
 
+(define-structure external-events external-events-interface
+  (open scheme-level-1
+	(subset wind (dynamic-wind))
+	enumerated
+	condvars condvars-internal proposals
+	session-data
+	interrupts)
+  (files (rts external-event)))
+
 (define-structures ((threads threads-interface)
 		    (threads-internal threads-internal-interface))
   (open scheme-level-1 enumerated queues cells
@@ -390,6 +399,7 @@
 	(subset interrupts      (with-interrupts-inhibited
 				 all-interrupts
 				 set-enabled-interrupts!))
+	(subset external-events (waiting-for-external-events?))
 	(subset wind            (call-with-current-continuation))
 	(subset channel-i/o	(waiting-for-i/o?
 				 initialize-channel-i/o!
@@ -453,6 +463,7 @@
 	exceptions-internal
 	vm-exceptions
 	interrupts	 ;initialize-interrupts!
+	(subset external-events (initialize-external-events!))
 	records-internal ;initialize-records!
 	shared-bindings	 ;find-undefined-imported-bindings
 	debug-messages	 ;warn about undefined bindings 

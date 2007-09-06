@@ -78,6 +78,12 @@
 		 shared-binding-next
 		 set-shared-binding-next!))
 
+(define (get-imported-binding name)
+  (save-temp0! (enter-string+gc name))
+  (let* ((key (ensure-space shared-binding-size))
+	 (name (recover-temp0!)))
+    (lookup-imported-binding name key)))
+
 ;----------------
 ; The following two functions are exported to C, hence the reversal of the
 ; export/import terminology.

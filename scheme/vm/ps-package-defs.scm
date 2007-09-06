@@ -20,6 +20,11 @@
 					integer)))
     (define schedule-interrupt 
       (external "s48_schedule_alarm_interrupt" (=> (integer) integer)))
+
+    ;; implemented in C, wrapper around s48-dequeue-external-event/unsafe!
+    (define dequeue-external-event!
+      (external "s48_dequeue_external_event" (=> () integer boolean)))
+
     (define cheap-time
       (external "CHEAP_TIME" (=> () integer)))
     (define real-time 

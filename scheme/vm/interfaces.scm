@@ -155,6 +155,9 @@
 	  s48-imported-bindings
 	  s48-exported-bindings
 
+	  ;; for external events
+	  get-imported-binding
+
 	  ;; for the primitives
 	  undefine-shared-binding!
 	  lookup-imported-binding lookup-exported-binding
@@ -382,6 +385,8 @@
 	  cheap-time
 	  schedule-interrupt
 
+	  dequeue-external-event!
+
 	  get-os-string-encoding
 
  	  external-bignum-make-cached-constants
@@ -462,6 +467,13 @@
 	  s48-cleaned-imported-bindings
 	  s48-exported-bindings
 	  ))
+
+(define external-events-interface
+  (export initialize-external-events
+	  s48-external-event-uid s48-unregister-external-event-uid
+	  s48-external-event-ready?/unsafe s48-external-event-pending?/unsafe
+	  s48-note-external-event!/unsafe
+	  s48-dequeue-external-event!/unsafe))
 
 (define-interface bignum-low-interface
   (export initialize-bignums
@@ -604,6 +616,11 @@
 	  s48-add-os-signal
           s48-os-signal-pending
 	  s48-reset-interrupts!
+
+	  s48-external-event-uid s48-unregister-external-event-uid
+	  s48-external-event-pending?/unsafe s48-external-event-ready?/unsafe
+	  s48-note-external-event!/unsafe
+	  s48-dequeue-external-event!/unsafe
 	  
           s48-define-exported-binding
 	  s48-get-imported-binding

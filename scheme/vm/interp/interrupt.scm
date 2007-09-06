@@ -99,6 +99,7 @@
 ; the interrupt mask, and whether the GC is running out of space.
 ; For i/o-completion we push the channel and its status.
 ; For i/o-error we push the channel and the error code.
+; For external-event, we push the event-type uid.
 
 (define (push-interrupt-args pending-interrupt)
   (cond ((eq? pending-interrupt (enum interrupt alarm))
@@ -129,6 +130,14 @@
 	     (note-interrupt! (enum interrupt os-signal)))
 	 (push (enter-fixnum *enabled-interrupts*))
 	 2)
+	((eq? pending-interrupt (enum interrupt external-event))
+	 (receive (uid still-ready?)
+	     (dequeue-external-event!)
+	   (push (enter-fixnum uid))
+	   (if still-ready?
+	       (note-interrupt! (enum interrupt external-event)))
+	   (push (enter-fixnum *enabled-interrupts*))
+	   2))
 	(else
 	 (push (enter-fixnum *enabled-interrupts*))
 	 1)))
@@ -360,7 +369,7 @@
 
 ; Do whatever processing the event requires.
 
-(define (process-event event channel status)
+(define (process-event event id status)
   (cond ((eq? event (enum events alarm-event))
 	 ;; Save the interrupted template for use by profilers.
 	 ;; Except that we have no more templates and no more profiler.
@@ -370,13 +379,15 @@
 	((eq? event (enum events keyboard-interrupt-event))
 	 (interrupt-bit (enum interrupt keyboard)))
 	((eq? event (enum events io-completion-event))
-	 (enqueue-channel! channel status false)
+	 (enqueue-channel! id status false)
 	 (interrupt-bit (enum interrupt i/o-completion)))
 	((eq? event (enum events io-error-event))
-	 (enqueue-channel! channel status true)
+	 (enqueue-channel! id status true)
 	 (interrupt-bit (enum interrupt i/o-completion)))
 	((eq? event (enum events os-signal-event))
 	 (interrupt-bit (enum interrupt os-signal)))
+	((eq? event (enum events external-event))
+	 (interrupt-bit (enum interrupt external-event)))
 	((eq? event (enum events no-event))
 	 0)
 	((eq? event (enum events error-event))
