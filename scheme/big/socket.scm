@@ -135,8 +135,30 @@
 		 (enable-interrupts!)
 		 (loop #t))))))))
 
+(define *host-by-lock* (make-lock))
+
+;; can only get one host name or address at a time
+(define (get-host-by-xxx initiate get-result)
+  (with-lock *host-by-lock*
+    (lambda ()
+      (wait-for-external-event 
+       get-host-by-event-uid
+       (lambda (return wait)
+	 (cond
+	  ((initiate) => return)
+	  (else
+	   (wait)
+	   (get-result))))))))
+
 (define (get-host-by-name name)
-  (real-get-host-by-name (host-name->byte-vector name)))
+  (get-host-by-xxx
+   (lambda ()
+     (real-get-host-by-name (host-name->byte-vector name)))
+   get-host-by-name-result))
+
+(define (get-host-by-address address)
+  (get-host-by-xxx (lambda () (real-get-host-by-address address))
+		   get-host-by-address-result))
 
 ;; #### This needs to be IDNA
 
@@ -248,7 +270,9 @@
 (import-lambda-definition close-socket-half (socket input?)
 			  "s48_close_socket_half")
 (import-lambda-definition real-get-host-by-name (name) "s48_get_host_by_name")
-(import-lambda-definition get-host-by-address (address) "s48_get_host_by_address")
+(import-lambda-definition get-host-by-name-result () "s48_get_host_by_name_result")
+(import-lambda-definition real-get-host-by-address (address) "s48_get_host_by_address")
+(import-lambda-definition get-host-by-address-result () "s48_get_host_by_address_result")
 (import-lambda-definition get-host-name () "s48_get_host_name")
 
 ; UDP calls
@@ -258,3 +282,8 @@
 			  "s48_udp_receive")
 (import-lambda-definition real-lookup-udp-address (address port)
 			  "s48_lookup_udp_address")
+
+(define get-host-by-event-uid 
+  (shared-binding-ref
+   (lookup-imported-binding "s48_event_gethostby")))
+

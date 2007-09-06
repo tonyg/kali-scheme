@@ -408,6 +408,7 @@
 	channel-ports		; {in|out}put-channel->port
 	channel-i/o		; wait-for-channel
 	condvars		; for wait-for-channel
+	locks external-events
 	byte-vectors)
   (files (big socket)))
 
