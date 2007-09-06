@@ -200,6 +200,10 @@
 				   (real-udp-receive channel buffer)))))
     (values (car got) (cdr got))))
 
+(define (lookup-udp-address name port)
+  (real-lookup-udp-address (host-name->byte-vector name)
+			   port))
+
 ;----------------
 ; We need to explicitly close socket channels.
 
@@ -235,5 +239,5 @@
 			  "s48_udp_send")
 (import-lambda-definition real-udp-receive (socket buffer)
 			  "s48_udp_receive")
-(import-lambda-definition lookup-udp-address (name port)
+(import-lambda-definition real-lookup-udp-address (name port)
 			  "s48_lookup_udp_address")
