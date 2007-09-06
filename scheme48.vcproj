@@ -998,7 +998,7 @@
 				>
 			</File>
 			<File
-				RelativePath="c\scheme48write-barrier.h"
+				RelativePath=".\c\win32\scheme48write-barrier.h"
 				>
 			</File>
 			<File
