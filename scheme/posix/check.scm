@@ -172,10 +172,12 @@
     (let ((new-info (get-file-info "file0")))
       (check (time=? (file-info-last-modification old-info)
 		     (file-info-last-modification new-info)))
-      (check (not (time=? (file-info-last-access old-info)
-			  (file-info-last-access new-info))))
-      (check (time<? (file-info-last-access old-info)
-		     (file-info-last-access new-info))))))
+      ;; On Linux, file-systems may be mounted using the "noatime"
+      ;; option.  That is, just reading the file does not necessarily
+      ;; update the access time.  Hence, we use TIME<=? instead of
+      ;; TIME<? (which makes this test less useful).
+      (check (time<=? (file-info-last-access old-info)
+		      (file-info-last-access new-info))))))
 
 (define-test-case link posix-core-tests
   (let ((old-link-count (file-info-link-count (get-file-info "file0"))))
