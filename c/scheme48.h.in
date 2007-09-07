@@ -96,6 +96,7 @@ S48_EXTERN s48_value	s48_add_channel(s48_value, s48_value, long);
 S48_EXTERN void		s48_close_channel(long);
 
 S48_EXTERN long		s48_external_event_uid(char*);
+S48_EXTERN void		s48_note_external_event(long);
 S48_EXTERN void		s48_unregister_external_event_uid(long);
 
 
