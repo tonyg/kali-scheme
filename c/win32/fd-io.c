@@ -481,22 +481,7 @@ writer_thread_proc(LPVOID lpParameter)
   return 0;
 }
 
-static HANDLE
-create_mutex_semaphore()
-{
-  HANDLE handle = CreateSemaphore(NULL, /* lpSemaphoreAttributes */
-				  0, /* lInitialCount */
-				  1, /* lMaximumCount */
-				  NULL); /* lpName */
-
-  if (handle == NULL)
-    {
-      fprintf(stderr, "error in CreateSemaphore\n");
-      exit(-1);
-    }
-
-  return handle;
-}
+extern HANDLE s48_create_mutex_semaphore();
 
 static void
 start_reader_slash_writer_thread(HANDLE file_handle,
@@ -515,8 +500,8 @@ start_reader_slash_writer_thread(HANDLE file_handle,
   thread_data->eof = PSFALSE;
   
   thread_data->file_handle = file_handle;
-  thread_data->check_semaphore = create_mutex_semaphore();
-  thread_data->abort_semaphore = create_mutex_semaphore();
+  thread_data->check_semaphore = s48_create_mutex_semaphore();
+  thread_data->abort_semaphore = s48_create_mutex_semaphore();
 
   thread_handle = CreateThread(NULL, /* lpThreadAttributes */
 			       4096, /* dwStackSize, */

@@ -393,6 +393,80 @@ s48_remove_fd(int fd)
   return TRUE;
 }
 
+HANDLE
+s48_create_mutex_semaphore()
+{
+  HANDLE handle = CreateSemaphore(NULL, /* lpSemaphoreAttributes */
+				  0, /* lInitialCount */
+				  1, /* lMaximumCount */
+				  NULL); /* lpName */
+
+  if (handle == NULL)
+    {
+      fprintf(stderr, "error in CreateSemaphore\n");
+      exit(-1);
+    }
+
+  return handle;
+}
+
+static HANDLE external_event_mutex;
+#define LOCK_EXTERNAL_EVENTS WaitForSingleObject(external_event_mutex, INFINITE)
+#define UNLOCK_EXTERNAL_EVENTS ReleaseSemaphore(external_event_mutex, 1, NULL)
+
+long
+s48_dequeue_external_event(char* readyp)
+{
+  long retval;
+  LOCK_EXTERNAL_EVENTS;
+  retval = s48_dequeue_external_eventBUunsafe(readyp);
+  UNLOCK_EXTERNAL_EVENTS;
+  return retval;
+}
+
+static char
+external_event_pending()
+{
+  char retval;
+  LOCK_EXTERNAL_EVENTS;
+  retval = s48_external_event_pendingPUunsafe();
+  UNLOCK_EXTERNAL_EVENTS;
+  return retval;
+}
+
+/* no side effect */
+static char
+external_event_ready()
+{
+  char retval;
+  LOCK_EXTERNAL_EVENTS;
+  retval = s48_external_event_readyPUunsafe();
+  UNLOCK_EXTERNAL_EVENTS;
+  return retval;
+}
+
+VOID CALLBACK
+s48_when_external_event_interrupt(DWORD dwParam)
+{
+  /* do nothing, except possibly interrupt the running SleepEx */
+}
+
+void
+s48_note_external_event(long uid)
+{
+  LOCK_EXTERNAL_EVENTS;
+  s48_note_external_eventBUunsafe(uid);
+  UNLOCK_EXTERNAL_EVENTS;
+  NOTE_EVENT;
+  if (!QueueUserAPC(s48_when_external_event_interrupt,
+		    s48_main_thread,
+		    (DWORD) 0))
+    {
+      fprintf(stderr, "QueueUserAPC failed\n");
+      exit(-1);
+    }
+}
+
 /*
  *  ; Scheme version of the get-next-event procedure
  *  ;
@@ -468,6 +542,8 @@ s48_get_next_event(long *ready_fd, long *status)
   if (s48_os_signal_pending())
     return (OS_SIGNAL_EVENT);
   */
+  if (external_event_pending())
+    return (EXTERNAL_EVENT);
   if ((keyboard_interrupt_count == 0)
       &&  (alarm_time == -1 || s48_current_time < alarm_time)
       &&  (poll_time == -1 || s48_current_time < poll_time))
@@ -493,7 +569,8 @@ s48_wait_for_event(long max_wait, psbool is_minutes)
 
   SleepEx(dwMilliseconds,
           TRUE);
-  if (there_are_ready_ports())
+  if (there_are_ready_ports()
+      || external_event_ready())
     NOTE_EVENT;
 
   s48_start_alarm_interrupts();
@@ -517,6 +594,9 @@ s48_sysdep_init(void)
       fprintf(stderr, "DuplicateHandle failed\n");
       exit(-1);
     }
+
+  external_event_mutex = s48_create_mutex_semaphore();
+  UNLOCK_EXTERNAL_EVENTS;
 
   start_control_c_interrupts();
 
