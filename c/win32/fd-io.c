@@ -1265,10 +1265,20 @@ static s48_value	s48_socket(s48_value udp_p, s48_value input_p),
                         s48_dup_socket_channel(s48_value socket_fd),
 			s48_close_socket_half(s48_value socket_channel,
 					      s48_value input_p),
+                        s48_get_host_by_name(s48_value machine),
+                        s48_get_host_by_name_result(void),
+                        s48_get_host_by_address(s48_value address),
+                        s48_get_host_by_address_result(void),
 			s48_get_host_name(void);
 
 /* Forward declaration. */
 static s48_value dup_socket_channel(long socket_fd);
+
+/*
+ * For asynch gethostbyname.
+ */
+
+long gethostby_event_uid;
 
 /*
  * Start up the sockets stuff and install all exported functions.
@@ -1297,7 +1307,13 @@ s48_init_socket(void)
   S48_EXPORT_FUNCTION(s48_connect);
   S48_EXPORT_FUNCTION(s48_dup_socket_channel);
   S48_EXPORT_FUNCTION(s48_close_socket_half);
+  S48_EXPORT_FUNCTION(s48_get_host_by_name);
+  S48_EXPORT_FUNCTION(s48_get_host_by_name_result);
+  S48_EXPORT_FUNCTION(s48_get_host_by_address);
+  S48_EXPORT_FUNCTION(s48_get_host_by_address_result);
   S48_EXPORT_FUNCTION(s48_get_host_name);
+
+  gethostby_event_uid = s48_external_event_uid("s48_event_gethostby");
 }
 
 static void
@@ -1334,6 +1350,137 @@ raise_windows_error(DWORD id)
     }
 #undef ERROR_BUFFER_SIZE
 }
+
+
+#define S48_MAX_HOST_NAME_LENGTH NI_MAXHOST
+static char host_name[S48_MAX_HOST_NAME_LENGTH + 1]; /* is enough */
+static char host_address[128]; /* should be enough */
+int host_address_size;
+int host_address_errno;
+
+/*
+ * Only one call can be active at any given time:
+ * We expect mutual exclusion at the Scheme end
+ */
+
+static DWORD WINAPI
+gethostbyname_thread(LPVOID lpParameter)
+{
+  struct addrinfo *address_info;
+  struct addrinfo hints;
+  hints.ai_family = PF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_protocol = IPPROTO_TCP;
+  hints.ai_flags = AI_CANONNAME;
+  hints.ai_addrlen = 0;
+  hints.ai_canonname = NULL;
+  hints.ai_addr = NULL;
+  hints.ai_next = NULL;
+  /* ####
+   * Unicode note: GetAddrInfoW exists, but Mike doesn't know
+   * if just passing in IDNA (which we'll need to do eventually
+   * anyway) works aas well.
+   */
+  host_address_errno = getaddrinfo(host_name,
+				   NULL, /* servname */
+				   &hints,
+				   &address_info);
+  if (host_address_errno == 0)
+    {
+      host_address_size = sizeof(struct in_addr);
+      memcpy(host_address,
+	     (void *)&(((struct sockaddr_in*)address_info->ai_addr)->sin_addr),
+	     host_address_size);
+    }
+  freeaddrinfo(address_info);
+  s48_note_external_event(gethostby_event_uid);
+  ExitThread(0);
+  return 0;
+}
+
+static s48_value
+s48_get_host_by_name(s48_value machine)
+{
+  DWORD id;
+  HANDLE thread_handle;
+  
+  int machine_length = S48_BYTE_VECTOR_LENGTH(machine);
+  if (machine_length > S48_MAX_HOST_NAME_LENGTH)
+    s48_raise_argument_type_error(machine);
+
+  memcpy(host_name, s48_extract_byte_vector(machine), machine_length);
+  host_name[machine_length] = '\0';
+
+  thread_handle = CreateThread(NULL, /* lpThreadAttributes */
+			       4096, /* dwStackSize */
+			       (LPTHREAD_START_ROUTINE)gethostbyname_thread,
+			       0, /* lpParameter */
+			       0, /* dwCreationFlags, */
+			       &id);
+
+  return S48_FALSE;
+}
+
+static s48_value
+s48_get_host_by_name_result(void)
+{
+  if (host_address_errno)
+    s48_raise_os_error(host_address_errno);
+  return s48_enter_byte_vector(host_address, host_address_size);
+}
+
+/*
+ * Get the name of the `sch_addr''s host.  If we can't get the real
+ * host name we use the numbers-and-dots representation of the
+ * address.
+ */
+
+
+static DWORD WINAPI
+gethostbyaddr_thread(LPVOID lpParameter)
+{
+  struct sockaddr_in address;
+  memset(&address, 0, sizeof(address));
+  address.sin_family = AF_INET;
+  address.sin_addr = *((struct in_addr *) host_address);
+
+  host_address_errno = getnameinfo((const struct sockaddr *)&address,
+				   sizeof(address),
+				   host_name, S48_MAX_HOST_NAME_LENGTH,
+				   NULL, 0, 0);
+
+  s48_note_external_event(gethostby_event_uid);
+  ExitThread(0);
+  return 0;
+}
+ 
+static s48_value
+s48_get_host_by_address(s48_value sch_addr)
+{
+  DWORD id;
+  HANDLE thread_handle;
+
+  host_address_size = sizeof(struct in_addr);
+  memcpy(host_address,
+	 (char *) s48_extract_byte_vector(sch_addr), host_address_size);
+
+  thread_handle = CreateThread(NULL, /* lpThreadAttributes */
+			       4096, /* dwStackSize */
+			       (LPTHREAD_START_ROUTINE)gethostbyaddr_thread,
+			       0, /* lpParameter */
+			       0, /* dwCreationFlags, */
+			       &id);
+  return S48_FALSE;
+}
+	 
+static s48_value 
+s48_get_host_by_address_result(void)
+{
+  if (host_address_errno)
+    s48_raise_os_error(host_address_errno);
+  return s48_enter_string_latin_1(host_name);
+}
+
 
 /*
  * Create an internet-domain stream (reliable, sequenced) socket.
@@ -1681,14 +1828,12 @@ connect_callback(DWORD dwParam)
 
 static s48_value
 s48_connect(s48_value channel,
-	    s48_value machine,
+	    s48_value sch_address,
 	    s48_value port,
 	    s48_value retry_p)
 {
   long socket_fd;
   unsigned short port_number;
-  char *machine_name;
-  struct addrinfo *address_info;
   struct sockaddr_in address;
   stream_descriptor_t* stream_descriptor;
   callback_data_t* callback_data;
@@ -1701,49 +1846,17 @@ s48_connect(s48_value channel,
   callback_data = &(stream_descriptor->callback_data);
   socket = stream_descriptor->socket_data.socket;
 
-  machine_name = s48_extract_byte_vector(machine);
-  
   S48_CHECK_FIXNUM(port);
   port_number = (unsigned short)S48_UNSAFE_EXTRACT_FIXNUM(port);
-  
-  /*
-   * Get the host and initialize `address'.
-   * ####Note that this blocks.
-   */
-
-  {
-      struct addrinfo hints;
-      int status;
-      hints.ai_family = PF_INET;
-      hints.ai_socktype = SOCK_STREAM;
-      hints.ai_protocol = IPPROTO_TCP;
-      hints.ai_flags = AI_CANONNAME;
-      hints.ai_addrlen = 0;
-      hints.ai_canonname = NULL;
-      hints.ai_addr = NULL;
-      hints.ai_next = NULL;
-      /* ####
-       * Unicode note: GetAddrInfoW exists, but Mike doesn't know
-       * if just passing in IDNA (which we'll need to do eventually
-       * anyway) works aas well.
-       */
-      status = getaddrinfo(machine_name,
-			   NULL, /* servname */
-			   &hints,
-			   &address_info);
-      if (status != 0)
-	raise_windows_error(status);
-  }
 
   memset((void *)&address, 0, sizeof(address));
 
-  if (address_info->ai_addrlen > sizeof(address))
-    s48_raise_range_error(s48_enter_fixnum(address_info->ai_addrlen),
+  if (S48_BYTE_VECTOR_LENGTH(sch_address) > sizeof(address))
+    s48_raise_range_error(s48_enter_fixnum(S48_BYTE_VECTOR_LENGTH(sch_address)),
 			  S48_UNSAFE_ENTER_FIXNUM(0),
 			  s48_enter_fixnum(sizeof(address)));
 
-  memcpy((void *)&address, (void *)address_info->ai_addr, address_info->ai_addrlen);
-  freeaddrinfo(address_info);
+  memcpy((void *)&address, (void *)host_address, host_address_size);
 
   address.sin_port = htons(port_number);
 
