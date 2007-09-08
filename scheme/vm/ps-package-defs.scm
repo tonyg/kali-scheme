@@ -35,6 +35,9 @@
     (define get-os-string-encoding
       (external "s48_get_os_string_encoding" (=> () (^ char))))
 
+    (define host-architecture
+      (external "S48_HOST_ARCHITECTURE" (^ char)))
+
     (define s48-call-native-procedure
       (external "s48_call_native_procedure" (=> (integer integer) integer)))
     (define s48-invoke-native-continuation

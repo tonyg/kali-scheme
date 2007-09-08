@@ -508,6 +508,8 @@
 (define-primitive system-parameter (fixnum->)
   (lambda (key)
     (enum-case system-parameter-option key
+      ((host-architecture)
+       (goto return (enter-string+gc host-architecture)))
       ((os-string-encoding)
        (goto return (enter-string+gc (get-os-string-encoding))))
       (else

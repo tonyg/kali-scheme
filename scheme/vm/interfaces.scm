@@ -388,6 +388,7 @@
 	  dequeue-external-event!
 
 	  get-os-string-encoding
+	  host-architecture
 
  	  external-bignum-make-cached-constants
  	  external-bignum-add

@@ -546,7 +546,8 @@
 ; Options for op/system-parameter
 
 (define-enumeration system-parameter-option
-  (os-string-encoding))
+  (host-architecture
+   os-string-encoding))
 
 (define-enumeration stob
   (;; D-vector types (traced by GC)

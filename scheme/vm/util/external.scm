@@ -169,6 +169,8 @@
 (define (get-os-string-encoding)
   "UTF-8")
 
+(define host-architecture "s48")
+
 (define (raise-argument-type-error val)
   (fake-it 'raise-argument-type-error))
 
