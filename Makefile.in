@@ -31,15 +31,17 @@ HOST_ARCHITECTURE = @host@
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 
+bindir = @bindir@
+libdir = @libdir@
+incdir = @includedir@
+manext = 1
+mandir = @mandir@/man$(manext)
+datarootdir = @datarootdir@
+datadir = @datadir@
+
 DYNAMIC_EXTERNALS_CFLAGS=@DYNAMIC_EXTERNALS_CFLAGS@
 DYNAMIC_EXTERNALS_LDFLAGS=@DYNAMIC_EXTERNALS_LDFLAGS@
 ### End of `configure' section###
-
-bindir = $(exec_prefix)/bin
-libdir = $(exec_prefix)/lib
-incdir = $(exec_prefix)/include
-manext = 1
-mandir = $(prefix)/man/man$(manext)
 
 # HP 9000 series, if you don't have gcc
 #   CC = cc
@@ -53,10 +55,12 @@ mandir = $(prefix)/man/man$(manext)
 	$(CC) -c $(CPPFLAGS) $(DEFS) -I ./c -I$(srcdir)/c -I$(srcdir)/c/bibop $(CFLAGS) -o $@ $<
 
 # You might want to change RUNNABLE to "s48"
+VERSION = 1.`cat $(srcdir)/build/minor-version-number`
 RUNNABLE = scheme48
 CONFIG_SCRIPT = scheme48-config
 MANPAGE = $(RUNNABLE).$(manext)
-LIB = $(libdir)/$(RUNNABLE)
+LIB = $(libdir)/scheme48-$(VERSION)
+SHARE = $(datadir)/scheme48-$(VERSION)
 
 distdir = /tmp
 
@@ -387,17 +391,17 @@ inst-vm:
 
 inst-image:
 	rm -f '/tmp/$(IMAGE)' &&					\
-	$(srcdir)/build/build-usual-image $(srcdir) '$(LIB)'            \
-	         '/tmp/$(IMAGE)' './$(VM)' '$(INITIAL)' &&		\
-	$(INSTALL_DATA) /tmp/$(IMAGE) $(DESTDIR)$(LIB) &&				\
+	$(srcdir)/build/build-usual-image $(srcdir) "$(SHARE)"          \
+	         "/tmp/$(IMAGE)" "./$(VM)" "$(INITIAL)" &&		\
+	$(INSTALL_DATA) /tmp/$(IMAGE) $(DESTDIR)$(LIB) &&		\
 	rm /tmp/$(IMAGE)
 
 inst-man:
 	$(srcdir)/mkinstalldirs $(DESTDIR)$(mandir)
 	sed 's=LBIN=$(bindir)=g' $(srcdir)/doc/scheme48.man |	   \
-		sed 's=LLIB=$(LIB)=g' |				   \
-		sed 's=LS48=$(RUNNABLE)=g' >$(MANPAGE) &&	   \
-	$(INSTALL_DATA) $(MANPAGE) $(DESTDIR)$(mandir) &&			   \
+		sed "s=LLIB=$(LIB)=g" |				   \
+		sed "s=LS48=$(RUNNABLE)=g" >$(MANPAGE) &&	   \
+	$(INSTALL_DATA) $(MANPAGE) $(DESTDIR)$(mandir) &&	   \
 	rm $(MANPAGE);						   \
 
 inst-inc: c/scheme48.exp
@@ -411,20 +415,21 @@ inst-inc: c/scheme48.exp
 inst-misc:
 	for stub in env big sort opt misc link posix cml srfi; do	\
 		for f in $(srcdir)/scheme/$$stub/*.scm; do		\
-			$(INSTALL_DATA) $$f $(DESTDIR)$(LIB)/$$stub || exit 1;	\
+			$(INSTALL_DATA) $$f $(DESTDIR)$(SHARE)/$$stub || exit 1;	\
 		done;							\
 	done &&								\
 	for f in $(srcdir)/scheme/rts/*num.scm 				\
 		 $(srcdir)/scheme/rts/jar-defrecord.scm; do		\
-		$(INSTALL_DATA) $$f $(DESTDIR)$(LIB)/rts || exit 1;		\
+		$(INSTALL_DATA) $$f $(DESTDIR)$(SHARE)/rts || exit 1;	\
 	done
 
 inst-script:
-	script=$(DESTDIR)$(bindir)/$(RUNNABLE) &&					\
-	echo '#!/bin/sh'	>$$script &&				\
+	script=$(DESTDIR)$(bindir)/$(RUNNABLE) &&			\
+	LIB=$(LIB) &&							\
+	echo "#!/bin/sh"	>$$script &&				\
 	echo			>>$$script &&				\
-	echo 'lib=$(LIB)'	>>$$script &&				\
-	echo 'exec $$lib/$(VM) -i $$lib/$(IMAGE) "$$@"'	\
+	echo "lib=$$LIB"	>>$$script &&				\
+	echo 'exec $$lib/$(VM) -i $$lib/$(IMAGE) "$$@"'			\
 				>>$$script &&				\
 	chmod +x $$script
 
@@ -435,14 +440,14 @@ inst-script-interpreters:
 	done
 
 inst-config-script:
-	config_script=$(DESTDIR)$(bindir)/$(CONFIG_SCRIPT) &&			\
+	config_script=$(DESTDIR)$(bindir)/$(CONFIG_SCRIPT) &&		\
 	sed -e 's,@incdir\@,$(incdir),g'				\
 	    -e 's,@libdir\@,$(libdir),g'				\
 	    -e 's,@CC\@,$(CC),g'					\
 	    -e 's,@LD\@,$(LD),g'					\
 	    -e 's,@DYNAMIC_EXTERNALS_CFLAGS\@,$(DYNAMIC_EXTERNALS_CFLAGS),g' \
 	    -e 's,@DYNAMIC_EXTERNALS_LDFLAGS\@,$(DYNAMIC_EXTERNALS_LDFLAGS),g' \
-	< $(srcdir)/build/$(CONFIG_SCRIPT).in > $$config_script &&		\
+	< $(srcdir)/build/$(CONFIG_SCRIPT).in > $$config_script &&	\
 	chmod +x $$config_script
 
 # Script to run scheme48 in this directory.
@@ -461,12 +466,12 @@ c/scheme48.exp: c/scheme48.h
 	egrep ^S48_EXTERN $(srcdir)/c/scheme48.h | sed 's,^S48_EXTERN.*\(s48_[a-zA-Z0-9_]*\)(.*$$,\1,' >> $(srcdir)/c/scheme48.exp
 
 dirs:
-	for dir in $(libdir) $(bindir) $(incdir); do			 \
+	for dir in $(libdir) $(bindir) $(incdir) $(datadir); do			 \
 		$(srcdir)/mkinstalldirs $(DESTDIR)$$dir || exit 1;	 \
 	done
 	$(srcdir)/mkinstalldirs $(DESTDIR)$(LIB)
 	for dir in rts env big sort opt misc link posix cml srfi; do	  \
-		$(srcdir)/mkinstalldirs $(DESTDIR)$(LIB)/$$dir || exit 1; \
+		$(srcdir)/mkinstalldirs $(DESTDIR)$(SHARE)/$$dir || exit 1; \
 	done
 
 configure: configure.in
@@ -554,7 +559,7 @@ DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
 		ps-compiler/prescheme/test/*.scm			\
 		c/sysdep.h.in
 
-distname = $(RUNNABLE)-1.`cat $(srcdir)/build/minor-version-number`
+distname = scheme48-$(VERSION)
 
 dist: build/initial.image c/scheme48.h
 	distname=$(distname) &&						\
