@@ -20,8 +20,8 @@ syntax: regexp
 ^doc/html
 ^doc/manual.(pdf|ps)$
 ^doc/manual.ps$
-^doc/src/.*\.(aux|dvi|hlog|idx|ind|log|ilg|eval4tex|out|toc)$
-^doc/src/manual-Z-G
+^doc/src/.*\.(aux|dvi|hlog|idx|ind|log|ilg|eval4tex|out|toc|bbl|blg)$
+^doc/src/.*-Z-G
 ^scheme/debug/.*\.(debug|image)$
 ^scheme/env/unicode-info\.scm$
 ^scheme/rts/syntax-info\.scm$
@@ -40,7 +40,7 @@ syntax: regexp
 ^generate-c-header\.input$
 ^ps-compiler/.*\.input$
 ^go\.bat$
-^scheme48\.(ncb|res|suo|vcproj.*)$
+^scheme48\.(ncb|res|suo|vcproj\..*)$
 ^scheme48vm\.(exe|exp|lib)$
 ^scheme48-files\.input$
 ^scheme48\.(msi|wixobj)$
