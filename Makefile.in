@@ -28,6 +28,9 @@ ASM_INITIALIZERS = @ASM_INITIALIZERS@
 
 prefix = @prefix@
 exec_prefix = @exec_prefix@
+
+DYNAMIC_EXTERNALS_CFLAGS=@DYNAMIC_EXTERNALS_CFLAGS@
+DYNAMIC_EXTERNALS_LDFLAGS=@DYNAMIC_EXTERNALS_LDFLAGS@
 ### End of `configure' section###
 
 bindir = $(exec_prefix)/bin
@@ -35,9 +38,6 @@ libdir = $(exec_prefix)/lib
 incdir = $(exec_prefix)/include
 manext = 1
 mandir = $(prefix)/man/man$(manext)
-
-DYNAMIC_EXTERNALS_CFLAGS=@DYNAMIC_EXTERNALS_CFLAGS@
-DYNAMIC_EXTERNALS_LDFLAGS=@DYNAMIC_EXTERNALS_LDFLAGS@
 
 # HP 9000 series, if you don't have gcc
 #   CC = cc
