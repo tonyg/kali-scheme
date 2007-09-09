@@ -371,7 +371,7 @@ $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 		scheme/cml/interfaces.scm scheme/cml/packages.scm \
 		scheme/posix/packages.scm scheme/srfi/packages.scm \
 		$(usual-files) build/initial.debug build/build-usual-image
-	$(srcdir)/build/build-usual-image $(srcdir) "`(cd $(srcdir) && echo $$PWD)`/scheme" '$(IMAGE)' './$(VM)' \
+	$(srcdir)/build/build-usual-image $(srcdir) "`(cd $(srcdir) && pwd)`/scheme" '$(IMAGE)' './$(VM)' \
 		'$(INITIAL)'
 
 ### Fake targets:  all clean install man dist
