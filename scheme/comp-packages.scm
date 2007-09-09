@@ -362,6 +362,6 @@
   (optimize auto-integrate))
 
 (define-structure filenames filenames-interface
-  (open scheme-level-1 simple-signals)
+  (open scheme-level-1 simple-signals fluids cells)
   (files (big filename)))
 

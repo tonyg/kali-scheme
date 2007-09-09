@@ -90,19 +90,38 @@
 ; Directory translations.
 ; E.g. (set-translation! "foo;" "/usr/mumble/foo/")
 
-(define *translations* '())
+(define *global-translations* '())
 
-(define (translations) *translations*)
+(define $translations (make-fluid (make-cell '())))
+
+(define (make-translations)
+  (make-cell '())))
+
+(define (with-translations translations thunk)
+  (let-fluid $translations (make-cell '()) thunk))
+
+(define (translations) (cell-ref (fluid $translations)))
+(define (set-translations! new)
+  (cell-set! (fluid $translations) new))
+
+(define (set-global-translation! from to)
+  (set! *global-translations*
+	(amend-alist! from to *global-translations*)))
 
 (define (set-translation! from to)
-  (let ((probe (assoc from *translations*)))
+  (set-translations! (amend-alist! from to (translations))))
+
+(define (amend-alist! from to alist)
+  (let ((probe (assoc from alist)))
     (if probe
-	(set-cdr! probe to)
-	(set! *translations* (cons (cons from to) *translations*)))))
+	(begin
+	  (set-cdr! probe to)
+	  alist)
+	(cons (cons from to) alist))))
 
 (define (translate name)
   (let ((len (string-length name)))
-    (let loop ((ts *translations*))
+    (let loop ((ts (append *global-translations* (translations))))
       (if (null? ts)
 	  name
 	  (let* ((from (caar ts))

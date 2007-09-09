@@ -95,6 +95,7 @@
 	  inspector-writing-length set-inspector-writing-length!
 	  condition-writing-depth set-condition-writing-depth!
 	  condition-writing-length set-condition-writing-length!
+	  translations set-translations!
 
 	  maybe-menu
 	  set-menu!

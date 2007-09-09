@@ -33,7 +33,10 @@ echo (ensure-loaded usual-features) >> %srcdir%\build\build-usual-image.input
 echo ,structure more-structures more-structures-interface >> %srcdir%\build\build-usual-image.input
 echo ,in debuginfo (read-debug-info "%srcdir_cooked%build/initial.debug") >> %srcdir%\build\build-usual-image.input
 echo ,keep maps source files >> %srcdir%\build\build-usual-image.input
-echo ,translate =scheme48/ "%lib%/" >> %srcdir%\build\build-usual-image.input
+echo ,new-package >> %srcdir%\build\build-usual-image.input
+echo ,open scheme filenames >> %srcdir%\build\build-usual-image.input
+echo (set-global-translation! "=scheme48/" "%lib%/") >> %srcdir%\build\build-usual-image.input
+echo ,user >> %srcdir%\build\build-usual-image.input
 echo ,build ((*structure-ref package-commands-internal >> %srcdir%\build\build-usual-image.input
 echo                         'new-command-processor) >> %srcdir%\build\build-usual-image.input
 echo         "(made by %USERNAME% on %builddate%)" >> %srcdir%\build\build-usual-image.input

@@ -62,6 +62,7 @@
 	signals			; error
 	signals-internal	; coerce-to-condition, coerce-to-simple-condition
 	i/o			; current-error-port
+	(subset filenames (with-translations make-translations))
 	util                    ; unspecific
 	channel-i/o             ; steal-channel-port
 	fluids

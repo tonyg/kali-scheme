@@ -871,7 +871,9 @@
 	  file-name-directory
 	  file-name-nondirectory
 	  translate
+	  set-global-translation!
 	  set-translation!
+	  make-translations with-translations
 	  translations))
 
 ; Things for the compiler.

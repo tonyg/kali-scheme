@@ -101,6 +101,9 @@
 (define condition-writing-length (user-context-accessor 'condition-writing-length
 							(lambda () 6)))
 (define set-condition-writing-length! (user-context-modifier 'condition-writing-length))
+
+(define translations (user-context-accessor 'translations make-translations))
+(define set-translations! (user-context-modifier 'translations))
   
 ;----------------
 ; User session state.

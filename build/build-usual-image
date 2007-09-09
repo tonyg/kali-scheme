@@ -11,7 +11,7 @@ USER=${USER-`logname 2>/dev/null || echo '*GOK*'`}
 
 $vm -i $initial -a batch <<EOF
 ,load $srcdir/scheme/env/init-defpackage.scm
-((*structure-ref filenames 'set-translation!)
+((*structure-ref filenames 'set-global-translation!)
  "=scheme48/" "$srcdir/scheme/")
 ,load =scheme48/packages.scm
 ,load =scheme48/more-interfaces.scm
@@ -33,7 +33,10 @@ $vm -i $initial -a batch <<EOF
 ,structure more-structures more-structures-interface
 ,in debuginfo (read-debug-info "$srcdir/build/initial.debug")
 ,keep maps source files
-,translate =scheme48/ "$lib/"
+,new-package
+,open scheme filenames
+(set-global-translation! "=scheme48/" "$lib/")
+,user
 ,build ((*structure-ref package-commands-internal
 			'new-command-processor)
 	"(made by $USER on $date)"

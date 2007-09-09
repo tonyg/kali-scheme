@@ -151,17 +151,19 @@
 	(let-fluids $command-level-thread? #t
 		    $user-session session
 	  (lambda ()
-	    (if (not (or (user-session-batch-mode? session)
-			 (user-session-script-mode? session)))
-		(greeting-thunk))
-	    ;(debug-message "[start-thunk]")
-	    (start-thunk)
-	    (let ((thunk (really-push-command-level condition
-						    inspector-state
-						    dynamic-env
-						    '())))
-	      (ignore-further-interrupts)
-	      thunk)))))))
+	    (with-translations (translations)
+	     (lambda ()
+	       (if (not (or (user-session-batch-mode? session)
+			    (user-session-script-mode? session)))
+		   (greeting-thunk))
+	       ;;(debug-message "[start-thunk]")
+	       (start-thunk)
+	       (let ((thunk (really-push-command-level condition
+						       inspector-state
+						       dynamic-env
+						       '())))
+		 (ignore-further-interrupts)
+		 thunk)))))))))
 
 ; A fluid to tell us when we are in the command level thread (used to
 ; avoid sending upcalls to whomever is running us).
