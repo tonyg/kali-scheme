@@ -499,6 +499,10 @@
 	  inversion-list-cursor inversion-list-cursor-at-end?
 	  inversion-list-cursor-next inversion-list-cursor-ref))
 
+(define-interface constant-tables-interface
+  (export make-constant-table
+	  constant-table-lookup))
+
 (define-interface mask-types-interface
   (export make-mask-type
 	  mask-type?

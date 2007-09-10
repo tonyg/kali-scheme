@@ -35,9 +35,17 @@
 	inversion-lists)
   (files (big inversion-list-check)))
 
+(define-structure constant-tables-test (export constant-tables-tests)
+  (open scheme test-suites
+	constant-tables
+	(subset tables (symbol-hash)))
+  (files (big constant-table-check)))
+
 (define-structure big-test (export big-tests)
   (open scheme test-suites
-	misc-big-test inversion-lists-test)
+	misc-big-test inversion-lists-test constant-tables-test)
   (begin
     (define-test-suite big-tests
-      (misc-big-tests inversion-lists-tests))))
+      (misc-big-tests
+       inversion-lists-tests
+       constant-tables-tests))))

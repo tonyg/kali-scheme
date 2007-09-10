@@ -215,6 +215,12 @@
 	signals)
   (files (big inversion-list)))
 
+(define-structure constant-tables constant-tables-interface
+  (open scheme
+	bitwise
+	define-record-types)
+  (files (big constant-table)))
+
 (define-structure receiving (export (receive :syntax))
   (open scheme-level-2)
   (files (big receive)))

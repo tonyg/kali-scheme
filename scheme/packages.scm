@@ -416,6 +416,7 @@
 	    command-levels
 	    command-processor
 	    compact-tables
+	    constant-tables
 	    conditions
 	    c-system-function
 	    debugging
