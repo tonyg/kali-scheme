@@ -5,10 +5,12 @@ set srcdir_cooked=%~f1
 set srcdir_cooked=%srcdir_cooked:\=\\%
 set lib=%~f2
 set lib=%lib:\=\\%
-set image=%~3
-set vm=%4
-set initial=%5
-set builddate=%~t5
+set share=%~f3
+set share=%share:\=\\%
+set image=%~4
+set vm=%5
+set initial=%6
+set builddate=%~t7
 
 echo ,load "%srcdir_cooked%scheme/env/init-defpackage.scm" > %srcdir%\build\build-usual-image.input
 echo ((*structure-ref filenames 'set-translation!) >> %srcdir%\build\build-usual-image.input
@@ -35,7 +37,8 @@ echo ,in debuginfo (read-debug-info "%srcdir_cooked%build/initial.debug") >> %sr
 echo ,keep maps source files >> %srcdir%\build\build-usual-image.input
 echo ,new-package >> %srcdir%\build\build-usual-image.input
 echo ,open scheme filenames >> %srcdir%\build\build-usual-image.input
-echo (set-global-translation! "=scheme48/" "%lib%/") >> %srcdir%\build\build-usual-image.input
+echo (set-global-translation! "=scheme48/" "%share%/") >> %srcdir%\build\build-usual-image.input
+echo (set-global-translation! "=scheme48external/" "%lib%/") >> %srcdir%\build\build-usual-image.input
 echo ,user >> %srcdir%\build\build-usual-image.input
 echo ,build ((*structure-ref package-commands-internal >> %srcdir%\build\build-usual-image.input
 echo                         'new-command-processor) >> %srcdir%\build\build-usual-image.input

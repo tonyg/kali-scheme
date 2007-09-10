@@ -377,7 +377,8 @@ $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 		scheme/cml/interfaces.scm scheme/cml/packages.scm \
 		scheme/posix/packages.scm scheme/srfi/packages.scm \
 		$(usual-files) build/initial.debug build/build-usual-image
-	$(srcdir)/build/build-usual-image $(srcdir) "`(cd $(srcdir) && pwd)`/scheme" '$(IMAGE)' './$(VM)' \
+	$(srcdir)/build/build-usual-image $(srcdir) \
+		"`(cd $(srcdir) && pwd)`/scheme" "`pwd`/c" '$(IMAGE)' './$(VM)' \
 		'$(INITIAL)'
 
 ### Fake targets:  all clean install man dist
@@ -392,7 +393,7 @@ inst-vm:
 inst-image:
 	rm -f '/tmp/$(IMAGE)' &&					\
 	$(srcdir)/build/build-usual-image $(srcdir) "$(SHARE)"          \
-	         "/tmp/$(IMAGE)" "./$(VM)" "$(INITIAL)" &&		\
+	         "$(LIB)" "/tmp/$(IMAGE)" "./$(VM)" "$(INITIAL)" &&	\
 	$(INSTALL_DATA) /tmp/$(IMAGE) $(DESTDIR)$(LIB) &&		\
 	rm /tmp/$(IMAGE)
 

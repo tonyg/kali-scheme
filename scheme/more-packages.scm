@@ -330,6 +330,7 @@
 	shared-objects
 	(subset usual-resumer (add-initialization-thunk!))
 	(subset big-util (delq delete any))
+	filenames
 	(subset signals (error)))
   (files (big dynamic-external)))
 

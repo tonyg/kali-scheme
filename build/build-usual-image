@@ -3,10 +3,11 @@
 
 date=`date`
 srcdir=$1
-lib=$2
-image=$3
-vm=$4
-initial=$5
+share=$2
+lib=$3
+image=$4
+vm=$5
+initial=$6
 USER=${USER-`logname 2>/dev/null || echo '*GOK*'`}
 
 $vm -i $initial -a batch <<EOF
@@ -35,7 +36,8 @@ $vm -i $initial -a batch <<EOF
 ,keep maps source files
 ,new-package
 ,open scheme filenames
-(set-global-translation! "=scheme48/" "$lib/")
+(set-global-translation! "=scheme48/" "$share/")
+(set-global-translation! "=scheme48external/" "$lib/")
 ,user
 ,build ((*structure-ref package-commands-internal
 			'new-command-processor)

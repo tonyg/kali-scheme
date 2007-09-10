@@ -32,12 +32,13 @@
 (define *the-dynamic-externals-table* '())
 
 (define (find-dynamic-externals name)
-  (any (lambda (dynamic-externals)
-	 (string=? name
-		   (shared-object-name
-		    (dynamic-externals-shared-object
-		     dynamic-externals))))
-       *the-dynamic-externals-table*))
+  (let ((real-name (translate name)))
+    (any (lambda (dynamic-externals)
+	   (string=? real-name
+		     (shared-object-name
+		      (dynamic-externals-shared-object
+		       dynamic-externals))))
+	 *the-dynamic-externals-table*)))
 
 ;; returns the DYNAMIC-EXTERNALS object
 (define (load-dynamic-externals name complete-name?
@@ -53,7 +54,7 @@
 	     (reload-dynamic-externals-internal dynamic-externals #t))
 	 dynamic-externals))
    (else
-    (let* ((shared-object (open-shared-object name complete-name?))
+    (let* ((shared-object (open-shared-object (translate name) complete-name?))
 	   (dynamic-externals (make-dynamic-externals shared-object
 						      complete-name?
 						      reload-on-repeat?
@@ -69,9 +70,9 @@
   (let* ((old-shared-object (dynamic-externals-shared-object dynamic-externals))
 	 (name (shared-object-name old-shared-object)))
     (if reload?
-	(unload-shared-object old-shared-object))
+	(unload-shared-object dynamic-externals)) 
     (let ((shared-object
-	   (open-shared-object name
+	   (open-shared-object (translate name)
 			       (dynamic-externals-complete-name? dynamic-externals))))
       (set-dynamic-externals-shared-object! dynamic-externals shared-object)
       (cond
