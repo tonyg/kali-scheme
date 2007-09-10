@@ -891,7 +891,7 @@
 	  table-walk
 	  make-table-immutable!
 
-	  string-hash
+	  string-hash symbol-hash
 	  default-hash-function))
 
 ;----------------

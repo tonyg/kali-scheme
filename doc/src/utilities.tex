@@ -774,11 +774,13 @@ For example, \code{make-integer-table} could be defined
 \begin{protos}
 \proto{default-hash-function}{ value}{integer}
 \proto{string-hash}{ string}{integer}
+\proto{symbol-hash}{ symbol}{integer}
 \end{protos}
 \noindent
 \code{Default-hash-function} is the hash function used in the tables
- returned by \code{make-table}, and \code{string-hash} it the one used
- by \code{make-string-table}.
+ returned by \code{make-table}, \code{string-hash} is the one used
+ by \code{make-string-table}, and \code{symbol-hash} is the one used
+ by \code{make-symbol-table}.
 
 \section{Port extensions}
 
