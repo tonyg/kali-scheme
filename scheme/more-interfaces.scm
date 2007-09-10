@@ -528,8 +528,10 @@
 	  enum-set->list
 	  enum-set-member?
 	  enum-set=?
+	  enum-set-subset?
 	  enum-set-union
 	  enum-set-intersection
+	  enum-set-difference
 	  enum-set-negation))
 
 (define-interface enum-sets-internal-interface
@@ -537,7 +539,16 @@
 	  enum-set?
 	  enum-set-type
 	  enum-set->integer
-	  integer->enum-set))
+	  integer->enum-set
+
+	  ;; for r6rs-enums
+	  make-enum-set-type
+	  enum-set-type-values
+	  enum-set-type-member?
+	  elements->enum-set
+	  (define-enum-set-maker :syntax)
+	  enum-set-type-element-index
+	  ))
 
 (define-interface search-trees-interface
   (export make-search-tree

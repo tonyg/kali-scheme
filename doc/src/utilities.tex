@@ -679,8 +679,10 @@ the index of an element within the \cvar{all-elements} vector.
 \proto{enum-set->list}{ enum-set}{list}
 \proto{enum-set-member?}{ enum-set enumerand}{boolean}
 \proto{enum-set=?}{ enum-set enum-set}{boolean}
+\proto{enum-set-subset?}{ enum-set enum-set}{boolean}
 \proto{enum-set-union}{ enum-set enum-set}{enum-set}
 \proto{enum-set-intersection}{ enum-set enum-set}{ enum-set}
+\proto{enum-set-difference}{ enum-set enum-set}{ enum-set}
 \proto{enum-set-negation}{ enum-set}{enum-set}
 \end{protos}
 %
@@ -688,8 +690,12 @@ the index of an element within the \cvar{all-elements} vector.
 \code{Enum-set-member?} tests for membership.  \code{Enum-set=?} tests
 two sets of equal type for equality.  (If its arguments are not of the
 same type, \code{enum-set=?} raises an exception.)
+\code{Enum-set-subset?} tests, for two sets of equal type, 
+if the first set is a subset of the second one.
 \code{Enum-set-union} computes the union of two sets of equal type,
-\code{enum-set-intersection} computes the intersection, and
+\code{enum-set-intersection} computes the intersection, 
+\code{enum-set-difference} computes the intersection, 
+and
 \code{enum-set-negation} computes the complement of a set.
 
 Here is an example.  Given an enumerated type:

@@ -46,14 +46,14 @@
 			     element-predicate
 			     all-elements
 			     element-index-ref))
+
        (define (predicate x)
 	 (and (enum-set? x)
-	      (eq? (enum-set-type x)
-		   type)))
+	      (enum-set-has-type? x type)))
+
        (define (constructor elements)
-	 (if (every element-predicate elements)
-	     (make-enum-set type (elements->mask elements element-index-ref))
-	     (error "invalid set elements" element-predicate elements)))
+	 (elements->enum-set type elements))
+
        (define-enum-set-maker id constructor element-syntax)))))
 
 ; (define-enum-set-maker id constructor element-syntax)
@@ -76,6 +76,9 @@
   (predicate enum-set-type-predicate)
   (values    enum-set-type-values)
   (index-ref enum-set-type-index-ref))
+
+(define (enum-set-type-element-index enum-set-type element)
+  ((enum-set-type-index-ref enum-set-type) element))
 
 (define-record-discloser :enum-set-type
   (lambda (e-s-t)
@@ -105,12 +108,13 @@
 
 (define integer->enum-set make-enum-set)
 
-(define (make-set-constructor id predicate values index-ref)
-  (let ((type (make-enum-set-type id predicate values index-ref)))
-    (lambda elements
-      (if (every predicate elements)
-	  (make-enum-set type (elements->mask elements index-ref))
-	  (error "invalid set elements" predicate elements)))))
+(define (elements->enum-set enum-set-type elements)
+  (let ((element-predicate (enum-set-type-predicate enum-set-type)))
+    (if (every element-predicate elements)
+	(make-enum-set enum-set-type
+		       (elements->mask elements 
+				       (enum-set-type-index-ref enum-set-type)))
+	(error "invalid set elements" enum-set-type elements))))
 
 (define (elements->mask elements index-ref)
   (do ((elements elements (cdr elements))
@@ -121,18 +125,30 @@
        mask)))
 				  
 (define (enum-set-member? enum-set element)
-  (if ((enum-set-type-predicate (enum-set-type enum-set))
-         element)
+  (if (enum-set-type-member? (enum-set-type enum-set) element)
       (not (= (bitwise-and (enum-set-mask enum-set)
 			   (element-mask element (enum-set-type enum-set)))
 	      0))
       (call-error "invalid arguments" enum-set-member? enum-set element)))
 
+(define (enum-set-type-member? enum-set-type element)
+  ((enum-set-type-predicate enum-set-type)
+   element))
+
 (define (enum-set=? enum-set0 enum-set1)
   (if (eq? (enum-set-type enum-set0)
           (enum-set-type enum-set1))
       (= (enum-set-mask enum-set0) 
-        (enum-set-mask enum-set1))
+	 (enum-set-mask enum-set1))
+      (call-error "invalid arguments" enum-set=? enum-set0 enum-set1)))
+
+(define (enum-set-subset? enum-set0 enum-set1)
+  (if (eq? (enum-set-type enum-set0)
+	   (enum-set-type enum-set1))
+      (let ((mask0 (enum-set-mask enum-set0))
+	    (mask1 (enum-set-mask enum-set1)))
+	(= (bitwise-ior mask0 mask1)
+	   mask1))
       (call-error "invalid arguments" enum-set=? enum-set0 enum-set1)))
 
 (define (element-mask element enum-set-type)
@@ -183,3 +199,6 @@
 		   (bitwise-and (bitwise-not (enum-set-mask enum-set))
 				mask))))
 
+(define (enum-set-difference enum-set0 enum-set1)
+  (enum-set-intersection enum-set0
+			 (enum-set-negation enum-set1)))
