@@ -87,7 +87,7 @@
 		    (posix-time  posix-time-interface)
 		    (posix-users posix-users-interface))
   (open scheme define-record-types finite-types
-	external-calls
+	external-calls load-dynamic-externals
 	bitwise			;for manipulating protection masks
 	signals			;call-error
 	posix-file-options
@@ -103,7 +103,7 @@
 					     file-options-on?
 					     file-options-union)
   (open scheme define-record-types finite-types enum-sets
-	external-calls
+	external-calls load-dynamic-externals
 	bitwise)
   (files file-options))
 
@@ -127,7 +127,8 @@
 
 (define-structures ((posix-process-data posix-process-data-interface)
 		    (posix-platform-names posix-platform-names-interface))
-  (open scheme define-record-types external-calls
+  (open scheme define-record-types
+	external-calls load-dynamic-externals
 	os-strings
 	interrupts
 	posix-processes posix-users posix-time) ; we need these to be loaded
@@ -178,7 +179,7 @@
   (open scheme
 	define-record-types finite-types
 	reinitializers
-	external-calls
+	external-calls load-dynamic-externals
 	interrupts
 	placeholders
 	weak
@@ -218,7 +219,7 @@
 
 (define-structure posix-i/o posix-i/o-interface
   (open scheme
-	external-calls
+	external-calls load-dynamic-externals
 	i/o			;read-block
 	channels
 	channel-i/o
@@ -246,7 +247,8 @@
 
 (define-structures ((posix-regexps posix-regexps-interface)
 		    (posix-regexps-internal (export make-match)))
-  (open scheme define-record-types finite-types external-calls
+  (open scheme define-record-types finite-types
+	external-calls load-dynamic-externals
 	(subset big-util (string->immutable-string))
 	signals
 	os-strings text-codecs)

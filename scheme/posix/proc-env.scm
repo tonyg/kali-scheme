@@ -3,6 +3,8 @@
 
 ; Access to Posix process environment
 
+(import-dynamic-externals "=scheme48external/posix")
+
 ; We multiplex a bunch of these to save typing.
 
 ;----------------

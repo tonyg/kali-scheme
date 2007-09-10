@@ -2,6 +2,8 @@
 
 ; 5.1 Directories
 
+(import-dynamic-externals "=scheme48external/posix")
+
 ; A record for directory streams.  It just has the name and a byte vector
 ; containing the C directory object.  The name is used only for printing.
 

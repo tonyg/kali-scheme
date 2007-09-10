@@ -3,6 +3,8 @@
 
 ; Calls from Section 6 of POSIX.
 
+(import-dynamic-externals "=scheme48external/posix")
+
 ; First some port manipulation routines.
 
 (define (fd-port? port)

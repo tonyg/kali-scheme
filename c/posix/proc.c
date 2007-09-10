@@ -21,7 +21,8 @@
 #include "posix.h"
 #include "unix.h"
 
-extern void		s48_init_posix_proc(void);
+extern void		s48_init_posix_proc(void),
+			s48_uninit_posix_proc(void);
 static s48_value	posix_fork(void),
 			posix_exec(s48_value program, s48_value lookup_p,
 				   s48_value env, s48_value args),
@@ -30,12 +31,14 @@ static s48_value	posix_fork(void),
 			posix_integer_to_signal(s48_value sig_int),
 			posix_initialize_named_signals(void),
 			posix_request_interrupts(s48_value int_number),  
-			posix_cancel_interrupt_request(s48_value int_number),  
+			posix_cancel_interrupt_request(s48_value sch_signal),
   			posix_kill(s48_value sch_pid, s48_value sch_signal);
 
 static s48_value	enter_signal(int signal);
 static int		extract_signal(s48_value sch_signal);
-static void		signal_map_init();
+static void		signal_map_init(void);
+static void		signal_map_uninit(void);
+static void		cancel_interrupt_requests(void);
 
 static char		**enter_byte_vector_array(s48_value strings),
 			*add_dot_slash(char *name);
@@ -116,6 +119,14 @@ s48_init_posix_proc(void)
   S48_GC_PROTECT_GLOBAL(unnamed_signals);
 
   signal_map_init();
+}
+
+void
+s48_uninit_posix_proc(void)
+{
+  /* this will lose our signal handlers without reinstalling them; too bad */
+  cancel_interrupt_requests();
+  signal_map_uninit();
 }
 
 /*
@@ -448,6 +459,12 @@ signal_map_init()
 #include "s48_signals.h"
 }
 
+static void
+signal_map_uninit(void)
+{
+  free(signal_map);
+}
+
 /*
  * Converts from an OS signal to a canonical signal number.
  * We return -1 if there is no matching named signal.
@@ -672,21 +689,36 @@ posix_request_interrupts(s48_value sch_signum)
  * and remove it from the saved_action array.
  */
 
+static void
+cancel_interrupt_request(int signum)
+{
+  struct sigaction *	old = saved_actions[signum];
+
+  if (old != NULL)
+    {
+      
+      if (sigaction(signum, old, (struct sigaction *) NULL) != 0)
+	s48_raise_os_error(errno);
+      
+      free(old);
+      saved_actions[signum] = NULL; 
+    }
+}
+
 s48_value
 posix_cancel_interrupt_request(s48_value sch_signum)
 {
-  int			signum = s48_extract_fixnum(sch_signum);
-  struct sigaction *	old = saved_actions[signum];
-
-  if (old != NULL) {
-    
-    if (sigaction(signum, old, (struct sigaction *) NULL) != 0)
-      s48_raise_os_error(errno);
-    
-    free(old);
-    saved_actions[signum] = NULL; }
-    
+  cancel_interrupt_request(s48_extract_fixnum(sch_signum));
   return S48_UNSPECIFIC;
 }
 
-
+static void
+cancel_interrupt_requests(void)
+{
+  int signum = 0;
+  while (signum <= MAX_SIGNAL)
+    {
+      cancel_interrupt_request(signum);
+      ++signum;
+    }
+}

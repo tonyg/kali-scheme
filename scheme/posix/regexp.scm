@@ -9,6 +9,8 @@
 ;   regexp-match-end
 ;   regexp-option
 
+(import-dynamic-externals "=scheme48external/posix")
+
 ; The compiled version of the expression is produced when needed.
 
 (define-record-type regexp :regexp

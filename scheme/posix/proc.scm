@@ -2,6 +2,8 @@
 
 
 ; 3.1 Process Creation and Execution
+
+(import-dynamic-externals "=scheme48external/posix")
 ;
 ; FORK returns the child pid in the parent, and #f in the child.
 

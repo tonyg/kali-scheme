@@ -8,7 +8,7 @@ syntax: regexp
 ^config\.log$
 ^configure$
 ^Makefile$
-^c/.*\.(o|a|exp)$
+^c/.*\.(o|a|exp|so)$
 ^go$
 ^scheme48\.image$
 ^scheme48vm$

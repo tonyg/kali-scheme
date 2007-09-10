@@ -1,7 +1,9 @@
 ; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; 3.3 Signals
-;
+
+(import-dynamic-externals "=scheme48external/posix")
+
 ; int kill(pid_t pid, int sig)
 ;
 ; Also signal sets, sigaction(), blocked and waiting signals,
