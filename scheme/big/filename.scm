@@ -95,7 +95,7 @@
 (define $translations (make-fluid (make-cell '())))
 
 (define (make-translations)
-  (make-cell '())))
+  (make-cell '()))
 
 (define (with-translations translations thunk)
   (let-fluid $translations (make-cell '()) thunk))
