@@ -319,6 +319,7 @@
 (define-structure shared-objects shared-objects-interface
   (open scheme-level-2
 	define-record-types
+	exceptions
 	external-calls
 	os-strings text-codecs)
   (files (big shared-object)))

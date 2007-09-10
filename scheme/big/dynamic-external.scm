@@ -6,10 +6,13 @@
 ;; track of which shared objects are loaded, and prevents them from
 ;; being removed automatically by the GC.
 
-;; The shared object must define two functions
+;; The shared object must define a function
 ;; void s48_on_load(void);
-;; and
+;; It can also define functiosn:
+;; void s48_on_unload(void);
+;;   which is called just before unloading, and
 ;; void s48_on_reload(void);
+;;   which is called after reloading.
 ;; (which typically do the same thing) that LOAD-DYNAMIC-EXTERNALS
 ;; calls, depending on whether the object is being loaded for the
 ;; first time or not.
@@ -47,7 +50,7 @@
 	 ;; We assume they're always the same.  We should probably
 	 ;; verify.
 	 (if reload-on-repeat?
-	     (reload-dynamic-externals-internal dynamic-externals #t "s48_on_reload"))
+	     (reload-dynamic-externals-internal dynamic-externals #t))
 	 dynamic-externals))
    (else
     (let* ((shared-object (open-shared-object name complete-name?))
@@ -62,25 +65,28 @@
        (shared-object-address shared-object "s48_on_load"))
       dynamic-externals))))
 
-(define (reload-dynamic-externals-internal dynamic-externals close-first? init-name)
+(define (reload-dynamic-externals-internal dynamic-externals reload?)
   (let* ((old-shared-object (dynamic-externals-shared-object dynamic-externals))
 	 (name (shared-object-name old-shared-object)))
-    (if close-first?
-	(close-shared-object old-shared-object))
+    (if reload?
+	(unload-shared-object old-shared-object))
     (let ((shared-object
 	   (open-shared-object name
 			       (dynamic-externals-complete-name? dynamic-externals))))
-      (set-dynamic-externals-shared-object! dynamic-externals
-					    shared-object)
-      (call-shared-object-address
-       (shared-object-address shared-object init-name)))))
+      (set-dynamic-externals-shared-object! dynamic-externals shared-object)
+      (cond
+       ((not reload?)
+	(shared-object-address shared-object "s48_on_load"))
+       ((shared-object-address shared-object "s48_on_reload")
+	=> call-shared-object-address)
+       (else (shared-object-address shared-object "s48_on_load"))))))
 
 ;; for interactive usage
 (define (reload-dynamic-externals name)
   (cond
    ((find-dynamic-externals name) =>
     (lambda (dynamic-externals)
-      (reload-dynamic-externals-internal dynamic-externals #t "s48_on_reload")))
+      (reload-dynamic-externals-internal dynamic-externals #t)))
    (else
     (error "trying to load dynamic externals that were never loaded" name))))
 
@@ -100,11 +106,20 @@
 		   (not (dynamic-externals-reload-on-resume? dynamic-externals)))
 		 *the-dynamic-externals-table*))
    (for-each (lambda (dynamic-externals)
-	       (reload-dynamic-externals-internal dynamic-externals #f "s48_on_load"))
+	       (reload-dynamic-externals-internal dynamic-externals #f))
 	     *the-dynamic-externals-table*)))
 
 ;; note this leaves the shared bindings in place.
 (define (unload-dynamic-externals dynamic-externals)
   (set! *the-dynamic-externals-table*
 	(delq dynamic-externals *the-dynamic-externals-table*))
-  (close-shared-object (dynamic-externals-shared-object dynamic-externals)))
+  (unload-shared-object dynamic-externals))
+
+(define (unload-shared-object dynamic-externals)
+  (let ((shared-object (dynamic-externals-shared-object dynamic-externals)))
+    (cond
+     ((shared-object-address-or-false shared-object "s48_on_unload")
+      => call-shared-object-address))
+    (close-shared-object shared-object)))
+  
+			      

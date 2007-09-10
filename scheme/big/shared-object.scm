@@ -72,6 +72,10 @@
 						(lambda ()
 						  (x->os-string name)))))))
 
+(define (shared-object-address-or-false shared-object name)
+  (guard (c (else #f))
+    (shared-object-address shared-object name)))
+
 ;; This simply calls a C function with no parameters and no return
 ;; value.  It's typically for calling the initialization function; we
 ;; can't use any of the regular external-calling mechanisms because

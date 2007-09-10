@@ -253,20 +253,29 @@ most variants of Unix and on Windows.  The required Scheme functions
 are in the structure \code{load-dynamic-externals}.
 
 To be suitable for dynamic loading, the externals code must reside in
-a shared object.  The shared object must define two functions:
+a shared object.  The shared object must define a function:
 %
 \begin{protos}
   \cproto{void s48\_on\_load(void)}
-  \cproto{void s48\_on\_reload(void)}
 \end{protos}
 %
 The \code{s48\_on\_load} is run upon loading the shared objects.  It
 typically contains invocations of \code{S48\_EXPORT\_FUNCTION} to
 make the functionality defined by the shared object known to
-Scheme~48.  Scheme~48 calls \code{s48\_on\_reload} when it loads the
-shared object for the second time, or some new version thereof.  (More
-on that later.)  Most of the time, \code{s48\_on\_reload} will simply
-call \code{s48\_on\_load}.
+Scheme~48. 
+
+The shared object may also define either or both of the following
+functions:
+%
+\begin{protos}
+   \cproto{void s48\_on\_unload(void)}
+   \cproto{void s48\_on\_reload(void)}
+\end{protos}
+Scheme~48 calls \code{s48\_on\_unload} just before it unloads the
+shared object.  If \code{s48\_on\_reload} is present, Scheme~48 calls
+it when it loads the shared object for the second time, or some new
+version thereof.  If it is not present, Scheme~48 calls
+\code{s48\_on\_load} instead.  (More on that later.)
 
 For Linux, the following commands compile \code{foo.c} into a file
 \code{foo.so} that can be loaded dynamically.
@@ -285,26 +294,30 @@ shared objects containing dynamic externals:
 \protonoresult{reload-dynamic-externals}{ dynamic-externals}
 \end{protos}
 %
-\code{Load-dynamic-externals} loads the
-named shared objects.  The \cvar{plete?} argument determines whether
-Scheme~48 appends the OS-specific suffix (typically \code{.so} for
-Unix, and \code{.dll} for Windows) to the name.  The \cvar{rrepeat?}
-argument determines how \code{load-dynamic-externals} behaves if it is
-called again with the same argument: If this is true, it reloads the
-shared object (and calls its \code{s48\_on\_reload} function),
-otherwise, it will not do anything.  The \cvar{rresume?}  argument
-determines if an image subsequently dumped will try to load the shared
-object again automatically.  (The shared objects will be loaded before
-any record resumers run.)  \code{Load-dynamic-externals} returns a
-handle identifying the shared object just loaded.
+\code{Load-dynamic-externals} loads the named shared objects.  The
+\cvar{plete?} argument determines whether Scheme~48 appends the
+OS-specific suffix (typically \code{.so} for Unix, and \code{.dll} for
+Windows) to the name.  The \cvar{rrepeat?}  argument determines how
+\code{load-dynamic-externals} behaves if it is called again with the
+same argument: If this is true, it reloads the shared object (and
+calls its \code{s48\_on\_unload} on unloading if present, and, after
+reloading, \code{s48\_on\_reload} if present or \code{s48\_on\_load}
+if not), otherwise, it will not do anything.  The \cvar{rresume?}
+argument determines if an image subsequently dumped will try to load
+the shared object again automatically.  (The shared objects will be
+loaded before any record resumers run.)  \code{Load-dynamic-externals}
+returns a handle identifying the shared object just loaded.
 
 \code{Unload-dynamic-externals} unloads the shared object associated
-with the handle passed as its argument.  Note that this invalidates
+with the handle passed as its argument, previously calling its
+\code{s48\_on\_unload} function if present.  Note that this invalidates
 all external bindings associated with the shared object; referring to
 any of them will probably crash the program.
 
 \code{Reload-dynamic-externals} will reload the shared object named by
-its argument and call its \code{s48\_on\_reload} function.
+its argument and call its \code{s48\_on\_unload} function before
+unloading, and, after reloading, \code{s48\_on\_reload} if present or
+\code{s48\_on\_load} if not.
 
 \begin{protos}
 \proto{import-dynamic-externals}{ string}{dynamic-externals}  

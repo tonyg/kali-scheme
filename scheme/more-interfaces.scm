@@ -441,7 +441,7 @@
 	  close-shared-object
 	  shared-object?
 	  shared-object-name
-	  shared-object-address
+	  shared-object-address shared-object-address-or-false
 	  shared-object-address?
 	  shared-object-address-value
 	  call-shared-object-address))
