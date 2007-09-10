@@ -244,15 +244,13 @@ main(void)
 {
   pthread_kill(pthread_self(), 0);
 }],
-	    [flags_result="$1 (compile)"
-             DYNAMIC_EXTERNALS_CFLAGS="$DYNAMIC_EXTERNALS_CFLAGS $1"],
+	    [flags_result="$1 (compile)"],
 	    [CFLAGS="$oldCFLAGS"])
 
 	  oldLDFLAGS="$LDFLAGS"
 	  LDFLAGS="$LDFLAGS $1"
 	  AC_TRY_RUN([int main() { return 0;}],
 		  [flags_result="$flags_result $1 (link)"
-		   DYNAMIC_EXTERNALS_LDFLAGS="$DYNAMIC_EXTERNALS_LDFLAGS $1"
 		   pthreads_done="yes"],
 		  [LDFLAGS="$oldLDFLAGS"])
 	if test -n "$flags_result"; then
