@@ -410,16 +410,6 @@
 	  string-normalize-nfc
 	  string-normalize-nfkc))
 
-(define-interface r6rs-unicode-interface
-  (compound-interface unicode-normalizations-interface
-		      (export char-titlecase
-			      char-title-case?
-			      char-foldcase
-			      string-upcase string-downcase
-			      string-foldcase
-			      string-titlecase)
-		      (export char-general-category)))
-
 ; --------------------
 ; Big Scheme
 
