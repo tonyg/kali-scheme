@@ -529,6 +529,8 @@ check:	$(VM) $(IMAGE) scheme/debug/check.scm
 		echo ',config ,load =scheme48/misc/packages.scm';	\
 		echo ',config ,load =scheme48/misc/test-packages.scm';	\
 		echo ',open misc-test';					\
+		echo ',config ,load =scheme48/r6rs/test-packages.scm';	\
+		echo ',open r6rs-test';					\
 		echo ',config ,load =scheme48/cml/test-packages.scm';	\
 		echo ',open cml-test';					\
 		echo ',config ,load =scheme48/srfi/test-packages.scm';	\
@@ -536,7 +538,7 @@ check:	$(VM) $(IMAGE) scheme/debug/check.scm
 		echo ',config ,load =scheme48/posix/test-packages.scm';	\
 		echo ',open posix-test';				\
 		echo ',open test-suites';				\
-		echo '(define-test-suite all-tests (compiler-tests big-tests tcp-sockets-tests udp-sockets-tests misc-tests cml-tests srfi-tests posix-tests))'; \
+		echo '(define-test-suite all-tests (compiler-tests big-tests tcp-sockets-tests udp-sockets-tests misc-tests r6rs-tests cml-tests srfi-tests posix-tests))'; \
 		echo '(run-test-suite all-tests)'			\
 	) | ./$(VM) -i $(IMAGE) -h 8000000
 

@@ -484,7 +484,6 @@
 	    traverse
 	    udp-sockets
 	    unicode-normalizations
-	    r6rs-unicode
 	    value-pipes
 	    variable-argument-lists
 
@@ -512,6 +511,11 @@
 	    ; do-it-yourself
 	    make-rendezvous
 	    trans-ids
+
+	    ; R6RS packages
+
+	    r6rs-unicode
+	    r6rs-enums
 
 	    ; POSIX packages (see scheme/posix/packages.scm)
 	    posix-files

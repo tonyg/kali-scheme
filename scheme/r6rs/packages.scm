@@ -29,3 +29,33 @@
     (define (char-general-category c)
       (general-category-symbol (s48:char-general-category c)))))
 
+(define-interface r6rs-enums-interface
+  (export make-enumeration
+	  enum-set-universe
+	  enum-set-indexer
+	  enum-set-constructor
+	  enum-set->list
+	  enum-set-member?
+	  enum-set=?
+	  enum-set-subset?
+	  enum-set-union
+	  enum-set-intersection
+	  enum-set-difference
+	  enum-set-complement
+	  enum-set-projection
+	  (define-enumeration :syntax)))
+
+(define-structure r6rs-enums r6rs-enums-interface
+  (open scheme
+	big-util
+	(modify enum-sets (prefix big:))
+	(modify enum-sets-internal (prefix big:))
+	signals
+	constant-tables
+	(subset tables (symbol-hash))
+	(subset names (desyntaxify))
+	code-quote)
+  (files enum))
+
+  
+	  
