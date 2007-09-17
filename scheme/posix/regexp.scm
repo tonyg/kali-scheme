@@ -78,8 +78,8 @@
 	       (regexp (apply really-make-regexp pattern pattern-byte-string #f options)))
 	  (add-finalizer! regexp free-compiled-regexp)
 	  regexp)
-	(apply call-error "invalid argument(s)"
-	                  make-regexp
+	(apply assertion-violation 'make-regexp
+	                  "invalid argument(s)"
 		          pattern
 			  options))))
 
@@ -111,7 +111,8 @@
 						  (regexp-ignore-case? regexp)
 						  (regexp-submatches? regexp)
 						  (regexp-newline? regexp))))
-	      (error (if message
+	      (error 'regexo.compiled
+		     (if message
 			 (string-append "Posix regexp: " message)
 			 "inconsistent results from Posix regexp compiler")
 		     regexp))))))
@@ -124,14 +125,14 @@
   (cond
    ((not (and (regexp? regexp)
 	      (string? string)))
-      (call-error "invalid argument"
-		  regexp-match
-		  regexp string start starts-line? ends-line?))
+      (assertion-violation 'regexp-match
+			   "invalid argument"
+			   regexp string start starts-line? ends-line?))
    ((and submatches?
 	 (not (regexp-submatches? regexp)))
-    (call-error "regexp not compiled for submatches"
-		regexp-match
-		  regexp string start starts-line? ends-line?))
+    (assertion-violation 'regexp-match
+			 "regexp not compiled for submatches"
+			 regexp string start starts-line? ends-line?))
    (else
     (call-imported-binding posix-regexp-match
 			   (regexp-compiled regexp)

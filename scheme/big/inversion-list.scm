@@ -87,7 +87,8 @@
 		    (inversion-list-min i-list-2)))
 	    (not (= (inversion-list-max i-list-1)
 		    (inversion-list-max i-list-2))))
-	(call-error "min/max mismatch" (proc-thunk) i-list-1 i-list-2))
+	(assertion-violation 'make-inversion-list-union/intersection
+			     "min/max mismatch" (proc-thunk) i-list-1 i-list-2))
     (let ((ranges-1 (inversion-list-range-vector i-list-1))
 	  (ranges-2 (inversion-list-range-vector i-list-2))
 	  (min (inversion-list-min i-list-1))
@@ -179,7 +180,8 @@
 (define (number->inversion-list min max n)
   (if (or (< n min)
 	  (>= n max))
-      (call-error "invalid number" number->inversion-list min max n))
+      (assertion-violation 'number->inversion-list "invalid number"
+			   min max n))
   (make-inversion-list min max
 		       (if (= n (- max 1))
 			   (vector n)
@@ -204,7 +206,8 @@
 	  (> left right)
 	  (< left min)
 	  (> right max))
-      (call-error "invalid range" range->inversion-list min max left right))
+      (assertion-violation 'range->inversion-list "invalid range"
+			   min max left right))
   (make-inversion-list min max
 		       (if (= right max)
 			   (vector left)
@@ -220,7 +223,8 @@
 		(right (cdr range-pair)))
 	    (if (not (and (number? left)
 			  (number? right)))
-		(call-error "invalid range" ranges->inversion-list min max (cons left right)))
+		(assertion-violation 'ranges->inversion-list "invalid range"
+				     min max (cons left right)))
 	    (loop (cdr ranges)
 		  (inversion-list-union result
 					(range->inversion-list min max left right))))))))

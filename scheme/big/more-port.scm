@@ -63,7 +63,7 @@
 	;; back to our handler for every character.
 	(set-port-text-codec-spec! tracking utf-8/diy)
 	tracking)
-      (call-error "not an input port" make-tracking-input-port port)))
+      (assertion-violation 'make-tracking-input-port "not an input port" port)))
 
 (define (make-tracking-one-char-input plain-one-char-input)
   (lambda (port mode)
@@ -164,7 +164,7 @@
 	;; back to our handler for every character.
 	(set-port-text-codec-spec! tracking utf-8/diy)
 	tracking)
-      (call-error "not an output port" make-tracking-output-port port)))
+      (assertion-violation 'make-tracking-output-port "not an output port" port)))
 
 (define (fresh-line port)
   (let ((column (current-column port)))
@@ -321,11 +321,13 @@
      (list 'char-sink-output-port))
    make-output-port-closed!
    (lambda (port byte)
-     (call-error "char port does not accept bytes"))
+     (assertion-violation 'char-sink-output-port-handler
+			  "char port does not accept bytes"))
    (lambda (port ch)
      ((port-data port) ch))
    (lambda (port buffer start count)
-     (call-error "char port does not accept bytes"))
+     (assertion-violation 'char-sink-output-port-handler
+			  "char port does not accept bytes"))
    (lambda (port)		; ready?
      #t)
    (lambda (port error-if-closed?)	; output forcer

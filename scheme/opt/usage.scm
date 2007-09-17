@@ -49,9 +49,10 @@
 				    (if (subtype? new-type value-type)
 					new-type
 					value-type))
-	      (warn "ill-typed right-hand side"
-		    (schemify node)
-		    (type->sexp new-type #t)))))))
+	      (warning 'maybe-update-known-type
+		       "ill-typed right-hand side"
+		       (schemify node)
+		       (type->sexp new-type #t)))))))
 
 ;----------------
 ; Another entry point.

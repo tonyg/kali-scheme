@@ -19,7 +19,7 @@
         (subset stob (b-vector-set! b-vector-ref b-vector-length))
         (subset memory (address->stob-descriptor address-after-header))
         (subset data (least-fixnum-value greatest-fixnum-value)))
-  (for-syntax (open scheme signals)) ; for error
+  (for-syntax (open scheme)) ; for error
   (files (util external)))
 
 (define-structures ((channel-io channel-interface)

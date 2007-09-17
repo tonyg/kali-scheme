@@ -32,14 +32,16 @@
 		 (set-operator-type! probe type))
 		((symbol? type)		; 'leaf or 'internal
 		 (if (not (eq? type previous-type))
-		     (warn "operator type inconsistency" name type previous-type)))
+		     (warning 'get-operator
+			      "operator type inconsistency" name type previous-type)))
 		((subtype? type previous-type)  ;Improvement
 		 (set-operator-type! probe type))
 		((not (subtype? previous-type type))
-		 (warn "operator type inconsistency"
-		       name
-		       (type->sexp previous-type 'foo)
-		       (type->sexp type 'foo))))
+		 (warning 'get-operator
+			  "operator type inconsistency"
+			  name
+			  (type->sexp previous-type 'foo)
+			  (type->sexp type 'foo))))
 	  probe)
 	(let* ((uid *operator-uid*)
 	       (op (make-operator type
@@ -51,7 +53,8 @@
 				  uid
 				  name)))
 	  (if (>= uid number-of-operators)
-	      (warn "too many operators" (operator-name op) (operator-type op)))
+	      (warning 'get-operator
+		       "too many operators" (operator-name op) (operator-type op)))
 	  (set! *operator-uid* (+ *operator-uid* 1))
 	  (table-set! operators-table (operator-name op) op)
 	  (vector-set! the-operators uid op)

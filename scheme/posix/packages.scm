@@ -89,7 +89,7 @@
   (open scheme define-record-types finite-types
 	external-calls load-dynamic-externals
 	bitwise			;for manipulating protection masks
-	signals			;call-error
+	exceptions
 	posix-file-options
 	channel-i/o
 	channel-ports
@@ -186,7 +186,7 @@
 	value-pipes
 	debug-messages
 	session-data
-	signals			;call-error
+	exceptions
 	root-scheduler		;scheme-exit-now
 	channel-ports		;force-channel-output-ports!
 	interrupts		;set-interrupt-handler!
@@ -224,7 +224,7 @@
 	channels
 	channel-i/o
 	channel-ports
-	signals			;call-error
+	exceptions
 	util
 	posix-file-options
 	ports			;port?
@@ -250,7 +250,7 @@
   (open scheme define-record-types finite-types
 	external-calls load-dynamic-externals
 	(subset big-util (string->immutable-string))
-	signals
+	exceptions
 	os-strings text-codecs)
   (files regexp))
 
@@ -296,7 +296,7 @@
 
 (define-structures ((regexps regexps-interface)
 		    (regexps-internal regexps-internal-interface))
-  (open scheme define-record-types mvlet ascii unicode signals
+  (open scheme define-record-types mvlet ascii unicode exceptions
 	bitwise bigbit
 	reduce
 	(modify posix-regexps (rename (make-regexp make-posix-regexp)))

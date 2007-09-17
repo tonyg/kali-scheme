@@ -142,31 +142,30 @@
 ; warnings on the command level thread to avoid circularity problems.
 
 (define (command-loop-condition-handler c next-handler)
-  (let ((c (coerce-to-condition c)))
-    (cond ((or (warning? c)
-	       (note? c))
-	   (if (break-on-warnings?)
-	       (deal-with-condition c)
-	       (begin (force-output (current-output-port)) ; keep synchronous
-		      (display-condition c (current-error-port)
-					 (condition-writing-depth) (condition-writing-length))
-		      (unspecific))))	;proceed
-	  ((or (error? c) (bug? c) (interrupt? c))
-	   (if (batch-mode?)
-	       (begin (force-output (current-output-port)) ; keep synchronous
-		      (display-condition c (current-error-port)
-					 (condition-writing-depth) (condition-writing-length))
-		      (let ((status
-			     (cond
-			      ((error? c) 1)
-			      ((bug? c) 3) ; historical, probably nonsense
-			      (else 2))))
-			(scheme-exit-now status)))
-	       (deal-with-condition c)))
-	  ((reset-command-input? c)
-	   (unspecific))		;proceed
-	  (else                           
-	   (next-handler)))))
+  (cond ((or (warning? c)
+	     (note? c))
+	 (if (break-on-warnings?)
+	     (deal-with-condition c)
+	     (begin (force-output (current-output-port)) ; keep synchronous
+		    (display-condition c (current-error-port)
+				       (condition-writing-depth) (condition-writing-length))
+		    (unspecific))))	;proceed
+	((or (serious-condition? c) (interrupt-condition? c))
+	 (if (batch-mode?)
+	     (begin (force-output (current-output-port)) ; keep synchronous
+		    (display-condition c (current-error-port)
+				       (condition-writing-depth) (condition-writing-length))
+		    (let ((status
+			   (cond
+			    ((error? c) 1)
+			    ((violation? c) 3) ; historical, probably nonsense
+			    (else 2))))
+		      (scheme-exit-now status)))
+	     (deal-with-condition c)))
+	((reset-command-input-condition? c)
+	 (unspecific))			;proceed
+	(else                           
+	 (next-handler))))
 
 ; Stop the current level either by pushing a new one or restarting it.
 ; If we restart the current level we save it as the focus object to give
@@ -251,13 +250,12 @@
    (lambda (k)
      (with-handler
       (lambda (c punt)
-	(let ((c (coerce-to-condition c)))
-	  (if (or (error? c) (bug? c))
-	      (begin
-		(display-condition c (current-error-port)
-				   (condition-writing-depth) (condition-writing-length))
-		(k (EX_SOFTWARE)))
-	      (punt))))
+	(if (serious-condition? c)
+	    (begin
+	      (display-condition c (current-error-port)
+				 (condition-writing-depth) (condition-writing-length))
+	      (k (EX_SOFTWARE)))
+	    (punt)))
       (lambda ()
 	(thunk)
 	0)))))
@@ -458,7 +456,8 @@
 	  (and (not (eqv? value #t))
 	       (not (eqv? value #f)))
 	  (not ((setting-type setting) value)))
-      (error "invalid value for setting" (setting-name setting) value))
+      (error 'setting-set!
+	     "invalid value for setting" (setting-name setting) value))
   ((setting-set setting) value))
 
 (define (setting-doc setting)

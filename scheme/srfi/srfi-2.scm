@@ -42,8 +42,9 @@
 
     ; Error check to catch illegal (A B ...) clauses.
     ((and-let* ((exp junk . more-junk) more ...) . body)
-     (error "syntax error"
-	    '(and-let* ((exp junk . more-junk) more ...) . body)))
+     (syntax-violation 'and-let*
+		       "syntax error"
+		       '(and-let* ((exp junk . more-junk) more ...) . body)))
 
     ; (EXP) and VAR - just check the value for #F.
     ; There is no way for us to check that VAR is an identifier and not a
@@ -61,7 +62,7 @@
 ;  (syntax-rules ()
 ;    ((expect a b)
 ;     (if (not (equal? a b))
-;         (error "test failed" 'a b)))))
+;         (assertion-violation 'expect "test failed" 'a b)))))
 ;
 ;(expect  (and-let* () 1) 1)
 ;(expect  (and-let* () 1 2) 2)

@@ -24,7 +24,7 @@
 	       form)
               ((eq? form close-paren)
                ;; Too many right parens.
-	       (warn "discarding extraneous right parenthesis" port)
+	       (warning 'read "discarding extraneous right parenthesis" port)
                (loop))
 	      (else
 	       (reading-error port (cdr form))))))))
@@ -442,9 +442,17 @@
 
 ; Reader errors
 
+(define-condition-type &read-error &error
+  make-read-error read-error?)
+  
 (define (reading-error port message . irritants)
-  (apply signal 'read-error message
-	 (append irritants (list port))))
+  (raise
+   (condition
+    (make-read-error)
+    (make-i/o-port-error port)
+    (make-who-condition 'read)
+    (make-message-condition message)
+    (make-irritants-condition irritants))))
 
 ; returns index of value (must be number) in vector
 (define (binary-search vec val)

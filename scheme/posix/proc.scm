@@ -100,7 +100,7 @@
   (if (and (process-id? p1)
 	   (process-id? p2))
       (eq? p1 p2)
-      (call-error "argument type error" process-id=? p1 p2)))
+      (assertion-violation 'process-id=? "argument type error" p1 p2)))
 
 ; We need to make these in the outside world.
 (define-exported-binding "posix-process-id-type" :process-id)
@@ -120,7 +120,7 @@
 
 (define (wait-for-child-process pid)
   (if (not (process-id? pid))
-      (call-error wait-for-child-process pid))
+      (assertion-violation wait-for-child-process "not a process id" pid))
   (or (process-id-exit-status pid)
       (process-id-terminating-signal pid)
       (begin

@@ -22,7 +22,8 @@
 	((null? (cdr maybe-value))
 	 (car maybe-value))
 	(else
-	 (error "too many arguments passed to :optional" maybe-value))))
+	 (assertion-violation ':optional
+			      "too many arguments passed to :optional" maybe-value))))
 
 ;;; This is a library of list- and pair-processing functions. I wrote it after
 ;;; carefully considering the functions provided by the libraries found in
@@ -167,13 +168,13 @@
 ;;; checks, such as procedure arity for higher-order values.
 ;;;
 ;;; The code has only these non-R4RS dependencies:
-;;;   A few calls to an ERROR procedure;
+;;;   A few calls to an ASSERTION-VIOLATION procedure;
 ;;;   Uses of the R5RS multiple-value procedure VALUES and the m-v binding
 ;;;     RECEIVE macro (which isn't R5RS, but is a trivial macro).
 ;;;   Many calls to a parameter-checking procedure check-arg:
 ;;;    (define (check-arg pred val caller)
 ;;;      (let lp ((val val))
-;;;        (if (pred val) val (lp (error "Bad argument" val pred caller)))))
+;;;        (if (pred val) val (lp (assertion-violation 'check-arg "Bad argument" val pred caller)))))
 ;;;   A few uses of the LET-OPTIONAL and :OPTIONAL macros for parsing
 ;;;     optional arguments.
 ;;;
@@ -246,8 +247,10 @@
   (check-arg (lambda (n) (and (integer? n) (>= n 0))) len make-list)
   (let ((elt (cond ((null? maybe-elt) #f) ; Default value
 		   ((null? (cdr maybe-elt)) (car maybe-elt))
-		   (else (error "Too many arguments to MAKE-LIST"
-				(cons len maybe-elt))))))
+		   (else (apply assertion-violation
+				'make-list
+				"Too many arguments to MAKE-LIST"
+				len maybe-elt)))))
     (do ((i len (- i 1))
 	 (ans '() (cons elt ans)))
 	((<= i 0) ans))))
@@ -288,7 +291,7 @@
 
 (define (iota count . maybe-start+step)
   (check-arg integer? count iota)
-  (if (< count 0) (error "Negative step count" iota count))
+  (if (< count 0) (assertion-violation 'iota "Negative step count" count))
 ;  (let-optionals maybe-start+step ((start 0) (step 1)) ...)
   (receive (start step)
       (case (length maybe-start+step)
@@ -296,8 +299,8 @@
 	((2) (values (car maybe-start+step)
 		     (cadr maybe-start+step)))
 	(else
-	 (error "wrong number of arguments to IOTA"
-		(cons count maybe-start+step))))
+	 (apply assertion-violation 'iota "wrong number of arguments"
+		count maybe-start+step)))
     (check-arg number? start iota)
     (check-arg number? step iota)
     (let loop ((n 0) (r '()))
@@ -325,7 +328,7 @@
 ;	  (if (pair? rest)
 ;	      (let ((arg3 (check (car rest)))
 ;		    (rest (cdr rest)))
-;		(if (pair? rest) (error "Too many parameters" proc arg1 rest-args)
+;		(if (pair? rest) (assertion-violation '%parse-iota-args "Too many parameters" proc arg1 rest-args)
 ;		    (values arg1 arg2 arg3)))
 ;	      (values arg1 arg2 1)))
 ;	(values 0 arg1 1))))
@@ -334,7 +337,7 @@
 ;  (receive (from to step) (%parse-iota-args arg1 rest-args iota:)
 ;    (let* ((numsteps (floor (/ (- to from) step)))
 ;	   (last-val (+ from (* step numsteps))))
-;      (if (< numsteps 0) (error "Negative step count" iota: from to step))
+;      (if (< numsteps 0) (assertion-violation 'iota: "Negative step count" from to step))
 ;      (do ((steps-left numsteps (- steps-left 1))
 ;	   (val last-val (- val step))
 ;	   (ans '() (cons val ans)))
@@ -345,7 +348,7 @@
 ;  (receive (from to step) (%parse-iota-args arg1 rest-args :iota)
 ;    (let* ((numsteps (ceiling (/ (- to from) step)))
 ;	   (last-val (+ from (* step (- numsteps 1)))))
-;      (if (< numsteps 0) (error "Negative step count" :iota from to step))
+;      (if (< numsteps 0) (assertion-violation ':iota "Negative step count" from to step))
 ;      (do ((steps-left numsteps (- steps-left 1))
 ;	   (val last-val (- val step))
 ;	   (ans '() (cons val ans)))
@@ -410,7 +413,7 @@
 (define (null-list? l)
   (cond ((pair? l) #f)
 	((null? l) #t)
-	(else (error "null-list?: argument out of domain" l))))
+	(else (assertion-violation 'null-list? "null-list?: argument out of domain" l))))
            
 
 (define (list= = . lists)
@@ -843,7 +846,9 @@
 
       (let ((tail-gen (car maybe-tail-gen)))
 	(if (pair? (cdr maybe-tail-gen))
-	    (apply error "Too many arguments" unfold p f g seed maybe-tail-gen)
+	    (apply assertion-violation 'unfold
+		   "Too many arguments"
+		   p f g seed maybe-tail-gen)
 
 	    (let recur ((seed seed))
 	      (if (p seed) (tail-gen seed)

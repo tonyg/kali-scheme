@@ -41,7 +41,7 @@
 	      ((variable-type? want-type)
 	       (get-location-for-unassignable cenv name))
 	      (else
-	       (warn "invalid variable reference" name cenv)
+	       (warning 'get-location "invalid variable reference" name cenv)
 	       (note-caching! cenv name place)
 	       place)))
       (get-location-for-undefined cenv name)))
@@ -110,7 +110,7 @@
       (get-location-for-unassignable (generated-env name)
 				     (generated-name name))
       (let ((package (cenv->package cenv)))
-	(warn "invalid assignment" name)
+	(warning 'get-location-for-unassignable "invalid assignment" name)
 	(if (package? package)
 	    (lambda () (location-for-assignment package name))
 	    (lambda () (make-undefined-location name))))))
@@ -205,7 +205,8 @@
 				(generated-name name)
 				name))
 			  (reverse names))))
-	  (apply warn
+	  (apply warning
+		 'print-undefined-names
 		 "undefined variables"
 		 env
 		 names)))))

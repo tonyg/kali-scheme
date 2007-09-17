@@ -7,7 +7,8 @@
 	     (lambda (loc)
 	       (if (location-assigned? loc)
 		   (contents loc)
-		   (error "uninitialized variable" name package)))
+		   (assertion-violation 'environment-ref "uninitialized variable"
+					name package)))
 	     package
 	     name))
 
@@ -15,7 +16,7 @@
   (let ((binding (package-lookup package name)))
     (if (and (binding? binding)
 	     (not (variable-type? (binding-type binding))))
-	(error "invalid assignment" name package value)
+	(assertion-violation 'environment-set! "invalid assignment" name package value)
 	(carefully binding
 		   (lambda (loc)
 		     (set-contents! loc value))
@@ -29,22 +30,23 @@
   (let ((binding (structure-lookup struct name #f)))
     (if binding
 	(carefully binding contents struct name)
-	(error "structure-ref: name not exported" struct name))))
+	(assertion-violation 'structure-ref "name not exported" struct name))))
 
 (define (carefully binding action env name)
   (cond ((not binding)
-	 (error "unbound variable" name env))
+	 (assertion-violation 'carefully "unbound variable" name env))
 	((not (binding? binding))
-	 (error "peculiar binding" binding name env))
+	 (assertion-violation 'carefully "peculiar binding" binding name env))
 	((eq? (binding-type binding) syntax-type)
-	 (error "attempt to reference syntax as variable" name env))
+	 (assertion-violation 'carefully "attempt to reference syntax as variable"
+			      name env))
 	(else
 	 (let ((loc (binding-place binding)))
 	   (if (location? loc)
 	       (if (location-defined? loc)
 		   (action loc)
-		   (error "unbound variable" name env))
-	       (error "variable has no location" name env))))))
+		   (assertion-violation 'carefully "unbound variable" name env))
+	       (assertion-violation 'carefully "variable has no location" name env))))))
 
 ; Interaction environment
 
@@ -56,19 +58,22 @@
 (define (set-interaction-environment! p)
   (if (package? p)
       (fluid-cell-set! $interaction-environment p)
-      (call-error "invalid package" set-interaction-environment! p)))
+      (assertion-violation 'set-interaction-environment!
+			   "invalid package" set-interaction-environment! p)))
 
 (define (with-interaction-environment p thunk)
   (if (package? p)
       (let-fluid $interaction-environment (make-cell p) thunk)
-      (call-error "invalid package" with-interaction-environment p)))
+      (assertion-violation 'with-interaction-environment
+			   "invalid package" with-interaction-environment p)))
 
 ; Scheme report environment.  Should be read-only; fix later.
 
 (define (scheme-report-environment n)
   (if (= n *scheme-report-number*)
       *scheme-report-environment*
-      (error "no such Scheme report environment")))
+      (assertion-violation 'scheme-report-environment
+			   "no such Scheme report environment")))
 
 (define *scheme-report-environment* #f)
 (define *null-environment* #f)
@@ -82,7 +87,8 @@
 (define (null-environment n)
   (if (= n *scheme-report-number*)
       *null-environment*
-      (error "no such Scheme report environment")))
+      (assertion-violation 'null-environment
+			   "no such Scheme report environment")))
 
 ; Make an infinite tower of packages for syntax.
 ; structs should be a non-null list of structures that should be

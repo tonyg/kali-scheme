@@ -61,9 +61,10 @@
   (let loop ((names (record-type-field-names rt))
 	     (i 1))
     (cond ((null? names)
-	   (error "unknown field"
-		  (record-type-name rt)
-		  name))
+	   (assertion-violation 'record-field-index
+				"unknown field"
+				(record-type-name rt)
+				name))
 	  ((eq? name (car names))
 	   i)
 	  (else
@@ -85,11 +86,13 @@
 	  (if (null? as)
 	      (if (null? is)
 		  r
-		  (error "too few arguments to record constructor"
-			 rt names args))
+		  (assertion-violation 'record-constructor
+				       "too few arguments to record constructor"
+				       rt names args))
 	      (if (null? is)
-		  (error "too many arguments to record constructor"
-			 rt names args)
+		  (assertion-violation 'record-constructor
+				       "too many arguments to record constructor"
+				       rt names args)
 		  (begin (record-set! r (car is) (car as))
 			 (loop (cdr is) (cdr as))))))))))
 
@@ -101,7 +104,8 @@
     (lambda (r)
       (if (eq? (record-type r) rt)
 	  (record-ref r index)
-	  (call-error "invalid record access" error-cruft r)))))
+	  (assertion-violation 'record-accessor "invalid record access"
+			       error-cruft r)))))
 
 (define (record-modifier rt name)
   (let ((index (record-field-index rt name))
@@ -109,7 +113,8 @@
     (lambda (r x)
       (if (eq? (record-type r) rt)
 	  (record-set! r index x)
-	  (call-error "invalid record modification" error-cruft r x)))))
+	  (assertion-violation 'record-modifier "invalid record modification"
+			       error-cruft r x)))))
 
 (define (record-predicate rt)
   (lambda (x)
@@ -127,7 +132,7 @@
   (if (and (record-type? rt)
 	   (procedure? proc))
       (set-record-type-discloser! rt proc)
-      (call-error "invalid argument" define-record-discloser rt proc)))
+      (assertion-violation 'define-record-discloser "invalid argument" rt proc)))
 
 ; By default we just return the name of the record type.
 
@@ -168,7 +173,7 @@
 		    (< 0 (record-type-number-of-fields rt)))
 	       (procedure? resumer)))
       (set-record-type-resumer! rt resumer)
-      (call-error "invalid argument" define-record-resumer rt resumer)))
+      (assertion-violation 'define-record-resumer "invalid argument" rt resumer)))
 
 ; By default we leave records alone.
 

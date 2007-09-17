@@ -29,8 +29,9 @@
 			indexes
 			field-values)
 	      record)
-	    (error "wrong number of arguments to record constructor"
-		   field-values type-id names)))))
+	    (assertion-violation
+	     '<record-constructor> "wrong number of arguments to record constructor"
+	     field-values type-id names)))))
 
   (define (predicate obj)
     (and (vector? obj)
@@ -42,21 +43,25 @@
       (lambda (record)
 	(if (predicate record) ;Faster: (eq? (vector-ref record 0) unique)
 	    (vector-ref record i)
-	    (error "invalid argument to record accessor"
-		   record type-id name)))))
+	    (assertion-violation
+	     '<record-accessor>
+	     "invalid argument to record accessor"
+	     record type-id name)))))
 
   (define (modifier name)
     (let ((i (field-index name)))
       (lambda (record new-value)
 	(if (predicate record) ;Faster: (eq? (vector-ref record 0) unique)
 	    (vector-set! record i new-value)
-	    (error "invalid argument to record modifier"
-		   record type-id name)))))
+	    (assertion-violation
+	     '<record-modifier>
+	     "invalid argument to record modifier"
+	     record type-id name)))))
 
   (define (field-index name)
     (let loop ((l field-names) (i 1))
       (if (null? l)
-	  (error "bad field name" name)
+	  (assertion-violation 'field-index "bad field name" name)
 	  (if (eq? name (car l))
 	      i
 	      (loop (cdr l) (+ i 1))))))
@@ -90,7 +95,7 @@
 
 (define (record-type? r-t)
   (and (procedure? r-t)
-       (error "record-type? not implemented" r-t)))
+       (assertion-violation 'record-type? "record-type? not implemented" r-t)))
 
 (define (define-record-discloser r-t proc)
   "ignoring define-record-discloser form")

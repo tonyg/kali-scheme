@@ -104,7 +104,8 @@
 		     "Not a procedure or a continuation.")
 		 (command-output)))))
 	(else
-	 (error "bad selection command" name)))))
+	 (assertion-violation 'execute-selection-command
+			      "bad selection command" name)))))
 
 (define (coerce-to-template obj)
   (cond ((template? obj)

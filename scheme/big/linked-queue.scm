@@ -37,13 +37,13 @@
 (define (queue-head q)
   (let ((e (q-entry-next q)))
     (if (eq? q e)	;(queue-empty? q)
-	(error "empty queue" q)
+	(assertion-violation 'queue-head "empty queue" q)
 	(q-entry-data e))))
 
 (define (dequeue! q)
   (let ((e (q-entry-next q)))
     (cond ((eq? q e)	;(queue-empty? q)
-	   (error "empty queue" q))
+	   (assertion-violation 'dequeue! "empty queue" q))
 	  (else
 	   (set-q-entry-next! q (q-entry-next e))
 	   (set-q-entry-prev! (q-entry-next q) q)

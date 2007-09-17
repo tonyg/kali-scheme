@@ -16,7 +16,7 @@
 	     (open-output-port? port))
 	(let recur ((obj obj))
 	  (recurring-write obj port recur))
-	(call-error "invalid port argument" write port))))
+	(assertion-violation 'write "invalid port argument" port))))
 
 (define (recurring-write obj port recur)
   (cond ((null? obj) (write-string "()" port))
@@ -201,5 +201,5 @@
 		((char? obj) (write-char obj port))
 		(else
 		 (recurring-write obj port recur))))
-	(call-error "invalid port argument" display port))))
+	(assertion-violation 'display "invalid port argument" port))))
 

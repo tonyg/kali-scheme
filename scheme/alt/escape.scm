@@ -19,7 +19,7 @@
       ((escape-procedure esc) thunk)
       (let ((answer (thunk)))
 	(signal 'vm-return answer)	;#f means halt
-	(call-error "halt" answer))))
+	(assertion-violation 'with-continuation "halt" answer))))
 
 (define (primitive-cwcc proc)
   (call-with-current-continuation

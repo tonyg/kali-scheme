@@ -9,8 +9,6 @@
   (open scheme 
 	srfi-9 ; DEFINE-RECORD-PROCEDURES
         srfi-19
-        srfi-34 ; exceptions
-        srfi-35 ; conditions
 	test-suites
         formats)
   (files srfi-19-check))

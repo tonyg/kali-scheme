@@ -24,7 +24,7 @@
 
 (define (port-is-a-terminal? port)
   (cond ((not (port? port))
-	 (call-error "not a port" port-is-a-terminal? port))
+	 (assertion-violation 'port-is-a-terminal? "not a port" port))
 	((port->channel port)
 	 => channel-is-a-terminal?)
 	(else
@@ -32,7 +32,7 @@
 
 (define (port-terminal-name port)
   (cond ((not (port? port))
-	 (call-error "not a port" port-terminal-name port))
+	 (assertion-violation 'port-terminal-name "not a port" port))
 	((port->channel port)
 	 => (lambda (channel)
 	      (byte-vector->os-string (channel-terminal-name channel))))
@@ -74,7 +74,7 @@
 	     input-channel->port
 	     output-channel->port)
 	 (channel-dup channel))
-	(call-error "argument cannot be coerced to channel" dup port))))
+	(assertion-violation 'dup "argument cannot be coerced to channel" port))))
 
 (define (channel-dup channel)
   (really-dup channel #f))
@@ -87,7 +87,7 @@
 	     (really-dup channel (enum channel-status-option output)))
 	    (input-channel->port
 	     (really-dup channel (enum channel-status-option input))))
-	(call-error "argument cannot be coerced to channel" dup-switching-mode port))))
+	(assertion-violation 'dup-switching-mode "argument cannot be coerced to channel" port))))
 
 (define (dup2 port fd)
   (let ((channel (maybe-x->channel port)))
@@ -96,7 +96,7 @@
 	     input-channel->port
 	     output-channel->port)
 	 (channel-dup2 channel fd))
-	(call-error "argument cannot be coerced to channel" dup2 port fd))))
+	(assertion-violation 'dup2 "argument cannot be coerced to channel" port fd))))
 
 (import-lambda-definition really-dup (channel new-status) "posix_dup")
 (import-lambda-definition channel-dup2 (channel fd) "posix_dup2")
@@ -138,8 +138,8 @@
 				   (not (vector-ref channels index)))
 			       (set-close-on-exec?! channel #t))))
 		       (open-channels-list)))))
-	(apply call-error "not all arguments can be mapped to channels"
-	       remap-file-descriptors!
+	(apply assertion-violation 'remap-file-descriptors!
+	       "not all arguments can be mapped to channels"
 	       ports&channels))))
 
 (define (close-all-but . ports&channels)
@@ -149,8 +149,8 @@
 		    (if (not (memq channel channels))
 			(close-channel channel)))
 		  (open-channels-list))
-	(apply call-error "not all arguments can be mapped to channels" 
-	       close-all-but
+	(apply assertion-violation 'close-all-but 
+	       "not all arguments can be mapped to channels"
 	       ports&channels))))
 
 ; Coerce PORT-OR-CHANNEL to a channel, if possible.
@@ -290,14 +290,14 @@
   (let ((channel (maybe-x->channel port-or-channel)))
     (if channel
 	(call-imported-binding posix-io-flags channel #f)
-	(call-error "argument cannot be coerced to channel" i/o-flags port-or-channel))))
+	(assertion-violation 'i/o-flags "argument cannot be coerced to channel" port-or-channel))))
 
 (define (set-i/o-flags! port-or-channel options)
   (let ((channel (maybe-x->channel port-or-channel)))
     (if (and channel
 	     (file-options? options))
 	(call-imported-binding posix-io-flags channel options)
-	(call-error "argument type error" set-i/o-flags! port-or-channel options))))
+	(assertion-violation 'set-i/o-flags! "argument type error" port-or-channel options))))
 
 (import-definition posix-io-flags)
 

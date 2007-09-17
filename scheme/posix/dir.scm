@@ -207,7 +207,7 @@
   (let ((channel (port->channel port)))
     (if channel
 	(call-imported-binding posix-file-info channel #f file-types)
-	(call-error get-port-info (list port)))))
+	(assertion-violation 'get-port-info "port without channel" port))))
 
 ;----------------
 ; Modes
@@ -238,7 +238,7 @@
 	      (<= stuff #o7777))
 	 (really-make-file-mode stuff))
 	(else
-	 (call-error "argument type error" integer->file-mode stuff))))
+	 (assertion-violation 'integer->file-mode "argument type error" stuff))))
 
 ; Arithmetic
 

@@ -6,16 +6,16 @@
 
 "
 ,translate =scheme48/ ./
-,open packages compiler built-in-structures handle condition
+,open packages compiler built-in-structures handle conditions
 ,open interfaces table defpackage package-mutation
 "
 
 (define (try exp env . should-return-option)
   (let ((val (ignore-errors (lambda () (eval exp env)))))
     (if (if (null? should-return-option)
-	    (error? val)
+	    (serious-condition? val)
 	    (not (if (eq? (car should-return-option) 'error)
-		     (error? val)
+		     (serious-condition? val)
 		     (eq? val (car should-return-option)))))
 	(begin (write `(lost: ,exp => ,val))
 	       (newline)))))

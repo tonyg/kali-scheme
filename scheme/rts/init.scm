@@ -8,7 +8,7 @@
 ; The placement of INITIALIZE-RECORDS! is questionable.  Important parts
 ; of the system are not in place when it is run.
 
-(define (make-usual-resumer warn-about-undefined-imported-bindings? signal-condition-proc
+(define (make-usual-resumer warn-about-undefined-imported-bindings?
 			    entry-point)
   ;; The argument list needs to be in sync with
   ;; S48-CALL-STARTUP-PROCEDURE in vm/interp/resume.scm, and
@@ -16,8 +16,7 @@
   (lambda (resume-arg
 	   in in-encoding out out-encoding error error-encoding
 	   records)
-    (initialize-rts signal-condition-proc
-		    in in-encoding out out-encoding error error-encoding
+    (initialize-rts in in-encoding out out-encoding error error-encoding
 		    (lambda ()
 		      (initialize-os-string-text-codec!)
 		      (run-initialization-thunks)
@@ -29,7 +28,7 @@
 			    (vector->list resume-arg)))))))
 
 (define (usual-resumer entry-point)
-  (make-usual-resumer #t really-signal-condition entry-point))
+  (make-usual-resumer #t entry-point))
 
 (define (warn-about-undefined-imported-bindings)
   (let ((undefined-bindings (find-undefined-imported-bindings)))
@@ -39,12 +38,10 @@
       (debug-message "undefined imported binding "
 		     (shared-binding-name (vector-ref undefined-bindings i))))))
 
-(define (initialize-rts signal-condition-proc
-			in in-encoding out out-encoding error error-encoding
+(define (initialize-rts in in-encoding out out-encoding error error-encoding
 			thunk)
   (initialize-session-data!)
   (initialize-dynamic-state!)
-  (initialize-vm-exceptions! signal-condition-proc)
   (initialize-exceptions!
    (lambda ()
      (initialize-interrupts!

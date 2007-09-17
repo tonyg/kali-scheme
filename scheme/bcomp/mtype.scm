@@ -163,7 +163,7 @@
 
 (define (make-optional-type t)
   (if (type-more t)
-      (warn "peculiar type in make-optional-type" t))
+      (warning 'make-optional-type "peculiar type in make-optional-type" t))
   (make-type (bitwise-ior (type-mask t) mask/no-values)
 	     #f
 	     (type-info t)))
@@ -199,7 +199,7 @@
 (define (tail-type t)
   (if (empty-rail-type? t)
       ;; bottom-type   ?
-      (warn "rail-type of empty rail" t))
+      (warning 'tail-type "rail-type of empty rail" t))
   (let ((more (type-more t)))
     (if more
 	(cdr more)
@@ -453,7 +453,7 @@
 		    ((> (bitwise-and m mask/procedure) 0)
 		     (join-procedure m t1 t2))
 		    (else
-		     (error "This shouldn't happen" t1 t2))))))))
+		     (assertion-violation 'join-type "This shouldn't happen" t1 t2))))))))
 
 (define (join-rail t1 t2)
   (let ((t (join-type (head-type t1) (head-type t2))))
@@ -621,8 +621,8 @@
 	    (mask->type (cadr x)))
            ((variable)
             (variable-type (sexp->type (cadr x) r?)))
-	   (else (error "unrecognized type" x))))
-	(else (error "unrecognized type" x))))
+	   (else (assertion-violation 'sexp->type "unrecognized type" x))))
+	(else (assertion-violation 'sexp->type "unrecognized type" x))))
 
 (define (sexp->values-type l req? r?)
   (cond ((null? l)
@@ -774,13 +774,13 @@
        (i 0 (+ i 1)))
       ((empty-rail-type? d) i)
     (if (optional-type? d)
-	(error "this shouldn't happen" t d))))
+	(assertion-violation 'procedure-type-arity "this shouldn't happen" t d))))
 
 (define (procedure-type-argument-types t)
   (let recur ((d (procedure-type-domain t)))
     (cond ((empty-rail-type? d) '())
 	  ((optional-type? d)
-	   (call-error "lossage" procedure-type-argument-types t))
+	   (assertion-violation 'procedure-type-argument-types "lossage" t))
 	  (else
 	   (cons (head-type d)
 		 (recur (tail-type d)))))))

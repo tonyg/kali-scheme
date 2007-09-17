@@ -57,7 +57,7 @@
 	((generated? name)
 	 (name-hash (generated-name name)))
 	(else
-	 (error "invalid name" name))))
+	 (assertion-violation 'name-hash "invalid name" name))))
 
 (define make-name-table
   (make-table-maker eq? name-hash))
@@ -91,7 +91,7 @@
 		    (loop (+ i 1)
 			  (and same? (eq? x (vector-ref thing i))))))))))
 	(else
-	 (warn "invalid datum in quotation" thing)
+	 (warning 'desyntaxify "invalid datum in quotation" thing)
 	 thing)))
 
 ;----------------

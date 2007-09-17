@@ -9,29 +9,33 @@
 
 ; ERROR is built-in
 
-(define (format-error-message message irritants)
-  (apply string-append message
-	 (map (lambda (irritant)
-		(string-append " " ((error-value->string-handler) irritant 1000)))
-	      irritants)))
+(define (format-error-message message who irritants)
+  (printf "~a: ~a~a"
+	  who message
+	  (apply string-append
+		 (map (lambda (irritant)
+			(string-append " " ((error-value->string-handler) irritant 1000)))
+		      irritants))))
 
-(define (warn message . irritants)
-  (void)
-  (display (format-error-message message irritants)
+(define (assertion-violation who message . irritants)
+  (error (format-error-message message who irritants)
+	 irritants))
+
+(define (implementation-restriction-violation who message . irritants)
+  (error (format-error-message message who irritants)
+	 irritants))
+  
+(define (warning who message . irritants)
+  (display (format-error-message message who irritants)
 	   (current-error-port))
-  (newline (current-error-port))
-)
+  (newline (current-error-port)))
 
-(define (signal type . stuff)
-  (apply warn "condition signalled" type stuff))
-
-(define (syntax-error . rest)		; Must return a valid expression.
-  (apply warn rest)
+(define (syntax-violation who message . irritants)
+  (apply warning who message irritants)
   ''syntax-error)
 
-(define (call-error message proc . args)
-  (error message (cons proc args)))
-
+(define (note who message . irritants)
+  (apply warning who message irritants))
 
 ; FEATURES
 

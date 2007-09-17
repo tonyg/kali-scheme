@@ -8,7 +8,7 @@
   (open scheme-level-2
 	define-record-types tables bitwise
 	features ;make-immutable!
-	util simple-signals)
+	util low-exceptions)
   (files (bcomp mtype))
   (optimize auto-integrate))
 
@@ -28,7 +28,7 @@
 		    (transforms transforms-interface))
   (open scheme-level-2
 	define-record-types tables
-	simple-signals
+	low-exceptions
 	meta-types	;sexp->type
 	bindings	;same-denotation?
 	features)	;make-immutable! string-hash
@@ -64,7 +64,7 @@
   (open scheme-level-2
 	meta-types names packages packages-internal
 	compiler-envs bindings transforms
-	simple-signals define-record-types tables
+	low-exceptions define-record-types tables
 	util)
   (files (bcomp node)
 	 (bcomp schemify))
@@ -77,7 +77,7 @@
   (open scheme-level-2 util
 	meta-types names bindings
 	nodes compiler-envs
-	simple-signals tables fluids
+	low-exceptions tables fluids
 	var-utilities
 	transforms
 	features)		;make-immutable!
@@ -90,7 +90,7 @@
 	fluids		;used in definition of %file-name%
 	code-quote
 	util
-	tables simple-signals)
+	tables low-exceptions)
   (files (bcomp usual)
 	 (bcomp rules)))
 
@@ -123,14 +123,14 @@
 ; Determining stack usage.  No longer used.
 ;
 ;(define-structure stack-check (export maximum-stack-use)
-;  (open scheme-level-2 architecture code-vectors simple-signals)
+;  (open scheme-level-2 architecture code-vectors low-exceptions)
 ;  (files (bcomp stack-check))
 ;  (optimize auto-integrate))
 
 ; Compiler back end
 
 (define-structure segments segments-interface
-  (open scheme-level-2 util tables simple-signals fluids
+  (open scheme-level-2 util tables low-exceptions fluids
 	define-record-types
 	bitwise vm-data
 	code-vectors
@@ -147,7 +147,7 @@
 (define-structure primops primops-interface
   (open scheme-level-2 tables define-record-types
 	meta-types
-	simple-signals)
+	low-exceptions)
   (files (bcomp primop))
   (optimize auto-integrate))
 
@@ -159,14 +159,14 @@
 	primops
 	var-utilities		;n-ary?
 	util			;last
-	simple-signals)
+	low-exceptions)
   (files (bcomp recon)))
 
 ; The compiler itself.
 
 (define-structures ((compiler compiler-interface)
 		    (bc-generation bc-generation-interface))
-  (open scheme-level-2 util simple-signals
+  (open scheme-level-2 util low-exceptions
 	features		;force-output
 	enumerated		;enumerand->name
 	ascii
@@ -193,7 +193,7 @@
 	architecture			; two-byte-limit
 	templates			; template-overhead
 	debug-data-internal		; new-debug-data
-	simple-signals			; error
+	low-exceptions			; error
 	thingies)
   (files (bcomp frame))
   (optimize auto-integrate))
@@ -206,7 +206,7 @@
   (open scheme-level-2
 	fluids filenames cells
 	features		;current-noise-port force-output
-	simple-signals          ;error
+	low-exceptions          ;error
 	)
   (files (bcomp read-form)))
 
@@ -214,7 +214,7 @@
 ; Live-variable analysis for closures.
 
 (define-structure flat-environments (export flatten-form)
-  (open scheme-level-2 nodes simple-signals
+  (open scheme-level-2 nodes low-exceptions
 	optimizer primops
 	util			;every
 	var-utilities)
@@ -227,7 +227,7 @@
   (open scheme-level-2
 	define-record-types tables
 	util			;filter every mvlet symbol-append
-	simple-signals		;error
+	low-exceptions		;error
 	weak			;populations
 	meta-types)
   (files (bcomp interface))
@@ -237,7 +237,7 @@
 		    (packages-internal packages-internal-interface)
 		    (undefined undefined-interface))
   (open scheme-level-2
-	define-record-types tables fluids simple-signals cells
+	define-record-types tables fluids low-exceptions cells
 	util features locations weak
         meta-types interfaces
 	names bindings
@@ -254,14 +254,14 @@
 	meta-types bindings
 	reading-forms
 	filenames
-	simple-signals
+	low-exceptions
 	features		;current-noise-port force-output
 	)
   (files (bcomp scan-package)))
 
 (define-structure optimizer optimizer-interface
   (open scheme-level-2
-	simple-signals tables
+	low-exceptions tables
 	util)
   (files (bcomp optimize)))
 
@@ -289,7 +289,7 @@
 	packages syntactic usual-macros types
 	interfaces
 	source-file-names	;%file-name%
-	simple-signals		;error
+	low-exceptions		;error
 	tables)
   (files (bcomp module-language)
 	 (bcomp config)))
@@ -315,7 +315,7 @@
 	reconstruction
 	var-utilities
 	define-record-types
-	util simple-signals tables strong)
+	util low-exceptions tables strong)
   (files (opt usage)
          (opt sort)))
 
@@ -330,7 +330,7 @@
 	transforms
 	syntactic               ;static-value
 	packages
-	simple-signals
+	low-exceptions
 	features		;force-output
 	optimizer		;set-optimizer!
 	util)
@@ -343,11 +343,11 @@
 	transforms
 	packages
 	usages
-	simple-signals)
+	low-exceptions)
   (files (opt inline)))
 
 (define-structure strong (export strongly-connected-components)
-  (open scheme-level-2 define-record-types simple-signals)
+  (open scheme-level-2 define-record-types low-exceptions)
   (files (big strong))) ;!
 
 ;----------------
@@ -356,12 +356,12 @@
 (define-structure tables general-tables-interface
   (open scheme-level-1
 	define-record-types
-	simple-signals
+	low-exceptions
 	features)    ; string-hash, make-immutable!
   (files (big general-table))
   (optimize auto-integrate))
 
 (define-structure filenames filenames-interface
-  (open scheme-level-1 simple-signals fluids cells)
+  (open scheme-level-1 low-exceptions fluids cells)
   (files (big filename)))
 

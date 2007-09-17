@@ -20,7 +20,7 @@
 			    (let ((c (string-ref s 0)))
 			      (or (char=? c #\space)
 				  (char=? c #\newline))))
-			(error "unusual whitespace character lost" s)
+			(assertion-violation 'ascii-chars "unusual whitespace character lost" s)
 			s)))
 	 (init (lambda (i s)
 		 (do ((i i (+ i 1))
@@ -38,7 +38,7 @@
 
 (define (ascii->char n)
   (or (vector-ref ascii-chars n)
-      (error "not a standard character's ASCII code" n)))
+      (assertion-violation 'ascii->char "not a standard character's ASCII code" n)))
 
 (define native-chars
   (let ((end (vector-length ascii-chars)))
@@ -64,6 +64,6 @@
 (define (char->ascii char)
   (or (vector-ref (cdr native-chars)
 		  (- (char->integer char) (car native-chars)))
-      (error "not a standard character" char)))
+      (assertion-violation 'char->ascii "not a standard character" char)))
 
 (define ascii-whitespaces '(32 10 9 12 13)) ;space linefeed tab page return

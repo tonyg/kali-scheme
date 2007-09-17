@@ -43,7 +43,7 @@
      ((any same-name?
 	   (test-suite-cases suite))
       => (lambda (duplicate)
-	   (warn "duplicate test case, removing old one" duplicate)
+	   (warning 'define-test-case! "duplicate test case, removing old one" duplicate)
 	   (set-test-suite-cases! suite
 				  (delete same-name? (test-suite-cases suite)))))))
 

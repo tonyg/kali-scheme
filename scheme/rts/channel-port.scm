@@ -111,8 +111,9 @@
 			 (channel-buffer-size)
 			 (car maybe-buffer-size))))
     (if (>= 0 buffer-size)
-	(call-error "invalid buffer size"
-		    input-channel->port channel buffer-size)
+	(assertion-violation 'real-input-channel->port
+			     "invalid buffer size"
+			     input-channel->port channel buffer-size)
 	(let ((port
 	       (make-buffered-input-port input-channel-handler
 					 (make-channel-cell channel closer)
@@ -225,8 +226,9 @@
     (if  (or (not (integer? buffer-size))
 	     (< buffer-size 0)
 	     (not (channel? channel)))
-	 (call-error "invalid argument"
-		     output-channel->port channel buffer-size)
+	 (assertion-violation 'real-output-channel->port
+			      "invalid argument"
+			      output-channel->port channel buffer-size)
 	 (let ((port (make-buffered-output-port output-channel-handler
 						(make-channel-cell channel
 								   closer)
@@ -250,15 +252,12 @@
 	     ((and (vm-exception? c)
 		   (eq? 'os-error
 			(vm-exception-reason c)))
-	      ;; We can't use PUNT here because the I/O error
-	      ;; condition object typically needs to be re-encoded,
-	      ;; and PUNT won't do that.  So we exit regularly, and
-	      ;; call SIGNAL-CONDITION, which does the job.  (If this
-	      ;; seems obscure to you, ask Mike.)
-	      (make-i/o-error
-	       (car (reverse (vm-exception-arguments c)))
-	       op
-	       (list file-name)))
+	      (punt (condition
+		     (make-i/o-error)
+		     (make-who-condition op)
+		     (make-message-condition
+		      (os-error-message (car (reverse (condition-irritants c)))))
+		     (make-irritants-condition (list file-name)))))
 	     (else
 	      (punt))))
 	  (lambda ()
@@ -266,9 +265,7 @@
 	      (open-channel (os-string->byte-vector file-name/os)
 			    (os-string->string file-name/os)
 			    option close-silently?))))))
-    (if (channel? thing)
-	(coercion thing (channel-buffer-size))
-	(signal-condition thing))))
+    (coercion thing (channel-buffer-size))))
   
 ; And then all of RnRS's file opening procedures.
 
@@ -280,7 +277,7 @@
 		   input-channel->port))
 
 (define (open-input-file string)
-  (really-open-input-file open-input-file string  #f))
+  (really-open-input-file 'open-input-file string  #f))
 
 (define (really-open-output-file op string close-silently?)
   (maybe-open-file op
@@ -290,17 +287,17 @@
 		   output-channel->port))
 
 (define (open-output-file string)
-  (really-open-output-file open-output-file string #f))
+  (really-open-output-file 'open-output-file string #f))
 
 (define (call-with-input-file string proc)
-  (let* ((port (really-open-input-file call-with-input-file string #t))
+  (let* ((port (really-open-input-file 'call-with-input-file string #t))
          (results (call-with-values (lambda () (proc port))
 				    list)))
     (close-input-port port)
     (apply values results)))
 
 (define (call-with-output-file string proc)
-  (let* ((port (really-open-output-file call-with-output-file string #t))
+  (let* ((port (really-open-output-file 'call-with-output-file string #t))
          (results (call-with-values (lambda () (proc port))
 				    list)))
     (close-output-port port)

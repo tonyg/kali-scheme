@@ -152,9 +152,7 @@
 	(cond (probe
 	       (cdr probe))
 	      ((generated? name)
-	       (signal 'note
-		       "this shouldn't happen - make-substitution"
-		       name)
+	       (note 'make-substitution "this shouldn't happen" name)
 	       name)			;TEMPORARY KLUDGE.
 	      (else
 	       (rename name)))))))

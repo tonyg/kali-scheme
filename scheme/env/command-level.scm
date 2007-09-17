@@ -204,7 +204,11 @@
 (define (ignore-further-interrupts)
   (set-interrupt-handler! (enum interrupt keyboard)
 			  (lambda stuff
-			    (apply signal (cons 'interrupt stuff))))
+			    (signal-condition
+			     (condition
+			      (make-interrupt-condition (enum interrupt keyboard))
+			      (make-irritants-condition stuff)
+			      (make-who-condition 'ignore-further-interrupts)))))
   (call-before-heap-overflow! (lambda stuff #f))
   (call-when-deadlocked! #f))
 
@@ -213,20 +217,19 @@
 ; go to the 
 
 (define (command-levels-condition-handler c next-handler)
-  (let ((c (coerce-to-condition c)))
-    (cond ((or (warning? c)
-	       (note? c))
-	   (force-output (current-output-port))	; keep synchronous
-	   (display-condition c (current-error-port)
-			      (condition-writing-depth) (condition-writing-length))
-	   (unspecific))		; proceed
-	  ((or (error? c) (bug? c))
-	   (force-output (current-output-port))	; keep synchronous
-	   (display-condition c (current-error-port)
-			      (condition-writing-depth) (condition-writing-length))
-	   (scheme-exit-now 1))
-	  (else
-	   (next-handler)))))
+  (cond ((or (warning? c)
+	     (note? c))
+	 (force-output (current-output-port)) ; keep synchronous
+	 (display-condition c (current-error-port)
+			    (condition-writing-depth) (condition-writing-length))
+	 (unspecific))			; proceed
+	((serious-condition? c)
+	 (force-output (current-output-port)) ; keep synchronous
+	 (display-condition c (current-error-port)
+			    (condition-writing-depth) (condition-writing-length))
+	 (scheme-exit-now 1))
+	(else
+	 (next-handler))))
 
 ;----------------------------------------------------------------
 ; Grab the current continuation, then make a command level and run it.
@@ -250,12 +253,16 @@
 	     (dynamic-wind
 	      (lambda ()
 		(if (command-level-terminated? level)
-		    (error "trying to throw back into a command level" level)))
+		    (assertion-violation 'really-push-command-level
+					 "trying to throw back into a command level"
+					 level)))
 	      (lambda ()
 		(run-command-level level #f))
 	      (lambda ()
 		(if (command-level-terminated? level)
-		    (warn "abandoning failed level-termination unwinds.")
+		    (warning 'really-push-command-level
+			     "abandoning failed level-termination unwinds."
+			     level)
 		    (begin
 		      (set-command-level-terminated?! level #t)
 		      (terminate-level level))))))))))))
@@ -286,7 +293,8 @@
     (dynamic-wind
      (lambda ()
        (if *out?*
-	   (error "trying to throw back into a command level" level)))
+	   (assertion-violation 'terminate-level
+				"trying to throw back into a command level" level)))
      (lambda ()
        (run-command-level level (length threads)))
      (lambda ()
@@ -310,14 +318,15 @@
     (if repl
 	(interrupt-thread repl
 			  (lambda return-values
-			    (signal the-reset-command-input-condition)
+			    (signal-condition the-reset-command-input-condition)
 			    (apply values return-values))))))
 
 (define-condition-type &reset-command-input &condition
-  reset-command-input?)
+  make-reset-command-input-condition
+  reset-command-input-condition?)
 
 (define the-reset-command-input-condition
-  (condition (&reset-command-input)))
+  (make-reset-command-input-condition))
 
 ; Make sure the input and output ports are available and then run the threads
 ; on LEVEL's queue.
@@ -365,24 +374,43 @@
 	 (let* ((thread (car args))
 		(level (thread-data thread)))
 	   (cond ((not (command-level? level))
-		  (error "non-command-level thread restarted on a command level"
-			 thread))
+		  (assertion-violation
+		   'command-level-event-handler
+		   "non-command-level thread restarted on a command level"
+		   level thread))
 		 ((memq level levels)
 		  (enqueue! (command-level-queue level) thread))
 		 (else
-		  (warn "dropping thread from exited command level"
-			thread)))
+		  (warning 'command-level-event-handler
+			   "dropping thread from exited command level"
+			   level thread)))
 	   #t))
 	((interrupt)
 	 (if terminating?
-	     (warn "Interrupted while unwinding terminated level's threads."))
-	 (quit-or-push-level (make-condition 'interrupt args) levels)
-	 #t)
+	     (warning 'command-level-event-handler
+		      "Interrupted while unwinding terminated level's threads."
+		      level))
+	 (let ((int (car args)))
+	   (quit-or-push-level
+	    (condition
+	     (make-message-condition
+	      (enum-case interrupt int
+		((keyboard) "keyboard interrupt")
+		((post-major-gc) "insufficient memory after major GC")
+		(else "interrupt")))
+	     (make-interrupt-condition int)
+	     (make-who-condition 'command-level-event-handler)
+	     (make-irritants-condition 
+	      (list
+	       (enumerand->name int interrupt))))
+			       levels))
+	   #t)
 	((deadlock)
 	 (if terminating?
-	     (warn "Deadlocked while unwinding terminated level's threads."))
- 	 (quit-or-push-level (make-condition 'error (list 'deadlocked))
- 			     levels)
+	     (warning 'command-level-event-handler
+		      "Deadlocked while unwinding terminated level's threads."
+		      level))
+ 	 (quit-or-push-level (make-deadlock-condition) levels)
 	 #t)
 	(else
 	 #f)))))
@@ -408,7 +436,8 @@
 	  ((exit-status)
 	   (exit-levels level (exit-status)))
 	  (else
-	   (warn "command interpreter has died; restarting")
+	   (warning 'command-level-wait
+		    "command interpreter has died; restarting" level)
 	   (spawn-repl-thread! level)
 	   #t))))
 
@@ -558,7 +587,7 @@
 (define (level-pushed-from level)
   (let loop ((levels (command-levels)))
     (cond ((null? (cdr levels))
-	   (error "level not found" level))
+	   (assertion-violation 'level-pushed-from "level not found" level))
 	  ((eq? level (cadr levels))
 	   (car levels))
 	  (else
@@ -576,4 +605,4 @@
 	      (spawn-repl-thread! level))
 	  (terminate-thread! paused)	; it's already running, so no enqueue
 	  (set-command-level-paused-thread! level #f))
-	(warn "level has no paused thread" level))))
+	(warning 'kill-paused-thread! "level has no paused thread" level))))

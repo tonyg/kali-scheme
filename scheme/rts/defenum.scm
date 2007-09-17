@@ -33,7 +33,7 @@
                                                (if (c which (vector-ref components i))
                                                    i
                                                    (loop (+ i 1)))
-                                               ;; (syntax-error "unknown enumerand name"
+                                               ;; (syntax-violation 'enum "unknown enumerand name"
                                                ;;               `(,(cadr e) ,(car e) ,(caddr e)))
                                                e))))
                                       (else e)))))
@@ -50,7 +50,7 @@
 (define-syntax enum
   (cons (lambda (e r c) 
           (if (not (= (length e) 3))
-              '(syntax-error "wrong number of arguments for enum" e)
+              '(syntax-violation 'enum "wrong number of arguments for enum" e)
               `(,(cadr e) enum ,(caddr e))))
         '()))
 

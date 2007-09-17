@@ -20,7 +20,7 @@
 	   (big 0.0 (max big (abs (array-ref a i j)))))
 	  ((>= j n)
 	   (if (= big 0.0)
-	       (error "lu-decomposition matrix has a zero row" a i))
+	       (assertion-violation 'lu-decomposition "matrix has a zero row" a i))
 	   (vector-set! vv i (/ big)))))
 
     (do ((j 0 (+ j 1)))

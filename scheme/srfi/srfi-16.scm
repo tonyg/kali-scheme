@@ -28,7 +28,7 @@
      (let ((?a1 ?args))
        ?e1 ...))
     ((case-lambda "CLAUSE" ?args ?l)
-     (error "Wrong number of arguments to CASE-LAMBDA."))
+     (syntax-violation 'case-lambda "Wrong number of arguments to CASE-LAMBDA."))
     ((case-lambda "IMPROPER" ?args ?l ?k ?al ((?a1 . ?ar) ?e1 ...)
       ?clause1 ...)
      (case-lambda "IMPROPER" ?args ?l (+ ?k 1) ?al (?ar ?e1 ...) 

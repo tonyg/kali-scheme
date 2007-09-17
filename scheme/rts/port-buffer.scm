@@ -14,8 +14,9 @@
 		 limit
 		 #f             ; pending-cr?
 		 #f)            ; pending-eof?
-      (call-error "invalid argument"
-		  make-buffered-input-port handler data buffer index limit)))
+      (assertion-violation 'make-buffered-input-port
+			   "invalid argument"
+			   handler data buffer index limit)))
 
 (define (make-buffered-output-port handler data buffer index limit)
   (if (and (okay-buffer? buffer index limit)
@@ -32,8 +33,9 @@
 		 limit
 		 #f             ; pending-cr?
 		 #f)            ; pending-eof?
-      (call-error "invalid argument"
-		  make-buffered-output-port handler data buffer index limit)))
+      (assertion-violation 'make-buffered-output-port
+			   "invalid argument"
+			   handler data buffer index limit)))
 
 (define (okay-buffer? buffer index limit)
   (and (byte-vector? buffer)
@@ -100,9 +102,9 @@
 	    (limit (provisional-port-limit port)))
 	(cond ((not (open-input-port? port))
 	       (remove-current-proposal!)
-	       (call-error "invalid argument"
-			   (if read? read-byte peek-byte)
-			   port))
+	       (assertion-violation (if read? 'read-byte 'peek-byte)
+				    "invalid argument"
+				    port))
 	      ((< index limit)
 	       (if read?
 		   (provisional-set-port-index! port (+ 1 index)))
@@ -145,12 +147,12 @@
 
 	    (cond ((not (open-input-port? port))
 		   (remove-current-proposal!)
-		   (call-error "invalid argument"
-			       (cond
-				((not mode) read-char)
-				((null? mode) char-ready?)
-				(else peek-char))
-			       port))
+		   (assertion-violation (cond
+					 ((not mode) 'read-char)
+					 ((null? mode) 'char-ready?)
+					 (else 'peek-char))
+					"invalid argument"
+					port))
 		  ((< index limit)
 		   (let ((buffer (port-buffer port)))
 		     (call-with-values
@@ -243,7 +245,7 @@
 		       open-output-port?)
 		   port))
 	     (remove-current-proposal!)
-	     (call-error "invalid argument" byte-ready? port))
+	     (assertion-violation 'byte-ready? "invalid argument" port))
 	    ((or (< (provisional-port-index port)
 		    (provisional-port-limit port))
 		 (and read?
@@ -304,7 +306,8 @@
 			   have)))))
 	    (begin
 	      (remove-current-proposal!)
-	      (call-error "invalid argument" read-block port buffer start count)))))))
+	      (assertion-violation 'read-block "invalid argument"
+				   port buffer start count)))))))
 
 ; Copy whatever bytes are currently available.
 ;
@@ -382,7 +385,7 @@
 	    (limit (byte-vector-length (port-buffer port))))
 	(cond ((not (open-output-port? port))
 	       (remove-current-proposal!)
-	       (call-error "invalid argument" write-byte port))
+	       (assertion-violation 'write-byte "invalid argument" port))
 	      ((< index limit)
 	       (provisional-byte-vector-set! (port-buffer port)
 					     index
@@ -403,7 +406,7 @@
 	      (limit (byte-vector-length (port-buffer port))))
 	  (cond ((not (open-output-port? port))
 		 (remove-current-proposal!)
-		 (call-error "invalid argument" write-byte port))
+		 (assertion-violation 'write-byte "invalid argument" port))
 		((< index limit)
 		 (let ((encode-count #f)
 		       (ok? #f))
@@ -479,8 +482,8 @@
       (with-new-proposal (lose)
 	(cond ((not (open-output-port? port))
 	       (remove-current-proposal!)
-	       (call-error "invalid argument"
-			   write-block buffer start count port))
+	       (assertion-violation 'write-block "invalid argument"
+				    buffer start count port))
 	      ((= count 0)
 	       (if (maybe-commit)
 		   0
@@ -527,7 +530,7 @@
 	     (if necessary?
 		 (begin
 		   (remove-current-proposal!)
-		   (call-error "invalid argument" force-output port)))
+		   (assertion-violation 'force-output "invalid argument" port)))
 	     (unspecific))
 	    ((< 0 (provisional-port-index port))
 	     (if (or (not (call-to-flush port (lambda () (buffer-emptier! port necessary?))))

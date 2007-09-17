@@ -10,20 +10,24 @@
 
 ; SIGNALS
 
-(define error #'ps:scheme-error)
+(define (error who message . irritants)
+  (apply #'ps:scheme-error message irritants))
 
-(define warn #'ps:scheme-warn)
+(define (assertion-violation who message . irritants)
+  (apply #'ps:scheme-error message irritants))
 
-(define (signal type . stuff)
-  (apply warn "condition signalled" type stuff))
+(define (implementation-restriction-violation who message . irritants)
+  (apply #'ps:scheme-error message irritants))
 
-(define (syntax-error . rest)		; Must return a valid expression.
-  (apply warn rest)
+(define (warning who message . irritants)
+  (apply #'ps:scheme-warn message irritants))
+
+(define (note who message . irritants)
+  (apply #'ps:scheme-warn message irritants))
+
+(define (syntax-violation who message . irritants)
+  (apply warning who message irritants)
   ''syntax-error)
-
-(define (call-error message proc . args)
-  (error message (cons proc args)))
-
 
 ; FEATURES
 

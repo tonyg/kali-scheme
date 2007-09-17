@@ -318,9 +318,10 @@
 (define (decoding-error encoding-name
 			message
 			bytes start)
-  (signal-condition
+  (raise
+   (make-message-condition
+    (string-append "error while decoding " encoding-name ": " message))
    (make-decoding-error encoding-name
-			(string-append "error while decoding " encoding-name ": " message)
 			bytes start)))
 
 (define-enumeration decoding-status

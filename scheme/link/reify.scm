@@ -136,7 +136,7 @@
 	((primop? thing)
 	 `(primop ',(primop-name thing)))
 	;; ((interface? thing) ...)
-	(else (error "don't know how to reify this" thing))))
+	(else (assertion-violation 'reify-object "don't know how to reify this" thing))))
 
 (define (reify-package thing)
   (process-one-object thing
@@ -183,7 +183,7 @@
 	 (info (package-info package)))
     (for-each-export (lambda (name want-type binding)
 		       (if (not (process-one-binding name package info p-form))
-			   (warn "undefined export" name package)))
+			   (warning 'process-exports "undefined export" name package)))
 		     struct)))
 
 
@@ -262,8 +262,9 @@
 			   (process-one-binding name env info env-form))
 			 (or (transform-aux-names transform) ; () must be true
 			     (begin
-			       (warn "reified macro's auxiliary bindings are unknown"
-				     name)
+			       (warning 'process-transform
+					"reified macro's auxiliary bindings are unknown"
+					name)
 			       '())))))
 	   (lambda () #f))))))
 

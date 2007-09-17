@@ -245,19 +245,19 @@
   (let ((scheduler (current-thread)))
     (cond ((not (thread-continuation thread))
 	   (enable-interrupts!)
-	   (error "RUN called with a completed thread" thread))
+	   (assertion-violation 'run "RUN called with a completed thread" thread))
 	  ((not (eq? (thread-scheduler thread) scheduler))
 	   (enable-interrupts!)
-	   (error "thread run by wrong scheduler" thread scheduler))
+	   (assertion-violation 'run "thread run by wrong scheduler" thread scheduler))
 	  ((thread-cell thread)
 	   (enable-interrupts!)
-	   (error "thread run while still blocked" thread))
+	   (assertion-violation 'run "thread run while still blocked" thread))
 	  ((and (thread-current-task thread)
 		(not (null? (thread-arguments thread))))
 	   (enable-interrupts!)
-	   (error "returning values to running thread"
-		  thread
-		  (thread-arguments thread)))
+	   (assertion-violation 'run "returning values to running thread"
+				thread
+				(thread-arguments thread)))
 	  ((event-pending?)
 	   (enable-interrupts!)
 	   (apply values time (dequeue! (thread-events (current-thread)))))
@@ -490,7 +490,8 @@
       (begin
 	(interrupt-thread thread
 			  (lambda ()
-			    (apply error "unhandled upcall" token args)))
+			    (apply error 'propogate-upcall "unhandled upcall"
+				   token args)))
 	(values))))
 
 (define (kill-thread! thread)   ; dangerous!
@@ -519,7 +520,7 @@
 	   (set-enabled-interrupts! interrupts))
 	  (else
 	   (set-enabled-interrupts! interrupts)
-	   (call-error "invalid argument" interrupt-thread thread)))))
+	   (assertion-violation 'interrupt-thread "invalid argument" thread)))))
   
 ;----------------
 ; Dealing with event queues
@@ -647,7 +648,7 @@
       (schedule-event (thread-scheduler thread)
 		      (enum event-type runnable)
 		      thread)
-      (error "MAKE-READY thread has no scheduler" thread)))
+      (assertion-violation 'make-ready "MAKE-READY thread has no scheduler" thread)))
 
 (define (clear-thread-cell! thread)
   (let ((cell (thread-cell thread)))
@@ -736,14 +737,14 @@
     (lambda (exit-multitasking)
       (with-handler
        (lambda (c punt)
-	 (if (deadlock? c)
+	 (if (deadlock-condition? c)
 	     (exit-multitasking 0)
 	     (punt)))
        (lambda ()
 	 (call-with-current-continuation
 	   (lambda (terminate)
 	     (with-handler (lambda (c punt)
-			     (if (terminate? c)
+			     (if (terminate-condition? c)
 				 (terminate 0)
 				 (punt)))
 	       (lambda ()
@@ -766,25 +767,27 @@
 
 ; Raised when there is nothing to run.
 
-(define-condition-type 'deadlock '())
-(define deadlock? (condition-predicate 'deadlock))
+(define-condition-type &deadlock &serious
+  make-deadlock-condition deadlock-condition?)
 
 ; Raised when the current thread has been killed.
 
-(define-condition-type 'terminate '())
-(define terminate? (condition-predicate 'terminate))
+(define-condition-type &terminate &condition
+  make-terminate-condition terminate-condition?)
+
+(define the-terminate-condition (make-terminate-condition))
 
 ; Kill the current thread.  DEBUG-MESSAGE is used to try and make sure that some
 ; record exists when an error occured.  The system may be too broken for ERROR
 ; to work properly.
 
 (define (terminate-current-thread)
-  (signal 'terminate)
+  (signal-condition the-terminate-condition)
   (debug-message "Can't terminate current thread "
 		 (thread-uid (current-thread))
 		 " "
 		 (thread-name (current-thread)))
-  (error "can't terminate current thread")
+  (assertion-violation 'terminate-current-thread "can't terminate current thread")
   0)    ; suppress bogus compiler warning
 
 

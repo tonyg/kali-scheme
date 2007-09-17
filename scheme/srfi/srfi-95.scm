@@ -24,7 +24,7 @@
     ((0) less?)
     ((1) (let ((key (car opt-key)))
            (lambda (a b) (less? (key a) (key b)))))
-    (else (error caller 'too-many-args (cdr opt-key)))))
+    (else (apply assertion-violation caller "too many arguments" (cdr opt-key)))))
 
 ;;; (sorted? sequence less?)
 ;;; is true when sequence is a list (x0 x1 ... xm) or a vector #(x0 ... xm)

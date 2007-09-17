@@ -26,7 +26,7 @@
 		 (prompt-loop))
                 ((char=? c #\))      ;Erroneous right paren
 		 (read-char i-port)
-		 (warn "discarding extraneous right parenthesis")
+		 (warning 'read-command "discarding extraneous right parenthesis")
 		 (loop))
                 ((char=? c command-prefix)
                  (read-char i-port)
@@ -47,7 +47,7 @@
 	  (cond ((batch-mode?)
 		 (punt))
 		((and (i/o-port-error? c)
-		      (or (i/o-read-error? c)
+		      (or (i/o-error? c) ; should really be i/o-read-error?
 			  (read-command-error? c)))
 		 (let ((port (i/o-error-port c)))
 		   (if (eq? port i-port)
@@ -55,7 +55,7 @@
 		   (display-condition c (command-output)
 				      (condition-writing-depth) (condition-writing-length))
 		   (k #f)))
-		((reset-command-input? c)
+		((reset-command-input-condition? c)
 		 (k #f))
 		(else
 		 (punt))))
@@ -133,7 +133,8 @@
 	       (cons arg (recur ds #f))))
 	    ((eq? (car ds) 'command)	; must be the last argument
 	     (if (not (null? (cdr ds)))
-		 (error "invalid argument descriptions" ds))
+		 (assertion-violation 'read-command-arguments
+				      "invalid argument descriptions" ds))
 	     (list (really-read-command #f form-preferred? port)))
 	    (else
 	     (let ((arg (read-command-argument (car ds) port)))
@@ -160,7 +161,8 @@
 	       x
 	       (read-command-error port "invalid selection command" x))))
 	(else
-	 (error "invalid argument description" d)))))
+	 (assertion-violation 'read-command-argument
+			      "invalid argument description" d)))))
 
 
 (define (read-filename port)
@@ -172,16 +174,13 @@
 
 
 (define-condition-type &read-command-error &error
-  read-command-error?)
+  make-read-command-error read-command-error?)
 
 (define (read-command-error port message . rest)
-  (signal-condition (condition (&read-command-error)
-			       (&irritants
-				(values rest))
-			       (&i/o-port-error
-				(port port))
-			       (&message
-				(message message)))))
+  (signal-condition (condition (make-read-command-error)
+			       (make-irritants-condition (cons port rest))
+			       (make-i/o-port-error port)
+			       (make-message-condition message))))
 
 ; Utilities.
 

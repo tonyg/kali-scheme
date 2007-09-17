@@ -156,7 +156,7 @@
 	      ((string? arg)
 	       (add-string-masks arg case no-case))
 	      (else
-	       (apply call-error "invalid argument" set all-args)))
+	       (apply assertion-violation 'set "invalid argument" all-args)))
 	(make-set case no-case))))
 	      
 (define (add-char-masks char case no-case)
@@ -175,19 +175,19 @@
 
 (define (range low high)
   (or (real-ranges `(,low ,high) char->integer integer->scalar-value)
-      (call-error "invalid argument" range low high)))
+      (assertion-violation 'range "invalid argument" low high)))
 
 (define (ranges . limits)
   (or (real-ranges limits char->integer integer->scalar-value)
-      (apply call-error "invalid argument" ranges limits)))
+      (apply assertion-violation 'ranges "invalid argument" limits)))
 
 (define (ascii-range low high)
   (or (real-ranges `(,low ,high) char->ascii identity)
-      (call-error "invalid argument" ascii-range low high)))
+      (assertion-violation 'ascii-range "invalid argument" low high)))
 
 (define (ascii-ranges . limits)
   (or (real-ranges limits char->ascii identity)
-      (apply call-error "invalid argument" ascii-ranges limits)))
+      (apply assertion-violation 'ascii-ranges "invalid argument" limits)))
 
 (define (integer->scalar-value i)
   (char->scalar-value (integer->char i)))
@@ -308,7 +308,7 @@
 
 (define (submatch id exp)
   (cond ((not (regexp? exp))
-	 (call-error "invalid argument" submatch exp))
+	 (assertion-violation 'submatch "invalid argument" exp))
 	((empty-set? exp)
 	 the-empty-set)
 	(else
@@ -343,7 +343,7 @@
 	       (make-sequence (reverse res))))
 	(let ((exp (car exps)))
 	  (cond ((not (regexp? exp))
-		 (apply call-error "invalid argument" sequence all-exps))
+		 (apply assertion-violation 'sequence "invalid argument" all-exps))
 		((empty-set? exp)
 		 the-empty-set)
 		((sequence? exp)
@@ -373,7 +373,7 @@
 				(cons set (reverse res))))))
 	(let ((exp (car exps)))
 	  (cond ((not (regexp? exp))
-		 (apply call-error "invalid argument" sequence all-exps))
+		 (apply assertion-violation 'one-of "invalid argument" all-exps))
 		((empty-set? exp)
 		 (loop (cdr exps) res set))
 		((set? exp)
@@ -388,7 +388,7 @@
 (define (text string)
   (if (string? string)
       (apply sequence (map char->set (string->list string)))
-      (call-error "invalid argument" text string)))
+      (assertion-violation 'text "invalid argument" string)))
 
 ; Repetitions
 ;  LOW is an integer >= 0.
@@ -413,7 +413,7 @@
 		   (or (not high)
 		       (and (integer? high)
 			    (<= low high)))))
-	 (call-error "invalid argument" make-repeat low high exp))
+	 (assertion-violation 'make-repeat "invalid argument" low high exp))
 	((or (epsilon? exp)
 	     (and high
 		  (= low high 0)))
@@ -437,7 +437,7 @@
 (define (repeat . stuff)
   (case (length stuff)
     ((0)
-     (call-error "invalid argument" repeat))
+     (assertion-violation 'repeat "invalid argument" repeat))
     ((1)
      (make-repeat 0 #f (car stuff)))
     ((2)
@@ -445,7 +445,7 @@
     ((3)
      (apply make-repeat stuff))
     (else
-     (apply call-error "invalid argument" repeat stuff))))
+     (apply assertion-violation 'repeat "invalid argument" stuff))))
 
 ;----------------
 ; Three functions that transform EXP instead of having their own record type.
@@ -470,7 +470,7 @@
   (if (regexp? exp)
       (or (expression-map function exp)
 	  exp)
-      (call-error "invalid argument" proc exp)))
+      (assertion-violation 'start-expression-map "invalid argument" proc exp)))
 
 ; This returns #F if FUNCTION does not modify EXP.
 
@@ -515,7 +515,7 @@
 	       (string-end? exp))
 	   exp)
 	  (else
-	   (error "expression-map got a non-expression" exp)))))
+	   (assertion-violation 'expression-map "got a non-expression" exp)))))
 
 ; As above, this returns #F if FUNCTION leaves EXPS unchanged.
 
@@ -547,9 +547,9 @@
 
 (define (exp->posix-string exp)
   (cond ((not (regexp? exp))
-	 (call-error "invalid argument" exp->posix-string exp))
+	 (assertion-violation 'exp->posix-string "invalid argument" exp))
 	((empty-set? exp)
-	 (call-error "no Posix string for the empty set" exp->posix-string exp))
+	 (assertion-violation 'exp->posix-string "no Posix string for the empty set" exp))
 	(else
 	 (reduce ((list* elt (exp->strings exp '())))
 		 ((strings '())
@@ -592,7 +592,7 @@
 	((string-end? exp)
 	 (cons "$" tail))
 	(else
-	 (error "bad expression" exp))))
+	 (assertion-violation 'exp->strings "bad expression" exp))))
 
 ; Add parentheses around the strings for EXP, encoding "(" as #F because it
 ; does not begin a submatch.
@@ -675,7 +675,7 @@
 
 (define (bit-set->posix-string bit-set)
   (cond ((= bit-set 0)
-	 (error "trying to convert the empty set"))
+	 (assertion-violation 'bit-set->posix-string "trying to convert the empty set"))
 	((= (bitwise-and bit-set all-chars)
 	    all-chars)
 	 ".")
@@ -853,7 +853,7 @@
       (if (empty-set? exp)
 	  #f
 	  (regexp-match (car (compile-exp exp)) string 0 #f #t #t))
-      (call-error "invalid argument" any-match? exp string)))
+      (assertion-violation 'any-match? "invalid argument" exp string)))
   
 (define (exact-match? exp string)
   (if (and (regexp? exp)
@@ -864,7 +864,7 @@
 	    (and matches
 		 (= 0 (match-start (car matches)))
 		 (= (string-length string) (match-end (car matches))))))
-      (call-error "invalid argument" exact-match? exp string)))
+      (assertion-violation 'exact-match? "invalid argument" exp string)))
 
 ; Do the match and select out the match records that correspond to submatches,
 ; making them into an alist.  The first match record, which is for the entire
@@ -890,7 +890,7 @@
 			  (match-end (car matches))
 			  (reverse submatches)))
 	    #f))
-      (call-error "invalid argument" match exp string)))
+      (assertion-violation 'match "invalid argument" exp string)))
 
 ; Compile the expression if this hasn't already been done.  The compiled version
 ; is the POSIX regexp object and the list of submatch indexes.
@@ -913,7 +913,7 @@
 
 (define (regexp->s-exp x)
   (cond ((not (regexp? x))
-	 (call-error "invalid argument" regexp->s-exp x))	 
+	 (assertion-violation 'regexp->s-exp "invalid argument" x))	 
 	((set? x)
 	 (list 'set
 	       (let ((chars (set->chars x)))
@@ -936,7 +936,7 @@
 	((string-end? x)
 	 '(string-end))
 	(else
-	 (error "unknown type of regular-expression" x))))
+	 (assertion-violation 'regexp->s-exp  "unknown type of regular-expression" x))))
 
 ; Used by EXP->S-EXP.  Returns a list of the characters in SET (using the
 ; case-sensitive set).

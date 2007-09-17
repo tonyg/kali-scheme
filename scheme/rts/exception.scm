@@ -34,21 +34,22 @@
     (lambda (k)
       (fluid-cell-set! $exception-handlers
 		       (list (last-resort-exception-handler k)))
+      (initialize-vm-exceptions! really-signal-condition)
       (thunk))))
 
 (define (last-resort-exception-handler halt)
   (let ((interrupt/keyboard (enum interrupt keyboard))
 	(losing? #f))
     (lambda (condition punt)
-      (cond ((error? condition)
+      (cond ((serious-condition? condition)
 	     (primitive-catch
 	       (lambda (c)
 		 (if (not losing?)
 		     (begin (set! losing? #t)
 			    (report-utter-lossage condition c)))
 		 (halt 123))))
-	    ((and (interrupt? condition)
-		  (= (cadr condition) interrupt/keyboard))
+	    ((and (interrupt-condition? condition)
+		  (= (interrupt-source condition) interrupt/keyboard))
 	     (halt 2))
 	    (else
 	     (unspecific))))))	;proceed
@@ -65,10 +66,15 @@
 			(enumerand->name (vm-exception-opcode condition)
 					 op)))
 	(else
-	 (apply debug-message
-		(condition-type condition)
-		" with no handler in place: "
-		(condition-stuff condition))))
+	 (call-with-values
+	     (lambda () (decode-condition condition))
+	   (lambda (type who message stuff)
+	     (apply debug-message
+		    type
+		    " [" who "]"
+		    " with no handler in place: "
+		    message
+		    stuff)))))
   (apply debug-message
 	 "stack template id's: "
 	 (map (lambda (id+pc)
@@ -85,7 +91,7 @@
   (call-with-current-continuation
     (lambda (k)
       (with-handler (lambda (c next)
-		      (if (error? c)
+		      (if (serious-condition? c)
 			  (k c)
 			  (next)))
 	thunk))))
@@ -100,7 +106,7 @@
 		      #f))))
     (if condition
 	(begin
-	  (apply warn message (append irritants (list condition)))
+	  (apply warning 'report-errors-as-warnings (append irritants (list condition)))
 	  #t)
 	#f)))
 
@@ -138,7 +144,7 @@
 		(loop (cdr handlers) obj)
 		(loop (cdr handlers) (car maybe-obj)))))
 	 (set! last-handler (car handlers)))))
-    (error "exception handler returned" last-handler obj)))
+    (assertion-violation 'raise "exception handler returned" last-handler obj)))
 
 (define-syntax guard
   (syntax-rules ()
@@ -191,3 +197,52 @@
      (if test
          (begin result1 result2 ...)
          (guard-aux reraise clause1 clause2 ...)))))
+
+(define (make-general-condition con who message irritants)
+  (apply condition
+	 con
+	 (make-message-condition message)
+	 (make-irritants-condition irritants)
+	 (if who
+	     (list (make-who-condition who))
+	     '())))
+
+(define (raise-general-trouble con who message irritants)
+  (raise (make-general-condition con who message irritants)))
+
+(define (error who message . irritants)
+  (raise-general-trouble (make-error)
+			 who message irritants))
+
+(define (assertion-violation who message . irritants)
+  (raise-general-trouble (make-assertion-violation)
+			 who message irritants))
+
+(define (implementation-restriction-violation who message . irritants)
+  (raise-general-trouble (make-implementation-restriction-violation)
+			 who message irritants))
+
+(define (warning who message . irritants)
+  (signal-condition
+   (make-general-condition (make-warning)
+			   who message irritants)))
+
+(define (note who message . irritants)
+  (signal-condition
+   (make-general-condition (make-note)
+			   who message irritants)))
+
+; must return a valid expression
+; pretty lame still
+(define (syntax-violation who message . irritants)
+  (signal-condition
+   (make-general-condition (make-syntax-violation #f #f)
+			   who message irritants))
+  ''syntax-violation)
+
+; Set LOW-EXCEPTIONS straight
+
+(initialize-low-exception-procedures!
+ error assertion-violation implementation-restriction-violation
+ warning note
+ syntax-violation)

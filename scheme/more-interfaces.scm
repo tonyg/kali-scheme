@@ -62,7 +62,7 @@
 	  proceed-with-command-level
 	  kill-paused-thread!
 
-	  reset-command-input?  ; condition predicate 
+	  reset-command-input-condition?
 
 	  terminate-command-processor!
 	  command-level
@@ -215,7 +215,6 @@
 
 (define-interface display-conditions-interface
   (export display-condition		;command.scm
-	  &disclose-condition      	;env/disclosers.scm
 	  limited-write))
 
 (define-interface debuginfo-interface
@@ -229,12 +228,12 @@
 	  error-form
 	  location-info
 	  location-name
+	  location-package-name
 	  template-debug-data
 	  template-id
 	  template-name
 	  template-names
-	  debug-data-names
-	  disclose-vm-condition))
+	  debug-data-names))
 
 (define-interface package-mutation-interface
   (export package-system-sentinel	;env/command.scm
@@ -330,60 +329,6 @@
 	  string-upcase string-downcase
 	  string-foldcase
 	  string-titlecase))
-
-(define-interface conditions-interface
-  (export make-condition-type
-	  condition-type?
-	  make-condition
-	  condition?
-	  condition-has-type?
-	  condition-ref
-	  make-compound-condition
-	  extract-condition
-
-	  (define-condition-type :syntax)
-	  (condition :syntax)
-
-	  &condition
-	  &message message-condition? condition-message
-	  &serious serious-condition?
-	  &error error?
-	  &bug bug?
-	  &irritants irritants?
-	  condition-irritants
-	  &call-error call-error?
-	  call-error-proc call-error-args
-	  &vm-exception vm-exception?
-	  vm-exception-opcode vm-exception-reason vm-exception-arguments
-	  &warning warning?
-	  &note note?
-	  &syntax-error syntax-error?
-	  &interrupt interrupt?
-	  interrupt-type
-	  &decoding-error decoding-error?
-	  decoding-error-encoding-name
-	  &simple-condition simple-condition?
-	  simple-condition-type simple-condition-stuff))
-
-(define-interface i/o-conditions-interface
-  (export &i/o-error i/o-error?
-	  &i/o-port-error i/o-port-error?
-	  i/o-error-port
-	  &i/o-read-error i/o-read-error?
-	  &i/o-write-error i/o-write-error?
-	  &i/o-closed-error i/o-closed-error?
-	  &i/o-filename-error i/o-filename-error?
-	  i/o-error-filename
-	  &i/o-malformed-filename-error i/o-malformed-filename-error?
-	  &i/o-file-protection-error i/o-file-protection-error?
-	  &i/o-file-is-read-only-error i/o-file-is-read-only-error?
-	  &i/o-file-already-exists-error i/o-file-already-exists-error?
-	  &i/o-no-such-file-error i/o-no-such-file-error?
-	  &read-error read-error?
-	  read-error-line read-error-column read-error-position read-error-span
-
-	  &primitive-i/o-error primitive-i/o-error?
-	  i/o-error-status i/o-error-operation i/o-error-arguments))
 
 (define-interface signals-internal-interface
   (export simple-condition->condition
@@ -658,3 +603,10 @@
 	  run-test-suite
 	  =within
 	  zap-test-suite!))
+
+; Backwards compatibility
+
+(define-interface signals-interface
+  (export error warn syntax-error call-error note
+	  signal signal-condition
+	  make-condition))

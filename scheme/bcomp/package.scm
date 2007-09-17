@@ -44,13 +44,15 @@
     (if (interface? int)
 	(begin (set-structure-interface! structure int)
 	       (note-reference-to-interface! int structure))
-	(call-error "invalid interface" initialize-structure! structure))))
+	(assertion-violation 'initialize-structure!
+			     "invalid interface" structure))))
 
 ; Make a structure over PACKAGE and the interface returned by INT-THUNK.
 
 (define (make-structure package int-thunk . name-option)
   (if (not (package? package))
-      (call-error "invalid package" make-structure package int-thunk))
+      (assertion-violation 'make-structure
+			   "invalid package" package int-thunk))
   (let ((struct (really-make-structure package
 				       (if (procedure? int-thunk)
 					   int-thunk
@@ -104,7 +106,7 @@
         ((procedure? env)
          #f)                    ; conservative
         (else
-         (error "invalid environment" env))))
+         (assertion-violation 'environment-stable? "invalid environment" env))))
 
 ; Map PROC down the the [name type binding] triples provided by STRUCT.
 
@@ -269,7 +271,7 @@
 
 (define (make-simple-package opens unstable? tower . name-option)
   (if (not (list? opens))
-      (error "invalid package opens list" opens))
+      (assertion-violation 'make-simple-package "invalid package opens list" opens))
   (let ((package (make-package (lambda () opens)
 			       (lambda () '()) ;accesses-thunk
 			       unstable?
@@ -314,7 +316,8 @@
 			  (binding-type probe)
 			  (binding-place probe)
 			  static)
-	(error "internal error: name not bound" package name))))
+	(assertion-violation 'package-add-static!
+			     "internal error: name not bound" package name))))
 
 (define (package-refine-type! package name type)
   (let ((probe (table-ref (package-definitions package) name)))
@@ -323,7 +326,8 @@
 			  type
 			  (binding-place probe)
 			  (binding-static probe))
-	(error "internal error: name not bound" package name))))
+	(assertion-violation 'package-refine-type!
+			     "internal error: name not bound" package name))))
 
 ; --------------------
 ; Lookup
@@ -378,11 +382,11 @@
 	 (or (structure-lookup env
 			       name
 			       (package-integrate? (structure-package env)))
-	     (call-error "not exported" generic-lookup env name)))
+	     (assertion-violation 'generic-lookup "not exported" env name)))
 	((procedure? env)
 	 (lookup env name))
 	(else
-	 (error "invalid environment" env name))))
+	 (assertion-violation 'generic-lookup "invalid environment" env name))))
 
 ; --------------------
 ; Package initialization

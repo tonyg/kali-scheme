@@ -42,7 +42,8 @@
 	((symbol? x)
 	 (list->string (map file-name-preferred-case
 			    (string->list (symbol->string x)))))
-	(else (error "bogus namelist component" x))))
+	(else (assertion-violation 'namestring-component
+				   "bogus namelist component" x))))
 
 (define file-name-preferred-case char-downcase)
 

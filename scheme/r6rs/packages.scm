@@ -50,7 +50,6 @@
 	big-util
 	(modify enum-sets (prefix big:))
 	(modify enum-sets-internal (prefix big:))
-	signals
 	constant-tables
 	(subset tables (symbol-hash))
 	(subset names (desyntaxify))

@@ -11,7 +11,7 @@
 (define (sleep user-n)
   (let ((n (coerce-to-nonnegative-integer user-n)))
     (cond ((not n)
-	   (call-error "wrong type argument" sleep user-n))
+	   (assertion-violation 'sleep "wrong type argument" user-n))
 	  ((< 0 n)
 	   (let ((cell (make-cell (current-thread))))
 	     (disable-interrupts!)
@@ -55,7 +55,7 @@
 (define (register-dozer! user-wakeup-time alive? wakeup!)
   (let ((wakeup-time (coerce-to-nonnegative-integer user-wakeup-time)))
     (cond ((not wakeup-time)
-	   (call-error "wrong type argument" register-dozer! user-wakeup-time))
+	   (assertion-violation 'register-dozer! "wrong type argument" user-wakeup-time))
 	  (else
 	   (let ((ints (set-enabled-interrupts! 0)))
 	     (register-dozer-unsafe! wakeup-time alive? wakeup!)

@@ -8,12 +8,13 @@
 		       ((symbol? x) (symbol->string x))
 		       ((number? x) (number->string x))
 		       (else
-			(error "cannot coerce ~S to a string" x))))
+			(assertion-violation 'concatenate-symbol "cannot coerce to a string"
+					     x))))
 	       stuff))))
 
 (define (error format-string . args)
   (if #t       ; work around a bug in the type system
-      (rts-error (apply format (cons #f (cons format-string args))))))
+      (rts-error 'error (apply format (cons #f (cons format-string args))))))
 
 (define (breakpoint format-string . args)
   (rts-breakpoint (apply format (cons #f (cons format-string args)))))
@@ -35,7 +36,7 @@
   (cond ((null? x) #t)
 	((pair? x) #f)
 	(else
-	 (error "null-list? got a non-list" x))))
+	 (assertion-violation 'null-list? "non-list" x))))
 
 (define (reverse! l)
   (cond ((or (null? l)

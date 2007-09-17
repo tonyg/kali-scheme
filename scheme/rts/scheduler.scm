@@ -104,10 +104,10 @@
 	  ((no-event)
 	   (values))
 	  (else
-	   (error "unhandled event"
-		  (cons (enumerand->name event event-type)
-			event-data)
-		  event-handler)))))
+	   (assertion-violation 'asynchronous-event-handler "unhandled event"
+				(cons (enumerand->name event event-type)
+				      event-data)
+				event-handler)))))
 
   (define (next-thread)
     (if (queue-empty? runnable)

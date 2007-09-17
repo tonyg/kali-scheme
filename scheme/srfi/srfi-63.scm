@@ -237,7 +237,8 @@
              (apply array-set! nra row (reverse idxs)))
             (;; ERROR CHECKING
              (if (not (eqv? (car dims) (length row)))
-                 (error "non-rectangular array" dims dimensions))
+                 (assertion-violation 'list->array "non-rectangular array"
+				      dims dimensions))
              
              (do ((idx 0 (add1 idx))
                   (row row (cdr row)))

@@ -494,42 +494,82 @@
 
 (define :enumeration :syntax)
 
-(define-interface signals-interface
-  (export error warn syntax-error call-error note
-	  signal signal-condition
-	  make-condition))
+(define-interface low-exceptions-interface
+  (export ((error
+	    assertion-violation
+	    implementation-restriction-violation
+	    warning note
+	    syntax-violation)
+	   (proc (:value :string &rest :value) :values))
+
+	  initialize-low-exception-procedures!))
 
 (define-interface handle-interface
   (export ignore-errors report-errors-as-warnings with-handler))
 
-(define-interface simple-conditions-interface
-  (export define-condition-type
+(define-interface conditions-interface
+  (export condition
+	  condition?
+	  simple-conditions
 	  condition-predicate
-	  decode-condition condition-stuff condition-type
-	  define-condition-decoder
-	  error? warning? note? syntax-error? call-error? read-error?
-	  interrupt?
+	  condition-accessor
+	  define-condition-type
+	  &condition
+	  &message
+	  make-message-condition
+	  message-condition?
+	  condition-message
+	  &warning
+	  make-warning
+	  warning?
+	  &serious
+	  make-serious-condition
+	  serious-condition?
+	  &error
+	  make-error
+	  error?
+	  &violation
+	  make-violation
+	  violation?
+	  &non-continuable
+	  make-noncontinuable-violation
+	  non-continuable-violation?
+	  &implementation-restriction
+	  make-implementation-restriction-violation
+	  implementation-restriction-violation?
+	  &lexical
+	  make-lexical-violation
+	  lexical-violation?
+	  &syntax
+	  make-syntax-violation
+	  syntax-violation?
+	  &undefined
+	  make-undefined-violation
+	  undefined-violation?
+	  &assertion
+	  make-assertion-violation
+	  assertion-violation?
+	  &irritants
+	  make-irritants-condition
+	  irritants-condition?
+	  condition-irritants
+	  &who
+	  make-who-condition
+	  who-condition?
+	  condition-who
 
-	  ;; Do these belong here?... not really.
-	  vm-exception-arguments
-	  vm-exception-reason
-	  vm-exception-opcode
-	  vm-exception?
-	  make-vm-exception
-
-	  i/o-error?
-	  i/o-error-status
-	  i/o-error-message
-	  i/o-error-operation
-	  i/o-error-arguments
-	  make-i/o-error
-
-	  decoding-error?
+	  &vm-exception make-vm-exception vm-exception?
+	  vm-exception-opcode vm-exception-reason
+	  &i/o-error make-i/o-error i/o-error?
+	  &i/o-port-error make-i/o-port-error i/o-port-error? i/o-error-port
+	  &decoding-error make-decoding-error decoding-error?
 	  decoding-error-encoding-name
-	  decoding-error-message
-	  decoding-error-bytes
-	  decoding-error-start
-	  make-decoding-error))
+	  decoding-error-bytes decoding-error-start
+	  &note make-note note?
+	  &interrupt make-interrupt-condition interrupt-condition?
+	  interrupt-source
+	  decode-condition
+	  ))
 
 (define-interface wind-interface
   (export call-with-current-continuation
@@ -716,6 +756,7 @@
 	  interrupt-thread
 	  kill-thread!
 	  terminate-thread!
+	  make-deadlock-condition deadlock-condition?
 
 	  thread-queue-empty?
 	  maybe-dequeue-thread!
@@ -743,19 +784,25 @@
 	  delete-from-queue! on-queue?))
 
 (define-interface exceptions-interface
-  (export with-exception-handler
-	  raise
-	  (guard :syntax)))
+  (compound-interface (export with-exception-handler
+			      raise
+			      (guard :syntax)
+			      syntax-violation)
+		      low-exceptions-interface))
 
 (define-interface exceptions-internal-interface
   (export initialize-exceptions!
 	  really-signal-condition))
 
+(define-interface signal-conditions-interface
+  (export signal-condition))
+
 (define-interface vm-exceptions-interface
   (export define-vm-exception-handler
 	  initialize-vm-exceptions!
 	  extend-opcode!
-	  signal-vm-exception))
+	  signal-vm-exception
+	  vm-exception-reason->message))
 
 (define-interface interrupts-interface
   (export initialize-interrupts!	;init.scm
@@ -764,7 +811,7 @@
 	  ;reset-timer-interrupts!
 	  set-interrupt-handler!
 	  get-interrupt-handler
-	  interrupt?
+	  interrupt-condition?
 	  ;set-timer-interrupt!
 	  schedule-interrupt
 	  set-enabled-interrupts!	;command.scm

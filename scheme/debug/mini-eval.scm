@@ -45,7 +45,7 @@
 
 (define (initial-package name)
   (let ((probe (assq name *initial-bindings*)))
-    (if probe (cdr probe) (error "unbound" name))))
+    (if probe (cdr probe) (assertion-violation 'initial-package "unbound" name))))
 
 (define (define-initial name val)
   (let ((probe (assq name *initial-bindings*)))

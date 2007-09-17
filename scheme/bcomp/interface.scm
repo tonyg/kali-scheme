@@ -163,7 +163,8 @@
 	    (let ((int (make-interface lookup walker #f)))
 	      (note-reference-to-interface! interface int)
 	      int))))
-      (error "badly-formed structure modifiers" commands)))
+      (assertion-violation 'make-modified-interface-maker
+			   "badly-formed structure modifiers" commands)))
 
 ; We process COMMANDS and compute three values:
 ;   - an alist mapping visible names to their real names in the package

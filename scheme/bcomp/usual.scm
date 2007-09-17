@@ -14,7 +14,7 @@
 
 (define (usual-transform name)
   (or (table-ref the-usual-transforms name)
-      (call-error "no such transform" usual-transform name)))
+      (assertion-violation 'usual-transform  "no such transform" name)))
 
 ; Ordinarily we would write #f instead of ,#f below.  However, it is
 ; useful (although decreasingly so) to be able compile Scheme 48
@@ -235,7 +235,7 @@
       (cond ((eq? mode 'quote) `(,%quote ,arg))
 	    ((eq? mode 'unquote) arg)
 	    ((eq? mode 'unquote-splicing)
-	     (syntax-error ",@ in invalid context" arg))
+	     (syntax-violation 'quasiquote ",@ in invalid context" arg))
 	    (else `(,mode ,@arg))))
 
     (define (descend-quasiquote x level return)

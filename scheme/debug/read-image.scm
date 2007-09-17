@@ -35,10 +35,12 @@
              (startup-proc       (read-number port)))
         (read-page port)
         (if (not (= old-level level))
-            (error "format of image is incompatible with this version of system"
+            (error 'read-image
+		   "format of image is incompatible with this version of system"
                    old-level level))
         (if (not (= old-bytes-per-cell bytes-per-cell))
-            (error "incompatible bytes-per-cell"
+            (error 'read-image
+		   "incompatible bytes-per-cell"
                    old-bytes-per-cell bytes-per-cell))
 
 	;; ***CHANGED***
@@ -66,7 +68,8 @@
 	 (reverse-descriptor-byte-order! *hp*)
 	 (if (= (fetch *hp*) 1)
 	     #t
-	     (begin (error "unable to correct byte order" (fetch *hp*))
+	     (begin (error 'check-image-byte-order
+			   "unable to correct byte order" (fetch *hp*))
 		    #f)))))
 
 (define *hp* 0)
@@ -89,14 +92,16 @@
 	((vm-eq? obj vm-unspecific) (if #f 0))
 	((vm-eq? obj unbound-marker) '<unbound>)
 	((vm-eq? obj unassigned-marker) '<unassigned>)
-	(else (error "random descriptor" obj))))
+	(else (error 'extract "random descriptor" obj))))
 
 (define (extract-stored-object old store-new!)
   ((vector-ref stored-object-extractors (header-type (stob-header old)))
    old store-new!))
 
 (define stored-object-extractors
-  (make-vector stob-count (lambda rest (apply error "no extractor" rest))))
+  (make-vector stob-count
+	       (lambda rest
+		 (apply error 'stored-object-extractors "no extractor" rest))))
 
 (define (define-extractor which proc)
   (vector-set! stored-object-extractors which proc))
@@ -162,7 +167,7 @@
      (case (extract-vm-fixnum (port-index obj))
        ((0) (current-input-port))
        ((1) (current-output-port))
-       (else (error "unextractable port" obj))))))
+       (else (error 'stob/port "unextractable port" obj))))))
 
 
 

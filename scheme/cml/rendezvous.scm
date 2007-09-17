@@ -119,7 +119,7 @@
 		(cvar-unset-state-blocked state))
       (set-cvar-state! cvar (make-cvar-set-state 1)))
      (else
-      (error "cvar already set")))))
+      (assertion-violation 'cvar-set! "cvar already set")))))
 
 (define (cvar-get-rv cvar)
   (make-base
@@ -315,7 +315,7 @@
    ((choose? rv)
     (force-prim-rvs (choose-rvs rv) '()))
    (else
-    (call-error "not a rendezvous" rv))))
+    (assertion-violation 'really-force-rv "not a rendezvous" rv))))
 
 (define (sync-prim-rv prim-rv)
   (let ((poll-thunk (prim-rv-poll-thunk prim-rv))

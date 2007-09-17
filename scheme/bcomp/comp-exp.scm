@@ -106,7 +106,8 @@
 	  ((null? (cdr rest))
 	   (stack-indirect-instruction stack-offset (car rest)))
 	  (else
-	   (error "variable has too many indirections" name binding)))))
+	   (assertion-violation 'compile-local-name "variable has too many indirections"
+				name binding)))))
 
 ;----------------------------------------------------------------
 ; Hacked versions of the above for peephole optimization of pushes.
@@ -196,7 +197,7 @@
 		    (rest (cdr binding)))
 		(if (null? rest)		; in this frame
 		    (stack-set!-instruction stack-offset)
-		    (error "SET! on a closed-over variable" name)))
+		    (assertion-violation 'set! "SET! on a closed-over variable" name)))
 	      (let ((offset (template-offset frame depth))
 		    (index (binding->index frame
 					   binding
@@ -270,7 +271,8 @@
  	       (let ((primop (node-form proc-node)))
  		 (if (primop-compilator primop)
  		     ((primop-compilator primop) node depth frame cont)
- 		     (error "compiler bug: primop has no compilator"
+ 		     (assertion-violation 'compile-call
+					  "compiler bug: primop has no compilator"
  			    primop
  			    (schemify node)))))
 	      (else
@@ -427,7 +429,7 @@
 
 (define (push-continuation depth frame cont node)
   (if (return-cont? cont)
-      (error "making a return point in tail position"))
+      (assertion-violation 'push-continuation "making a return point in tail position" cont))
   (let ((protocol (continuation-protocol (if (ignore-values-cont? cont)
                                              0
                                              1)
@@ -687,7 +689,7 @@
 ; Produce something for source code that contains a compile-time error.
 
 (define (generate-trap depth frame cont . stuff)
-  (apply warn stuff)
+  (apply warning 'generate-trap stuff)
   (sequentially
     (stack-indirect-instruction (template-offset frame depth)
 				(literal->index frame (cons 'error stuff)))
@@ -724,9 +726,10 @@
 			  ((not (meet? proc-type any-procedure-type))
 			   ;; Could also check args for one-valuedness.
 			   (let ((message "non-procedure in operator position"))
-			     (warn message
-				   (schemify node)
-				   `(procedure: ,proc-type))
+			     (warning 'type-check
+				      message
+				      (schemify node)
+				      `(procedure: ,proc-type))
 			     (node-set! node 'type-error message))
 			   node)
 			  (else node)))
@@ -748,11 +751,12 @@
 		"argument type error")
 	       (else
 		"wrong number of arguments"))))
-    (warn message
-	  (schemify node)
-	  `(procedure wants:
-		      ,(rail-type->sexp (procedure-type-domain proc-type)
-					#f))
+    (warning 'diagnose-call-error
+	     message
+	     (schemify node)
+	     `(procedure wants:
+			 ,(rail-type->sexp (procedure-type-domain proc-type)
+					   #f))
 	  `(arguments are: ,(map (lambda (arg)
 				   (type->sexp (node-type arg) #t))
 				 (cdr (node-form node)))))

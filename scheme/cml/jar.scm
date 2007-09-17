@@ -101,7 +101,7 @@
 	   (set-jar-value! jar value)
 	   (or (maybe-commit)
 	       (lose))))))
-      (error "jar is already full" jar value)))
+      (assertion-violation 'jar-put! "jar is already full" jar value)))
 
 (define (jar-take jar)
   (sync (jar-take-rv jar)))

@@ -40,6 +40,7 @@
 	    (else
 	     ;; We only read queue and value and they are set atomically,
 	     ;; so there is no need to commit here.
-	     (error "placeholder is already assigned"
-		    placeholder
-		    (placeholder-real-value placeholder)))))))
+	     (assertion-violation 'placeholder-set!
+				  "placeholder is already assigned"
+				  placeholder
+				  (placeholder-real-value placeholder)))))))

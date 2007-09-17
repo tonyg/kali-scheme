@@ -262,8 +262,9 @@
 		    (loop (cdr vars)
 			  frame
 			  (add-variable var offset (cdr binding) other))))
-	      (error "variable in flat-lambda list is not local"
-		     (car vars)))))))
+	      (assertion-violation 'get-variables-locations
+				   "variable in flat-lambda list is not local"
+				   (car vars)))))))
 
 ; Add VAR, with stack-offset OFFSET and MORE other indexes, to OTHER, an alist
 ; indexed by offsets.  Currently MORE always has lenth one.

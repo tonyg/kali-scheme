@@ -10,7 +10,7 @@
   (let ((probe (assv proc setters)))
     (if probe
 	(cdr probe)
-	(error "No setter found" proc))))
+	(assertion-violation 'setter "No setter found" proc))))
 
 (define (set-setter! proc setter)
   (let ((probe (assv proc setters)))

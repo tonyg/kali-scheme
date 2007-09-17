@@ -43,14 +43,14 @@
 (define-structure srfi-1 srfi-1-interface
   (open (modify scheme-level-2 (hide map for-each member assoc)) ; redefined
 	receiving
-	(subset signals (error)))
+	(subset exceptions (assertion-violation)))
   (files srfi-1))
 
 ; AND-LET*: an AND with local bindings, a guarded LET* special form
 
 (define-structure srfi-2 (export (and-let* :syntax))
   (open scheme-level-2
-	signals)		; error
+	exceptions)		; error
   (files srfi-2))
 
 ; SRFI-3 - withdrawn
@@ -117,7 +117,7 @@
 	; for parsing programs
 	receiving
 	nondeterminism
-	(subset signals (error))
+	(subset exceptions (assertion-violation))
 
 	(subset evaluation			(eval-from-file))
 
@@ -139,7 +139,7 @@
       '(srfi-1 srfi-2 srfi-4 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
 	srfi-11 srfi-13 srfi-14 srfi-16 srfi-17 srfi-19
 	srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
-	srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
+	srfi-31 srfi-34 srfi-37
 	srfi-39 srfi-40 srfi-42 srfi-43 srfi-45
         srfi-60 srfi-61 srfi-62 srfi-63 srfi-66 srfi-67
 	srfi-71 srfi-74 srfi-78
@@ -246,7 +246,7 @@
 	bitwise
 	srfi-8 srfi-14
 	unicode-char-maps
-	(subset signals		(error)))
+	(subset exceptions (assertion-violation)))
   (files srfi-13))
 
 ; Character-Set Library
@@ -303,7 +303,7 @@
 	variable-argument-lists
 	(subset big-util (partition-list))
 	(subset features (make-immutable!))
-	(subset signals (call-error)))
+	(subset exceptions (assertion-violation)))
   (optimize auto-integrate)
   (files srfi-14
 	 srfi-14-base-char-sets ; auto-generated
@@ -315,14 +315,14 @@
 
 (define-structure srfi-16 (export (case-lambda :syntax))
   (open scheme-level-2
-	(subset signals (error)))
+	(subset exceptions (syntax-violation)))
   (files srfi-16))
 
 ; Generalized set!
 
 (define-structure srfi-17 (export (set! :syntax) setter)
   (open (modify scheme-level-2 (rename (set! scheme-set!)))
-	(subset signals (error))
+	(subset exceptions (assertion-violation))
 	(subset util (unspecific)))
   (files srfi-17))
 
@@ -437,7 +437,12 @@
 ; Error reporting mechanism
 
 (define-structure srfi-23 (export error)
-  (open (subset signals (error))))
+  (open scheme
+	(modify exceptions
+		(rename (error exceptions:error))))
+  (begin
+    (define (error message . irritants)
+      (apply exceptions:error #f message irritants))))
 
 ; Multi-dimensional Array Primitives 
 
@@ -448,7 +453,7 @@
 (define-structure srfi-25 srfi-25-interface
   (open scheme
 	define-record-types
-	(subset signals (error)))
+	(subset exceptions (assertion-violation)))
   (files srfi-25))
 
 ; Notation for Specializing Parameters without Currying
@@ -492,7 +497,7 @@
 
 (define-structure srfi-28 srfi-28-interface
   (open scheme
-	(subset signals (error))
+	(subset exceptions (assertion-violation))
 	srfi-6				; string ports
 	)
   (files srfi-28))
@@ -525,53 +530,6 @@
   (open scheme
 	exceptions))
 
-; Conditions
-
-(define-interface srfi-35-interface
-  (export make-condition-type
-	  condition-type?
-	  make-condition
-	  condition?
-	  condition-has-type?
-	  condition-ref
-	  make-compound-condition
-	  extract-condition
-
-	  (define-condition-type :syntax)
-	  (condition :syntax)
-
-	  &condition
-	  &message message-condition? condition-message
-	  &serious serious-condition?
-	  &error error?))
-
-(define-structure srfi-35 srfi-35-interface
-  (open scheme
-	conditions))
-
-; I/O Conditions
-
-(define-interface srfi-36-interface
-  (export &i/o-error i/o-error?
-	  &i/o-port-error i/o-port-error?
-	  i/o-error-port
-	  &i/o-read-error i/o-read-error?
-	  &i/o-write-error i/o-write-error?
-	  &i/o-closed-error i/o-closed-error?
-	  &i/o-filename-error i/o-filename-error?
-	  i/o-error-filename
-	  &i/o-malformed-filename-error i/o-malformed-filename-error?
-	  &i/o-file-protection-error i/o-file-protection-error?
-	  &i/o-file-is-read-only-error i/o-file-is-read-only-error?
-	  &i/o-file-already-exists-error i/o-file-already-exists-error?
-	  &i/o-no-such-file-error i/o-no-such-file-error?
-	  &read-error read-error?
-	  read-error-line read-error-column read-error-position read-error-span))
-
-(define-structure srfi-36 srfi-36-interface
-  (open scheme
-	i/o-conditions))
-
 ; SRFI 37: args-fold: a program argument processor
 
 (define-interface srfi-37-interface
@@ -593,7 +551,7 @@
 
 (define-structure srfi-39 srfi-39-interface
   (open scheme
-	signals
+	exceptions
         fluids
         cells)
   (files srfi-39))
@@ -662,7 +620,7 @@
                 (rename (list->vector %list->vector)))
         (modify util (rename (unspecific unspecified-value)))
         (subset srfi-8 (receive))
-        (subset signals (error)))
+        (subset exceptions (assertion-violation)))
   (files srfi-43))
 
 ; SRFI 45: Primitives for Expressing Iterative Lazy Algorithms
@@ -731,7 +689,7 @@
   (open (modify scheme-level-2 (hide equal?)) ; redefined
         define-record-types
         srfi-4 srfi-16
-        (subset signals (error)))  
+        (subset exceptions (assertion-violation)))
   (files srfi-63))
 
 ; SRFI 66: Octet Vectors
@@ -878,7 +836,7 @@
 
 (define-structure srfi-78 srfi-78-interface
   (open scheme srfi-42
-        (subset signals (error)))
+        (subset exceptions (assertion-violation)))
   (files srfi-78))
 
 ; SRFI 95: Sorting and Merging
@@ -888,5 +846,5 @@
 
 (define-structure srfi-95 srfi-95-interface
   (open scheme srfi-63
-	(subset signals (error)))
+	(subset exceptions (assertion-violation)))
   (files srfi-95))

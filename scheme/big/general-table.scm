@@ -242,7 +242,8 @@
 	((eq? obj #f) 3001)
 	((eq? obj #t) 3003)
 	((null? obj) 3005)
-	(else (error "value cannot be used as a table key" obj))))
+	(else (assertion-violation 'default-hash-function
+				   "value cannot be used as a table key" obj))))
 
 (define eqv?-assoc (make-assoc eqv?))
 

@@ -12,7 +12,7 @@
 
 ; SIGNALS
 
-(define (error message . irritants)
+(define (error who message . irritants)
   (if (symbol? message)
       (apply schemetoc-error message irritants)
       (apply schemetoc-error
@@ -23,8 +23,17 @@
 			 irritants))
 	     irritants)))
 
-(define (warn message . irritants)
+(define (assertion-violation who message . irritants)
+  (apply error who message irritants))
+
+(define (implementation-restriction-violation who message . irritants)
+  (apply error who message irritants))
+
+(define (warning  who message . irritants)
   (display-error-message "Warning: " message irritants))
+
+(define (note who message . irritants)
+  (display-error-message "Note: " message irritants))
 
 (define (display-error-message heading message irritants)
   (display heading)
@@ -38,16 +47,9 @@
 		(newline))
 	      irritants)))
 
-(define (signal type . stuff)
-  (apply warn "condition signalled" type stuff))
-
-(define (syntax-error . rest)		; Must return a valid expression.
-  (apply warn rest)
+(define (syntax-violation who message . irritants)
+  (apply warning who message irritants)
   ''syntax-error)
-
-(define (call-error message proc . args)
-  (error message (cons proc args)))
-
 
 ; FEATURES
 

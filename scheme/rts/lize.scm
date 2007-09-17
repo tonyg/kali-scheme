@@ -23,7 +23,9 @@
              (+ 1 fx)))))
   ;; Do some juggling to satisfy preconditions of simplest-rational-internal.
   (cond ((not (< x y))
-         (if (rational? x) x (error "(rationalize <irrational> 0)" x)))
+         (if (rational? x)
+	     x 
+	     (assertion-violation 'rationalize "(rationalize <irrational> 0)" x)))
         ((positive? x)
          (simplest-rational-internal x y))
         ((negative? y)

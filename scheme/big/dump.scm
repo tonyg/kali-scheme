@@ -53,7 +53,7 @@
 (define restorers
   (make-vector 256 (lambda (type read-char)
 		     ;; Invalid type
-		     (error "invalid type code" type))))
+		     (assertion-violation 'restore "invalid type code" type))))
 
 (define (define-restorer! type proc)
   (vector-set! restorers (char->ascii type) proc))
@@ -102,7 +102,7 @@
 
 (define (dump-number n write-char)
   (if (not (communicable-number? n))
-      (error "can't dump this number" n))
+      (assertion-violation 'dump-number "can't dump this number" n))
   (if (and (integer? n)
 	   (>= n 0)
 	   (< n 256))

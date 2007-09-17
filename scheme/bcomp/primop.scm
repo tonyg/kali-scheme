@@ -30,4 +30,4 @@
 
 (define (get-primop name)
   (or (table-ref primop-table name)
-      (error "unknown compiler primitive" name)))
+      (assertion-violation 'get-primop "unknown compiler primitive" name)))

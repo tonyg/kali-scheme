@@ -72,8 +72,9 @@
 			  (append (cdr clause) transforms)
 			  primitives?))
 		 (else
-		  (error "unrecognized define-structure keyword"
-			 clause))))
+		  (assertion-violation 'package-source
+				       "unrecognized define-structure keyword"
+				       clause))))
 	     (reverse (package-clauses package))
 	     '() '() #f)))
 
@@ -112,15 +113,17 @@
 	   (if (binding? binding)
 	       (let ((have-type (binding-type binding)))
 		 (if (not (compatible-types? have-type want-type))
-		     (warn "Type in interface doesn't match binding"
-			   name
-			   `(binding: ,(type->sexp have-type #t))
-			   `(interface: ,(type->sexp want-type #t))
-			   structure)))
+		     (warning 'check-structure
+			      "Type in interface doesn't match binding"
+			      name
+			      `(binding: ,(type->sexp have-type #t))
+			      `(interface: ,(type->sexp want-type #t))
+			      structure)))
 	       (set! undefined (cons name undefined))))
 	 structure)
     (if (not (null? undefined))
-	(warn "Structure has undefined exports"
-	      structure
-	      undefined))))
+	(warning 'check-structure
+		 "Structure has undefined exports"
+		 structure
+		 undefined))))
 

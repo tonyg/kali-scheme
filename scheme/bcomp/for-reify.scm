@@ -50,6 +50,7 @@
 			 ((structure? static)
 			  structure-type)
 			 (else
-			  (error "unknown kind of static value" static)))
+			  (assertion-violation 'package-define-static!
+					       "unknown kind of static value" static)))
 		   #f
 		   static))

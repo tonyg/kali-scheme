@@ -53,7 +53,8 @@
           ((string? thing)
 	   (transport-string thing))
           (else
-           (error "cannot transport object" thing stuff))))) ; DELETEME stuff
+           (assertion-violation 'transport
+				"cannot transport object" thing stuff))))) ; DELETEME stuff
 
 ; Transport the things that are not allocated from the heap.
 
@@ -71,7 +72,7 @@
         ((eq? thing (unspecific))
          vm-unspecific)
         (else
-         (error "cannot transport literal" thing))))
+         (assertion-violation 'transport-immediate "cannot transport literal" thing))))
 
 ;==============================================================================
 ; The heap is a list of transported stored objects, each of which is either a
@@ -264,7 +265,7 @@
            (write-stob (vector-ref thing (- len 1))
                        thing (- len 1) vector-ref write-descriptor port)))
         (else
-         (error "do not know how to write stob" thing))))
+         (assertion-violation 'write-heap-stob "do not know how to write stob" thing))))
 
 ; Write out a transported STOB to PORT.  HEADER is the header, LENGTH is the
 ; number of objects the STOB contains, ACCESSOR and WRITER access the contents

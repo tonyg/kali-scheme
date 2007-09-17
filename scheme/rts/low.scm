@@ -10,19 +10,16 @@
 (define (char->ascii c)
   (let ((scalar-value (char->scalar-value c)))
     (if (>= scalar-value ascii-limit)
-	(signal-condition
-	 (cons 'call-error
-	       (cons "not an ASCII character"
-		     (cons char->ascii (cons c '()))))))
+	(assertion-violation 'char->ascii
+			     "not an ASCII character"
+			     c))
     scalar-value))
 
 (define (ascii->char x)
   (if (or (>= x ascii-limit) (< x 0))
-      (signal-condition
-       (cons 'call-error
-	     (cons"not an ASCII code"
-		  (cons ascii->char
-			(cons x '()))))))
+      (assertion-violation 'ascii->char
+			   "not an ASCII code"
+			   x))
   (scalar-value->char x))
 
 (define (char->integer c) (char->scalar-value c))
@@ -187,9 +184,9 @@
 		     message
 		     undumpable)
     (if (vector-ref undumpable 0)
-	(signal 'error
-		"undumpable records written in image"
-		(vector-prefix->list undumpable)))))
+	(assertion-violation 'write-image
+			     "undumpable records written in image"
+			     (vector-prefix->list undumpable)))))
 
 ; Return a list containing the non-#F values at the beginning of VECTOR.
 

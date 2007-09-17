@@ -17,17 +17,17 @@
 		      (exact? radix)
 		      (< 0 radix))))
 	(real-number->string number radix)
-	(apply call-error
-	       "invalid argument"
+	(apply assertion-violation
 	       'number->string
+	       "invalid argument"
 	       number
 	       maybe-radix))))
 
 (define-method &number->string (n radix)
-  (call-error "invalid argument"
-	      'number->string
-	      n
-	      radix))
+  (assertion-violation 'number->string
+		       "invalid argument"
+		       n
+		       radix))
 
 (define-method &number->string ((n :exact-integer) radix)
   (integer->string n radix))
@@ -67,8 +67,8 @@
 
 (define (string->number string . options)
   (if (not (string? string))
-      (apply call-error "invalid argument"
-	     'string->number
+      (apply assertion-violation 'string->number
+	     "invalid argument"
 	     string options))
   (let* ((radix (cond ((null? options) 10)
 		      ((null? (cdr options)) (car options))
@@ -77,9 +77,8 @@
 	 (radix (case radix
 		  ((2 8 10 16) radix)
 		  ((b) 2) ((o) 8) ((d) 10) ((x) 16)    ;R3RS only?
-		  (else (call-error "invalid radix"
-				    'string->number
-				    string radix))))
+		  (else (assertion-violation 'string->number
+					     "invalid radix" string radix))))
 	 (len (string-length string)))
     (let loop ((pos 0) (exactness? #f) (exact? #t) (radix? #f) (radix radix))
       (cond ((>= pos len)
@@ -116,8 +115,9 @@
 		      (cond ((>= pos len) #t) ;exact
 			    ((char=? (string-ref string pos) #\.)
 			     (if (not (= radix 10))
-				 (warn "non-base-10 number has decimal point"
-				       string))
+				 (warning 'string->number
+					  "non-base-10 number has decimal point"
+					  string))
 			     #f)	;inexact
 			    ((char=? (string-ref string pos) #\#)
 			     #f)

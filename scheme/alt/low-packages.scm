@@ -8,7 +8,7 @@
 ; structures that export privileged operations.
 
 (define-structure escapes escapes-interface
-  (open scheme-level-2 define-record-types simple-signals)
+  (open scheme-level-2 define-record-types low-exceptions)
   (files escape))
 
 (define-structures ((primitives primitives-interface)
@@ -20,7 +20,7 @@
 	define-record-types
 	bitwise	    ;Only for re-export
 	features    ;Only for re-export
-	simple-signals
+	low-exceptions
 	;; templates -- unneeded now?
 	)
   (files primitives

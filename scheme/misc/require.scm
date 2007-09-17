@@ -21,7 +21,8 @@
 	      (ensure-loaded (thunk))
 	      (thunk)))
 	   (else
-	    (error "unrecognized interface identifier" interface-id)))))
+	    (assertion-violation
+	     'require "unrecognized interface identifier" interface-id)))))
     (package-open! (interaction-environment)
 		   (let loop ((names (cdr interface-id))
 			      (thunk start-thunk))

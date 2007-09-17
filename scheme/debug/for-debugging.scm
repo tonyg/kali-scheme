@@ -9,10 +9,10 @@
 (define (with-exceptions thunk)
   (with-handler
        (lambda (c punt)
-	 (cond ((and (exception? c)
+	 (cond ((and (condition? c)
 		     (procedure? (get-exception-handler)))
 		(handle-exception-carefully c))
-	       ((interrupt? c)
+	       ((interrupt-condition? c)
 		(if (not (deal-with-interrupt c))
 		    (punt)))
 	       ;; ((vm-return? c)

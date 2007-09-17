@@ -54,8 +54,9 @@
 		(parse-program program available-srfis)
 	      (if needed
 		  (program->structure-exp needed source)
-		  (error "cannot satisfy program's requirements")))
-	    (error "program not found in file" filename))))))
+		  (assertion-violation 'read-srfi-7
+				       "cannot satisfy program's requirements")))
+	    (assertion-violation 'read-srfi-7 "program not found in file" filename))))))
 
 (define (skip-line port)
   (let loop ()
@@ -137,7 +138,7 @@
              (for-each
               (lambda (exp) (eval exp (interaction-environment)))
               (transform-source source)))
-           (error "cannot satisfy program's requirements"))))))
+           (assertion-violation 'program "cannot satisfy program's requirements"))))))
 
 (define (open-structure name)
   (let* ((c (config-package))
@@ -190,7 +191,7 @@
 		   available
 		   (cons clause source)))
 	    (else
-	     (error "bad program clause" clause)))))))
+	     (assertion-violation 'process-clauses "bad program clause" clause)))))))
   
 
 ; Loop down CLAUSES looking for one whose predicate can be satisfied.

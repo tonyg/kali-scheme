@@ -1,10 +1,5 @@
 ; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-
-
-; ,open architecture primitives assembler packages enumerated 
-; ,open features sort locations display-conditions
-
 (define length-procedures
   (do ((i (- stob-count 1) (- i 1))
        (l '() (cons (eval `(lap *length ()

@@ -51,7 +51,9 @@
 (define (string->float string)
   (let ((res (make-double)))
     (or (floperate (enum flop string->float) string res)
-	(error "not enough memory for STRING->FLOAT string buffer" string))))
+	(implementation-restriction-violation
+	 'string->float
+	 "not enough memory for STRING->FLOAT string buffer" string))))
 
 ; Call the VM to get a string
 
@@ -80,7 +82,7 @@
 	 ;; but x doesn't.
 	 (float/ (numerator x) (denominator x)))
 	(else
-	 (error "cannot coerce to a float" x))))
+	 (assertion-violation 'x->float "cannot coerce to a float" x))))
 
 ; Conversion to/from exact integer
 
@@ -146,7 +148,7 @@
 ; 	  ((null? (cdr maybe-b))
 ; 	   (float-atan2 a (car maybe-b)))
 ; 	  (else
-; 	   (error "too many arguments to ATAN" (cons a maybe-b)))))
+; 	   (apply assertion-violation 'atan "too many arguments to ATAN" a maybe-b))))
 ;   (define sqrt float-sqrt))
 
 (define (float-fraction-length x)
@@ -154,7 +156,7 @@
     (do ((x x (float* x two))
 	 (i 0 (+ i 1)))
 	((integral-floatnum? x) i)
-      (if (> i 3000) (error "I'm bored." x)))))
+      (if (> i 3000) (assertion-violation 'float-fraction-length "I'm bored." x)))))
 
 (define (float-denominator x)
   (expt (exact-integer->float 2) (float-fraction-length x)))
@@ -172,8 +174,9 @@
 
 (define (float->exact x)
   (define (lose)
-    (call-error "no exact representation"
-		inexact->exact x))
+    (implementation-restriction-violation 'inexact->exact
+					  "no exact representation"
+					  x))
 
   (cond
    ((integral-floatnum? x)
@@ -253,7 +256,7 @@
     (float-log x))
    ((= x (exact->inexact 0))
     (if (exact? x)
-	(call-error "log of exact 0 is undefined" log x)
+	(assertion-violation 'log "log of exact 0 is undefined" x)
 	(float-log x)))
    (else
     (next-method))))

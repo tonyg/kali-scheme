@@ -40,7 +40,7 @@
 
       (if (or (null? insts)
 	      (not (eq? 'protocol (caar insts))))
-	  (error "missing protocol instruction"))
+	  (assertion-violation 'lap "missing protocol instruction"))
       (call-with-values
        (lambda () (assemble-protocol (cdar insts)))
        (lambda (protocol template? env? closure? body-depth)
@@ -90,8 +90,9 @@
 		 => (lambda (t)
 		      (template-set! template i (cdr t))))
 		(else
-		 (error "no template of this name available"
-			(template-marker-name x)))))))))
+		 (assertion-violation 'fixup-template-refs!
+				      "no template of this name available"
+				      (template-marker-name x)))))))))
 
 ; Marking where a template should be inserted.
 
@@ -145,7 +146,7 @@
 	   (loop (cdr insts) segments stuff offset
 		 (cons (cons (car insts) offset) labels)))
 	  (else
-	   (error "bad LAP instruction" (car insts))))))
+	   (assertion-violation 'compile-lap "bad LAP instruction" (car insts))))))
 
 ; Reassemble the instruction at the beginning of each STUFF list to resolve
 ; the label reference and glue everything together using SEQUENTIALLY.  The
@@ -192,7 +193,7 @@
 		  (values (quotient delta byte-limit)
 			  (remainder delta byte-limit)))))
 	  (else
-	   (error "LAP label is not defined" label)))))
+	   (assertion-violation 'resolve-label "LAP label is not defined" label)))))
 
 ;----------------
 ; Actually do some assembly.  A few opcodes need special handling; most just
@@ -208,7 +209,8 @@
 	   => (lambda (opcode)
 		(assemble-general-instruction opcode inst bindings labels depth frame)))
 	  (else
-	   (error "unknown LAP instruction" inst)))))
+	   (assertion-violation 'really-assemble-instruction
+				"unknown LAP instruction" inst)))))
 
 ; The optional ' is optionally stripped off the argument to LITERAL.
 
@@ -253,11 +255,11 @@
 (define (lap-global assign? name bindings frame depth)
   (let ((binding (assq bindings name)))
     (if (not binding)
-	(error "LAP variable is not in free list" name)
+	(assertion-violation 'lap-global "LAP variable is not in free list" name)
 	(let ((binding (cdr binding)))
 	  (cond ((and (binding?  binding)
 		      (pair? (binding-place binding)))
-		 (error "LAP variable is not global" name))
+		 (assertion-violation 'lap-global "LAP variable is not global" name))
 		(assign?
 		 (let ((offset (template-offset frame depth))
 		       (index (binding->index frame
@@ -296,7 +298,7 @@
 ;            ((1) (instruction (enum op local1) over))
 ;            ((2) (instruction (enum op local2) over))
 ;            (else (instruction (enum op local) back over))))
-;        (error "LAP local variable is not locally bound" name))))
+;        (assertion-violation 'lap-local "LAP local variable is not locally bound" name))))
 ;          
 ;; Same thing, except that there is only one opcode.
 ;
@@ -312,7 +314,7 @@
 ;                       back
 ;                       (quotient over byte-limit)
 ;                       (remainder over byte-limit)))
-;        (error "LAP local variable is not locally bound" name))))
+;        (assertion-violation 'lap-set-locasl! "LAP local variable is not locally bound" name))))
 
 ; Assembling protocols.
 
@@ -329,7 +331,7 @@
 	   (if (and (not (null? rest))
 		    (or (not (pair? (car rest)))
 			(not (eq? 'push (caar rest)))))
-	       (error "unknown assembly protocol" args))
+	       (assertion-violation 'assemble-protocol "unknown assembly protocol" args))
 	   (let ((push-env?
 		  (and (not (null? rest))
 		       (memq 'env (cdar rest))))
@@ -358,9 +360,9 @@
 		 (cons nary-dispatch-protocol
 		       (parse-nary-dispatch (cdr args)))))
 	((big-stack)
-	 (error "can't assemble big-stack protocol"))
+	 (assertion-violation 'assemble-protocol "can't assemble big-stack protocol"))
 	(else
-	 (error "unknown assembly protocol" args)))))
+	 (assertion-violation 'assemble-protocol "unknown assembly protocol" args)))))
 
 ; This is fairly bogus, because it uses the targets as addresses instead
 ; of treating them as labels.  Fixing this is too much work, seeing as
@@ -368,7 +370,8 @@
 
 (define (parse-nary-dispatch targets)
   (let ((results (vector 0 0 0 0)))
-    (warn "LAP compiler treats nary-dispatch targets as addresses, not as labels.")
+    (warning 'parse-nary-dispatch
+	     "LAP compiler treats nary-dispatch targets as addresses, not as labels.")
     (for-each (lambda (target)
 		(if (and (pair? target)
 			 (pair? (cdr target))
@@ -383,7 +386,8 @@
 				     3
 				     (car target))
 				 (caddr target))
-		    (error "bad nary-dispatch label in LAP" target)))
+		    (assertion-violation 'parse-nary-dispatch
+					 "bad nary-dispatch label in LAP" target)))
 	      targets)
     (vector->list results)))
 
@@ -426,24 +430,27 @@
 	     (if (or (eq? (car specs) '+)
 		     (integer? (car specs)))
 		 (finish ops label-use?)
-		 (error "LAP internal error, unknown opcode argument specification" (car specs)))))))))
+		 (assertion-violation
+		  'assemble-general-instruction
+		  "LAP internal error, unknown opcode argument specification"
+		  (car specs)))))))))
 
 ; Check that the car of ARGS is an argument of the appropriate type and
 ; return it.
 
 (define (check-lap-arg args type inst)
   (if (null? args)
-      (error "not enough arguments in LAP instruction" inst))
+      (assertion-violation 'check-lap-arg "not enough arguments in LAP instruction" inst))
   (let ((arg (car args)))
     (case type
       ((int)
        (if (integer? arg)
 	   arg
-	   (error "numeric operand expected in LAP instruction" inst)))
+	   (assertion-violation 'check-lap-arg "numeric operand expected in LAP instruction" inst)))
       ((stob)
        (cond ((name->enumerand arg stob))
 	     (else
-	      (error "unknown STOB argument in LAP instruction" inst))))
+	      (assertion-violation 'check-lap-arg "unknown STOB argument in LAP instruction" inst))))
       ((label)
        (cond ((symbol? arg)
 	      arg)
@@ -451,7 +458,8 @@
 		   (eq? (car arg) '=>))
 	      (cadr arg))
 	     (else
-	      (error "bad label in LAP instruction" inst))))
+	      (assertion-violation 'check-lap-arg "bad label in LAP instruction" inst))))
       (else
-       (error "LAP internal error, unknown LAP argument specifier" type)))))
+       (assertion-violation 'check-lap-arg
+			    "LAP internal error, unknown LAP argument specifier" type)))))
 	    

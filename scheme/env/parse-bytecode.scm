@@ -102,7 +102,8 @@
                 ((#b110) (values #f #t #t))
                 ((#b101) (values #t #f #t))
                 ((#b111) (values #t #t #t))
-                (else (error "invalid init-template spec" (code-vector-ref code (+ size 1)))))
+                (else (assertion-violation 'with-template "invalid init-template spec"
+					   (code-vector-ref code (+ size 1)))))
             (fun (+ size 2)
                  length
                  ((attribution-init-template attribution) 
@@ -112,7 +113,8 @@
 (define (parse-instruction template code pc state attribution)
   (let* ((opcode (code-vector-ref code pc))
 	 (len.rev-args (cond ((= opcode (enum op computed-goto)) ; unused?
-			      (error "computed-goto in parse-bytecode"))
+			      (assertion-violation 'parse-instruction
+						   "computed-goto in parse-bytecode"))
 			     (else
 			      (parse-opcode-args opcode 
                                                  pc 
@@ -134,7 +136,8 @@
          (opcode-table-ref (attribution-opcode-table attribution) opcode)))
     (if opcode-attribution
 	(apply opcode-attribution opcode template new-state pc len args)
-	(error "cannot attribute " (enumerand->name opcode op) args)))))
+	(assertion-violation 'parse-instruction "cannot attribute "
+			     (enumerand->name opcode op) args)))))
 
 ;;--------------------
 ;; labels
@@ -260,7 +263,7 @@
              (values size
                      (list protocol real-attribution stack-size)))))
         (else
-         (error "unknown protocol" protocol pc))))
+         (assertion-violation 'parse-protocol "unknown protocol" protocol pc))))
 
 (define (parse-dispatch code pc attribution)
   (define (maybe-parse-one-dispatch index)
@@ -285,7 +288,8 @@
             #f
             (if (= protocol big-stack-protocol)
                 (n-ary-protocol? (cadr p-args))
-                (error "unknown protocol in n-ary-protocol?" p-args))))))
+                (assertion-violation 'n-ary-protocol?
+				     "unknown protocol" p-args))))))
 
 (define (protocol-nargs p-args)
   (let ((protocol (car p-args)))
@@ -302,20 +306,24 @@
           ((= protocol ignore-values-protocol)
            0)
           ((= protocol call-with-values-protocol)
-           (error "call-with-values-protocol in protocol-nargs"))
+           (assertion-violation 'protocol-nargs
+				"call-with-values-protocol in protocol-nargs"))
 	  (else
-	   (error "unknown protocol in protocol-nargs" p-args)))))
+	   (assertion-violation 'protocol-nargs
+				"unknown protocol" p-args)))))
 
 (define (protocol-cwv-tailcall? p-args)
   (let ((protocol (protocol-protocol p-args)))
     (if (not (= protocol call-with-values-protocol))
-        (error "invalid protocol in protocol-cwv-tailcall?" protocol))
+        (assertion-violation 'protocol-cwv-tailcall?
+			     "invalid protocol" protocol))
     (caddr p-args)))
 
 (define (call-with-values-protocol-target p-args)
   (let ((protocol (protocol-protocol p-args)))
     (if (not (= protocol call-with-values-protocol))
-        (error "invalid protocol in protocol-cwv-tailcall?" protocol))
+        (assertion-violation 'call-with-values-protocol-target
+			     "invalid protocol" protocol))
     (cadr p-args)))
   
 ; Generic opcode argument parser
@@ -380,8 +388,8 @@
   (case spec
     ((byte nargs stack-index index literal stob) 1)
     ((two-bytes two-byte-nargs two-byte-stack-index two-byte-index offset offset-) 2)
-    ((env-data) (error "env-data in arg-spec-size"))
-    ((protocol) (error "protocol in arg-spec-size"))
+    ((env-data) (assertion-violation 'arg-spec-size "env-data in arg-spec-size"))
+    ((protocol) (assertion-violation 'arg-spec-size "protocol in arg-spec-size"))
     ((moves-data)
      (let ((n-moves (code-vector-ref code pc)))
        (+ 1 (* 2 n-moves))))
@@ -433,7 +441,8 @@
               (cons (cons (get-offset code offset)
                           (get-offset code (+ offset 2)))
                     (loop (+ offset 4) (- n 1)))))))
-     (else (error "unknown arg spec: " (car specs))))))
+     (else (assertion-violation 'parse-opcode-arg
+				"unknown arg spec: " (car specs))))))
 
 (define-record-type cont-data :cont-data
   (make-cont-data length mask-bytes live-offsets template pc gc-mask-size depth)
@@ -498,7 +507,8 @@
   (cond ((template? obj) obj)
 	((closure? obj) (closure-template obj))
 	((continuation? obj) (continuation-template obj))
-	(else (error "expected a procedure or continuation" obj))))
+	(else (assertion-violation 'coerce-to-template
+				   "expected a procedure or continuation" obj))))
 
 (define (template-code-length code)
   (if (and (= (enum op protocol)

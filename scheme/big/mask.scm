@@ -56,14 +56,16 @@
   (if (mask-type? type)
       (eq? (mask-type mask)
 	   type)
-      (call-error "argument is not a mask" mask-has-type? mask type)))
+      (assertion-violation 'mask-has-type? "argument is not a mask"
+			   mask type)))
 
 (define (integer->mask type integer)
   (if (and (mask-type? type)
 	   (integer? integer)
 	   (<= 0 integer))	; no infinite masks
       (make-mask type integer)
-      (call-error "argument type error" integer->mask type integer)))
+      (assertion-violation 'integer->mask "argument type error"
+			   type integer)))
 
 (define (list->mask type things)
   (make-mask type (list->integer type things)))
@@ -116,10 +118,10 @@
 ; Union and intersection
 
 (define (mask-union mask . more-masks)
-  (mask-binop mask more-masks bitwise-ior mask-union))
+  (mask-binop mask more-masks bitwise-ior 'mask-union))
 
 (define (mask-intersection mask . more-masks)
-  (mask-binop mask more-masks bitwise-and mask-intersection))
+  (mask-binop mask more-masks bitwise-and 'mask-intersection))
 
 (define (mask-binop mask more-masks bitwise-op mask-op)
   (if (and (mask? mask)
@@ -132,7 +134,7 @@
 		 (apply bitwise-op
 			(mask->integer mask)
 			(map mask->integer more-masks)))
-      (apply call-error "argument is not a mask" mask-op mask more-masks)))
+      (apply assertion-violation 'mask-op "argument is not a mask" mask more-masks)))
 			
 ; Subtraction
 
@@ -144,7 +146,7 @@
       (make-mask (mask-type x)
 		 (bitwise-and (mask->integer x)
 			      (bitwise-not (mask->integer y))))
-      (call-error mask-subtract (list x y))))
+      (assertion-violation 'mask-subtract "invalid arguments" x y)))
 
 ; Negation
 ; This is legal only for masks with a size limit.
@@ -157,4 +159,4 @@
 		   (bitwise-and (bitwise-not (mask->integer mask))
 				(- (arithmetic-shift 1 (mask-type-size type))
 				   1))))
-      (call-error mask-negate mask)))
+      (assertion-violation 'mask-negate "invalid mask" mask)))

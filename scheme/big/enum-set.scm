@@ -114,7 +114,9 @@
 	(make-enum-set enum-set-type
 		       (elements->mask elements 
 				       (enum-set-type-index-ref enum-set-type)))
-	(error "invalid set elements" enum-set-type elements))))
+	(assertion-violation 'elements->enum-set
+			     "invalid set elements"
+			     enum-set-type elements))))
 
 (define (elements->mask elements index-ref)
   (do ((elements elements (cdr elements))
@@ -129,7 +131,8 @@
       (not (= (bitwise-and (enum-set-mask enum-set)
 			   (element-mask element (enum-set-type enum-set)))
 	      0))
-      (call-error "invalid arguments" enum-set-member? enum-set element)))
+      (assertion-violation 'enum-set-member? "invalid arguments"
+			   enum-set element)))
 
 (define (enum-set-type-member? enum-set-type element)
   ((enum-set-type-predicate enum-set-type)
@@ -140,7 +143,8 @@
           (enum-set-type enum-set1))
       (= (enum-set-mask enum-set0) 
 	 (enum-set-mask enum-set1))
-      (call-error "invalid arguments" enum-set=? enum-set0 enum-set1)))
+      (assertion-violation 'enum-set=? "invalid arguments"
+			   enum-set0 enum-set1)))
 
 (define (enum-set-subset? enum-set0 enum-set1)
   (if (eq? (enum-set-type enum-set0)
@@ -149,7 +153,8 @@
 	    (mask1 (enum-set-mask enum-set1)))
 	(= (bitwise-ior mask0 mask1)
 	   mask1))
-      (call-error "invalid arguments" enum-set=? enum-set0 enum-set1)))
+      (assertion-violation 'enum-set-subset? "invalid arguments"
+			   enum-set0 enum-set1)))
 
 (define (element-mask element enum-set-type)
   (arithmetic-shift 1
@@ -180,7 +185,8 @@
       (make-enum-set (enum-set-type enum-set0)
 		     (bitwise-ior (enum-set-mask enum-set0)
 				  (enum-set-mask enum-set1)))
-      (call-error "invalid arguments" enum-set-union enum-set0 enum-set1)))
+      (assertion-violation 'enum-set-union "invalid arguments"
+			   enum-set0 enum-set1)))
 
 (define (enum-set-intersection enum-set0 enum-set1)
   (if (eq? (enum-set-type enum-set0)
@@ -188,7 +194,8 @@
       (make-enum-set (enum-set-type enum-set0)
 		     (bitwise-and (enum-set-mask enum-set0)
 				  (enum-set-mask enum-set1)))
-      (call-error "invalid arguments" enum-set-union enum-set0 enum-set1)))
+      (assertion-violation 'enum-set-interaction "invalid arguments"
+			   enum-set0 enum-set1)))
 
 (define (enum-set-negation enum-set)
   (let* ((type (enum-set-type enum-set))

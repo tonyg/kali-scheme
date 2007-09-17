@@ -4,7 +4,7 @@
 ; ,config ,load debug/test.scm
 
 (define-structure testing (export (test :syntax) lost?)
-  (open scheme signals handle conditions)
+  (open scheme handle conditions)
   (open i/o)
   (begin
 
@@ -20,7 +20,7 @@
 	 (call-with-current-continuation
 	   (lambda (k)
 	     (with-handler (lambda (condition punt)
-			     (if (error? condition)
+			     (if (serious-condition? condition)
 				 (k condition)
 				 (punt)))
 	       thunk)))))

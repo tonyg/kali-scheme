@@ -177,7 +177,7 @@
 	 (list->string (map file-name-preferred-case
 			    (string->list (symbol->string x)))))
 	(else
-	 ;; (error "bogus namelist component" x)
+	 ;; (assertion-violation 'namestring-component "bogus namelist component" x)
 	 "bogus namelist component")))
 
 (define file-name-preferred-case char-downcase)

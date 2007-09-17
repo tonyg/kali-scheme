@@ -32,7 +32,7 @@
 
 (define-structure list-merge-sort list-merge-sort-interface
   (open scheme
-	(subset signals (error)))
+	(subset exceptions (assertion-violation)))
   (files lmsort)
   (optimize auto-integrate))
 

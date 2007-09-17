@@ -13,7 +13,7 @@
 	 (lambda (go)
 	   (with-handler
 	       (lambda (c punt)
-		 (cond ((or (error? c) (interrupt? c))
+		 (cond ((or (serious-condition? c) (interrupt-condition? c))
 			(display-condition c err)
 			(go (if batch?
 				(lambda () 1)
@@ -37,7 +37,8 @@
 			   (let ((form (read in)))
 			     (go (lambda ()
 				   (eval form (interaction-environment))))))
-			  (else (error "unknown command" (cadr form) 'go 'load (eq? (cadr form) 'load)))))
+			  (else (error 'command-processor
+				       "unknown command" (cadr form) 'go 'load (eq? (cadr form) 'load)))))
 		       (else
 			(call-with-values
 			    (lambda () (eval form (interaction-environment)))

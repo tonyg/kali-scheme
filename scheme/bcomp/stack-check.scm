@@ -105,7 +105,7 @@
 		   maximum
 		   jumps))
 	(else
-	 (error "stack-max: no one jumps to target" i))))
+	 (assertion-violation 'continue "stack-max: no one jumps to target" i))))
 
 ; Skip BYTE-ARGS and then continue.
 
@@ -160,7 +160,7 @@
 		    (values (get-offset cv (+ pc 1))
 			    3))
 		   (else
-		    (error "unknown protocol" protocol))))
+		    (assertion-violation 'protocol "unknown protocol" protocol))))
 	   (lambda (bytes on-stack)
 	     (stack-max cv
 			(+ pc bytes)
@@ -310,7 +310,7 @@
     ((nargs byte stob junk) 1)
     ((two-bytes offset small-index index) 2)
     (else
-     (error "unknown arg-spec" spec))))
+     (assertion-violation 'arg-spec-size "unknown arg-spec" spec))))
 
 (do ((i 0 (+ i 1)))
     ((= i (vector-length stack-delta)))

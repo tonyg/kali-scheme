@@ -50,8 +50,10 @@
 		    (cond (cached
 			   (if (eq? (binding-place prev) cached)
 			       (cope-with-mutation p name new cached)
-			       (error "binding cache inconsistency"
-				      p name new cached))))
+			       (assertion-violation
+				'get-new-location-carefully
+				"binding cache inconsistency"
+				p name new cached))))
 		    new)
 		  (get-new-location-non-shadowing p name)))
 	 (aloc (table-ref (package-undefined-but-assigneds p)
@@ -106,7 +108,8 @@
 
 (define (cope-with-mutation p name new prev)
   (if (eq? new prev)
-      (error "lossage in cope-with-mutation" p name new prev))
+      (assertion-violation 'cope-with-mutation
+			   "lossage in cope-with-mutation" p name new prev))
   (let ((replacement (make-new-location p name)))
     (copy-location-info! prev replacement)
     (table-set! (package-cached p) name new)
@@ -269,12 +272,14 @@
         (undefs (package-undefineds p)))
     (table-walk (lambda (name prev)
                   (if (table-ref defs name)
-		      (error "lossage in verify-package-undefineds" p name))
+		      (assertion-violation 'verify-package-undefineds
+					   "lossage" p name))
 		  (let ((binding (package-lookup p name)))
 		    (if (binding? binding)
 			(let ((place (binding-place binding)))
 			  (if (eq? place prev)
-			      (error "lossage - verify-package-undefineds"
+			      (assertion-violation 'verify-package-undefineds
+						   "lossage"
 				     p name binding))
 			  (set-location-forward! prev place name p)
 			  (set! newly-defined
@@ -351,7 +356,8 @@
 ;            (doing (if (package-definition p name)
 ;                       "redefining"
 ;                       "shadowing")))
-;        (warn (if (equal? old-description new-description)
+;        (warning  'maybe-note-redefinition
+;                  (if (equal? old-description new-description)
 ;                  doing
 ;                  (string-append doing
 ;                                 " as "
@@ -392,5 +398,6 @@
 		       (binding-place new)
 		       (location-for-reference p name)))
 		 name p))
-	(warn "can't undefine - binding is inherited"
-	      p name))))
+	(warning 'package-undefine!
+		 "can't undefine - binding is inherited"
+		 p name))))

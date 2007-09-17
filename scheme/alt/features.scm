@@ -8,17 +8,34 @@
 ; Assumes Revised^5 Report Scheme, for EVAL and friends.
 
 
-; SIGNALS
+; LOW-EXCEPTIONS
 
-(define (error message . irritants)
-  (display-error-message "Error: " message irritants)
+(define (error who message . irritants)
+  (display-error-message "Error" who message irritants)
   (an-error-occurred-now-what?))
 
-(define (warn message . irritants)
-  (display-error-message "Warning: " message irritants))
+(define (assertion-violation who message . irritants)
+  (display-error-message "Assertion violation" who message irritants)
+  (an-error-occurred-now-what?))
+  (error who message irritants))
 
-(define (display-error-message heading message irritants)
+(define (implementation-restriction-violation who message . irritants)
+  (display-error-message "Assertion violation" who message irritants)
+  (an-error-occurred-now-what?))
+
+(define (warning who message . irritants)
+  (display-error-message "Warning" who message irritants))
+  
+(define (syntax-violation who message . irritants)
+  (display-error-message "Syntax violation" who message irritants)
+  ''syntax-error)
+
+(define (note who message . irritants)
+  (display-error-message "Note" who message irritants))
+  
+(define (display-error-message heading who message irritants)
   (display heading)
+  (display " [") (display who) (display "]: ")
   (display message)
   (newline)
   (let ((spaces (list->string

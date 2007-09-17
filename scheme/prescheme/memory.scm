@@ -110,7 +110,7 @@
 	  (byte-address (address->vector-index address)))
       (if (and vector (= byte-address 0))
 	  (vector-set! *memory* (arithmetic-shift address address-shift) #f)
-	  (error "bad deallocation address" address)))))
+	  (assertion-violation 'deallocate-memory "bad deallocation address" address)))))
 
 ; Various ways of accessing memory
 
@@ -130,7 +130,7 @@
     (let ((vector (address->vector address))
 	  (byte-address (address->vector-index address)))
       (if (not (= 0 (bitwise-and byte-address 3)))
-	  (error "unaligned address error" address)
+	  (assertion-violation 'word-ref "unaligned address error" address)
 	  (+ (+ (arithmetic-shift (signed-code-vector-ref vector byte-address) 24)
 		(arithmetic-shift (code-vector-ref vector (+ byte-address 1)) 16))
 	     (+ (arithmetic-shift (code-vector-ref vector (+ byte-address 2))  8)
@@ -147,7 +147,7 @@
     (let ((vector (address->vector address))
 	  (byte-address (address->vector-index address)))
       (if (not (= 0 (bitwise-and byte-address 3)))
-	  (error "unaligned address error" address))
+	  (assertion-violation 'word-set! "unaligned address error" address))
       (code-vector-set! vector    byte-address
 			(bitwise-and 255 (arithmetic-shift value -24)))
       (code-vector-set! vector (+ byte-address 1)
@@ -162,11 +162,11 @@
 
 (define (flonum-ref address)
   (if #t					; work around type checker bug
-      (error "call to FLONUM-REF" address)))
+      (assertion-violation 'flonum-ref "call to FLONUM-REF" address)))
 
 (define (flonum-set! address value)
   (if #t					; work around type checker bug
-      (error "call to FLONUM-SET!" address value)))
+      (assertion-violation 'flonum-set! "call to FLONUM-SET!" address value)))
 
 ; Block I/O procedures.
 
@@ -265,7 +265,7 @@
 (define (index-of-first-nul vector address)
   (let loop ((i address))
     (cond ((= i (code-vector-length vector))
-	   (error "CHAR-POINTER->STRING called on pointer with no nul termination"))
+	   (assertion-violation 'char-pointer->string "CHAR-POINTER->STRING called on pointer with no nul termination"))
 	  ((= 0 (code-vector-ref vector i))
 	   (- i address))
 	  (else

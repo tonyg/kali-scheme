@@ -89,7 +89,9 @@
     (lambda (dynamic-externals)
       (reload-dynamic-externals-internal dynamic-externals #t)))
    (else
-    (error "trying to load dynamic externals that were never loaded" name))))
+    (assertion-violation 'name
+			 "trying to reload dynamic externals that were never loaded"
+			 name))))
 
 ;; most common usage, when a Scheme package requires C externals to work
 (define (import-dynamic-externals name)

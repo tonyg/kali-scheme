@@ -77,7 +77,7 @@
 				 (if (c which (car (vector-ref components i)))
 				     (r (cdr (vector-ref components i)))
 				     (loop (+ i 1)))
-				 ;; (syntax-error "unknown enumerand name"
+				 ;; (syntax-violation 'enum "unknown enumerand name"
 				 ;;               `(,(cadr e) ,(car e) ,(caddr e)))
 				 e))))
 			(else e))))))

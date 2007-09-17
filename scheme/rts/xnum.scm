@@ -63,7 +63,8 @@
 				 (extended-number-set! n i ?arg))
 			  ...
 			  n)))
-		    (error "ill-formed DEFINE-EXTENDED-NUMBER-TYPE" '?type))))
+		    (assertion-violation 'define-extended-number-type
+					 "ill-formed DEFINE-EXTENDED-NUMBER-TYPE" '?type))))
 	    (define (?predicate x)
 	      (and (extended-number? x)
 		   (eq? (extended-number-type x) ?type)))
@@ -186,7 +187,7 @@
 	0
 	(exact->inexact 0)))
    ((negative? x) (force pi))
-   ((exact? x)    (call-error "invalid argument to angle" angle x))
+   ((exact? x)    (assertion-violation 'angle "invalid argument to angle" x))
    (else x)))
 
 (define-method &floor ((n :integer)) n)

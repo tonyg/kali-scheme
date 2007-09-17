@@ -119,7 +119,7 @@
 	      (let ((templates (restore)))
 		(for-each (lambda (template)
 			    (if (not (template? template))
-				(error "lossage" template))
+				(assertion-violation 'fasload "lossage" template))
 			    (invoke-closure (make-closure template
 							  (package-uid p))))
 			  templates))))

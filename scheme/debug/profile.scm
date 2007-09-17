@@ -24,8 +24,8 @@
 	(let ((foo (continuation-template k0)))
 	  (with-handler
 	      (lambda (c punt)
-		(if (and (interrupt? c)
-			 (eq? (interrupt-type c) interrupt/alarm))
+		(if (and (interrupt-condition? c)
+			 (eqv? (interrupt-source c) interrupt/alarm))
 		    (primitive-catch
 		      (lambda (k)
 			(record-profile-information! k foo table)

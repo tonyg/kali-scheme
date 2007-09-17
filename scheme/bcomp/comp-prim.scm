@@ -161,7 +161,8 @@
   (let ((winner? (fixed-arity-procedure-type? type)))
     (let ((nargs (if winner?
                      (procedure-type-arity type)
-                     (error "n-ary simple primitive?!" name type))))
+                     (assertion-violation 'define-simple-primitive
+					  "n-ary simple primitive?!" name type))))
       (define-compiler-primitive name type
         (simple-compilator segment)
         (simple-closed-compilator nargs segment)))))
@@ -369,7 +370,7 @@
 
 ; SIGNAL-CONDITION is the same as TRAP.
 
-(define-simple-primitive 'signal-condition (proc (pair-type) unspecific-type)
+(define-simple-primitive 'signal-condition (proc (value-type) unspecific-type)
   (instruction (enum op trap)))
 
 ; (primitive-catch (lambda (cont) ...))
@@ -501,8 +502,9 @@
     (let ((exp (node-form node)))
       (if (>= (length (cdr exp)) min-nargs)
           (compilator node depth frame cont)
-          (begin (warn "too few arguments to primitive"
-                       (schemify node))
+          (begin (warning 'n-ary-primitive-compilator
+			  "too few arguments to primitive"
+			  (schemify node))
                  (compile-unknown-call node depth frame cont))))))
 
 ; APPLY wants the arguments on the stack, with the final list on top, and the
@@ -571,7 +573,8 @@
 					       " arguments where one is expected"))
 			    (schemify node)))
 	    (else
-	     (error "unknown compiler continuation for VALUES" cont)))))
+	     (assertion-violation 'values
+				  "unknown compiler continuation for VALUES" cont)))))
   (lambda (frame)
     (sequentially (nary-primitive-protocol 0)
 		  (instruction (enum op closed-values)))))
@@ -952,7 +955,8 @@
 						  " arguments where one is expected")
 				   (schemify node)))
 		   (else
-		    (error "unknown compiler continuation" (enumerand->name regular op) cont)))))
+		    (assertion-violation 'define-encode/decode
+					 "unknown compiler continuation" (enumerand->name regular op) cont)))))
 	      (direct-closed-compilator regular))))))
 
   (define-encode/decode 'encode-char 

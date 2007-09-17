@@ -15,7 +15,8 @@
 	 (astate (make-astate cv))
 	 (debug-data (frame-debug-data frame)))
     (if (> (segment-size segment) 65535)
-	(error "VM limit exceeded: segment too large" (segment-size segment)))
+	(assertion-violation 'segment->cv
+			     "VM limit exceeded: segment too large" (segment-size segment)))
     (emit-segment! astate segment)
     (if big-stack?
 	(add-big-stack-protocol! cv (frame-size frame)))
@@ -59,8 +60,9 @@
 	((<= frame-size available-stack-space)
 	 #t)
 	(else
-	 (error "VM limit exceeded: procedure requires too much stack space"
-		frame-size))))
+	 (assertion-violation 'check-stack-use
+			      "VM limit exceeded: procedure requires too much stack space"
+			      frame-size))))
 
 ; We put the length and the original protocol at the end of the code vector
 ; so that the original protocol's data doesn't have to be moved (which would
@@ -112,7 +114,7 @@
 
 (define (sequentially . segments)
   (if (not (car segments))
-      (error "bad call to SEQUENTIALLY"))
+      (assertion-violation 'sequentially "bad call to SEQUENTIALLY"))
   ;;  (reduce sequentially-2 empty-segment segments)
   ;;+++ this sped the entire compilation process up by several percent
   (cond ((null? segments)
@@ -219,7 +221,8 @@
                         (low-byte nargs)
                         push-byte))
           (else
-           (error "compiler bug: too many formals" nargs)))))
+           (assertion-violation 'lambda-protocol
+				"compiler bug: too many formals" nargs)))))
 
 (define (nary-lambda-protocol nargs need-template? need-env? need-closure?)
   (let ((push-byte (make-push-byte need-template? need-env? need-closure?)))
@@ -230,7 +233,8 @@
                         (low-byte nargs)
                         push-byte))
           (else
-           (error "compiler bug: too many formals" nargs)))))
+           (assertion-violation 'nary-lambda-protocol
+				"compiler bug: too many formals" nargs)))))
   
 
 (define (nary-primitive-protocol min-nargs)
@@ -401,7 +405,7 @@
 			  ((null? labels))
 			(let ((label (car labels)))
 			  (if (car label)
-			      (warn "backward jumps not supported")
+			      (warning 'computed-goto-instruction "backward jumps not supported")
 			      (set-cdr! label
 					(cons (cons location base-address)
 					      (cdr label)))))))))))

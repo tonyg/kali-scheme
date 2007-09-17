@@ -367,7 +367,7 @@
     (if (not (and (integer? bound)
 		  (exact? bound)
 		  (<= 0 bound)))
-	(call-error "invalid bound" char-set-hash bound))
+	(assertion-violation 'char-set-hash "invalid bound" bound))
     (let ((bound (if (zero? bound) 4194304 bound)))
       (modulo (+ (simple-cset-hash (char-set-simple cs) bound)
 		 (* 37 (inversion-list-hash (char-set-i-list cs) bound)))
@@ -583,15 +583,15 @@
 
 (define (ucs-range->char-set! lower upper error? base-cs)
   (if (negative? lower)
-      (call-error "negative lower bound" ucs-range->char-set! lower))
+      (assertion-violation 'ucs-range->char-set! "negative lower bound" lower))
   (if (> lower #x10ffff)
-      (call-error "invalid lower bound" ucs-range->char-set! lower))
+      (assertion-violation 'ucs-range->char-set! "invalid lower bound" lower))
   (if (negative? upper)
-      (call-error "negative upper bound" ucs-range->char-set! upper))
+      (assertion-violation 'ucs-range->char-set! "negative upper bound" upper))
   (if (> upper #x110000)
-      (call-error "invalid lower bound" ucs-range->char-set! upper))
+      (assertion-violation 'ucs-range->char-set! "invalid lower bound" upper))
   (if (not (<= lower upper))
-      (call-error "decreasing bounds" ucs-range->char-set! lower upper))
+      (assertion-violation 'ucs-range->char-set! "decreasing bounds" lower upper))
 
   (let ((create-inversion-list
 	 (lambda (lower upper)
@@ -646,7 +646,7 @@
   (cond ((char-set? x) x)
 	((string? x) (string->char-set x))
 	((char? x) (char-set x))
-	(else (call-error "->char-set: Not a charset, string or char." x->char-set))))
+	(else (assertion-violation 'x->char-set "Not a charset, string or char."))))
 
 
 ; Set algebra

@@ -37,7 +37,7 @@
 	((output-port? port)
 	 (real-format port string args))
 	(else
-	 (error "invalid port argument to FORMAT" port))))
+	 (assertion-violation 'format "invalid port argument" port))))
 
 ; Loop down the format string printing characters and dispatching on directives
 ; as required.  Procedures for the directives are in a vector indexed by
@@ -51,10 +51,10 @@
     (cond ((>= i (string-length string))
 	   (if (null? args)
 	       #f
-	       (error "too many arguments to FORMAT" string all-args)))
+	       (assertion-violation 'format "too many arguments" string all-args)))
 	  ((char=? #\~ (string-ref string i))
 	   (if (= (+ i 1) (string-length string))
-	       (error "invalid format string" string i)
+	       (assertion-violation 'format "invalid format string" string i)
 	       (loop (+ i 2)
 		     ((vector-ref format-dispatch-vector
 				  (char->ascii (string-ref string (+ i 1))))
@@ -74,9 +74,10 @@
 (define format-dispatch-vector
   (make-vector number-of-char-codes
 	       (lambda (string i args out)
-		 (error "illegal format command"
-			string
-			(string-ref string (- i 1))))))
+		 (assertion-violation 'format
+				      "illegal format command"
+				      string
+				      (string-ref string (- i 1))))))
 
 ; This implements FORMAT's case-insensitivity.
 
@@ -124,7 +125,7 @@
   (lambda (string i args out)
     (check-for-format-arg args)
     (if (not (number? (car args)))
-	(error "invalid number argument to ~D in FORMAT" string (car args)))
+	(assertion-violation 'format "invalid number argument to ~D" string (car args)))
     (display (number->string (car args) 10) out)
     (cdr args)))
 
@@ -149,6 +150,6 @@
 
 (define (check-for-format-arg args)
   (if (null? args)
-      (error "insufficient number of arguments to FORMAT")))
+      (assertion-violation 'format "insufficient number of arguments")))
 
 

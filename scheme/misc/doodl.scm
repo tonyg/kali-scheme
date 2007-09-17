@@ -81,7 +81,8 @@
   (letrec ((perform (methods->perform
 		      (list info
 			    (method-info method args
-			      (apply call-error "invalid arguments" m args)))
+			      (apply assertion-violation 'make-method
+				     "invalid arguments" m args)))
 		      ;; This oughta be a prototype
 		      #f))
 	   (m (annotate-procedure (lambda args (perform args))
@@ -183,14 +184,14 @@
 
 (define (instance-slot-ref instance slot)
   (cond ((assq slot (instance-slot-values instance)) => cdr)
-	(else (call-error "no such slot"
-			  instance-slot-ref instance slot))))
+	(else (assertion-violation 'instance-slot-ref "no such slot"
+				   instance slot))))
 
 (define (instance-slot-set! instance slot new-value)
   (cond ((assq slot (instance-slot-values instance))
 	 => (lambda (z) (set-cdr! z new-value)))
-	(else (call-error "no such slot"
-			  instance-slot-set! instance slot new-value))))
+	(else (assertion-violation 'instance-slot-set! "no such slot"
+				   instance slot new-value))))
 
 ; Classes
 

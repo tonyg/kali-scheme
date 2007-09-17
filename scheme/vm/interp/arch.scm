@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 37")
+(define architecture-version "Vanilla 38")
 
 ; Things that the VM and the runtime system both need to know.
 

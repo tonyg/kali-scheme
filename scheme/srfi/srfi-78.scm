@@ -62,7 +62,7 @@
           ((summary)       1)
           ((report-failed) 10)
           ((report)        100)
-          (else (error "unrecognized mode" mode)))))
+          (else (assertion-violation 'check-set-mode! "unrecognized mode" mode)))))
 
 (check-set-mode! 'report)
 
@@ -166,7 +166,7 @@
                   (check:add-failed! expression 
 				     actual-result 
 				     expected-result)))))
-    (else (error "unrecognized check:mode" check:mode)))
+    (else (assertion-violation 'check:proc "unrecognized check:mode" check:mode)))
   (if #f #f))
 
 (define-syntax check

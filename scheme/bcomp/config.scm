@@ -14,7 +14,7 @@
 		name))
 
 (define (loser . rest)
-  (error "init-defpackage! neglected"))
+  (assertion-violation 'init-defpackage! "init-defpackage! neglected"))
 
 (define interface-of structure-interface)
 

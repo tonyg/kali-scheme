@@ -67,7 +67,7 @@
 		  (assemble instruction-list
 			    (assembler-extend instr label lenv)
 			    cenv))))
-	      (else (error "invalid instruction" instr))))))
+	      (else (assertion-violation 'assemble "invalid instruction" instr))))))
 
 ; ASSEMBLE-INSTRUCTION returns a segment.
 
@@ -87,8 +87,9 @@
 		      (if probe
 			  probe
 			  (begin
-			    (syntax-error "can't find forward label reference"
-					  operand)
+			    (syntax-violation 'assemble-instruction
+					      "can't find forward label reference"
+					      operand)
 			    empty-segment)))
 		    (assemble-operands (cddr instr) arg-specs))))
 	  (else
@@ -110,7 +111,8 @@
 				      (compile-lap (cddr operand))
 				      (cadr operand)))
 	  (else
-	   (syntax-error "invalid index operand" operand)
+	   (syntax-violation 'assemble-instruction-with-index
+			     "invalid index operand" operand)
 	   empty-segment))
 	;; Top-level variable reference
 	(instruction-with-location
@@ -124,9 +126,11 @@
   (map (lambda (operand arg-spec)
 	 (case arg-spec
 	   ((stob) (or (name->enumerand operand stob)
-		       (error "unknown stored object type" operand)))
+		       (assertion-violation 'assemble-operands
+					    "unknown stored object type" operand)))
 	   ((byte nargs) operand)
-	   (else (error "unknown operand type" operand arg-spec))))
+	   (else (assertion-violation 'assemble-operands "unknown operand type"
+				      operand arg-spec))))
        operands
        arg-specs))
 

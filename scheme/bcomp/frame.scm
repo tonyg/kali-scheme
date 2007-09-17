@@ -109,8 +109,9 @@
 	   (- template-overhead 1))
 	(begin
 	  (if (>= count two-byte-limit)
-	      (error "compiler bug: too many literals"
-		     thing))
+	      (assertion-violation 'literal->index
+				   "compiler bug: too many literals"
+				   thing))
 	  (set-frame-literals! frame
 			       (cons thing
 				     (frame-literals frame)))

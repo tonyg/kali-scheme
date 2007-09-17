@@ -16,13 +16,19 @@
 			       (read-char         scheme:read-char)
 			       (peek-char         scheme:peek-char)))
 	(subset i/o (byte-ready? read-byte peek-byte write-byte))
-	code-vectors bitwise ascii primitives signals enumerated
+	code-vectors bitwise ascii primitives enumerated
+	signals ; #### replace by EXCEPTIONS at some point in the future
 	define-record-types
 	bigbit)   ; make sure that bignum bitwise operations are loaded
   (optimize auto-integrate)
   (begin
     ; What we will get in C on many machines
-    (define pre-scheme-integer-size 32))
+    (define pre-scheme-integer-size 32)
+    
+    ;; #### ditch when switching to EXCEPTIONS
+    (define (assertion-violation who message . irritants)
+      (apply error message irritants))
+    )
   (files ps-defenum prescheme memory))
 
 (define-structure ps-record-types (export define-record-type)
@@ -60,5 +66,5 @@
 ;          signed-byte-vector-ref32 signed-byte-vector-set32!))
 ;
 ;(define-structure xmemory ps-memory-interface
-;  (open scheme byte-vectors signals enumerated bitwise)
+;  (open scheme byte-vectors exceptions enumerated bitwise)
 ;  (files simple-memory))

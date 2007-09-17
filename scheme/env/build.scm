@@ -52,7 +52,6 @@
 (define (stand-alone-resumer warnings? start)
   (make-usual-resumer  ;sets up exceptions, interrupts, and current input & output
    warnings?
-   signal-condition
    (lambda (arg)
      (call-with-current-continuation
        (lambda (halt)
@@ -64,19 +63,18 @@
 
 (define (simple-condition-handler halt port)
   (lambda (c punt)
-    (let ((c (coerce-to-condition c)))
-      (cond ((error? c)
-	     (display-condition c port)
-	     (halt 1))
-	    ((warning? c)
-	     (display-condition c port)) ;Proceed
-	    ((interrupt? c)
-	     ;; (and ... (= (cadr c) interrupt/keyboard)) ?
-	     (halt 2))
-	    ((bug? c)
-	     (display-condition c port)
-	     (halt 3))
-	    (else
-	     (punt))))))
+    (cond ((violation? c)
+	   (display-condition c port)
+	   (halt 3))
+	  ((serious-condition? c)
+	   (display-condition c port)
+	   (halt 1))
+	  ((warning? c)
+	   (display-condition c port))	;Proceed
+	  ((interrupt-condition? c)
+	   ;; (and ... (= (cadr c) interrupt/keyboard)) ?
+	   (halt 2))
+	  (else
+	   (punt)))))
 
 ;(define interrupt/keyboard (enum interrupt keyboard))

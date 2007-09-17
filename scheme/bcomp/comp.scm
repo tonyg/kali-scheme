@@ -105,7 +105,8 @@
 		    i
 		    (loop (cdr slots) (+ i 1))))))
 	(else
-	 (error "can't find location data in STOB-DATA"))))
+	 (assertion-violation 'location-contents-offset
+			      "can't find location data in STOB-DATA"))))
 
 ;----------------
 ; Make a startup procedure from a list of initialization templates.  This

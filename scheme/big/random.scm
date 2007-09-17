@@ -31,7 +31,7 @@
 		   (c (vector-ref vec index)))
 	      (vector-set! vec index b)
 	      c))))
-      (call-error "invalid argument" make-random seed)))
+      (assertion-violation 'make-random "invalid argument" seed)))
 
 (define (randomize x mult ad)
   (bitwise-and (+ (low-bits-of-product x mult) ad)

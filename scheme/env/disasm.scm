@@ -121,7 +121,7 @@
               (display stack-size))
             (cdr p-args)))
           (else
-           (error "unknown protocol" protocol)))))
+           (assertion-violation 'show-protocol "unknown protocol" protocol)))))
 
 (define (display-dispatch target-pc tag)
   (if target-pc
@@ -286,7 +286,7 @@
       ((instr)
        (write arg))
       (else
-       (error "unknown arg spec" spec)))))
+       (assertion-violation 'print-opcode-arg "unknown arg spec" spec)))))
 
 ;----------------
 ; Utilities.
@@ -302,7 +302,8 @@
 	 (or (continuation-template obj)
 	     (continuation-code obj)))
 	(else
-	 (error "expected a procedure or continuation" obj))))
+	 (assertion-violation 'coerce-to-template-or-code
+			      "expected a procedure or continuation" obj))))
 
 ; Indenting and aligning the program counter.
 

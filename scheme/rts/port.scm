@@ -58,58 +58,54 @@
     (one-arg-proc->handler (lambda (port)
 			     ((port-handler-byte (port-handler port))
 			      port
-			      #t))
-			   signal-vm-exception))
+			      #t))))
     
   (define-vm-exception-handler (enum op peek-byte)
     (one-arg-proc->handler (lambda (port)
 			     ((port-handler-byte (port-handler port))
 			      port
-			      #f))
-			   signal-vm-exception))
+			      #f))))
 
   (define-vm-exception-handler (enum op read-char)
     (one-arg-proc->handler (lambda (port)
 			     ((port-handler-char (port-handler port))
 			      port
-			      #f))
-			   signal-vm-exception))
+			      #f))))
     
   (define-vm-exception-handler (enum op peek-char)
     (one-arg-proc->handler (lambda (port)
 			     ((port-handler-char (port-handler port))
 			      port
-			      #t))
-			   signal-vm-exception))
+			      #t))))
   
   (define-vm-exception-handler (enum op write-byte)
     (two-arg-proc->handler (lambda (byte port)
 			     ((port-handler-byte (port-handler port))
 			      port
-			      byte))
-			   signal-vm-exception))
+			      byte))))
 
   (define-vm-exception-handler (enum op write-char)
     (two-arg-proc->handler (lambda (ch port)
 			     ((port-handler-char (port-handler port))
 			      port
-			      ch))
-			   signal-vm-exception)))
+			      ch)))))
 
 ; Check the VM exception and then lock the port.
 
-(define (one-arg-proc->handler proc signal-vm-exception)
+(define (one-arg-proc->handler proc)
   (lambda (opcode reason port)
     (if (= reason (enum exception buffer-full/empty))
 	(proc port)
+	;; note this must be an assertion violation---these only look at the buffer
 	(signal-vm-exception opcode reason port))))
 
 ; This could combined with on-arg-... if the port were the first argument.
 
-(define (two-arg-proc->handler proc signal-vm-exception)
+(define (two-arg-proc->handler proc)
   (lambda (opcode reason arg port)
     (if (= reason (enum exception buffer-full/empty))
 	(proc arg port)
+	;; note this must be an assertion violation---these only look at the buffer
 	(signal-vm-exception opcode reason arg port))))
 
 ;----------------
@@ -121,7 +117,7 @@
    ((open-input-port? port)
     ((port-handler-char (port-handler port)) port '()))
    (else
-    (call-error "invalid argument" char-ready? port))))
+    (assertion-violation 'char-ready? "invalid argument" port))))
 
 ; See if there is a character available.  BYTE-READY? itself is defined
 ; in current-ports.scm as it needs CURRENT-INPUT-PORT when called with
@@ -131,7 +127,7 @@
   (if (open-input-port? port)
       ((port-handler-ready? (port-handler port))
          port)
-      (call-error "invalid argument" real-byte-ready? port)))
+      (assertion-violation 'real-byte-ready? "invalid argument" port)))
 
 ; Reading in a block of characters at once.
 
@@ -150,7 +146,7 @@
 	    count
 	    (or (null? maybe-wait?)
 		(car maybe-wait?))))
-      (call-error "invalid argument" read-block buffer start count port)))
+      (assertion-violation 'read-block "invalid argument" buffer start count port)))
 
 ; Write the COUNT bytes beginning at START from BUFFER to PORT.
 
@@ -164,7 +160,7 @@
 	     buffer
 	     start
 	     count))
-      (call-error "invalid argument" write-block buffer start count port)))
+      (assertion-violation 'write-block "invalid argument" buffer start count port)))
 
 (define (write-string string port)
   (do ((size (string-length string))
@@ -178,7 +174,7 @@
   (if (open-output-port? port)
       ((port-handler-ready? (port-handler port))
          port)
-      (call-error "invalid argument" output-port-ready? port)))
+      (assertion-violation 'output-port-ready? "invalid argument" port)))
 
 ; Forcing output.
 
@@ -187,7 +183,7 @@
       ((port-handler-force (port-handler port))
          port
 	 #t)			; raise error if PORT is not open
-      (call-error "invalid argument" force-output port)))
+      (assertion-violation 'force-output "invalid argument" port)))
 
 (define (force-output-if-open port)
   (if (open-output-port? port)
@@ -205,7 +201,7 @@
 	    ((port-handler-close (port-handler port))
 	       port))
 	(unspecific))
-      (call-error "invalid argument" close-input-port port)))
+      (assertion-violation 'close-input-port "invalid argument" port)))
 
 (define (close-output-port port)
   (if (output-port? port)
@@ -214,7 +210,7 @@
 	    ((port-handler-close (port-handler port))
 	       port))
 	(unspecific))
-      (call-error "invalid argument" close-output-port port)))
+      (assertion-violation 'close-output-port "invalid argument" port)))
 
 ;----------------
 
@@ -311,8 +307,8 @@
 		 #f		; limit
 		 #f             ; pending-cr?
 		 #f)            ; pending-eof?
-      (call-error "invalid argument"
-		  make-unbuffered-output-port handler data)))
+      (assertion-violation 'make-unbuffered-output-port "invalid argument"
+			   handler data)))
 
 (define (make-one-byte-handler write-block)
   (lambda (port byte)

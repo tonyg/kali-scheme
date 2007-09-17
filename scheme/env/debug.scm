@@ -86,7 +86,7 @@
 
 (define (ok-to-proceed? condition)
   (and condition
-       (if (error? condition)
+       (if (serious-condition? condition)
 	   (and (vm-exception? condition)
 		(let ((opcode (vm-exception-opcode condition)))
 		  (or (= opcode (enum op global))
@@ -94,11 +94,12 @@
 	   #t)))
 
 (define (breakpoint . rest)
-  (command-loop (conditions:condition (&breakpoint)
-				      (&irritants (values rest)))))
+  (command-loop (conditions:condition (make-breakpoint-condition)
+				      (make-who-condition 'breakpoint)
+				      (make-irritants-condition rest))))
 
 (define-condition-type &breakpoint &condition
-  breakpoint?)
+  make-breakpoint-condition breakpoint-condition?)
 
 ; push
 
@@ -193,11 +194,11 @@
       (list-settings)
       (let* ((setting (lookup-setting name))
 	     (value (cond ((not setting)
-			   (error "setting not found" name))
+			   (assertion-violation 'set "setting not found" name))
 			  ((null? maybe-value)
 			   (if (setting-boolean? setting)
 			       #t
-			       (error "no value specified")))
+			       (assertion-violation 'set "no value specified")))
 			  ((eq? (car maybe-value) '?)
 			   (if (setting-boolean? setting)
 			       (display (if (setting-value setting)
@@ -210,7 +211,9 @@
 			     ((off) #f)
 			     ((on) #t)
 			     (else
-			      (error "invalid value for boolean setting; should be on or off"))))
+			      (assertion-violation
+			       'set
+			       "invalid value for boolean setting; should be on or off"))))
 			  (else
 			   (car maybe-value))))
 	     (out (command-output)))
@@ -226,7 +229,7 @@
   (let ((setting (lookup-setting name))
 	(out (command-output)))
     (if (not setting)
-	(error "setting not found" name)
+	(assertion-violation 'unset "setting not found" name)
 	(setting-set! setting #f))
     (display (setting-doc setting) out)
     (newline out)))
@@ -311,7 +314,7 @@
   (lambda maybe-value
     (set name (if (null? maybe-value)
 		  (if (setting-value (or (lookup-setting name)
-					 (error "setting not found" name)))
+					 (assertion-violation 'toggle "setting not found" name)))
 		      'off
 		      'on)
 		  (car maybe-value)))))
@@ -619,8 +622,9 @@ Kind should be one of: names maps files source tabulate"
 			  ((end) '())
 			  ((#f run) (cons (cadr command) (recur)))
 			  (else
-			   (error "unusual command in ,from-file ... ,end"
-				  command))))))))
+			   (assertion-violation 'from-file
+						"unusual command in ,from-file ... ,end"
+						command))))))))
     (if (package? env)
 	(with-interaction-environment env
 	  (lambda ()
@@ -677,10 +681,9 @@ Kind should be one of: names maps files source tabulate"
   (call-with-current-continuation
     (lambda (exit)
       (with-handler (lambda (condition punt)
-		      (let ((condition (coerce-to-condition condition)))
-			(if (error? condition)
-			    (exit #f)
-			    (punt))))
+		      (if (serious-condition? condition)
+			  (exit #f)
+			  (punt)))
 		    user-context))))
 
 (define (get-file-environment filename)

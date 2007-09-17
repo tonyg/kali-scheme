@@ -1,15 +1,41 @@
 ; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
+; For backwards compatibility with old versions of Scheme 48
+; only---don't use in new code.
 
 ;;;; Signalling conditions
 
 ; I don't like the term "signal," but that's the one Gnu Emacs Lisp,
 ; Common Lisp, and Dylan use, so it's probably best to stick with it.
 
-(define make-condition cons)
+(define (make-condition type stuff)
+  (let ((base
+	 (case type
+	   ((error) (make-error))
+	   ((warning) (make-warning))
+	   ((note) (make-note))
+	   ((syntax-error) (make-syntax-violation))
+	   ((call-error) (make-assertion-violation))
+	   (else (make-assertion-violation)))))
+    (call-with-values
+	(lambda ()
+	  (cond
+	   ((null? stuff) (values #f '()))
+	   ((string? (car stuff)) (values (car stuff) (cdr stuff)))
+	   (else (values #f stuff))))
+      (lambda (message irritants)
+	(let* ((con
+		(if message
+		    (condition base
+			       (make-message-condition message))
+		    base))
+	       (con
+		(condition con (make-irritants-condition irritants))))
+	  con)))))
 
 (define (signal type . stuff)
-  (signal-condition (make-condition type stuff)))
+  (signal-condition
+   (make-condition type stuff)))
 
 ; Error
 

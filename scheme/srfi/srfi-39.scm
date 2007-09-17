@@ -22,7 +22,9 @@
 		    (cond ((null? new-val)
 			   (cell-ref cell))
 			  ((not (null? (cdr new-val)))
-			   (apply call-error "parameter object called with more than one argument"
+			   (apply assertion-violation
+				  'make-parameter
+				  "parameter object called with more than one argument"
 				  parameter new-val))
 			  ((eq? (car new-val) *return-fluid*)
 			   $fluid)

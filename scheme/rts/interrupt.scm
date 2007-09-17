@@ -17,7 +17,9 @@
 	  (vector-set! handlers
 		       i
 		       (lambda stuff
-			 (apply signal (cons 'interrupt (cons i stuff))))))
+			 (signal-condition (condition
+					    (make-interrupt-condition (car stuff))
+					    (make-irritants-condition (cdr stuff)))))))
 	(vector-set! handlers
 		     (enum interrupt post-major-gc)
 		     (post-gc-handler #t spawn-on-root))

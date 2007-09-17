@@ -41,10 +41,10 @@
 			     (features features-interface)
 			     (records records-interface)
 			     (record-types record-types-interface)
-			     (simple-signals signals-interface))
+			     (low-exceptions low-exceptions-interface))
 	   ;; Assumes use of FLATLOAD.  The implementations of these
 	   ;; structures will become available via some miracle, e.g.
-	   ;; a command ",open simple-signals ... code-vectors" or an
+	   ;; a command ",open low-exceptions ... code-vectors" or an
 	   ;; explicit LOAD of something.  Cf. the rule for
 	   ;; link/linker.image in the Makefile.
 	   )))
@@ -228,7 +228,7 @@
 	    code-vectors
 	    features
 	    records
-	    simple-signals)
+	    low-exceptions)
 	   :structure)))
 
 (define-interface low-structures-interface
@@ -240,7 +240,7 @@
 	    code-vectors
 	    features
 	    records
-	    simple-signals
+	    low-exceptions
 	    cells
 	    channels
 	    closures
@@ -254,6 +254,7 @@
 	    low-proposals
 	    scheme-level-0
 	    shared-bindings
+	    signal-conditions
 	    silly
 	    source-file-names
 	    structure-refs
@@ -290,7 +291,7 @@
 
 (define-interface run-time-internals-structures-interface
   (export ((channel-ports
-	    simple-conditions
+	    conditions
 	    continuations
 	    ;; escapes
 	    exceptions
@@ -437,7 +438,6 @@
 	    finite-types
 	    floatnums
 	    formats
-	    i/o-conditions
 	    inspector
 	    inspector-internal
 	    inversion-lists
@@ -478,6 +478,7 @@
 
 	    sparse-vectors
 	    reinitializers
+	    signals
 	    spatial
 	    strong
 	    text-codec-utils

@@ -98,8 +98,9 @@
 		  (set! alist (cons (cons name new-name)
 				    alist))
 		  new-name)))
-	  (error "non-name argument to rename procedure"
-		 name parent-name)))))
+	  (assertion-violation 'make-name-generator
+			       "non-name argument to rename procedure"
+			       name parent-name)))))
 
 ;----------------
 ; We break an abstraction here to avoid a circular module dependency.

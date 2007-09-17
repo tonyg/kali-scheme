@@ -1,6 +1,6 @@
 (define-structure trans-ids trans-ids-interface
   (open scheme
-	signals				; error
+	exceptions				; error
 	cells
 	threads (subset threads-internal (maybe-commit-and-block))
 	proposals)
@@ -9,7 +9,7 @@
 (define-structures ((rendezvous rendezvous-interface)
 		    (make-rendezvous make-rendezvous-interface))
   (open scheme
-	signals
+	exceptions
 	define-record-types
 	trans-ids
 	threads
@@ -50,7 +50,7 @@
 	proposals
 	trans-ids rendezvous make-rendezvous
 	queues
-	signals
+	exceptions
 	(subset util (unspecific)))
   (files placeholder))
 
@@ -60,7 +60,7 @@
 	proposals (subset threads-internal (maybe-commit-and-make-ready))
 	trans-ids rendezvous make-rendezvous
 	queues
-	signals
+	exceptions
 	(subset util (unspecific)))
   (files jar))
 

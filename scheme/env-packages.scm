@@ -9,7 +9,7 @@
 		    (command (export command-processor)))
   (open scheme ;;-level-2     ; eval, interaction-environment
 	tables fluids cells
-	conditions i/o-conditions
+	conditions
 	os-strings
 	define-record-types
 	handle
@@ -27,8 +27,7 @@
 	vm-exposure		; primitive-catch
 	fluids-internal         ; get-dynamic-env, set-dynamic-env!
 	nodes			; for ## kludge
-	signals
-	signals-internal	; coerce-to-condition, coerce-to-simple-condition
+	exceptions signal-conditions
 	debug-messages		; for debugging
 
 	(subset evaluation (load-script-into))
@@ -59,8 +58,7 @@
 	display-conditions	; display-condition
 	weak
 	debug-messages		; for debugging
-	signals			; error
-	signals-internal	; coerce-to-condition, coerce-to-simple-condition
+	exceptions signal-conditions
 	i/o			; current-error-port
 	(subset filenames (with-translations make-translations))
 	util                    ; unspecific
@@ -111,8 +109,7 @@
 	command-state
 	menus			; write-line
         conditions
-	signals
-	signals-internal	; coerce-to-condition, coerce-to-simple-condition
+	exceptions signal-conditions
 	handle
         usual-resumer
         filenames               ; translate
@@ -145,7 +142,7 @@
 	interfaces
 	ascii
 	i/o			; force-output, current-error-port, silently
-        signals
+	exceptions
 	util			; every
 	os-strings
         fluids)
@@ -160,7 +157,7 @@
   (open scheme-level-1
         methods more-types
         tables
-        simple-conditions
+        conditions
         display-conditions
         locations
         code-vectors
@@ -175,6 +172,18 @@
         templates continuations channels
         architecture)
   (files (env disclosers)))
+
+(define-structure more-vm-exceptions (export construct-vm-exception)
+  (open scheme
+	conditions
+	signal-conditions
+	enumerated enum-case
+	vm-exceptions
+	architecture
+	disclosers
+	(subset primitives (os-error-message))
+	os-strings)
+  (files (env vm-exception)))
 
 ; For printing procedures with their names, etc.
 
@@ -196,6 +205,7 @@
   (open scheme-level-2
 	writing
 	methods
+	conditions
 	handle)	;ignore-errors
   (files (env dispcond)))
 
@@ -212,8 +222,7 @@
         fluids
         tables
 	weak
-        signals
-	signals-internal	; coerce-to-condition
+        exceptions
         util                    ; filter
         evaluation              ; eval-from-file, eval
         environments            ; environment-define! (for ,trace)
@@ -255,7 +264,7 @@
 	fluids
         display-conditions      ; limited-write
         util                    ; sublist
-        signals          	; error
+        exceptions
 	handle			; ignore-errors
 	conditions		; error?
 	
@@ -282,7 +291,7 @@
 	command-levels
 	command-state
 	menus
-	signals			; error
+	exceptions
 	
 	; The following two structures are for ,where
         debug-data
@@ -311,7 +320,7 @@
         disclosers              ; location-info
         handle
 	debug-messages
-        tables fluids weak signals)
+        tables fluids weak exceptions)
   (files (env pedit)))
 
 ; The following hooks the compiler up with a VM exception handler for
@@ -321,7 +330,11 @@
   (open scheme-level-1
         vm-exposure             ;primitive-catch
         continuations templates locations code-vectors
-        vm-exceptions signals
+        vm-exceptions more-vm-exceptions exceptions
+	signal-conditions
+	enumerated
+	disclosers
+	conditions
 	debug-messages
         architecture)   ;(enum op global)
   (files (env shadow)))     ;Exception handler to support package system
@@ -333,7 +346,7 @@
         code-vectors byte-vectors
         architecture
         enumerated
-        signals
+        exceptions
         fluids
         closures
         debug-data
@@ -362,7 +375,7 @@
 	bitwise
         closures
         architecture
-        signals)
+        exceptions)
   (files (env disasm)))
 
 ; Assembler.
@@ -378,7 +391,7 @@
 	bindings		;binding? binding-place
         meta-types              ;value-type
         templates               ; for Richard's version
-        signals          	;error
+        exceptions
         enumerated              ;name->enumerand
         code-vectors)
   (files (env assem)))
@@ -412,29 +425,3 @@
 ;        sort
 ;        escapes)       ; primitive-cwcc
 ;  (files (env profile)))
-
-; Needs to be here because it's installed by the BUILD package
-
-(define-structures ((conditions conditions-interface)
-		    (i/o-conditions i/o-conditions-interface))
-  (open scheme
-	define-record-types
-	simple-signals
-	methods
-	display-conditions
-	disclosers
-	(subset architecture (interrupt))
-        enumerated              ; enumerand->name
-	)
-  (files (env condition)
-	 (env io-condition)))
-
-(define-structures ((signals (interface-of simple-signals))
-		    (signals-internal signals-internal-interface))
-  (open scheme debug-messages
-	disclosers
-	conditions i/o-conditions
-	exceptions-internal
-	(with-prefix simple-conditions sc:))
-  (files (env signal)))
-

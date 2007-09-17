@@ -126,7 +126,9 @@
 	       (enable-interrupts!)
 	       (values channel output-channel))
 	      ((eq? output-channel #t)
-	       (error "client socket already connected" host-name port-number))
+	       (assertion-violation 'socket-client
+				    "client socket already connected"
+				    host-name port-number))
 	      (else
 	       (let ((condvar (make-condvar)))
 		 (wait-for-channel channel condvar)
@@ -219,7 +221,8 @@
   (if (not (and (socket? socket)
 		(eq? (socket-type socket)
 		     'udp-output-socket)))
-      (call-error "not a UDP output socket" udp-send socket address buffer count))
+      (assertion-violation 'udp-send "not a UDP output socket"
+			   socket address buffer count))
   (blocking-socket-op socket
 		      (lambda (channel retry?)
 			(real-udp-send channel address buffer count))))
@@ -228,7 +231,8 @@
   (if (not (and (socket? socket)
 		(eq? (socket-type socket)
 		     'udp-input-socket)))
-      (call-error "not a UDP input socket" udp-receive socket buffer))
+      (assertion-violation 'udp-receive "not a UDP input socket"
+			   socket buffer))
   (let ((got (blocking-socket-op socket
 				 (lambda (channel retry?)
 				   (real-udp-receive channel buffer)))))

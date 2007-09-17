@@ -304,7 +304,7 @@
 	    (unlock port))
 	   (else
             (unlock port)
-	    (error "writing to a broken pipe"))))
+	    (assertion-violation 'write-char  "writing to a broken pipe"))))
 
    ;; write-block couldn't fit COUNT characters into the buffer
    (lambda (thing start count port)
@@ -324,7 +324,7 @@
 		    (loop (+ start have) (- count have)))))
 	     (else
 	      (unlock port)
-	      (error "writing to a broken pipe")))))
+	      (assertion-violation 'write-block "writing to a broken pipe")))))
 
    ;; force-output
    (lambda (port)
@@ -365,7 +365,7 @@
 		    (< 0 size))
 	       (values size #f))
 	      (else
-	       (call-error "invalid pipe buffer size" make-pipe size))))))
+	       (assertion-violation 'make-pipe "invalid pipe buffer size" size))))))
 
 ; These should probably be moved to I/O
 

@@ -17,7 +17,7 @@
     (dynamic-wind
      (lambda ()
        (if (not port)
-	   (error "attempt to throw back into READ-FORMS")))
+	   (assertion-violation 'read-forms "attempt to throw back into READ-FORMS")))
      (lambda ()
        ((fluid-cell-ref $note-file-package) filename package)
        (let ((o-port (current-noise-port)))

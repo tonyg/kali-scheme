@@ -7,7 +7,7 @@
   (list '<population>))
 
 (define (add-to-population! x pop)
-  (if (not x) (error "can't put #f in a population"))
+  (if (not x) (assertion-violation 'add-to-population! "can't put #f in a population"))
   (if (not (weak-memq x (cdr pop)))
       (set-cdr! pop (cons (make-weak-pointer x) (cdr pop)))))
 

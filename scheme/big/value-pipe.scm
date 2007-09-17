@@ -36,7 +36,7 @@
 				 (exact? size)
 				 (< 0 size)))
 			size
-			(call-error "invalid argument" make-pipe more)))))
+			(assertion-violation 'make-pipe "invalid argument" more)))))
 	(id (if (or (null? more)
 		    (null? (cdr more)))
 		#f

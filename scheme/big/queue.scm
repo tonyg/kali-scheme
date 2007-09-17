@@ -49,14 +49,14 @@
 (define (queue-head q)
   (ensure-atomicity
     (if (queue-empty? q)
-	(error "queue is empty" q)
+	(assertion-violation 'queue-head "queue is empty" q)
 	(car (real-queue-head q)))))
 
 (define (dequeue! q)
   (ensure-atomicity
     (let ((pair (real-queue-head q)))
       (cond ((null? pair)	;(queue-empty? q)
-	     (error "empty queue" q))
+	     (assertion-violation 'dequeue! "empty queue" q))
 	    (else
 	     (let ((value (car pair))
 		   (next  (cdr pair)))

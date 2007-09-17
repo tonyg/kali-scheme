@@ -93,8 +93,10 @@
 			  (dynamic-wind
 			   (lambda ()
 			     (if done?
-				 (error "attempt to throw into a callback"
-					(cons proc args))))
+				 (apply
+				  assertion-violation 'callback
+				  "attempt to throw into a callback"
+				  (cons proc args))))
 			   (lambda ()
 			     (let ((result (apply proc args)))
 			       (disable-interrupts!)
@@ -210,8 +212,10 @@
 		   value
 		   (shared-binding-name proc)
 		   args)
-	    (apply call-error "bad procedure" call-imported-binding proc args)))
-      (apply call-error "bad procedure" call-imported-binding proc args)))
+	    (apply assertion-violation 'call-imported-binding "bad procedure"
+		   proc args)))
+      (apply assertion-violation 'call-imported-binding "bad procedure"
+	     proc args)))
 
 ;----------------
 ; We export the record-type type so that external code can check to see if

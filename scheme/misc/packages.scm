@@ -4,7 +4,7 @@
 
 (define-structure reset/shift (export (reset :syntax)
 				      (shift :syntax))
-  (open scheme escapes signals)
+  (open scheme escapes exceptions)
   (files shift-reset))
 
 (define-structure call-with-mumble-pipes
@@ -44,7 +44,7 @@
 	built-in-structures
 	dump/restore
 	sockets
-	signals features)
+	exceptions features)
   (files remote))
 
 (define-structure requirements (export (require :syntax))
@@ -53,7 +53,7 @@
 	environments
 	ensures-loaded
 	package-commands-internal
-	signals)
+	exceptions)
   (files require))
 
 
@@ -78,7 +78,7 @@
 	;; handle	; ignore-errors
 	;; conditions	; error?
 	util 
-	signals)
+	exceptions)
   (files doodl))
 
 
@@ -131,6 +131,6 @@
 
 (define-structure sicp sicp-interface
   (open scheme
-	(subset signals (error))
+	(subset exceptions (error))
 	tables)
   (files sicp))

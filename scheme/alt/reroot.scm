@@ -49,6 +49,6 @@
 ;
 ;(define (check)                         ;Algorithm invariants
 ;  (if (not (null? (cdr *here*)))
-;      (error "confusion #1"))
+;      (assertion-violation 'check "confusion #1"))
 ;  (if (car *here*)
-;      (error "confusion #2")))
+;      (assertion-violation 'check "confusion #2")))
