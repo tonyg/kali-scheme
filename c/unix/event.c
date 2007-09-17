@@ -14,6 +14,9 @@
 #ifdef HAVE_PTHREAD_H
 #include <pthread.h>
 #endif
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#endif
 #include "c-mods.h"
 #include "scheme48vm.h"
 #include "event.h"
@@ -413,6 +416,7 @@ typedef struct fd_struct {
  * that case, lastp points to first.
  */
 typedef struct fdque {
+  long          count;
   fd_struct	*first,
 		**lastp;
 } fdque;
@@ -420,10 +424,12 @@ typedef struct fdque {
 
 static fd_struct	*fds[FD_SETSIZE];
 static fdque	ready = {
+			 0,
 			 NULL,
 			 &ready.first
 			},
 		pending = {
+			   0,
 			   NULL,
 			   &pending.first
 			  };
@@ -433,7 +439,6 @@ static void		findrm(fd_struct *entry, fdque *que);
 static fd_struct	*rmque(fd_struct **link, fdque *que);
 static void		addque(fd_struct *entry, fdque *que);
 static fd_struct	*add_fd(int fd, psbool is_input);
-
 
 /*
  * Find a fd_struct in a queue, and remove it.
@@ -468,6 +473,7 @@ rmque(fd_struct **link, fdque *que)
   *link = res->next;
   if (res->next == NULL)
     que->lastp = link;
+  que->count--;
   return (res);
 }
 
@@ -481,6 +487,7 @@ addque(fd_struct *entry, fdque *que)
   *que->lastp = entry;
   entry->next = NULL;
   que->lastp = &entry->next;
+  que->count++;
 }
 
 
@@ -620,6 +627,85 @@ s48_wait_for_event(long max_wait, psbool is_minutes)
 }
 
 
+#ifdef HAVE_POLL
+static struct pollfd    *pollfds;
+static long             pollfds_size;
+
+/*
+ * Call poll() on the pending ports and move any ready ones to the ready
+ * queue.  If wait is true, seconds is either -1 (wait forever) or the
+ * maximum number of seconds to wait (with ticks any additional ticks).
+ * The returned value is a status code.
+ */
+static int
+queue_ready_ports(psbool wait, long seconds, long ticks)
+{
+  int           npollfds;
+  int           timeout;
+  fd_struct	*fdp,
+    		**fdpp;
+  int		left;
+
+  if ((! wait)
+      &&  (pending.first == NULL))
+    return (NO_ERRORS);
+
+  if (pending.count > pollfds_size) {
+    pollfds_size *= 2;
+    pollfds = (struct pollfd *) realloc (pollfds, 
+					 sizeof (struct pollfd) * pollfds_size);
+    if (pollfds == NULL) {
+      fprintf(stderr,
+	      "Failed to realloc array of file descriptors to poll, errno = %d\n",
+	      errno);
+      exit(1);
+    }
+  }
+
+  for (fdp = pending.first, npollfds = 0; fdp != NULL; fdp = fdp->next, npollfds++) {
+    pollfds[npollfds].fd = fdp->fd;
+    pollfds[npollfds].events = fdp->is_input? POLLIN : POLLOUT;
+  }
+
+  if (wait)
+    if (seconds == -1)
+      timeout = -1;
+    else
+      timeout = (int) seconds;
+  else
+    timeout = 0;
+
+  while(1) {
+    left = poll(pollfds, pending.count, timeout);
+    if (left > 0) {
+      fdpp = &pending.first;
+      for (fdp = *fdpp, npollfds = 0;
+	   (left > 0) && (fdp != NULL); 
+	   fdp = *fdpp, npollfds++) {
+	if (pollfds[npollfds].events & fdp->is_input? POLLIN : POLLOUT) {
+	  rmque(fdpp, &pending);
+	  fdp->status = FD_READY;
+	  addque(fdp, &ready);
+	}
+	else
+	  fdpp = &fdp->next;
+      }
+      if (pending.first == NULL)
+	poll_time = -1;
+      return NO_ERRORS;
+    }
+    else if (left == 0)
+      return NO_ERRORS;
+    else if (errno == EINTR) {
+      if (external_event_ready())
+	return NO_ERRORS;
+      timeout = 0;		/* turn off blocking and try again */
+    }	      
+    else
+      return errno;
+  }
+}
+#else /* not HAVE_POLL */
 /*
  * Call select() on the pending ports and move any ready ones to the ready
  * queue.  If wait is true, seconds is either -1 (wait forever) or the
@@ -691,6 +777,7 @@ queue_ready_ports(psbool wait, long seconds, long ticks)
       return errno;
   }
 }
+#endif /* not HAVE_POLL */
 
 void
 s48_sysdep_init(void)
@@ -714,6 +801,19 @@ s48_sysdep_init(void)
 	    "Failed to sigaltstack, errno = %d\n",
 	    errno);
 #endif
+
+#ifdef HAVE_POLL
+  pollfds_size = FD_SETSIZE;
+  pollfds = (struct pollfd *) calloc (sizeof (struct pollfd), pollfds_size);
+
+  if (pollfds == NULL) {
+    fprintf(stderr,
+	    "Failed to alloc array of file descriptors to poll with %d elements, errno = %d\n",
+	    pollfds_size,
+	    errno);
+    exit(1);
+  }
+#endif /* HAVE_POLL */
 
   if (!s48_setcatcher(SIGINT, s48_when_keyboard_interrupt)
       || !s48_setcatcher(SIGALRM, s48_when_alarm_interrupt)
