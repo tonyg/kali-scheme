@@ -226,16 +226,28 @@
   (let ((depth (+ depth 1))
 	(uid (unique-id))
 	(proc (node-form proc)))
-    (do ((names (cadr proc) (cdr names))
-	 (vals args (cdr vals)))
-	((null? names))
-      (let ((type (schemify-type (infer-type (car vals) depth) depth)))
-	(if (type-scheme? type)
-	    (set-node-type! (car names) type)
-	    (unify! (initialize-name-node-type (car names) uid depth)
-		    type
-		    node))))
-    (infer-any-type (caddr proc) depth return?)))
+    (let ((all-names (cadr proc)))
+
+      (define (arity-mismatch)
+	(format #t "Arity mismatch ~S ~S~%" (map schemify all-names) (map schemify args))
+	(if *currently-checking*
+	    (format #t "~% while reconstructing the type of '~S'" *currently-checking*))
+	(error "type error"))
+
+      (do ((names all-names (cdr names))
+	   (vals args (cdr vals)))
+	  ((null? names)
+	   (if (not (null? vals))
+	       (arity-mismatch)))
+	(if (null? vals)
+	    (arity-mismatch))
+	(let ((type (schemify-type (infer-type (car vals) depth) depth)))
+	  (if (type-scheme? type)
+	      (set-node-type! (car names) type)
+	      (unify! (initialize-name-node-type (car names) uid depth)
+		      type
+		      node))))
+      (infer-any-type (caddr proc) depth return?))))
 
 (define (rule-for-primitives node depth primitive args return?)
   ((primitive-inference-rule primitive)
