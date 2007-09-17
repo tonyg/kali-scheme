@@ -422,7 +422,8 @@ typedef struct fdque {
 } fdque;
 
 
-static fd_struct	*fds[FD_SETSIZE];
+static long		fd_setsize;
+static fd_struct	**fds;
 static fdque	ready = {
 			 0,
 			 NULL,
@@ -518,10 +519,13 @@ s48_add_pending_fd(int fd, psbool is_input)
 {
   fd_struct	*data;
 
-  if (! (0 <= fd && fd < FD_SETSIZE)) {
-    fprintf(stderr, "ERROR: add_pending fd %d not in [0, %d)\n",
-	    fd,
-	    FD_SETSIZE);
+  if (! (0 <= fd && fd < fd_setsize)) {
+    fd_setsize *= 2;
+    fds = (fd_struct **) realloc (fds, sizeof (fd_struct *) * fd_setsize);
+    if (fds == NULL) 
+      fprintf(stderr, "ERROR: realloc of fds to %d elements failed, errno = %d\n",
+	      errno,
+	      fd_setsize);
     return (PSFALSE);
   }
   data = fds[fd];
@@ -574,10 +578,10 @@ s48_remove_fd(int fd)
 {
   struct fd_struct	*data;
 
-  if (! (0 <= fd && fd < FD_SETSIZE)) {
+  if (! (0 <= fd && fd < fd_setsize)) {
     fprintf(stderr, "ERROR: s48_remove_fd fd %d not in [0, %d)\n",
 	    fd,
-	    FD_SETSIZE);
+	    fd_setsize);
     return PSFALSE;
   }
   data = fds[fd];
@@ -814,6 +818,17 @@ s48_sysdep_init(void)
     exit(1);
   }
 #endif /* HAVE_POLL */
+
+  fd_setsize = FD_SETSIZE;
+  fds = (fd_struct **) calloc (sizeof (fd_struct *), fd_setsize);
+
+  if (fds == NULL) {
+    fprintf(stderr,
+	    "Failed to alloc fds with %d elements, errno = %d\n",
+	    fd_setsize,
+	    errno);
+    exit(1);
+  }
 
   if (!s48_setcatcher(SIGINT, s48_when_keyboard_interrupt)
       || !s48_setcatcher(SIGALRM, s48_when_alarm_interrupt)
