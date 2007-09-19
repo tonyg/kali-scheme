@@ -24,7 +24,6 @@ GC_OBJS = @GC_OBJS@
 
 ASM_OBJECTS = @ASM_OBJECTS@
 ASM_STYLE = @ASM_STYLE@
-ASM_INITIALIZERS = @ASM_INITIALIZERS@
 
 HOST_ARCHITECTURE = @host@
 
@@ -113,8 +112,7 @@ START_LINKER = echo ',batch';					\
 	       echo ',load scheme/alt/init-defpackage.scm'
 
 # --------------------
-# You shouldn't have to change anything below this point, except for possibly
-# the external code rules.
+# You shouldn't have to change anything below this point.
 
 # Targets:
 
@@ -125,8 +123,8 @@ LIBSCHEME48 = c/libscheme48.a
 POSIX_EXTERNAL = c/posix.so
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
 OBJS =	c/scheme48vm.o \
-	c/extension.o c/free.o c/double_to_string.o \
-	c/external.o c/external-lib.o c/bignum.o c/init.o
+	c/extension.o c/free.o c/double_to_string.o c/bignum.o \
+	c/external.o c/external-lib.o c/external-init.o c/init.o
 
 FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
 		c/fake/sys-select.h c/fake/langinfo.h
@@ -150,19 +148,9 @@ enough: vm $(POSIX_EXTERNAL) $(LIBSCHEME48) $(IMAGE) script-interpreter go
 # External code to include in the VM
 # After changing any of these you should delete `scheme48vm' and remake it.
 
-EXTERNAL_OBJECTS = $(SOCKET_OBJECTS) $(DYNLINK_OBJECTS) \
-		   $(SYSEXITS_OBJECTS) $(LOOKUP_OBJECTS) $(ASM_OBJECTS) \
-		   $(SRFI_OBJECTS)
-EXTERNAL_LD_FLAGS = $(SOCKET_LD_FLAGS) $(DYNLINK_LD_FLAGS) \
-		    $(SYSEXITS_LD_FLAGS)
-EXTERNAL_INITIALIZERS = s48_initialize_external s48_init_external_libs  \
-			$(SOCKET_INITIALIZERS)				\
-			$(DYNLINK_INITIALIZERS)				\
-			$(SYSEXITS_INITIALIZERS)			\
-                        $(ASM_INITIALIZERS)				\
-			$(SRFI_INITIALIZERS)
-
-# Rules for any external code.
+EXTERNAL_OBJECTS = c/unix/socket.o c/unix/dynlink.o \
+		   c/unix/sysexits.o $(ASM_OBJECTS) \
+		   c/srfi-27.o
 
 # POSIX rules; this could have its own Makefile, but I don't want to bother.
 
@@ -210,33 +198,6 @@ $(POSIX_EXTERNAL) : $(POSIX_OBJECTS)
 
 # End of POSIX rules
 
-# Socket rules
-
-c/unix/socket.o: $(SCHEME48HS) c/fd-io.h c/event.h
-
-SOCKET_OBJECTS = c/unix/socket.o
-SOCKET_LD_FLAGS =
-SOCKET_INITIALIZERS = 	s48_init_socket
-
-# End of socket rules
-
-# Dynamic linking rules
-
-c/unix/dynlink.o: $(SCHEME48HS)
-
-DYNLINK_OBJECTS = c/unix/dynlink.o
-# configure adds -ldl or -mld to the regular libraries
-DYNLINK_LD_FLAGS = 
-DYNLINK_INITIALIZERS = 	s48_init_dynlink
-
-# End of dynamic linking rules
-
-# Sysexits (this is for the implementation of SRFI 22)
-
-SYSEXITS_OBJECTS = c/unix/sysexits.o
-SYSEXITS_LD_FLAGS =
-SYSEXITS_INITIALIZERS = s48_init_sysexits
-
 # Native-code glue rules
 
 # Fake definitions if there is no support for native code
@@ -246,8 +207,6 @@ FAKE_ASM_OBJECTS = c/fake/glue.o
 # on the machine we're compiling on
 # Does currently not work because of the new GC infrastructure
 X86_ASM_OBJECTS = c/glue.o c/asm-glue.o
-
-X86_ASM_INITIALIZERS = s48_init_asm_glue
 
 # Assumes s48-compiler/ in the working directory
 
@@ -314,39 +273,16 @@ c/bibop/remset.o: c/bibop/remset.h c/bibop/memory.h c/scheme48.h	       \
 
 # End of BIBOP GC rules
 
-
-# SRFI rules
-
-SRFI_OBJECTS = c/srfi-27.o
-SRFI_INITIALIZERS = s48_init_srfi_27
-
-# End of SRFI rules
-
-# End of external rules
-# --------------------
-
 $(VM): c/main.o $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS) c/scheme48.exp
-	rm -f /tmp/s48_external_$$$$.c &&				\
-	$(srcdir)/build/build-external-modules /tmp/s48_external_$$$$.c	\
-		$(EXTERNAL_INITIALIZERS) &&				\
 	$(CC) $(LDFLAGS) $(LDFLAGS_VM) $(CFLAGS) -o $@ c/main.o		\
 		$(OBJS) $(GC_OBJS) $(UNIX_OBJS)				\
-		/tmp/s48_external_$$$$.c				\
 		$(LIBOBJS) $(LIBS)					\
-		$(EXTERNAL_OBJECTS) $(EXTERNAL_LD_FLAGS) &&		\
-	rm -f /tmp/s48_external_$$$$.c
+		$(EXTERNAL_OBJECTS)
 
 $(LIBSCHEME48): $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
 	rm -f $@;							\
-	rm -f /tmp/s48_external_$$$$.c;					\
-	$(srcdir)/build/build-external-modules /tmp/s48_external_$$$$.c	\
-		$(EXTERNAL_INITIALIZERS) &&				\
-	$(CC) -c $(CFLAGS) -o  /tmp/s48_external_$$$$.o			\
-			/tmp/s48_external_$$$$.c &&			\
-	ar cq $@ $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)	\
-		/tmp/s48_external_$$$$.o &&				\
-	ranlib $@ &&					\
-	rm -f /tmp/s48_external_$$$$.c
+	ar cq $@ $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
+	ranlib $@
 
 script-interpreter: c/script-interpreter.o
 	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/script-interpreter.o
@@ -367,7 +303,6 @@ c/extension.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS) c/scheme48vm.h
 c/free.o: c/sysdep.h
 c/external.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS) c/c-mods.h
 c/external-lib.o: $(SCHEME48HS)
-c/unix/sysexits.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS)
 c/unix/event.o: c/sysdep.h $(FAKEHS) c/c-mods.h \
 			c/scheme48vm.h c/scheme48heap.h \
 			c/event.h c/fd-io.h \
@@ -377,6 +312,11 @@ c/unix/fd-io.o: c/sysdep.h $(FAKEHS) c/c-mods.h \
 			c/event.h c/fd-io.h 
 c/unix/misc.o: c/sysdep.h $(FAKEHS)
 c/unix/io.o: c/io.h
+
+c/unix/socket.o: $(SCHEME48HS) c/fd-io.h c/event.h
+c/unix/dynlink.o: $(SCHEME48HS)
+c/unix/srfi-27.o: $(SCHEME48HS)
+
 c/script-interpreter.o: c/sysdep.h $(FAKEHS) c/script-interpreter.c
 	$(CC) -c $(CFLAGS) -o $@ \
 		-DRUNNABLE=\"$(bindir)/$(RUNNABLE)\" \
@@ -573,7 +513,6 @@ DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
 		build/*.scm build/*-version-number build/*.exec		\
 		build/*.lisp build/build-usual-image build/filenames.make \
 		build/initial.debug build/initial.image			\
-		build/build-external-modules				\
 		build/*.bat build/*.sh build/*.rc			\
 		build/dummy build/*.wxs 				\
 		build/*.bmp build/*.ico					\
