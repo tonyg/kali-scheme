@@ -25,13 +25,14 @@
 #include "sysdep.h"
 #endif
 
-typedef unsigned long word32_t;
-
 /* It's a shame ... */
 #ifdef _WIN32
+typedef unsigned long word32_t;
 #define UNSIGNED64 unsigned _int64
 #else
 #define UNSIGNED64 unsigned long long
+#include <inttypes.h>
+typedef uint32_t word32_t;
 #endif
 
 #define U32 word32_t
