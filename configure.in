@@ -111,8 +111,9 @@ then
   AC_MSG_RESULT([building Universal Binary; using compiler defined macros instead])
 else
 AC_TRY_RUN([#include <stdio.h>
+#include <inttypes.h>
 
-typedef unsigned long word32_t;
+typedef uint32_t word32_t;
 
 typedef union { double d; word32_t word[2]; } double_overlay;
 
