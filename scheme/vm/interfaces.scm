@@ -422,8 +422,8 @@
 	  shared-ref
 	  (shared-set! :syntax)
 
-	  raise-argument-type-error
-	  raise-range-error
+	  argument-type-violation
+	  range-violation
 	  ))
 
 (define-interface event-interface

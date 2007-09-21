@@ -293,8 +293,10 @@
 					 call-external-value)
   (open scheme-level-2 define-record-types
 	primitives
-        architecture
-	vm-exceptions interrupts exceptions
+	os-strings
+        architecture ; includes ENUM
+	enum-case
+	vm-exceptions interrupts exceptions conditions
 	placeholders
 	shared-bindings
 	byte-vectors

@@ -221,7 +221,7 @@ s48_socket_number(s48_value channel)
   RETRY_NEG(status, getsockname(socket_fd, (struct sockaddr *)&address, &len));
 
   if ((status < 0) || (address.sin_family != AF_INET))
-    s48_raise_os_error(errno);
+    s48_os_error("s48_socket_number", errno, 1, channel);
 
   return s48_enter_fixnum(ntohs(address.sin_port));
 }
@@ -297,10 +297,10 @@ s48_accept(s48_value channel, s48_value retry_p)
    */
 
   if ((errno != EWOULDBLOCK) && (errno != EINTR) && (errno != EAGAIN))
-    s48_raise_os_error(errno);
+    s48_os_error("s48_accept", errno, 2, channel, retry_p);
 
   if (! s48_add_pending_fd(socket_fd, PSTRUE))
-    s48_raise_out_of_memory_error();
+    s48_out_of_memory_error();
 
   return S48_FALSE;
 }
@@ -359,7 +359,8 @@ s48_get_host_by_name(s48_value machine)
 
   int machine_length = S48_BYTE_VECTOR_LENGTH(machine);
   if (machine_length > S48_MAX_HOST_NAME_LENGTH)
-    s48_raise_argument_type_error(machine);
+    s48_assertion_violation("s48_get_host_by_name_result", "machine name too long", 1,
+			    machine);
 
   memcpy(host_name, s48_extract_byte_vector(machine), machine_length);
   host_name[machine_length] = '\0';
@@ -369,7 +370,7 @@ s48_get_host_by_name(s48_value machine)
       static struct hostent *host;
       RETRY_NULL(host, gethostbyname(host_name));
       if (host == NULL)
-	s48_raise_os_error(h_errno);
+	s48_os_error("s48_get_host_by_name_result", h_errno, 1, machine);
       return s48_enter_byte_vector(host->h_addr, host->h_length);
     }
   else
@@ -383,7 +384,7 @@ static s48_value
 s48_get_host_by_name_result(void)
 {
   if (host_address_errno)
-    s48_raise_os_error(host_address_errno);
+    s48_os_error("s48_get_host_by_name_result", host_address_errno, 0);
   return s48_enter_byte_vector(host_address, host_address_size);
 }
 
@@ -442,7 +443,7 @@ s48_get_host_by_name(s48_value machine)
   char* machine_name = s48_extract_byte_vector(machine);
   RETRY_NULL(host, gethostbyname(machine_name));
   if (host == NULL)
-    s48_raise_os_error(h_errno);
+    s48_os_error("s48_get_host_by_name", h_errno, 1, machine);
   return s48_enter_byte_vector(host->h_addr, host->h_length);
 }
 
@@ -506,9 +507,7 @@ s48_connect(s48_value channel,
   address.sin_family = AF_INET;
 
   if (S48_BYTE_VECTOR_LENGTH(sch_address) > sizeof(address.sin_addr))
-    s48_raise_range_error(s48_enter_fixnum(S48_BYTE_VECTOR_LENGTH(sch_address)),
-			  S48_UNSAFE_ENTER_FIXNUM(0),
-			  s48_enter_fixnum(sizeof(address.sin_addr)));
+    s48_assertion_violation("s48_connect", "address has invalid size", 1, sch_address);
   memcpy((void *)&address.sin_addr,
 	 (void *)s48_extract_byte_vector(sch_address),
 	 S48_BYTE_VECTOR_LENGTH(sch_address));
@@ -542,10 +541,10 @@ s48_connect(s48_value channel,
 
   if (errno != EWOULDBLOCK && errno != EINTR && errno != EALREADY
       && errno != EINPROGRESS && errno != EAGAIN)
-    s48_raise_os_error(errno);
+    s48_os_error("s48_connect", errno, 4, channel, sch_address, port, retry_p);
 
   if (! (s48_add_pending_fd(socket_fd, PSFALSE)))
-    s48_raise_out_of_memory_error();
+    s48_out_of_memory_error();
 
   return S48_FALSE;
 }
@@ -605,7 +604,7 @@ s48_close_socket_half(s48_value channel, s48_value input_p)
      the file descriptor closed. */
   RETRY_NEG(status, shutdown(socket_fd, S48_EXTRACT_BOOLEAN(input_p) ? 0 : 1));
   if ((0 > status) && (errno != ENOTCONN))
-    s48_raise_os_error(errno);
+    s48_os_error("s48_close_socket_half", errno, 2, channel, input_p);
   
   return S48_TRUE;
 }  
@@ -695,10 +694,10 @@ s48_udp_receive(s48_value channel, s48_value buffer)
   
   if (errno != EWOULDBLOCK && errno != EINTR && errno != EALREADY
       && errno != EINPROGRESS && errno != EAGAIN)
-    s48_raise_os_error(errno);
+    s48_os_error("s48_udp_receive", errno, 2, channel, buffer);
 
   if (! (s48_add_pending_fd(socket_fd, PSTRUE)))
-    s48_raise_out_of_memory_error();
+    s48_out_of_memory_error();
 
   return S48_FALSE;
 }
@@ -742,10 +741,10 @@ s48_udp_send(s48_value channel,
   
   if (errno != EWOULDBLOCK && errno != EINTR && errno != EALREADY
       && errno != EINPROGRESS && errno != EAGAIN)
-    s48_raise_os_error(errno);
+    s48_os_error("s48_udp_send", errno, 4, channel, address, buffer, count);
 
   if (! (s48_add_pending_fd(socket_fd, PSFALSE)))
-    s48_raise_out_of_memory_error();
+    s48_out_of_memory_error();
 
   return S48_FALSE;
 }

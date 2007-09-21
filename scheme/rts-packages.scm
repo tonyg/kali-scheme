@@ -149,6 +149,7 @@
 	channels
 	i/o i/o-internal
 	(subset primitives (os-error-message))
+	os-strings
 	conditions
 	(subset threads-internal (maybe-commit-no-interrupts))
 	proposals

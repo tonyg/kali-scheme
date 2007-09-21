@@ -119,7 +119,7 @@
 	       "long __stob_set_i = (i); "
 	       "s48_value __stob_set_v = (v); "
 	       "if (S48_STOB_IMMUTABLEP(__stob_set_x)) "
-	       "s48_raise_argument_type_error(__stob_set_x); "
+	       "s48_assertion_violation(NULL, \"immutable stob\", 1, __stob_set_x); "
 	       "else { "
 	       "S48_WRITE_BARRIER((__stob_set_x), "
 	       "(char *) (&S48_STOB_REF((__stob_set_x), (__stob_set_i))),"
@@ -134,7 +134,7 @@
 	       "long __stob_set_i = (i); "
 	       "char __stob_set_v = (v); "
 	       "if (S48_STOB_IMMUTABLEP(__stob_set_x)) "
-	       "s48_raise_argument_type_error(__stob_set_x); "
+	       "s48_assertion_violation(NULL, \"immutable stob\", 1, __stob_set_x); "
 	       "else "
 	       "*(&S48_STOB_BYTE_REF((__stob_set_x), (__stob_set_i))) = (__stob_set_v); "
 	       "} while (0)"))

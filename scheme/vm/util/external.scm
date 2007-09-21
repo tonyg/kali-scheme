@@ -171,8 +171,8 @@
 
 (define host-architecture "s48")
 
-(define (raise-argument-type-error val)
-  (fake-it 'raise-argument-type-error))
+(define (argument-type-violation val)
+  (fake-it 'argument-type-violation))
 
-(define (raise-range-error val min max)
-  (fake-it 'raise-range-error))
+(define (range-violation val min max)
+  (fake-it 'range-violation))

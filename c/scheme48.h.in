@@ -223,7 +223,16 @@ S48_EXTERN void *	s48_value_pointer(s48_value);
 
 /* Exceptions */
 
-S48_EXTERN void s48_raise_scheme_exception(long type, long nargs, ...);
+S48_EXTERN void s48_error(const char* who, const char* message,
+			  long irritant_count, ...);
+S48_EXTERN void s48_assertion_violation(const char* who, const char* message,
+					long irritant_count, ...);
+S48_EXTERN void s48_os_error(const char* who, int the_errno,
+			     long irritant_count, ...);
+S48_EXTERN void s48_out_of_memory_error();
+
+/* The following are deprecated */
+
 S48_EXTERN void s48_raise_argument_type_error(s48_value value);
 S48_EXTERN void s48_raise_argument_number_error(s48_value value,
 						s48_value min,
@@ -236,20 +245,24 @@ S48_EXTERN void s48_raise_os_error(int the_errno);
 S48_EXTERN void s48_raise_string_os_error(char *reason);
 S48_EXTERN void s48_raise_out_of_memory_error();
 
+/* Internal use */
+
+S48_EXTERN void s48_raise_scheme_exception(long type, long nargs, ...);
+
 /* Type checking */
 
-#define S48_CHECK_PAIR(v) do { if (!S48_PAIR_P(v)) s48_raise_argument_type_error(v); } while (0)
-#define S48_CHECK_FIXNUM(v) do { if (!S48_FIXNUM_P(v)) s48_raise_argument_type_error(v); } while (0)
-#define S48_CHECK_STRING(v) do { if (!S48_STRING_P(v)) s48_raise_argument_type_error(v); } while (0)
-#define S48_CHECK_BYTE_VECTOR(v) do { if (!S48_BYTE_VECTOR_P(v)) s48_raise_argument_type_error(v); } while (0)
-#define S48_CHECK_CHANNEL(v) do { if (!S48_CHANNEL_P(v)) s48_raise_argument_type_error(v); } while (0)
-#define S48_CHECK_RECORD(v) do { if (!S48_RECORD_P(v)) s48_raise_argument_type_error(v); } while (0)
-#define S48_CHECK_VALUE(v) do { if (!S48_BYTE_VECTOR_P(v)) s48_raise_argument_type_error(v); } while (0)
-#define S48_CHECK_EXPORT_BINDING(v) do { if (!S48_EXPORT_BINDING_P(v)) s48_raise_argument_type_error(v); } while (0)
+#define S48_CHECK_PAIR(v) do { if (!S48_PAIR_P(v)) s48_assertion_violation(NULL, "must be a pair", 1, v); } while (0)
+#define S48_CHECK_FIXNUM(v) do { if (!S48_FIXNUM_P(v)) s48_assertion_violation(NULL, "must be a fixnum", 1, v); } while (0)
+#define S48_CHECK_STRING(v) do { if (!S48_STRING_P(v)) s48_assertion_violation(NULL, "must be a string", 1, v); } while (0)
+#define S48_CHECK_BYTE_VECTOR(v) do { if (!S48_BYTE_VECTOR_P(v)) s48_assertion_violation(NULL, "must be a bytevector", 1, v); } while (0)
+#define S48_CHECK_CHANNEL(v) do { if (!S48_CHANNEL_P(v)) s48_assertion_violation(NULL, "must be a channel", 1, v); } while (0)
+#define S48_CHECK_RECORD(v) do { if (!S48_RECORD_P(v)) s48_assertion_violation(NULL, "must be a record", 1, v); } while (0)
+#define S48_CHECK_VALUE(v) do { if (!S48_BYTE_VECTOR_P(v)) s48_assertion_violation(NULL, "must be an external value", 1, v); } while (0)
+#define S48_CHECK_EXPORT_BINDING(v) do { if (!S48_EXPORT_BINDING_P(v)) s48_assertion_violation(NULL, "must be an exported value", 1, v ); } while (0)
 #define S48_CHECK_BOOLEAN(v)					\
   do { s48_value s48_temp = (v);				\
        if (s48_temp != S48_TRUE && s48_temp != S48_FALSE)	\
-           s48_raise_argument_type_error(v); } while (0)
+	 s48_assertion_violation(NULL, "must be a boolean", 1, v); } while (0)
 
 #define S48_VALUE_P(v) (S48_BYTE_VECTOR_P(v))
 
@@ -259,9 +272,9 @@ S48_EXTERN void s48_raise_out_of_memory_error();
 #define S48_ENTER_BOOLEAN(v) ((v) ? S48_TRUE : S48_FALSE)
 
 #define S48_SHARED_BINDING_CHECK(binding)					\
-  do { if (S48_UNSPECIFIC == S48_SHARED_BINDING_REF(binding))		\
+  do { if (S48_UNSPECIFIC == S48_SHARED_BINDING_REF(binding))			\
          s48_raise_scheme_exception(S48_EXCEPTION_UNBOUND_EXTERNAL_NAME, 1,	\
-				    S48_SHARED_BINDING_NAME(binding));	\
+				    S48_SHARED_BINDING_NAME(binding));		\
   } while(0)
 
 

@@ -137,7 +137,8 @@
 		(make-who-condition (if reason
 				     (enumerand->name reason exception)
 				     #f))
-		(make-message-condition (os-error-message status))
+		(make-message-condition
+		 (os-string->string (byte-vector->os-string (os-error-message status))))
 		(make-irritants-condition (cons channel rest)))))
 	     (else
 	      (apply signal-vm-exception opcode reason channel status rest))))
@@ -151,7 +152,8 @@
 		  (construct-vm-exception opcode reason)
 		  (make-i/o-error)
 		  (make-who-condition 'write-image)
-		  (make-message-condition (os-error-message status))
+		  (make-message-condition
+		   (os-string->string (byte-vector->os-string (os-error-message status))))
 		  (make-irritants-condition
 		   (cons (byte-vector->os-string filename)
 			 rest)))))

@@ -52,7 +52,7 @@ shared_object_dlopen(s48_value name, s48_value complete_name_p)
 
   handle = dlopen(s48_extract_byte_vector(full_name), DLOPEN_MODE);
   if (handle == NULL)
-    s48_raise_string_os_error((char *)dlerror());
+    s48_error("shared_object_dlopen", (char *)dlerror(), 1, full_name);
 
   res = S48_MAKE_VALUE(void *);
   S48_UNSAFE_EXTRACT_VALUE(res, void *) = handle;
@@ -78,7 +78,7 @@ shared_object_dlsym(s48_value handle, s48_value name)
   entry = dlsym(native_handle, native_name);
 
   if (entry == NULL)
-    s48_raise_string_os_error((char*)dlerror());
+    s48_error("shared_object_dlsym", (char*)dlerror(), 2, handle, name);
 
   res = S48_MAKE_VALUE(void *);
   S48_UNSAFE_EXTRACT_VALUE(res, void *) = entry;
@@ -91,7 +91,7 @@ shared_object_dlclose(s48_value handle)
   void *native_handle = S48_EXTRACT_VALUE(handle, void *);
   
   if (dlclose(native_handle) < 0)
-    s48_raise_string_os_error((char*)dlerror());
+    s48_error("shared_object_dlclose", (char*)dlerror(), 1, handle);
   return S48_UNSPECIFIC;
 }
 

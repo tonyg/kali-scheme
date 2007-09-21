@@ -74,19 +74,19 @@
 
 (define (ensure-string s)
   (if (not (vm-string? s))
-      (raise-argument-type-error s)))
+      (argument-type-violation s)))
 
 (define (ensure-index-range i min max)
   (if (or (< i min)
 	  (> i max))
-      (raise-range-error (enter-fixnum i)
-			 (enter-fixnum min) (enter-fixnum max))))     
+      (range-violation (enter-fixnum i)
+		       (enter-fixnum min) (enter-fixnum max))))     
   
 (define (ensure-string-index s i)
   (ensure-index-range i 0 (- (vm-string-length s) 1)))
 
 (define (s48-string-set s i c)
-  (ensure-string s)
+  (ensure-string  s)
   (ensure-string-index s i)
   (vm-string-set! s i c))
 

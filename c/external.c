@@ -439,7 +439,7 @@ s48_trampoline(s48_value proc, s48_value nargs)
   case 0: {
     s48_value value = s48_call_scheme(proc, 0);
     if (value == S48_FALSE)
-      s48_raise_string_os_error("trampoline bouncing");
+      s48_assertion_violation("s48_trampoline", "trampoline bouncing", 0);
     return value;
   }
   case 1:
@@ -450,7 +450,7 @@ s48_trampoline(s48_value proc, s48_value nargs)
     return s48_call_scheme(proc, 3, s48_enter_fixnum(100), s48_enter_fixnum(200),
 		    s48_enter_fixnum(300));
   default:
-    s48_raise_range_error(nargs, s48_enter_fixnum(0), s48_enter_fixnum(3));
+    s48_assertion_violation("s48_trampoline", "invalid number of arguments", 1, nargs);
     return S48_UNDEFINED; /* not that we ever get here */
   }
 }
@@ -471,35 +471,144 @@ s48_system(s48_value string)
  *
  * The maximum number of arguments is determined by the amount of space reserved
  * on the Scheme stack for exceptions. See the definition of stack-slack in
- * scheme/vm/stack.scm.
+ * scheme/vm/interp/stack.scm.
  */
+
+static long
+raise_scheme_exception_prelude(long why, long nargs)
+{
+  int i;
+  va_list irritants;
+
+  s48_setup_external_exception(why, nargs);
+  
+  if (11 < nargs) {   /* DO NOT INCREASE THIS NUMBER */
+    fprintf(stderr, "too many arguments to external exception, discarding surplus\n");
+    nargs = 11;
+  }
+  return nargs;
+}
+
+static void
+raise_scheme_exception_postlude(void)
+{
+   external_return_value = S48_UNSPECIFIC;
+   longjmp(current_return_point.buf, EXCEPTION_THROW);
+}
+
 void
 s48_raise_scheme_exception(long why, long nargs, ...)
 {
   int i;
   va_list irritants;
 
-  va_start(irritants, nargs);
+  nargs = raise_scheme_exception_prelude(why, nargs + 1) - 1;
 
-  s48_setup_external_exception(why, nargs + 1);
-  
-  if (10 < nargs) {   /* DO NOT INCREASE THIS NUMBER */
-    fprintf(stderr, "s48_raise_scheme_exception() called with more than 10 arguments, discarding surplus\n");
-    nargs = 10;
-  }
-  
   s48_push(current_procedure);
+
+  va_start(irritants, nargs);
 
   for (i = 0; i < nargs; i++)
     s48_push(va_arg(irritants, s48_value));
 
   va_end(irritants);
 
-   external_return_value = S48_UNSPECIFIC;
-   longjmp(current_return_point.buf, EXCEPTION_THROW);
+  raise_scheme_exception_postlude();
+}
+
+static void
+raise_scheme_standard_exception(long why, const char* who, const char* message,
+				long irritant_count, va_list irritants)
+{
+  int i;
+  long nargs = irritant_count + 2; /* who and message */
+
+  nargs = raise_scheme_exception_prelude(why, nargs);
+  irritant_count = nargs - 2;
+  
+  for (i = 0; i < irritant_count; i++)
+    s48_push(va_arg(irritants, s48_value));
+
+  va_end(irritants);
+
+  /* these must be last because of GC protection */
+  if (who == NULL)
+    s48_push(current_procedure);
+  else
+    s48_push(s48_enter_string_utf_8((char*)who));
+  s48_push(s48_enter_byte_string((char*)message));
+
+  raise_scheme_exception_postlude();
 }
 
 /* Specific exceptions */
+
+void
+s48_error(const char* who, const char* message,
+	  long irritant_count, ...)
+{
+  va_list irritants;
+  va_start(irritants, irritant_count);
+  raise_scheme_standard_exception(S48_EXCEPTION_EXTERNAL_ERROR,
+				  who, message, irritant_count, irritants);
+}
+
+void
+s48_assertion_violation(const char* who, const char* message,
+			long irritant_count, ...)
+{
+  va_list irritants;
+  va_start(irritants, irritant_count);
+  raise_scheme_standard_exception(S48_EXCEPTION_EXTERNAL_ASSERTION_VIOLATION,
+				  who, message, irritant_count, irritants);
+}
+
+void s48_os_error(const char* who, int the_errno,
+		  long irritant_count, ...)
+{
+  int i;
+  long nargs = irritant_count + 2; /* who and errno */
+  va_list irritants;
+
+  nargs = raise_scheme_exception_prelude(S48_EXCEPTION_EXTERNAL_OS_ERROR, nargs);
+  irritant_count = nargs - 2;
+  
+  va_start(irritants, irritant_count);
+
+  for (i = 0; i < irritant_count; i++)
+    s48_push(va_arg(irritants, s48_value));
+
+  va_end(irritants);
+
+  /* last because of GC protection */
+  if (who == NULL)
+    s48_push(current_procedure);
+  else
+    s48_push(s48_enter_string_utf_8((char*)who));
+  s48_push(s48_enter_fixnum(the_errno));
+
+  raise_scheme_exception_postlude();
+}
+
+void
+s48_out_of_memory_error()
+{
+  s48_raise_scheme_exception(S48_EXCEPTION_OUT_OF_MEMORY, 0);
+}
+
+/* For internal use by the VM: */
+
+void
+s48_argument_type_violation(s48_value value) {
+  s48_assertion_violation(NULL, "argument-type violation", 1, value);
+}
+
+void
+s48_range_violation(s48_value value, s48_value min, s48_value max) {
+  s48_assertion_violation(NULL, "argument out of range", 3, value, min, max);
+}
+
+/* The following are deprecated: */
 
 void
 s48_raise_argument_type_error(s48_value value) {
@@ -525,21 +634,19 @@ s48_raise_closed_channel_error() {
 
 void
 s48_raise_os_error(int the_errno) {
-  s48_raise_scheme_exception(S48_EXCEPTION_OS_ERROR, 2,
-			     s48_enter_fixnum(the_errno),
-			     s48_enter_string_latin_1(strerror(the_errno)));
+  s48_os_error(NULL, the_errno, 0);
 }
 
 void
 s48_raise_string_os_error(char *reason) {
-  s48_raise_scheme_exception(S48_EXCEPTION_OS_ERROR, 1,
-			     s48_enter_string_latin_1(reason));
+  s48_error(NULL, (const char*)s48_enter_string_latin_1(reason), 0);
 }
 
 void
 s48_raise_out_of_memory_error() {
   s48_raise_scheme_exception(S48_EXCEPTION_OUT_OF_MEMORY, 0);
 }
+
 
 /********************************/
 /* Support routines for external code */
@@ -558,7 +665,7 @@ long
 s48_stob_length(s48_value thing, int type)
 {
   if (!(S48_STOB_P(thing) && (S48_STOB_TYPE(thing) == type)))
-    s48_raise_argument_type_error(thing);
+    s48_assertion_violation("s48_stob_length", "not a stob", 1, thing);
   
   return S48_STOB_DESCRIPTOR_LENGTH(thing);
 }
@@ -567,7 +674,7 @@ long
 s48_stob_byte_length(s48_value thing, int type)
 {
   if (!(S48_STOB_P(thing) && (S48_STOB_TYPE(thing) == type)))
-    s48_raise_argument_type_error(thing);
+    s48_assertion_violation("s48_stob_byte_length", "not a stob", 1, thing);
 
   if (type == S48_STOBTYPE_STRING)
     return S48_STOB_BYTE_LENGTH(thing) - 1;
@@ -581,14 +688,15 @@ s48_stob_ref(s48_value thing, int type, long offset)
   long length;
 
   if (!(S48_STOB_P(thing) && (S48_STOB_TYPE(thing) == type)))
-    s48_raise_argument_type_error(thing);
+    s48_assertion_violation("s48_stob_ref", "not a stob", 1, thing);
 
   length = S48_STOB_DESCRIPTOR_LENGTH(thing);
 
   if (offset < 0 || length <= offset)
-    s48_raise_range_error(s48_enter_integer(offset),
-			  S48_UNSAFE_ENTER_FIXNUM(0),
-		          S48_UNSAFE_ENTER_FIXNUM(length - 1));
+    s48_assertion_violation("s48_stob_ref", "invalid stob index", 3,
+			    s48_enter_integer(offset),
+			    S48_UNSAFE_ENTER_FIXNUM(0),
+			    S48_UNSAFE_ENTER_FIXNUM(length - 1));
 			  
   return S48_STOB_REF(thing, offset);
 }
@@ -601,14 +709,15 @@ s48_stob_set(s48_value thing, int type, long offset, s48_value value)
   if (!(S48_STOB_P(thing) &&
 	(S48_STOB_TYPE(thing) == type) &&
 	!S48_STOB_IMMUTABLEP(thing)))
-    s48_raise_argument_type_error(thing);
+    s48_assertion_violation("s48_stob_set", "not a mutable stob", 1, thing);
   
   length = S48_STOB_DESCRIPTOR_LENGTH(thing);
 
   if (offset < 0 || length <= offset)
-    s48_raise_range_error(s48_enter_integer(offset),
-			  S48_UNSAFE_ENTER_FIXNUM(0),
-			  S48_UNSAFE_ENTER_FIXNUM(length - 1));
+    s48_assertion_violation("s48_stob_set", "invalid stob index", 3,
+			    s48_enter_integer(offset),
+			    S48_UNSAFE_ENTER_FIXNUM(0),
+			    S48_UNSAFE_ENTER_FIXNUM(length - 1));
 			  
   S48_STOB_SET(thing, offset, value);
 }
@@ -619,16 +728,17 @@ s48_stob_byte_ref(s48_value thing, int type, long offset)
   long length;
 
   if (!(S48_STOB_P(thing) && (S48_STOB_TYPE(thing) == type)))
-    s48_raise_argument_type_error(thing);
+    s48_assertion_violation("s48_stob_byte_ref", "not a stob", 1, thing);
   
   length = (type == S48_STOBTYPE_STRING) ?
            S48_STOB_BYTE_LENGTH(thing) - 1 :
            S48_STOB_BYTE_LENGTH(thing);
   
   if (offset < 0 || length <= offset)
-    s48_raise_range_error(s48_enter_integer(offset),
-			  S48_UNSAFE_ENTER_FIXNUM(0),
-			  S48_UNSAFE_ENTER_FIXNUM(length - 1));
+    s48_assertion_violation("s48_stob_byte_ref", "invalid stob index", 3,
+			    s48_enter_integer(offset),
+			    S48_UNSAFE_ENTER_FIXNUM(0),
+			    S48_UNSAFE_ENTER_FIXNUM(length - 1));
 			  
   return S48_STOB_BYTE_REF(thing, offset);
 }
@@ -639,16 +749,17 @@ s48_stob_byte_set(s48_value thing, int type, long offset, char value)
   long length;
 
   if (!(S48_STOB_P(thing) && (S48_STOB_TYPE(thing) == type)))
-    s48_raise_argument_type_error(thing);
+    s48_assertion_violation("s48_stob_byte_set", "not a stob", 1, thing);
   
   length = (type == S48_STOBTYPE_STRING) ?
            S48_STOB_BYTE_LENGTH(thing) - 1 :
            S48_STOB_BYTE_LENGTH(thing);
   
   if (offset < 0 || length <= offset)
-    s48_raise_range_error(s48_enter_integer(offset),
-			  S48_UNSAFE_ENTER_FIXNUM(0),
-			  S48_UNSAFE_ENTER_FIXNUM(length - 1));
+    s48_assertion_violation("s48_stob_byte_set", "invalid stob index", 3,
+			    s48_enter_integer(offset),
+			    S48_UNSAFE_ENTER_FIXNUM(0),
+			    S48_UNSAFE_ENTER_FIXNUM(length - 1));
 			  
   S48_STOB_BYTE_SET(thing, offset, value);
 }
@@ -674,7 +785,7 @@ s48_value
 s48_enter_fixnum(long value)
 {
   if (value < S48_MIN_FIXNUM_VALUE || S48_MAX_FIXNUM_VALUE < value)
-    s48_raise_argument_type_error(s48_enter_integer(value));
+    s48_assertion_violation("s48_enter_fixnum", "not a fixnum", 1, s48_enter_integer(value));
 
   return S48_UNSAFE_ENTER_FIXNUM(value);
 }
@@ -683,7 +794,7 @@ long
 s48_extract_fixnum(s48_value value)
 {
   if (! S48_FIXNUM_P(value))
-    s48_raise_argument_type_error(value);
+    s48_assertion_violation("s48_extract_fixnum", "not a fixnum", 1, value);
   
   return S48_UNSAFE_EXTRACT_FIXNUM(value);
 }
@@ -702,10 +813,10 @@ s48_extract_integer(s48_value value)
     bignum_type bignum = S48_ADDRESS_AFTER_HEADER(value, long);
     
     if (! s48_bignum_fits_in_word_p(bignum, 32, 1))
-      s48_raise_argument_type_error (value);
+      s48_assertion_violation("s48_extract_integer", "does not fit in word", 1, value);
     else return s48_bignum_to_long(bignum);
   }
-  else s48_raise_argument_type_error(value);
+  else s48_assertion_violation("s48_extract_integer", "not an exact integer", 1, value);
 }
 
 /*
@@ -727,7 +838,7 @@ double
 s48_extract_double(s48_value s48_double)
 {
   if (! S48_DOUBLE_P(s48_double))
-    s48_raise_argument_type_error(s48_double);
+    s48_assertion_violation("s48_extract_double", "not a double", 1, s48_double);
   
   return S48_UNSAFE_EXTRACT_DOUBLE(s48_double);
 }
@@ -738,10 +849,7 @@ s48_enter_char(long a_char)
   if (! ((a_char >= 0)
 	 && ((a_char <= 0xd7ff)
 	     || ((a_char >= 0xe000) && (a_char <= 0x10ffff)))))
-    /* #### not quite */
-    s48_raise_range_error(s48_enter_fixnum(a_char),
-			  s48_enter_fixnum(0),
-			  s48_enter_fixnum(0x10ffff));
+    s48_assertion_violation("s48_enter_char", "not a scalar value", 1, s48_enter_fixnum(a_char));
 
   return S48_UNSAFE_ENTER_CHAR(a_char);
 }
@@ -750,7 +858,7 @@ long
 s48_extract_char(s48_value a_char)
 {
   if (! S48_CHAR_P(a_char))
-    s48_raise_argument_type_error(a_char);
+    s48_assertion_violation("s48_extract_char", "not a char", 1, a_char);
   
   return S48_UNSAFE_EXTRACT_CHAR(a_char);
 }
@@ -919,8 +1027,9 @@ s48_check_record_type(s48_value record, s48_value type_binding)
   if ((! S48_RECORD_P(record)) ||
       (S48_UNSAFE_SHARED_BINDING_REF(type_binding) !=
        S48_UNSAFE_RECORD_REF(record, -1)))
-    s48_raise_argument_type_error(record);
-}    
+    s48_assertion_violation("s48_check_record_type", "not a record of the appropriate type", 2,
+			    record, S48_SHARED_BINDING_REF(type_binding));
+}
 
 long
 s48_length(s48_value list)

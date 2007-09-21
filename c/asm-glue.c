@@ -110,7 +110,7 @@ s48_malloc_byte_vector(s48_value length)
   char *bv = (char *)malloc(bytes);
 
   if (bv == NULL)
-    s48_raise_out_of_memory_error();
+    s48_out_of_memory_error();
 
   *((long *) bv) = (c_length << 8)
                  | (S48_STOBTYPE_BYTE_VECTOR << 2)
@@ -127,7 +127,7 @@ static s48_value
 s48_free_byte_vector(s48_value byte_vector)
 {
   if (!S48_BYTE_VECTOR_P(byte_vector))
-    s48_raise_argument_type_error(byte_vector);
+    s48_assertion_violation("s48_free_byte_vector", "not a byte vector", 1, byte_vector);
 
   free((void *) ((byte_vector & -4)- 4));
 
@@ -143,7 +143,7 @@ static s48_value
 s48_stob_start_address(s48_value stob)
 {
   if (!S48_STOB_P(stob))
-    s48_raise_argument_type_error(stob);
+    s48_assertion_violation("s48_stob_start_address", "not a stob", 1, stob);
   
   return s48_enter_integer((long) S48_ADDRESS_AFTER_HEADER(stob, void));
 }

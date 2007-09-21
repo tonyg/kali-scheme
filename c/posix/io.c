@@ -74,7 +74,7 @@ posix_dup(s48_value channel, s48_value new_mode)
 
   if (!S48_CHANNEL_P(channel) ||
       S48_CHANNEL_STATUS(channel) == S48_CHANNEL_STATUS_CLOSED)
-    s48_raise_argument_type_error(channel);
+    s48_assertion_violation("posix_dup", "not an open channel", 1, channel);
   
   old_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
   old_mode = S48_UNSAFE_CHANNEL_STATUS(channel);
@@ -124,10 +124,10 @@ posix_dup2(s48_value channel, s48_value new_fd)
 
   if (!S48_CHANNEL_P(channel) ||
       S48_CHANNEL_STATUS(channel) == S48_CHANNEL_STATUS_CLOSED)
-    s48_raise_argument_type_error(channel);
+    s48_assertion_violation("posix_dup2", "not an open channel", 1, channel);
 
   if (!S48_FIXNUM_P(new_fd) || new_fd < 0)
-    s48_raise_argument_type_error(new_fd);
+    s48_assertion_violation("posix_dup2", "fd not a nonnegative fixnum", 1, new_fd);
 
   old_c_fd = s48_extract_fixnum(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
   new_c_fd = s48_extract_fixnum(new_fd);
@@ -205,7 +205,7 @@ posix_close_on_exec_p(s48_value channel)
 
   if (!S48_CHANNEL_P(channel) ||
       S48_CHANNEL_STATUS(channel) == S48_CHANNEL_STATUS_CLOSED)
-    s48_raise_argument_type_error(channel);
+    s48_assertion_violation("posix_close_on_exec_p", "not an open channel", 1, channel);
   
   c_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
 
@@ -222,7 +222,7 @@ posix_set_close_on_exec(s48_value channel, s48_value value)
 
   if (!S48_CHANNEL_P(channel) ||
       S48_CHANNEL_STATUS(channel) == S48_CHANNEL_STATUS_CLOSED)
-    s48_raise_argument_type_error(channel);
+    s48_assertion_violation("posix_set_close_on_exec", "not an open channel", 1, channel);
 
   c_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
   
@@ -247,7 +247,7 @@ posix_io_flags(s48_value channel, s48_value options)
 
   if (!S48_CHANNEL_P(channel) ||
       S48_CHANNEL_STATUS(channel) == S48_CHANNEL_STATUS_CLOSED)
-    s48_raise_argument_type_error(channel);
+    s48_assertion_violation("posix_io_flags", "not an open channel", 1, channel);
 
   c_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
 

@@ -448,22 +448,19 @@
 		 (loop (vm-cdr env)))))
 	(error "current thread is not a record"))))
 
-(define-consing-primitive os-error-message (fixnum->)
+(define-primitive os-error-message (fixnum->)
   (lambda (status)
-    (vm-string-size (string-length (error-string status))))
-  (lambda (status key)
-    (goto return (get-error-string status key))))
-
-; Copying error strings into the heap.
-
-(define (get-error-string status key)
-  (let* ((string (error-string status))
-	 (len (string-length string))
-	 (new (vm-make-string len key)))
-    (do ((i 0 (+ i 1)))
-	((= i len))
-      (vm-string-set! new i (char->ascii (string-ref string i))))
-    new))
+    (let* ((raw (error-string status))
+	   (len (+ (string-length raw) 1))
+	   (vector (maybe-make-b-vector+gc (enum stob byte-vector) len)))
+      (if (false? vector)
+	  (raise-exception heap-overflow
+			   0
+			   (enter-fixnum len))
+	  (do ((i 0 (+ 1 i)))
+	      ((>= i len)
+	       (goto return vector))
+	    (code-vector-set! vector i (char->ascii (string-ref raw i))))))))
 
 ;----------------
 ; A poor man's WRITE for use in debugging.

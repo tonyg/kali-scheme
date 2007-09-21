@@ -355,6 +355,11 @@
    no-current-proposal
    native-code-not-supported
    illegal-exception-return
+
+   ;; these only come from external code
+   external-error
+   external-assertion-violation
+   external-os-error
    ))
 
 ; Used by (READ-BYTE) and (WRITE-BYTE) to get the appropriate ports from

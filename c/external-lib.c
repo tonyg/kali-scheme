@@ -5,6 +5,7 @@
  * Access to various Scheme-side libraries via the FFI
  */
 
+#include <stdlib.h>
 #include "scheme48.h"
 
 /*
@@ -35,7 +36,8 @@ s48_check_enum_set_type(s48_value sch_thing, s48_value sch_enum_set_type_binding
       
   if (!S48_EQ_P(S48_UNSAFE_RECORD_REF(sch_thing, 0),
 		S48_SHARED_BINDING_REF(sch_enum_set_type_binding)))
-    s48_raise_argument_type_error(sch_thing);
+    s48_assertion_violation("s48_check_enum_set_type", "invalid enum-set type", 2,
+			    sch_thing, binding_val);
   }
 }
 

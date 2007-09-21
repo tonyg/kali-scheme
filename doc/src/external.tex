@@ -794,43 +794,38 @@ Raising an exception performs all
  necessary clean-up actions to properly return to Scheme~48, including
  adjusting the stack of protected variables.
 
-\begin{protos}
-\cproto{s48\_raise\_scheme\_exception(int type, int nargs, \ldots)}
-\end{protos}
-
-\noindent{}\code{s48\_raise\_scheme\_exception} is the base procedure for
- raising exceptions.
-\code{type} is the type of exception, and should be one of the
- \code{S48\_EXCEPTION\_}\ldots constants defined in \code{scheme48arch.h}.
-\code{nargs} is the number of additional values to be included in the
- exception; these follow the \code{nargs} argument and should all have
- type \code{s48\_value}.
-\code{s48\_raise\_scheme\_exception} never returns.
- 
 The following procedures are available for raising particular
  types of exceptions.
-Like \code{s48\_raise\_scheme\_exception} these never return.
+These never return.
 
 \begin{protos}
-\cproto{s48\_raise\_argument\_type\_error(s48\_value)}
-\cproto{s48\_raise\_argument\_number\_error(int nargs, int min, int max)}
-\cproto{s48\_raise\_range\_error(long value, long min, long max)}
-\cproto{s48\_raise\_closed\_channel\_error()}
-\cproto{s48\_raise\_os\_error(int errno)}
-\cproto{s48\_raise\_out\_of\_memory\_error()}
+\cproto{s48\_assertion\_violation(const char* who, const char* message, long count, ...)}
+\cproto{s48\_error(const char* who, const char* message, long count, ...)}
+\cproto{s48\_os\_error(const char* who, const char* message, long count, ...)}
+\cproto{s48\_out\_of\_memory\_error()}
 \end{protos}
 
-\noindent{}An argument type error indicates that the given value is of the wrong
- type.
-An argument number error is raised when the number of arguments, \code{nargs},
- should be, but isn't, between \code{min} and \code{max}, inclusive.
-Similarly, a range error indicates that \code{value} is not between
- between \code{min} and \code{max}, inclusive.
+\noindent{}An assertion violation signalled via
+\code{s48\_assertion\_violation} typically means that an invalid
+argument (or invalid number of arguments) has been passed.  An error
+signalled via \code{s48\_error} means that an environmental error
+(like an I/O error) has occurred.  In both cases, \code{who} indicates
+the location of the error, typically the name of the function it
+occurred in.  It may be \code{NULL}, in which the system guesses a
+name.  The \code{message} argument is an error message encoded in
+UTF-8.  Additional arguments may be passed that become part of the
+condition object that will be raised on the Scheme side: \code{count}
+indicates their number, and the arguments (which must be of type
+\code{s48\_value}) follow.
 
-The following macros raise argument type errors if their argument does not
- have the required type.
-\code{S48\_CHECK\_BOOLEAN} raises an error if its argument is neither
- \code{\#t} or \code{\#f}.
+The \code{s48\_os\_error} function is like \code{s48\_error}, except
+that the error message is inferred from an OS error code (as in
+\code{strerro}).  The \code{s48\_out\_of\_memory\_error} function
+signals that the system has run out of memory.
+
+The following macros raise assertion violations if their argument does
+not have the required type.  \code{S48\_CHECK\_BOOLEAN} raises an
+error if its argument is neither \code{\#t} or \code{\#f}.
 
 \begin{protos}
 \cproto{void S48\_CHECK\_BOOLEAN(s48\_value)}
