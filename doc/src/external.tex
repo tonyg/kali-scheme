@@ -653,19 +653,24 @@ The following macros can be used to create and access embedded C objects.
 
 \begin{protos}
 \cgcproto{s48\_value S48\_MAKE\_VALUE(type)}
+\cgcproto{s48\_value S48\_MAKE\_SIZED\_VALUE(size)}
 \cproto{type \ \ \ \ \ S48\_EXTRACT\_VALUE(s48\_value, type)}
+\cproto{long \ \ \ \ \ S48\_VALUE\_SIZE(s48\_value)}
 \cproto{type * \ \ \ S48\_EXTRACT\_VALUE\_POINTER(s48\_value, type)}
 \cproto{void \ \ \ \ \ S48\_SET\_VALUE(s48\_value, type, value)}
 \end{protos}
 
 \noindent{}
 \code{S48\_MAKE\_VALUE} makes a byte vector large enough to hold an object
- whose type is \cvar{type}.
+whose type is \cvar{type}.
+\code{S48\_MAKE\_SIZED\_VALUE} makes a byte vector large enough to hold an object
+of \cvar{size} bytes.
 \code{S48\_EXTRACT\_VALUE} returns the contents of a byte vector cast to
- \cvar{type}, and \code{S48\_EXTRACT\_VALUE\_POINTER} returns a pointer
- to the contents of the byte vector.
+ \cvar{type}, \code{S48\_VALUE\_SIZE} returns its size,
+and \code{S48\_EXTRACT\_VALUE\_POINTER} returns a pointer to the
+contents of the byte vector.
 The value returned by \code{S48\_EXTRACT\_VALUE\_POINTER} is valid only until
- the next garbage collection.
+the next garbage collection.
 
 \code{S48\_SET\_VALUE} stores \code{value} into the byte vector.
 

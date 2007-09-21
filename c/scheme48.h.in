@@ -111,10 +111,12 @@ S48_EXTERN s48_value	s48_call_scheme(s48_value proc, long nargs, ...);
 #define S48_EXPORT_FUNCTION(p) (s48_define_exported_binding(#p, s48_enter_pointer((void*) p)))
 
 #define S48_MAKE_VALUE(type) (s48_make_byte_vector(sizeof(type)))
+#define S48_MAKE_SIZED_VALUE(size) (s48_make_byte_vector(size))
 S48_EXTERN void *	s48_value_pointer(s48_value);
 
 #define S48_EXTRACT_VALUE_POINTER(x, type) ((type *) s48_value_pointer(x))
 #define S48_EXTRACT_VALUE(x, type) (*(S48_EXTRACT_VALUE_POINTER((x), type)))
+#define S48_VALUE_SIZE(x) (S48_BYTE_VECTOR_LENGTH(x))
 #define S48_SET_VALUE(x, type, v) (S48_EXTRACT_VALUE((x), type) = (v))
 
 #define S48_UNSAFE_EXTRACT_VALUE_POINTER(x, type)		\
