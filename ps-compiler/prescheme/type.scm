@@ -31,6 +31,7 @@
 	(else #f)))
 
 (define type/integer      (make-base-type 'integer))
+(define type/unsigned-integer (make-base-type 'unsigned-integer))
 (define type/float        (make-base-type 'float))
 
 (define type/null         (make-base-type 'null))  ; no value

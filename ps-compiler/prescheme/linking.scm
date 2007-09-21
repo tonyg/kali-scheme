@@ -24,6 +24,7 @@
     (environment-define! config 'ps-memory ps-memory)
     (environment-define! config 'ps-receive ps-receive)
     (environment-define! config 'ps-flonums ps-flonums)
+    (environment-define! config 'ps-unsigned-integers ps-unsigned-integers)
     (environment-define! config 'ps-record-types ps-record-types)
     (environment-define! config 'structure-refs structure-refs)
     (environment-define! config ':syntax (structure-ref meta-types syntax-type))
@@ -232,6 +233,11 @@
   (make-structure base-package
 		  (lambda () (get-interface 'ps-flonums-interface)) 
 		  'ps-flonums))
+
+(define ps-unsigned-integers
+  (make-structure base-package
+		  (lambda () (get-interface 'ps-unsigned-integers-interface)) 
+		  'ps-unsigned-integers))
 
 (define ps-receive
   (make-structure base-package

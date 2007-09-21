@@ -19,6 +19,9 @@
 (define (s48-enter-integer x)
   (enter-integer x (ensure-space long-as-integer-size)))
 
+(define (s48-enter-unsigned-integer x)
+  (enter-unsigned-integer x (ensure-space long-as-integer-size)))
+
 					; arguments must either both be intergers or both floanums
 (define (s48-integer-or-floanum-add x y)
   (if (double? x)

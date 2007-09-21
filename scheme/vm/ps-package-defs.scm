@@ -118,6 +118,8 @@
  		(=> (address address) address)))
     (define external-bignum-from-long
       (external "(char *) s48_long_to_bignum" (=> (integer) address)))
+    (define external-bignum-from-unsigned-long
+      (external "(char *) s48_ulong_to_bignum" (=> (unsigned-integer) address)))
     (define external-bignum->long
       (external "s48_bignum_to_long" (=> (address) integer)))
     (define external-bignum-fits-in-word?

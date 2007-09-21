@@ -52,6 +52,20 @@
     (define fl< <) (define fl> >)
     (define fl<= <=) (define fl>= >=)))
 
+(define-structure ps-flonums ps-flonums-interface
+  (open scheme)
+  (optimize auto-integrate)
+  (begin
+    (define un+ +) (define un- -) (define un* *)
+    (define unquotient quotient)
+    (define unremainder remainder)
+    (define un= =)
+    (define un< <) (define un> >)
+    (define un<= <=) (define un>= >=)
+    (define (unsigned->integer x) x)
+    (define (integer->unsigned x) x)
+    ))
+
 ;(define-structure byte-vectors byte-vector-interface
 ;  (open scheme code-vectors)
 ;  (optimize auto-integrate)

@@ -408,6 +408,7 @@
  	  external-bignum-bitwise-ior
  	  external-bignum-bitwise-xor
  	  external-bignum-from-long
+	  external-bignum-from-unsigned-long
  	  external-bignum->long
  	  external-bignum-fits-in-word?
 
@@ -513,7 +514,7 @@
 	  bignum-bitwise-and
 	  bignum-bitwise-ior
 	  bignum-bitwise-xor
-	  long->bignum
+	  long->bignum unsigned-long->bignum
 	  bignum-bits-to-size))
 
 (define-interface integer-arithmetic-interface
@@ -536,6 +537,7 @@
 	  integer-bitwise-ior
 	  integer-bitwise-xor
 	  enter-integer
+	  enter-unsigned-integer
 	  long-as-integer-size))
 
 (define-interface interpreter-internal-interface
@@ -650,6 +652,7 @@
 	  s48-allocate-bignum
  	  s48-shorten-bignum
  	  s48-enter-integer
+	  s48-enter-unsigned-integer
 
 	  ; for initializing additional processes
 	  s48-reset-external-roots!

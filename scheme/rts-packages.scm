@@ -290,7 +290,10 @@
     (define-syntax assert
       (syntax-rules ()
         ((assert foo) #t)))
-    
+
+    (define (integer->unsigned x) x)
+    (define un> >)
+
     ; We just know this.
     (define useful-bits-per-word 32))
   (files (vm/data data)))

@@ -122,6 +122,9 @@
 (define (too-big-for-fixnum? n)
   (> n greatest-fixnum-value))
 
+(define (unsigned-too-big-for-fixnum? n)
+  (un> n (integer->unsigned greatest-fixnum-value)))
+
 (define (too-small-for-fixnum? n)
   (< n least-fixnum-value))
 

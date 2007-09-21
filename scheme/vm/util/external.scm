@@ -131,6 +131,9 @@
   (lambda (long)
     (address-after-header (integer->b-vector long))))
 
+(define external-bignum-from-unsigned-long
+  (fake-it 'external-bignum-from-unsigned-long))
+
 (define  (external-bignum-fits-in-word? bignum-addr word-length two-compl?)
   (let ((bignum (b-vector->integer (address->stob-descriptor bignum-addr))))
     (and (>= bignum least-fixnum-value)

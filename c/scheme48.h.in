@@ -74,6 +74,8 @@ S48_EXTERN s48_value	s48_enter_fixnum(long);
 S48_EXTERN long		s48_extract_fixnum(s48_value);
 S48_EXTERN s48_value	s48_enter_integer(long);
 S48_EXTERN long		s48_extract_integer(s48_value);
+S48_EXTERN s48_value	s48_enter_unsigned_integer(unsigned long);
+S48_EXTERN unsigned long s48_extract_unsigned_integer(s48_value);
 S48_EXTERN s48_value	s48_enter_double(double);
 S48_EXTERN double	s48_extract_double(s48_value);
 S48_EXTERN s48_value	s48_cons(s48_value, s48_value);

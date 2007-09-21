@@ -15,12 +15,22 @@
 	    args)
   type/float)
 
+(define (arith-unsigned-integer-op-rule args node depth return?)
+  (for-each (lambda (arg)
+	      (unify! (infer-type arg depth) type/unsigned-integer node))
+	    args)
+  type/unsigned-integer)
+
 (define (arith-comparison-rule args node depth return?)
   (arith-op-rule args node depth return?)
   type/boolean)
 
 (define (float-comparison-rule args node depth return?)
   (arith-float-op-rule args node depth return?)
+  type/boolean)
+
+(define (unsigned-integer-comparison-rule args node depth return?)
+  (arith-unsigned-integer-op-rule args node depth return?)
   type/boolean)
 
 (define (integer-binop-rule args node depth return?)
@@ -33,6 +43,11 @@
   (check-arg-type args 1 type/float depth node)
   type/float)
 
+(define (unsigned-integer-binop-rule args node depth return?)
+  (check-arg-type args 0 type/unsigned-integer depth node)
+  (check-arg-type args 1 type/unsigned-integer depth node)
+  type/unsigned-integer)
+
 (define (integer-monop-rule args node depth return?)
   (check-arg-type args 0 type/integer depth node)
   type/integer)
@@ -43,6 +58,10 @@
 
 ;----------------------------------------------------------------
 ; Arithmetic
+
+(define (nonnegative-integer? x)
+  (and (integer? x)
+       (not (negative? x))))
 
 (define-complex-primitive (+ . integer?) +
   arith-op-rule
@@ -64,6 +83,16 @@
 		       (make-literal-node (get-prescheme-primop 'fl+))
 		       type))))
 
+(define-complex-primitive (un+ . nonnegative-integer?) +
+  arith-unsigned-integer-op-rule
+  (lambda (x y) (un+ x y))
+  (lambda (args type)
+    (if (null? args)
+	(make-literal-node 0 type/unsigned-integer)
+	(n-ary->binary args
+		       (make-literal-node (get-prescheme-primop 'un+))
+		       type))))
+
 (define-complex-primitive (* . integer?) *
   arith-op-rule
   (lambda (x y) (* x y))
@@ -82,6 +111,16 @@
 	(make-literal-node 1.0)
 	(n-ary->binary args
 		       (make-literal-node (get-prescheme-primop 'fl*))
+		       type))))
+
+(define-complex-primitive (un* . nonnegative-integer?) *
+  arith-unsigned-integer-op-rule
+  (lambda (x y) (un* x y))
+  (lambda (args type)
+    (if (null? args)
+	(make-literal-node 1)
+	(n-ary->binary args
+		       (make-literal-node (get-prescheme-primop 'un*))
 		       type))))
 
 (define (subtract-action name)
@@ -127,6 +166,12 @@
   (lambda (x y) (fl- x y))
   (subtract-maker 'fl- 0.0))
 
+(define-complex-primitive (un- nonnegative-integer? . nonnegative-integer?)
+  (subtract-action '-)
+  (subtract-checker type/unsigned-integer 'fl-)
+  (lambda (x y) (un- x y))
+  (subtract-maker 'un- 0))
+
 (define (n-ary->binary args proc type)
   (let loop ((args args))
     (if (null? (cdr args))
@@ -145,10 +190,12 @@
        (lambda (args type)
 	 (make-primop-call-node (get-prescheme-primop 'id) args type))))))
 
-(define-binary-primitive =   = integer? arith-comparison-rule)
-(define-binary-primitive <   < integer? arith-comparison-rule)
-(define-binary-primitive fl= = real?    float-comparison-rule)
-(define-binary-primitive fl< < real?    float-comparison-rule)
+(define-binary-primitive =   = integer?             arith-comparison-rule)
+(define-binary-primitive <   < integer?             arith-comparison-rule)
+(define-binary-primitive fl= = real?                float-comparison-rule)
+(define-binary-primitive fl< < real?                float-comparison-rule)
+(define-binary-primitive un= = nonnegative-integer? unsigned-integer-comparison-rule)
+(define-binary-primitive un< < nonnegative-integer? unsigned-integer-comparison-rule)
 
 (define-semi-primitive (>  integer? integer?) >
   arith-comparison-rule
@@ -162,7 +209,7 @@
   arith-comparison-rule
   (lambda (x y) (not (< x y))))
 
-(define-semi-primitive (fl>  real? real?) >
+(define-semi-primitive (fl> real? real?) >
   float-comparison-rule
   (lambda (x y) (fl< y x)))
 
@@ -174,10 +221,24 @@
   float-comparison-rule
   (lambda (x y) (not (fl< x y))))
 
-(define-binary-primitive quotient  quotient  integer? integer-binop-rule)
-(define-binary-primitive fl/       /         real?    float-binop-rule)
-(define-binary-primitive remainder remainder integer? integer-binop-rule)
-(define-binary-primitive modulo    modulo    integer? integer-binop-rule)
+(define-semi-primitive (un> nonnegative-integer? nonnegative-integer?) >
+  unsigned-integer-comparison-rule
+  (lambda (x y) (un< y x)))
+
+(define-semi-primitive (un<= nonnegative-integer? nonnegative-integer?) <=
+  unsigned-integer-comparison-rule
+  (lambda (x y) (not (un< y x))))
+
+(define-semi-primitive (un>= nonnegative-integer? nonnegative-integer?) >=
+  unsigned-integer-comparison-rule
+  (lambda (x y) (not (un< x y))))
+
+(define-binary-primitive quotient    quotient  integer?             integer-binop-rule)
+(define-binary-primitive unquotient  quotient  nonnegative-integer? unsigned-integer-binop-rule)
+(define-binary-primitive fl/         /         real?                float-binop-rule)
+(define-binary-primitive remainder   remainder integer?             integer-binop-rule)
+(define-binary-primitive unremainder remainder nonnegative-integer? integer-binop-rule)
+(define-binary-primitive modulo      modulo    integer?             integer-binop-rule)
 
 (define-primitive bitwise-and
   ((integer? type/integer) (integer? type/integer))
@@ -252,3 +313,8 @@
 	((<= y 0)
 	 r))))
 
+(define (unsigned->integer x) x)
+(define (integer->unsigned x) x)
+
+(define-primitive unsigned->integer ((nonnegative-integer? type/unsigned-integer)) type/integer)
+(define-primitive integer->unsigned ((integer? type/integer)) type/unsigned-integer)
