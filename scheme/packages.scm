@@ -430,7 +430,7 @@
 	    dump/restore
 	    dynamic-externals
 	    enum-case
-	    enum-sets
+	    enum-sets enum-sets-internal
 	    extended-numbers
 	    extended-ports
 	    externals
