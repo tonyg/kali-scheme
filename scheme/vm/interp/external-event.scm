@@ -20,6 +20,7 @@
 (define *pending-event-types-head*)
 (define *pending-event-types-tail*)
 (define *pending-event-types-ready*) ; last external event actually returned by event sysstem
+(define *unused-event-types-head*) ; unused types form a list, also linked by next
 
 (define (initialize-external-events)
   (set! *event-types* (make-vector *number-of-event-types* (null-pointer)))
@@ -27,6 +28,7 @@
       (error "out of memory, unable to continue"))
   (let ((event-types-count *number-of-event-types*))
     (set! *number-of-event-types* 0)
+    (set! *unused-event-types-head* (null-pointer))
     (if (not (add-external-event-types event-types-count))
 	(error "out of memory, unable to continue")))
   (set! *pending-event-types-head* (null-pointer))
@@ -51,7 +53,7 @@
 			 (vector-ref old-event-types i))
 	    (goto loop (+ 1 i)))
 	   (else
-	    (let ((t (make-event-type i #f (null-pointer))))
+	    (let ((t (make-event-type i #f *unused-event-types-head*)))
 	      (if (null-pointer? t)
 		  (begin
 		    (set! *event-types* new-event-types)
@@ -59,32 +61,68 @@
 		    #f)
 		  (begin
 		    (vector-set! new-event-types i t)
+		    (set! *unused-event-types-head* t)
 		    (goto loop (+ 1 i)))))))))))
 
 (define (use-event-type-uid! id)
-  (set-event-type-used?! (vector-ref *event-types* id)
-			 #t))
+  (let ((type (vector-ref *event-types* id)))
+    (if (event-type-used? type)
+	(begin
+	  (write-error-string "trying to use an event uid that's already in use : ")
+	  (write-error-integer id)
+	  (write-error-newline)
+	  (error "assertion violation")))
+
+    (set-event-type-used?! type #t)
+    ;; delete from linked list
+    (let loop ((previous (null-pointer))
+	       (unused-type *unused-event-types-head*))	; usually, it should be the first
+      (cond 
+       ((null-pointer? unused-type)
+	(unspecific))
+       ((not (eq? type unused-type))
+	(loop unused-type (event-type-next unused-type)))
+       ((null-pointer? previous)
+	(set! *unused-event-types-head* (event-type-next unused-type)))
+       (else
+	(set-event-type-next! previous (event-type-next unused-type)))))
+
+    (set-event-type-next! type (null-pointer))))
+
+(define (mark-event-type-uid-unused! uid)
+  (let ((type (vector-ref *event-types* uid)))
+    (cond
+     ((not (null-pointer? (event-type-next type)))
+      (write-error-string "trying to unregister external event that is still in use : ")
+      (write-error-integer uid)
+      (write-error-newline)
+      (error "assertion violation"))
+     (else
+      (set-event-type-next! type *unused-event-types-head*)
+      (set-event-type-used?! type #f)
+      (set! *unused-event-types-head* type)))))
 
 ; returns -1 on out-of-memory
-; this could be optimized via a free list, for example
 (define (unused-event-type-uid)
-  (let loop ((i 0))
-    (cond
-     ((= i *number-of-event-types*)
-      (if (add-external-event-types (* 2 *number-of-event-types*))
-	  (begin
-	    (use-event-type-uid! i)
-	    i)
-	  -1))
-     ((not (event-type-used? (vector-ref *event-types* i)))
-      (use-event-type-uid! i)
-      i)
-     (else (loop (+ 1 i))))))
-		   
-(define (s48-external-event-uid name)
+  (cond
+   ((not (null-pointer? *unused-event-types-head*))
+    (event-type-uid *unused-event-types-head*))
+   ((add-external-event-types (* 2 *number-of-event-types*))
+    (unused-event-type-uid))
+   (else -1)))
+
+(define (s48-external-event-uid)
+  (let ((uid (unused-event-type-uid)))
+    (if (= -1 uid)
+	uid
+	(begin
+	  (use-event-type-uid! uid)
+	  uid))))
+  
+(define (s48-permanent-external-event-uid name)
   (let* ((binding (get-imported-binding name))
 	 (uid-val (shared-binding-ref binding)))
-    
+
     (define (indeed uid)
       (shared-binding-set! binding (enter-fixnum uid))
       (use-event-type-uid! uid)
@@ -110,7 +148,7 @@
     (write-error-string "trying to unregister invalid external event: ")
     (write-error-integer index)
     (write-error-newline)
-    (unspecific)) 
+    (error "assertion violation")) 
 
   (if (>= index *number-of-event-types*)
       (lose/invalid))
@@ -123,9 +161,9 @@
       (write-error-string "trying to unregister external event that is still in use : ")
       (write-error-integer index)
       (write-error-newline)
-      (unspecific))
+      (error "assertion violation"))
      (else
-      (set-event-type-used?! type #f)))))
+      (mark-event-type-uid-unused! index)))))
 
 ; Pending events
 
@@ -148,7 +186,7 @@
     (write-error-string "invalid external event: ")
     (write-error-integer index)
     (write-error-newline)
-    (unspecific))
+    (error "assertion-violation"))
 
   (if (>= index *number-of-event-types*)
       (lose))

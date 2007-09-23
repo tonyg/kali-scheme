@@ -90,6 +90,7 @@ S48_EXTERN s48_value	s48_make_weak_pointer(s48_value);
 S48_EXTERN void		s48_check_record_type(s48_value, s48_value);
 S48_EXTERN long		s48_length(s48_value);
 S48_EXTERN s48_value	s48_enter_pointer(void *);
+S48_EXTERN void*	s48_extract_pointer(s48_value);
 S48_EXTERN s48_value	s48_get_imported_binding(char *);
 S48_EXTERN void		s48_define_exported_binding(char *, s48_value);
 
@@ -97,7 +98,8 @@ S48_EXTERN s48_value	s48_set_channel_os_index(s48_value, long);
 S48_EXTERN s48_value	s48_add_channel(s48_value, s48_value, long);
 S48_EXTERN void		s48_close_channel(long);
 
-S48_EXTERN long		s48_external_event_uid(char*);
+S48_EXTERN long		s48_external_event_uid(void);
+S48_EXTERN long		s48_permanent_external_event_uid(char*);
 S48_EXTERN void		s48_note_external_event(long);
 S48_EXTERN void		s48_unregister_external_event_uid(long);
 

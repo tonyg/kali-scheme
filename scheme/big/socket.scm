@@ -137,29 +137,24 @@
 		 (enable-interrupts!)
 		 (loop #t))))))))
 
-(define *host-by-lock* (make-lock))
-
-;; can only get one host name or address at a time
-(define (get-host-by-xxx initiate get-result)
-  (with-lock *host-by-lock*
-    (lambda ()
-      (wait-for-external-event 
-       get-host-by-event-uid
-       (lambda (return wait)
-	 (cond
-	  ((initiate) => return)
-	  (else
-	   (wait)
-	   (get-result))))))))
+(define (get-host-by-xxx retval get-result)
+  (if (pair? retval)
+      (let ((result #f))
+	(dynamic-wind ; we need to release the uid in case the thread gets killed
+	    values
+	    (lambda ()
+	      (wait-for-external-event (car retval)))
+	    (lambda ()
+	      (set! result (get-result (cdr retval)))))
+	result)
+      retval))
 
 (define (get-host-by-name name)
-  (get-host-by-xxx
-   (lambda ()
-     (real-get-host-by-name (host-name->byte-vector name)))
-   get-host-by-name-result))
+  (get-host-by-xxx (real-get-host-by-name (host-name->byte-vector name))
+		   get-host-by-name-result))
 
 (define (get-host-by-address address)
-  (get-host-by-xxx (lambda () (real-get-host-by-address address))
+  (get-host-by-xxx (real-get-host-by-address address)
 		   get-host-by-address-result))
 
 ;; #### This needs to be IDNA
@@ -274,9 +269,11 @@
 (import-lambda-definition close-socket-half (socket input?)
 			  "s48_close_socket_half")
 (import-lambda-definition real-get-host-by-name (name) "s48_get_host_by_name")
-(import-lambda-definition get-host-by-name-result () "s48_get_host_by_name_result")
+(import-lambda-definition get-host-by-name-result (event-uid)
+			  "s48_get_host_by_name_result")
 (import-lambda-definition real-get-host-by-address (address) "s48_get_host_by_address")
-(import-lambda-definition get-host-by-address-result () "s48_get_host_by_address_result")
+(import-lambda-definition get-host-by-address-result (event-uid)
+			  "s48_get_host_by_address_result")
 (import-lambda-definition get-host-name () "s48_get_host_name")
 
 ; UDP calls
@@ -287,7 +284,4 @@
 (import-lambda-definition real-lookup-udp-address (address port)
 			  "s48_lookup_udp_address")
 
-(define get-host-by-event-uid 
-  (shared-binding-ref
-   (lookup-imported-binding "s48_event_gethostby")))
 

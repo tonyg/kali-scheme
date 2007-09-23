@@ -42,9 +42,9 @@ static s48_value	s48_socket(s48_value udp_p, s48_value input_p),
 			s48_close_socket_half(s48_value socket_channel,
 					      s48_value input_p),
                         s48_get_host_by_name(s48_value machine),
-                        s48_get_host_by_name_result(void),
+                        s48_get_host_by_name_result(s48_value event_uid),
                         s48_get_host_by_address(s48_value address),
-                        s48_get_host_by_address_result(void),
+                        s48_get_host_by_address_result(s48_value event_uid),
 			s48_get_host_name(void),
 			s48_udp_send(s48_value channel,
 				     s48_value udp_address,
@@ -75,13 +75,6 @@ static long		connections_index_mask = INITIAL_CONNECTIONS_SIZE - 1;
 static long		connection_count = 0;
 
 /*
- * For asynch gethostbyname.
- */
-
-long gethostby_event_uid;
-
-
-/*
  * Install all exported functions in Scheme48.
  */
 
@@ -105,9 +98,6 @@ s48_init_socket(void)
   S48_EXPORT_FUNCTION(s48_udp_send);
   S48_EXPORT_FUNCTION(s48_udp_receive);
   S48_EXPORT_FUNCTION(s48_lookup_udp_address);
-
-  /* we need this even if we don't do asynch lookups */
-  gethostby_event_uid = s48_external_event_uid("s48_event_gethostby");
 
   S48_GC_PROTECT_GLOBAL(s48_udp_address_type_binding);
   s48_udp_address_type_binding = s48_get_imported_binding("s48-udp-address-type");
@@ -324,11 +314,16 @@ call_gethostbyaddr(s48_value sch_addr)
 }
 
 #ifdef HAVE_PTHREAD_H
-#define S48_MAX_HOST_NAME_LENGTH 128
-static char host_name[S48_MAX_HOST_NAME_LENGTH + 1]; /* is enough */
-static char host_address[128]; /* should be enough */
-int host_address_size;
-int host_address_errno;
+#define S48_MAX_HOST_NAME_LENGTH 1024
+
+struct gethostbyname_handshake
+{
+  long event_uid;
+  char host_name[S48_MAX_HOST_NAME_LENGTH + 1]; /* is enough */
+  int errno_val;
+  int h_length;
+  char* h_addr;
+};
 
 /*
  * Only one call can be active at any given time:
@@ -336,56 +331,98 @@ int host_address_errno;
  */
 
 static void
-gethostbyname_thread(void *ignore)
+gethostbyname_thread(void *void_handshake)
 {
+  struct gethostbyname_handshake *handshake = void_handshake;
   static struct hostent *host; /* will be thread-local */
 
-  RETRY_NULL(host, gethostbyname(host_name));
+  host = gethostbyname(handshake->host_name);
   if (host == NULL)
-      host_address_errno = h_errno;
+    handshake->errno_val = h_errno;
   else
     {
-      host_address_errno = 0;
-      host_address_size = host->h_length;
-      memcpy(host_address, host->h_addr, host_address_size);
+      handshake->h_length = host->h_length;
+      handshake->h_addr = malloc(handshake->h_length);
+      if (handshake->h_addr == NULL)
+	handshake->errno_val = ENOMEM;
+      else
+	handshake->errno_val = 0;
+      
+      memcpy(handshake->h_addr, host->h_addr, handshake->h_length);
     }
-  s48_note_external_event(gethostby_event_uid);
+  s48_note_external_event((long) handshake->event_uid);
 }
 
 static s48_value
 s48_get_host_by_name(s48_value machine)
 {
   pthread_t t;
+  struct gethostbyname_handshake* handshake;
 
   int machine_length = S48_BYTE_VECTOR_LENGTH(machine);
   if (machine_length > S48_MAX_HOST_NAME_LENGTH)
     s48_assertion_violation("s48_get_host_by_name_result", "machine name too long", 1,
 			    machine);
 
-  memcpy(host_name, s48_extract_byte_vector(machine), machine_length);
-  host_name[machine_length] = '\0';
+  handshake = malloc(sizeof(struct gethostbyname_handshake));
+  if (handshake == NULL)
+    s48_out_of_memory_error();
 
-  if (pthread_create(&t, NULL, gethostbyname_thread, NULL))
+  memcpy(handshake->host_name, s48_extract_byte_vector(machine), machine_length);
+  handshake->host_name[machine_length] = '\0';
+  
+  handshake->event_uid = s48_external_event_uid();
+  if (pthread_create(&t, NULL, gethostbyname_thread, (void*) handshake))
     {
       static struct hostent *host;
-      RETRY_NULL(host, gethostbyname(host_name));
+      s48_unregister_external_event_uid(handshake->event_uid);
+      host = gethostbyname(handshake->host_name);
+      free(handshake);
       if (host == NULL)
 	s48_os_error("s48_get_host_by_name_result", h_errno, 1, machine);
       return s48_enter_byte_vector(host->h_addr, host->h_length);
     }
   else
     {
+      s48_value sch_event_uid = S48_UNSPECIFIC;
+      s48_value sch_handshake = S48_UNSPECIFIC;
+      s48_value sch_result;
+      S48_DECLARE_GC_PROTECT(2);
+
       pthread_detach(t);
-      return S48_FALSE;
+
+      S48_GC_PROTECT_2(sch_event_uid, sch_handshake);
+      sch_event_uid = s48_enter_integer(handshake->event_uid);
+      sch_handshake = s48_enter_pointer(handshake);
+
+      sch_result = s48_cons(sch_event_uid, sch_handshake);
+      S48_GC_UNPROTECT();
+      return sch_result;
     }
 }
 
 static s48_value
-s48_get_host_by_name_result(void)
+s48_get_host_by_name_result(s48_value sch_handshake)
 {
-  if (host_address_errno)
-    s48_os_error("s48_get_host_by_name_result", host_address_errno, 0);
-  return s48_enter_byte_vector(host_address, host_address_size);
+  struct gethostbyname_handshake* handshake
+    = s48_extract_pointer(sch_handshake);
+
+  s48_unregister_external_event_uid(handshake->event_uid);
+
+  if (handshake->errno_val)
+    {
+      int errno_val = handshake->errno_val;
+      free(handshake);
+      s48_os_error("s48_get_host_by_name_result", errno_val, 0);
+    }
+  else
+    {
+      s48_value sch_result
+	= s48_enter_byte_vector(handshake->h_addr, handshake->h_length);
+      free(handshake->h_addr);
+      free(handshake);
+      return sch_result;
+    }
 }
 
 /*
@@ -394,46 +431,82 @@ s48_get_host_by_name_result(void)
  * address.
  */
 
+struct gethostbyaddr_handshake
+{
+  long event_uid;
+  struct in_addr address;
+  char host_name[S48_MAX_HOST_NAME_LENGTH + 1];
+};
 
 static void
-gethostbyaddr_thread(void *ignore)
+gethostbyaddr_thread(void *void_handshake)
 {
+  struct gethostbyaddr_handshake *handshake = void_handshake;
   struct in_addr addr;
   struct hostent *hostdata;
   
-  hostdata = gethostbyaddr(host_address,
+  hostdata = gethostbyaddr(&(handshake->address),
 			   sizeof(struct in_addr),
 			   AF_INET);
   if (hostdata == NULL)
-    strcpy(host_name, inet_ntoa(*((struct in_addr *) host_address)));
+    strcpy(handshake->host_name,
+	   inet_ntoa(*((struct in_addr *) &(handshake->address))));
   else
-    strcpy(host_name, hostdata->h_name);
+    strcpy(handshake->host_name, hostdata->h_name);
 
-  s48_note_external_event(gethostby_event_uid);
+  s48_note_external_event((long) handshake->event_uid);
 }
  
 static s48_value
 s48_get_host_by_address(s48_value sch_addr)
 {
   pthread_t t;
+  struct gethostbyaddr_handshake* handshake;
+  
+  handshake = malloc(sizeof(struct gethostbyaddr_handshake));
+  if (handshake == NULL)
+    s48_out_of_memory_error();
 
-  host_address_size = sizeof(struct in_addr);
-  memcpy(host_address,
-	 (char *) s48_extract_byte_vector(sch_addr), host_address_size);
+  memcpy(&(handshake->address),
+	 (char *) s48_extract_byte_vector(sch_addr), sizeof(struct in_addr));
 
-  if (pthread_create(&t, NULL, gethostbyaddr_thread, NULL))
+  handshake->event_uid = s48_external_event_uid();
+  if (pthread_create(&t, NULL, gethostbyaddr_thread, (void*) handshake))
+    {
+      s48_unregister_external_event_uid(handshake->event_uid);
+      free(handshake);
       return call_gethostbyaddr(sch_addr);
+    }
   else
     {
+      s48_value sch_event_uid = S48_UNSPECIFIC;
+      s48_value sch_handshake = S48_UNSPECIFIC;
+      s48_value sch_result;
+      S48_DECLARE_GC_PROTECT(2);
+
       pthread_detach(t);
-      return S48_FALSE;
+
+      S48_GC_PROTECT_2(sch_event_uid, sch_handshake);
+      sch_event_uid = s48_enter_integer(handshake->event_uid);
+      sch_handshake = s48_enter_pointer(handshake);
+
+      sch_result = s48_cons(sch_event_uid, sch_handshake);
+      S48_GC_UNPROTECT();
+      return sch_result;
     }
 }
 	 
 static s48_value 
-s48_get_host_by_address_result(void)
+s48_get_host_by_address_result(s48_value sch_handshake)
 {
-  return s48_enter_string_latin_1(host_name);
+  struct gethostbyaddr_handshake* handshake
+    = s48_extract_pointer(sch_handshake);
+  s48_value sch_result;
+
+  s48_unregister_external_event_uid(handshake->event_uid);
+  sch_result = s48_enter_string_latin_1(handshake->host_name);
+  free(handshake);
+  return sch_result;
 }
 #else
 static s48_value

@@ -45,33 +45,14 @@
    ((fetch-external-event-condvar! uid)
     => notify-external-event-condvar!)))
 
-; PROC takes a procedure RETURN and a thunk WAIT performs the wait
-; itself.  The sequence is supposed to go as follows:
+(define (wait-for-external-event uid)
+  (let ((ints (disable-interrupts!))
+	(condvar (make-condvar)))
+    (add-external-event-condvar! uid condvar)
+    (with-new-proposal (lose)
+      (maybe-commit-and-wait-for-condvar condvar))
+    (set-enabled-interrupts! ints)))
 
-; - PROC sets up whatever will cause the external event
-; - it then either calls RETURN on the return values, meaning that the
-;   result is already available and no event will come
-; - ... or it calls WAIT which waits for the event and then returns
-;   the results.
-
-(define (wait-for-external-event uid proc)
-  (let ((ints #f))
-    (dynamic-wind
-	(lambda ()
-	  (set! ints (disable-interrupts!)))
-	(lambda ()
-	  (let ((condvar (make-condvar)))
-	    (add-external-event-condvar! uid condvar)
-	    (proc
-	     (lambda results
-	       (fetch-external-event-condvar! uid) ; ditch
-	       (apply values results))
-	     (lambda () ; actually wait
-	       (with-new-proposal (lose)
-		 (maybe-commit-and-wait-for-condvar condvar))))))
-	(lambda ()
-	  (set-enabled-interrupts! ints)))))
-     
 ; This just deletes from the alist.
 
 (define (fetch-external-event-condvar! uid)

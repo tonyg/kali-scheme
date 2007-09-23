@@ -620,7 +620,7 @@
           s48-os-signal-pending
 	  s48-reset-interrupts!
 
-	  s48-external-event-uid s48-unregister-external-event-uid
+	  s48-external-event-uid s48-permanent-external-event-uid s48-unregister-external-event-uid
 	  s48-external-event-pending?/unsafe s48-external-event-ready?/unsafe
 	  s48-note-external-event!/unsafe
 	  s48-dequeue-external-event!/unsafe

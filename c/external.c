@@ -901,6 +901,13 @@ s48_enter_pointer(void *pointer)
   return obj;
 }
 
+void*
+s48_extract_pointer(s48_value sch_pointer)
+{
+  S48_CHECK_VALUE(sch_pointer);
+  return *(S48_ADDRESS_AFTER_HEADER(sch_pointer, void *));
+}
+
 s48_value
 s48_cons(s48_value v1, s48_value v2)
 {
