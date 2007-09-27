@@ -167,13 +167,13 @@ posix_get_groups(void)
   grouplist = (gid_t *) malloc(count * sizeof(gid_t));
 
   if (grouplist == NULL)
-    s48_raise_out_of_memory_error();
+    s48_out_of_memory_error();
 
   RETRY_NEG(status, getgroups(count, grouplist));
 
   if (status == -1) {
     free(grouplist);
-    s48_raise_os_error(errno); }
+    s48_os_error("posix_get_groups", errno, 0); }
 
   for(i = count - 1; i > -1; i--) {
     temp = s48_enter_gid(grouplist[i]);

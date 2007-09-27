@@ -20,3 +20,9 @@ s48_jump_to_native_address(long address, long template)
 {
   return 3;    /* indicates failure; see scheme/vm/interp/call.scm */
 }
+
+void
+s48_init_asm_glue(void)
+{
+}
+

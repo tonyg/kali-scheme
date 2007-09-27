@@ -53,7 +53,10 @@
   (condition
    (make-i/o-error status)
    (make-who-condition who)
-   (make-message-condition (os-error-message status))
+   (make-message-condition
+    (os-string->string
+     (byte-vector->os-string
+      (os-error-message status))))
    (make-irritants-condition (list channel buffer start count wait?))))
 
 ; Set CONDVAR's value to be RESULT.

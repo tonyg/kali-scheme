@@ -87,6 +87,10 @@
 (define-interface ps-flonums-interface
   (export fl+ fl- fl* fl/ fl= fl< fl> fl<= fl>=))
 
+(define-interface ps-unsigned-integers-interface
+  (export un+ un- un* unquotient unremainder un= un< un> un<= un>=
+	  unsigned->integer integer->unsigned))
+
 (define-interface ps-receive-interface
   (export receive))
 

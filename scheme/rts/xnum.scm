@@ -96,7 +96,7 @@
 		    (lambda (lose)
 		      (set-final-method! mtable
 					 (lambda (next-method . args)
-					   (apply lose args)))
+					   (apply lose (enum exception wrong-type-argument) args)))
 		      (lambda args
 			((perform) args))))))
 		      

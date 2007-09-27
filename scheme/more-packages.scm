@@ -293,8 +293,10 @@
 					 call-external-value)
   (open scheme-level-2 define-record-types
 	primitives
-        architecture
-	vm-exceptions interrupts exceptions
+	os-strings
+        architecture ; includes ENUM
+	enum-case
+	vm-exceptions interrupts exceptions conditions
 	placeholders
 	shared-bindings
 	byte-vectors
@@ -361,46 +363,6 @@
 	exceptions)		;assertion-violation
   (optimize auto-integrate)
   (files (big value-pipe)))
-
-; Unix Sockets
-
-(define-structures ((sockets (export open-socket
-				     close-socket
-				     socket-accept
-				     socket-port-number
-				     socket-client
-				     get-host-name
-				     get-host-by-name
-				     get-host-by-address
-
-				     ; From the old interface
-				     ; I would like to get rid of these.
-				     socket-listen
-				     socket-listen-channels
-				     socket-client-channels))
-		    (udp-sockets (export get-host-name
-					 close-socket
-					 open-udp-socket
-					 udp-send
-					 udp-receive
-					 lookup-udp-address
-					 socket-port-number
-					 udp-address?
-					 udp-address-address
-					 udp-address-hostname
-					 udp-address-port)))
-  (open scheme define-record-types
-	external-calls
-	channels		; channel? close-channel
-	exceptions		; error assertion-violation
-	proposals		; atomically!
-	interrupts		; enable-interrupts! disable-interrupts!
-	channel-ports		; {in|out}put-channel->port
-	channel-i/o		; wait-for-channel
-	condvars		; for wait-for-channel
-	locks external-events
-	byte-vectors)
-  (files (big socket)))
 
 ; Heap traverser
 

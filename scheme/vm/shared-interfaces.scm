@@ -82,7 +82,7 @@
 
 	  enter-fixnum extract-fixnum
 	  bits-per-fixnum greatest-fixnum-value least-fixnum-value
-	  too-small-for-fixnum? too-big-for-fixnum?
+	  too-small-for-fixnum? too-big-for-fixnum? unsigned-too-big-for-fixnum?
 	  descriptor->fixnum fixnum->stob
 	  fixnum= fixnum< fixnum> fixnum<= fixnum>=
 	  fixnum-bitwise-not fixnum-bitwise-and

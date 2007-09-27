@@ -263,7 +263,7 @@ posix_waitpid(void)
       if (errno == ECHILD)		/* no one left to wait for */
 	return S48_FALSE;
       else if (errno != EINTR)
-	s48_raise_os_error(errno);
+	s48_os_error("posix_waitpid", errno, 0);
     }
     else {
       s48_value sch_pid = lookup_pid(c_pid);
@@ -299,7 +299,7 @@ posix_fork(void)
   pid_t child_pid = fork();
 
   if (child_pid < 0)
-    s48_raise_os_error(errno);
+    s48_os_error("posix_fork", errno, 0);
 
   if (child_pid == 0)
     return S48_FALSE;
@@ -354,7 +354,7 @@ posix_exec(s48_value program, s48_value lookup_p,
 
   free(c_args);
   s48_start_alarm_interrupts();
-  s48_raise_os_error(errno);
+  s48_os_error("posix_exec", errno, 0);
 
   /* appease gcc -Wall */
   return S48_FALSE;
@@ -372,13 +372,13 @@ enter_byte_vector_array(s48_value vectors)
   int i;
 
   if (result == NULL)
-    s48_raise_out_of_memory_error();
+    s48_out_of_memory_error();
   
   for(i = 0; i < length; i++, vectors = S48_UNSAFE_CDR(vectors)) {
     s48_value vector = S48_UNSAFE_CAR(vectors);
     if (! S48_BYTE_VECTOR_P(vector)) {
       free(result);
-      s48_raise_argument_type_error(vector); }
+      s48_assertion_violation(NULL, "not a byte vector", 1, vector); }
     result[i] = S48_UNSAFE_EXTRACT_BYTE_VECTOR(vector); }
   result[length] = NULL;
 
@@ -396,7 +396,7 @@ add_dot_slash(char *name)
   char *new_name = (char *)malloc((len + 1) * sizeof(char));
   
   if (new_name == NULL)
-    s48_raise_out_of_memory_error();
+    s48_out_of_memory_error();
   
   new_name[0] = '.';
   new_name[1] = '/';
@@ -497,7 +497,8 @@ posix_initialize_named_signals(void)
   named_signals = S48_SHARED_BINDING_REF(posix_signals_vector_binding);
 
   if(! S48_VECTOR_P(named_signals))
-    s48_raise_argument_type_error(named_signals);
+    s48_assertion_violation("posix_initialize_named_signals", "not a vector", 1,
+			    named_signals);
     
   length = S48_UNSAFE_VECTOR_LENGTH(named_signals);
 
@@ -594,7 +595,7 @@ extract_signal(s48_value sch_signal)
   s48_value type;
 
   if (! S48_RECORD_P(sch_signal))
-    s48_raise_argument_type_error(sch_signal);
+    s48_assertion_violation(NULL, "not a record", 1, sch_signal);
 
   type = S48_UNSAFE_RECORD_TYPE(sch_signal);
 
@@ -604,14 +605,14 @@ extract_signal(s48_value sch_signal)
 	&& signal_map[canonical] != -1)
       return signal_map[canonical];
     else
-      s48_raise_argument_type_error(sch_signal); }
+      s48_assertion_violation(NULL, "not a valid signal index", 1, sch_signal); }
 
   else if (type ==
 	   S48_UNSAFE_SHARED_BINDING_REF(posix_unnamed_signal_type_binding))
     return s48_extract_fixnum(S48_UNSAFE_RECORD_REF(sch_signal, 1));
 
   else
-    s48_raise_argument_type_error(sch_signal);
+    s48_assertion_violation(NULL, "not a signal", 1, sch_signal);
 }
 
 /*
@@ -669,7 +670,7 @@ posix_request_interrupts(s48_value sch_signum)
                                 malloc(sizeof(struct sigaction));
     
     if (old == NULL)
-      s48_raise_out_of_memory_error();
+      s48_out_of_memory_error();
 
     sa.sa_handler = generic_interrupt_catcher;
     sigfillset(&sa.sa_mask);
@@ -677,7 +678,7 @@ posix_request_interrupts(s48_value sch_signum)
 
     if (sigaction(signum, &sa, old) != 0) {
       free(old);
-      s48_raise_os_error(errno); }
+      s48_os_error("posix_request_interrupts", errno, 1, sch_signum); }
 
     saved_actions[signum] = old; }
     
@@ -698,7 +699,7 @@ cancel_interrupt_request(int signum)
     {
       
       if (sigaction(signum, old, (struct sigaction *) NULL) != 0)
-	s48_raise_os_error(errno);
+	s48_os_error(NULL, errno, 1, s48_enter_fixnum(signum));
       
       free(old);
       saved_actions[signum] = NULL; 

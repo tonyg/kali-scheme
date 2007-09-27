@@ -41,14 +41,14 @@ shared_object_dlopen(s48_value name, s48_value complete_name_p)
 
   name_utf16 = malloc(sizeof(WCHAR) * (len + 1));
   if (name_utf16 == NULL)
-    s48_raise_out_of_memory_error();
+    s48_out_of_memory_error();
   s48_utf_8of16_to_utf_16(s48_extract_byte_vector(full_name), name_utf16, NULL);
 
   handle = LoadLibraryW(name_utf16);
 
   free(name_utf16);
   if (handle == NULL)
-    s48_raise_string_os_error(ps_error_string(GetLastError()));
+    s48_os_error("shared_object_dlopen", GetLastError(), 1, name);
 
   res = S48_MAKE_VALUE(HINSTANCE);
   S48_SET_VALUE(res, HINSTANCE, handle);
@@ -71,7 +71,8 @@ shared_object_dlsym(s48_value handle, s48_value name)
   entry = GetProcAddress(native_handle, native_name);
 
   if (entry == NULL)
-    s48_raise_string_os_error(ps_error_string(GetLastError()));
+    s48_os_error("shared_object_dlsym", GetLastError(), 2,
+		 handle, name);
 
   return s48_enter_pointer(entry);
 }
@@ -82,7 +83,7 @@ shared_object_dlclose(s48_value handle)
   HINSTANCE native_handle = S48_EXTRACT_VALUE(handle, HINSTANCE);
   
   if (!FreeLibrary(native_handle) < 0)
-    s48_raise_string_os_error(ps_error_string(GetLastError()));
+    s48_os_error("shared_object_dlclose", GetLastError(), 1, handle);
   return S48_UNSPECIFIC;
 }
 

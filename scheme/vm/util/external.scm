@@ -131,6 +131,9 @@
   (lambda (long)
     (address-after-header (integer->b-vector long))))
 
+(define external-bignum-from-unsigned-long
+  (fake-it 'external-bignum-from-unsigned-long))
+
 (define  (external-bignum-fits-in-word? bignum-addr word-length two-compl?)
   (let ((bignum (b-vector->integer (address->stob-descriptor bignum-addr))))
     (and (>= bignum least-fixnum-value)
@@ -171,8 +174,8 @@
 
 (define host-architecture "s48")
 
-(define (raise-argument-type-error val)
-  (fake-it 'raise-argument-type-error))
+(define (argument-type-violation val)
+  (fake-it 'argument-type-violation))
 
-(define (raise-range-error val min max)
-  (fake-it 'raise-range-error))
+(define (range-violation val min max)
+  (fake-it 'range-violation))

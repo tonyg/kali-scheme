@@ -19,6 +19,7 @@
           ;type/int8
           ;type/int8u
           type/integer
+	  type/unsigned-integer
           type/float
 	  type/char
 	  type/address

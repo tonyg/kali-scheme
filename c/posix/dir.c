@@ -143,13 +143,13 @@ posix_readdir(s48_value svdir)
 
   dpp = S48_EXTRACT_VALUE_POINTER(svdir, DIR *);
   if (*dpp == (DIR *)NULL)
-    s48_raise_argument_type_error(svdir);	/* not really correct error */
+    s48_assertion_violation("posix_readdir", "invalid NULL value", 1, svdir);
   do {
     errno = 0;
     RETRY_NULL(dep, readdir(*dpp));
     if (dep == (struct dirent *)NULL) {
       if (errno != 0)
-	s48_raise_os_error(errno);
+	s48_os_error("posix_readdir", errno, 1, svdir);
       return (S48_FALSE);
     }
     name = dep->d_name;
@@ -200,10 +200,10 @@ posix_working_directory(s48_value new_wd)
 	buffer_size *= 2;
 	buffer = (char *) malloc(buffer_size * sizeof(char));
 	if (buffer == NULL)
-	  s48_raise_out_of_memory_error();
+	  s48_out_of_memory_error();
       }
       else
-	s48_raise_os_error(errno);
+	s48_os_error("posix_working_directory", errno, 1, new_wd);
     }
   }
   else {
@@ -331,13 +331,11 @@ posix_file_stuff(s48_value op, s48_value arg0, s48_value arg1)
       case ELOOP:	/* too many symbolic links */
 	return S48_FALSE;
       default:		/* all other errors are (supposed to be) real errors */
-	s48_raise_os_error(errno); }
+	s48_os_error("posix_file_stuff/access", errno, 2, arg0, arg1); }
   }
   default:
     /* appease gcc -Wall */
-    s48_raise_range_error(op,
-			  S48_UNSAFE_ENTER_FIXNUM(0),
-			  S48_UNSAFE_ENTER_FIXNUM(6));
+    s48_assertion_violation("posix_file_stuff", "invalid operation", 1, op);
   }
   return S48_UNSPECIFIC;
 }

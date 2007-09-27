@@ -24,14 +24,18 @@
 	 ((+ x (+ 'a y)) (+ 'a (+ x y))))  ; result of the literal.  Maybe these
 	call)))))                          ; should be left out. 
 
-(define-scheme-primop   + #f type/integer (addition-simplifier   +   -   0))
-(define-scheme-primop fl+ #f type/float   (addition-simplifier fl+ fl- 0.0))
+(define-scheme-primop   + #f type/integer          (addition-simplifier   +   -   0))
+(define-scheme-primop fl+ #f type/float            (addition-simplifier fl+ fl- 0.0))
+(define-scheme-primop un+ #f type/unsigned-integer (addition-simplifier un+ un-   0))
 
 ; The simplifiers think that the constant folders have the same name as
 ; the primops.  It is easier to define these than to change the simplifiers.
 (define fl+ +)
 (define fl- -)
 (define fl* *)
+(define un+ +)
+(define un- -)
+(define un* *)
 
 (define-syntax subtraction-simplifier
   (syntax-rules ()
@@ -48,8 +52,9 @@
 	 ((- (+ 'a x) (+ 'b y)) (- (+ '(- a b) x) y)))
 	call)))))
        
-(define-scheme-primop   - #f type/integer (subtraction-simplifier +     -   0))
-(define-scheme-primop fl- #f type/float   (subtraction-simplifier fl+ fl- 0.0))
+(define-scheme-primop   - #f type/integer          (subtraction-simplifier +     -   0))
+(define-scheme-primop un- #f type/unsigned-integer (subtraction-simplifier un+ un-   0))
+(define-scheme-primop fl- #f type/float            (subtraction-simplifier fl+ fl- 0.0))
 
 ; This should check for multiply by powers of 2 (other constants can be
 ; done later).
@@ -91,9 +96,10 @@
    ((fl* 'a (fl* x 'b)) (fl* x '(fl* a b)))
    ((fl* 'a (fl* 'b x)) (fl* x '(fl* a b)))))
 
-(define-scheme-primop      * #f type/integer simplify-multiply)
-(define-scheme-primop small* #f type/integer simplify-multiply)
-(define-scheme-primop    fl* #f type/float   simplify-float-multiply)
+(define-scheme-primop      * #f type/integer          simplify-multiply)
+(define-scheme-primop    un* #f type/unsigned-integer simplify-multiply)
+(define-scheme-primop small* #f type/integer          simplify-multiply)
+(define-scheme-primop    fl* #f type/float            simplify-float-multiply)
 
 (define-syntax quotient-simplifier
   (syntax-rules ()
@@ -108,13 +114,17 @@
 	 ((id 'a 'b) '(op a b)))
 	call)))))
 
-(define-scheme-primop quotient  exception type/integer
+(define-scheme-primop quotient exception type/integer
   (quotient-simplifier quotient 1 0 quotient))
 
-(define-scheme-primop fl/       exception type/float
+(define-scheme-primop unquotient exception type/unsigned-integer
+  (quotient-simplifier unquotient 1 0 quotient))
+
+(define-scheme-primop fl/ exception type/float
   (quotient-simplifier fl/ 1.0 0.0 /))
 
 (define-scheme-primop remainder exception type/integer)
+(define-scheme-primop unremainder exception type/unsigned-integer)
 
 (define (simplify-ashl call)
   (simplify-args call 0)
@@ -243,8 +253,10 @@
 
 (define-scheme-primop =      #f bool-type (simplify-= = = + -))
 (define-scheme-primop fl=    #f bool-type (simplify-= fl= = fl+ fl-))
+(define-scheme-primop un=    #f bool-type (simplify-= un= = un+ un-))
 (define-scheme-primop <      #f bool-type (simplify-< < < + -))
 (define-scheme-primop fl<    #f bool-type (simplify-< fl< < fl+ fl-))
+(define-scheme-primop un<    #f bool-type (simplify-< un< < un+ un-))
 (define-scheme-primop char=? #f bool-type simplify-char=?)
 (define-scheme-primop char<? #f bool-type simplify-char<?)
 
@@ -270,6 +282,9 @@
 
 (define-scheme-primop char->ascii #f type/integer simplify-char->ascii)
 (define-scheme-primop ascii->char #f type/integer simplify-ascii->char)
+
+(define-scheme-primop unsigned->integer type/integer)
+(define-scheme-primop integer->unsigned type/unsigned-integer)
 
 ;(define (simplify-sign-extend call)
 ;  (simplify-args call 0)

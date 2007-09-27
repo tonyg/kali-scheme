@@ -149,6 +149,7 @@
 	channels
 	i/o i/o-internal
 	(subset primitives (os-error-message))
+	os-strings
 	conditions
 	(subset threads-internal (maybe-commit-no-interrupts))
 	proposals
@@ -289,7 +290,10 @@
     (define-syntax assert
       (syntax-rules ()
         ((assert foo) #t)))
-    
+
+    (define (integer->unsigned x) x)
+    (define un> >)
+
     ; We just know this.
     (define useful-bits-per-word c-useful-bits-per-word))
   (files (vm/data data)))

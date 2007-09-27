@@ -118,16 +118,17 @@ posix_regexp_match(s48_value sch_regex, s48_value string, s48_value sch_start,
               (S48_EXTRACT_BOOLEAN(eol_p) ? 0 : REG_NOTEOL);
 
   if ((start < 0) || (start > len))
-    s48_raise_range_error(sch_start,
-			  s48_enter_fixnum(0),
-			  s48_enter_fixnum(len));
+    s48_assertion_violation("posix_regexp_match", "start out of range", 3,
+			    sch_start,
+			    s48_enter_fixnum(0),
+			    s48_enter_fixnum(len));
 
   if (nmatch <= 32)
     pmatch = pmatch_buffer;
   else {
     pmatch = (regmatch_t *) malloc(nmatch * sizeof(regmatch_t));
     if (pmatch == NULL)
-      s48_raise_out_of_memory_error(); }
+      s48_out_of_memory_error(); }
     
   status = regexec(S48_EXTRACT_VALUE_POINTER(sch_regex, regex_t),
 		   S48_UNSAFE_EXTRACT_BYTE_VECTOR(string) + start,

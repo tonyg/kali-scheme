@@ -112,6 +112,11 @@ s48_run_machine(long (*proc) (void))
   return s48_return_value;
 }
 
+/* 
+ * #### We should be producing UTF-8 here; see raise_windows_error in fd-io.c 
+ * for how it's done.
+ */
+   
 unsigned char *
 ps_error_string(long the_errno)
 {

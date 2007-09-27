@@ -203,6 +203,7 @@ dnl
 define(S48_CREATE_BUILD_DIRS, [dnl
         mkdir -p c/bibop
         mkdir -p c/unix
+	mkdir -p c/net
         mkdir -p c/posix
         mkdir -p c/fake
 ])dnl
@@ -222,7 +223,6 @@ AC_ARG_ENABLE([native-code],
 		   i?86 )
 			 AC_MSG_RESULT([x86])
 			 ASM_OBJECTS='${X86_ASM_OBJECTS}'
-			 ASM_INITIALIZERS='${X86_ASM_INITIALIZERS}'
 			 AC_CHECK_FUNCS(sigaltstack, HAVE_SIGALTSTACK=1, HAVE_SIGALTSTACK=0)
 			 if test "$HAVE_SIGALTSTACK" = 0; then
 				 AC_MSG_ERROR([Your system lacks sigaltstack])
@@ -239,17 +239,14 @@ AC_ARG_ENABLE([native-code],
 		   * )
 		     AC_MSG_RESULT([no])
 		     ASM_OBJECTS='${FAKE_ASM_OBJECTS}'
-		     ASM_INITIALIZERS='';;
 		 esac;;
 	   * )
 	     AC_MSG_RESULT([no (picked GC not compatible)])
 	     ASM_OBJECTS='${FAKE_ASM_OBJECTS}'
-	     ASM_INITIALIZERS='';;
 	 esac],
    	[dnl
 	 AC_MSG_RESULT([no])
 	 ASM_OBJECTS='${FAKE_ASM_OBJECTS}'
-	 ASM_INITIALIZERS=''
         ]
 )])dnl
 dnl
@@ -462,7 +459,6 @@ fail
      AC_SUBST(GC_OBJS)
      AC_SUBST(ASM_OBJECTS)
      AC_SUBST(ASM_STYLE)
-     AC_SUBST(ASM_INITIALIZERS)
      AC_SUBST(S48_GC_TWOSPACE)
      AC_SUBST(S48_GC_BIBOP)
      AC_SUBST(BIT_SUFFIX)

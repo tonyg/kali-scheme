@@ -256,7 +256,9 @@
 		     (make-i/o-error)
 		     (make-who-condition op)
 		     (make-message-condition
-		      (os-error-message (car (reverse (condition-irritants c)))))
+		      (os-string->string
+		       (byte-vector->os-string
+			(os-error-message (car (reverse (condition-irritants c)))))))
 		     (make-irritants-condition (list file-name)))))
 	     (else
 	      (punt))))

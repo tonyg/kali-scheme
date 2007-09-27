@@ -10,6 +10,11 @@
 (define-c-arith-binop-generator * "*")
 (define-c-arith-binop-generator quotient  "/")
 
+(define-c-arith-binop-generator un+ "+")
+(define-c-arith-binop-generator un- "-")
+(define-c-arith-binop-generator un* "*")
+(define-c-arith-binop-generator unquotient  "/")
+
 (define-c-arith-binop-generator fl+ "+")
 (define-c-arith-binop-generator fl- "-")
 (define-c-arith-binop-generator fl* "*")
@@ -24,6 +29,7 @@
     (format port ")")))
 
 (define-c-arith-binop-generator remainder "%")
+(define-c-arith-binop-generator unremainder "%")
 (define-c-arith-binop-generator bitwise-and "&")
 (define-c-arith-binop-generator bitwise-ior "|")
 (define-c-arith-binop-generator bitwise-xor "^")
@@ -77,6 +83,8 @@
 (define-c-comp-binop-generator <      "<" )
 (define-c-comp-binop-generator fl=    "==")
 (define-c-comp-binop-generator fl<    "<" )
+(define-c-comp-binop-generator un=    "==")
+(define-c-comp-binop-generator un<    "<" )
 (define-c-comp-binop-generator char=? "==")
 (define-c-comp-binop-generator char<? "<" )
 
@@ -89,6 +97,18 @@
 (define-c-generator char->ascii #t
   (lambda (call port indent)
     (display "((unsigned char) " port)
+    (c-value (call-arg call 0) port)
+    (display ")" port)))
+
+(define-c-generator unsigned->integer #t
+  (lambda (call port indent)
+    (display "((long) " port)
+    (c-value (call-arg call 0) port)
+    (display ")" port)))
+
+(define-c-generator integer->unsigned #t
+  (lambda (call port indent)
+    (display "((unsigned long) " port)
     (c-value (call-arg call 0) port)
     (display ")" port)))
     

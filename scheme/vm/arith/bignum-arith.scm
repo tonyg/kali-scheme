@@ -198,11 +198,18 @@
 (define (long->external-bignum x)
   (external-bignum-from-long x))
 
+(define (unsigned-long->external-bignum x)
+  (external-bignum-from-unsigned-long x))
+
 ; Converting between longs and bignums
 
 (define (long->bignum x key)
   (set-bignum-preallocation-key! key)
   (enter-bignum (long->external-bignum x)))
+
+(define (unsigned-long->bignum x key)
+  (set-bignum-preallocation-key! key)
+  (enter-bignum (unsigned-long->external-bignum x)))
 
 (define (external-bignum->integer external-bignum)
   (if (external-bignum-fits-in-word? external-bignum
@@ -210,3 +217,4 @@
 				     #t)
       (enter-fixnum (external-bignum->long external-bignum))
       (enter-bignum external-bignum)))
+

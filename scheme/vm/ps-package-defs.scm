@@ -64,13 +64,13 @@
     ; for use in C functions usable from external code, defined as
     ; PreScheme procedures
 
-    (define raise-argument-type-error
+    (define argument-type-violation
       ;; value
-      (external "s48_raise_argument_type_error" (=> (integer) null)))
+      (external "s48_argument_type_violation" (=> (integer) null)))
 
-    (define raise-range-error
+    (define range-violation
       ;; value, min, max
-      (external "s48_raise_range_error" (=> (integer integer integer) null)))
+      (external "s48_range_violation" (=> (integer integer integer) null)))
 
     ; Lots of bignum stuff.  This should be moved to its own interface.
     (define export-key
@@ -118,6 +118,8 @@
  		(=> (address address) address)))
     (define external-bignum-from-long
       (external "(char *) s48_long_to_bignum" (=> (integer) address)))
+    (define external-bignum-from-unsigned-long
+      (external "(char *) s48_ulong_to_bignum" (=> (unsigned-integer) address)))
     (define external-bignum->long
       (external "s48_bignum_to_long" (=> (address) integer)))
     (define external-bignum-fits-in-word?

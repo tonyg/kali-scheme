@@ -321,9 +321,8 @@
 ; Data structures
 
 (define-structure data vm-data-interface
-  (open prescheme vm-utilities
-	vm-architecture
-	ps-platform)
+  (open prescheme ps-unsigned-integers vm-utilities
+	ps-platform vm-architecture)
   ;(optimize auto-integrate)
   (files (data data)))
 
@@ -485,7 +484,7 @@
   (files (arith bignum-arith)))
 
 (define-structure integer-arithmetic integer-arithmetic-interface
-  (open prescheme 
+  (open prescheme ps-unsigned-integers
 	fixnum-arithmetic
 	bignum-arithmetic
 	external

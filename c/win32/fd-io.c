@@ -1341,7 +1341,7 @@ raise_windows_error(DWORD id)
 			      NULL, /* lpDefaultChar */
 			      NULL /* lpUsedDefaultChar */
 			      );
-	  s48_raise_string_os_error(buf_utf8);
+	  s48_error(NULL, buf_utf8, 0);
 	}
       else
 	/* risky, but we assume some amount of sanity on the side of
@@ -1406,7 +1406,7 @@ s48_get_host_by_name(s48_value machine)
   
   int machine_length = S48_BYTE_VECTOR_LENGTH(machine);
   if (machine_length > S48_MAX_HOST_NAME_LENGTH)
-    s48_raise_argument_type_error(machine);
+    s48_assertion_violation("s48_get_host_by_name", "invalid machine length", 1, machine); 
 
   memcpy(host_name, s48_extract_byte_vector(machine), machine_length);
   host_name[machine_length] = '\0';
@@ -1425,7 +1425,7 @@ static s48_value
 s48_get_host_by_name_result(void)
 {
   if (host_address_errno)
-    s48_raise_os_error(host_address_errno);
+    s48_os_error("s48_get_host_by_name_result", host_address_errno, 0);
   return s48_enter_byte_vector(host_address, host_address_size);
 }
 
@@ -1477,7 +1477,7 @@ static s48_value
 s48_get_host_by_address_result(void)
 {
   if (host_address_errno)
-    s48_raise_os_error(host_address_errno);
+    s48_os_error("s48_get_host_by_address_result", host_address_errno, 0);
   return s48_enter_string_latin_1(host_name);
 }
 
@@ -1785,7 +1785,7 @@ s48_accept(s48_value channel, s48_value retry_p)
       HANDLE thread_handle;
 
       if (!s48_add_pending_fd(socket_fd, PSTRUE))
-	s48_raise_out_of_memory_error();
+	s48_out_of_memory_error();
 
       stream_descriptor->socket_data.hatch_callback = accept_callback;
       thread_handle = CreateThread(NULL, /* lpThreadAttributes */
@@ -1852,9 +1852,8 @@ s48_connect(s48_value channel,
   memset((void *)&address, 0, sizeof(address));
 
   if (S48_BYTE_VECTOR_LENGTH(sch_address) > sizeof(address))
-    s48_raise_range_error(s48_enter_fixnum(S48_BYTE_VECTOR_LENGTH(sch_address)),
-			  S48_UNSAFE_ENTER_FIXNUM(0),
-			  s48_enter_fixnum(sizeof(address)));
+    s48_assertion_violation("s48_connect", "address has invalid length", 1,
+			    sch_address);
 
   memcpy((void *)&address, (void *)host_address, host_address_size);
 
@@ -1893,7 +1892,7 @@ s48_connect(s48_value channel,
       HANDLE thread_handle;
 
       if (!s48_add_pending_fd(socket_fd, PSFALSE))
-	s48_raise_out_of_memory_error();
+	s48_out_of_memory_error();
 
       stream_descriptor->socket_data.hatch_callback = connect_callback;
       thread_handle = CreateThread(NULL, /* lpThreadAttributes */

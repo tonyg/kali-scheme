@@ -23,6 +23,7 @@ echo ,load =scheme48/sort/interfaces.scm >> %srcdir%\build\build-usual-image.inp
 echo ,load =scheme48/sort/packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/more-packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/r6rs/packages.scm >> %srcdir%\build\build-usual-image.input
+echo ,load =scheme48/net/packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/posix/packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/cml/interfaces.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/cml/packages.scm >> %srcdir%\build\build-usual-image.input

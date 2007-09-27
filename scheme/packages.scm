@@ -430,7 +430,7 @@
 	    dump/restore
 	    dynamic-externals
 	    enum-case
-	    enum-sets
+	    enum-sets enum-sets-internal
 	    extended-numbers
 	    extended-ports
 	    externals
@@ -449,6 +449,8 @@
 	    mask-types
 	    mvlet
 	    nondeterminism
+	    net-addresses
+	    net-sockets
 	    package-commands-internal
 	    package-mutation
             parse-bytecode
