@@ -23,13 +23,6 @@
 	(subset i/o-internal (open-input-port? eof-object)))
   (files (big check)))
 
-(define-structure sockets-test (export tcp-sockets-tests
-				       udp-sockets-tests)
-  (open scheme test-suites
-	byte-vectors threads
-	sockets udp-sockets)
-  (files (big socket-check)))
-
 (define-structure inversion-lists-test (export inversion-lists-tests)
   (open scheme test-suites
 	inversion-lists)
@@ -49,3 +42,10 @@
       (misc-big-tests
        inversion-lists-tests
        constant-tables-tests))))
+
+(define-structure sockets-test (export tcp-sockets-tests
+				       udp-sockets-tests)
+  (open scheme test-suites
+	byte-vectors threads
+	sockets udp-sockets)
+  (files (net socket-check)))
