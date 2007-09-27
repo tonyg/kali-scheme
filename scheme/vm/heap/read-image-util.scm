@@ -96,12 +96,15 @@
 ; memory intensive, but independent of Scheme's integer size
 
 (define (reverse-descriptor-byte-order! addr)
-  (let ((x (fetch-byte addr)))
-    (store-byte! addr (fetch-byte (address+ addr 3)))
-    (store-byte! (address+ addr 3) x))
-  (let ((x (fetch-byte (address+ addr 1))))
-    (store-byte! (address+ addr 1) (fetch-byte (address+ addr 2)))
-    (store-byte! (address+ addr 2) x)))
+  (do ((i 0 (+ i 1))
+       (j (- bytes-per-cell 1) (- j 1)))
+      ((>= i j))
+    (let* ((addr-a (address+ addr i))
+	   (addr-b (address+ addr j))
+	   (byte-a (fetch-byte addr-a))
+	   (byte-b (fetch-byte addr-b)))
+      (store-byte! addr-a byte-b)
+      (store-byte! addr-b byte-a))))
 
 (define (reverse-byte-order! start end)
   (error-message "Correcting byte order of resumed image.")

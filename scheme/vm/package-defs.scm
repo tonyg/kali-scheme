@@ -432,6 +432,7 @@
 
 (define-structure read-image-util read-image-util-interface
   (open prescheme ps-receive
+	data
 	memory
 	(subset ps-memory (read-block address+ address<))
 	(subset data (bytes->a-units b-vector-header? header-length-in-a-units stob?))
