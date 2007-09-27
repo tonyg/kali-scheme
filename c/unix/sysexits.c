@@ -8,5 +8,5 @@ void
 s48_init_sysexits(void)
 {
   /* For SRFI 22 */
-  s48_define_exported_binding("EX_SOFTWARE", s48_enter_integer(70L));
+  s48_define_exported_binding("EX_SOFTWARE", s48_enter_integer(EX_SOFTWARE));
 }
