@@ -14,7 +14,7 @@
   ; using shift instead of quotient for speed
   ; (quotient (+ bytes (- bytes-per-cell 1)) bytes-per-cell)
   (arithmetic-shift-right (+ bytes (- bytes-per-cell 1))
-			  2))  ; log(bytes-per-cell)
+			  log-bytes-per-cell))
 
 (define (cells->bytes cells)
   (* cells bytes-per-cell))
