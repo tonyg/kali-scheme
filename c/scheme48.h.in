@@ -35,8 +35,17 @@ typedef long	s48_value;
 /* Superceded name for the above definition, retained for compatibility. */
 #define S48_EQ(v1, v2) ((v1) == (v2)) 
 
+#include "sysdep.h"
+
+#if SIZEOF_VOID_P == 4
 #define S48_MAX_FIXNUM_VALUE ((1 << 29) - 1)
 #define S48_MIN_FIXNUM_VALUE (-1 << 29)
+#elif SIZEOF_VOID_P == 8
+#define S48_MAX_FIXNUM_VALUE ((1L << 61) - 1)
+#define S48_MIN_FIXNUM_VALUE (-1L << 61)
+#else
+#error "What size are your pointers, really?"
+#endif
 
 S48_EXTERN int		s48_stob_has_type(s48_value, int);
 S48_EXTERN long		s48_stob_length(s48_value, int);
