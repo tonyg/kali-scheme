@@ -51,7 +51,7 @@ DYNAMIC_EXTERNALS_LDFLAGS=@DYNAMIC_EXTERNALS_LDFLAGS@
 #   LDFLAGS = -N
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(DEFS) -I ./c -I$(srcdir)/c -I$(srcdir)/c/bibop $(CFLAGS) -o $@ $<
+	$(CC) -c $(CPPFLAGS) $(DEFS) -I ./c -I$(srcdir)/c -I$(srcdir)/c/net -I$(srcdir)/c/bibop $(CFLAGS) -o $@ $<
 
 # You might want to change RUNNABLE to "s48"
 VERSION = 1.`cat $(srcdir)/build/minor-version-number`
@@ -148,7 +148,8 @@ enough: vm $(POSIX_EXTERNAL) $(LIBSCHEME48) $(IMAGE) script-interpreter go
 # External code to include in the VM
 # After changing any of these you should delete `scheme48vm' and remake it.
 
-EXTERNAL_OBJECTS = c/unix/socket.o c/unix/dynlink.o \
+EXTERNAL_OBJECTS = c/net/socket.o c/net/address.o c/net/net.o c/unix/socket.o \
+		   c/unix/dynlink.o \
 		   c/unix/sysexits.o $(ASM_OBJECTS) \
 		   c/srfi-27.o
 
@@ -313,7 +314,10 @@ c/unix/fd-io.o: c/sysdep.h $(FAKEHS) c/c-mods.h \
 c/unix/misc.o: c/sysdep.h $(FAKEHS)
 c/unix/io.o: c/io.h
 
-c/unix/socket.o: $(SCHEME48HS) c/fd-io.h c/event.h
+c/net/address.o: $(SCHEME48HS) c/net/address.h
+c/net/socket.o: $(SCHEME48HS) c/net/address.h c/net/socket.h
+c/unix/socket.o: $(SCHEME48HS) c/net/address.h c/net/socket.h c/fd-io.h c/event.h
+c/net/net.o: $(SCHEME48HS)
 c/unix/dynlink.o: $(SCHEME48HS)
 c/unix/srfi-27.o: $(SCHEME48HS)
 
@@ -338,6 +342,7 @@ $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 		scheme/sort/interfaces.scm scheme/sort/packages.scm \
 		scheme/r6rs/packages.scm \
 		scheme/cml/interfaces.scm scheme/cml/packages.scm \
+		scheme/net/packages.scm	\
 		scheme/posix/packages.scm scheme/srfi/packages.scm \
 		$(usual-files) build/initial.debug build/build-usual-image
 	$(srcdir)/build/build-usual-image $(srcdir) \
@@ -446,7 +451,8 @@ configure: configure.in
 
 clean:
 	-rm -f $(VM) script-interpreter					\
-		*.o c/unix/*.o c/posix/*.o c/*.o c/fake/*.o c/bibop/*.o	\
+		*.o c/unix/*.o c/posix/*.o c/net/*.o c/*.o 		\
+		c/fake/*.o c/bibop/*.o					\
 		c/*.a c/glue_gnu.s c/glue_darwin.s c/scheme48.exp 	\
 		TAGS $(IMAGE)						\
 		$(srcdir)/build/*.tmp $(srcdir)/$(MANPAGE) 		\

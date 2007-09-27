@@ -449,6 +449,8 @@
 	    mask-types
 	    mvlet
 	    nondeterminism
+	    net-addresses
+	    net-sockets
 	    package-commands-internal
 	    package-mutation
             parse-bytecode
