@@ -107,7 +107,10 @@ START_LINKER = echo ',batch';					\
 	       echo ',open signals handle features';		\
 	       echo ',open bitwise ascii code-vectors';		\
 	       echo '$(LINKER_WRITEBYTE)';			\
-	       echo ',open cells record-types';			\
+	       echo ',config ,load scheme/platform-interfaces.scm'; \
+	       echo ',config ,load scheme/platform-packages.scm'; \
+	       echo ',open platform';	\
+	       echo ',open cells record-types';	\
 	       echo ',load scheme/alt/low-exception.scm';	\
 	       echo ',load $(linker-files)';			\
 	       echo ',load scheme/alt/init-defpackage.scm'
@@ -687,6 +690,8 @@ link/linker-in-lucid: build/lucid-script.lisp $(linker-files) \
 $(INITIAL): $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files)
 	cd $(srcdir) &&							\
 	($(START_LINKER);						\
+		echo '(load-configuration "scheme/platform-interfaces.scm")'; \
+		echo '(load-configuration "scheme/platform-packages.scm")'; \
 		echo '(load-configuration "scheme/interfaces.scm")';	\
 		echo '(load-configuration "scheme/vm/shared-interfaces.scm")'; \
 		echo '(load-configuration "scheme/packages.scm")';	\
@@ -824,6 +829,8 @@ i-know-what-i-am-doing: compile-vm compile-twospace-gc compile-bibop-gc
 compile-vm:
 	cd $(srcdir)/ps-compiler &&					     \
 	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/platform-packages.scm';	     \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
 		echo ',exec ,load load-ps-compiler.scm';		     \
@@ -838,6 +845,8 @@ compile-vm:
 compile-twospace-gc:
 	cd $(srcdir)/ps-compiler &&					     \
 	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/platform-packages.scm';	     \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
 		echo ',exec ,load load-ps-compiler.scm';		     \
@@ -851,6 +860,8 @@ compile-twospace-gc:
 compile-bibop-gc:
 	cd $(srcdir)/ps-compiler &&					     \
 	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/platform-packages.scm';	     \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
 		echo ',exec ,load load-ps-compiler.scm';		     \

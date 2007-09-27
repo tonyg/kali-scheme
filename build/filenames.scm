@@ -17,6 +17,7 @@
 (define enumerated (structure (make-simple-interface 'enumerated '())))
 (define tables     (structure (make-simple-interface 'tables     '())))
 (define cells      (structure (make-simple-interface 'cells      '())))
+(define platform   (structure (make-simple-interface 'structure  '())))
 
 ; The following loads are unnecessary; they only serve to suppress
 ; annoying "undefined" warnings for interfaces.

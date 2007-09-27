@@ -17,14 +17,12 @@
 			       (peek-char         scheme:peek-char)))
 	(subset i/o (byte-ready? read-byte peek-byte write-byte))
 	code-vectors bitwise ascii primitives enumerated
+	platform
 	signals ; #### replace by EXCEPTIONS at some point in the future
 	define-record-types
 	bigbit)   ; make sure that bignum bitwise operations are loaded
   (optimize auto-integrate)
   (begin
-    ; What we will get in C on many machines
-    (define pre-scheme-integer-size 32)
-    
     ;; #### ditch when switching to EXCEPTIONS
     (define (assertion-violation who message . irritants)
       (apply error message irritants))

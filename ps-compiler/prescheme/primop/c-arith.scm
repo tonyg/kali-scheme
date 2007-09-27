@@ -53,7 +53,7 @@
 	 (c-variable (car (lambda-variables (call-arg call 0))) port)
 	 (format port ")"))
 	((and (literal-node? (call-arg call 1))
-	      (>= (literal-value (call-arg call 1)) prescheme-integer-size))
+	      (>= (literal-value (call-arg call 1)) pre-scheme-integer-size))
 	 (format port "0L"))
 	(else
 	 (if logical?

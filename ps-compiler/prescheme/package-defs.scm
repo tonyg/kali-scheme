@@ -231,7 +231,7 @@
 
 (define-structures ((ps-primops ps-primop-interface))
   (open scheme big-scheme comp-util node simplify-internal
-	linking ps-types front expand)
+	linking ps-types front expand platform)
   (files (primop primop)))
 
 (define-structures ((ps-c-primops ps-c-primop-interface))
@@ -256,6 +256,7 @@
 (define-structures ((c-primop-data (export)))
   (open scheme big-scheme comp-util node simplify
 	ps-types ps-primops ps-c-primops
+	platform
 	front
 	structure-refs
 	c-internal

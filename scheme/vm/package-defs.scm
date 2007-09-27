@@ -33,7 +33,7 @@
 ; Byte code architecture.
 
 (define-structure vm-architecture vm-architecture-interface
-  (open prescheme)
+  (open prescheme ps-platform)
   (files (interp arch)))
 
 ;----------------------------------------------------------------
@@ -322,7 +322,8 @@
 
 (define-structure data vm-data-interface
   (open prescheme vm-utilities
-	system-spec vm-architecture)
+	vm-architecture
+	ps-platform)
   ;(optimize auto-integrate)
   (files (data data)))
 
@@ -407,6 +408,7 @@
   (open prescheme ps-receive enum-case
 	vm-utilities vm-architecture
 	memory data struct
+	ps-platform
 	heap
 	image-table
 	image-util
@@ -460,6 +462,7 @@
   (open prescheme 
 	vm-utilities
 	stob
+	ps-platform
 	gc
 	struct memory
 	vm-architecture
@@ -476,7 +479,6 @@
 	ps-receive
 	interpreter-internal
 	data
-	system-spec
 	gc-util
 	bignum-low)
   (files (arith bignum-arith)))

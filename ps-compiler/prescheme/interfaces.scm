@@ -7,7 +7,6 @@
           (define-nonsimple-scheme-primop :syntax)
           (define-scheme-cond-primop :syntax)
 
-	  prescheme-integer-size
 	  lshr))
 
 (define-interface ps-c-primop-interface

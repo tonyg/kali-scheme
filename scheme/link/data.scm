@@ -17,28 +17,6 @@
   (bitwise-ior (arithmetic-shift high width) low))
 
 
-; Essential constants
-
-(define level          17)
-(define little-endian? #t)
-(define bits-per-byte  8)
-(define bytes-per-cell 4)
-(define bits-per-cell  (* bits-per-byte bytes-per-cell))
-(define addressing-units-per-cell 4)
-
-; This is actually the mimimum for the different PreScheme implementations.
-; The Scheme version of PreScheme leaves 30 bits for PreScheme's fixnums.
-; There have to be enough bits to represent the largest fixnum in the system.
-; USEFUL-BITS-PER-WORD is not written in the image.
-(define useful-bits-per-word      30)
-
-(define unused-field-width 2)
-
-(define tag-field-width 2)
-
-(define immediate-type-field-width
-  (- 8 tag-field-width))
-
 ; Data descriptions copied from DATA.SCM
 
 (define-enumeration tag
@@ -57,9 +35,9 @@
    null))
 
 (define bits-per-fixnum
-  (- (if (< bits-per-cell useful-bits-per-word)
+  (- (if (< bits-per-cell s48-useful-bits-per-word)
 	 bits-per-cell
-	 useful-bits-per-word)
+	 s48-useful-bits-per-word)
      tag-field-width))
 
 (define	   least-fixnum-value (- 0 (arithmetic-shift 1 (- bits-per-fixnum 1))))

@@ -8,7 +8,9 @@
 (in 'prescheme-compiler
     '(run (prescheme-compiler
            '(allocation heap heap-bibop gc gc-bibop-util read-image write-image)
-           '("../scheme/vm/interfaces.scm"
+	   '("../scheme/platform-interfaces.scm"
+	     "../scheme/ps-platform-packages.scm"
+	     "../scheme/vm/interfaces.scm"
 	     "../scheme/vm/shared-interfaces.scm"
              "../scheme/vm/ps-package-defs.scm"
              "../scheme/vm/package-defs.scm"

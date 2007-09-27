@@ -31,12 +31,3 @@
 					close-input-port close-output-port
 					errors)))
   (files (util s48-channel)))
-
-; The number of usable bits in a small integer.
-
-(define-structures ((system-spec (export useful-bits-per-word)))
-  (open prescheme)
-  (begin
-    (define useful-bits-per-word 30)   ; in Scheme 48
-    ))
-

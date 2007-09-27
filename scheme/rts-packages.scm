@@ -263,12 +263,12 @@
   (files (rts defenum scm)))
 
 (define-structure architecture vm-architecture-interface
-  (open scheme-level-1 exceptions enumerated)
+  (open scheme-level-1 exceptions enumerated platform)
   (files (vm/interp arch)))
 
 (define-structure vm-data vm-data-interface
   (open scheme-level-1 enumerated bitwise ascii
-        architecture)
+        architecture platform)
   (begin
     ; Scheme/Pre-Scheme differences
     (define (arithmetic-shift-right n k)
@@ -291,7 +291,7 @@
         ((assert foo) #t)))
     
     ; We just know this.
-    (define useful-bits-per-word 32))
+    (define useful-bits-per-word c-useful-bits-per-word))
   (files (vm/data data)))
 
 (define-structure vm-exceptions vm-exceptions-interface
