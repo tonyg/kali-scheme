@@ -538,7 +538,6 @@ free_getaddrinfo_handshake(struct getaddrinfo_handshake *handshake)
 {
   free(handshake->nodename);
   free(handshake->servname);
-  free(handshake->hints);
   free(handshake);
 }
 
@@ -582,8 +581,8 @@ get_addrinfo_result(struct getaddrinfo_handshake *handshake)
 	++i;
       }
     
-    free_getaddrinfo_handshake(handshake);
     freeaddrinfo(handshake->result);
+    free_getaddrinfo_handshake(handshake);
     S48_GC_UNPROTECT();
     return sch_result;
   }
