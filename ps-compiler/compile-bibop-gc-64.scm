@@ -9,7 +9,7 @@
     '(run (prescheme-compiler
            '(allocation heap heap-bibop gc gc-bibop-util read-image write-image)
 	   '("../scheme/platform-interfaces.scm"
-	     "../scheme/ps-platform-packages.scm"
+	     "../scheme/ps-platform-64-packages.scm"
 	     "../scheme/vm/interfaces.scm"
 	     "../scheme/vm/shared-interfaces.scm"
              "../scheme/vm/ps-package-defs.scm"
@@ -18,7 +18,7 @@
 	     "../scheme/vm/alt-vm-package-defs.scm"
 	     )
            's48-heap-init
-           "../scheme/vm/scheme48-bibop-heap.c"
+           "../scheme/vm/scheme48-bibop-heap-64.c"
 	   '(header "#include <string.h>") ; for strlen, memcpy
 	   '(header "#include <stdlib.h>") ; for malloc, free
            '(header "#include \"scheme48vm.h\"")

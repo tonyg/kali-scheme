@@ -87,7 +87,7 @@ extern void s48_memory_map_setB(s48_address address, Area* value);
 #elif REMAINING_ADDRESS_BITS == 0
 #undef NEED_METAPAGE_HASHING
 #else
-#error "Misconfigured memory map."
+#error "Misconfigured memory map."##REMAINING_ADDRESS_BITS
 #endif
 
 /* For both direct access and hashed access, we split an address into

@@ -14,7 +14,7 @@ syntax: regexp
 ^scheme48vm$
 ^script-interpreter$
 ^build/filenames\.(bat|make)$
-^build/initial\.(debug|image)$
+^build/initial\.(debug|image)(-32|-64)?$
 ^build/reify-debug\.tmp$
 ^build/scheme48-files\.wxi$
 ^doc/html
@@ -28,8 +28,10 @@ syntax: regexp
 ^scheme/big/unicode-normalization-info\.scm$
 ^scheme/srfi/srfi-14-base-char-sets\.scm$
 ^c/scheme48\.h$
-^c/scheme48vm\.c$
-^c/scheme48.*heap\.c$
+^c/scheme48vm-32\.c$
+^c/scheme48vm-64\.c$
+^c/scheme48.*heap-32\.c$
+^c/scheme48.*heap-64\.c$
 ^c/scheme48write-barrier\.h$
 ^c/scheme48(read|write)-image\.c$
 ^c/sysdep\.h(\.in)?$
