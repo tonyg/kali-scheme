@@ -422,6 +422,17 @@ fail
 		AC_DEFINE(HAVE_SIGACTION)
 		AC_MSG_RESULT([yes]),
 		AC_MSG_RESULT([no]))
+     AC_CHECK_SIZEOF([short])
+     if test "$ac_cv_sizeof_short" != 2; then
+       echo ""
+       echo "PANIC: Configure tests are not working - your compiler is broken."
+       echo "PANIC: Please examine config.log for compilation errors."
+       exit 1
+     fi
+     AC_CHECK_SIZEOF([int])
+     AC_CHECK_SIZEOF([long])
+     AC_CHECK_SIZEOF([long long])
+     AC_CHECK_SIZEOF([void *])
      S48_IEEE_ENDIANNESS
      S48_NATIVE_CODE
      S48_DYNAMIC_EXTERNALS
