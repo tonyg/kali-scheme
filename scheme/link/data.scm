@@ -96,7 +96,7 @@
 					     header-type-field-width))))
 
 (define (make-stob-descriptor addr)
-  (make-descriptor (enum tag stob) (a-units->cells addr)))
+  (bitwise-ior (enum tag stob) addr))
 
 (define (bytes->cells bytes)
   (quotient (+ bytes (- bytes-per-cell 1))

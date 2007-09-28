@@ -40,9 +40,11 @@ typedef long	s48_value;
 #if SIZEOF_VOID_P == 4
 #define S48_MAX_FIXNUM_VALUE ((1 << 29) - 1)
 #define S48_MIN_FIXNUM_VALUE (-1 << 29)
+#define S48_LOG_BYTES_PER_CELL 2
 #elif SIZEOF_VOID_P == 8
 #define S48_MAX_FIXNUM_VALUE ((1L << 61) - 1)
 #define S48_MIN_FIXNUM_VALUE (-1L << 61)
+#define S48_LOG_BYTES_PER_CELL 3
 #else
 #error "What size are your pointers, really?"
 #endif
