@@ -14,6 +14,9 @@
 #include "event.h"
 #include "fd-io.h"
 
+#include "socket.h"
+#include "address.h"
+
 extern int s48_utf_8of16_to_utf_16(const unsigned char* utf_8of16,
 				   LPWSTR utf_16,
 				   int* errorp);
@@ -84,6 +87,9 @@ typedef struct {
       SOCKET hatched_socket;
       /* callback to set socket hatched by connect/accept  */
       PAPCFUNC hatch_callback;
+      /* address returned by recvfrom */
+      struct sockaddr_storage recv_address;
+      socklen_t recv_address_len;
     } socket_data;
   };
 
@@ -1249,73 +1255,6 @@ s48_fd_io_init()
  * partially), so we can't use the file operations we want on sockets.
  */
 
-/* Henry Cejtin says that 5 is the largest safe number for this, at least on Unix. */
-#define	LISTEN_QUEUE_SIZE	5
-
-extern void		s48_init_socket(void);
-static s48_value	s48_socket(s48_value udp_p, s48_value input_p),
-			s48_bind(s48_value socket_channel, s48_value number),
-			s48_socket_number(s48_value socket_channel),
-			s48_listen(s48_value socket_channel),
-			s48_accept(s48_value socket_channel, s48_value retry_p),
-			s48_connect(s48_value socket_channel,
-				    s48_value machine,
-				    s48_value port,
-				    s48_value retry_p),
-                        s48_dup_socket_channel(s48_value socket_fd),
-			s48_close_socket_half(s48_value socket_channel,
-					      s48_value input_p),
-                        s48_get_host_by_name(s48_value machine),
-                        s48_get_host_by_name_result(void),
-                        s48_get_host_by_address(s48_value address),
-                        s48_get_host_by_address_result(void),
-			s48_get_host_name(void);
-
-/* Forward declaration. */
-static s48_value dup_socket_channel(long socket_fd);
-
-/*
- * For asynch gethostbyname.
- */
-
-long gethostby_event_uid;
-
-/*
- * Start up the sockets stuff and install all exported functions.
- */
-
-void
-s48_init_socket(void)
-{
-  WORD wVersionRequested;
-  WSADATA wsaData;
- 
-  /* This is the *highest* version we can use.  Great. */
-  wVersionRequested = MAKEWORD(2, 0);
- 
-  if (WSAStartup(wVersionRequested, &wsaData) != 0)
-    {
-      fprintf(stderr, "Windows Sockets startup failed.\n");
-      exit(-1);
-    }
-
-  S48_EXPORT_FUNCTION(s48_socket);
-  S48_EXPORT_FUNCTION(s48_bind);
-  S48_EXPORT_FUNCTION(s48_socket_number);
-  S48_EXPORT_FUNCTION(s48_listen);
-  S48_EXPORT_FUNCTION(s48_accept);
-  S48_EXPORT_FUNCTION(s48_connect);
-  S48_EXPORT_FUNCTION(s48_dup_socket_channel);
-  S48_EXPORT_FUNCTION(s48_close_socket_half);
-  S48_EXPORT_FUNCTION(s48_get_host_by_name);
-  S48_EXPORT_FUNCTION(s48_get_host_by_name_result);
-  S48_EXPORT_FUNCTION(s48_get_host_by_address);
-  S48_EXPORT_FUNCTION(s48_get_host_by_address_result);
-  S48_EXPORT_FUNCTION(s48_get_host_name);
-
-  gethostby_event_uid = s48_external_event_uid("s48_event_gethostby");
-}
-
 static void
 raise_windows_error(DWORD id)
 {
@@ -1351,156 +1290,31 @@ raise_windows_error(DWORD id)
 #undef ERROR_BUFFER_SIZE
 }
 
-
-#define S48_MAX_HOST_NAME_LENGTH NI_MAXHOST
-static char host_name[S48_MAX_HOST_NAME_LENGTH + 1]; /* is enough */
-static char host_address[128]; /* should be enough */
-int host_address_size;
-int host_address_errno;
-
-/*
- * Only one call can be active at any given time:
- * We expect mutual exclusion at the Scheme end
- */
-
-static DWORD WINAPI
-gethostbyname_thread(LPVOID lpParameter)
+socket_t
+s48_extract_socket_fd(s48_value sch_channel)
 {
-  struct addrinfo *address_info;
-  struct addrinfo hints;
-  hints.ai_family = PF_INET;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_protocol = IPPROTO_TCP;
-  hints.ai_flags = AI_CANONNAME;
-  hints.ai_addrlen = 0;
-  hints.ai_canonname = NULL;
-  hints.ai_addr = NULL;
-  hints.ai_next = NULL;
-  /* ####
-   * Unicode note: GetAddrInfoW exists, but Mike doesn't know
-   * if just passing in IDNA (which we'll need to do eventually
-   * anyway) works aas well.
-   */
-  host_address_errno = getaddrinfo(host_name,
-				   NULL, /* servname */
-				   &hints,
-				   &address_info);
-  if (host_address_errno == 0)
-    {
-      host_address_size = sizeof(struct in_addr);
-      memcpy(host_address,
-	     (void *)&(((struct sockaddr_in*)address_info->ai_addr)->sin_addr),
-	     host_address_size);
-    }
-  freeaddrinfo(address_info);
-  s48_note_external_event(gethostby_event_uid);
-  ExitThread(0);
-  return 0;
+  S48_CHECK_CHANNEL(sch_channel);
+  {
+    long socket_fd
+      = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(sch_channel));
+    stream_descriptor_t* stream_descriptor = &(stream_descriptors[socket_fd]);
+    callback_data_t* callback_data = &(stream_descriptor->callback_data);
+    socket_t socket = stream_descriptor->socket_data.socket;
+    return socket;
+  }
 }
 
 static s48_value
-s48_get_host_by_name(s48_value machine)
+s48_socket(s48_value sch_af, s48_value sch_type, s48_value sch_protocol)
 {
-  DWORD id;
-  HANDLE thread_handle;
-  
-  int machine_length = S48_BYTE_VECTOR_LENGTH(machine);
-  if (machine_length > S48_MAX_HOST_NAME_LENGTH)
-    s48_assertion_violation("s48_get_host_by_name", "invalid machine length", 1, machine); 
-
-  memcpy(host_name, s48_extract_byte_vector(machine), machine_length);
-  host_name[machine_length] = '\0';
-
-  thread_handle = CreateThread(NULL, /* lpThreadAttributes */
-			       4096, /* dwStackSize */
-			       (LPTHREAD_START_ROUTINE)gethostbyname_thread,
-			       0, /* lpParameter */
-			       0, /* dwCreationFlags, */
-			       &id);
-
-  return S48_FALSE;
-}
-
-static s48_value
-s48_get_host_by_name_result(void)
-{
-  if (host_address_errno)
-    s48_os_error("s48_get_host_by_name_result", host_address_errno, 0);
-  return s48_enter_byte_vector(host_address, host_address_size);
-}
-
-/*
- * Get the name of the `sch_addr''s host.  If we can't get the real
- * host name we use the numbers-and-dots representation of the
- * address.
- */
-
-
-static DWORD WINAPI
-gethostbyaddr_thread(LPVOID lpParameter)
-{
-  struct sockaddr_in address;
-  memset(&address, 0, sizeof(address));
-  address.sin_family = AF_INET;
-  address.sin_addr = *((struct in_addr *) host_address);
-
-  host_address_errno = getnameinfo((const struct sockaddr *)&address,
-				   sizeof(address),
-				   host_name, S48_MAX_HOST_NAME_LENGTH,
-				   NULL, 0, 0);
-
-  s48_note_external_event(gethostby_event_uid);
-  ExitThread(0);
-  return 0;
-}
- 
-static s48_value
-s48_get_host_by_address(s48_value sch_addr)
-{
-  DWORD id;
-  HANDLE thread_handle;
-
-  host_address_size = sizeof(struct in_addr);
-  memcpy(host_address,
-	 (char *) s48_extract_byte_vector(sch_addr), host_address_size);
-
-  thread_handle = CreateThread(NULL, /* lpThreadAttributes */
-			       4096, /* dwStackSize */
-			       (LPTHREAD_START_ROUTINE)gethostbyaddr_thread,
-			       0, /* lpParameter */
-			       0, /* dwCreationFlags, */
-			       &id);
-  return S48_FALSE;
-}
-	 
-static s48_value 
-s48_get_host_by_address_result(void)
-{
-  if (host_address_errno)
-    s48_os_error("s48_get_host_by_address_result", host_address_errno, 0);
-  return s48_enter_string_latin_1(host_name);
-}
-
-
-/*
- * Create an internet-domain stream (reliable, sequenced) socket.
- * We return an input channel on success and raise an exception on failure.
- * The socket has been made non-blocking.
- */
-
-static s48_value
-s48_socket(s48_value udp_p, s48_value input_p)
-{
-  int mode;
   long fd;
+  int af = s48_extract_af(sch_af);
+  int socktype = s48_extract_socket_type(sch_type);
+  int protocol = s48_extract_fixnum(sch_protocol);
   s48_value channel;
   stream_descriptor_t* stream_descriptor;
 
-  SOCKET socket = WSASocket(AF_INET,
-			    (udp_p == S48_FALSE)
-			    ? SOCK_STREAM
-			    : SOCK_DGRAM,
-			    0, /* protocol */
+  SOCKET socket = WSASocket(af, socktype, protocol,
 			    NULL,
 			    0, /* reserved */
 			    WSA_FLAG_OVERLAPPED);
@@ -1508,125 +1322,164 @@ s48_socket(s48_value udp_p, s48_value input_p)
   if (socket == INVALID_SOCKET)
     raise_windows_error(WSAGetLastError());
 
-  mode = (input_p == S48_FALSE)
-    ? S48_CHANNEL_STATUS_SPECIAL_OUTPUT
-    : S48_CHANNEL_STATUS_SPECIAL_INPUT;
-
   fd = allocate_fd(STREAM_SOCKET);
   stream_descriptor = &(stream_descriptors[fd]);
   stream_descriptor->socket_data.socket = socket;
 
-  channel = s48_add_channel(mode, s48_enter_string_latin_1("socket"), fd);
+  channel = s48_add_channel(S48_CHANNEL_STATUS_SPECIAL_INPUT,
+			    s48_enter_string_latin_1("socket"), fd);
 
   if (!S48_CHANNEL_P(channel))
     {
       ps_close_fd(fd);
       s48_raise_scheme_exception(s48_extract_fixnum(channel), 0);
-    };
+    }
 
   return channel;
 }
 
-/*
- * Given an internet-domain stream socket and a port number, bind
- * the socket to the port and prepare to receive connections.
- * If the port number is #f, then we bind the socket to any available
- * port.
- * 
- * Nothing useful is returned.
- */
+#define RETRY_OR_RAISE_NEG(STATUS, CALL)			\
+do {								\
+    STATUS = (CALL);						\
+    if (STATUS == SOCKET_ERROR)					\
+      s48_os_error(NULL, WSAGetLastError(), 0);			\
+ } while (0)
 
 static s48_value
-s48_bind(s48_value channel, s48_value port_number)
+s48_socketpair(s48_value sch_af, s48_value sch_type, s48_value sch_protocol)
 {
-  int socket_fd;
-  unsigned short port;
   int status;
-  SOCKET socket;
-  struct sockaddr_in address;
+  s48_value sch_channel0 = S48_UNSPECIFIC, sch_channel1 = S48_UNSPECIFIC;
+  s48_value sch_result;
+  int af = s48_extract_af(sch_af);
+  int socktype = s48_extract_socket_type(sch_type);
+  int protocol = s48_extract_fixnum(sch_protocol);
+  socket_t listener, socket0, socket1;
+  long fd0, fd1;
   stream_descriptor_t* stream_descriptor;
+  struct sockaddr_in addr;
+  socklen_t salen = sizeof(addr);
+  S48_DECLARE_GC_PROTECT(2);
 
-  S48_CHECK_CHANNEL(channel);
-  socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
-  stream_descriptor = &(stream_descriptors[socket_fd]);
-  socket = stream_descriptor->socket_data.socket;
-
-  if (port_number == S48_FALSE)
-    port = 0;
-  else
-    port = (unsigned short)s48_extract_fixnum(port_number);
-
-  memset(&address, 0, sizeof(address));
-  address.sin_family = AF_INET;
-  address.sin_addr.s_addr = htonl(INADDR_ANY);
-  address.sin_port = htons(port);
-
-  status = bind(socket,
-		(struct sockaddr *)&address,
-		sizeof(address));
-  if (status == SOCKET_ERROR)
+  listener = WSASocket(af, socktype, protocol,
+		      NULL,
+		      0, /* reserved */
+		      WSA_FLAG_OVERLAPPED);
+  if (listener == INVALID_SOCKET)
     raise_windows_error(WSAGetLastError());
   
-  return S48_UNSPECIFIC;
+  addr.sin_family = AF_INET;
+  addr.sin_port = 0;
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+  RETRY_OR_RAISE_NEG(status, bind(listener, (struct sockaddr*)&addr, sizeof(addr)));
+  RETRY_OR_RAISE_NEG(status, listen(listener, 1));
+  RETRY_OR_RAISE_NEG(status,
+		     getsockname(listener, (struct sockaddr*)&addr, &salen));
+
+  socket1 = WSASocket(af, socktype, protocol,
+		      NULL,
+		      0, /* reserved */
+		      WSA_FLAG_OVERLAPPED);
+  if (socket1 == INVALID_SOCKET)
+    raise_windows_error(WSAGetLastError());
+  
+  RETRY_OR_RAISE_NEG(status, connect(socket1, (struct sockaddr*) &addr, salen));
+  socket0 = accept(listener, (struct sockaddr*) &addr, &salen);
+  if (socket0 == INVALID_SOCKET)
+    raise_windows_error(WSAGetLastError());
+  
+  closesocket(listener);
+
+  fd0 = allocate_fd(STREAM_SOCKET);
+  stream_descriptor = &(stream_descriptors[fd0]);
+  stream_descriptor->socket_data.socket = socket0;
+
+  fd1 = allocate_fd(STREAM_SOCKET);
+  stream_descriptor = &(stream_descriptors[fd1]);
+  stream_descriptor->socket_data.socket = socket1;
+
+  S48_GC_PROTECT_2(sch_channel0, sch_channel1);
+  sch_channel0 = s48_add_channel(S48_CHANNEL_STATUS_INPUT,
+				 s48_enter_string_latin_1("socket"), fd0);
+  sch_channel1 = s48_add_channel(S48_CHANNEL_STATUS_INPUT,
+				 s48_enter_string_latin_1("socket"), fd1);
+  sch_result = s48_cons(sch_channel0, sch_channel1);
+  S48_GC_UNPROTECT();
+  return sch_result;
 }
 
 /*
- * Return the port number associated with an internet stream socket.
+ * dup() `socket_fd' and return an output channel holding the result.
+ *
+ * We have to versions, one for calling from C and one for calling from Scheme.
  */
 
 static s48_value
-s48_socket_number(s48_value channel)
+dup_socket_channel(long socket_fd)
 {
-  int socket_fd;
-  int status;
-  int len;
-  struct sockaddr_in address;
-  stream_descriptor_t* stream_descriptor;
-  SOCKET socket;
+  long output_fd;
+  SOCKET output_socket;
+  s48_value output_channel;
+  stream_descriptor_t* stream_descriptor = &(stream_descriptors[socket_fd]);
+  callback_data_t* callback_data = &(stream_descriptor->callback_data);
+  SOCKET socket = stream_descriptor->socket_data.socket;
+  stream_descriptor_t* output_stream_descriptor;
+  int buf_size;
 
-  S48_CHECK_CHANNEL(channel);
-  socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
-  stream_descriptor = &(stream_descriptors[socket_fd]);
-  socket = stream_descriptor->socket_data.socket;
-
-  address.sin_addr.s_addr = htonl(INADDR_ANY);
-
-  len = sizeof(address);
-
-  status = getsockname(socket, (struct sockaddr *)&address, &len);
-
-  if (status == SOCKET_ERROR)
+  WSAPROTOCOL_INFO protocolInfo;
+  if (WSADuplicateSocket(socket,
+			 GetCurrentProcessId(),
+			 &protocolInfo)
+      == SOCKET_ERROR)
     raise_windows_error(WSAGetLastError());
 
-  return s48_enter_fixnum(ntohs(address.sin_port));
+  output_socket = WSASocket(AF_INET,
+			    SOCK_STREAM,
+			    0, /* protocol */
+			    &protocolInfo,
+			    0, /* reserved */
+			    WSA_FLAG_OVERLAPPED);
+  if (output_socket == INVALID_SOCKET)
+    raise_windows_error(WSAGetLastError());
+  
+  buf_size = 0;
+  setsockopt(output_socket,
+	     SOL_SOCKET, SO_SNDBUF, 
+	     (const char*)buf_size,
+	     sizeof(buf_size));
+
+  output_fd = allocate_fd(STREAM_SOCKET);
+  output_stream_descriptor = &(stream_descriptors[output_fd]);
+  output_stream_descriptor->socket_data.socket = output_socket;
+
+  output_channel = s48_add_channel(S48_CHANNEL_STATUS_OUTPUT,
+				   s48_enter_string_latin_1("socket connection"),
+				   output_fd);
+  
+  if (!S48_CHANNEL_P(output_channel))
+    {
+      ps_close_fd(output_fd);
+      s48_raise_scheme_exception(s48_extract_fixnum(output_channel), 0);
+    }
+
+  return output_channel;
 }
- 
+
 static s48_value
-s48_listen(s48_value channel)
+s48_dup_socket_channel(s48_value channel)
 {
   int socket_fd;
-  int status;
-  stream_descriptor_t* stream_descriptor;
-  SOCKET socket;
 
   S48_CHECK_CHANNEL(channel);
   socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
-  stream_descriptor = &(stream_descriptors[socket_fd]);
-  socket = stream_descriptor->socket_data.socket;
-
-  status = listen(socket, LISTEN_QUEUE_SIZE);
-
-  if (status == SOCKET_ERROR)
-    raise_windows_error(WSAGetLastError());
-
-  return S48_UNSPECIFIC;
+  
+  return dup_socket_channel(socket_fd);
 }
- 
 
 /*
- * Given an internet-domain stream socket which has been bound
- * accept a connection and return the resulting socket as a pair of channels
- * (after marking it non-blocking).
+ * Given a bound socket, accept a connection and return the resulting
+ * socket as a pair of channels (after marking it non-blocking).
  *
  * If the accept fails because the client hasn't connected yet, then we
  * return #f.
@@ -1803,9 +1656,7 @@ s48_accept(s48_value channel, s48_value retry_p)
   return S48_FALSE;
 }
 
-/*
- * Given an internet-domain stream socket, a machine name and a port number,
- * connect the socket to that machine/port.
+/* Connect a socket to an address.
  *
  * If this succeeds, it returns an output channel for the connection.
  * If it fails because the connect would block, add the socket to the
@@ -1827,37 +1678,21 @@ connect_callback(DWORD dwParam)
 }
 
 static s48_value
-s48_connect(s48_value channel,
+s48_connect(s48_value sch_channel,
 	    s48_value sch_address,
-	    s48_value port,
-	    s48_value retry_p)
+	    s48_value sch_retry_p)
 {
   long socket_fd;
-  unsigned short port_number;
-  struct sockaddr_in address;
   stream_descriptor_t* stream_descriptor;
   callback_data_t* callback_data;
   SOCKET socket;
   int status;
 
-  S48_CHECK_CHANNEL(channel);
-  socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
+  S48_CHECK_CHANNEL(sch_channel);
+  socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(sch_channel));
   stream_descriptor = &(stream_descriptors[socket_fd]);
   callback_data = &(stream_descriptor->callback_data);
   socket = stream_descriptor->socket_data.socket;
-
-  S48_CHECK_FIXNUM(port);
-  port_number = (unsigned short)S48_UNSAFE_EXTRACT_FIXNUM(port);
-
-  memset((void *)&address, 0, sizeof(address));
-
-  if (S48_BYTE_VECTOR_LENGTH(sch_address) > sizeof(address))
-    s48_assertion_violation("s48_connect", "address has invalid length", 1,
-			    sch_address);
-
-  memcpy((void *)&address, (void *)host_address, host_address_size);
-
-  address.sin_port = htons(port_number);
 
   /*
    * Try the connection.  If it works we make an output channel and return it.
@@ -1870,8 +1705,8 @@ s48_connect(s48_value channel,
    */
 
   status = WSAConnect(socket,
-		      (const struct sockaddr*)&address,
-		      sizeof(address),
+		      (const struct sockaddr*)S48_EXTRACT_VALUE_POINTER(sch_address, struct sockaddr),
+		      S48_VALUE_SIZE(sch_address),
 		      NULL, /* lpCallerData */
 		      NULL, /* lpCalleeData */
 		      NULL, /* lpSQOS */
@@ -1883,7 +1718,7 @@ s48_connect(s48_value channel,
   if (status == 0)
     /* success */
     {
-      S48_STOB_SET(channel, S48_CHANNEL_STATUS_OFFSET, S48_CHANNEL_STATUS_INPUT);
+      S48_STOB_SET(sch_channel, S48_CHANNEL_STATUS_OFFSET, S48_CHANNEL_STATUS_INPUT);
       return dup_socket_channel(socket_fd);
     }
   else if (WSAGetLastError() == WSAEWOULDBLOCK)
@@ -1919,116 +1754,195 @@ s48_connect(s48_value channel,
 }
 
 /*
- * dup() `socket_fd' and return an output channel holding the result.
- *
- * We have to versions, one for calling from C and one for calling from Scheme.
+ * Receive a message.  Returns pair (<byte-count> . <sender>) or just
+ * <byte-count> if want_sender_p is false.
  */
 
-static s48_value
-s48_dup_socket_channel(s48_value channel)
-{
-  int			socket_fd;
-
-  S48_CHECK_CHANNEL(channel);
-  socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
-  
-  return dup_socket_channel(socket_fd);
-}
 
 static s48_value
-dup_socket_channel(long socket_fd)
+s48_recvfrom(s48_value sch_channel,
+	     s48_value sch_buffer, s48_value sch_start, s48_value sch_count,
+	     s48_value sch_flags,
+	     s48_value sch_want_sender_p,
+	     s48_value sch_retry_p)
 {
-  long output_fd;
-  SOCKET output_socket;
-  s48_value output_channel;
+  int retry_p = !(S48_EQ_P(sch_retry_p, S48_FALSE));
+  int want_sender_p = !(S48_EQ_P(sch_want_sender_p, S48_FALSE));
+  int flags = s48_extract_msg_flags(sch_flags);
+  size_t buffer_size = S48_BYTE_VECTOR_LENGTH(sch_buffer);
+  size_t start = s48_extract_unsigned_integer(sch_start);
+  size_t count = s48_extract_unsigned_integer(sch_count);
+  long socket_fd
+    = S48_UNSAFE_EXTRACT_FIXNUM(S48_CHANNEL_OS_INDEX(sch_channel));
   stream_descriptor_t* stream_descriptor = &(stream_descriptors[socket_fd]);
   callback_data_t* callback_data = &(stream_descriptor->callback_data);
-  SOCKET socket = stream_descriptor->socket_data.socket;
-  stream_descriptor_t* output_stream_descriptor;
-  int buf_size;
+  socket_t socket = stream_descriptor->socket_data.socket;
 
-  WSAPROTOCOL_INFO protocolInfo;
-  if (WSADuplicateSocket(socket,
-			 GetCurrentProcessId(),
-			 &protocolInfo)
-      == SOCKET_ERROR)
-    raise_windows_error(WSAGetLastError());
+  if ((start + count) > buffer_size)
+    s48_assertion_violation("s48_sendto", "buffer start or count is wrong", 3,
+			    sch_buffer, sch_start, sch_count);
 
-  output_socket = WSASocket(AF_INET,
-			    SOCK_STREAM,
-			    0, /* protocol */
-			    &protocolInfo,
-			    0, /* reserved */
-			    WSA_FLAG_OVERLAPPED);
-  if (output_socket == INVALID_SOCKET)
-    raise_windows_error(WSAGetLastError());
-  
-  buf_size = 0;
-  setsockopt(output_socket,
-	     SOL_SOCKET, SO_SNDBUF, 
-	     (const char*)buf_size,
-	     sizeof(buf_size));
-
-  output_fd = allocate_fd(STREAM_SOCKET);
-  output_stream_descriptor = &(stream_descriptors[output_fd]);
-  output_stream_descriptor->socket_data.socket = output_socket;
-
-  output_channel = s48_add_channel(S48_CHANNEL_STATUS_OUTPUT,
-				   s48_enter_string_latin_1("socket connection"),
-				   output_fd);
-  
-  if (!S48_CHANNEL_P(output_channel))
+  if (!retry_p)
     {
-      ps_close_fd(output_fd);
-      s48_raise_scheme_exception(s48_extract_fixnum(output_channel), 0);
+      DWORD numberOfBytesRecvd;
+      int wsa_status;
+      int block;
+      
+      /* There's nothing in the buffer---need to do an actual read. */
+      maybe_grow_callback_data_buffer(callback_data, (size_t)count);
+      
+      /* just making sure */
+      callback_data->overlap.Offset = 0;
+      callback_data->overlap.OffsetHigh = 0;
+      
+      stream_descriptor->socket_data.wsabuf.len = count;
+      stream_descriptor->socket_data.wsabuf.buf = (char*)callback_data->buffer;
+      
+      stream_descriptor->socket_data.recv_address_len
+	= sizeof(stream_descriptor->socket_data.recv_address);
+      block = 1; /* non-blocking */
+      ioctlsocket(socket, FIONBIO, &block);
+      
+      wsa_status = WSARecvFrom(socket,
+			       (LPWSABUF)&stream_descriptor->socket_data.wsabuf,
+			       1,
+			       &numberOfBytesRecvd,
+			       &flags,
+			       want_sender_p
+			       ? (struct sockaddr*)&stream_descriptor->socket_data.recv_address
+			       : NULL,
+			       want_sender_p
+			       ? &stream_descriptor->socket_data.recv_address_len
+			       : NULL,
+			       (LPOVERLAPPED)callback_data,
+			       recv_completed);
+      
+      if ((wsa_status == 0)
+	  || (WSAGetLastError() == WSA_IO_PENDING))
+	{
+	  if (! (s48_add_pending_fd(socket_fd, PSTRUE)))
+	    s48_out_of_memory_error();
+	  return S48_FALSE;
+	}
+      else
+	raise_windows_error(WSAGetLastError());
+    }
+  else
+    {
+      /* rebound */
+      size_t size = callback_data->current_size;
+      memcpy(s48_extract_byte_vector(sch_buffer) + start,
+	     callback_data->current, size);
+      callback_data->current_size = 0;
+      callback_data->current = stream_descriptor->callback_data.buffer;
+
+      if (want_sender_p)
+	{
+	  s48_value sch_count = S48_UNSPECIFIC, sch_saddr = S48_UNSPECIFIC;
+	  s48_value sch_result;
+	  S48_DECLARE_GC_PROTECT(2);
+	  S48_GC_PROTECT_2(sch_count, sch_saddr);
+	  sch_count = s48_enter_unsigned_integer(size);
+	  sch_saddr
+	    = s48_enter_sockaddr((struct sockaddr *)&stream_descriptor->socket_data.recv_address,
+				 stream_descriptor->socket_data.recv_address_len);
+	  sch_result = s48_cons(sch_count, sch_saddr);
+	  S48_GC_UNPROTECT();
+	  return sch_result;
+	}
+      else
+	return s48_enter_unsigned_integer(size);
+    }
+}
+
+static s48_value
+s48_sendto(s48_value sch_channel,
+	   s48_value sch_buffer, s48_value sch_start, s48_value sch_count,
+	   s48_value sch_flags,
+	   s48_value sch_saddr,
+	   s48_value sch_retry_p)
+{
+  int retry_p = !(S48_EQ_P(sch_retry_p, S48_FALSE));
+  const struct sockaddr *sa
+    = S48_EXTRACT_VALUE_POINTER(sch_saddr, const struct sockaddr);
+  socklen_t salen = S48_VALUE_SIZE(sch_saddr);
+  int flags = s48_extract_msg_flags(sch_flags);
+  size_t buffer_size = S48_BYTE_VECTOR_LENGTH(sch_buffer);
+  size_t start = s48_extract_unsigned_integer(sch_start);
+  size_t count = s48_extract_unsigned_integer(sch_count);
+  long socket_fd
+    = S48_UNSAFE_EXTRACT_FIXNUM(S48_CHANNEL_OS_INDEX(sch_channel));
+  stream_descriptor_t* stream_descriptor = &(stream_descriptors[socket_fd]);
+  callback_data_t* callback_data = &(stream_descriptor->callback_data);
+  socket_t socket = stream_descriptor->socket_data.socket;
+
+  if ((start + count) > buffer_size)
+    s48_assertion_violation("s48_sendto", "buffer start or count is wrong", 3,
+			    sch_buffer, sch_start, sch_count);
+  
+  if (!retry_p)
+    {
+	DWORD numberOfBytesSent;
+	DWORD flags = 0;
+	int wsa_status;
+	char* buffer = s48_extract_byte_vector(sch_buffer) + start;
+
+	maybe_grow_callback_data_buffer(callback_data, count);
+	
+	memcpy(callback_data->buffer, buffer, count);
+
+	/* just making sure */
+	callback_data->overlap.Offset = 0;
+	callback_data->overlap.OffsetHigh = 0;
+
+	stream_descriptor->socket_data.wsabuf.len = count;
+	stream_descriptor->socket_data.wsabuf.buf = (char*)callback_data->buffer;
+
+	wsa_status = WSASendTo(socket,
+			       (LPWSABUF)&stream_descriptor->socket_data.wsabuf,
+			       1,
+			       &numberOfBytesSent,
+			       flags,
+			       S48_EXTRACT_VALUE_POINTER(sch_saddr, struct sockaddr),
+			       S48_VALUE_SIZE(sch_saddr),
+			       (LPOVERLAPPED)callback_data,
+			       send_completed);
+	if ((wsa_status == 0)
+	    | (WSAGetLastError() == WSA_IO_PENDING))
+	  {
+	    if (! (s48_add_pending_fd(socket_fd, PSFALSE)))
+	      s48_out_of_memory_error();
+	    
+	    return S48_FALSE;
+	  }
+	else
+	  raise_windows_error(WSAGetLastError());
+    }
+  else
+    /* rebound */
+    return s48_enter_integer(stream_descriptor->file_regular_data.current_offset);
+}
+
+void
+s48_init_os_sockets(void)
+{
+  WORD wVersionRequested;
+  WSADATA wsaData;
+ 
+  /* This is the *highest* version we can use.  Great. */
+  wVersionRequested = MAKEWORD(2, 0);
+ 
+  if (WSAStartup(wVersionRequested, &wsaData) != 0)
+    {
+      fprintf(stderr, "Windows Sockets startup failed.\n");
+      exit(-1);
     }
 
-  return output_channel;
-}
-
-/*
- * Close half of a socket; if `input_p' is true we close the input half,
- * otherwise the output half.  This horribleness is forced upon us by
- * Windows's use of bidirectional file descriptors.
- */
-
-static s48_value
-s48_close_socket_half(s48_value channel, s48_value input_p)
-{
-  long socket_fd;
-  stream_descriptor_t* stream_descriptor;
-  callback_data_t* callback_data;
-  SOCKET socket;
-  
-  S48_CHECK_CHANNEL(channel);
-  socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
-  stream_descriptor = &(stream_descriptors[socket_fd]);
-  callback_data = &(stream_descriptor->callback_data);
-  socket = stream_descriptor->socket_data.socket;
-
-  /* We ignore `endpoint is not connected' errors, as we just want to get
-     the file descriptor closed. */
-  if ((shutdown(socket,
-	       S48_EXTRACT_BOOLEAN(input_p) ? SD_RECEIVE : SD_SEND)
-       == SOCKET_ERROR)
-      && (WSAGetLastError() != WSAENOTCONN))
-    raise_windows_error(WSAGetLastError());
-
-  return S48_TRUE;
-}
-
-/*
- * Get the name of the local machine.
- */
-
-static s48_value
-s48_get_host_name(void)
-{
-  char	mbuff[4096]; /* we don't have MAXHOSTNAMELEN on Windows */
-
-  /* #### Unicode? IDNA? */
-  if (gethostname(mbuff, sizeof(mbuff)) == SOCKET_ERROR)
-    raise_windows_error(WSAGetLastError());
-
-  return s48_enter_string_latin_1(mbuff);
+  S48_EXPORT_FUNCTION(s48_socket);
+  S48_EXPORT_FUNCTION(s48_socketpair);
+  S48_EXPORT_FUNCTION(s48_dup_socket_channel);
+  S48_EXPORT_FUNCTION(s48_accept);
+  S48_EXPORT_FUNCTION(s48_connect);
+  S48_EXPORT_FUNCTION(s48_recvfrom);
+  S48_EXPORT_FUNCTION(s48_sendto);
 }

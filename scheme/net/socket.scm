@@ -299,11 +299,6 @@
 			  "s48_ipv6_socket_leave_group")
 			  
 
-(define-socket-option-setter set-socket-ipv6-v6-only?!
-  "s48_setsockopt_IPV6_V6ONLY")
-(define-socket-option-getter socket-ipv6-v6-only?
-  "s48_getsockopt_IPV6_V6ONLY")
-
 ; Messages
 
 (define-enumeration message-option
@@ -321,9 +316,12 @@
 			(lambda (channel retry?)
 			  (external-sendto channel buffer start count
 					   (enum-set->integer flags)
-					   (socket-address-raw address))))))
+					   (socket-address-raw address)
+					   retry?)))))
 
-(import-lambda-definition external-sendto (channel buffer start count flags address)
+(import-lambda-definition external-sendto (channel
+					   buffer start count flags address
+					   retry?)
 			  "s48_sendto")
 
 (define socket-receive
@@ -338,10 +336,13 @@
 			       (lambda (channel retry?)
 				 (external-recvfrom channel buffer start count
 						    (enum-set->integer flags)
-						    want-sender?)))))
+						    want-sender?
+						    retry?)))))
       (if want-sender?
 	  (values (car got) (raw->socket-address (cdr got)))
 	  got))))
 
-(import-lambda-definition external-recvfrom (channel buffer start count flags want-sender?)
+(import-lambda-definition external-recvfrom (channel
+					     buffer start count flags
+					     want-sender? retry?)
 			  "s48_recvfrom")

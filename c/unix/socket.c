@@ -119,9 +119,8 @@ s48_dup_socket_channel(s48_value sch_channel)
 }
 
 /*
- * Given an internet-domain stream socket which has been bound
- * accept a connection and return the resulting socket as a pair of channels
- * (after marking it non-blocking).
+ * Given a bound socket, accept a connection and return the resulting
+ * socket as a pair of channels (after marking it non-blocking).
  *
  * If the accept fails because the client hasn't connected yet, then we
  * return #f.
@@ -181,8 +180,7 @@ s48_accept(s48_value sch_channel, s48_value sch_retry_p)
 }
 
 /*
- * Given an internet-domain stream socket, a machine name and a port number,
- * connect the socket to that machine/port.
+ * Given a socket and an address, connect the socket.
  *
  * If this succeeds, it returns an output channel for the connection.
  * If it fails because the connect would block, add the socket to the
@@ -245,7 +243,8 @@ static s48_value
 s48_recvfrom(s48_value sch_channel,
 	     s48_value sch_buffer, s48_value sch_start, s48_value sch_count,
 	     s48_value sch_flags,
-	     s48_value sch_want_sender_p)
+	     s48_value sch_want_sender_p,
+	     s48_value sch_retry_p)
 {
   socket_t socket_fd = s48_extract_socket_fd(sch_channel);
   int want_sender_p = !(S48_EQ_P(sch_want_sender_p, S48_FALSE));
@@ -282,7 +281,7 @@ s48_recvfrom(s48_value sch_channel,
 	return sch_result;
       }
     else
-      return s48_enter_unsigned_integer(count);
+      return s48_enter_unsigned_integer(status);
   
   /*
    * Check for errors.  If we need to retry we mark the socket as pending
@@ -305,7 +304,8 @@ static s48_value
 s48_sendto(s48_value sch_channel,
 	   s48_value sch_buffer, s48_value sch_start, s48_value sch_count,
 	   s48_value sch_flags,
-	   s48_value sch_saddr)
+	   s48_value sch_saddr,
+	   s48_value sch_retry_p) /* ignored on Unix */
 {
   socket_t socket_fd = s48_extract_socket_fd(sch_channel);
   ssize_t sent;
@@ -345,6 +345,7 @@ s48_sendto(s48_value sch_channel,
 
   return S48_FALSE;
 }
+
 void
 s48_init_os_sockets(void)
 {

@@ -4,9 +4,17 @@
 #ifndef __NET_ADDRESS_H__
 #define __NET_ADDRESS_H__
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <mswsock.h>
+typedef int sa_family_t;
+typedef unsigned char uint8_t;
+#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#endif
+
 #include <scheme48.h>
 
 extern sa_family_t s48_extract_af(s48_value sch_af_val);

@@ -45,7 +45,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="c,c/bibop,c/win32"
+				AdditionalIncludeDirectories="c,c/net,c/bibop,c/win32"
 				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE;__COMPILING_SCHEME48_ITSELF__;S48_HOST_ARCHITECTURE=\&quot;i86-pc-win32\&quot;"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -135,7 +135,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="c,c/bibop,c/win32"
+				AdditionalIncludeDirectories="c,c/net,c/bibop,c/win32"
 				PreprocessorDefinitions="_DEBUG;WIN32;_CONSOLE;__COMPILING_SCHEME48_ITSELF__;S48_HOST_ARCHITECTURE=\&quot;i86-pc-win32\&quot;"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -205,6 +205,10 @@
 			Name="Source Files"
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
+			<File
+				RelativePath=".\c\net\address.c"
+				>
+			</File>
 			<File
 				RelativePath="c\bibop\area_roots.c"
 				>
@@ -730,6 +734,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\c\net\net.c"
+				>
+			</File>
+			<File
 				RelativePath="c\bibop\page_alloc.c"
 				>
 				<FileConfiguration
@@ -856,6 +864,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\c\net\socket.c"
+				>
+			</File>
+			<File
 				RelativePath=".\c\win32\utf-8of16.c"
 				>
 			</File>
@@ -890,6 +902,10 @@
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
+			<File
+				RelativePath=".\c\net\address.h"
+				>
+			</File>
 			<File
 				RelativePath="c\bibop\area_roots.h"
 				>
@@ -1000,6 +1016,10 @@
 			</File>
 			<File
 				RelativePath=".\c\win32\scheme48write-barrier.h"
+				>
+			</File>
+			<File
+				RelativePath=".\c\net\socket.h"
 				>
 			</File>
 			<File

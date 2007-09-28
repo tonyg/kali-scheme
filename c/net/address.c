@@ -7,6 +7,22 @@
 
 /* Main source: RFC 3493 - Basic Socket Interface Extensions for IPv6 */
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <mswsock.h>
+#include <windows.h>
+#include <ws2tcpip.h>
+#include <iphlpapi.h>
+
+#define HAVE_THREADS
+#define DECLARE_THREAD_PROC(name, param_name) \
+       DWORD WINAPI name(LPVOID param_name)
+#define EXIT_THREAD_PROC() do { ExitThread(0); return 0; } while (0)
+typedef HANDLE thread_t;
+#define START_THREAD(desc, name, arg) \
+  ((desc = CreateThread(NULL, 4096, (LPTHREAD_START_ROUTINE) name, (LPVOID) arg, 0, NULL)) == NULL)
+#define DETACH_THREAD(desc) ;
+#else
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -15,10 +31,19 @@
 #include <sys/un.h>
 
 #include "sysdep.h"
-
 #ifdef HAVE_PTHREAD_H
 #include <pthread.h>
+#define HAVE_THREADS
+#define DECLARE_THREAD_PROC(name, param_name) \
+       void* name(void* param_name)
+#define EXIT_THREAD_PROC() do { return NULL; } while (0)
+typedef pthread_t thread_t;
+#define START_THREAD(desc, name, arg) \
+  pthread_create(&desc, NULL, name, (void*) arg)
+#define DETACH_THREAD(desc) pthread_detach(desc)
 #endif
+#endif
+
 #include <errno.h>
 
 #include <scheme48.h>
@@ -256,6 +281,8 @@ s48_get_in6addr_loopback(void)
 #define SOCKADDR_UN_LEN(su) (sizeof(su) - sizeof((su).sun_path) + strlen((su).sun_path))
 #endif
 
+#ifndef _WIN32
+
 /* Unix domain addresses */
 
 /* may GC */
@@ -289,6 +316,7 @@ s48_make_sockaddr_un_raw(s48_value sch_path)
   return s48_enter_sockaddr_un_raw(&saddr);
 }
 
+
 /* may GC */
 static s48_value
 s48_enter_sockaddr_un(const struct sockaddr_un *saddr)
@@ -305,6 +333,8 @@ s48_enter_sockaddr_un(const struct sockaddr_un *saddr)
   return sch_saddr;
 		
 }
+
+#endif /* !_WIN32 */
 
 /* Generic addresses */
 
@@ -328,8 +358,10 @@ s48_enter_sockaddr(const struct sockaddr* saddr, socklen_t addrlen)
       return s48_enter_sockaddr_in((const struct sockaddr_in*) saddr);
     case AF_INET6:
       return s48_enter_sockaddr_in6((const struct sockaddr_in6*) saddr);
+#ifndef _WIN32
     case AF_UNIX:
       return s48_enter_sockaddr_un((const struct sockaddr_un*) saddr);
+#endif
     default:
       {
 	S48_DECLARE_GC_PROTECT(1);
@@ -346,6 +378,8 @@ s48_enter_sockaddr(const struct sockaddr* saddr, socklen_t addrlen)
 }
 
 /* Interfaces */
+
+#ifndef _WIN32 /* supposedly available on Vista, so there's hope */
 
 /* note an error is indicated by 0 */
 static s48_value
@@ -408,6 +442,8 @@ s48_if_nameindex(void)
   return sch_table;
 }
 
+#endif
+
 /* Nodename translation */
 
 int
@@ -444,11 +480,7 @@ extract_ai_flags(s48_value sch_flags)
   long flags = s48_extract_fixnum(sch_flags);
   return (((flags & 0x01) ? AI_PASSIVE : 0)
 	  | ((flags & 0x02) ? AI_CANONNAME : 0)
-	  | ((flags & 0x04) ? AI_NUMERICHOST : 0)
-	  | ((flags & 0x08) ? AI_NUMERICSERV : 0)
-	  | ((flags & 0x10) ? AI_V4MAPPED : 0)
-	  | ((flags & 0x20) ? AI_ALL : 0)
-	  | ((flags & 0x40) ? AI_ADDRCONFIG : 0));
+	  | ((flags & 0x04) ? AI_NUMERICHOST : 0));
 }
 
 static s48_value
@@ -457,11 +489,7 @@ enter_ai_flags(int flags)
   return
     s48_enter_fixnum(((flags & AI_PASSIVE) ? 0x01 : 0)
 		     | ((flags & AI_CANONNAME) ? 0x02 : 0)
-		     | ((flags & AI_NUMERICHOST) ? 0x04 : 0)
-		     | ((flags & AI_NUMERICSERV) ? 0x08 : 0)
-		     | ((flags & AI_V4MAPPED) ? 0x10 : 0)
-		     | ((flags & AI_ALL) ? 0x20 : 0)
-		     | ((flags & AI_ADDRCONFIG) ? 0x40 : 0));
+		     | ((flags & AI_NUMERICHOST) ? 0x04 : 0));
 }
 
 static int
@@ -551,11 +579,12 @@ get_addrinfo_result(struct getaddrinfo_handshake *handshake)
 
   if (handshake->status != 0)
     {
+      int status = handshake->status;
       free_getaddrinfo_handshake(handshake);
-      if (handshake->status == EAI_NONAME)
+      if (status == EAI_NONAME)
 	return S48_FALSE;
       else
-      s48_error("s48_getaddrinfo_result", gai_strerror(handshake->status), 0);
+	s48_error("s48_getaddrinfo_result", gai_strerror(status), 0);
     }
 
   addrinfo_count = 0;
@@ -594,17 +623,18 @@ s48_getaddrinfo_result(s48_value sch_handshake)
   return get_addrinfo_result(s48_extract_pointer(sch_handshake));
 }
 
-#ifdef HAVE_PTHREAD_H
-static void*
-getaddrinfo_thread(void *void_handshake)
+#ifdef HAVE_THREADS
+static
+DECLARE_THREAD_PROC(getaddrinfo_thread, void_handshake)
 {
-  struct getaddrinfo_handshake *handshake = void_handshake;
+  struct getaddrinfo_handshake *handshake
+    = (struct getaddrinfo_handshake *) void_handshake;
   
   handshake->status
     = getaddrinfo(handshake->nodename, handshake->servname,
 		  &(handshake->hints), &(handshake->result));
   s48_note_external_event(handshake->event_uid);
-  return NULL;
+  EXIT_THREAD_PROC();
 }
 #endif
 
@@ -614,9 +644,9 @@ s48_getaddrinfo(s48_value sch_nodename, s48_value sch_servname,
 		s48_value sch_hint_socktype, s48_value sch_hint_protocol)
 {
   struct getaddrinfo_handshake *handshake;
-  char* nodename;
-  char* servname;
-  pthread_t t;
+#ifdef HAVE_THREADS
+  thread_t t;
+#endif
 
   handshake = malloc(sizeof(struct getaddrinfo_handshake));
   if (handshake == NULL)
@@ -659,8 +689,8 @@ s48_getaddrinfo(s48_value sch_nodename, s48_value sch_servname,
 
   handshake->event_uid = s48_external_event_uid();
 
-#ifdef HAVE_PTHREAD_H
-  if (pthread_create(&t, NULL, getaddrinfo_thread, (void*) handshake))
+#ifdef HAVE_THREADS
+  if (START_THREAD(t, getaddrinfo_thread, handshake))
 #endif
     {
       handshake->status
@@ -668,7 +698,7 @@ s48_getaddrinfo(s48_value sch_nodename, s48_value sch_servname,
 		      &(handshake->hints), &(handshake->result));
       return get_addrinfo_result(handshake);
     }
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_THREADS
   else
     {
       s48_value sch_event_uid = S48_UNSPECIFIC;
@@ -676,7 +706,7 @@ s48_getaddrinfo(s48_value sch_nodename, s48_value sch_servname,
       s48_value sch_result;
       S48_DECLARE_GC_PROTECT(2);
 
-      pthread_detach(t);
+      DETACH_THREAD(t);
 
       S48_GC_PROTECT_2(sch_event_uid, sch_handshake);
       sch_event_uid = s48_enter_integer(handshake->event_uid);
@@ -733,8 +763,9 @@ getnameinfo_result(struct getnameinfo_handshake* handshake)
 
   if (handshake->status != 0)
     {
+      int status = handshake->status;
       free(handshake);
-      s48_error("s48_getaddrinfo_result", gai_strerror(handshake->status), 0);
+      s48_error("s48_getnameinfo_result", gai_strerror(status), 0);
     }
 
   S48_GC_PROTECT_3(sch_host, sch_serv, sch_result);
@@ -755,9 +786,9 @@ s48_getnameinfo_result(s48_value sch_handshake)
   return getnameinfo_result(s48_extract_pointer(sch_handshake));
 }
 
-#ifdef HAVE_PTHREAD_H
-static void*
-getnameinfo_thread(void *void_handshake)
+#ifdef HAVE_THREADS
+static
+DECLARE_THREAD_PROC(getnameinfo_thread, void_handshake)
 {
   struct getnameinfo_handshake *handshake = void_handshake;
   
@@ -767,7 +798,7 @@ getnameinfo_thread(void *void_handshake)
 		  handshake->serv, NI_MAXSERV,
 		  handshake->flags);
   s48_note_external_event(handshake->event_uid);
-  return NULL;
+  EXIT_THREAD_PROC();
 }
 #endif
 
@@ -778,7 +809,9 @@ s48_getnameinfo(s48_value sch_saddr, s48_value sch_flags)
   const struct sockaddr *sa
     = S48_EXTRACT_VALUE_POINTER(sch_saddr, const struct sockaddr);
   socklen_t salen = S48_VALUE_SIZE(sch_saddr);
-  pthread_t t;
+#ifdef HAVE_THREADS
+  thread_t t;
+#endif
 
   struct getnameinfo_handshake *handshake
     = malloc(sizeof(struct getnameinfo_handshake));
@@ -793,8 +826,8 @@ s48_getnameinfo(s48_value sch_saddr, s48_value sch_flags)
 
   handshake->event_uid = s48_external_event_uid();
 
-#ifdef HAVE_PTHREAD_H
-  if (pthread_create(&t, NULL, getnameinfo_thread, (void*) handshake))
+#ifdef HAVE_THREADS
+  if (START_THREAD(t, getnameinfo_thread, handshake))
 #endif
     {
       handshake->status
@@ -804,7 +837,7 @@ s48_getnameinfo(s48_value sch_saddr, s48_value sch_flags)
 		      handshake->flags);
       return getnameinfo_result(handshake);
     }
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_THREADS
   else
     {
       s48_value sch_event_uid = S48_UNSPECIFIC;
@@ -812,7 +845,7 @@ s48_getnameinfo(s48_value sch_saddr, s48_value sch_flags)
       s48_value sch_result;
       S48_DECLARE_GC_PROTECT(2);
 
-      pthread_detach(t);
+      DETACH_THREAD(t);
 
       S48_GC_PROTECT_2(sch_event_uid, sch_handshake);
       sch_event_uid = s48_enter_integer(handshake->event_uid);
@@ -841,9 +874,19 @@ s48_inet_pton(s48_value sch_af, s48_value sch_src)
 	struct in_addr addr;
 	s48_copy_string_to_latin_1(sch_src, src);
 	src[s48_string_length(sch_src)] = '\0';
+#ifdef _WIN32
+	{
+	  INT size = sizeof(struct in_addr);
+	  if (WSAStringToAddress(src, AF_INET, 0, 
+				 (LPSOCKADDR)&addr, &size)
+	      == 0)
+	  return enter_in_addr(&addr);
+	}
+#else
 	status = inet_pton(AF_INET, src, &addr);
 	if (status == 1)
 	  return enter_in_addr(&addr);
+#endif
 	break;
       }
     case AF_INET6:
@@ -852,9 +895,19 @@ s48_inet_pton(s48_value sch_af, s48_value sch_src)
 	struct in6_addr addr;
 	s48_copy_string_to_latin_1(sch_src, src);
 	src[s48_string_length(sch_src)] = '\0';
+#ifdef _WIN32
+	{
+	  INT size = sizeof(struct in6_addr);
+	  if (WSAStringToAddress(src, AF_INET6, 0,
+				 (LPSOCKADDR)&addr, &size)
+	      == 0)
+	  return s48_enter_in6_addr(&addr);
+	}
+#else
 	status = inet_pton(AF_INET6, src, &addr);
 	if (status == 1)
 	  return s48_enter_in6_addr(&addr);
+#endif
       }
     default:
       s48_assertion_violation("s48_inet_pton", "invalid adddress family", 1, sch_af);
@@ -875,8 +928,18 @@ s48_inet_ntop(s48_value sch_af, s48_value sch_src)
 	char dest[INET_ADDRSTRLEN+1]; /* be safe */
 	struct in_addr addr;
 	extract_in_addr(sch_src, &addr);
+#ifdef _WIN32
+	{
+	  DWORD destlen;
+	  if (WSAAddressToString((struct sockaddr *)&addr, sizeof(struct in_addr),
+				 NULL, dest, &destlen) != 0)
+	    s48_os_error("s48_inet_ntop", WSAGetLastError(), 2, sch_af, sch_src);
+	}
+	    
+#else
 	if (inet_ntop(AF_INET, &addr, dest, sizeof(dest)) == NULL)
 	  s48_os_error("s48_inet_ntop", errno, 2, sch_af, sch_src);
+#endif
 	return s48_enter_string_latin_1(dest);
       }
     case AF_INET6:
@@ -884,8 +947,17 @@ s48_inet_ntop(s48_value sch_af, s48_value sch_src)
 	char dest[INET6_ADDRSTRLEN+1]; /* be safe */
 	struct in6_addr addr;
 	s48_extract_in6_addr(sch_src, &addr);
+#ifdef _WIN32
+	{
+	  DWORD destlen;
+	  if (WSAAddressToString((struct sockaddr *)&addr, sizeof(struct in6_addr),
+				 NULL, dest, &destlen) != 0)
+	    s48_os_error("s48_inet_ntop", WSAGetLastError(), 2, sch_af, sch_src);
+	}
+#else
 	if (inet_ntop(AF_INET6, &addr, dest, sizeof(dest)) == NULL)
 	  s48_os_error("s48_inet_ntop", errno, 2, sch_af, sch_src);
+#endif
 	return s48_enter_string_latin_1(dest);
       }
     default:
@@ -928,11 +1000,13 @@ s48_init_net_addresses(void)
   S48_EXPORT_FUNCTION(s48_get_in6addr_any);
   S48_EXPORT_FUNCTION(s48_get_in6addr_loopback);
 
+#ifndef _WIN32
   S48_EXPORT_FUNCTION(s48_make_sockaddr_un_raw);
 
   S48_EXPORT_FUNCTION(s48_if_nametoindex);
   S48_EXPORT_FUNCTION(s48_if_indextoname);
   S48_EXPORT_FUNCTION(s48_if_nameindex);
+#endif
 
   S48_EXPORT_FUNCTION(s48_getaddrinfo);
   S48_EXPORT_FUNCTION(s48_getaddrinfo_result);
