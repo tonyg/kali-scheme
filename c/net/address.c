@@ -7,6 +7,9 @@
 
 /* Main source: RFC 3493 - Basic Socket Interface Extensions for IPv6 */
 
+#include <stdlib.h>
+#include <string.h>
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <mswsock.h>
@@ -309,7 +312,7 @@ s48_make_sockaddr_un_raw(s48_value sch_path)
   saddr.sun_family = AF_UNIX;
   strcpy(saddr.sun_path, s48_extract_byte_vector(sch_path));
 
-#ifdef SUN_LEN
+#ifdef SIN6_LEN
   saddr.sun_len = SUN_LEN(&saddr);
 #endif
 
