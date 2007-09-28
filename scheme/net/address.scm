@@ -317,11 +317,7 @@
 (define-enumeration address-info-flag
   (passive
    canonname
-   numerichost
-   numericserv
-   v4mapped
-   all
-   addrconfig)
+   numerichost)
   address-info-flags)
 
 (define address-info-flag-set-type (enum-set-type (address-info-flags)))

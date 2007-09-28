@@ -8,7 +8,7 @@ extern void s48_init_external_libs(void);
 extern void s48_init_dynlink(void);
 extern void s48_init_sysexits(void);
 extern void s48_init_srfi_27(void);
-extern void s48_init_sockets(void);
+extern void s48_init_os_sockets(void);
 extern void s48_init_net(void);
 extern void s48_init_asm_glue(void);
 

@@ -3,10 +3,10 @@
 set srcdir=%1
 set srcdir_cooked=%~f1
 set srcdir_cooked=%srcdir_cooked:\=\\%
-set lib=%~f2
-set lib=%lib:\=\\%
-set share=%~f3
+set share=%~f2
 set share=%share:\=\\%
+set lib=%~f3
+set lib=%lib:\=\\%
 set image=%~4
 set vm=%5
 set initial=%6

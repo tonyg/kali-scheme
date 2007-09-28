@@ -1,7 +1,5 @@
 ; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
-(import-dynamic-externals "=scheme48external/posix")
-
 ; Options for open() and fcntl()
  
 (define-enumerated-type file-option :file-option

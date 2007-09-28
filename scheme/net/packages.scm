@@ -135,9 +135,6 @@
 
 	  socket-ipv6-join-group!
 	  socket-ipv6-leave-group!  
-
-	  set-socket-ipv6-v6-only?!
-	  socket-ipv6-v6-only?
 	  ))
 
 (define-structure net-sockets net-sockets-interface

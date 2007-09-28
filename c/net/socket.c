@@ -5,13 +5,30 @@
  * More or less platform-unspecific socket stuff.
  */
 
+#include <stdlib.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <mswsock.h>
+#include <windows.h>
+#include <ws2tcpip.h>
+
+#define RETRY_NEG(STATUS, CALL) STATUS = (CALL)
+#define RETRY_OR_RAISE_NEG(STATUS, CALL)			\
+do {								\
+    STATUS = (CALL);						\
+    if (STATUS == SOCKET_ERROR)					\
+      s48_os_error(NULL, WSAGetLastError(), 0);			\
+ } while (0)
+
+#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdlib.h>
 
 #include "unix.h"
+#endif
 
 #include <scheme48.h>
 
@@ -26,12 +43,21 @@ extract_how(s48_value sch_how)
   long how_val = s48_extract_fixnum(sch_how);
   switch (how_val)
     {
+#ifdef _WIN32
+    case 0:
+      return SD_RECEIVE;
+    case 1:
+      return SD_SEND;
+    case 2:
+      return SD_BOTH;
+#else
     case 0:
       return SHUT_RD;
     case 1:
       return SHUT_WR;
     case 2:
       return SHUT_RDWR;
+#endif
     }
 }
 
@@ -62,7 +88,11 @@ s48_shutdown(s48_value sch_channel, s48_value sch_how)
    * the file descriptor closed.
    */
   RETRY_NEG(status, shutdown(socket_fd, how));
+#ifdef _WIN32
+  if ((status == SOCKET_ERROR) && (WSAGetLastError() != WSAENOTCONN))
+#else
   if ((0 > status) && (errno != ENOTCONN))
+#endif
     s48_os_error("s48_close_socket_half", errno, 1, sch_channel);
   
   return S48_UNSPECIFIC;
@@ -86,7 +116,7 @@ static s48_value
 s48_listen(s48_value sch_channel, s48_value sch_queue_size)
 {
   socket_t socket_fd = s48_extract_socket_fd(sch_channel);
-  int queue_size = s48_extract_fixnum(sch_queue_size);
+  int queue_size = s48_extract_integer(sch_queue_size);
   int status;
 
   RETRY_OR_RAISE_NEG(status, listen(socket_fd, queue_size));
@@ -97,7 +127,8 @@ s48_listen(s48_value sch_channel, s48_value sch_queue_size)
 static s48_value
 s48_max_connection_count(void)
 {
-  return s48_enter_fixnum(SOMAXCONN);
+  /* not a fixnum on Windows! */
+  return s48_enter_integer(SOMAXCONN);
 }
 
 static s48_value
@@ -136,7 +167,7 @@ setsockopt_boolean(int level, int option,
   on = (S48_EQ_P(sch_val, S48_FALSE) ? 0 : 1);
   RETRY_OR_RAISE_NEG(status, \
 		     setsockopt(socket_fd, level, option,
-				&on, sizeof(on)));
+				(void*)&on, sizeof(on)));
   return S48_UNSPECIFIC;
 }
 
@@ -150,7 +181,7 @@ getsockopt_boolean(int level, int option,
 
   RETRY_OR_RAISE_NEG(status,
 		     getsockopt(socket_fd, level, option,
-				&on, &onlen));
+				(void*)&on, &onlen));
   return (on ? S48_TRUE : S48_FALSE);
 }
 
@@ -161,10 +192,10 @@ setsockopt_int(int level, int option,
   socket_t socket_fd = s48_extract_socket_fd(sch_channel);
   int status, val;
 
-  val = s48_extract_integer(val);
+  val = s48_extract_integer(sch_val);
   RETRY_OR_RAISE_NEG(status,
 		     setsockopt(socket_fd, level, option,
-				&val, sizeof(val)));
+				(void*)&val, sizeof(val)));
   return S48_UNSPECIFIC;
 }
 
@@ -178,7 +209,7 @@ getsockopt_int(int level, int option,
 
   RETRY_OR_RAISE_NEG(status,
 		     getsockopt(socket_fd, level, option,
-				&val, &vallen));
+				(void*)&val, &vallen));
   return s48_enter_integer(val);
 }
 
@@ -254,7 +285,7 @@ ipv6_socket_group_op(int group_op,
 
   RETRY_OR_RAISE_NEG(status,
 		     setsockopt(socket_fd, IPPROTO_IPV6, group_op,
-				&mreq, sizeof(struct ipv6_mreq)));
+				(void*)&mreq, sizeof(struct ipv6_mreq)));
   return S48_UNSPECIFIC;
 }
 
@@ -275,9 +306,6 @@ s48_ipv6_socket_leave_group(s48_value sch_channel,
   return ipv6_socket_group_op(IPV6_LEAVE_GROUP,
 			      sch_channel, sch_address, sch_if);
 }
-
-DEFINE_SOCKET_OPTION_SETTER(s48_setsockopt_IPV6_V6ONLY, SOL_SOCKET, IPV6_V6ONLY, boolean)
-DEFINE_SOCKET_OPTION_GETTER(s48_getsockopt_IPV6_V6ONLY, SOL_SOCKET, IPV6_V6ONLY, boolean)
 
 void
 s48_init_net_sockets(void)
@@ -323,7 +351,4 @@ s48_init_net_sockets(void)
 
   S48_EXPORT_FUNCTION(s48_ipv6_socket_join_group);
   S48_EXPORT_FUNCTION(s48_ipv6_socket_leave_group);
-
-  S48_EXPORT_FUNCTION(s48_setsockopt_IPV6_V6ONLY);
-  S48_EXPORT_FUNCTION(s48_getsockopt_IPV6_V6ONLY);
 }
