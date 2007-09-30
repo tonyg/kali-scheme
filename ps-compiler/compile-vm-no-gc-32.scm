@@ -8,7 +8,7 @@
     '(run (prescheme-compiler
 	   '(vm external-gc-roots interpreter-gc)
 	   '("../scheme/platform-interfaces.scm"
-	     "../scheme/ps-platform-32-packages.scm"
+	     "../scheme/vm/ps-platform-32-packages.scm"
 	     "../scheme/vm/interfaces.scm"
 	     "../scheme/vm/shared-interfaces.scm"
 	     "../scheme/vm/ps-package-defs.scm"

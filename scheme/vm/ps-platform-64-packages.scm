@@ -3,6 +3,6 @@
 
 ; Platform-specific constants
 
-(define-structure platform platform-interface
-  (open scheme)
-  (files (platform platform-32)))
+(define-structure ps-platform platform-interface
+  (open prescheme)
+  (files ((data) platform-64)))
