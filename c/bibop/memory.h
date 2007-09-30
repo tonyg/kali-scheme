@@ -7,7 +7,7 @@
 typedef char* s48_address;
 
 /* bytes <--> cells */
-#define S48_LOG_BYTES_PER_CELL 2
+//can't include it, because of mutual inclusion: include <scheme48.h> // S48_LOG_BYTES_PER_CELL
 #define S48_BYTES_PER_CELL (1L << S48_LOG_BYTES_PER_CELL)
 
 #define S48_BYTES_TO_CELLS(b) (((unsigned long)(b + (S48_BYTES_PER_CELL - 1))) \

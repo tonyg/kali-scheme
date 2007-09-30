@@ -6,6 +6,7 @@
 
 #include "memory.h"
 #include "areas.h"
+#include "page_constants.h"
 
 /* When a new page is allocated: */
 extern void s48_memory_map_setB(s48_address address, Area* value);
