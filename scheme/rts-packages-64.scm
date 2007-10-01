@@ -5,4 +5,4 @@
 
 (define-structure platform platform-interface
   (open scheme)
-  (files (platform platform-64)))
+  (files ((vm data) platform-64)))

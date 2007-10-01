@@ -9,7 +9,7 @@
     '(run (prescheme-compiler
            '(allocation heap heap-two-space-native-code gc read-image write-image)
 	   '("../scheme/platform-interfaces.scm"
-	     "../scheme/ps-platform-64-packages.scm"
+	     "../scheme/vm/ps-platform-64-packages.scm"
 	     "../scheme/vm/interfaces.scm"
 	     "../scheme/vm/shared-interfaces.scm"
              "../scheme/vm/ps-package-defs.scm"

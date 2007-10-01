@@ -5,4 +5,4 @@
 
 (define-structure ps-platform platform-interface
   (open prescheme)
-  (files (platform platform-32)))
+  (files ((data) platform-32)))
