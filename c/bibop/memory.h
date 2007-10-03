@@ -7,7 +7,7 @@
 typedef char* s48_address;
 
 /* bytes <--> cells */
-//can't include it, because of mutual inclusion: include <scheme48.h> // S48_LOG_BYTES_PER_CELL
+/* can't include scheme48.h, because of mutual inclusion: defines S48_LOG_BYTES_PER_CELL */
 #define S48_BYTES_PER_CELL (1L << S48_LOG_BYTES_PER_CELL)
 
 #define S48_BYTES_TO_CELLS(b) (((unsigned long)(b + (S48_BYTES_PER_CELL - 1))) \
@@ -16,7 +16,7 @@ typedef char* s48_address;
 #define S48_CELLS_TO_BYTES(c) ((c) << S48_LOG_BYTES_PER_CELL)
 
 /* addressable units <--> cells */
-#define S48_LOG_A_UNITS_PER_CELL 2
+#define S48_LOG_A_UNITS_PER_CELL S48_LOG_BYTES_PER_CELL /* on byte-addressable platforms (the only ones we support at the moment) */
 #define S48_A_UNITS_PER_CELL (1L << S48_LOG_A_UNITS_PER_CELL)
 
 #define S48_A_UNITS_TO_CELLS(a) (((unsigned long)a) >> S48_LOG_A_UNITS_PER_CELL)
