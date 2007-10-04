@@ -102,31 +102,32 @@ BIG_HEAP = -h 8000000
 LINKER_VM = $(RUNNABLE) $(BIG_HEAP)
 LINKER_RUNNABLE = $(LINKER_VM)
 LINKER_WRITEBYTE = ,open (subset i/o (write-byte)) (subset ports (set-port-crlf?!))
-START_LINKER-32 = echo ',batch';				\
+START_LINKER_HEAD = echo ',batch';				\
 	       echo ',bench on';				\
 	       echo ',open signals handle features';		\
 	       echo ',open bitwise ascii code-vectors';		\
 	       echo '$(LINKER_WRITEBYTE)';			\
-	       echo ',config ,load scheme/platform-interfaces.scm'; \
-	       echo ',config ,load scheme/rts-packages-32.scm'; \
-	       echo ',open platform';	\
-	       echo ',open cells record-types';	\
+	       echo ',config ,load scheme/platform-interfaces.scm'
+
+START_LINKER_TAIL = echo ',open platform';			\
+	       echo ',config ,load scheme/prescheme/interface.scm'; \
+	       echo ',config ,load scheme/prescheme/package-defs.scm'; \
+	       echo ',config ,load scheme/vm/interfaces.scm'; 	\
+	       echo ',config ,load scheme/vm/shared-interfaces.scm'; \
+	       echo ',config ,load scheme/link/vm-packages.scm'; \
+	       echo ',open vm-data vm-utilities';		\
+	       echo ',open cells record-types';			\
 	       echo ',load scheme/alt/low-exception.scm';	\
 	       echo ',load $(linker-files)';			\
 	       echo ',load scheme/alt/init-defpackage.scm'
 
-START_LINKER-64 = echo ',batch';				\
-	       echo ',bench on';				\
-	       echo ',open signals handle features';		\
-	       echo ',open bitwise ascii code-vectors';		\
-	       echo '$(LINKER_WRITEBYTE)';			\
-	       echo ',config ,load scheme/platform-interfaces.scm'; \
+START_LINKER-32 = $(START_LINKER_HEAD);				\
+	       echo ',config ,load scheme/rts-packages-32.scm'; \
+	       $(START_LINKER_TAIL)
+
+START_LINKER-64 = $(START_LINKER_HEAD);				\
 	       echo ',config ,load scheme/rts-packages-64.scm'; \
-	       echo ',open platform';	\
-	       echo ',open cells record-types';	\
-	       echo ',load scheme/alt/low-exception.scm';	\
-	       echo ',load $(linker-files)';			\
-	       echo ',load scheme/alt/init-defpackage.scm'
+	       $(START_LINKER_TAIL)
 
 # --------------------
 # You shouldn't have to change anything below this point.

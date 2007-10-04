@@ -129,8 +129,6 @@ Cleanup:
       This would result in more uniform and flexible internal
       protocols for reading files, scanning for DEFINEs, compiling,
       and running - passes could be interleaved or separated easily.
-    Flush link/data.scm.  Linker should instead open the VM module
-      that includes vm/data.scm.
     Flush (optimize ...) clause in DEFINE-STRUCTURE in favor of
       optimizer argument to SCAN-STRUCTURES.
     Vector templates ought to be supported in SYNTAX-RULES.
