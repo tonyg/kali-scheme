@@ -469,6 +469,7 @@ configure: configure.in
 clean:
 	-rm -f $(VM) script-interpreter					\
 		*.o c/unix/*.o c/posix/*.o c/net/*.o c/*.o 		\
+		$(POSIX_EXTERNAL)					\
 		c/fake/*.o c/bibop/*.o					\
 		c/*.a c/glue_gnu.s c/glue_darwin.s c/scheme48.exp 	\
 		TAGS $(IMAGE)						\
