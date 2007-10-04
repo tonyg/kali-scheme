@@ -110,7 +110,7 @@ AC_CACHE_VAL(ac_cv_sizeof_void_p,
 	    ac_cv_sizeof_void_p=0,
 	    AC_MSG_ERROR(failed to compile test program))])
      AC_MSG_RESULT($ac_cv_sizeof_void_p)
-     AC_DEFINE_UNQUOTED(SIZEOF_VOID_P, $ac_cv_sizeof_void_p)
+     AC_DEFINE(SIZEOF_VOID_P, $ac_cv_sizeof_void_p, [Check for sizeof (void *)])
      if test $BIT_SUFFIX; then
        echo "You forced BIT_SUFFIX to be $BIT_SUFFIX."
      elif test "$ac_cv_sizeof_void_p" = 4; then
