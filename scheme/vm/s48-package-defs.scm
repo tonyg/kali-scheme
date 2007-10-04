@@ -2,7 +2,7 @@
 
 
 (define-structures ((vm-utilities vm-utilities-interface))
-  (open prescheme)
+  (open scheme)
   (files (util vm-utilities))
   (begin
 ;    (define-syntax assert

@@ -50,7 +50,7 @@
     (define fl< <) (define fl> >)
     (define fl<= <=) (define fl>= >=)))
 
-(define-structure ps-flonums ps-flonums-interface
+(define-structure ps-unsigned-integers ps-unsigned-integers-interface
   (open scheme)
   (optimize auto-integrate)
   (begin
