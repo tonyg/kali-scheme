@@ -686,7 +686,8 @@ queue_ready_ports(psbool wait, long seconds, long ticks)
       for (fdp = *fdpp, npollfds = 0;
 	   (left > 0) && (fdp != NULL); 
 	   fdp = *fdpp, npollfds++) {
-	if (pollfds[npollfds].events & fdp->is_input? POLLIN : POLLOUT) {
+	if (pollfds[npollfds].revents & (fdp->is_input? POLLIN : POLLOUT) 
+	    | POLLHUP | POLLERR) {
 	  rmque(fdpp, &pending);
 	  fdp->status = FD_READY;
 	  addque(fdp, &ready);
