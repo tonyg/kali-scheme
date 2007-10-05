@@ -225,21 +225,26 @@
   (lambda (stob value)
     (let ((type (code-byte 0))
 	  (offset (code-byte 1)))
-      (cond ((and (stob-of-type? stob type)
-		  (not (immutable? stob)))
+      (cond ((not (stob-of-type? stob type))
+	     (raise-exception wrong-type-argument 3
+			      stob
+			      (enter-fixnum type)
+			      (enter-fixnum offset)
+			      value))
+	    ((immutable? stob)
+	     (raise-exception immutable-argument 3
+			      stob
+			      (enter-fixnum type)
+			      (enter-fixnum offset)
+			      value))
+	    (else
 	     (if (or (= 0 (code-byte 2))
 		     (false? (current-proposal)))
 		 (d-vector-set! stob offset value)
 		 (proposal-d-write stob (enter-fixnum offset) value))
 	     (goto continue-with-value
 		   unspecific-value
-		   3))
-	    (else
-	     (raise-exception wrong-type-argument 3
-			      stob
-			      (enter-fixnum type)
-			      (enter-fixnum offset)
-			      value))))))
+		   3))))))
 
 ; Indexed objects
 
@@ -265,9 +270,11 @@
   (lambda (stob index value)
     (let ((type (code-byte 0)))
       (cond ((or (not (fixnum? index))
-		 (not (stob-of-type? stob type))
-		 (immutable? stob))
+		 (not (stob-of-type? stob type)))
 	     (raise-exception wrong-type-argument 2
+			      stob (enter-fixnum type) index value))
+	    ((immutable? stob)
+	     (raise-exception immutable-argument 2
 			      stob (enter-fixnum type) index value))
 	    ((valid-index? (extract-fixnum index)
 			   (d-vector-length stob))
@@ -294,8 +301,10 @@
 
 (define-primitive byte-vector-logging-set! (code-vector-> fixnum-> any->)
   (lambda (vector index byte)
-    (cond ((or (immutable? vector)
-	       (not (fixnum? byte)))
+    (cond ((immutable? vector)
+	   (raise-exception immutable-argument 0
+			    vector (enter-fixnum index) byte))
+	  ((not (fixnum? byte))
 	   (raise-exception wrong-type-argument 0
 			    vector (enter-fixnum index) byte))
 	  ((valid-index? index (code-vector-length vector))
@@ -329,10 +338,12 @@
 
 (define-primitive checked-record-set! (any-> any-> fixnum-> any->)
   (lambda (record type index value)
-    (cond ((not (and (stob-of-type? record (enum stob record))
-		     (vm-eq? type (record-ref record 0))
-		     (not (immutable? record))))
+    (cond ((or (not (stob-of-type? record (enum stob record)))
+	       (not (vm-eq? type (record-ref record 0))))
 	   (raise-exception wrong-type-argument 1
+			    record type (enter-fixnum index) value))
+	  ((immutable? record)
+	   (raise-exception immutable-argument 1
 			    record type (enter-fixnum index) value))
 	  ((valid-index? index (record-length record))
 	   (if (or (= 0 (code-byte 0))
@@ -409,9 +420,13 @@
 	  (no-log? (= 0 (code-byte 0))))
       (cond ((not (and (okay-copy-code-vector? from from-index count)
 		       (okay-copy-code-vector? to   to-index   count)
-		       (not (immutable? to))
 		       (<= 0 count)))
 	     (lose))
+	    ((immutable? to)
+	     (raise-exception immutable-argument 1
+			      from (enter-fixnum from-index)
+			      to (enter-fixnum to-index)
+			      (enter-fixnum count)))
 	    ((or no-log?
 		 (false? (current-proposal)))
 	     (copy-memory! (address+ (address-after-header from) from-index)

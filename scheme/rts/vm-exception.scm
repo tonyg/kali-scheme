@@ -32,6 +32,7 @@
 	((bad-procedure) "attempt to call a non-procedure")
 	((wrong-number-of-arguments) "wrong number of arguments")
 	((wrong-type-argument) "argument of wrong type")
+	((immutable-argument) "immutable argument")
 	((arithmetic-overflow) "arithmetic overflow")
 	((index-out-of-range) "index out of range")
 	((heap-overflow) "heap overflow")

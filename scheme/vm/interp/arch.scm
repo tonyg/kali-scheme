@@ -5,7 +5,7 @@
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 38")
+(define architecture-version "Vanilla 39")
 
 ; Things that the VM and the runtime system both need to know.
 
@@ -332,6 +332,7 @@
    bad-procedure
    wrong-number-of-arguments
    wrong-type-argument
+   immutable-argument
    arithmetic-overflow
    index-out-of-range
    heap-overflow
