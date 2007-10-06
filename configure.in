@@ -149,6 +149,23 @@ AC_ARG_ENABLE([universal-binary],
 	 AC_MSG_RESULT(no)])])
 dnl
 dnl
+dnl linker workaround for MacOSX 10.4 x86_64
+define(S48_MACOS_X86_64_LIBS, [dnl
+  case "$host_os" in
+    darwin*|macosx* )
+      AC_MSG_CHECKING([if need to use linker workaround on MacOSX x86_64])
+      if test "`echo \"$LDFLAGS\" | grep \"x86_64\"`"; then
+        MACOS_X86_64_LIBS="/usr/lib/dylib1.o"
+        AC_SUBST(MACOS_X86_64_LIBS)
+        AC_MSG_RESULT([yes])
+      else
+        AC_MSG_RESULT([no])
+      fi
+    ;;
+  esac
+])
+dnl
+dnl
 dnl
 define(S48_PICK_GC, [dnl
 AC_ARG_ENABLE([gc],
@@ -426,6 +443,7 @@ AC_INIT(c/prescheme.h)
      S48_DETERMINE_BIT_SUFFIX
      S48_ENABLE_UNIVERSAL_BINARY
      S48_OSX_ARCH_FLAGS($S48_BUILD_UNIVERSAL_P,$S48_FORCE_32_P)
+     S48_MACOS_X86_64_LIBS
      S48_CREATE_BUILD_DIRS
      S48_LDFLAGS
      AC_ISC_POSIX
