@@ -10,6 +10,7 @@ echo ,open signals handle features >> build\build-initial-image.input
 echo ,open bitwise ascii code-vectors >> build\build-initial-image.input
 echo ,open (subset i/o (write-byte)) (subset ports (set-port-crlf?!)) >> build\build-initial-image.input
 echo ,open cells record-types >> build\build-initial-image.input
+echo ,load scheme/alt/low-exception.scm >> build\build-initial-image.input
 echo ,load %linker-files% >> build\build-initial-image.input
 echo ,load scheme/alt/init-defpackage.scm >> build\build-initial-image.input
 echo (load-configuration "scheme/interfaces.scm") >> build\build-initial-image.input
