@@ -131,12 +131,3 @@
 		    (events event-interface))
   (open prescheme)
   (files (data ps-channel)))
-
-; The number of usable bits in a small integer.
-
-(define-structures ((system-spec (export useful-bits-per-word)))
-  (open prescheme)
-  (begin
-    (define useful-bits-per-word 32)   ; when compiled
-    ))
-

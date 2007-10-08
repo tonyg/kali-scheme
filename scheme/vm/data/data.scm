@@ -10,17 +10,11 @@
 ; want to put tag bits in the high end of a word, or even go to some
 ; kind of BIBOP system.
 
-; Fundamental parameters
-
-(define bits-per-byte 8)
-(define bytes-per-cell 4)
-(define bits-per-cell (* bits-per-byte bytes-per-cell))
-
 (define (bytes->cells bytes)
   ; using shift instead of quotient for speed
   ; (quotient (+ bytes (- bytes-per-cell 1)) bytes-per-cell)
   (arithmetic-shift-right (+ bytes (- bytes-per-cell 1))
-			  2))  ; log(bytes-per-cell)
+			  log-bytes-per-cell))
 
 (define (cells->bytes cells)
   (* cells bytes-per-cell))
@@ -32,17 +26,6 @@
 ;  word-addressed architecture there is one addressing unit per cell.  On
 ;  the VAX or 68000, though, the addressing unit is the byte, of which there
 ;  are 4 to a cell.
-;
-;  Note: by a "byte" is meant enough bits to store a bytecode.  That
-;  probably means either 7, 8, or 9 bits.
-;
-;  If the addressing unit is smaller than a cell each address will have some
-;  number of "unused bits" at its low end.  On a byte-addressable machine with
-;  32 bit addresses, there are two.
-
-(define unused-field-width 2)
-
-(define addressing-units-per-cell 4)
 
 (define (cells->a-units cells)
   (adjoin-bits cells 0 unused-field-width))
@@ -58,9 +41,6 @@
 ;  A descriptor is represented as an integer whose low two bits are
 ;  tag bits.  The high bits contain information whose format and
 ;  meaning are dependent on the tag.
-
-(define tag-field-width 2)
-(define data-field-width (- bits-per-cell tag-field-width))
 
 (define (make-descriptor tag data)
   (adjoin-bits data tag tag-field-width))
@@ -111,9 +91,9 @@
 ; Fixnums
 
 (define bits-per-fixnum
-  (- (if (< bits-per-cell useful-bits-per-word)
+  (- (if (< bits-per-cell c-useful-bits-per-word)
           bits-per-cell
-          useful-bits-per-word)
+          c-useful-bits-per-word)
       tag-field-width))
 
 (define    least-fixnum-value (- 0 (shift-left 1 (- bits-per-fixnum 1))))
@@ -158,10 +138,6 @@
 
 ;----------------
 ; Immediates
-;  The number 8 is chosen to streamline 8-bit-byte-oriented implementations.
-
-(define immediate-type-field-width
-  (- 8 tag-field-width))
 
 (define (make-immediate type info)
   (make-descriptor (enum tag immediate)

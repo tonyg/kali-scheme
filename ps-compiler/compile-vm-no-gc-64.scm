@@ -7,14 +7,16 @@
 (in 'prescheme-compiler
     '(run (prescheme-compiler
 	   '(vm external-gc-roots interpreter-gc)
-	   '("../scheme/vm/interfaces.scm"
+	   '("../scheme/platform-interfaces.scm"
+	     "../scheme/vm/ps-platform-64-packages.scm"
+	     "../scheme/vm/interfaces.scm"
 	     "../scheme/vm/shared-interfaces.scm"
 	     "../scheme/vm/ps-package-defs.scm"
 	     "../scheme/vm/package-defs.scm"
 	     "../scheme/vm/alt-gc-package-defs.scm" ;; For the type-checker
 	     "../scheme/vm/alt-image-package-defs.scm")
 	   's48-init
-	   "../scheme/vm/scheme48vm.c"
+	   "../scheme/vm/scheme48vm-64.c"
 	   '(header "#include \"scheme48vm-prelude.h\"")
 	   '(copy (interpreter pop-continuation-from-stack
 			       env-and-template-setup))

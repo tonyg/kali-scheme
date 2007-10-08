@@ -11,5 +11,5 @@ rm -f scheme48.image build/initial.image c/scheme48.h &&
 make build/filenames.make &&
 make i-know-what-i-am-doing &&
 make c/scheme48.h &&
-make build/initial.image &&
+make build/initial.image-32 build/initial.image-64 &&
 make distclean

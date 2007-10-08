@@ -32,7 +32,7 @@
 
 
 
-/* BIBOP *
+/* BIBOP */
 
 /* 1. Areas */
 

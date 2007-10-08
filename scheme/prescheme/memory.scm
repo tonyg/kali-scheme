@@ -129,13 +129,22 @@
   (let ((address (address-index address)))
     (let ((vector (address->vector address))
 	  (byte-address (address->vector-index address)))
-      (if (not (= 0 (bitwise-and byte-address 3)))
+      (if (not (= 0 (bitwise-and byte-address (- bytes-per-cell 1))))
 	  (assertion-violation 'word-ref "unaligned address error" address)
-	  (+ (+ (arithmetic-shift (signed-code-vector-ref vector byte-address) 24)
-		(arithmetic-shift (code-vector-ref vector (+ byte-address 1)) 16))
-	     (+ (arithmetic-shift (code-vector-ref vector (+ byte-address 2))  8)
-		(code-vector-ref vector (+ byte-address 3))))))))
-  
+	  (let ((word 0))
+	    (do ((byte-offset 0 (+ byte-offset 1))
+		 (shift-offset (- bits-per-cell bits-per-byte) 
+			       (- shift-offset bits-per-byte)))
+		((or (>= byte-offset bytes-per-cell) (< shift-offset 0)))
+	      (set! word 
+		    (+ word
+		       (arithmetic-shift ((if (= 0 byte-offset)
+					      signed-code-vector-ref
+					      code-vector-ref)
+					  vector
+					  (+ byte-address byte-offset))
+					 shift-offset)))))))))
+
 (define (unsigned-byte-set! address value)
   (let ((address (address-index address)))
     (code-vector-set! (address->vector address)
@@ -148,14 +157,15 @@
 	  (byte-address (address->vector-index address)))
       (if (not (= 0 (bitwise-and byte-address 3)))
 	  (assertion-violation 'word-set! "unaligned address error" address))
-      (code-vector-set! vector    byte-address
-			(bitwise-and 255 (arithmetic-shift value -24)))
-      (code-vector-set! vector (+ byte-address 1)
-			(bitwise-and 255 (arithmetic-shift value -16)))
-      (code-vector-set! vector (+ byte-address 2)
-			(bitwise-and 255 (arithmetic-shift value -8)))
-      (code-vector-set! vector (+ byte-address 3)
-			(bitwise-and 255 value)))))
+      (do ((byte-offset 0 (+ byte-offset 1))
+	   (shift-offset (- bits-per-cell bits-per-byte) 
+			 (- shift-offset bits-per-byte)))
+	  ((or (>= byte-offset bytes-per-cell) (< shift-offset 0)))
+	(code-vector-set! vector 
+			  (+ byte-address byte-offset)
+			  (bitwise-and 255 
+				       (arithmetic-shift value 
+							 (- shift-offset))))))))
 
 ; With the right access to the flonum bits we could actually make these
 ; work.  Something to do later.

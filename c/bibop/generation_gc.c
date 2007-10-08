@@ -21,6 +21,8 @@
 #include "measure.h"
 #include "remset.h"
 
+#include <event.h>   // s48_run_time
+
 #define FOR_ALL_AREAS(areas, command) \
 do { \
   Area* area = areas; \
@@ -188,6 +190,9 @@ void s48_integrate_area(Area* area) {
   *a = area;
 }
 
+#if (S48_ADJUST_WATER_MARK)
+
+static unsigned long aging_space_survival;
 static float last_aging_space_survival = 0; /* initial value does not
 					       matter */
 
@@ -209,6 +214,7 @@ static void adjust_water_mark(float aging_space_survival) {
   if (current_water_mark == S48_CREATION_SPACE_SIZE)
     current_water_mark--;
 }
+#endif
 
 /********************************************************************
  Starting a Collection
@@ -411,7 +417,6 @@ inline static void init_areas(int count) {
   }
 #endif
 
-  /* 
   /* FPage 6 */
   /* initialize the creation_space */
   /* the objects of the small_below area that will survive the
@@ -637,8 +642,6 @@ long s48_gc_run_time(long* mseconds) {
   *mseconds = gc_mseconds;
   return gc_seconds;
 }
-
-static unsigned long aging_space_survival;
 
 /* collect the first COUNT generations */
 /* FPage 5 ... */
@@ -1792,7 +1795,7 @@ void s48_initialize_image_areas(long small_bytes, long small_hp_d,
    if ((max_size != 0) && (min_size > max_size)) {
      s48_set_max_heap_sizeB( min_size );
      fprintf(stderr,
-	     "Maximum heap size %i is too small, using %i cells instead.\n", max_size,
+	     "Maximum heap size %ld is too small, using %ld cells instead.\n", max_size,
 	     s48_max_heap_size());
    }
  }

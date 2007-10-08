@@ -8,14 +8,16 @@
 (in 'prescheme-compiler
     '(run (prescheme-compiler
            '(allocation heap heap-two-space-native-code gc read-image write-image)
-           '("../scheme/vm/interfaces.scm"
+	   '("../scheme/platform-interfaces.scm"
+	     "../scheme/vm/ps-platform-64-packages.scm"
+	     "../scheme/vm/interfaces.scm"
 	     "../scheme/vm/shared-interfaces.scm"
              "../scheme/vm/ps-package-defs.scm"
 	     "../scheme/vm/package-defs.scm"
 	     "../scheme/vm/twospace-gc-package-defs.scm"
 	     "../scheme/vm/alt-vm-package-defs.scm")
            's48-heap-init
-           "../scheme/vm/scheme48-twospace-heap.c"
+           "../scheme/vm/scheme48-twospace-heap-64.c"
            '(header "#include \"scheme48vm.h\"")
            '(header "#include \"scheme48heap.h\"")
            ;'(copy (heap walk-over-type-in-area))
