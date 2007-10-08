@@ -1255,41 +1255,6 @@ s48_fd_io_init()
  * partially), so we can't use the file operations we want on sockets.
  */
 
-static void
-raise_windows_error(DWORD id)
-{
-#define ERROR_BUFFER_SIZE 512
-  WCHAR buf[ERROR_BUFFER_SIZE + 1];
-
-  for (;;)
-    {
-      if (FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM,
-			 NULL, /* lpSource */
-			 id,
-			 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			 buf, ERROR_BUFFER_SIZE,
-			 NULL)) /* arguments ... */
-	{
-	  char buf_utf8[ERROR_BUFFER_SIZE * 3 + 1];
-	  WideCharToMultiByte(CP_UTF8,
-			      0, /* dwFlags */
-			      buf,
-			      -1,
-			      buf_utf8, 
-			      ERROR_BUFFER_SIZE * 3, 
-			      NULL, /* lpDefaultChar */
-			      NULL /* lpUsedDefaultChar */
-			      );
-	  s48_error(NULL, buf_utf8, 0);
-	}
-      else
-	/* risky, but we assume some amount of sanity on the side of
-	   the Windows implementors---haha */
-	id = GetLastError();
-    }
-#undef ERROR_BUFFER_SIZE
-}
-
 socket_t
 s48_extract_socket_fd(s48_value sch_channel)
 {
@@ -1320,7 +1285,8 @@ s48_socket(s48_value sch_af, s48_value sch_type, s48_value sch_protocol)
 			    WSA_FLAG_OVERLAPPED);
 
   if (socket == INVALID_SOCKET)
-    raise_windows_error(WSAGetLastError());
+    s48_os_error("s48_socket", WSAGetLastError(), 3,
+		 sch_af, sch_type, sch_protocol);
 
   fd = allocate_fd(STREAM_SOCKET);
   stream_descriptor = &(stream_descriptors[fd]);
@@ -1366,7 +1332,8 @@ s48_socketpair(s48_value sch_af, s48_value sch_type, s48_value sch_protocol)
 		      0, /* reserved */
 		      WSA_FLAG_OVERLAPPED);
   if (listener == INVALID_SOCKET)
-    raise_windows_error(WSAGetLastError());
+    s48_os_error("s48_socketpair", WSAGetLastError(), 3,
+		 sch_af, sch_type, sch_protocol);
   
   addr.sin_family = AF_INET;
   addr.sin_port = 0;
@@ -1382,12 +1349,14 @@ s48_socketpair(s48_value sch_af, s48_value sch_type, s48_value sch_protocol)
 		      0, /* reserved */
 		      WSA_FLAG_OVERLAPPED);
   if (socket1 == INVALID_SOCKET)
-    raise_windows_error(WSAGetLastError());
+    s48_os_error("s48_socketpair", WSAGetLastError(), 3,
+		 sch_af, sch_type, sch_protocol);
   
   RETRY_OR_RAISE_NEG(status, connect(socket1, (struct sockaddr*) &addr, salen));
   socket0 = accept(listener, (struct sockaddr*) &addr, &salen);
   if (socket0 == INVALID_SOCKET)
-    raise_windows_error(WSAGetLastError());
+    s48_os_error("s48_socketpair", WSAGetLastError(), 3,
+		 sch_af, sch_type, sch_protocol);
   
   closesocket(listener);
 
@@ -1432,7 +1401,8 @@ dup_socket_channel(long socket_fd)
 			 GetCurrentProcessId(),
 			 &protocolInfo)
       == SOCKET_ERROR)
-    raise_windows_error(WSAGetLastError());
+    s48_os_error(NULL, WSAGetLastError(), 1,
+		 s48_enter_fixnum(socket_fd));
 
   output_socket = WSASocket(AF_INET,
 			    SOCK_STREAM,
@@ -1441,7 +1411,8 @@ dup_socket_channel(long socket_fd)
 			    0, /* reserved */
 			    WSA_FLAG_OVERLAPPED);
   if (output_socket == INVALID_SOCKET)
-    raise_windows_error(WSAGetLastError());
+    s48_os_error(NULL, WSAGetLastError(), 1,
+		 s48_enter_fixnum(socket_fd));
   
   buf_size = 0;
   setsockopt(output_socket,
@@ -1558,7 +1529,8 @@ s48_accept(s48_value channel, s48_value retry_p)
 				0, /* reserved */
 				WSA_FLAG_OVERLAPPED);
       if (accept_socket == INVALID_SOCKET)
-	raise_windows_error(WSAGetLastError());
+	s48_os_error("s48_accept", WSAGetLastError(), 2,
+		     channel, retry_p);
       
       stream_descriptor->socket_data.hatched_socket = accept_socket;
 
@@ -1591,7 +1563,8 @@ s48_accept(s48_value channel, s48_value retry_p)
       else if (GetLastError() == ERROR_IO_INCOMPLETE)
 	return S48_FALSE; /* still not done */
       else
-	raise_windows_error(GetLastError());
+	s48_os_error("s48_accept", WSAGetLastError(), 2,
+		     channel, retry_p);
     }
 			 
   /*
@@ -1617,7 +1590,8 @@ s48_accept(s48_value channel, s48_value retry_p)
 		     (char *)&socket, 
 		     sizeof(socket))
 	  != 0)
-	raise_windows_error(WSAGetLastError());
+	s48_os_error("s48_accept", WSAGetLastError(), 2,
+		     channel, retry_p);
 
       input_channel = s48_add_channel(S48_CHANNEL_STATUS_INPUT,
 				      s48_enter_string_latin_1("socket connection"),
@@ -1650,7 +1624,8 @@ s48_accept(s48_value channel, s48_value retry_p)
       return S48_FALSE;
     }
   
-  raise_windows_error(WSAGetLastError());
+  s48_os_error("s48_accept", WSAGetLastError(), 2,
+	       channel, retry_p);
   
   /* not reachable: */
   return S48_FALSE;
@@ -1742,12 +1717,14 @@ s48_connect(s48_value sch_channel,
 						  NULL); /* name */
       if (WSAEventSelect(socket, callback_data->overlap.hEvent, FD_ACCEPT)
 	  != 0)
-	raise_windows_error(WSAGetLastError());
+	s48_os_error("s48_connect", WSAGetLastError(), 3,
+		     sch_channel, sch_address, sch_retry_p);
       
       return S48_FALSE;
     }
   else
-    raise_windows_error(WSAGetLastError());
+    s48_os_error("s48_connect", WSAGetLastError(), 3,
+		 sch_channel, sch_address, sch_retry_p);
 
   /* not reachable */
   return S48_FALSE;
@@ -1825,7 +1802,9 @@ s48_recvfrom(s48_value sch_channel,
 	  return S48_FALSE;
 	}
       else
-	raise_windows_error(WSAGetLastError());
+	s48_os_error("s48_recvfrom", WSAGetLastError(), 7,
+		     sch_channel, sch_buffer, sch_start, sch_count,
+		     sch_flags, sch_want_sender_p, sch_retry_p);
     }
   else
     {
@@ -1916,7 +1895,9 @@ s48_sendto(s48_value sch_channel,
 	    return S48_FALSE;
 	  }
 	else
-	  raise_windows_error(WSAGetLastError());
+	  s48_os_error("s48_sendto", WSAGetLastError(), 7,
+		       sch_channel, sch_buffer, sch_start, sch_count,
+		       sch_flags, sch_saddr, sch_retry_p);
     }
   else
     /* rebound */

@@ -112,32 +112,44 @@ s48_run_machine(long (*proc) (void))
   return s48_return_value;
 }
 
-/* 
- * #### We should be producing UTF-8 here; see raise_windows_error in fd-io.c 
- * for how it's done.
- */
-   
 unsigned char *
 ps_error_string(long the_errno)
 {
-  DWORD id = the_errno;
-  /* the VM is responsible for copying this */
-  static char buf[512];
+  DWORD id = (DWORD) the_errno;
+#define ERROR_BUFFER_SIZE 512
+  static WCHAR buf[ERROR_BUFFER_SIZE + 1];
+  static char utf8[(ERROR_BUFFER_SIZE * 4) + 1];
 
   for (;;)
     {
-      if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
-			NULL, /* lpSource */
-			(DWORD) id,
-			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			buf, sizeof(buf)-1,
-			NULL)) /* arguments ... */
-	return buf;
+      if (FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM,
+			 NULL, /* lpSource */
+			 id,
+			 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			 buf, ERROR_BUFFER_SIZE,
+			 NULL)) /* arguments ... */
+	{
+	  int count
+	    = WideCharToMultiByte(CP_UTF8,
+				  0, /* dwFlags */
+				  buf,
+				  -1,
+				  utf8, 
+				  ERROR_BUFFER_SIZE * 4 + 1, 
+				  NULL, /* lpDefaultChar */
+				  NULL /* lpUsedDefaultChar */
+				  );
+	  /* get rid of annoying trailing line end */
+	  if ((count > 3) && (utf8[count-3] == 0x0d) && (utf8[count-2] == 0x0a))
+	    utf8[count-3] = '\0';
+	  return utf8;
+	}
       else
 	/* risky, but we assume some amount of sanity on the side of
 	   the Windows implementors---haha */
 	id = GetLastError();
     }
+#undef ERROR_BUFFER_SIZE
 }
 
 /* Getting the length of a file. */
