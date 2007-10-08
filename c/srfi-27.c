@@ -34,7 +34,12 @@
 */
 
 #include "scheme48.h" /* $SCHEME48/c/scheme48.h */
+
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/time.h>
+#endif
 
 #ifndef NULL
   #define NULL 0
@@ -217,12 +222,19 @@ s48_value mrg32k3a_random_real(s48_value state) {
   return s48_enter_double(x);
 }
 
-/* Kludge for scsh */
+#ifdef _WIN32
+static s48_value current_time(void){
+  SYSTEMTIME systemTime;
+  GetSystemTime(&systemTime);
+  return s48_enter_unsigned_integer((unsigned long) systemTime.wSecond);
+}
+#else
 static s48_value current_time(void){
   struct timeval tv;
   gettimeofday(&tv, NULL);
   return s48_enter_integer(tv.tv_sec);
 }
+#endif
 
 
 /* Exporting the C values to Scheme

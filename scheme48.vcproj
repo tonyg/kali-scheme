@@ -868,6 +868,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\c\srfi-27.c"
+				>
+			</File>
+			<File
 				RelativePath=".\c\win32\utf-8of16.c"
 				>
 			</File>
