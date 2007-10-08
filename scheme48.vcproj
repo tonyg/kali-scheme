@@ -418,6 +418,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\c\external-init.c"
+				>
+			</File>
+			<File
 				RelativePath="c\external-lib.c"
 				>
 				<FileConfiguration
@@ -575,32 +579,6 @@
 			</File>
 			<File
 				RelativePath="c\fake\glue.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="c\win32\init-external.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -869,6 +847,10 @@
 			</File>
 			<File
 				RelativePath=".\c\srfi-27.c"
+				>
+			</File>
+			<File
+				RelativePath=".\c\win32\sysexits.c"
 				>
 			</File>
 			<File
