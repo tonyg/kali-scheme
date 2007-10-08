@@ -115,13 +115,13 @@
 	call)))))
 
 (define-scheme-primop quotient exception type/integer
-  (quotient-simplifier quotient 1 0 quotient))
+  (quotient-simplifier quotient 0 1 quotient))
 
 (define-scheme-primop unquotient exception type/unsigned-integer
-  (quotient-simplifier unquotient 1 0 quotient))
+  (quotient-simplifier unquotient 0 1 quotient))
 
 (define-scheme-primop fl/ exception type/float
-  (quotient-simplifier fl/ 1.0 0.0 /))
+  (quotient-simplifier fl/ 0.0 1.0 /))
 
 (define-scheme-primop remainder exception type/integer)
 (define-scheme-primop unremainder exception type/unsigned-integer)
