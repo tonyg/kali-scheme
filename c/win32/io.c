@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include <stdio.h>
@@ -298,4 +298,11 @@ ps_close(FILE *stream)
     return 0;
   else
     return errno;
+}
+
+char*
+s48_get_os_string_encoding(void)
+{
+  /* really UTF-8of16, but that doesn't matter at the Scheme level */
+  return "UTF-8";
 }

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Miniature command processor.
@@ -7,13 +7,13 @@
   (let ((in (current-input-port))
 	(out (current-output-port))
 	(err (current-error-port))
-	(batch? (member "batch" args)))
+	(batch? (member "batch" (map os-string->string args))))
     (let loop ()
       ((call-with-current-continuation
 	 (lambda (go)
 	   (with-handler
 	       (lambda (c punt)
-		 (cond ((or (error? c) (interrupt? c))
+		 (cond ((or (serious-condition? c) (interrupt-condition? c))
 			(display-condition c err)
 			(go (if batch?
 				(lambda () 1)
@@ -37,7 +37,8 @@
 			   (let ((form (read in)))
 			     (go (lambda ()
 				   (eval form (interaction-environment))))))
-			  (else (error "unknown command" (cadr form) 'go 'load (eq? (cadr form) 'load)))))
+			  (else (error 'command-processor
+				       "unknown command" (cadr form) 'go 'load (eq? (cadr form) 'load)))))
 		       (else
 			(call-with-values
 			    (lambda () (eval form (interaction-environment)))
@@ -69,3 +70,13 @@
              (list->string (reverse l)))
             (else
              (loop (cons (read-char port) l) (+ n 1)))))))
+
+(define (byte-vector->string b)
+  (let ((size (- (byte-vector-length b) 1)))
+    (do ((s (make-string size))
+	 (i 0 (+ 1 i)))
+	((= i size)
+	 s)
+      (string-set! s i (ascii->char (vector-ref b i))))))
+
+    

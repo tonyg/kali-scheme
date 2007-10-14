@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Stub support for DEFINE-PACKAGE and DEFINE-INTERFACE macros.
@@ -177,7 +177,7 @@
 	 (list->string (map file-name-preferred-case
 			    (string->list (symbol->string x)))))
 	(else
-	 ;; (error "bogus namelist component" x)
+	 ;; (assertion-violation 'namestring-component "bogus namelist component" x)
 	 "bogus namelist component")))
 
 (define file-name-preferred-case char-downcase)

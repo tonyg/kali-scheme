@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Names (symbols) and generated names.
 
@@ -57,7 +57,7 @@
 	((generated? name)
 	 (name-hash (generated-name name)))
 	(else
-	 (error "invalid name" name))))
+	 (assertion-violation 'name-hash "invalid name" name))))
 
 (define make-name-table
   (make-table-maker eq? name-hash))
@@ -74,24 +74,19 @@
 	 (desyntaxify (generated-name thing)))
 	((pair? thing)
 	 (make-immutable!
-	  (let ((x (desyntaxify (car thing)))
-		(y (desyntaxify (cdr thing))))
-	    (if (and (eq? x (car thing))
-		     (eq? y (cdr thing)))
-		thing
-		(cons x y)))))
+	  (cons (desyntaxify (car thing))
+		(desyntaxify (cdr thing)))))
 	((vector? thing)
 	 (make-immutable!
 	  (let ((new (make-vector (vector-length thing) #f)))
-	    (let loop ((i 0) (same? #t))
+	    (let loop ((i 0))
 	      (if (>= i (vector-length thing))
-		  (if same? thing new)
-		  (let ((x (desyntaxify (vector-ref thing i))))
-		    (vector-set! new i x)
-		    (loop (+ i 1)
-			  (and same? (eq? x (vector-ref thing i))))))))))
+		  new
+		  (begin
+		    (vector-set! new i (desyntaxify (vector-ref thing i)))
+		    (loop (+ i 1))))))))
 	(else
-	 (warn "invalid datum in quotation" thing)
+	 (warning 'desyntaxify "invalid datum in quotation" thing)
 	 thing)))
 
 ;----------------
@@ -118,54 +113,6 @@
 (define (qualified-symbol q) (vector-ref q 2))
 (define (qualified-uid q) (vector-ref q 3))
 
-; Convert an alias (generated name) to S-expression form ("qualified name").
-
-(define (name->qualified name env)
-  (cond ((not (generated? name))
-	 name)
-	((let ((d0 (lookup env name))
-	       (d1 (lookup env (generated-name name))))
-	   (and d0 d1 (same-denotation? d0 d1)))
-	 (generated-name name))   ;+++
-	(else
-	 (make-qualified (qualify-parent (generated-parent-name name)
-					 env)
-			 (generated-name name)
-			 (generated-uid name)))))
-	 
-; As an optimization, we elide intermediate steps in the lookup path
-; when possible.  E.g.
-;     #(>> #(>> #(>> define-record-type define-accessors)
-;		define-accessor)
-;	   record-ref)
-; is replaced with
-;     #(>> define-record-type record-ref)
-;
-; I think that this is buggy.  The RECUR calls are using the wrong environment.
-; ENV is not the environment in which the names will be looked up.
-
-(define (qualify-parent name env)
-  (let recur ((name name))
-    (if (generated? name)
-	(let ((parent (generated-parent-name name)))
-	  (if (let ((b1 (lookup env name))
-		    (b2 (lookup env parent)))
-		(and b1
-		     b2
-		     (or (same-denotation? b1 b2)
-			 (and (binding? b1)
-			      (binding? b2)
-			      (let ((s1 (binding-static b1))
-				    (s2 (binding-static b2)))
-				(and (transform? s1)
-				     (transform? s2)
-				     (eq? (transform-env s1)
-					  (transform-env s2))))))))
-	      (recur parent) ;+++
-	      (make-qualified (recur parent)
-			      (generated-name name)
-			      (generated-uid name))))
-	name)))
   
 
 

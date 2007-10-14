@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Rewritten, simplified, and corrected from the SRFI document.
 ;

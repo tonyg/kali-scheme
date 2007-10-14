@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Meta-modules: the big picture.
@@ -41,10 +41,10 @@
 			     (features features-interface)
 			     (records records-interface)
 			     (record-types record-types-interface)
-			     (simple-signals signals-interface))
+			     (low-exceptions low-exceptions-interface))
 	   ;; Assumes use of FLATLOAD.  The implementations of these
 	   ;; structures will become available via some miracle, e.g.
-	   ;; a command ",open simple-signals ... code-vectors" or an
+	   ;; a command ",open low-exceptions ... code-vectors" or an
 	   ;; explicit LOAD of something.  Cf. the rule for
 	   ;; link/linker.image in the Makefile.
 	   )))
@@ -228,7 +228,7 @@
 	    code-vectors
 	    features
 	    records
-	    simple-signals)
+	    low-exceptions)
 	   :structure)))
 
 (define-interface low-structures-interface
@@ -239,16 +239,14 @@
 	    byte-vectors
 	    cells
 	    code-vectors
-	    default-string-encodings
 	    features
 	    records
-	    simple-signals
+	    low-exceptions
 	    cells
 	    channels
 	    closures
 	    code-quote
 	    escapes
-	    file-names
 	    locations
 	    loopholes
 	    low-level
@@ -259,9 +257,9 @@
 	    scheme-level-0
 	    session-data   ;; kali
 	    shared-bindings
+	    signal-conditions
 	    silly
 	    source-file-names
-	    string/bytes-types
 	    structure-refs
 	    debug-messages
 	    unicode
@@ -274,9 +272,11 @@
 	    channel-i/o
 	    condvars
 	    define-record-types
+	    encodings
 	    enum-case
 	    enumerated
 	    fluids
+	    os-strings
 	    proposals
 	    queues
 	    record-types
@@ -285,6 +285,7 @@
 	    scheme-level-2
 	    set-text-procedures
 	    templates
+	    text-codecs
 	    threads
 	    util
 	    vm-data
@@ -293,7 +294,7 @@
 
 (define-interface run-time-internals-structures-interface
   (export ((channel-ports
-	    simple-conditions
+	    conditions
 	    continuations
 	    ;; escapes
 	    exceptions
@@ -305,6 +306,7 @@
 	    methods
 	    meta-methods
 	    interrupts
+	    external-events
 	    low-level
 	    more-types
 	    number-i/o
@@ -313,7 +315,6 @@
 	    records-internal
 	    root-scheduler
 	    session-data
-	    text-codecs
 	    threads-internal
 	    vm-exceptions
 	    usual-resumer
@@ -419,6 +420,7 @@
 	    command-levels
 	    command-processor
 	    compact-tables
+	    constant-tables
 	    conditions
 	    c-system-function
 	    debugging
@@ -430,9 +432,8 @@
 	    display-conditions
 	    dump/restore
 	    dynamic-externals
-	    encodings
 	    enum-case
-	    enum-sets
+	    enum-sets enum-sets-internal
 	    extended-numbers
 	    extended-ports
 	    externals
@@ -440,7 +441,6 @@
 	    finite-types
 	    floatnums
 	    formats
-	    i/o-conditions
 	    inspector
 	    inspector-internal
 	    inversion-lists
@@ -452,6 +452,8 @@
 	    mask-types
 	    mvlet
 	    nondeterminism
+	    net-addresses
+	    net-sockets
 	    package-commands-internal
 	    package-mutation
             parse-bytecode
@@ -481,6 +483,7 @@
 
 	    sparse-vectors
 	    reinitializers
+	    signals
 	    spatial
 	    strong
 	    text-codec-utils
@@ -530,6 +533,11 @@
 	    make-rendezvous
 	    trans-ids
 
+	    ; R6RS packages
+
+	    r6rs-unicode
+	    r6rs-enums
+
 	    ; POSIX packages (see scheme/posix/packages.scm)
 	    posix-files
 	    posix-time
@@ -543,7 +551,7 @@
 
 	    ; SRFI packages
 	    srfi-1 srfi-2 srfi-4 srfi-5 srfi-6 srfi-7 srfi-8 srfi-9
-	    srfi-11 srfi-13 srfi-14 srfi-16 srfi-17
+	    srfi-11 srfi-13 srfi-14 srfi-16 srfi-17 srfi-19
 	    srfi-23 srfi-25 srfi-26 srfi-27 srfi-28
 	    srfi-31 srfi-34 srfi-35 srfi-36 srfi-37
 	    srfi-39 srfi-40 srfi-42 srfi-43 srfi-45
@@ -551,6 +559,7 @@
 	    srfi-71 srfi-74 srfi-78
 
             libscheme48
+	    test-suites
 	    )
 	   :structure)
 	  ((define-signature define-package) :syntax)))

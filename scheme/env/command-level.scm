@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Command levels for the command processor
 ;
@@ -101,16 +101,23 @@
 	((= 1 (counter-value (command-level-thread-counter level)))
 	 (list (command-level-repl-thread level)))
 	(else
-	 (let ((threads (all-threads)))
-	   (do ((i 0 (+ i 1))
-		(es '() (let ((thread (vector-ref threads i)))
-			  (if (and (thread-continuation thread)
-				   (eq? level (thread-data thread)))
-			      (cons thread es)
-			      es))))
-	       ((= i (vector-length threads))
-		(set-command-level-threads! level (make-weak-pointer es))
-		es))))))
+	 (exact-command-level-threads level))))
+
+; Use this when you really have to know.  It's still somewhat
+; imprecise as we may get threads that are already dead, but at least
+; it doesn't leave anything out.
+
+(define (exact-command-level-threads level)
+  (let ((threads (all-threads)))
+    (do ((i 0 (+ i 1))
+	 (es '() (let ((thread (vector-ref threads i)))
+		   (if (and (thread-continuation thread)
+			    (eq? level (thread-data thread)))
+		       (cons thread es)
+		       es))))
+	((= i (vector-length threads))
+	 (set-command-level-threads! level (make-weak-pointer es))
+	 es))))
 
 ;----------------------------------------------------------------
 ; Entry point
@@ -136,25 +143,27 @@
 				    resume-args	; focus values
 				    #f		; exit status
 				    (and (pair? resume-args)
-					 (equal? (car resume-args) "batch"))
+					 (string=? (os-string->string (car resume-args)) "batch"))
 				    (and (pair? resume-args)
-					 (equal? (car resume-args) "run-script")))))
+					 (string=? (os-string->string (car resume-args)) "run-script")))))
     (with-handler command-levels-condition-handler
       (lambda ()
 	(let-fluids $command-level-thread? #t
 		    $user-session session
 	  (lambda ()
-	    (if (not (or (user-session-batch-mode? session)
-			 (user-session-script-mode? session)))
-		(greeting-thunk))
-	    ;(debug-message "[start-thunk]")
-	    (start-thunk)
-	    (let ((thunk (really-push-command-level condition
-						    inspector-state
-						    dynamic-env
-						    '())))
-	      (ignore-further-interrupts)
-	      thunk)))))))
+	    (with-translations (translations)
+	     (lambda ()
+	       (if (not (or (user-session-batch-mode? session)
+			    (user-session-script-mode? session)))
+		   (greeting-thunk))
+	       ;;(debug-message "[start-thunk]")
+	       (start-thunk)
+	       (let ((thunk (really-push-command-level condition
+						       inspector-state
+						       dynamic-env
+						       '())))
+		 (ignore-further-interrupts)
+		 thunk)))))))))
 
 ; A fluid to tell us when we are in the command level thread (used to
 ; avoid sending upcalls to whomever is running us).
@@ -195,7 +204,11 @@
 (define (ignore-further-interrupts)
   (set-interrupt-handler! (enum interrupt keyboard)
 			  (lambda stuff
-			    (apply signal (cons 'interrupt stuff))))
+			    (signal-condition
+			     (condition
+			      (make-interrupt-condition (enum interrupt keyboard))
+			      (make-irritants-condition stuff)
+			      (make-who-condition 'ignore-further-interrupts)))))
   (call-before-heap-overflow! (lambda stuff #f))
   (call-when-deadlocked! #f))
 
@@ -204,18 +217,19 @@
 ; go to the 
 
 (define (command-levels-condition-handler c next-handler)
-  (let ((c (coerce-to-condition c)))
-    (cond ((or (warning? c)
-	       (note? c))
-	   (force-output (current-output-port))	; keep synchronous
-	   (display-condition c (current-error-port))
-	   (unspecific))		; proceed
-	  ((or (error? c) (bug? c))
-	   (force-output (current-output-port))	; keep synchronous
-	   (display-condition c (current-error-port))
-	   (scheme-exit-now 1))
-	  (else
-	   (next-handler)))))
+  (cond ((or (warning? c)
+	     (note? c))
+	 (force-output (current-output-port)) ; keep synchronous
+	 (display-condition c (current-error-port)
+			    (condition-writing-depth) (condition-writing-length))
+	 (unspecific))			; proceed
+	((serious-condition? c)
+	 (force-output (current-output-port)) ; keep synchronous
+	 (display-condition c (current-error-port)
+			    (condition-writing-depth) (condition-writing-length))
+	 (scheme-exit-now 1))
+	(else
+	 (next-handler))))
 
 ;----------------------------------------------------------------
 ; Grab the current continuation, then make a command level and run it.
@@ -239,12 +253,16 @@
 	     (dynamic-wind
 	      (lambda ()
 		(if (command-level-terminated? level)
-		    (error "trying to throw back into a command level" level)))
+		    (assertion-violation 'really-push-command-level
+					 "trying to throw back into a command level"
+					 level)))
 	      (lambda ()
 		(run-command-level level #f))
 	      (lambda ()
 		(if (command-level-terminated? level)
-		    (warn "abandoning failed level-termination unwinds.")
+		    (warning 'really-push-command-level
+			     "abandoning failed level-termination unwinds."
+			     level)
 		    (begin
 		      (set-command-level-terminated?! level #t)
 		      (terminate-level level))))))))))))
@@ -266,7 +284,7 @@
 (define $current-level (make-fluid #f))
 
 (define (terminate-level level)
-  (let ((threads (command-level-threads level))
+  (let ((threads (exact-command-level-threads level))
 	(*out?* #f))
     (for-each (lambda (thread)
 		(if (thread-continuation thread)
@@ -275,9 +293,10 @@
     (dynamic-wind
      (lambda ()
        (if *out?*
-	   (error "trying to throw back into a command level" level)))
+	   (assertion-violation 'terminate-level
+				"trying to throw back into a command level" level)))
      (lambda ()
-       (run-command-level level #t))
+       (run-command-level level (length threads)))
      (lambda ()
        (set! *out?* #t)
        (let ((levels (command-level-levels level)))
@@ -299,29 +318,40 @@
     (if repl
 	(interrupt-thread repl
 			  (lambda return-values
-			    (signal the-reset-command-input-condition)
+			    (signal-condition the-reset-command-input-condition)
 			    (apply values return-values))))))
 
 (define-condition-type &reset-command-input &condition
-  reset-command-input?)
+  make-reset-command-input-condition
+  reset-command-input-condition?)
 
 (define the-reset-command-input-condition
-  (condition (&reset-command-input)))
+  (make-reset-command-input-condition))
 
 ; Make sure the input and output ports are available and then run the threads
 ; on LEVEL's queue.
 
-(define (run-command-level level terminating?)
-  (if (not terminating?)
-      (set-exit-status! #f))
-  (run-threads
-    (round-robin-event-handler (command-level-queue level)
-			       command-quantum
-			       (unspecific)
-			       (command-level-thread-counter level)
-			       (command-level-event-handler level terminating?)
-			       command-level-upcall-handler
-			       (command-level-wait level terminating?))))
+; TERMINATE-COUNT is a number if we're terminating, indicating the
+; exact number of threads that must still terminate.  Note that the
+; current value of the thread counter is not a good indication, as it
+; includes threads that have died a quiet death by garbage collection:
+; We'll never see them again, but if they were included in the count,
+; the thread system would falsely detect deadlock.
+
+(define (run-command-level level terminate-count)
+  (let ((counter (command-level-thread-counter level))
+	(terminating? (and terminate-count #t)))
+    (if terminating?
+	(set-counter! counter terminate-count)
+	(set-exit-status! #f))
+    (run-threads
+     (round-robin-event-handler (command-level-queue level)
+				command-quantum
+				(unspecific)
+				counter
+				(command-level-event-handler level terminating?)
+				command-level-upcall-handler
+				(command-level-wait level terminating?)))))
 
 ; The number of milliseconds per timeslice in the command interpreter
 ; scheduler.  Should be elsewhere?
@@ -344,24 +374,43 @@
 	 (let* ((thread (car args))
 		(level (thread-data thread)))
 	   (cond ((not (command-level? level))
-		  (error "non-command-level thread restarted on a command level"
-			 thread))
+		  (assertion-violation
+		   'command-level-event-handler
+		   "non-command-level thread restarted on a command level"
+		   level thread))
 		 ((memq level levels)
 		  (enqueue! (command-level-queue level) thread))
 		 (else
-		  (warn "dropping thread from exited command level"
-			thread)))
+		  (warning 'command-level-event-handler
+			   "dropping thread from exited command level"
+			   level thread)))
 	   #t))
 	((interrupt)
 	 (if terminating?
-	     (warn "Interrupted while unwinding terminated level's threads."))
-	 (quit-or-push-level (make-condition 'interrupt args) levels)
-	 #t)
+	     (warning 'command-level-event-handler
+		      "Interrupted while unwinding terminated level's threads."
+		      level))
+	 (let ((int (car args)))
+	   (quit-or-push-level
+	    (condition
+	     (make-message-condition
+	      (enum-case interrupt int
+		((keyboard) "keyboard interrupt")
+		((post-major-gc) "insufficient memory after major GC")
+		(else "interrupt")))
+	     (make-interrupt-condition int)
+	     (make-who-condition 'command-level-event-handler)
+	     (make-irritants-condition 
+	      (list
+	       (enumerand->name int interrupt))))
+			       levels))
+	   #t)
 	((deadlock)
 	 (if terminating?
-	     (warn "Deadlocked while unwinding terminated level's threads."))
- 	 (quit-or-push-level (make-condition 'error (list 'deadlocked))
- 			     levels)
+	     (warning 'command-level-event-handler
+		      "Deadlocked while unwinding terminated level's threads."
+		      level))
+ 	 (quit-or-push-level (make-deadlock-condition) levels)
 	 #t)
 	(else
 	 #f)))))
@@ -379,7 +428,7 @@
 
 (define (command-level-wait level terminating?)
   (lambda ()
-    (cond ((< 0 (counter-value (command-level-thread-counter level)))
+    (cond ((positive? (counter-value (command-level-thread-counter level)))
 	   (wait)
 	   #t)
 	  (terminating?
@@ -387,7 +436,8 @@
 	  ((exit-status)
 	   (exit-levels level (exit-status)))
 	  (else
-	   (warn "command interpreter has died; restarting")
+	   (warning 'command-level-wait
+		    "command interpreter has died; restarting" level)
 	   (spawn-repl-thread! level)
 	   #t))))
 
@@ -537,7 +587,7 @@
 (define (level-pushed-from level)
   (let loop ((levels (command-levels)))
     (cond ((null? (cdr levels))
-	   (error "level not found" level))
+	   (assertion-violation 'level-pushed-from "level not found" level))
 	  ((eq? level (cadr levels))
 	   (car levels))
 	  (else
@@ -555,4 +605,4 @@
 	      (spawn-repl-thread! level))
 	  (terminate-thread! paused)	; it's already running, so no enqueue
 	  (set-command-level-paused-thread! level #f))
-	(warn "level has no paused thread" level))))
+	(warning 'kill-paused-thread! "level has no paused thread" level))))

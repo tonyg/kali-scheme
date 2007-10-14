@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 
 (define-interface utilities-interface
@@ -74,6 +74,7 @@
 	  add-variable-simplifier!
 	  remove-variable-simplifier!
 	  note-known-global-lambda!
+	  variable-known-lambda
           ))
 
 (define-interface node-interface

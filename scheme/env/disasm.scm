@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ;;;; Disassembler
 
@@ -35,14 +35,16 @@
                      template-or-code)))
       (parse-template-code template code level disasm-attribution)))
 
-(define (disasm-init-template level template p-args push-template? push-env?)
+(define (disasm-init-template level template p-args push-template? push-env? push-closure?)
   (if (template-name template)
       (write (template-name template)))
   (print-opcode (enum op protocol) 0 level)
   (show-protocol p-args 0)
-  (if (or push-template? push-env?)
+  (if (or push-template? push-env? push-closure?)
       (begin
         (display " (push")
+	(if push-closure?
+	    (display " closure"))
         (if push-env?
             (display " env"))
         (if push-template?
@@ -61,7 +63,7 @@
   level)
 
 (define disasm-table (make-opcode-table
-                               (lambda (opcode template level pc . args)
+                               (lambda (opcode template level pc len . args)
                                  (print-opcode opcode pc level)
                                  (print-opcode-args args)
                                  (display #\))
@@ -78,7 +80,7 @@
 
 ;------------------------------
 (define-disasm protocol
-  (lambda (opcode template level pc p-args)
+  (lambda (opcode template level pc len p-args)
     (print-opcode opcode pc level)
     (show-protocol (cdr p-args) pc)
     (display #\))
@@ -119,7 +121,7 @@
               (display stack-size))
             (cdr p-args)))
           (else
-           (error "unknown protocol" protocol)))))
+           (assertion-violation 'show-protocol "unknown protocol" protocol)))))
 
 (define (display-dispatch target-pc tag)
   (if target-pc
@@ -129,7 +131,7 @@
 
 ;------------------------------
 (define-disasm global
-  (lambda (opcode template level pc index-to-template index-within-template)
+  (lambda (opcode template level pc len index-to-template index-within-template)
     (print-opcode opcode pc level)
     (print-opcode-args (list index-to-template index-within-template))
     (display #\space)
@@ -138,7 +140,7 @@
     level))
 
 (define-disasm set-global!
-  (lambda (opcode template level pc index-to-template index-within-template)
+  (lambda (opcode template level pc len index-to-template index-within-template)
     (print-opcode opcode pc level)
     (print-opcode-args (list index-to-template index-within-template))
     (display #\space)
@@ -159,7 +161,7 @@
 
 
 ;------------------------------
-(define (disasm-make-flat-env opcode template level pc env-data-arg)
+(define (disasm-make-flat-env opcode template level pc len env-data-arg)
   (let ((env-data (cdr env-data-arg)))
     (print-opcode opcode pc level)
     (display #\space)
@@ -203,35 +205,28 @@
 ;------------------------------
 
 (define (display-cont-data cont-data)
-  (let ((gc-mask (bytes->bits (cont-data-mask-bytes cont-data))))
-    (write-char #\space)
-    (display (list (cont-data-depth cont-data)))
-    (if (zero? (cont-data-gc-mask-size cont-data))
-	(display " all-live"))
-    (let loop ((mask gc-mask) (i 0))
-      (if (not (zero? mask))
-	  (begin
-	    (if (odd? mask)
-		(begin
-		  (write-char #\space)
-		  (display i)))
-	    (loop (arithmetic-shift mask -1) (+ 1 i)))))))
-		  
-(define (bytes->bits l)
-  (let loop ((n 0) (l l))
-    (if (null? l)
-	n
-	(loop (+ (arithmetic-shift n 8) (car l))
-	      (cdr l)))))
+  (write-char #\space)
+  (display (list '=> (cont-data-pc cont-data)))
+  (write-char #\space)
+  (display (list 'depth (cont-data-depth cont-data)))
+  (write-char #\space)
+  (display (list 'template (cont-data-template cont-data)))
+  (write-char #\space)
+  (cond
+   ((cont-data-live-offsets cont-data)
+    => (lambda (offsets)
+	 (display (cons 'live offsets))))
+   (else
+    (display "all-live"))))
 
 (define-disasm cont-data
-  (lambda (opcode template level pc cont-data-arg)
+  (lambda (opcode template level pc len cont-data-arg)
     (print-opcode opcode pc level)
     (display-cont-data (cdr cont-data-arg))
     (display #\))
     level))
 ;------------------------------
-(define (display-shuffle opcode template level pc moves-data)
+(define (display-shuffle opcode template level pc len moves-data)
   (print-opcode opcode pc level)
   (write-char #\space)
   (let ((moves (cdr moves-data)))
@@ -247,7 +242,7 @@
 (define-disasm big-stack-shuffle! display-shuffle)
 
 (define (write-instruction code template pc level write-sub-templates?)
-  ;; An in the previous version, WRITE-SUB-TEMPLATES? is ignored and
+  ;; As in the previous version, WRITE-SUB-TEMPLATES? is ignored and
   ;; sub templates are never written.
   (call-with-values 
    (lambda ()
@@ -288,8 +283,10 @@
        (write `(=> ,arg)))
       ((stob)
        (write (enumerand->name arg stob)))
+      ((instr)
+       (write arg))
       (else
-       (error "unknown arg spec" spec)))))
+       (assertion-violation 'print-opcode-arg "unknown arg spec" spec)))))
 
 ;----------------
 ; Utilities.
@@ -305,7 +302,8 @@
 	 (or (continuation-template obj)
 	     (continuation-code obj)))
 	(else
-	 (error "expected a procedure or continuation" obj))))
+	 (assertion-violation 'coerce-to-template-or-code
+			      "expected a procedure or continuation" obj))))
 
 ; Indenting and aligning the program counter.
 

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Integer-only primitive operations
 
@@ -232,10 +232,7 @@
 		  (goto return quot)
 		  (binary-lose x y)))))
 	  ((and (double? x) (double? y))
-	   (let ((result (flonum-divide x y)))
-	     (if (false? result)
-		 (binary-lose x y)
-		 (goto return result))))
+	   (goto return (flonum-divide x y)))
 	  (else
 	   (binary-lose x y)))))
 

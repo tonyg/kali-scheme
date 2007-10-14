@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 (define (simplify-letrec1 call)
   (let* ((cont (call-arg call 0))

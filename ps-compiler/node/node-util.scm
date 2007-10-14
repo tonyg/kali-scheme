@@ -1,5 +1,5 @@
  
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 ; This file contains miscellaneous utilities for accessing and modifying the
 ; node tree.
@@ -684,15 +684,16 @@
 		 (node-flag b))))
 	  ((lambda-node? node)
 	   (set-node-flag! node #t)
-	   (let* ((vec (call-args (lambda-body node)))
-		  (res (let loop ((i (- (vector-length vec) 1)))
-			 (cond ((< i 0) #t)
-			       ((not (label (vector-ref vec i))) #f)
-			       (else (loop (- i 1)))))))
+	   (let ((res (label (lambda-body node))))
 	     (set-node-flag! node #f)
 	     res))
-	  (else
-	   #t))))
+	  ((call-node? node)
+	   (let ((vec (call-args node)))
+	     (let loop ((i (- (vector-length vec) 1)))
+	       (cond ((< i 0) #t)
+		     ((not (label (vector-ref vec i))) #f)
+		     (else (loop (- i 1)))))))
+	  (else #t))))
 
 (define (node-type node)
   (cond ((literal-node? node)

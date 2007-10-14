@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Simple code analysis to determine whether it's a good idea to
 ; in-line calls to a given procedure.
@@ -92,8 +92,6 @@
 		  var-nodes))
 	 (require "good analysis" id
 	   (simple? (caddr exp) ret)))))
-
-(define operator/name (get-operator 'name 'leaf))
 
 ; --------------------
 ; SIMPLE? takes an alpha-converted expression and returns either
@@ -225,17 +223,6 @@
                 (simple? new-node ret?)))
 	  (really-simple-call? exp ret?)))))
 
-; Return the static value of FORM, if any.
-
-(define (static-value form)
-  (if (and (node? form)
-	   (name-node? form))
-      (let ((probe (node-ref form 'binding)))
-	(if (binding? probe)
-	    (binding-static probe)
-	    #f))
-      #f))
-
 (define (really-simple-call? exp ret?)
   (let ((proc (car exp)))
     (and (require "non-local non-tail call" proc
@@ -287,14 +274,6 @@
     (if (binding? probe)
 	(binding-type probe)
 	#f)))
-
-; --------------------
-
-(define lambda-node? (node-predicate 'lambda))
-(define name-node? (node-predicate 'name))
-(define loophole-node? (node-predicate 'loophole))
-(define define-node? (node-predicate 'define syntax-type))
-(define literal-node? (node-predicate 'literal 'leaf))
 
 ;----------------
 ;(define (foo f p)

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Package / structure / interface mutation operations.
 
@@ -50,8 +50,10 @@
 		    (cond (cached
 			   (if (eq? (binding-place prev) cached)
 			       (cope-with-mutation p name new cached)
-			       (error "binding cache inconsistency"
-				      p name new cached))))
+			       (assertion-violation
+				'get-new-location-carefully
+				"binding cache inconsistency"
+				p name new cached))))
 		    new)
 		  (get-new-location-non-shadowing p name)))
 	 (aloc (table-ref (package-undefined-but-assigneds p)
@@ -106,7 +108,8 @@
 
 (define (cope-with-mutation p name new prev)
   (if (eq? new prev)
-      (error "lossage in cope-with-mutation" p name new prev))
+      (assertion-violation 'cope-with-mutation
+			   "lossage in cope-with-mutation" p name new prev))
   (let ((replacement (make-new-location p name)))
     (copy-location-info! prev replacement)
     (table-set! (package-cached p) name new)
@@ -172,17 +175,18 @@
 
 ;; Deal with editing operations
 
-(define (really-verify-later! thunk)           ;cf. define-structure macro
-  (let ((loser (ignore-errors thunk)))
-    (cond ((or (structure? loser)
-               (interface? loser))
-	   ;; (write `(loser: ,loser)) (newline)
-	   (let ((cell (fluid $losers)))
-	     (cell-set! cell
-			(cons loser
-			      (cell-ref cell)))))))
-  #f)
-
+(define (really-verify-later! thunk)	;cf. define-structure macro
+  (let ((premature (ignore-errors thunk))) ; old value if we're redefining
+    (let ((cell (fluid $losers))
+	  (loser (if (or (structure? premature)
+			 (interface? premature))
+		     (cons premature thunk)
+		     (cons #f thunk))))
+      (cell-set! cell
+		 (cons loser
+		       (cell-ref cell))))))
+ 
+; each element is a a pair (thing, thunk)
 (define $losers (make-fluid (make-cell '())))
 (define $package-losers (make-fluid (make-cell '())))
 
@@ -191,20 +195,49 @@
   (drain $package-losers verify-package))
 
 (define (verify-loser loser)
+  (really-verify-loser (car loser)
+		       (ignore-errors (cdr loser))))
+
+(define (really-verify-loser premature thing)
   (if *debug?*
-      (begin (write `(verify-loser ,loser)) (newline)))
-  (cond ((interface? loser)
-	 (walk-population verify-loser (interface-clients loser)))
-	((structure? loser)
-	 (reinitialize-structure! loser)
-	 (walk-population verify-loser (structure-clients loser)))
-	((package? loser)
-	 (reinitialize-package! loser)
-	 (let* ((cell (fluid $package-losers))
-		(losers (cell-ref cell)))
-	   (if (not (memq loser losers))
-	       (cell-set! cell
-			  (cons loser losers)))))))
+      (begin (write `(verify-loser ,premature ,thing)) (newline)))
+  (cond
+   ((structure? thing) (verify-structure premature thing))
+   ((interface? thing) (verify-interface premature thing))))
+ 
+(define (verify-structure premature struct)
+  (reinitialize-structure! struct)
+  (if *debug?*
+      (begin
+	(write `(verify-structure ,struct ,(population->list (structure-clients struct))))
+	(newline)))
+  (walk-population (lambda (thing)
+		     (cond
+		      ((package? thing) (note-verify-package thing))
+		      ((structure? thing) (verify-structure #f thing))))
+		   (structure-clients struct)))
+
+(define (verify-interface premature int)
+  ;; add clients of old interface to new one
+  (if (interface? premature)
+      (walk-population
+       (lambda (client)
+	 (note-reference-to-interface! int client))
+       (interface-clients premature)))
+  (if *debug?*
+      (begin
+	(write `(verify-interface ,(population->list (interface-clients int))))
+	(newline)))
+  (walk-population (lambda (thing) (really-verify-loser #f thing))
+		   (interface-clients int)))
+
+(define (note-verify-package pack)
+  (reinitialize-package! pack)
+  (let* ((cell (fluid $package-losers))
+	 (losers (cell-ref cell)))
+    (if (not (memq pack losers))
+	(cell-set! cell
+		   (cons pack losers)))))
 
 (define (drain flu check)
   (let ((cell (fluid flu)))
@@ -239,12 +272,14 @@
         (undefs (package-undefineds p)))
     (table-walk (lambda (name prev)
                   (if (table-ref defs name)
-		      (error "lossage in verify-package-undefineds" p name))
+		      (assertion-violation 'verify-package-undefineds
+					   "lossage" p name))
 		  (let ((binding (package-lookup p name)))
 		    (if (binding? binding)
 			(let ((place (binding-place binding)))
 			  (if (eq? place prev)
-			      (error "lossage - verify-package-undefineds"
+			      (assertion-violation 'verify-package-undefineds
+						   "lossage"
 				     p name binding))
 			  (set-location-forward! prev place name p)
 			  (set! newly-defined
@@ -321,7 +356,8 @@
 ;            (doing (if (package-definition p name)
 ;                       "redefining"
 ;                       "shadowing")))
-;        (warn (if (equal? old-description new-description)
+;        (warning  'maybe-note-redefinition
+;                  (if (equal? old-description new-description)
 ;                  doing
 ;                  (string-append doing
 ;                                 " as "
@@ -362,5 +398,6 @@
 		       (binding-place new)
 		       (location-for-reference p name)))
 		 name p))
-	(warn "can't undefine - binding is inherited"
-	      p name))))
+	(warning 'package-undefine!
+		 "can't undefine - binding is inherited"
+		 p name))))

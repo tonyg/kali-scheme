@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; DEFINE-ENUMERATION macro hacked to use external (C enumeration) names
 ; instead of integers.
@@ -77,7 +77,7 @@
 				 (if (c which (car (vector-ref components i)))
 				     (r (cdr (vector-ref components i)))
 				     (loop (+ i 1)))
-				 ;; (syntax-error "unknown enumerand name"
+				 ;; (syntax-violation 'enum "unknown enumerand name"
 				 ;;               `(,(cadr e) ,(car e) ,(caddr e)))
 				 e))))
 			(else e))))))

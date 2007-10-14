@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Parameters are like fluids, but support mutation, and have a really
 ; awkward API.
@@ -22,7 +22,9 @@
 		    (cond ((null? new-val)
 			   (cell-ref cell))
 			  ((not (null? (cdr new-val)))
-			   (apply call-error "parameter object called with more than one argument"
+			   (apply assertion-violation
+				  'make-parameter
+				  "parameter object called with more than one argument"
 				  parameter new-val))
 			  ((eq? (car new-val) *return-fluid*)
 			   $fluid)

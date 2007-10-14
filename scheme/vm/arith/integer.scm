@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Operations on integers.
@@ -66,5 +66,10 @@
 	   (too-small-for-fixnum? x))
        (long->bignum x key)
        (enter-fixnum x)))
+
+(define (enter-unsigned-integer x key)
+  (if  (unsigned-too-big-for-fixnum? x)
+       (unsigned-long->bignum x key)
+       (enter-fixnum (unsigned->integer x))))
 
 (define long-as-integer-size (bignum-bits-to-size 32))

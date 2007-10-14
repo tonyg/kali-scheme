@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 
 (define-structures ((fact (export *one* fact all)))
@@ -54,7 +54,7 @@
   (files record))
 
 (define-structures ((buffer (export port->stream stream-read-char)))
-  (open prescheme)
+  (open prescheme ps-record-types ps-memory)
   (files buffer))
 
 (define-structures ((values (export test)))

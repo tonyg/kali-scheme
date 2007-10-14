@@ -253,20 +253,29 @@ most variants of Unix and on Windows.  The required Scheme functions
 are in the structure \code{load-dynamic-externals}.
 
 To be suitable for dynamic loading, the externals code must reside in
-a shared object.  The shared object must define two functions:
+a shared object.  The shared object must define a function:
 %
 \begin{protos}
   \cproto{void s48\_on\_load(void)}
-  \cproto{void s48\_on\_reload(void)}
 \end{protos}
 %
 The \code{s48\_on\_load} is run upon loading the shared objects.  It
 typically contains invocations of \code{S48\_EXPORT\_FUNCTION} to
 make the functionality defined by the shared object known to
-Scheme~48.  Scheme~48 calls \code{s48\_on\_reload} when it loads the
-shared object for the second time, or some new version thereof.  (More
-on that later.)  Most of the time, \code{s48\_on\_reload} will simply
-call \code{s48\_on\_load}.
+Scheme~48. 
+
+The shared object may also define either or both of the following
+functions:
+%
+\begin{protos}
+   \cproto{void s48\_on\_unload(void)}
+   \cproto{void s48\_on\_reload(void)}
+\end{protos}
+Scheme~48 calls \code{s48\_on\_unload} just before it unloads the
+shared object.  If \code{s48\_on\_reload} is present, Scheme~48 calls
+it when it loads the shared object for the second time, or some new
+version thereof.  If it is not present, Scheme~48 calls
+\code{s48\_on\_load} instead.  (More on that later.)
 
 For Linux, the following commands compile \code{foo.c} into a file
 \code{foo.so} that can be loaded dynamically.
@@ -282,29 +291,33 @@ shared objects containing dynamic externals:
 \proto{load-dynamic-externals}{ string plete?
   rrepeat? rresume?}{dynamic-externals}
 \proto{unload-dynamic-externals}{ string}{ dynamic-externals}
-\protonoresult{reload-dynamic-externals}{ string}
+\protonoresult{reload-dynamic-externals}{ dynamic-externals}
 \end{protos}
 %
-\code{Load-dynamic-externals} loads the
-named shared objects.  The \cvar{plete?} argument determines whether
-Scheme~48 appends the OS-specific suffix (typically \code{.so} for
-Unix, and \code{.dll} for Windows) to the name.  The \cvar{rrepeat?}
-argument determines how \code{load-dynamic-externals} behaves if it is
-called again with the same argument: If this is true, it reloads the
-shared object (and calls its \code{s48\_on\_reload} function),
-otherwise, it will not do anything.  The \cvar{rresume?}  argument
-determines if an image subsequently dumped will try to load the shared
-object again automatically.  (The shared objects will be loaded before
-any record resumers run.)  \code{Load-dynamic-externals} returns a
-handle identifying the shared object just loaded.
+\code{Load-dynamic-externals} loads the named shared objects.  The
+\cvar{plete?} argument determines whether Scheme~48 appends the
+OS-specific suffix (typically \code{.so} for Unix, and \code{.dll} for
+Windows) to the name.  The \cvar{rrepeat?}  argument determines how
+\code{load-dynamic-externals} behaves if it is called again with the
+same argument: If this is true, it reloads the shared object (and
+calls its \code{s48\_on\_unload} on unloading if present, and, after
+reloading, \code{s48\_on\_reload} if present or \code{s48\_on\_load}
+if not), otherwise, it will not do anything.  The \cvar{rresume?}
+argument determines if an image subsequently dumped will try to load
+the shared object again automatically.  (The shared objects will be
+loaded before any record resumers run.)  \code{Load-dynamic-externals}
+returns a handle identifying the shared object just loaded.
 
 \code{Unload-dynamic-externals} unloads the shared object associated
-with the handle passed as its argument.  Note that this invalidates
+with the handle passed as its argument, previously calling its
+\code{s48\_on\_unload} function if present.  Note that this invalidates
 all external bindings associated with the shared object; referring to
 any of them will probably crash the program.
 
 \code{Reload-dynamic-externals} will reload the shared object named by
-its argument and call its \code{s48\_on\_reload} function.
+its argument and call its \code{s48\_on\_unload} function before
+unloading, and, after reloading, \code{s48\_on\_reload} if present or
+\code{s48\_on\_load} if not.
 
 \begin{protos}
 \proto{import-dynamic-externals}{ string}{dynamic-externals}  
@@ -317,19 +330,6 @@ dynamic-externals.  It is best explained by its definition:
 (define (import-dynamic-externals name)
   (load-dynamic-externals name #t #f #t))
 \end{example}
-
-\section{Compatibility}
-
-% JAR says: give version number (I would if I knew what it was -RK)
-Scheme~48's old \code{external-call} function is still available in the
- structure
- \code{externals}, which now also includes \code{external-name} and
- \code{external-value}.
-The old \code{scheme48.h} file has been renamed \code{old-scheme48.h}.
-
-Also, the old code for loading external code dynamically is still
-available in the \code{dynamic-externals} structure, but will
-probably disappear in a future release.
 
 \section{Accessing Scheme data from C}
 \label{sec:scheme-data}
@@ -653,19 +653,24 @@ The following macros can be used to create and access embedded C objects.
 
 \begin{protos}
 \cgcproto{s48\_value S48\_MAKE\_VALUE(type)}
+\cgcproto{s48\_value S48\_MAKE\_SIZED\_VALUE(size)}
 \cproto{type \ \ \ \ \ S48\_EXTRACT\_VALUE(s48\_value, type)}
+\cproto{long \ \ \ \ \ S48\_VALUE\_SIZE(s48\_value)}
 \cproto{type * \ \ \ S48\_EXTRACT\_VALUE\_POINTER(s48\_value, type)}
 \cproto{void \ \ \ \ \ S48\_SET\_VALUE(s48\_value, type, value)}
 \end{protos}
 
 \noindent{}
 \code{S48\_MAKE\_VALUE} makes a byte vector large enough to hold an object
- whose type is \cvar{type}.
+whose type is \cvar{type}.
+\code{S48\_MAKE\_SIZED\_VALUE} makes a byte vector large enough to hold an object
+of \cvar{size} bytes.
 \code{S48\_EXTRACT\_VALUE} returns the contents of a byte vector cast to
- \cvar{type}, and \code{S48\_EXTRACT\_VALUE\_POINTER} returns a pointer
- to the contents of the byte vector.
+ \cvar{type}, \code{S48\_VALUE\_SIZE} returns its size,
+and \code{S48\_EXTRACT\_VALUE\_POINTER} returns a pointer to the
+contents of the byte vector.
 The value returned by \code{S48\_EXTRACT\_VALUE\_POINTER} is valid only until
- the next garbage collection.
+the next garbage collection.
 
 \code{S48\_SET\_VALUE} stores \code{value} into the byte vector.
 
@@ -794,43 +799,38 @@ Raising an exception performs all
  necessary clean-up actions to properly return to Scheme~48, including
  adjusting the stack of protected variables.
 
-\begin{protos}
-\cproto{s48\_raise\_scheme\_exception(int type, int nargs, \ldots)}
-\end{protos}
-
-\noindent{}\code{s48\_raise\_scheme\_exception} is the base procedure for
- raising exceptions.
-\code{type} is the type of exception, and should be one of the
- \code{S48\_EXCEPTION\_}\ldots constants defined in \code{scheme48arch.h}.
-\code{nargs} is the number of additional values to be included in the
- exception; these follow the \code{nargs} argument and should all have
- type \code{s48\_value}.
-\code{s48\_raise\_scheme\_exception} never returns.
- 
 The following procedures are available for raising particular
  types of exceptions.
-Like \code{s48\_raise\_scheme\_exception} these never return.
+These never return.
 
 \begin{protos}
-\cproto{s48\_raise\_argument\_type\_error(s48\_value)}
-\cproto{s48\_raise\_argument\_number\_error(int nargs, int min, int max)}
-\cproto{s48\_raise\_range\_error(long value, long min, long max)}
-\cproto{s48\_raise\_closed\_channel\_error()}
-\cproto{s48\_raise\_os\_error(int errno)}
-\cproto{s48\_raise\_out\_of\_memory\_error()}
+\cproto{s48\_assertion\_violation(const char* who, const char* message, long count, ...)}
+\cproto{s48\_error(const char* who, const char* message, long count, ...)}
+\cproto{s48\_os\_error(const char* who, const char* message, long count, ...)}
+\cproto{s48\_out\_of\_memory\_error()}
 \end{protos}
 
-\noindent{}An argument type error indicates that the given value is of the wrong
- type.
-An argument number error is raised when the number of arguments, \code{nargs},
- should be, but isn't, between \code{min} and \code{max}, inclusive.
-Similarly, a range error indicates that \code{value} is not between
- between \code{min} and \code{max}, inclusive.
+\noindent{}An assertion violation signalled via
+\code{s48\_assertion\_violation} typically means that an invalid
+argument (or invalid number of arguments) has been passed.  An error
+signalled via \code{s48\_error} means that an environmental error
+(like an I/O error) has occurred.  In both cases, \code{who} indicates
+the location of the error, typically the name of the function it
+occurred in.  It may be \code{NULL}, in which the system guesses a
+name.  The \code{message} argument is an error message encoded in
+UTF-8.  Additional arguments may be passed that become part of the
+condition object that will be raised on the Scheme side: \code{count}
+indicates their number, and the arguments (which must be of type
+\code{s48\_value}) follow.
 
-The following macros raise argument type errors if their argument does not
- have the required type.
-\code{S48\_CHECK\_BOOLEAN} raises an error if its argument is neither
- \code{\#t} or \code{\#f}.
+The \code{s48\_os\_error} function is like \code{s48\_error}, except
+that the error message is inferred from an OS error code (as in
+\code{strerro}).  The \code{s48\_out\_of\_memory\_error} function
+signals that the system has run out of memory.
+
+The following macros raise assertion violations if their argument does
+not have the required type.  \code{S48\_CHECK\_BOOLEAN} raises an
+error if its argument is neither \code{\#t} or \code{\#f}.
 
 \begin{protos}
 \cproto{void S48\_CHECK\_BOOLEAN(s48\_value)}

@@ -1,10 +1,11 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Link script.
 
 (define (link-initial-system)
   (let ((structures-to-open		;Structures to open for the initial
 	 (struct-list scheme		;system's read-eval-print loop.
+		      platform
 		      environments
 		      module-system
 		      ensures-loaded

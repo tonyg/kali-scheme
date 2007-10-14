@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Getting usage counts and doing a topological sort (so that definitions
 ; will be seen before uses, where possible).
@@ -49,9 +49,10 @@
 				    (if (subtype? new-type value-type)
 					new-type
 					value-type))
-	      (warn "ill-typed right-hand side"
-		    (schemify node)
-		    (type->sexp new-type #t)))))))
+	      (warning 'maybe-update-known-type
+		       "ill-typed right-hand side"
+		       (schemify node)
+		       (type->sexp new-type #t)))))))
 
 ;----------------
 ; Another entry point.
@@ -225,12 +226,3 @@
 (define note-reference! (usage-incrementator usage-reference-count set-reference!))
 (define note-operator! (usage-incrementator usage-operator-count set-operator!))
 (define note-assignment! (usage-incrementator usage-assignment-count set-assignment!))
-
-;----------------
-
-(define lambda-node? (node-predicate 'lambda))
-(define quote-node? (node-predicate 'quote))
-(define literal-node? (node-predicate 'literal))
-(define call-node? (node-predicate 'call))
-(define name-node? (node-predicate 'name 'leaf))
-(define define-node? (node-predicate 'define syntax-type))

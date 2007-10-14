@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file shared-object.scm.
 
@@ -32,7 +32,8 @@
 (define (open-shared-object name complete-name?)
   (let ((shared-object (make-shared-object name
 					   complete-name?
-					   (external-dlopen (thing->file-name-byte-string name)
+					   (external-dlopen (os-string->byte-vector
+							     (x->os-string name))
 							    complete-name?))))
     (add-finalizer! shared-object close-shared-object)
     shared-object))
@@ -43,19 +44,6 @@
 	(begin
 	  (external-dlclose c-handle)
 	  (set-shared-object-c-handle! shared-object #f)))))
-
-(define-string/bytes-type dynamic-external-name :dynamic-external-name
-  dynamic-external-name?
-  
-  string-encoding-length encode-string
-  string-decoding-length decode-string
-
-  thing->dynamic-external-name
-  string->dynamic-external-name
-  byte-vector->dynamic-external-name
-  
-  dynamic-external-name->string
-  dynamic-external-name->byte-vector dynamic-external-name->byte-string)
 
 (define-record-type shared-object-address :shared-object-address
   (make-shared-object-address object
@@ -78,8 +66,15 @@
   (make-shared-object-address shared-object
 			      name
 			      (external-dlsym (shared-object-c-handle shared-object)
-					      (dynamic-external-name->byte-string
-					       (thing->dynamic-external-name name)))))
+					      (os-string->byte-vector
+					       (call-with-os-string-text-codec
+						utf-8-codec
+						(lambda ()
+						  (x->os-string name)))))))
+
+(define (shared-object-address-or-false shared-object name)
+  (guard (c (else #f))
+    (shared-object-address shared-object name)))
 
 ;; This simply calls a C function with no parameters and no return
 ;; value.  It's typically for calling the initialization function; we

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file transport.scm.
 
@@ -22,9 +22,9 @@
 ; return it.  Locations and symbols may have multiple references in
 ; the image.  Their transported addresses are kept in a table.
 
-(define (transport thing)
+(define (transport thing . stuff)
   (let transport ((thing thing))
-    (cond ((immediate? thing)
+    (cond ((immediate-value? thing)
            (transport-immediate thing))
           ((closure? thing)
            (transport-closure thing))
@@ -53,7 +53,8 @@
           ((string? thing)
 	   (transport-string thing))
           (else
-           (error "cannot transport object" thing)))))
+           (assertion-violation 'transport
+				"cannot transport object" thing stuff))))) ; DELETEME stuff
 
 ; Transport the things that are not allocated from the heap.
 
@@ -71,7 +72,7 @@
         ((eq? thing (unspecific))
          vm-unspecific)
         (else
-         (error "cannot transport literal" thing))))
+         (assertion-violation 'transport-immediate "cannot transport literal" thing))))
 
 ;==============================================================================
 ; The heap is a list of transported stored objects, each of which is either a
@@ -235,7 +236,7 @@
          (new (cdr data)))
     (do ((i 0 (+ i 1)))
         ((>= i length))
-      (vector-set! new i (transport (ref vector i))))
+      (vector-set! new i (transport (ref vector i) vector type)))
     descriptor))
 
 ;==============================================================================
@@ -267,7 +268,7 @@
            (write-stob (vector-ref thing (- len 1))
                        thing (- len 1) vector-ref write-descriptor port)))
         (else
-         (error "do not know how to write stob" thing))))
+         (assertion-violation 'write-heap-stob "do not know how to write stob" thing))))
 
 ; Write out a transported STOB to PORT.  HEADER is the header, LENGTH is the
 ; number of objects the STOB contains, ACCESSOR and WRITER access the contents

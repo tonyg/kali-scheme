@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 (define-interface ps-primop-interface
   (export get-prescheme-primop
@@ -7,7 +7,6 @@
           (define-nonsimple-scheme-primop :syntax)
           (define-scheme-cond-primop :syntax)
 
-	  prescheme-integer-size
 	  lshr))
 
 (define-interface ps-c-primop-interface
@@ -20,6 +19,7 @@
           ;type/int8
           ;type/int8u
           type/integer
+	  type/unsigned-integer
           type/float
 	  type/char
 	  type/address

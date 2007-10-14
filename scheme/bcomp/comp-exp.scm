@@ -39,19 +39,17 @@
     (compile-constant (cadr (node-form node)) depth frame cont)))
 
 (define (compile-constant obj depth frame cont)
-  (deliver-value (cond ((ignore-values-cont? cont)
-			empty-segment)			;+++ dead code
-		       ((eq? obj #f)
-			; +++ hack for bootstrap from Schemes that don't
-			; distinguish #f/()
-			(instruction (enum op false)))
-		       ((small-integer? obj)
-			(integer-literal-instruction obj))
-		       (else
-			(stack-indirect-instruction
-			  (template-offset frame depth)
-			  (literal->index frame obj))))
-		 cont))
+  (deliver-constant-value (cond ((eq? obj #f)
+				 ;; +++ hack for bootstrap from Schemes that don't
+				 ;; distinguish #f/()
+				 (instruction (enum op false)))
+				((small-integer? obj)
+				 (integer-literal-instruction obj))
+				(else
+				 (stack-indirect-instruction
+				  (template-offset frame depth)
+				  (literal->index frame obj))))
+			  cont))
 
 (define (small-integer? obj)
   (and (integer? obj)
@@ -67,13 +65,19 @@
 
 (define-compilator 'unspecific (proc () unspecific-type)
   (lambda (node depth frame cont)
-    (deliver-value (instruction (enum op unspecific))
-		   cont)))
+    (deliver-constant-value (instruction (enum op unspecific))
+			    cont)))
 
 (define-compilator 'unassigned (proc () unspecific-type)
   (lambda (node depth frame cont)
-    (deliver-value (instruction (enum op unassigned))
-		   cont)))
+    (deliver-constant-value (instruction (enum op unassigned))
+			    cont)))
+
+(define (deliver-constant-value segment cont)
+  (deliver-value (if (ignore-values-cont? cont)
+		     empty-segment
+		     segment)
+		 cont))
 
 ;----------------------------------------------------------------
 ; Variable reference
@@ -102,11 +106,8 @@
 	  ((null? (cdr rest))
 	   (stack-indirect-instruction stack-offset (car rest)))
 	  (else
-	   (error "variable has too many indirections" name binding)))))
-
-(define (index->offset index depth)
-  (- (- depth 1)
-     index))
+	   (assertion-violation 'compile-local-name "variable has too many indirections"
+				name binding)))))
 
 ;----------------------------------------------------------------
 ; Hacked versions of the above for peephole optimization of pushes.
@@ -196,7 +197,7 @@
 		    (rest (cdr binding)))
 		(if (null? rest)		; in this frame
 		    (stack-set!-instruction stack-offset)
-		    (error "SET! on a closed-over variable" name)))
+		    (assertion-violation 'set! "SET! on a closed-over variable" name)))
 	      (let ((offset (template-offset frame depth))
 		    (index (binding->index frame
 					   binding
@@ -270,7 +271,8 @@
  	       (let ((primop (node-form proc-node)))
  		 (if (primop-compilator primop)
  		     ((primop-compilator primop) node depth frame cont)
- 		     (error "compiler bug: primop has no compilator"
+ 		     (assertion-violation 'compile-call
+					  "compiler bug: primop has no compilator"
  			    primop
  			    (schemify node)))))
 	      (else
@@ -311,7 +313,7 @@
 			     (+ depth nargs)
 			     frame
 			     (fall-through-cont node 0))
-		    (call-instruction nargs label)
+		    (call-instruction nargs (+ depth nargs) label)
 		    after))))
 
 ; A redex is a call of the form ((lambda (x1 ... xn) body ...) e1 ... en).
@@ -427,7 +429,7 @@
 
 (define (push-continuation depth frame cont node)
   (if (return-cont? cont)
-      (error "making a return point in tail position"))
+      (assertion-violation 'push-continuation "making a return point in tail position" cont))
   (let ((protocol (continuation-protocol (if (ignore-values-cont? cont)
                                              0
                                              1)
@@ -548,7 +550,7 @@
 ; signficantly slower (because the argument count cannot be encoded in
 ; the protocol).
 
-(define (call-instruction nargs label)
+(define (call-instruction nargs depth label)
   (if label
       (if (> nargs maximum-stack-args)				;+++
 	  (instruction-using-label (enum op big-call)
@@ -565,7 +567,9 @@
 		       (high-byte nargs)
 		       (low-byte nargs))
 	  (instruction (enum op tail-call)
-		       nargs))))
+		       nargs
+                       (high-byte depth)
+                       (low-byte depth)))))
   
 (define (stack-ref-instruction index)
   (if (>= index byte-limit)					;+++
@@ -685,7 +689,7 @@
 ; Produce something for source code that contains a compile-time error.
 
 (define (generate-trap depth frame cont . stuff)
-  (apply warn stuff)
+  (apply warning 'generate-trap stuff)
   (sequentially
     (stack-indirect-instruction (template-offset frame depth)
 				(literal->index frame (cons 'error stuff)))
@@ -722,9 +726,10 @@
 			  ((not (meet? proc-type any-procedure-type))
 			   ;; Could also check args for one-valuedness.
 			   (let ((message "non-procedure in operator position"))
-			     (warn message
-				   (schemify node)
-				   `(procedure: ,proc-type))
+			     (warning 'type-check
+				      message
+				      (schemify node)
+				      `(procedure: ,proc-type))
 			     (node-set! node 'type-error message))
 			   node)
 			  (else node)))
@@ -746,11 +751,12 @@
 		"argument type error")
 	       (else
 		"wrong number of arguments"))))
-    (warn message
-	  (schemify node)
-	  `(procedure wants:
-		      ,(rail-type->sexp (procedure-type-domain proc-type)
-					#f))
+    (warning 'diagnose-call-error
+	     message
+	     (schemify node)
+	     `(procedure wants:
+			 ,(rail-type->sexp (procedure-type-domain proc-type)
+					   #f))
 	  `(arguments are: ,(map (lambda (arg)
 				   (type->sexp (node-type arg) #t))
 				 (cdr (node-form node)))))
@@ -762,19 +768,6 @@
 (define-compilator 'loophole syntax-type
   (lambda (node depth frame cont)
     (compile (caddr (node-form node)) depth frame cont)))
-
-; Node predicates and operators.
-
-(define lambda-node?      (node-predicate 'lambda      syntax-type))
-(define flat-lambda-node? (node-predicate 'flat-lambda syntax-type))
-(define name-node?        (node-predicate 'name        'leaf))
-(define literal-node?     (node-predicate 'literal     'leaf))
-(define quote-node?       (node-predicate 'quote       syntax-type))
-
-(define operator/lambda     (get-operator 'lambda syntax-type))
-(define operator/set!	    (get-operator 'set!   syntax-type))
-(define operator/call	    (get-operator 'call   'internal))
-(define operator/begin      (get-operator 'begin  syntax-type))
 
 ; Should this be in its own spot?
 

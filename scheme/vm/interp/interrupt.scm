@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 ; Code for handling interrupts.
 
 ; New interrupt handler vector in *val*
@@ -30,7 +30,7 @@
     (push code)
     (push (enter-fixnum pc)))
   (push-interrupt-state)
-  (push-adlib-continuation! (code+pc->code-pointer *interrupted-byte-call-return-code*
+  (push-adlib-continuation! (code+pc->code-pointer *interrupted-byte-opcode-return-code*
 						   return-code-pc))
   (goto find-and-call-interrupt-handler))
 
@@ -39,6 +39,15 @@
   (push *val*)
   (push-interrupt-state)
   (push-adlib-continuation! (code+pc->code-pointer *interrupted-native-call-return-code*
+						   return-code-pc))
+  (goto find-and-call-interrupt-handler))
+
+(define (handle-native-poll template return-address)
+  (push *val*)
+  (push template)
+  (push return-address)
+  (push-interrupt-state)
+  (push-adlib-continuation! (code+pc->code-pointer *native-poll-return-code*
 						   return-code-pc))
   (goto find-and-call-interrupt-handler))
 
@@ -59,17 +68,7 @@
 ; Ditto, except that we are going to return to the current continuation instead
 ; of continuating with the current template.
 
-(define (push-poll-interrupt-continuation)
-  (push-interrupt-state)
-  (push poll-interrupt-continuation-descriptors)
-  (push-continuation! (code+pc->code-pointer *poll-interrupt-return-code*
-					     return-code-pc)))
-
 (define interrupt-state-descriptors 2)
-
-(define poll-interrupt-continuation-descriptors
-  (enter-fixnum (+ 1		; this number
-		   interrupt-state-descriptors)))
 
 (define (push-interrupt-state)
   (push (current-proposal))
@@ -100,6 +99,7 @@
 ; the interrupt mask, and whether the GC is running out of space.
 ; For i/o-completion we push the channel and its status.
 ; For i/o-error we push the channel and the error code.
+; For external-event, we push the event-type uid.
 
 (define (push-interrupt-args pending-interrupt)
   (cond ((eq? pending-interrupt (enum interrupt alarm))
@@ -130,6 +130,14 @@
 	     (note-interrupt! (enum interrupt os-signal)))
 	 (push (enter-fixnum *enabled-interrupts*))
 	 2)
+	((eq? pending-interrupt (enum interrupt external-event))
+	 (receive (uid still-ready?)
+	     (dequeue-external-event!)
+	   (push (enter-fixnum uid))
+	   (if still-ready?
+	       (note-interrupt! (enum interrupt external-event)))
+	   (push (enter-fixnum *enabled-interrupts*))
+	   2))
 	(else
 	 (push (enter-fixnum *enabled-interrupts*))
 	 1)))
@@ -214,21 +222,10 @@
 (define-opcode poll
   (if (and (interrupt-flag-set?)
            (pending-interrupt?))
-      (begin
-        (push-continuation! (address+ *code-pointer*
-				      (code-offset 0)))
-        (push-poll-interrupt-continuation)
-        (goto find-and-call-interrupt-handler))
-      (goto continue 2)))
+      (goto handle-interrupt)
+      (goto continue 0)))
 	    
-; Return from a call to an interrupt handler.
-
-(define-opcode return-from-poll-interrupt
-  (pop)
-  (s48-pop-interrupt-state)
-  (goto return-values 0 null 0))
-
-(define-opcode resume-interrupted-call-to-byte-code
+(define-opcode resume-interrupted-opcode-to-byte-code
   (pop)
   (s48-pop-interrupt-state)
   (let ((pc (pop)))
@@ -242,6 +239,14 @@
   (set! *val* (pop))
   (let ((protocol-skip (extract-fixnum (pop))))
     (goto really-call-native-code protocol-skip)))
+
+(define-opcode resume-native-poll
+  (pop)                                 ; frame size
+  (s48-pop-interrupt-state)
+  (let* ((return-address (pop))
+         (template (pop)))
+    (set! *val* (pop))
+    (goto post-native-dispatch (s48-jump-native return-address template))))
 
 ; Do nothing much until something happens.  To avoid race conditions this
 ; opcode is called with all interrupts disabled, so it has to return if
@@ -364,7 +369,7 @@
 
 ; Do whatever processing the event requires.
 
-(define (process-event event channel status)
+(define (process-event event id status)
   (cond ((eq? event (enum events alarm-event))
 	 ;; Save the interrupted template for use by profilers.
 	 ;; Except that we have no more templates and no more profiler.
@@ -374,13 +379,15 @@
 	((eq? event (enum events keyboard-interrupt-event))
 	 (interrupt-bit (enum interrupt keyboard)))
 	((eq? event (enum events io-completion-event))
-	 (enqueue-channel! channel status false)
+	 (enqueue-channel! id status false)
 	 (interrupt-bit (enum interrupt i/o-completion)))
 	((eq? event (enum events io-error-event))
-	 (enqueue-channel! channel status true)
+	 (enqueue-channel! id status true)
 	 (interrupt-bit (enum interrupt i/o-completion)))
 	((eq? event (enum events os-signal-event))
 	 (interrupt-bit (enum interrupt os-signal)))
+	((eq? event (enum events external-event))
+	 (interrupt-bit (enum interrupt external-event)))
 	((eq? event (enum events no-event))
 	 0)
 	((eq? event (enum events error-event))

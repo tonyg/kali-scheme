@@ -19,7 +19,6 @@ s48_init_asm_glue(void)
 static s48_value
 s48_provide_asm_values(s48_value asm_vector)
 {
-  extern void s48_stack_gc();
   extern long s48_unknown_call();
   extern long s48_unknown_return();
   extern long s48_unknown_return_values();
@@ -58,38 +57,37 @@ s48_provide_asm_values(s48_value asm_vector)
   S48_VECTOR_SET(asm_vector, 1, s48_enter_fixnum((long) &ScontS));
   /* 2 *stack*      */
   S48_VECTOR_SET(asm_vector, 3, s48_enter_fixnum((long) &s48_Sstack_limitS));
-  S48_VECTOR_SET(asm_vector, 4, s48_enter_fixnum((long) &s48_stack_gc));
-  S48_VECTOR_SET(asm_vector, 5, s48_enter_fixnum((long) &s48_ShpS));
-  S48_VECTOR_SET(asm_vector, 6, s48_enter_fixnum((long) &s48_SlimitS));
-  S48_VECTOR_SET(asm_vector, 7, s48_enter_fixnum((long) &s48_unknown_call));
-  S48_VECTOR_SET(asm_vector, 8, s48_enter_fixnum((long) &s48_unknown_return));
-  S48_VECTOR_SET(asm_vector, 9, s48_enter_fixnum((long) &s48_unknown_return_values));
-  S48_VECTOR_SET(asm_vector, 10, s48_enter_fixnum((long) &s48_interrupt_handler));
-  S48_VECTOR_SET(asm_vector, 11, s48_enter_fixnum((long) &s48_restart_vm));
-  S48_VECTOR_SET(asm_vector, 12, s48_enter_fixnum((long) &s48_ensure_space_for_native_code));
-  S48_VECTOR_SET(asm_vector, 13, s48_enter_fixnum((long) &s48_native_add));
-  S48_VECTOR_SET(asm_vector, 14, s48_enter_fixnum((long) &s48_native_sub));
-  S48_VECTOR_SET(asm_vector, 15, s48_enter_fixnum((long) &s48_native_mul));
-  S48_VECTOR_SET(asm_vector, 16, s48_enter_fixnum((long) &s48_native_E));
-  S48_VECTOR_SET(asm_vector, 17, s48_enter_fixnum((long) &s48_native_L));
-  S48_VECTOR_SET(asm_vector, 18, s48_enter_fixnum((long) &s48_native_G));
-  S48_VECTOR_SET(asm_vector, 19, s48_enter_fixnum((long) &s48_native_LE));
-  S48_VECTOR_SET(asm_vector, 20, s48_enter_fixnum((long) &s48_native_GE));
-  S48_VECTOR_SET(asm_vector, 21, s48_enter_fixnum((long) &s48_native_remainder));
-  S48_VECTOR_SET(asm_vector, 22, s48_enter_fixnum((long) &s48_native_quotient));
-  S48_VECTOR_SET(asm_vector, 23, s48_enter_fixnum((long) &s48_native_divide));
-  S48_VECTOR_SET(asm_vector, 24, s48_enter_fixnum((long) &s48_native_bitwise_not));
-  S48_VECTOR_SET(asm_vector, 25, s48_enter_fixnum((long) &s48_native_bit_count));
-  S48_VECTOR_SET(asm_vector, 26, s48_enter_fixnum((long) &s48_native_bitwise_and));
-  S48_VECTOR_SET(asm_vector, 27, s48_enter_fixnum((long) &s48_native_bitwise_ior));
-  S48_VECTOR_SET(asm_vector, 28, s48_enter_fixnum((long) &s48_native_bitwise_xor));
-  S48_VECTOR_SET(asm_vector, 29, s48_enter_fixnum((long) &s48_restart_vm3_pop_0));
-  S48_VECTOR_SET(asm_vector, 30, s48_enter_fixnum((long) &s48_restart_vm3_pop_1));
-  S48_VECTOR_SET(asm_vector, 31, s48_enter_fixnum((long) &s48_restart_vm3_pop_2));
-  S48_VECTOR_SET(asm_vector, 32, s48_enter_fixnum((long) &s48_restart_vm3_pop_3));
-  S48_VECTOR_SET(asm_vector, 33, s48_enter_fixnum((long) &s48_gcSallocate_for_native_code));
+  S48_VECTOR_SET(asm_vector, 4, s48_enter_fixnum((long) &s48_ShpS));
+  S48_VECTOR_SET(asm_vector, 5, s48_enter_fixnum((long) &s48_SlimitS));
+  S48_VECTOR_SET(asm_vector, 6, s48_enter_fixnum((long) &s48_unknown_call));
+  S48_VECTOR_SET(asm_vector, 7, s48_enter_fixnum((long) &s48_unknown_return));
+  S48_VECTOR_SET(asm_vector, 8, s48_enter_fixnum((long) &s48_unknown_return_values));
+  S48_VECTOR_SET(asm_vector, 9, s48_enter_fixnum((long) &s48_interrupt_handler));
+  S48_VECTOR_SET(asm_vector, 10, s48_enter_fixnum((long) &s48_restart_vm));
+  S48_VECTOR_SET(asm_vector, 11, s48_enter_fixnum((long) &s48_ensure_space_for_native_code));
+  S48_VECTOR_SET(asm_vector, 12, s48_enter_fixnum((long) &s48_native_add));
+  S48_VECTOR_SET(asm_vector, 13, s48_enter_fixnum((long) &s48_native_sub));
+  S48_VECTOR_SET(asm_vector, 14, s48_enter_fixnum((long) &s48_native_mul));
+  S48_VECTOR_SET(asm_vector, 15, s48_enter_fixnum((long) &s48_native_E));
+  S48_VECTOR_SET(asm_vector, 16, s48_enter_fixnum((long) &s48_native_L));
+  S48_VECTOR_SET(asm_vector, 17, s48_enter_fixnum((long) &s48_native_G));
+  S48_VECTOR_SET(asm_vector, 18, s48_enter_fixnum((long) &s48_native_LE));
+  S48_VECTOR_SET(asm_vector, 19, s48_enter_fixnum((long) &s48_native_GE));
+  S48_VECTOR_SET(asm_vector, 20, s48_enter_fixnum((long) &s48_native_remainder));
+  S48_VECTOR_SET(asm_vector, 21, s48_enter_fixnum((long) &s48_native_quotient));
+  S48_VECTOR_SET(asm_vector, 22, s48_enter_fixnum((long) &s48_native_divide));
+  S48_VECTOR_SET(asm_vector, 23, s48_enter_fixnum((long) &s48_native_bitwise_not));
+  S48_VECTOR_SET(asm_vector, 24, s48_enter_fixnum((long) &s48_native_bit_count));
+  S48_VECTOR_SET(asm_vector, 25, s48_enter_fixnum((long) &s48_native_bitwise_and));
+  S48_VECTOR_SET(asm_vector, 26, s48_enter_fixnum((long) &s48_native_bitwise_ior));
+  S48_VECTOR_SET(asm_vector, 27, s48_enter_fixnum((long) &s48_native_bitwise_xor));
+  S48_VECTOR_SET(asm_vector, 28, s48_enter_fixnum((long) &s48_restart_vm3_pop_0));
+  S48_VECTOR_SET(asm_vector, 29, s48_enter_fixnum((long) &s48_restart_vm3_pop_1));
+  S48_VECTOR_SET(asm_vector, 30, s48_enter_fixnum((long) &s48_restart_vm3_pop_2));
+  S48_VECTOR_SET(asm_vector, 31, s48_enter_fixnum((long) &s48_restart_vm3_pop_3));
+  S48_VECTOR_SET(asm_vector, 32, s48_enter_fixnum((long) &s48_gcSallocate_for_native_code));
   /* 34 current thread */
-  S48_VECTOR_SET(asm_vector, 35, s48_enter_fixnum((long) &s48_unknown_apply));
+  S48_VECTOR_SET(asm_vector, 33, s48_enter_fixnum((long) &s48_unknown_apply));
   return S48_UNSPECIFIC;
 }
 
@@ -112,7 +110,7 @@ s48_malloc_byte_vector(s48_value length)
   char *bv = (char *)malloc(bytes);
 
   if (bv == NULL)
-    s48_raise_out_of_memory_error();
+    s48_out_of_memory_error();
 
   *((long *) bv) = (c_length << 8)
                  | (S48_STOBTYPE_BYTE_VECTOR << 2)
@@ -129,7 +127,7 @@ static s48_value
 s48_free_byte_vector(s48_value byte_vector)
 {
   if (!S48_BYTE_VECTOR_P(byte_vector))
-    s48_raise_argument_type_error(byte_vector);
+    s48_assertion_violation("s48_free_byte_vector", "not a byte vector", 1, byte_vector);
 
   free((void *) ((byte_vector & -4)- 4));
 
@@ -145,7 +143,7 @@ static s48_value
 s48_stob_start_address(s48_value stob)
 {
   if (!S48_STOB_P(stob))
-    s48_raise_argument_type_error(stob);
+    s48_assertion_violation("s48_stob_start_address", "not a stob", 1, stob);
   
   return s48_enter_integer((long) S48_ADDRESS_AFTER_HEADER(stob, void));
 }
@@ -222,3 +220,11 @@ s48_make_native_return_code(int n_stack_args)
   
 }
 
+void
+s48_write_fatal_message(char* msg, int size, int bc_pc){
+  fprintf(stderr, "s48_write_fatal_message called with bc-pc %d\n", bc_pc);
+  write(2, msg, size);
+  fprintf(stderr, "s48_write_fatal_message put out\n");
+  exit(1);
+  return;
+}

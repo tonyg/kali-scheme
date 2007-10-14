@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The byte code compiler's assembly phase.
 
@@ -14,6 +14,9 @@
 			       0))
 	 (astate (make-astate cv))
 	 (debug-data (frame-debug-data frame)))
+    (if (> (segment-size segment) 65535)
+	(assertion-violation 'segment->cv
+			     "VM limit exceeded: segment too large" (segment-size segment)))
     (emit-segment! astate segment)
     (if big-stack?
 	(add-big-stack-protocol! cv (frame-size frame)))
@@ -58,8 +61,9 @@
 	((<= frame-size available-stack-space)
 	 #t)
 	(else
-	 (error "VM limit exceeded: procedure requires too much stack space"
-		frame-size))))
+	 (assertion-violation 'check-stack-use
+			      "VM limit exceeded: procedure requires too much stack space"
+			      frame-size))))
 
 ; We put the length and the original protocol at the end of the code vector
 ; so that the original protocol's data doesn't have to be moved (which would
@@ -111,7 +115,7 @@
 
 (define (sequentially . segments)
   (if (not (car segments))
-      (error "bad call to SEQUENTIALLY"))
+      (assertion-violation 'sequentially "bad call to SEQUENTIALLY"))
   ;;  (reduce sequentially-2 empty-segment segments)
   ;;+++ this sped the entire compilation process up by several percent
   (cond ((null? segments)
@@ -152,7 +156,7 @@
 	      '()))
 	 (gc-mask-size (length gc-mask))
 	 (size (+ 10			;   header (3)
-                                        ;   gc-mask (see below)
+                                        ;   gc-mask, low bytes first (see below)
                                         ; + template (2) 
 					; + offset (2)
 					; + gc-mask size (1)
@@ -184,27 +188,31 @@
       ((null? offsets)
        mask)))
 
+; low bytes first
 (define (bits->bytes n)
   (do ((n n (arithmetic-shift n -8))
        (b '() (cons (bitwise-and n #xFF) b)))
       ((= 0 n)
-       b)))
+       (reverse b))))
 
 
 ;;;;;;;;;;;;;;;;;;;;
 ; Emitting the PROTOCOL pseudo instruction
 
-(define (make-push-byte need-template? need-env?)
+(define (make-push-byte need-template? need-env? need-closure?)
   (bitwise-ior (if need-template? 
-                   #b10 
-                   #b00)
+                   #b001
+                   #b000)
                (if need-env?
-                   #b01
-                   #b00)))
+                   #b010 
+                   #b000)
+	       (if need-closure?
+		   #b100
+		   #b000)))
 
 
-(define (lambda-protocol nargs need-template? need-env?)
-  (let ((push-byte (make-push-byte need-template? need-env?)))
+(define (lambda-protocol nargs need-template? need-env? need-closure?)
+  (let ((push-byte (make-push-byte need-template? need-env? need-closure?)))
     (cond ((<= nargs maximum-stack-args)
            (instruction (enum op protocol) nargs push-byte))
           ((<= nargs available-stack-space)
@@ -214,10 +222,11 @@
                         (low-byte nargs)
                         push-byte))
           (else
-           (error "compiler bug: too many formals" nargs)))))
+           (assertion-violation 'lambda-protocol
+				"compiler bug: too many formals" nargs)))))
 
-(define (nary-lambda-protocol nargs need-template? need-env?)
-  (let ((push-byte (make-push-byte need-template? need-env?)))
+(define (nary-lambda-protocol nargs need-template? need-env? need-closure?)
+  (let ((push-byte (make-push-byte need-template? need-env? need-closure?)))
     (cond ((<= nargs available-stack-space)
            (instruction (enum op protocol)
                         two-byte-nargs+list-protocol
@@ -225,7 +234,8 @@
                         (low-byte nargs)
                         push-byte))
           (else
-           (error "compiler bug: too many formals" nargs)))))
+           (assertion-violation 'nary-lambda-protocol
+				"compiler bug: too many formals" nargs)))))
   
 
 (define (nary-primitive-protocol min-nargs)
@@ -396,7 +406,7 @@
 			  ((null? labels))
 			(let ((label (car labels)))
 			  (if (car label)
-			      (warn "backward jumps not supported")
+			      (warning 'computed-goto-instruction "backward jumps not supported")
 			      (set-cdr! label
 					(cons (cons location base-address)
 					      (cdr label)))))))))))
@@ -422,9 +432,6 @@
 
 (define (insert-backward-label! astate location label-pc offset)
   (let ((cv (astate-code-vector astate)))
-    (write (cons label-pc
-				       (astate-jump-back-dests astate)))
-    (newline)
     (set-astate-jump-back-dests! astate
 				 (cons label-pc
 				       (astate-jump-back-dests astate)))

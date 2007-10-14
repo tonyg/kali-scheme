@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The root scheduler.
 ;
@@ -49,8 +49,8 @@
 
 (define (root-handler condition next-handler)
   (let ((out (current-error-port)))
-    (cond ((error? condition)
-	   (display "Error while running root thread, thread killed: " out)
+    (cond ((serious-condition? condition)
+	   (display "Serious problem while running root thread, thread killed: " out)
 	   (display (current-thread) out)
 	   (newline out)
 	   (cheap-display-condition condition out)
@@ -64,21 +64,26 @@
 (define (cheap-display-condition condition out)
   (call-with-values
       (lambda () (decode-condition condition))
-    (lambda (type stuff)
+    (lambda (type who message stuff)
       (display (case type
 		 ((error) "Error")
+		 ((assertion-violation) "Assertion violation")
+		 ((serious) "Serious problem")
 		 ((vm-exception) "VM Exception")
 		 ((warning) "Warning")
 		 (else type))
 	       out)
       (display ": " out)
-      (display (car stuff) out)
+      (display " [" out)
+      (display who out)
+      (display "]" out)
+      (display message out)
       (newline out)
       (for-each (lambda (irritant)
 		  (display "    " out)
 		  (display irritant out)
 		  (newline out))
-		(cdr stuff)))))
+		stuff))))
 	 
 ; Upcall token
 
@@ -102,7 +107,8 @@
 	      (set-enabled-interrupts! all-interrupts)
 	      #t)
 	     ((or time-until-wakeup
-		  (waiting-for-i/o?))
+		  (waiting-for-i/o?)
+		  (waiting-for-external-events?))
 	      (do-some-waiting time-until-wakeup)
 	      (set-enabled-interrupts! all-interrupts)
 	      (root-wait))

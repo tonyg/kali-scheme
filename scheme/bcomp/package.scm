@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Structures 'n' packages.
@@ -17,7 +17,7 @@
 ;
 ; Clients are packages that import the structure's bindings.
 
-(define-record-type structure :structure
+(define-record-type structure :structure-type ; avoid name conflict with :STRUCTURE type
   (really-make-structure package interface-thunk interface clients name)
   structure?
   (interface-thunk structure-interface-thunk)
@@ -26,7 +26,7 @@
   (clients   structure-clients)
   (name	     structure-name set-structure-name!))
 
-(define-record-discloser :structure
+(define-record-discloser :structure-type
   (lambda (structure)
     (list 'structure
 	  (package-uid (structure-package structure))
@@ -44,13 +44,15 @@
     (if (interface? int)
 	(begin (set-structure-interface! structure int)
 	       (note-reference-to-interface! int structure))
-	(call-error "invalid interface" initialize-structure! structure))))
+	(assertion-violation 'initialize-structure!
+			     "invalid interface" structure))))
 
 ; Make a structure over PACKAGE and the interface returned by INT-THUNK.
 
 (define (make-structure package int-thunk . name-option)
   (if (not (package? package))
-      (call-error "invalid package" make-structure package int-thunk))
+      (assertion-violation 'make-structure
+			   "invalid package" package int-thunk))
   (let ((struct (really-make-structure package
 				       (if (procedure? int-thunk)
 					   int-thunk
@@ -90,6 +92,21 @@
 
 (define (structure-unstable? struct)
   (package-unstable? (structure-package struct)))
+
+; The #F returned for compile-time environments is conservative.  You could
+; look up the name of interest and see where it came from.  It might come
+; from a lexical binding or a stable package or structure.  A procedure to
+; do this could go in cenv.scm.
+
+(define (environment-stable? env)
+  (cond ((package? env)
+         (not (package-unstable? env)))
+        ((structure? env)
+         (not (structure-unstable? env)))
+        ((procedure? env)
+         #f)                    ; conservative
+        (else
+         (assertion-violation 'environment-stable? "invalid environment" env))))
 
 ; Map PROC down the the [name type binding] triples provided by STRUCT.
 
@@ -254,7 +271,7 @@
 
 (define (make-simple-package opens unstable? tower . name-option)
   (if (not (list? opens))
-      (error "invalid package opens list" opens))
+      (assertion-violation 'make-simple-package "invalid package opens list" opens))
   (let ((package (make-package (lambda () opens)
 			       (lambda () '()) ;accesses-thunk
 			       unstable?
@@ -299,7 +316,8 @@
 			  (binding-type probe)
 			  (binding-place probe)
 			  static)
-	(error "internal error: name not bound" package name))))
+	(assertion-violation 'package-add-static!
+			     "internal error: name not bound" package name))))
 
 (define (package-refine-type! package name type)
   (let ((probe (table-ref (package-definitions package) name)))
@@ -308,7 +326,8 @@
 			  type
 			  (binding-place probe)
 			  (binding-static probe))
-	(error "internal error: name not bound" package name))))
+	(assertion-violation 'package-refine-type!
+			     "internal error: name not bound" package name))))
 
 ; --------------------
 ; Lookup
@@ -363,11 +382,11 @@
 	 (or (structure-lookup env
 			       name
 			       (package-integrate? (structure-package env)))
-	     (call-error "not exported" generic-lookup env name)))
+	     (assertion-violation 'generic-lookup "not exported" env name)))
 	((procedure? env)
 	 (lookup env name))
 	(else
-	 (error "invalid environment" env name))))
+	 (assertion-violation 'generic-lookup "invalid environment" env name))))
 
 ; --------------------
 ; Package initialization

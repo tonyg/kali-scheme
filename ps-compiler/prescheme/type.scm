@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 (define-record-type base-type :base-type
   (really-make-base-type name uid)
@@ -31,6 +31,7 @@
 	(else #f)))
 
 (define type/integer      (make-base-type 'integer))
+(define type/unsigned-integer (make-base-type 'unsigned-integer))
 (define type/float        (make-base-type 'float))
 
 (define type/null         (make-base-type 'null))  ; no value

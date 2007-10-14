@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The entry point for all this.
 
@@ -41,7 +41,7 @@
 	      ((variable-type? want-type)
 	       (get-location-for-unassignable cenv name))
 	      (else
-	       (warn "invalid variable reference" name cenv)
+	       (warning 'get-location "invalid variable reference" name cenv)
 	       (note-caching! cenv name place)
 	       place)))
       (get-location-for-undefined cenv name)))
@@ -79,13 +79,18 @@
       (if (not (table-ref (package-definitions package) name))
 	  (let loop ((opens (package-opens package)))
 	    (if (not (null? opens))
-		(if (interface-member? (structure-interface (car opens))
-				       name)
-		    (begin (table-set! (package-cached package) name place)
-			   (package-note-caching!
-			    (structure-package (car opens))
-			    name place))
-		    (loop (cdr opens))))))))
+		(call-with-values
+		    (lambda ()
+		      (interface-ref (structure-interface (car opens))
+				     name))
+		  (lambda (internal-name type)
+		    (if internal-name
+			(begin
+			  (table-set! (package-cached package) name place)
+			  (package-note-caching!
+			   (structure-package (car opens))
+			   internal-name place))
+                        (loop (cdr opens))))))))))
 
 ; Find the actual package providing PLACE and remember that it is being used.
 
@@ -105,7 +110,7 @@
       (get-location-for-unassignable (generated-env name)
 				     (generated-name name))
       (let ((package (cenv->package cenv)))
-	(warn "invalid assignment" name)
+	(warning 'get-location-for-unassignable "invalid assignment" name)
 	(if (package? package)
 	    (lambda () (location-for-assignment package name))
 	    (lambda () (make-undefined-location name))))))
@@ -147,10 +152,15 @@
   (let loop ((opens (package-opens package)))
     (if (null? opens)
 	(get-undefined package name)
-	(if (interface-member? (structure-interface (car opens))
-			       name)
-	    (location-for-reference (structure-package (car opens)) name)
-	    (loop (cdr opens))))))
+	(call-with-values
+	    (lambda ()
+	      (interface-ref (structure-interface (car opens))
+			     name))
+	  (lambda (internal-name type)
+	    (if internal-name
+		(location-for-reference (structure-package (car opens))
+					internal-name)
+		(loop (cdr opens))))))))
 
 ;----------------
 ; Maintain and display a list of undefined names.
@@ -195,7 +205,8 @@
 				(generated-name name)
 				name))
 			  (reverse names))))
-	  (apply warn
+	  (apply warning
+		 'print-undefined-names
 		 "undefined variables"
 		 env
 		 names)))))

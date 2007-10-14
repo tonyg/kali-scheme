@@ -19,18 +19,20 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
 #ifndef _WIN32
 #include "sysdep.h"
 #endif
 
-typedef unsigned long word32_t;
-
 /* It's a shame ... */
 #ifdef _WIN32
+typedef unsigned long word32_t;
 #define UNSIGNED64 unsigned _int64
 #else
 #define UNSIGNED64 unsigned long long
+#include <inttypes.h>
+typedef uint32_t word32_t;
 #endif
 
 #define U32 word32_t
@@ -49,7 +51,7 @@ typedef unsigned long word32_t;
 
 typedef union { double d; word32_t word[2]; } double_overlay;
 
-#ifdef IEEE_MOST_FIRST
+#if ((defined(BUILD_UNIVERSAL_BINARY) && defined(__BIG_ENDIAN__)) || IEEE_MOST_FIRST)
 #define DOUBLE_WORD0(x) ((double_overlay*)&(x))->word[0]
 #define DOUBLE_WORD1(x) ((double_overlay*)&(x))->word[1]
 #else
@@ -397,9 +399,9 @@ int s48_dragon(buf, v) char *buf; double v; {
    if (e == exp_max) {
      /* infinity or NaN */
      if (f == 0)
-       strcpy(buf, sign ? "#{-Inf}" : "#{Inf}");
+       strcpy(buf, sign ? "-inf.0" : "+inf.0");
      else
-       strcpy(buf, "#{NaN}");
+       strcpy(buf, "+nan.0");
      return 0;
    }
 

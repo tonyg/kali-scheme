@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; package -> template
 
@@ -126,8 +126,3 @@
 
     procs))
 
-;----------------
-(define operator/define	             (get-operator 'define syntax-type))
-(define operator/primitive-procedure (get-operator 'primitive-procedure syntax-type))
-(define operator/call                (get-operator 'call   'internal))
-(define operator/literal             (get-operator 'literal 'leaf))

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 (define-structures ((vm-utilities vm-utilities-interface))
@@ -20,17 +20,30 @@
 					integer)))
     (define schedule-interrupt 
       (external "s48_schedule_alarm_interrupt" (=> (integer) integer)))
+
+    ;; implemented in C, wrapper around s48-dequeue-external-event/unsafe!
+    (define dequeue-external-event!
+      (external "s48_dequeue_external_event" (=> () integer boolean)))
+
     (define cheap-time
       (external "CHEAP_TIME" (=> () integer)))
     (define real-time 
       (external "s48_real_time" (=> () integer integer)))
     (define run-time 
       (external "s48_run_time" (=> () integer integer)))
+    
+    (define get-os-string-encoding
+      (external "s48_get_os_string_encoding" (=> () (^ char))))
+
+    (define host-architecture
+      (external "S48_HOST_ARCHITECTURE" (^ char)))
 
     (define s48-call-native-procedure
       (external "s48_call_native_procedure" (=> (integer integer) integer)))
     (define s48-invoke-native-continuation
       (external "s48_invoke_native_continuation" (=> (integer integer) integer)))
+    (define s48-jump-native
+      (external "s48_jump_to_native_address" (=> (integer integer) integer)))
     (define s48-native-return
       (external "((long)&s48_native_return)" integer))
 
@@ -51,13 +64,13 @@
     ; for use in C functions usable from external code, defined as
     ; PreScheme procedures
 
-    (define raise-argument-type-error
+    (define argument-type-violation
       ;; value
-      (external "s48_raise_argument_type_error" (=> (integer) null)))
+      (external "s48_argument_type_violation" (=> (integer) null)))
 
-    (define raise-range-error
+    (define range-violation
       ;; value, min, max
-      (external "s48_raise_range_error" (=> (integer integer integer) null)))
+      (external "s48_range_violation" (=> (integer integer integer) null)))
 
     ; Lots of bignum stuff.  This should be moved to its own interface.
     (define export-key
@@ -105,6 +118,8 @@
  		(=> (address address) address)))
     (define external-bignum-from-long
       (external "(char *) s48_long_to_bignum" (=> (integer) address)))
+    (define external-bignum-from-unsigned-long
+      (external "(char *) s48_ulong_to_bignum" (=> (unsigned-integer) address)))
     (define external-bignum->long
       (external "s48_bignum_to_long" (=> (address) integer)))
     (define external-bignum-fits-in-word?
@@ -116,12 +131,3 @@
 		    (events event-interface))
   (open prescheme)
   (files (data ps-channel)))
-
-; The number of usable bits in a small integer.
-
-(define-structures ((system-spec (export useful-bits-per-word)))
-  (open prescheme)
-  (begin
-    (define useful-bits-per-word 32)   ; when compiled
-    ))
-

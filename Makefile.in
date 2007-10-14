@@ -7,7 +7,8 @@ SHELL = /bin/sh
 srcdir = @srcdir@
 VPATH = @srcdir@
 CC = @CC@
-DEFS = @DEFS@ -D__COMPILING_SCHEME48_ITSELF__
+LD = @LD@
+DEFS = @DEFS@ -D__COMPILING_SCHEME48_ITSELF__ -DS48_HOST_ARCHITECTURE=\"$(HOST_ARCHITECTURE)\"
 LIBS = @LIBS@
 CFLAGS = @CFLAGS@
 CPPFLAGS =
@@ -16,19 +17,32 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
 
 LDFLAGS = @LDFLAGS@
+LDFLAGS_VM = @LDFLAGS_VM@
 LIBOBJS = @LIBOBJS@
+MACOS_X86_64_LIBS = @MACOS_X86_64_LIBS@
 
 GC_OBJS = @GC_OBJS@
 
+ASM_OBJECTS = @ASM_OBJECTS@
+ASM_STYLE = @ASM_STYLE@
+
+HOST_ARCHITECTURE = @host@
+BIT_SUFFIX = @BIT_SUFFIX@
+
 prefix = @prefix@
 exec_prefix = @exec_prefix@
-### End of `configure' section###
 
-bindir = $(exec_prefix)/bin
-libdir = $(exec_prefix)/lib
-incdir = $(exec_prefix)/include
+bindir = @bindir@
+libdir = @libdir@
+incdir = @includedir@
 manext = 1
-mandir = $(prefix)/man/man$(manext)
+mandir = @mandir@/man$(manext)
+datarootdir = @datarootdir@
+datadir = @datadir@
+
+DYNAMIC_EXTERNALS_CFLAGS=@DYNAMIC_EXTERNALS_CFLAGS@
+DYNAMIC_EXTERNALS_LDFLAGS=@DYNAMIC_EXTERNALS_LDFLAGS@
+### End of `configure' section###
 
 # HP 9000 series, if you don't have gcc
 #   CC = cc
@@ -39,12 +53,15 @@ mandir = $(prefix)/man/man$(manext)
 #   LDFLAGS = -N
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(DEFS) -I ./c -I$(srcdir)/c -I$(srcdir)/c/bibop $(CFLAGS) -o $@ $<
+	$(CC) -c $(CPPFLAGS) $(DEFS) -I ./c -I$(srcdir)/c -I$(srcdir)/c/net -I$(srcdir)/c/bibop $(CFLAGS) -o $@ $<
 
 # You might want to change RUNNABLE to "s48"
+VERSION = 1.`cat $(srcdir)/build/minor-version-number`
 RUNNABLE = scheme48
+CONFIG_SCRIPT = scheme48-config
 MANPAGE = $(RUNNABLE).$(manext)
-LIB = $(libdir)/$(RUNNABLE)
+LIB = $(libdir)/scheme48-$(VERSION)
+SHARE = $(datadir)/scheme48-$(VERSION)
 
 distdir = /tmp
 
@@ -71,33 +88,50 @@ include $(srcdir)/build/filenames.make
 #    command.  This is desirable if you are making changes to the
 #    system that might break scheme48vm and/or scheme48.image.  But it
 #    requires you to have squirreled away a previous working version
-#    of scheme48.  The settings assume a pre-Unicode version; if you
-#    want to use an installed Unicode-capable Scheme 48 (1.4 or later),
+#    of scheme48.  The settings assume a Unicode version; if you want
+#    to use an installed non-Unicode-capable Scheme 48 (1.4 or earlier),
 #    you need to use this setting:
-#    LINKER_WRITEBYTE = ,open (subset i/o (write-byte))
+#    LINKER_WRITEBYTE = ,load scheme/alt/write-byte.scm
 #
 # 2. LINKER_VM = ./$(VM) $(BIG_HEAP)
 #    LINKER_RUNNABLE = $(LINKER_VM) -i $(IMAGE)
-#    LINKER_WRITEBYTE = ,open (subset i/o (write-byte))
+#    LINKER_WRITEBYTE = ,open (subset i/o (write-byte)) (subset ports (set-port-crlf?!))
 #    This builds the linker on the scheme48vm and scheme48.image
 #    that are in the current directory.
 
 BIG_HEAP = -h 8000000
 LINKER_VM = $(RUNNABLE) $(BIG_HEAP)
 LINKER_RUNNABLE = $(LINKER_VM)
-LINKER_WRITEBYTE = ,load scheme/link/write-byte.scm
-START_LINKER = echo ',batch';					\
+LINKER_WRITEBYTE = ,open (subset i/o (write-byte)) (subset ports (set-port-crlf?!))
+START_LINKER_HEAD = echo ',batch';				\
 	       echo ',bench on';				\
 	       echo ',open signals handle features';		\
 	       echo ',open bitwise ascii code-vectors';		\
 	       echo '$(LINKER_WRITEBYTE)';			\
+	       echo ',config ,load scheme/platform-interfaces.scm'
+
+START_LINKER_TAIL = echo ',open platform';			\
+	       echo ',config ,load scheme/prescheme/interface.scm'; \
+	       echo ',config ,load scheme/prescheme/package-defs.scm'; \
+	       echo ',config ,load scheme/vm/interfaces.scm'; 	\
+	       echo ',config ,load scheme/vm/shared-interfaces.scm'; \
+	       echo ',config ,load scheme/link/vm-packages.scm'; \
+	       echo ',open vm-data vm-utilities';		\
 	       echo ',open cells record-types';			\
+	       echo ',load scheme/alt/low-exception.scm';	\
 	       echo ',load $(linker-files)';			\
 	       echo ',load scheme/alt/init-defpackage.scm'
 
+START_LINKER-32 = $(START_LINKER_HEAD);				\
+	       echo ',config ,load scheme/rts-packages-32.scm'; \
+	       $(START_LINKER_TAIL)
+
+START_LINKER-64 = $(START_LINKER_HEAD);				\
+	       echo ',config ,load scheme/rts-packages-64.scm'; \
+	       $(START_LINKER_TAIL)
+
 # --------------------
-# You shouldn't have to change anything below this point, except for possibly
-# the external code rules.
+# You shouldn't have to change anything below this point.
 
 # Targets:
 
@@ -105,13 +139,14 @@ IMAGE = scheme48.image
 INITIAL = $(srcdir)/build/initial.image
 VM = scheme48vm
 LIBSCHEME48 = c/libscheme48.a
+POSIX_EXTERNAL = c/posix.so
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
-OBJS =	c/scheme48vm.o \
-	c/extension.o c/free.o c/double_to_string.o \
-	c/external.o c/external-lib.o c/bignum.o c/init.o
+OBJS =	c/scheme48vm-$(BIT_SUFFIX).o \
+	c/extension.o c/free.o c/double_to_string.o c/bignum.o \
+	c/external.o c/external-lib.o c/external-init.o c/init.o
 
 FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
-		c/fake/sys-select.h
+		c/fake/sys-select.h c/fake/langinfo.h
 
 SCHEME48HS = c/scheme48.h c/scheme48write-barrier.h
 
@@ -126,116 +161,104 @@ CONFIG_FILES = scheme/interfaces.scm scheme/packages.scm \
 
 # The following is the first rule and therefore the "make" command's
 # default target.
-enough: vm $(LIBSCHEME48) $(IMAGE) script-interpreter go
+enough: vm $(POSIX_EXTERNAL) $(LIBSCHEME48) $(IMAGE) script-interpreter go
 
 # --------------------
 # External code to include in the VM
 # After changing any of these you should delete `scheme48vm' and remake it.
 
-EXTERNAL_OBJECTS = $(POSIX_OBJECTS) $(SOCKET_OBJECTS) $(DYNLINK_OBJECTS) \
-		   $(SYSEXITS_OBJECTS) $(LOOKUP_OBJECTS) $(ASM_OBJECTS) \
-		   $(SRFI_OBJECTS)
-EXTERNAL_LD_FLAGS = $(POSIX_LD_FLAGS) $(SOCKET_LD_FLAGS) $(DYNLINK_LD_FLAGS) \
-		    $(SYSEXITS_LD_FLAGS)
-EXTERNAL_INITIALIZERS = s48_initialize_external s48_init_external_libs  \
-			$(POSIX_INITIALIZERS) $(SOCKET_INITIALIZERS)	\
-			$(DYNLINK_INITIALIZERS)				\
-			$(SYSEXITS_INITIALIZERS)			\
-                        $(LOOKUP_INITIALIZERS) $(ASM_INITIALIZERS)	\
-			$(SRFI_INITIALIZERS)
-
-# Rules for any external code.
+EXTERNAL_OBJECTS = c/net/socket.o c/net/address.o c/net/net.o c/unix/socket.o \
+		   c/unix/dynlink.o \
+		   c/unix/sysexits.o $(ASM_OBJECTS) \
+		   c/srfi-27.o
 
 # POSIX rules; this could have its own Makefile, but I don't want to bother.
 
 posix_dir = c/posix
 
-$(posix_dir)/user.o     $(posix_dir)/regexp.o	\
-$(posix_dir)/proc-env.o $(posix_dir)/io.o:	\
-	$(SCHEME48HS) c/c-mods.h $(posix_dir)/posix.h
+CC_POSIX = $(CC) -c $(CPPFLAGS) $(DEFS) -I ./c -I$(srcdir)/c -I$(srcdir)/c/bibop $(CFLAGS) $(DYNAMIC_EXTERNALS_CFLAGS) -o $@ $<
 
-$(posix_dir)/proc.o:	\
+$(posix_dir)/user.o: c/posix/user.c \
+	$(SCHEME48HS) c/c-mods.h $(posix_dir)/posix.h
+	$(CC_POSIX)
+
+$(posix_dir)/regexp.o: c/posix/regexp.c \
+	$(SCHEME48HS) c/c-mods.h $(posix_dir)/posix.h
+	$(CC_POSIX)
+
+$(posix_dir)/proc-env.o: c/posix/proc-env.c \
+	$(SCHEME48HS) c/c-mods.h $(posix_dir)/posix.h
+	$(CC_POSIX)
+
+$(posix_dir)/io.o: c/posix/io.c \
+	$(SCHEME48HS) c/c-mods.h $(posix_dir)/posix.h
+	$(CC_POSIX)
+
+$(posix_dir)/proc.o: c/posix/proc.c \
 	$(SCHEME48HS) c/c-mods.h \
 	c/event.h $(posix_dir)/posix.h $(posix_dir)/s48_signals.h
+	$(CC_POSIX)
 
-$(posix_dir)/dir.o:	\
+$(posix_dir)/posix.o: c/posix/posix.c
+	$(CC_POSIX)
+
+$(posix_dir)/dir.o: c/posix/dir.c \
   $(SCHEME48HS) c/scheme48heap.h c/c-mods.h \
   c/event.h c/fd-io.h $(posix_dir)/posix.h
+	$(CC_POSIX)
 
 POSIX_OBJECTS = $(posix_dir)/user.o     $(posix_dir)/regexp.o	\
                 $(posix_dir)/proc-env.o $(posix_dir)/proc.o	\
-                $(posix_dir)/io.o	$(posix_dir)/dir.o
-POSIX_LD_FLAGS =
-POSIX_INITIALIZERS = 	s48_init_posix_dir	s48_init_posix_user	\
-			s48_init_posix_regexp	s48_init_posix_proc_env	\
-			s48_init_posix_io	s48_init_posix_proc
+                $(posix_dir)/io.o	$(posix_dir)/dir.o	\
+		$(posix_dir)/posix.o
+
+$(POSIX_EXTERNAL) : $(POSIX_OBJECTS)
+	$(LD) -o $@ $(DYNAMIC_EXTERNALS_LDFLAGS) $(POSIX_OBJECTS) $(MACOS_X86_64_LIBS)
+
 
 # End of POSIX rules
 
-# Socket rules
-
-c/unix/socket.o: $(SCHEME48HS) c/fd-io.h c/event.h
-
-SOCKET_OBJECTS = c/unix/socket.o
-SOCKET_LD_FLAGS =
-SOCKET_INITIALIZERS = 	s48_init_socket
-
-# End of socket rules
-
-# Dynamic linking rules
-
-c/unix/dynlink.o: $(SCHEME48HS)
-
-DYNLINK_OBJECTS = c/unix/dynlink.o
-# configure adds -ldl or -mld to the regular libraries
-DYNLINK_LD_FLAGS = 
-DYNLINK_INITIALIZERS = 	s48_init_dynlink
-
-# End of dynamic linking rules
-
-# Sysexits (this is for the implementation of SRFI 22)
-
-SYSEXITS_OBJECTS = c/unix/sysexits.o
-SYSEXITS_LD_FLAGS =
-SYSEXITS_INITIALIZERS = s48_init_sysexits
-
-# Lookup rules (this is just for compatibility with old code)
-
-c/unix/dynamo.o: $(SCHEME48HS)
-
-LOOKUP_OBJECTS = c/unix/dynamo.o
-LOOKUP_INITIALIZERS = 	s48_init_external_lookup
-
-# End of lookup rules
 # Native-code glue rules
 
-ASM_OBJECTS = c/fake/glue.o
-ASM_INITIALIZERS =
+# Fake definitions if there is no support for native code
+FAKE_ASM_OBJECTS = c/fake/glue.o
 
 # Real definitions to be used when a. native code works and b. it is supported
 # on the machine we're compiling on
-#ASM_OBJECTS = c/glue.o c/asm-glue.o
-#ASM_INITIALIZERS =	s48_init_asm_glue
+# Does currently not work because of the new GC infrastructure
+X86_ASM_OBJECTS = c/glue.o c/asm-glue.o
 
+# Assumes s48-compiler/ in the working directory
+
+c/glue.o: c/glue_$(ASM_STYLE).s
+	gcc -c -o $@ $<
+
+c/glue_$(ASM_STYLE).s: s48-compiler/assembler/x86/x86-glue.scm
+	(echo ',batch';						\
+	 echo ',open srfi-23';					\
+	 echo ',load $<';					\
+	 echo '(glue-code "$@" (quote $(ASM_STYLE)))';		\
+	 echo ',exit'						\
+	) | $(RUNNABLE)
 # End of native-code glue rules
 
 # Two-space copier objects
 
-GC_TWOSPACE_OBJS = c/scheme48-twospace-heap.o
+GC_TWOSPACE_OBJS = c/scheme48-twospace-heap-$(BIT_SUFFIX).o
 
-c/scheme48-twospace-heap.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
+c/scheme48-twospace-heap-$(BIT_SUFFIX).o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
 			c/scheme48vm-prelude.h c/c-mods.h \
 			c/event.h c/io.h c/fd-io.h
 
 # The BIBOP Garbage Collector
-GC_BIBOP_OBJS =  c/scheme48-bibop-heap.o \
+GC_BIBOP_OBJS =  c/scheme48-bibop-heap-$(BIT_SUFFIX).o \
 	c/bibop/page_alloc.o c/bibop/memory_map.o c/bibop/areas.o \
 	c/bibop/generation_gc.o c/bibop/find_all.o c/bibop/check_heap.o \
 	c/bibop/utils.o c/bibop/area_roots.o c/bibop/remset.o
 
 bibop: $(GC_BIBOP_OBJS)
 
-c/scheme48-bibop-heap.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
+c/scheme48-bibop-heap-$(BIT_SUFFIX).o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
 			c/scheme48vm-prelude.h c/scheme48write-barrier.h \
 			c/bibop/bibop.h \
 			c/c-mods.h c/event.h c/io.h c/fd-io.h
@@ -270,39 +293,16 @@ c/bibop/remset.o: c/bibop/remset.h c/bibop/memory.h c/scheme48.h	       \
 
 # End of BIBOP GC rules
 
-
-# SRFI rules
-
-SRFI_OBJECTS = c/srfi-27.o
-SRFI_INITIALIZERS = s48_init_srfi_27
-
-# End of SRFI rules
-
-# End of external rules
-# --------------------
-
-$(VM): c/main.o $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
-	rm -f /tmp/s48_external_$$$$.c &&				\
-	$(srcdir)/build/build-external-modules /tmp/s48_external_$$$$.c	\
-		$(EXTERNAL_INITIALIZERS) &&				\
-	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/main.o 			\
+$(VM): c/main.o $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS) c/scheme48.exp
+	$(CC) $(LDFLAGS) $(LDFLAGS_VM) $(CFLAGS) -o $@ c/main.o		\
 		$(OBJS) $(GC_OBJS) $(UNIX_OBJS)				\
-		/tmp/s48_external_$$$$.c				\
 		$(LIBOBJS) $(LIBS)					\
-		$(EXTERNAL_OBJECTS) $(EXTERNAL_LD_FLAGS) &&		\
-	rm -f /tmp/s48_external_$$$$.c
+		$(EXTERNAL_OBJECTS)
 
 $(LIBSCHEME48): $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
 	rm -f $@;							\
-	rm -f /tmp/s48_external_$$$$.c;					\
-	$(srcdir)/build/build-external-modules /tmp/s48_external_$$$$.c	\
-		$(EXTERNAL_INITIALIZERS) &&				\
-	$(CC) -c $(CFLAGS) -o  /tmp/s48_external_$$$$.o			\
-			/tmp/s48_external_$$$$.c &&			\
-	ar cq $@ $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)	\
-		/tmp/s48_external_$$$$.o &&				\
-	ranlib $@ &&					\
-	rm -f /tmp/s48_external_$$$$.c
+	ar cq $@ $(OBJS) $(GC_OBJS) $(UNIX_OBJS) $(LIBOBJS) $(EXTERNAL_OBJECTS)
+	ranlib $@
 
 script-interpreter: c/script-interpreter.o
 	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ c/script-interpreter.o
@@ -312,7 +312,7 @@ c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
 		-DDEFAULT_IMAGE_NAME=\"$(LIB)/$(IMAGE)\" \
 		$(CPPFLAGS) $(DEFS) $(srcdir)/c/main.c
 
-c/scheme48vm.o: c/prescheme.h c/scheme48vm.h \
+c/scheme48vm-$(BIT_SUFFIX).o: c/prescheme.h c/scheme48vm.h \
 		c/scheme48write-barrier.h c/scheme48heap.h \
 		c/scheme48image.h c/bignum.h c/event.h \
 		c/io.h c/fd-io.h \
@@ -323,7 +323,6 @@ c/extension.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS) c/scheme48vm.h
 c/free.o: c/sysdep.h
 c/external.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS) c/c-mods.h
 c/external-lib.o: $(SCHEME48HS)
-c/unix/sysexits.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS)
 c/unix/event.o: c/sysdep.h $(FAKEHS) c/c-mods.h \
 			c/scheme48vm.h c/scheme48heap.h \
 			c/event.h c/fd-io.h \
@@ -333,15 +332,22 @@ c/unix/fd-io.o: c/sysdep.h $(FAKEHS) c/c-mods.h \
 			c/event.h c/fd-io.h 
 c/unix/misc.o: c/sysdep.h $(FAKEHS)
 c/unix/io.o: c/io.h
+
+c/net/address.o: $(SCHEME48HS) c/net/address.h
+c/net/socket.o: $(SCHEME48HS) c/net/address.h c/net/socket.h
+c/unix/socket.o: $(SCHEME48HS) c/net/address.h c/net/socket.h c/fd-io.h c/event.h
+c/net/net.o: $(SCHEME48HS)
+c/unix/dynlink.o: $(SCHEME48HS)
+c/unix/srfi-27.o: $(SCHEME48HS)
+
 c/script-interpreter.o: c/sysdep.h $(FAKEHS) c/script-interpreter.c
 	$(CC) -c $(CFLAGS) -o $@ \
 		-DRUNNABLE=\"$(bindir)/$(RUNNABLE)\" \
 		$(CPPFLAGS) $(DEFS) \
 		-I ./c -I$(srcdir)/c \
 		$(srcdir)/c/script-interpreter.c
-c/fake/libdl1.o: c/fake/dlfcn.h
-c/fake/libdl2.o: c/fake/dlfcn.h
 c/fake/strerror.o: c/fake/strerror.h
+c/fake/langinfo.o: c/fake/langinfo.h
 
 # --------------------
 # Make scheme48.image from initial.image and library .scm files.
@@ -353,82 +359,111 @@ $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 		scheme/link-packages.scm scheme/env-packages.scm \
 		scheme/more-packages.scm \
 		scheme/sort/interfaces.scm scheme/sort/packages.scm \
+		scheme/r6rs/packages.scm \
 		scheme/cml/interfaces.scm scheme/cml/packages.scm \
+		scheme/net/packages.scm	\
 		scheme/posix/packages.scm scheme/srfi/packages.scm \
 		scheme/kali/*.scm scheme/kali/examples/*.scm \
 		$(usual-files) build/initial.debug build/build-usual-image
-	$(srcdir)/build/build-usual-image $(srcdir) "`(cd $(srcdir) && echo $$PWD)`/scheme" '$(IMAGE)' './$(VM)' \
-		'$(INITIAL)'
+	$(srcdir)/build/build-usual-image $(srcdir) \
+		"`(cd $(srcdir) && pwd)`/scheme" "`pwd`/c" '$(IMAGE)' './$(VM)' \
+		'$(INITIAL)-$(BIT_SUFFIX)'
 
 ### Fake targets:  all clean install man dist
 
 install: enough dirs \
 	 inst-script inst-vm inst-misc inst-man inst-inc inst-image \
-	 inst-script-interpreters
+	 inst-script-interpreters inst-config-script inst-externals
 
 inst-vm:
-	$(INSTALL_PROGRAM) $(VM) $(LIB)
+	$(INSTALL_PROGRAM) $(VM) $(DESTDIR)$(LIB)
 
 inst-image:
 	rm -f '/tmp/$(IMAGE)' &&					\
-	$(srcdir)/build/build-usual-image $(srcdir) '$(LIB)'            \
-	         '/tmp/$(IMAGE)' './$(VM)' '$(INITIAL)' &&		\
-	$(INSTALL_DATA) /tmp/$(IMAGE) $(LIB) &&				\
+	$(srcdir)/build/build-usual-image $(srcdir) "$(SHARE)" "$(LIB)" \
+		"/tmp/$(IMAGE)" "./$(VM)" "$(INITIAL)-$(BIT_SUFFIX)" && \
+	$(INSTALL_DATA) /tmp/$(IMAGE) $(DESTDIR)$(LIB) &&		\
 	rm /tmp/$(IMAGE)
 
 inst-man:
-	$(srcdir)/mkinstalldirs $(mandir)
+	$(srcdir)/mkinstalldirs $(DESTDIR)$(mandir)
 	sed 's=LBIN=$(bindir)=g' $(srcdir)/doc/scheme48.man |	   \
-		sed 's=LLIB=$(LIB)=g' |				   \
-		sed 's=LS48=$(RUNNABLE)=g' >$(MANPAGE) &&	   \
-	$(INSTALL_DATA) $(MANPAGE) $(mandir) &&			   \
+		sed "s=LLIB=$(LIB)=g" |				   \
+		sed "s=LS48=$(RUNNABLE)=g" >$(MANPAGE) &&	   \
+	$(INSTALL_DATA) $(MANPAGE) $(DESTDIR)$(mandir) &&	   \
 	rm $(MANPAGE);						   \
 
-inst-inc:
-	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(incdir)
-	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier.h $(incdir)
+inst-inc: c/scheme48.exp
+	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(DESTDIR)$(incdir)
+	$(INSTALL_DATA) c/scheme48write-barrier.h $(DESTDIR)$(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier-twospace.h $(DESTDIR)$(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier-bibop.h $(DESTDIR)$(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48.exp $(DESTDIR)$(incdir)
+	$(INSTALL_DATA) $(srcdir)/c/scheme48-external.exp $(DESTDIR)$(incdir)
 
 inst-misc:
 	for stub in env big sort opt misc link posix cml srfi; do	\
 		for f in $(srcdir)/scheme/$$stub/*.scm; do		\
-			$(INSTALL_DATA) $$f $(LIB)/$$stub || exit 1;	\
+			$(INSTALL_DATA) $$f $(DESTDIR)$(SHARE)/$$stub || exit 1;	\
 		done;							\
 	done &&								\
 	for f in $(srcdir)/scheme/rts/*num.scm 				\
 		 $(srcdir)/scheme/rts/jar-defrecord.scm; do		\
-		$(INSTALL_DATA) $$f $(LIB)/rts || exit 1;		\
+		$(INSTALL_DATA) $$f $(DESTDIR)$(SHARE)/rts || exit 1;	\
 	done
 
 inst-script:
-	script=$(bindir)/$(RUNNABLE) &&					\
-	echo '#!/bin/sh'	>$$script &&				\
+	script=$(DESTDIR)$(bindir)/$(RUNNABLE) &&			\
+	LIB=$(LIB) &&							\
+	echo "#!/bin/sh"	>$$script &&				\
 	echo			>>$$script &&				\
-	echo 'lib=$(LIB)'	>>$$script &&				\
-	echo 'exec $$lib/$(VM) -o $$lib/$(VM) -i $$lib/$(IMAGE) "$$@"'	\
+	echo "lib=$$LIB"	>>$$script &&				\
+	echo 'exec $$lib/$(VM) -i $$lib/$(IMAGE) "$$@"'			\
 				>>$$script &&				\
 	chmod +x $$script
 
 inst-script-interpreters:
 	for dialect in r5rs srfi-7; do					\
-		$(INSTALL_PROGRAM) script-interpreter $(bindir)/scheme-$$dialect; \
+		$(INSTALL_PROGRAM) script-interpreter			\
+			$(DESTDIR)$(bindir)/scheme-$$dialect;		\
 	done
+
+inst-config-script:
+	config_script=$(DESTDIR)$(bindir)/$(CONFIG_SCRIPT) &&		\
+	sed -e 's,@incdir\@,$(incdir),g'				\
+	    -e 's,@libdir\@,$(libdir),g'				\
+	    -e 's,@CC\@,$(CC),g'					\
+	    -e 's,@LD\@,$(LD),g'					\
+	    -e 's,@DYNAMIC_EXTERNALS_CFLAGS\@,$(DYNAMIC_EXTERNALS_CFLAGS),g' \
+	    -e 's,@DYNAMIC_EXTERNALS_LDFLAGS\@,$(DYNAMIC_EXTERNALS_LDFLAGS),g' \
+	< $(srcdir)/build/$(CONFIG_SCRIPT).in > $$config_script &&	\
+	chmod +x $$config_script
+
+inst-externals:
+	$(INSTALL_PROGRAM) $(POSIX_EXTERNAL) $(DESTDIR)$(LIB)/
 
 # Script to run scheme48 in this directory.
 go:
 	echo '#!/bin/sh'	>$@ &&					\
 	echo			>>$@ &&					\
 	echo "lib=\"`pwd`\""	>>$@ &&					\
-	echo 'exec "$$lib"/$(VM) -h 6000000 -o "$$lib"/$(VM) -i "$$lib"/$(IMAGE) "$$@"'	\
+	echo 'exec "$$lib"/$(VM) -h 6000000 -i "$$lib"/$(IMAGE) "$$@"'	\
 				>>$@ &&					\
 	chmod +x $@
 
+# Exports file for AIX
+
+c/scheme48.exp: c/scheme48.h
+	echo '#!..' > $(srcdir)/c/scheme48.exp &&			\
+	egrep ^S48_EXTERN $(srcdir)/c/scheme48.h | sed 's,^S48_EXTERN.*\(s48_[a-zA-Z0-9_]*\)(.*$$,\1,' >> $(srcdir)/c/scheme48.exp
+
 dirs:
-	for dir in $(libdir) $(bindir) $(incdir); do			 \
-		$(srcdir)/mkinstalldirs $$dir || exit 1;	 		 \
+	for dir in $(libdir) $(bindir) $(incdir) $(datadir); do			 \
+		$(srcdir)/mkinstalldirs $(DESTDIR)$$dir || exit 1;	 \
 	done
-	$(srcdir)/mkinstalldirs $(LIB)
+	$(srcdir)/mkinstalldirs $(DESTDIR)$(LIB)
 	for dir in rts env big sort opt misc link posix cml srfi; do	  \
-		$(srcdir)/mkinstalldirs $(LIB)/$$dir || exit 1;	 	  \
+		$(srcdir)/mkinstalldirs $(DESTDIR)$(SHARE)/$$dir || exit 1; \
 	done
 
 configure: configure.in
@@ -436,23 +471,44 @@ configure: configure.in
 
 clean:
 	-rm -f $(VM) script-interpreter					\
-		*.o c/unix/*.o c/posix/*.o c/*.o c/fake/*.o c/bibop/*.o\
+		*.o c/unix/*.o c/posix/*.o c/net/*.o c/*.o 		\
+		$(POSIX_EXTERNAL)					\
+		c/fake/*.o c/bibop/*.o					\
+		c/*.a c/glue_gnu.s c/glue_darwin.s c/scheme48.exp 	\
 		TAGS $(IMAGE)						\
-		build/*.tmp $(MANPAGE) build/linker.image		\
-		scheme/debug/*.image scheme/debug/*.debug config.cache	\
-		scheme/vm/scheme48vm.c scheme/vm/scheme48heap.c		\
+		$(srcdir)/build/*.tmp $(srcdir)/$(MANPAGE) 		\
+		$(srcdir)/scheme/debug/*.image 				\
+		$(srcdir)/scheme/debug/*.debug 				\
+		$(srcdir)/scheme/vm/scheme48vm-??.c 			\
+		$(srcdir)/scheme/vm/scheme48*heap-??.c			\
 		go $(distname)
 
 distclean: clean
-	rm -f Makefile config.log config.status c/sysdep.h
+	rm -f Makefile config.log config.status config-cache \
+		c/sysdep.h c/scheme48write-barrier.h
 
 check:	$(VM) $(IMAGE) scheme/debug/check.scm
 	(								\
 		echo ',batch';						\
-		echo ',config ,load =scheme48/debug/test.scm';		\
 		echo ',exec ,load =scheme48/debug/check.scm';		\
-		echo ',exec (done)'					\
-	) | ./$(VM) -i $(IMAGE)
+		echo ',config ,load =scheme48/test-packages.scm';	\
+		echo ',open big-test';					\
+		echo ',open sockets-test';				\
+		echo ',config ,load =scheme48/misc/packages.scm';	\
+		echo ',config ,load =scheme48/misc/test-packages.scm';	\
+		echo ',open misc-test';					\
+		echo ',config ,load =scheme48/r6rs/test-packages.scm';	\
+		echo ',open r6rs-test';					\
+		echo ',config ,load =scheme48/cml/test-packages.scm';	\
+		echo ',open cml-test';					\
+		echo ',config ,load =scheme48/srfi/test-packages.scm';	\
+		echo ',open srfi-test';					\
+		echo ',config ,load =scheme48/posix/test-packages.scm';	\
+		echo ',open posix-test';				\
+		echo ',open test-suites';				\
+		echo '(define-test-suite all-tests (compiler-tests big-tests tcp-sockets-tests udp-sockets-tests misc-tests r6rs-tests cml-tests srfi-tests posix-tests))'; \
+		echo '(run-test-suite all-tests)'			\
+	) | ./$(VM) -i $(IMAGE) -h 8000000
 
 # --------------------
 # Rules from here on down are not essential for the basic installation
@@ -461,7 +517,7 @@ check:	$(VM) $(IMAGE) scheme/debug/check.scm
 all: vm image $(LIBSCHEME48) script-interpreter go
 libscheme48: $(LIBSCHEME48)
 vm: $(VM)
-image: $(INITIAL)
+image: $(INITIAL)-$(BIT_SUFFIX)
 	$(MAKE) $(IMAGE)
 test: check
 
@@ -474,7 +530,7 @@ tags:
 # DISTFILES should include all sources.
 DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
 		configure acconfig.h configure.in Makefile.in 		\
-		scheme48.dsp scheme48.dsw				\
+		scheme48.sln scheme48.vcproj				\
 		mkinstalldirs install-sh				\
 		doc/*.ps doc/*.pdf doc/*.txt 				\
 		doc/html/*.html doc/html/*.css doc/html/*.gif 		\
@@ -483,10 +539,10 @@ DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
 		emacs/README 						\
 		build/*.scm build/*-version-number build/*.exec		\
 		build/*.lisp build/build-usual-image build/filenames.make \
-		build/initial.debug build/initial.image			\
-		build/build-external-modules				\
+		build/initial.debug 					\
+		build/initial.image-32 build/initial.image-64		\
 		build/*.bat build/*.sh build/*.rc			\
-		build/dummy build/*.wxs build/*.wxi			\
+		build/dummy build/*.wxs 				\
 		build/*.bmp build/*.ico					\
 		c/*.[ch] c/*/*.[ch] c/*/*.ci				\
 		c/scheme48.h.in	c/scheme48write-barrier.h.in		\
@@ -499,9 +555,9 @@ DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
 		ps-compiler/prescheme/test/*.scm			\
 		c/sysdep.h.in
 
-distname = $(RUNNABLE)-1.`cat $(srcdir)/build/minor-version-number`
+distname = scheme48-$(VERSION)
 
-dist: build/initial.image c/scheme48.h
+dist: build/initial.image-32 build/initial.image-64 c/scheme48.h
 	distname=$(distname) &&						\
 	distfile=$(distdir)/$$distname.tgz &&				\
 	if [ -d $(distdir) ] &&						\
@@ -566,7 +622,7 @@ $(srcdir)/build/filenames.make: $(PACKAGES)
 #	$(MAKE) $(VM) PACKAGES=
 	cd $(srcdir) && \
 	$(RUNNABLE) -a batch <build/filenames.scm
-# or:	./$(VM) -i $(srcdir)/$(INITIAL) -a batch <build/filenames.scm
+# or:	./$(VM) -i $(srcdir)/$(INITIAL)-$(BIT_SUFFIX) -a batch <build/filenames.scm
 
 
 # --------------------
@@ -595,22 +651,39 @@ link/linker-in-lucid: build/lucid-script.lisp $(linker-files) \
 # Scheme, the byte-code compiler, and a minimal command processor, but
 # no debugging environment to speak of.
 
-$(INITIAL): $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files)
+$(INITIAL)-32: $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files)
 	cd $(srcdir) &&							\
-	($(START_LINKER);						\
+	($(START_LINKER-32);						\
+		echo '(load-configuration "scheme/platform-interfaces.scm")'; \
+		echo '(load-configuration "scheme/rts-packages-32.scm")'; \
 		echo '(load-configuration "scheme/interfaces.scm")';	\
 		echo '(load-configuration "scheme/vm/shared-interfaces.scm")'; \
 		echo '(load-configuration "scheme/packages.scm")';	\
 		echo '(flatload initial-structures)';			\
 		echo '(load "build/initial.scm")';			\
 		echo '(link-initial-system)'				\
-	) | $(LINKER_RUNNABLE)
+	) | $(LINKER_RUNNABLE) && 					\
+		mv $(INITIAL) $(INITIAL)-32
+
+$(INITIAL)-64: $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files)
+	cd $(srcdir) &&							\
+	($(START_LINKER-64);						\
+		echo '(load-configuration "scheme/platform-interfaces.scm")'; \
+		echo '(load-configuration "scheme/rts-packages-64.scm")'; \
+		echo '(load-configuration "scheme/interfaces.scm")';	\
+		echo '(load-configuration "scheme/vm/shared-interfaces.scm")'; \
+		echo '(load-configuration "scheme/packages.scm")';	\
+		echo '(flatload initial-structures)';			\
+		echo '(load "build/initial.scm")';			\
+		echo '(link-initial-system)'				\
+	) | $(LINKER_RUNNABLE) && 					\
+		mv $(INITIAL) $(INITIAL)-64
 
 # --------------------
 # Various small images for debugging low-level changes
 
 LOAD_DEBUG = \
-	 $(START_LINKER); \
+	 $(START_LINKER-32); \
 	 echo \(load-configuration \"scheme/interfaces.scm\"\); \
 	 echo \(load-configuration \"scheme/packages.scm\"\); \
 	 echo \(load-configuration \"scheme/vm/shared-interfaces.scm\"\); \
@@ -619,7 +692,7 @@ LOAD_DEBUG = \
 scheme/debug/tiny.image: scheme/debug/tiny-packages.scm \
 		  scheme/debug/tiny.scm
 	cd $(srcdir) && \
-	($(START_LINKER); \
+	($(START_LINKER-32); \
 	 echo \(load-configuration \"scheme/debug/tiny-packages.scm\"\); \
 	 echo \(link-simple-system \'\(scheme/debug tiny\) \'start tiny-system\)) \
 	| $(LINKER_RUNNABLE)
@@ -627,7 +700,7 @@ scheme/debug/tiny.image: scheme/debug/tiny-packages.scm \
 scheme/debug/low-test.image: scheme/debug/low-test-packages.scm \
 		  scheme/debug/low-test.scm
 	cd $(srcdir) && \
-	($(START_LINKER); \
+	($(START_LINKER-32); \
 	 echo \(load-configuration \"scheme/debug/low-test-packages.scm\"\); \
 	 echo \(link-simple-system \'\(scheme/debug low-test\) \'start low-test-system\)) \
 	| $(LINKER_RUNNABLE)
@@ -677,7 +750,11 @@ scheme/debug/mini1.image: $(VM) scheme/debug/mini.image
 # from UnicodeData.txt
 # Get fresh UnicodeData.txt from http://www.unicode.org.
 
-scheme/env/unicode-info.scm: build/UnicodeData.txt			\
+scheme/rts/syntax-info.scm: build/UnicodeData.txt			\
+	build/PropList.txt						\
+	build/SpecialCasing.txt						\
+	build/CaseFolding.txt						\
+	build/CompositionExclusions.txt					\
 	scheme/link/unicode-data.scm 					\
 	scheme/env/unicode-category.scm					\
 	scheme/big/compact-table.scm
@@ -724,45 +801,90 @@ c/old-scheme48.h: scheme/vm/interp/arch.scm scheme/vm/data/data.scm \
 # know what you are doing.
 # Afterwards, you should probably make c/scheme48.h.
 
-i-know-what-i-am-doing: compile-vm compile-twospace-gc compile-bibop-gc
+i-know-what-i-am-doing: \
+	compile-vm-32 compile-twospace-gc-32 compile-bibop-gc-32 \
+	compile-vm-64 compile-twospace-gc-64 compile-bibop-gc-64
 
 # compiles VM without GC
 
-compile-vm:
+compile-vm-32:
 	cd $(srcdir)/ps-compiler &&					     \
 	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/rts-packages-32.scm';          \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
 		echo ',exec ,load load-ps-compiler.scm';		     \
-		echo ',exec ,load compile-vm-no-gc.scm';		     \
+		echo ',exec ,load compile-vm-no-gc-32.scm';		     \
 		echo ',exit'						     \
-	) | $(RUNNABLE) -h 8000000 &&					     \
-		mv ../scheme/vm/scheme48vm.c ../c
+	) | $(RUNNABLE) -h 12000000 &&					     \
+		mv ../scheme/vm/scheme48vm-32.c ../c
 
+compile-vm-64:
+	cd $(srcdir)/ps-compiler &&					     \
+	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/rts-packages-64.scm';          \
+		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
+		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
+		echo ',exec ,load load-ps-compiler.scm';		     \
+		echo ',exec ,load compile-vm-no-gc-64.scm';		     \
+		echo ',exit'						     \
+	) | $(RUNNABLE) -h 12000000 &&					     \
+		mv ../scheme/vm/scheme48vm-64.c ../c
 
 # compiles the two-space copier GC
 
-compile-twospace-gc:
+compile-twospace-gc-32:
 	cd $(srcdir)/ps-compiler &&					     \
 	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/rts-packages-32.scm';          \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
 		echo ',exec ,load load-ps-compiler.scm';		     \
-		echo ',exec ,load compile-twospace-gc.scm';		     \
+		echo ',exec ,load compile-twospace-gc-32.scm';		     \
 		echo ',exit'						     \
 	) | $(RUNNABLE) -h 8000000 &&					     \
-		mv ../scheme/vm/scheme48-twospace-heap.c ../c
+		mv ../scheme/vm/scheme48-twospace-heap-32.c ../c
+
+compile-twospace-gc-64:
+	cd $(srcdir)/ps-compiler &&					     \
+	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/rts-packages-64.scm';          \
+		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
+		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
+		echo ',exec ,load load-ps-compiler.scm';		     \
+		echo ',exec ,load compile-twospace-gc-64.scm';		     \
+		echo ',exit'						     \
+	) | $(RUNNABLE) -h 8000000 &&					     \
+		mv ../scheme/vm/scheme48-twospace-heap-64.c ../c
 
 # compiles the BIBOP GC
 
-compile-bibop-gc:
+compile-bibop-gc-32:
 	cd $(srcdir)/ps-compiler &&					     \
 	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/rts-packages-32.scm';          \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
 		echo ',exec ,load load-ps-compiler.scm';		     \
-		echo ',exec ,load compile-bibop-gc.scm';		     \
+		echo ',exec ,load compile-bibop-gc-32.scm';		     \
 		echo ',exit'						     \
 	) | $(RUNNABLE) -h 8000000 &&					     \
-		mv ../scheme/vm/scheme48-bibop-heap.c ../c
+		mv ../scheme/vm/scheme48-bibop-heap-32.c ../c
 
+compile-bibop-gc-64:
+	cd $(srcdir)/ps-compiler &&					     \
+	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/rts-packages-64.scm';          \
+		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
+		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
+		echo ',exec ,load load-ps-compiler.scm';		     \
+		echo ',exec ,load compile-bibop-gc-64.scm';		     \
+		echo ',exit'						     \
+	) | $(RUNNABLE) -h 8000000 &&					     \
+		mv ../scheme/vm/scheme48-bibop-heap-64.c ../c

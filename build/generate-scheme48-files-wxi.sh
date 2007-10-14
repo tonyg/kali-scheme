@@ -3,7 +3,7 @@
 # Mike doesn't know how to do this using only Windows batch files.
 # Run this in the source directory, under Cygwin or something.
 
-runnable="$1"
+runnable=$1
 
 (
 echo ',batch';
@@ -18,6 +18,7 @@ for f in scheme/*.scm \
       scheme/env/*.scm \
       scheme/big/*.scm \
       scheme/misc/*.scm \
+      scheme/net/*.scm \
       scheme/cml/*.scm \
       scheme/srfi/*.scm \
       scheme/rts/*.scm \
@@ -33,4 +34,4 @@ echo "(write-file-elements-include-file files uuids \"build/scheme48-files.wxi\"
 # For some reason, directly piping into $runnable doesn't work under Mike's Cygwin
 # installation---the second 4k block gets read a second time.
 
-"$runnable" < scheme48-files.input
+$runnable < scheme48-files.input

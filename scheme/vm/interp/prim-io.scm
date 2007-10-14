@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; I/O primitives
 
@@ -50,7 +50,7 @@
 	     (lose (enum exception wrong-type-argument)))
 	    ((fixnum? spec)
 	     (if (<= 0 (extract-fixnum spec))
-		 (win (extract-fixnum spec))
+	 (win (extract-fixnum spec))
 		 (lose (enum exception wrong-type-argument))))
 	    ((code-vector? spec)
 	     (receive (channel status)
@@ -75,25 +75,23 @@
       (= mode (enum channel-status-option special-input))
       (= mode (enum channel-status-option special-output))))
 
-(define-consing-primitive close-channel (channel->)
-  (lambda (ignore) error-string-size)
-  (lambda (channel key)
+(define-primitive close-channel (channel->)
+  (lambda (channel)
     (if (open? channel)
 	(let ((status (close-channel! channel)))
 	  (if (error? status)
-	      (raise-exception os-error 0 channel (get-error-string status key))
+	      (raise-exception os-error 0 channel status)
 	      (goto no-result)))
 	(raise-exception wrong-type-argument 0 channel))))
 
-(define-consing-primitive channel-ready? (channel->)
-  (lambda (ignore) error-string-size)
-  (lambda (channel key)
+(define-primitive channel-ready? (channel->)
+  (lambda (channel)
     (if (open? channel)
 	(receive (ready? status)
 	    (channel-ready? (extract-channel channel)
 			    (input-channel? channel))
 	  (if (error? status)
-	      (raise-exception os-error 0 channel (get-error-string status key))
+	      (raise-exception os-error 0 channel status)
 	      (goto return-boolean ready?)))
 	(raise-exception wrong-type-argument 0 channel))))
 
@@ -123,7 +121,11 @@
 	  (goto return
 		(cond ((error? status)
 		       (make-cell (enter-fixnum status) key))
-		      (eof? eof-object)
+		      (eof?
+		       ;; possible on Windows
+		       (if pending?
+			   (set-channel-os-status! channel true))
+		       eof-object)
 		      (pending?
 		       (set-channel-os-status! channel true)
 		       false)
@@ -202,22 +204,6 @@
   (lambda ()
     (goto return (open-channels-list))))
 
-; Copying error strings into the heap.
-
-(define max-error-string-length 512)
-
-(define error-string-size (vm-string-size max-error-string-length))
-
-(define (get-error-string status key)
-  (let* ((string (error-string status))
-	 (len (min (string-length string)
-		   max-error-string-length))
-	 (new (vm-make-string len key)))
-    (do ((i 0 (+ i 1)))
-	((= i len))
-      (vm-string-set! new i (char->ascii (string-ref string i))))
-    new))
-
 ;----------------------------------------------------------------
 ; Port instructions.
 ;
@@ -276,7 +262,8 @@
 			(lose
 			 (lambda ()
 			   ;; we may have gotten out of synch because of CR/LF conversion
-			   (set-port-index! port (enter-fixnum i))
+			   (if read?
+			       (set-port-index! port (enter-fixnum i)))
 			   (raise-exception buffer-full/empty 1 port))))
 		    (cond ((= i l)
 			   (lose))
@@ -291,9 +278,10 @@
 			     (lambda (encoding-ok? ok? incomplete? value count)
 			       
 			       (define (deliver)
-				 (set-port-pending-cr?! port false)
 				 (if read?
-				     (set-port-index! port (enter-fixnum (+ i count))))
+				     (begin
+				       (set-port-pending-cr?! port false)
+				       (set-port-index! port (enter-fixnum (+ i count)))))
 				 (goto continue-with-value
 				       (scalar-value->char value)
 				       1))
@@ -307,13 +295,15 @@
 				 ;; CR/LF handling.  Great.
 				 (cond
 				  ((= value cr-code)
-				   (set-port-pending-cr?! port true)
 				   (if read?
-				       (set-port-index! port (enter-fixnum (+ i count))))
+				       (begin
+					 (set-port-pending-cr?! port true)
+					 (set-port-index! port (enter-fixnum (+ i count)))))
 				   (goto continue-with-value (scalar-value->char lf-code) 1))
 				  ((and (= value lf-code)
 					(not (false? (port-pending-cr? port))))
-				   (set-port-pending-cr?! port false)
+				   (if read?
+				       (set-port-pending-cr?! port false))
 				   (loop (+ i count)))
 				  (else
 				   (deliver))))
@@ -458,10 +448,19 @@
 		 (loop (vm-cdr env)))))
 	(error "current thread is not a record"))))
 
-(define-consing-primitive os-error-message (fixnum->)
-  (lambda (ignore) error-string-size)
-  (lambda (status key)
-    (goto return (get-error-string status key))))
+(define-primitive os-error-message (fixnum->)
+  (lambda (status)
+    (let* ((raw (error-string status))
+	   (len (+ (string-length raw) 1))
+	   (vector (maybe-make-b-vector+gc (enum stob byte-vector) len)))
+      (if (false? vector)
+	  (raise-exception heap-overflow
+			   0
+			   (enter-fixnum len))
+	  (do ((i 0 (+ 1 i)))
+	      ((>= i len)
+	       (goto return vector))
+	    (code-vector-set! vector i (char->ascii (string-ref raw i))))))))
 
 ;----------------
 ; A poor man's WRITE for use in debugging.
@@ -533,34 +532,33 @@
 
 ; Bug: finalizers for things in the image are ignored.
 
-(define-consing-primitive write-image-low (code-vector-> any-> code-vector-> vector->)
-  (lambda (ignore) error-string-size)
-  (lambda (filename resume-proc comment-string undumpables key)
-    (let* ((lose (lambda (reason status)
-		   (raise-exception* reason 0
-				     filename resume-proc comment-string
-				     (get-error-string status key))))
-	   (port-lose (lambda (reason status port)
-			(if (error? (close-output-port port))
-			    (begin
-			      (error-message "Unable to close image file")
-			      (unspecific))) ; avoid type problem
-			(lose reason status))))
+(define-primitive write-image-low (code-vector-> any-> code-vector-> vector->)
+  (lambda (filename resume-proc comment-string undumpables)
+    (let* ((lose (lambda (status)
+		   (raise-exception* (enum exception os-error) 0
+				     (enter-fixnum status)
+				     filename
+				     resume-proc comment-string)))
+	   (port-lose (lambda (status port)
+			(let ((close-status (close-output-port port)))
+			  (if (error? close-status)
+			      (lose close-status)
+			      (lose status))))))
       (receive (port status)
 	  (open-output-file (extract-filename filename))
 	(if (error? status)
-	    (lose (enum exception cannot-open-channel) status)
+	    (lose status)
 	    (let ((status (write-string (extract-low-string comment-string) port)))
 	      (if (error? status)
-		  (port-lose (enum exception os-error) status port)
+		  (port-lose status port)
 		  (let ((status (s48-write-image resume-proc
 						 undumpables
 						 port)))
 		    (if (error? status)
-			(port-lose (enum exception os-error) status port)
+			(port-lose status port)
 			(let ((status (close-output-port port)))
 			  (if (error? status)
-			      (lose (enum exception os-error) status)
+			      (lose status)
 			      (goto no-result))))))))))))
 
 ; READ-IMAGE needs to protect some values against GCs (this can't be with

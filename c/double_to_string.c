@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include <stdlib.h>
@@ -17,7 +17,9 @@ s48_double_to_string(char *dest, double v)
   
   int digit_count = strlen(raw);
 
-  if (*digits == '#') /* infinity or NaN */
+  if (((digits[0] == '+') || (digits[0] == '-'))
+      || ((digits[1] == 'i') || (digits[1] == 'n')))
+    /* infinity or NaN */
     {
       strcpy(dest, digits);
       return digit_count;

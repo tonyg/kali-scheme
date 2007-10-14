@@ -2,7 +2,7 @@
 
 (define-record-type attribution :attribution
   (make-attribution init-template template-literal 
-                           opcode-table make-label at-label)
+		    opcode-table make-label at-label)
   attribution?
   (init-template attribution-init-template)
   (template-literal attribution-template-literal)
@@ -22,13 +22,13 @@
 
 ;; Example attribution
 (define (disass)
-  (define (disass-init-template state template p-args push-template? push-env?)
-    (cons (list 0 'protocol p-args push-template? push-env?)
+  (define (disass-init-template state template p-args push-template? push-env? push-closure?)
+    (cons (list 0 'protocol p-args push-template? push-env? push-closure?)
           state))
 
   (define instruction-set-table 
     (make-opcode-table 
-     (lambda (opcode template state pc . args)
+     (lambda (opcode template state pc len . args)
        (cons `(,pc ,(enumerand->name opcode op) ,@(map cdr args)) state))))
 
   (define (attribute-literal literal i state)
@@ -92,34 +92,41 @@
          (debug-data-jump-back-dests (template-debug-data tem)))
         (receive (size protocol-arguments)
             (parse-protocol code 1 attribution)
-          (receive (push-template? push-env?)
+          (receive (push-template? push-env? push-closure?)
               (case (code-vector-ref code (+ size 1))
-                ((0) (values #f #f))
-                ((1) (values #f #t))
-                ((2) (values #t #f))
-                ((3) (values #t #t))
-                (else (error "invalid init-template spec" (code-vector-ref code (+ size 1)))))
+                ((#b000) (values #f #f #f))
+                ((#b001) (values #t #f #f))
+                ((#b010) (values #f #t #f))
+                ((#b011) (values #t #t #f))
+                ((#b100) (values #f #f #t))
+                ((#b110) (values #f #t #t))
+                ((#b101) (values #t #f #t))
+                ((#b111) (values #t #t #t))
+                (else (assertion-violation 'with-template "invalid init-template spec"
+					   (code-vector-ref code (+ size 1)))))
             (fun (+ size 2)
                  length
                  ((attribution-init-template attribution) 
-                  state tem protocol-arguments push-template? push-env?))))))))
+                  state tem protocol-arguments push-template? push-env? push-closure?))))))))
           
 
 (define (parse-instruction template code pc state attribution)
   (let* ((opcode (code-vector-ref code pc))
 	 (len.rev-args (cond ((= opcode (enum op computed-goto)) ; unused?
-			      (error "computed-goto in parse-bytecode"))
+			      (assertion-violation 'parse-instruction
+						   "computed-goto in parse-bytecode"))
 			     (else
 			      (parse-opcode-args opcode 
                                                  pc 
                                                  code 
                                                  template 
-                                                 attribution)))))
-    (values (+ 1 (car len.rev-args))  ; 1 for the opcode
-            (really-parse-instruction pc opcode template state 
+                                                 attribution))))
+	 (total-len (+ 1 (car len.rev-args))))  ; 1 for the opcode
+    (values total-len
+            (really-parse-instruction pc total-len opcode template state 
                                       (reverse (cdr len.rev-args)) attribution))))
 
-(define (really-parse-instruction pc opcode template state args attribution)
+(define (really-parse-instruction pc len opcode template state args attribution)
   (let ((new-state (if (label-at-pc? pc)
                        ((attribution-at-label attribution) 
                         (pc->label pc attribution)
@@ -128,8 +135,9 @@
   (let ((opcode-attribution 
          (opcode-table-ref (attribution-opcode-table attribution) opcode)))
     (if opcode-attribution
-	(apply opcode-attribution opcode template new-state pc args)
-	(error "cannot attribute " (enumerand->name opcode op) args)))))
+	(apply opcode-attribution opcode template new-state pc len args)
+	(assertion-violation 'parse-instruction "cannot attribute "
+			     (enumerand->name opcode op) args)))))
 
 ;;--------------------
 ;; labels
@@ -255,7 +263,7 @@
              (values size
                      (list protocol real-attribution stack-size)))))
         (else
-         (error "unknown protocol" protocol pc))))
+         (assertion-violation 'parse-protocol "unknown protocol" protocol pc))))
 
 (define (parse-dispatch code pc attribution)
   (define (maybe-parse-one-dispatch index)
@@ -280,7 +288,8 @@
             #f
             (if (= protocol big-stack-protocol)
                 (n-ary-protocol? (cadr p-args))
-                (error "unknown protocol in n-ary-protocol?" p-args))))))
+                (assertion-violation 'n-ary-protocol?
+				     "unknown protocol" p-args))))))
 
 (define (protocol-nargs p-args)
   (let ((protocol (car p-args)))
@@ -297,20 +306,24 @@
           ((= protocol ignore-values-protocol)
            0)
           ((= protocol call-with-values-protocol)
-           (error "call-with-values-protocol in protocol-nargs"))
+           (assertion-violation 'protocol-nargs
+				"call-with-values-protocol in protocol-nargs"))
 	  (else
-	   (error "unknown protocol in protocol-nargs" p-args)))))
+	   (assertion-violation 'protocol-nargs
+				"unknown protocol" p-args)))))
 
 (define (protocol-cwv-tailcall? p-args)
   (let ((protocol (protocol-protocol p-args)))
     (if (not (= protocol call-with-values-protocol))
-        (error "invalid protocol in protocol-cwv-tailcall?" protocol))
+        (assertion-violation 'protocol-cwv-tailcall?
+			     "invalid protocol" protocol))
     (caddr p-args)))
 
 (define (call-with-values-protocol-target p-args)
   (let ((protocol (protocol-protocol p-args)))
     (if (not (= protocol call-with-values-protocol))
-        (error "invalid protocol in protocol-cwv-tailcall?" protocol))
+        (assertion-violation 'call-with-values-protocol-target
+			     "invalid protocol" protocol))
     (cadr p-args)))
   
 ; Generic opcode argument parser
@@ -318,35 +331,56 @@
 (define (parse-opcode-args op start-pc code template attribution)
   (let ((specs (vector-ref opcode-arg-specs op)))
     (let loop ((specs specs) (pc (+ start-pc 1)) (len 0) (args '()))
-      (cond ((null? specs)
-  	     (cons len args))
-            ((eq? (car specs) 'protocol)
-             (receive (size p-args)
-                 (parse-protocol code pc attribution)
-               (loop (cdr specs) 
-                     (+ pc size) 
-                     (+ len size) 
-                     (cons (cons 'protocol p-args) args))))
-            ((eq? (car specs) 'env-data)
-             (receive (size env-data)
-                 (parse-flat-env-args pc code 1 code-vector-ref)
-               (loop (cdr specs)
-                     (+ pc size)
-                     (+ len size)
-                     (cons (cons 'env-data env-data) args))))
-            ((= 0 (arg-spec-size (car specs) pc code))
-             (cons len args))
-	    (else
-  	     (let ((arg (parse-opcode-arg specs 
-					  pc 
-					  start-pc 
-					  code 
-					  template
-                                          attribution)))
- 	     (loop (cdr specs) 
-		   (+ pc (arg-spec-size (car specs) pc code))
-		   (+ len (arg-spec-size (car specs) pc code))
-		   (cons arg args))))))))
+      (if (null? specs)
+	  (cons len args)
+	  (let ((spec (car specs)))
+            (cond
+	     ((eq? spec 'protocol)
+	      (receive (size p-args)
+		  (parse-protocol code pc attribution)
+		(loop (cdr specs) 
+		      (+ pc size) 
+		      (+ len size) 
+		      (cons (cons 'protocol p-args) args))))
+	     ((or (eq? spec 'env-data)
+		  (eq? spec 'big-env-data))
+	      (receive (size env-data)
+		  (receive (slot-size fetch)
+		      (if (eq? spec 'env-data)
+			  (values 1 code-vector-ref)
+			  (values 2 get-offset))
+		    (parse-flat-env-args pc code slot-size fetch))
+		(loop (cdr specs)
+		      (+ pc size)
+		      (+ len size)
+		      (cons (cons 'env-data env-data) args))))
+             ((eq? spec 'instr)
+              (let ((opcode (code-vector-ref code pc)))
+                (let ((len.revargs (parse-opcode-args opcode
+                                                      pc
+                                                      code
+                                                      template
+                                                      attribution)))
+                  (loop (cdr specs)
+                        (+ pc 1 (car len.revargs))
+                        (+ len 1 (car len.revargs))
+                        (cons
+                         (cons 'instr
+                               (cons opcode (reverse (cdr len.revargs))))
+                              args)))))
+	     ((= 0 (arg-spec-size spec pc code))
+	      (cons len args))
+	     (else
+	      (let ((arg (parse-opcode-arg specs 
+					   pc 
+					   start-pc 
+					   code 
+					   template
+					   attribution)))
+		(loop (cdr specs) 
+		      (+ pc (arg-spec-size spec pc code))
+		      (+ len (arg-spec-size spec pc code))
+		      (cons arg args))))))))))
   
 ; The number of bytes required by an argument.
 
@@ -354,8 +388,8 @@
   (case spec
     ((byte nargs stack-index index literal stob) 1)
     ((two-bytes two-byte-nargs two-byte-stack-index two-byte-index offset offset-) 2)
-    ((env-data) (error "env-data in arg-spec-size"))
-    ((protocol) (error "protocol in arg-spec-size"))
+    ((env-data) (assertion-violation 'arg-spec-size "env-data in arg-spec-size"))
+    ((protocol) (assertion-violation 'arg-spec-size "protocol in arg-spec-size"))
     ((moves-data)
      (let ((n-moves (code-vector-ref code pc)))
        (+ 1 (* 2 n-moves))))
@@ -407,13 +441,16 @@
               (cons (cons (get-offset code offset)
                           (get-offset code (+ offset 2)))
                     (loop (+ offset 4) (- n 1)))))))
-     (else (error "unknown arg spec: " (car specs))))))
+     (else (assertion-violation 'parse-opcode-arg
+				"unknown arg spec: " (car specs))))))
 
 (define-record-type cont-data :cont-data
-  (make-cont-data length mask-bytes template pc gc-mask-size depth)
+  (make-cont-data length mask-bytes live-offsets template pc gc-mask-size depth)
   cont-data?
   (length cont-data-length)
   (mask-bytes cont-data-mask-bytes)
+  ;; #f if all are live
+  (live-offsets cont-data-live-offsets)
   (template cont-data-template)
   (pc cont-data-pc)
   (gc-mask-size cont-data-gc-mask-size)
@@ -427,17 +464,38 @@
 	 (offset (get-offset code (- end-pc 5)))
          (template (get-offset code (- end-pc 7)))
 	 (mask-bytes
-	  (let lp ((the-pc (+ pc 2)))
+	  (let lp ((the-pc (+ pc 2)) (mask-bytes '()))
 	    (if (>= the-pc (+ pc 2 gc-mask-size))
-		'()
-		(cons (code-vector-ref code the-pc)
-		      (lp (+ the-pc 1)))))))
+		mask-bytes
+		(lp (+ the-pc 1)
+		    (cons (code-vector-ref code the-pc) mask-bytes)))))
+	 (live-offsets
+	  (and (not (zero? gc-mask-size))
+	       (gc-mask-live-offsets (bytes->bits mask-bytes)))))
     (make-cont-data len
                     mask-bytes
+		    live-offsets
                     template
                     (pc->label offset attribution)
                     gc-mask-size
                     depth)))
+
+(define (bytes->bits l)
+  (let loop ((n 0) (l l))
+    (if (null? l)
+	n
+	(loop (+ (arithmetic-shift n 8) (car l))
+	      (cdr l)))))
+
+(define (gc-mask-live-offsets mask)
+  (let loop ((mask mask) (i 0) (l '()))
+    (if (zero? mask)
+	(reverse l)
+	(loop (arithmetic-shift mask -1) (+ 1 i)
+	      (if (odd? mask)
+		  (cons i l)
+		  l)))))
+
 ;----------------
 ; Utilities.
 
@@ -449,7 +507,8 @@
   (cond ((template? obj) obj)
 	((closure? obj) (closure-template obj))
 	((continuation? obj) (continuation-template obj))
-	(else (error "expected a procedure or continuation" obj))))
+	(else (assertion-violation 'coerce-to-template
+				   "expected a procedure or continuation" obj))))
 
 (define (template-code-length code)
   (if (and (= (enum op protocol)

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; [This is a kludge.  Richard is loathe to include it in the
 ; distribution.  But now the system itself uses it, so we're stuck.]
@@ -119,7 +119,7 @@
 	       "long __stob_set_i = (i); "
 	       "s48_value __stob_set_v = (v); "
 	       "if (S48_STOB_IMMUTABLEP(__stob_set_x)) "
-	       "s48_raise_argument_type_error(__stob_set_x); "
+	       "s48_assertion_violation(NULL, \"immutable stob\", 1, __stob_set_x); "
 	       "else { "
 	       "S48_WRITE_BARRIER((__stob_set_x), "
 	       "(char *) (&S48_STOB_REF((__stob_set_x), (__stob_set_i))),"
@@ -134,7 +134,7 @@
 	       "long __stob_set_i = (i); "
 	       "char __stob_set_v = (v); "
 	       "if (S48_STOB_IMMUTABLEP(__stob_set_x)) "
-	       "s48_raise_argument_type_error(__stob_set_x); "
+	       "s48_assertion_violation(NULL, \"immutable stob\", 1, __stob_set_x); "
 	       "else "
 	       "*(&S48_STOB_BYTE_REF((__stob_set_x), (__stob_set_i))) = (__stob_set_v); "
 	       "} while (0)"))
@@ -142,7 +142,7 @@
     (c-define "S48_STOB_HEADER(x) (S48_STOB_REF((x),-1))")
     (c-define "S48_STOB_ADDRESS(x) (&(S48_STOB_HEADER(x)))")
     (c-define "S48_STOB_BYTE_LENGTH(x) (S48_STOB_HEADER(x) >> 8)")
-    (c-define "S48_STOB_DESCRIPTOR_LENGTH(x) (S48_STOB_HEADER(x) >> 10)")
+    (c-define "S48_STOB_DESCRIPTOR_LENGTH(x) (S48_STOB_BYTE_LENGTH(x) >> S48_LOG_BYTES_PER_CELL)")
     (c-define "S48_STOB_IMMUTABLEP(x) ((S48_STOB_HEADER(x)>>7) & 1)")
     (c-define "S48_STOB_MAKE_IMMUTABLE(x) ((S48_STOB_HEADER(x)) |= (1<<7))")
     (newline)

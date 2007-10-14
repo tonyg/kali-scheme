@@ -14,8 +14,8 @@
 %    (foo int int) -> int
 
 \newcommand{\proto}[3]{%
-\protonoindex{{#1}}{{#2}}{{#3}}%
-\mainschindex{{#1}}}%
+\protonoindex{#1}{#2}{#3}%
+\mainschindex{#1}}%
 
 \newcommand{\protonoindex}[3]{\item\noindent\unskip%
 \hbox{\spaceskip=0.5em\code{({#1}{\it#2\/})} {$\rightarrow$} {\it#3}}}
@@ -31,8 +31,8 @@
 \hbox{\spaceskip=0.5em\code{(\hbox{#1}{\it#2\/})}}}
 
 \newcommand{\protonoresult}[2]{%
-\protonoresultnoindex{{#1}}{{#2}}%
-\mainschindex{{#1}}}%
+\protonoresultnoindex{#1}{#2}%
+\mainschindex{#1}}%
 
 \newcommand{\protoresult}[1]{\newline\unskip%
 {\hspace*{2em}\code{{$\rightarrow$} {\it#1}}\hfill}}
@@ -44,7 +44,7 @@
 \hbox{ }\nobreak\hfill\hbox{\rm syntax}}
 
 \newcommand{\syntaxprotonoresult}[2]{%
-\syntaxprotonoresultnoindex{{#1}}{{#2}}\mainschindex{{#1}}}
+\syntaxprotonoresultnoindex{#1}{#2}\mainschindex{#1}}
 
 \newcommand{\syntaxproto}[3]{\item\noindent\unskip%
 \hbox{\spaceskip=0.5em\code{(\hbox{#1}{#2})}} {$\rightarrow$} {\it#3}%
@@ -58,9 +58,9 @@
 \hbox{ }\nobreak\hfill\hbox{\rm #2}}
 
 % Variable prototype
-\newcommand{\constproto}[2]{\pconstproto{{#1}}{{#2}}\mainschindex{{#1}}}
+\newcommand{\constproto}[2]{\pconstproto{#1}{#2}\mainschindex{#1}}
 
-\newcommand{\constprotonoindex}[2]{\pconstproto{{#1}}{{#2}}}
+\newcommand{\constprotonoindex}[2]{\pconstproto{#1}{#2}}
 
 \endtexonly
 
@@ -81,24 +81,24 @@
 \item\noindent\code{({#1}{\var{#2}\/})~-->~{\var{#3}}}}
 
 \newcommand{\proto}[3]{%
-\protonoindex{{#1}}{{#2}}{{#3}}%
-\mainschindex{{#1}}}%
+\protonoindex{#1}{#2}{#3}%
+\mainschindex{#1}}%
 
 \newcommand{\protonoresultnoindex}[2]{%
 %\cindex{\code{#1}}%
 \item\noindent\code{({#1}{\var{#2}\/})}}
 
 \newcommand{\protonoresult}[2]{%
-\protonoresultnoindex{{#1}}{{#2}}%
-\mainschindex{{#1}}}%
+\protonoresultnoindex{#1}{#2}%
+\mainschindex{#1}}%
 
 \newcommand{\pconstproto}[2]{%
-\item\noindent\code{{#1}}\prototag{{#2}}}
+\item\noindent\code{{#1}}\prototag{#2}}
 
 % Variable prototype
-\newcommand{\constproto}[2]{\pconstproto{{#1}}{{#2}}\mainschindex{{#1}}}
+\newcommand{\constproto}[2]{\pconstproto{#1}{#2}\mainschindex{#1}}
 
-\newcommand{\constprotonoindex}[2]{\pconstproto{{#1}}{{#2}}}
+\newcommand{\constprotonoindex}[2]{\pconstproto{#1}{#2}}
 
 \newcommand{\cproto}[1]{%
 \item\noindent\code{{#1}}}
@@ -107,7 +107,7 @@
 \item\noindent\code{{#1}}\prototag{may GC}}
 
 \newcommand{\syntaxprotonoresult}[2]{%
-\syntaxprotonoresultnoindex{{#1}}{{#2}}\mainschindex{{#1}}}
+\syntaxprotonoresultnoindex{#1}{#2}\mainschindex{#1}}
 
 \newcommand{\syntaxprotonoresultnoindex}[2]{%
 \item\noindent\code{({#1}{#2})}\prototag{syntax}}

@@ -1,15 +1,15 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file arch.scm.
 
 ;;;; Architecture description
 
-(define architecture-version "Vanilla 36")
+(define architecture-version "Vanilla 39")
 
 ; Things that the VM and the runtime system both need to know.
 
-(define bits-used-per-byte 8)
+(define bits-used-per-byte bits-per-byte)
 
 (define byte-limit (expt 2 bits-used-per-byte))
 (define two-byte-limit (* byte-limit byte-limit))
@@ -78,6 +78,15 @@
   (make-flat-env  env-data)      ; make new environment from env-data
   (make-big-flat-env big-env-data) ; same, but with two-byte size and offsets
 
+  ; the following four emitted from the byte-code optimizer, for the
+  ; benefit of the native-code compiler
+  (env-set! stack-index index 1)             ; set environment slot
+  (big-env-set! two-byte-stack-index two-byte-index 1)
+  (template-ref stack-index index) ; same thing as stack-indirect
+  (big-template-ref two-byte-stack-index two-byte-index) ; same thing as stack-indirect
+
+  (make-flat-closure two-bytes)  ; create flat closure
+
   (push 1)		         ; push *val* onto stack
   (push-false)			 ; a common combination
   (pop)			         ; pop top of stack into *val*
@@ -107,9 +116,14 @@
   ;; Different ways to call procedures
   (call     offset nargs 1 +)    ; last argument is the procedure to call,
 				 ; offset is to return pointer
-  (tail-call nargs 1 +)          ; same, no return pointer, moves arguments
+  (tail-call nargs two-bytes 1 +)   ; same, no return pointer but stack frame size, moves arguments
   (big-call offset two-byte-nargs 1 +) ; ditto, nargs counts are two bytes
-  (poll offset)			 ; offset is for continuation-pc if interrupt
+
+  (known-tail-call nargs two-bytes 1 +)
+  (known-call offset nargs 1 +) ; like CALL, but no protocol conversion
+  (big-known-call offset two-byte-nargs 1 +) ; ditto, nargs count are two bytes
+
+  (poll)
   (apply offset two-byte-nargs 2 +)   ; last argument is procedure to call, second to
 				 ; last is a list of additional arguments, next
                                  ; two bytes are the number of stack arguments
@@ -130,6 +144,11 @@
 				 ; call a template instead of a procedure
 				 ; nargs is needed for interrupt handling
   (jump-if-false offset 1)	 ; boolean in *val*
+
+
+  ;; conditional jump; the offset is the jump target
+  (test-op+jump-if-false offset instr instr)
+
   (jump          offset)
   (jump-back     offset-)	 ; same, but subtract the offset
   (computed-goto byte offset 1)	 ; jump using delta specified by *val*
@@ -181,8 +200,8 @@
 
   (make-vector-object stob 2)			; size + init
   ; If the byte = 0 then do not log in the current proposal
-  (stored-object-indexed-ref  stob index 2)	; vector + offset
-  (stored-object-indexed-set! stob index 3)	; vector + offset + value
+  (stored-object-indexed-ref  stob byte 2)	; vector + offset
+  (stored-object-indexed-set! stob byte 3)	; vector + offset + value
 
   (untyped-indexed-set! 3) ; vector + offset + value ;; kali
 
@@ -251,9 +270,9 @@
   (return-from-native-exception 1)
   (set-interrupt-handlers! 1)
   (set-enabled-interrupts! 1)
-  (resume-interrupted-call-to-byte-code)
+  (resume-interrupted-opcode-to-byte-code)
   (resume-interrupted-call-to-native-code)
-  (return-from-poll-interrupt)
+  (resume-native-poll)
   (schedule-interrupt 1)
   (wait 2)                      ; do nothing until something happens
   (call-external-value 1 +)
@@ -261,11 +280,14 @@
   (undefine-shared-binding 2)
   (find-undefined-imported-bindings)
   (time 2)
+  (system-parameter 1)
   (vm-extension 2)		; access to extensions of the virtual machine
   (return-from-callback 2)	; return from an callback
   (really-encode 2)         ;; kali
   (really-decode 3)         ;; kali
-
+  (op-with-cell-literal byte byte byte byte ;word-literal
+                       byte +)
+  
   ;; Unnecessary primitives
   (string=? 2)
   (reverse-list->string 2)
@@ -305,6 +327,7 @@
    post-minor-gc post-major-gc ; handler is passed a list of finalizers
    i/o-completion  ; handler is passed channel, error flag and status
    os-signal
+   external-event  ; handler is passed event type uid
    ))
 
 ; Possible problems
@@ -316,6 +339,7 @@
    bad-procedure
    wrong-number-of-arguments
    wrong-type-argument
+   immutable-argument
    arithmetic-overflow
    index-out-of-range
    heap-overflow
@@ -340,6 +364,11 @@
    native-code-not-supported
    illegal-exception-return
    unassigned-proxy-data  ;; kali
+
+   ;; these only come from external code
+   external-error
+   external-assertion-violation
+   external-os-error
    ))
 
 ; Used by (READ-BYTE) and (WRITE-BYTE) to get the appropriate ports from
@@ -450,7 +479,7 @@
 (define gc-mask-size-offset -3)		; -3           gc mask size
 					; -4 -5        offset
                                         ; -6 -7        template
-(define gc-mask-offset      -8)         ; -8 ...       mask
+(define gc-mask-offset      -8)         ; -8 ...       mask (low bytes first)
 
 ; The number of additional values that the VM adds to exception continuations.
 (define exception-continuation-cells 5)
@@ -479,6 +508,7 @@
   (run-time
    real-time
    cheap-time     ; cheap (no system call) access to the polling clock
+   gc-run-time
    ;current-time
    ))
 
@@ -527,6 +557,12 @@
    utf-8
    utf-16le utf-16be
    utf-32le utf-32be))
+
+; Options for op/system-parameter
+
+(define-enumeration system-parameter-option
+  (host-architecture
+   os-string-encoding))
 
 (define-enumeration stob
   (;; D-vector types (traced by GC)

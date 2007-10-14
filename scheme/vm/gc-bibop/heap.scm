@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Variables shared by various parts of the BIBOP code
 
@@ -9,6 +9,11 @@
 
 (define (s48-set-max-heap-size! size)
   (set! *max-heap-size* size))
+
+(define *min-heap-size* 0)
+
+(define (s48-min-heap-size)
+  *min-heap-size*)
 
 ; addresses of the new allocated heap areas
 ; <= s48_initialize_heap()
@@ -57,6 +62,7 @@
   (= image-size 0)			; for the type checker
 
   (set! *max-heap-size* max-heap-size)
+  (set! *min-heap-size* (* 4 image-size))
 
   (s48-initialize-bibop-heap)
 

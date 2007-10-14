@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This is a small mock-up of the Cornell mobile robot system.
@@ -70,14 +70,14 @@
 	 (force-output out)
 	 (loop))
 	((eof) (cdr message))
-	(else (error "unrecognized message" message))))))
+	(else (error 'start-server "unrecognized message" message))))))
 
 (define (run-carefully template)
   (call-with-current-continuation
     (lambda (escape)
       (with-handler
 	  (lambda (c punt)
-	    (if (error? c)
+	    (if (serious-condition? c)
 		(escape (cons 'condition c))
 		(punt)))
 	(lambda ()
@@ -106,7 +106,7 @@
 				 ((condition)
 				  (signal-condition (cdr reply)))
 				 ((eof)
-				  (error "eof on connection")))))
+				  (error 'make-remote-eval "eof on connection")))))
 			   #f)))
 
 

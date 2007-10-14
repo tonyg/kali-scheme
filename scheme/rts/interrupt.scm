@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Interrupts
@@ -17,7 +17,9 @@
 	  (vector-set! handlers
 		       i
 		       (lambda stuff
-			 (apply signal (cons 'interrupt (cons i stuff))))))
+			 (signal-condition (condition
+					    (make-interrupt-condition (car stuff))
+					    (make-irritants-condition (cdr stuff)))))))
 	(vector-set! handlers
 		     (enum interrupt post-major-gc)
 		     (post-gc-handler #t spawn-on-root))
@@ -41,6 +43,10 @@
   (vector-set! (session-data-ref interrupt-handlers)
 	       interrupt
 	       handler))
+
+(define (get-interrupt-handler interrupt)
+  (vector-ref (session-data-ref interrupt-handlers)
+	      interrupt))
       
 (define no-interrupts 0)
 
@@ -106,3 +112,4 @@
 
 (define (call-before-heap-overflow! handler . maybe-required-space-percentage)
   (session-data-set! space-shortage-handler handler))
+

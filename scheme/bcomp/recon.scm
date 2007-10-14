@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Rudimentary type reconstruction, hardly worthy of the name.
 
@@ -257,9 +257,6 @@
   (lambda (node constrained want-type)
     any-procedure-type))
 
-(define name-node?    (node-predicate 'name    'leaf))
-(define lambda-node?  (node-predicate 'lambda  syntax-type))
-(define literal-node? (node-predicate 'literal 'leaf))
 ; --------------------
 ; Primops.
 ;
@@ -326,6 +323,7 @@
         ((char? x) char-type)
         ((null? x) null-type)
         ((symbol? x) symbol-type)
+	((primop? x) (primop-type x))
         ((vector? x) vector-type)
         (else value-type)))
 

@@ -41,7 +41,7 @@
 
 (define *meta-continuation*
   (lambda (v)
-    (error "You forgot the top-level reset...")))
+    (assertion-violation 'shift "You forgot the top-level reset...")))
 
 (define *abort
   (lambda (thunk)

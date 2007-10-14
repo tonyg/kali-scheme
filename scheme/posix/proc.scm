@@ -1,7 +1,9 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; 3.1 Process Creation and Execution
+
+(import-dynamic-externals "=scheme48external/posix")
 ;
 ; FORK returns the child pid in the parent, and #f in the child.
 
@@ -36,21 +38,8 @@
 (import-lambda-definition external-exec-with-alias (program lookup? environment arguments)
 			  "posix_exec")
 
-(define-string/bytes-type exec-arg :exec-arg
-  exec-arg?
-  
-  string-encoding-length encode-string
-  string-decoding-length decode-string
-
-  thing->exec-arg
-  string->exec-arg
-  byte-vector->exec-arg
-  
-  exec-arg->string
-  exec-arg->byte-vector exec-arg->byte-string)
-
 (define (thing->exec-arg-byte-string thing)
-  (exec-arg->byte-string (thing->exec-arg thing)))
+  (os-string->byte-vector (x->os-string thing)))
 
 (define (exec-with-alias program lookup? environment arguments)
   (external-exec-with-alias (thing->exec-arg-byte-string program)
@@ -111,7 +100,7 @@
   (if (and (process-id? p1)
 	   (process-id? p2))
       (eq? p1 p2)
-      (call-error "argument type error" process-id=? p1 p2)))
+      (assertion-violation 'process-id=? "argument type error" p1 p2)))
 
 ; We need to make these in the outside world.
 (define-exported-binding "posix-process-id-type" :process-id)
@@ -131,7 +120,7 @@
 
 (define (wait-for-child-process pid)
   (if (not (process-id? pid))
-      (call-error wait-for-child-process pid))
+      (assertion-violation wait-for-child-process "not a process id" pid))
   (or (process-id-exit-status pid)
       (process-id-terminating-signal pid)
       (begin

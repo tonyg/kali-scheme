@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Macro expansion.
 
@@ -39,7 +39,7 @@
 	 (begin
 	   (environment-define! env (cadr new-form) usual-variable-type)
 	   new-form)
-	 (syntax-error "ill-formed definition" form))))
+	 (syntax-violation 'syntax-rules "ill-formed definition" form))))
 
 (define (expand-define form env)
   (make-node operator/define
@@ -64,7 +64,7 @@
 					     name
 					     package))
 	'())
-      `(,(syntax-error "ill-formed syntax definition" form))))
+      `(,(syntax-violation 'define-syntax "ill-formed syntax definition" form))))
 
 ; This is used by the ,expand command.
 
@@ -80,8 +80,8 @@
 		 (let* ((new-form (destructure-define form))
 			(temp (if new-form
 				  (expand-define new-form env)
-				  (syntax-error "ill-formed definition"
-						form))))
+				  (syntax-violation 'expand "ill-formed definition"
+						    form))))
 		   (loop more-forms (cons temp expanded))))
 		((define-syntax? form)
 		 (loop more-forms
@@ -230,7 +230,8 @@
 						    (caddr new-form))
 					      defs)))
 		     (values defs
-			     (cons (syntax-error "ill-formed definition" form)
+			     (cons (syntax-violation 'scan-body-forms
+						     "ill-formed definition" form)
 				   more-forms)
 			     env))))
 	      ((begin? form)
@@ -250,8 +251,9 @@
 	       (values defs (cons form more-forms) env))))))
 
 (define (body-lossage node env)
-  (syntax-error "definitions and expressions intermixed"
-		(schemify node env)))
+  (syntax-violation 'body
+		    "definitions and expressions intermixed"
+		    (schemify node env)))
 
 ;--------------------
 ; Expands all macros in FORM and returns a node.
@@ -287,7 +289,7 @@
 	 (expand-literal form))
 	;; ((qualified? form) ...)
 	(else
-	 (expand (syntax-error "invalid expression" form) env))))
+	 (expand (syntax-violation 'expand "invalid expression" form) env))))
 
 (define (expand-list exps env)
   (map (lambda (exp)
@@ -301,7 +303,7 @@
   (if (list? exp)
       (make-node operator/call
 		 (cons proc-node (expand-list (cdr exp) env)))
-      (expand (syntax-error "invalid expression" exp) env)))
+      (expand (syntax-violation 'expand-call "invalid expression" exp) env)))
 
 ; An environment is a procedure that takes a name and returns one of
 ; the following:
@@ -334,9 +336,10 @@
 				  env-of-use))
    (lambda (new-form new-env)
      (if (eq? new-form form)
-	 (expand (syntax-error "use of macro doesn't match definition"
-			       (cons (schemify (car form) env-of-use)
-				     (desyntaxify (cdr form))))
+	 (expand (syntax-violation (schemify (car form) env-of-use)
+				   "use of macro doesn't match definition"
+				   (cons (schemify (car form) env-of-use)
+					 (desyntaxify (cdr form))))
 		 env-of-use)
 	 (expand new-form new-env)))))
 
@@ -365,10 +368,11 @@
 
 (define-expander 'define
   (lambda (op op-node exp env)
-    (expand (syntax-error (if (define? exp)
-			      "definition in expression context"
-			      "ill-formed definition")
-			  exp)
+    (expand (syntax-violation 'define
+			      (if (define? exp)
+				  "definition in expression context"
+				  "ill-formed definition")
+			      exp)
 	    env)))
 
 ; Remove generated names from quotations.
@@ -377,7 +381,7 @@
   (lambda (op op-node exp env)
     (if (this-long? exp 2)
 	(make-node op (list op (desyntaxify (cadr exp))))
-	(expand (syntax-error "invalid expression" exp) env))))
+	(expand (syntax-violation 'quote "invalid expression" exp) env))))
 
 ; Don't evaluate, but don't remove generated names either.  This is
 ; used when writing macro-defining macros.  Once we have avoided the
@@ -387,7 +391,7 @@
   (lambda (op op-node exp env)
     (if (this-long? exp 2)
 	(make-node operator/quote (list op (cadr exp)))
-	(expand (syntax-error "invalid expression" exp) env))))
+	(expand (syntax-violation 'code-quote "invalid expression" exp) env))))
 
 ; Convert one-armed IF to two-armed IF.
 
@@ -403,7 +407,7 @@
 	   (make-node op
 		      (cons op (expand-list (cdr exp) env))))
 	  (else
-	   (expand (syntax-error "invalid expression" exp) env)))))
+	   (expand (syntax-violation 'if "invalid expression" exp) env)))))
 
 (define (unspecific-node)
   (make-node operator/unspecific '(unspecific)))
@@ -419,7 +423,7 @@
 (define (expand-structure-ref form env expander)
   (let ((struct-node (expand (cadr form) env))
 	(lose (lambda ()
-		(expand (syntax-error "invalid structure reference" form)
+		(expand (syntax-violation 'structure-ref "invalid structure reference" form)
 			env))))
     (if (and (this-long? form 3)
 	     (name? (caddr form))
@@ -448,7 +452,7 @@
     (if (and (at-least-this-long? exp 3)
 	     (names? (cadr exp)))
 	(expand-lambda (cadr exp) (cddr exp) env)
-	(expand (syntax-error "invalid expression" exp) env))))
+	(expand (syntax-violation 'lambda "invalid expression" exp) env))))
 
 (define (expand-lambda names body env)
   (call-with-values
@@ -483,12 +487,12 @@
     (if (and (this-long? exp 3)
 	     (name? (cadr exp)))
 	(make-node op (cons op (expand-list (cdr exp) env)))
-	(expand (syntax-error "invalid expression" exp) env))))
+	(expand (syntax-violation 'set! "invalid expression" exp) env))))
 
 (define-expander 'letrec
   (lambda (op op-node exp env)
     (if (and (at-least-this-long? exp 3)
-	     (specs? (cadr exp)))
+	     (let-specs? (cadr exp)))
 	(let ((specs (cadr exp))
 	      (body (cddr exp)))
 	  (let* ((names (map (lambda (spec)
@@ -496,7 +500,7 @@
 			     specs))
 		 (env (bind (map car specs) names env)))
 	    (expand-letrec names (map cadr specs) body env)))
-	(expand (syntax-error "invalid expression" exp) env))))
+	(expand (syntax-violation 'letrec "invalid expression" exp) env))))
 
 (define (expand-letrec names values body env)
   (let* ((new-specs (map (lambda (name value)
@@ -513,12 +517,12 @@
 	(make-node op (list op
 			    (sexp->type (desyntaxify (cadr exp)) #t)
 			    (expand (caddr exp) env)))
-	(expand (syntax-error "invalid expression" exp) env))))
+	(expand (syntax-violation 'loophole "invalid expression" exp) env))))
 
 (define-expander 'let-syntax
   (lambda (op op-node exp env)
     (if (and (at-least-this-long? exp 3)
-	     (specs? (cadr exp)))
+	     (let-specs? (cadr exp)))
 	(let ((specs (cadr exp)))
 	  (expand-body (cddr exp)
 		       (bind (map car specs)
@@ -531,12 +535,12 @@
 								  env)))
 				  specs)
 			     env)))
-	(expand (syntax-error "invalid expression" exp) env))))
+	(expand (syntax-violation 'let-syntax "invalid expression" exp) env))))
 
 (define-expander 'letrec-syntax
   (lambda (op op-node exp env)
     (if (and (at-least-this-long? exp 3)
-	     (specs? (cadr exp)))
+	     (let-specs? (cadr exp)))
 	(let ((specs (cadr exp)))
 	  (expand-body
 	    (cddr exp)
@@ -551,7 +555,7 @@
 							    new-env)))
 			    specs))
 		     env)))
-	(expand (syntax-error "invalid expression" exp) env))))
+	(expand (syntax-violation 'letrec-syntax "invalid expression" exp) env))))
     
 (define (process-syntax form env name env-or-package)
   (let ((eval+env (force (environment-macro-eval env))))
@@ -577,7 +581,7 @@
 				(expand-name (cadr exp) env))
 			      (caddr exp))
 			. ,(cdddr exp)))
-	(expand (syntax-error "invalid expression" exp) env))))
+	(expand (syntax-violation 'lap "invalid expression" exp) env))))
 
 ; --------------------
 ; Syntax checking utilities
@@ -598,7 +602,7 @@
 	(else
 	 #f)))
 
-(define (specs? x)
+(define (let-specs? x)
   (or (null? x)
       (and (pair? x)
 	   (let ((s (car x)))
@@ -606,7 +610,7 @@
 		  (name? (car s))
 		  (pair? (cdr s))
 		  (null? (cddr s))))
-	   (specs? (cdr x)))))
+	   (let-specs? (cdr x)))))
 
 ; --------------------
 ; Utilities
@@ -620,27 +624,3 @@
 	((transform? d)
 	 (eq? (transform-type d) syntax-type))
 	(else #f)))
-
-;----------------
-; Node predicates and operators.
-
-(define begin-node? (node-predicate 'begin syntax-type))
-(define call-node? (node-predicate 'call 'internal))
-(define name-node? (node-predicate 'name 'leaf))
-
-(define operator/literal (get-operator 'literal 'leaf))
-(define operator/quote (get-operator 'quote syntax-type))
-(define operator/call (get-operator 'call 'internal))
-(define operator/name (get-operator 'name 'leaf))
-(define operator/unspecific (get-operator 'unspecific (proc () unspecific-type)))
-(define operator/unassigned (get-operator 'unassigned (proc () value-type)))
-(define operator/lambda (get-operator 'lambda syntax-type))
-(define operator/begin (get-operator 'begin syntax-type))
-(define operator/letrec (get-operator 'letrec syntax-type))
-(define operator/define (get-operator 'define syntax-type))
-(define operator/define-syntax (get-operator 'define-syntax syntax-type))
-(define operator/primitive-procedure
-  (get-operator 'primitive-procedure syntax-type))
-(define operator/structure-ref (get-operator 'structure-ref syntax-type))
-
-

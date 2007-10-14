@@ -1,29 +1,33 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This is file pseudoscheme-features.scm.
 ; Synchronize any changes with all the other *-features.scm files.
 
-(define *load-file-type* #f) ;For fun
+(define *scheme-file-type* #f) ;For fun
 
 
 ; SIGNALS
 
-(define error #'ps:scheme-error)
+(define (error who message . irritants)
+  (apply #'ps:scheme-error message irritants))
 
-(define warn #'ps:scheme-warn)
+(define (assertion-violation who message . irritants)
+  (apply #'ps:scheme-error message irritants))
 
-(define (signal type . stuff)
-  (apply warn "condition signalled" type stuff))
+(define (implementation-restriction-violation who message . irritants)
+  (apply #'ps:scheme-error message irritants))
 
-(define (syntax-error . rest)		; Must return a valid expression.
-  (apply warn rest)
+(define (warning who message . irritants)
+  (apply #'ps:scheme-warn message irritants))
+
+(define (note who message . irritants)
+  (apply #'ps:scheme-warn message irritants))
+
+(define (syntax-violation who message . irritants)
+  (apply warning who message irritants)
   ''syntax-error)
-
-(define (call-error message proc . args)
-  (error message (cons proc args)))
-
 
 ; FEATURES
 
@@ -37,7 +41,6 @@
 
 (define (make-immutable! thing) thing)
 (define (immutable? thing) #f)
-(define (unspecific) (if #f #f))
 
 
 ; BITWISE
@@ -85,6 +88,8 @@
   (lisp:length (lisp:the (lisp:simple-array (lisp:unsigned-byte 8) (lisp:*))
 			 bv)))
 
+(define (write-byte byte port)
+  (write-char (ascii->char byte) port))
 
 ; The rest is unnecessary in Pseudoscheme versions 2.8d and after.
 

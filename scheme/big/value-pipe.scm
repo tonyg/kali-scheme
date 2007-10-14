@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Value pipes (queues where readers and writers can block)
 ;
@@ -36,7 +36,7 @@
 				 (exact? size)
 				 (< 0 size)))
 			size
-			(call-error "invalid argument" make-pipe more)))))
+			(assertion-violation 'make-pipe "invalid argument" more)))))
 	(id (if (or (null? more)
 		    (null? (cdr more)))
 		#f

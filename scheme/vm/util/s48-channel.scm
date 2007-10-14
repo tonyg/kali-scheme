@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Implementation of OS channels in Scheme.
 ;
@@ -82,6 +82,7 @@
 	      #t)
 	  (enum prescheme:errors no-errors)))
 
+(define (channel-crlf?) #f)
 ;----------------
 ; Non-blocking I/O (implemented using CHAR-READY?)
 ;
@@ -139,6 +140,7 @@
    alarm-event
    os-signal-event
    error-event
+   external-event
    no-event
    ))
 

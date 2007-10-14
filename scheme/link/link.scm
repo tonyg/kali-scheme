@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The static linker.
 
@@ -25,6 +25,9 @@
 				   (vector-ref ,(strange-quotation locs)
 					       (- i ,least-uid)))))))))
 	       filename))
+
+; The compiler doesn't like to see unusual objects quoted, but this will
+; fake it out.
 
 (define strange-quotation
   (let ((operator/quote (get-operator 'quote)))

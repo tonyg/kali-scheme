@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; An implementation of Pre-Scheme's memory interface that can detect some
@@ -80,7 +80,7 @@
 
 (define (allocate-memory size)
   (cond ((> size max-size)
-	 -1)  ; error result
+	 null-address)  ; error result
 	(else
 	 (if (>= *next-index* (vector-length *memory*))
 	     (let ((new (make-vector (* 2 (vector-length *memory*)))))
@@ -110,7 +110,7 @@
 	  (byte-address (address->vector-index address)))
       (if (and vector (= byte-address 0))
 	  (vector-set! *memory* (arithmetic-shift address address-shift) #f)
-	  (error "bad deallocation address" address)))))
+	  (assertion-violation 'deallocate-memory "bad deallocation address" address)))))
 
 ; Various ways of accessing memory
 
@@ -129,13 +129,22 @@
   (let ((address (address-index address)))
     (let ((vector (address->vector address))
 	  (byte-address (address->vector-index address)))
-      (if (not (= 0 (bitwise-and byte-address 3)))
-	  (error "unaligned address error" address)
-	  (+ (+ (arithmetic-shift (signed-code-vector-ref vector byte-address) 24)
-		(arithmetic-shift (code-vector-ref vector (+ byte-address 1)) 16))
-	     (+ (arithmetic-shift (code-vector-ref vector (+ byte-address 2))  8)
-		(code-vector-ref vector (+ byte-address 3))))))))
-  
+      (if (not (= 0 (bitwise-and byte-address (- bytes-per-cell 1))))
+	  (assertion-violation 'word-ref "unaligned address error" address)
+	  (let ((word 0))
+	    (do ((byte-offset 0 (+ byte-offset 1))
+		 (shift-offset (- bits-per-cell bits-per-byte) 
+			       (- shift-offset bits-per-byte)))
+		((or (>= byte-offset bytes-per-cell) (< shift-offset 0)))
+	      (set! word 
+		    (+ word
+		       (arithmetic-shift ((if (= 0 byte-offset)
+					      signed-code-vector-ref
+					      code-vector-ref)
+					  vector
+					  (+ byte-address byte-offset))
+					 shift-offset)))))))))
+
 (define (unsigned-byte-set! address value)
   (let ((address (address-index address)))
     (code-vector-set! (address->vector address)
@@ -147,26 +156,27 @@
     (let ((vector (address->vector address))
 	  (byte-address (address->vector-index address)))
       (if (not (= 0 (bitwise-and byte-address 3)))
-	  (error "unaligned address error" address))
-      (code-vector-set! vector    byte-address
-			(bitwise-and 255 (arithmetic-shift value -24)))
-      (code-vector-set! vector (+ byte-address 1)
-			(bitwise-and 255 (arithmetic-shift value -16)))
-      (code-vector-set! vector (+ byte-address 2)
-			(bitwise-and 255 (arithmetic-shift value -8)))
-      (code-vector-set! vector (+ byte-address 3)
-			(bitwise-and 255 value)))))
+	  (assertion-violation 'word-set! "unaligned address error" address))
+      (do ((byte-offset 0 (+ byte-offset 1))
+	   (shift-offset (- bits-per-cell bits-per-byte) 
+			 (- shift-offset bits-per-byte)))
+	  ((or (>= byte-offset bytes-per-cell) (< shift-offset 0)))
+	(code-vector-set! vector 
+			  (+ byte-address byte-offset)
+			  (bitwise-and 255 
+				       (arithmetic-shift value 
+							 (- shift-offset))))))))
 
 ; With the right access to the flonum bits we could actually make these
 ; work.  Something to do later.
 
 (define (flonum-ref address)
   (if #t					; work around type checker bug
-      (error "call to FLONUM-REF" address)))
+      (assertion-violation 'flonum-ref "call to FLONUM-REF" address)))
 
 (define (flonum-set! address value)
   (if #t					; work around type checker bug
-      (error "call to FLONUM-SET!" address value)))
+      (assertion-violation 'flonum-set! "call to FLONUM-SET!" address value)))
 
 ; Block I/O procedures.
 
@@ -265,7 +275,7 @@
 (define (index-of-first-nul vector address)
   (let loop ((i address))
     (cond ((= i (code-vector-length vector))
-	   (error "CHAR-POINTER->STRING called on pointer with no nul termination"))
+	   (assertion-violation 'char-pointer->string "CHAR-POINTER->STRING called on pointer with no nul termination"))
 	  ((= 0 (code-vector-ref vector i))
 	   (- i address))
 	  (else

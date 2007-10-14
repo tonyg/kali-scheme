@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Interpreting commands.
 
@@ -52,7 +52,10 @@
 ; started.
 
 (define (command-loop condition)
-  (push-command-level condition #f))
+  ;; The handler may have gotten unwound by `raise'
+  (with-handler command-loop-condition-handler
+    (lambda ()
+      (push-command-level condition #f))))
 
 ; Install the handler, bind $NOTE-UNDEFINED to keep from annoying the user,
 ; bind $FOCUS-BEFORE to avoid keeping state on the stack where it can be
@@ -96,7 +99,8 @@
 
 (define (display-command-level-condition condition)
   (if condition
-      (display-condition condition (command-output))))
+      (display-condition condition (command-output)
+			 (condition-writing-depth) (condition-writing-length))))
 
 ; If #T anything that doesn't start with the command prefix (a comma) is
 ; treated as an argument to RUN.  If #F no commas are needed and RUN
@@ -138,29 +142,30 @@
 ; warnings on the command level thread to avoid circularity problems.
 
 (define (command-loop-condition-handler c next-handler)
-  (let ((c (coerce-to-condition c)))
-    (cond ((or (warning? c)
-	       (note? c))
-	   (if (break-on-warnings?)
-	       (deal-with-condition c)
-	       (begin (force-output (current-output-port)) ; keep synchronous
-		      (display-condition c (current-error-port))
-		      (unspecific))))	;proceed
-	  ((or (error? c) (bug? c) (interrupt? c))
-	   (if (batch-mode?)
-	       (begin (force-output (current-output-port)) ; keep synchronous
-		      (display-condition c (current-error-port))
-		      (let ((status
-			     (cond
-			      ((error? c) 1)
-			      ((bug? c) 3) ; historical, probably nonsense
-			      (else 2))))
-			(scheme-exit-now status)))
-	       (deal-with-condition c)))
-	  ((reset-command-input? c)
-	   (unspecific))		;proceed
-	  (else                           
-	   (next-handler)))))
+  (cond ((or (warning? c)
+	     (note? c))
+	 (if (break-on-warnings?)
+	     (deal-with-condition c)
+	     (begin (force-output (current-output-port)) ; keep synchronous
+		    (display-condition c (current-error-port)
+				       (condition-writing-depth) (condition-writing-length))
+		    (unspecific))))	;proceed
+	((or (serious-condition? c) (interrupt-condition? c))
+	 (if (batch-mode?)
+	     (begin (force-output (current-output-port)) ; keep synchronous
+		    (display-condition c (current-error-port)
+				       (condition-writing-depth) (condition-writing-length))
+		    (let ((status
+			   (cond
+			    ((error? c) 1)
+			    ((violation? c) 3) ; historical, probably nonsense
+			    (else 2))))
+		      (scheme-exit-now status)))
+	     (deal-with-condition c)))
+	((reset-command-input-condition? c)
+	 (unspecific))			;proceed
+	(else                           
+	 (next-handler))))
 
 ; Stop the current level either by pushing a new one or restarting it.
 ; If we restart the current level we save it as the focus object to give
@@ -171,7 +176,8 @@
       (command-loop c)
       (let ((level (car (command-levels))))
 	(set-focus-object! level)
-	(display-condition c (command-output))
+	(display-condition c (command-output)
+			   (condition-writing-depth) (condition-writing-length))
 	(restart-command-level level))))
 
 (define (abort-to-command-level level)
@@ -216,7 +222,7 @@
 ; ARG is a list of command-line arguments after "run-script"
 
 (define (run-script arg)
-  (run-script-handler (car arg) (cdr arg)))
+  (run-script-handler (os-string->string (car arg)) (cdr arg)))
 
 (define *script-handler-alist* '())
 
@@ -232,7 +238,7 @@
 	  (lambda ()
 	    ((cdr pair) args)))))
    (else
-    (display "invalid argument to run-script-handler:" (current-error-port))
+    (display "invalid argument to run-script-handler: " (current-error-port))
     (display tag (current-error-port))
     (newline (current-error-port))
     1)))
@@ -244,12 +250,12 @@
    (lambda (k)
      (with-handler
       (lambda (c punt)
-	(let ((c (coerce-to-condition c)))
-	  (if (or (error? c) (bug? c))
-	      (begin
-		(display-condition c (current-error-port))
-		(k (EX_SOFTWARE)))
-	      (punt))))
+	(if (serious-condition? c)
+	    (begin
+	      (display-condition c (current-error-port)
+				 (condition-writing-depth) (condition-writing-length))
+	      (k (EX_SOFTWARE)))
+	    (punt)))
       (lambda ()
 	(thunk)
 	0)))))
@@ -258,22 +264,22 @@
   (lambda (args)
     (with-srfi-22-error-handling
      (lambda ()
-       (load-script-into (car args) (interaction-environment))
-       ((environment-ref (interaction-environment) 'main) args)))))
+       (load-script-into (os-string->string (car args)) (interaction-environment))
+       ((environment-ref (interaction-environment) 'main) (map os-string->string args))))))
 
 (define-script-handler "srfi-7"
   (lambda (args)
     (with-srfi-22-error-handling
      (lambda ()
        (eval '(load-package 'srfi-7) (user-command-environment))
-       (eval `(load-srfi-7-script 'srfi-7-script ,(car args))
+       (eval `(load-srfi-7-script 'srfi-7-script ,(os-string->string (car args)))
 	     (user-command-environment))
        (let ((cell (make-cell #f)))	; kludge
 	 (let-fluid $command-results cell
 	  (lambda ()
 	    (eval '(in 'srfi-7-script '(run main))
 		  (user-command-environment))))
-	 ((car (cell-ref cell)) args))))))
+	 ((car (cell-ref cell)) (map os-string->string args)))))))
 
 ;----------------
 ; Evaluate a form and save its result as the current focus values.
@@ -450,7 +456,8 @@
 	  (and (not (eqv? value #t))
 	       (not (eqv? value #f)))
 	  (not ((setting-type setting) value)))
-      (error "invalid value for setting" (setting-name setting) value))
+      (error 'setting-set!
+	     "invalid value for setting" (setting-name setting) value))
   ((setting-set setting) value))
 
 (define (setting-doc setting)
@@ -635,7 +642,7 @@
         (begin (write-char #\space port)
                (display info port)))
     (newline port)
-    (write-line "Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees."
+    (write-line "Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees."
 		port)
     (write-line "Please report bugs to scheme-48-bugs@s48.org."
                 port)

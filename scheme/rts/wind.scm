@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This is file wind.scm.  (Rhymes with "find," not "pinned.")
@@ -85,9 +85,9 @@
 		  (< (point-depth here)
 		     (point-depth target))))
 	 (travel-to-point! here (point-parent target))
+	 ((point-in target))
 	 (set-dynamic-env! (point-dynamic-env target))
-	 (set-dynamic-point! target)
-	 ((point-in target)))
+	 (set-dynamic-point! target))
 	(else
 	 (set-dynamic-env! (point-dynamic-env here))
 	 (set-dynamic-point! here)

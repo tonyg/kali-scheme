@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 /* Implementation of the vm-extension opcode.  This is completely
@@ -17,8 +17,8 @@
 
 #include "scheme48.h"
 
-#define GREATEST_FIXNUM_VALUE ((1 << 29) - 1)
-#define LEAST_FIXNUM_VALUE (-1 << 29)
+#define GREATEST_FIXNUM_VALUE S48_MAX_FIXNUM_VALUE
+#define LEAST_FIXNUM_VALUE S48_MIN_FIXNUM_VALUE
 #define CHANNEL_INDEX(x) EXTRACT_FIXNUM(STOB_REF(x, 1))
 #define FOR_INPUT 1
 #define FOR_OUTPUT 2

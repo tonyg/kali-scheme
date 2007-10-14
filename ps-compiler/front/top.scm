@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 
 ; Debugging aids
@@ -71,7 +71,7 @@
   (debug-breakpoint 'simplify1 id node)
   (determine-protocols)
   (debug-breakpoint 'protocols id node)
-  (if (integrate-jump-procs!)
+  (if (integrate-jump-procs! node)
       (simplify-node node))
   (cond (*remove-cells?*
          (remove-cells-from-tree node (make-lambda-list))

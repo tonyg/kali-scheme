@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; A parameterized scheduler.
 
@@ -104,10 +104,10 @@
 	  ((no-event)
 	   (values))
 	  (else
-	   (error "unhandled event"
-		  (cons (enumerand->name event event-type)
-			event-data)
-		  event-handler)))))
+	   (assertion-violation 'asynchronous-event-handler "unhandled event"
+				(cons (enumerand->name event event-type)
+				      event-data)
+				event-handler)))))
 
   (define (next-thread)
     (if (queue-empty? runnable)
@@ -138,3 +138,6 @@
 
 (define (decrement-counter! count)
   (set-car! count (- (car count) 1)))
+
+(define (set-counter! count val)
+  (set-car! count val))

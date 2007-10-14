@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; We only do flat lambdas now.
 
@@ -72,7 +72,7 @@
 	 (n-ary? (n-ary? formals))
 	 (stack-nargs (if n-ary? (+ nargs 1) nargs))
 	 (need-env? (not (null? free)))		;+++  ; could just be #t
-	 (frame (make-frame frame lambda-name stack-nargs need-env? #t))
+	 (frame (make-frame frame lambda-name stack-nargs #t need-env? #f))
 	 (extras (if need-env? 2 1)))
     (set-lexical-offsets! free stack-nargs)
     (let ((code (compile-lambda-code formals
@@ -84,8 +84,8 @@
 				     body-name)))
       (values (sequentially
 	        (if n-ary?
-                    (nary-lambda-protocol nargs #t need-env?)
-                    (lambda-protocol nargs #t need-env?))
+                    (nary-lambda-protocol nargs #t need-env? #f)
+                    (lambda-protocol nargs #t need-env? #f))
 		code)
 	      frame))))
 
@@ -119,7 +119,7 @@
 			(if (null? free)
 			    args
 			    (append args
-				    (list (map node-form free)))))
+				    (list (map name-node->symbol free)))))
 		      0
 		      (compile body depth frame (return-cont name)))))
 
@@ -200,7 +200,7 @@
 			    (cons template-offset template-indexes))
 		      . ,env-code)))
     (if (any (lambda (b)
-	       (< byte-limit b))
+	       (<= byte-limit b))
 	     code-bytes)
 	(apply instruction
 	       (enum op make-big-flat-env)
@@ -262,8 +262,9 @@
 		    (loop (cdr vars)
 			  frame
 			  (add-variable var offset (cdr binding) other))))
-	      (error "variable in flat-lambda list is not local"
-		     (car vars)))))))
+	      (assertion-violation 'get-variables-locations
+				   "variable in flat-lambda list is not local"
+				   (car vars)))))))
 
 ; Add VAR, with stack-offset OFFSET and MORE other indexes, to OTHER, an alist
 ; indexed by offsets.  Currently MORE always has lenth one.

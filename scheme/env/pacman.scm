@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; PACkage-manipulation comMANds
 
@@ -62,7 +62,7 @@
 (define (reload-package name)
   (let ((s (get-structure name)))
     (if (not (package-unstable? (structure-package s)))
-	(error "read-only structure" s))
+	(assertion-violation 'reload-package "read-only structure" s))
     (set-package-loaded?! (structure-package s) #f)
     (quietly-ensure-loaded s)))
 
@@ -92,8 +92,8 @@
                 (if (structure? probe)
                     (if (ensure-loaded-query probe)
                         (package-open! (environment-for-commands) thunk)
-                        (error "structure not loaded" spec))
-                    (error "not a structure" spec))))
+                        (assertion-violation 'open "structure not loaded" spec))
+                    (assertion-violation 'open "not a structure" spec))))
             specs))
 
 (define (ensure-loaded-query struct)
@@ -227,7 +227,7 @@
   (let ((p (really-get-package name)))
     (if (package-unstable? p)
 	p
-	(error "read-only structure" p))))
+	(assertion-violation 'get-package "read-only structure" p))))
 
 (define (really-get-package name)
   (let ((s (get-structure name)))
@@ -237,7 +237,7 @@
 (define (get-structure name)
   (let ((thing (environment-ref (config-package) name)))
     (cond ((structure? thing) thing)
-	  (else (error "not a structure" name thing)))))
+	  (else (assertion-violation 'get-structure "not a structure" name thing)))))
 
 
 ; Main entry point, with package setup.
@@ -248,12 +248,13 @@
     (call-with-values (lambda ()
 			(make-user-envs commands built-in meta-structs))
       (lambda (env init-thunk)
-	(with-interaction-environment env
-	  (lambda ()
-	    (start-command-processor arg
-				     (lambda ()
-				       (greet-user info))
-				     init-thunk)))))))
+	(with-interaction-environment
+	 env
+	 (lambda ()
+	   (start-command-processor arg
+				    (lambda ()
+				      (greet-user info))
+				    init-thunk)))))))
 
 (define (make-user-envs commands built-in meta-structs)
   (let* ((tower (make-reflective-tower

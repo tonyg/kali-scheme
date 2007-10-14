@@ -7,6 +7,7 @@
 \usepackage{alltt}
 \usepackage{makeidx}
 \usepackage{matter}
+\usepackage{ifpdf}
 
 \input{myindex}
 \input{proto}
@@ -17,7 +18,6 @@
 % \includeonly{module}
 
 \let\url\relax
-\input{pdfcond}
 \ifpdf
 \usepackage[pdftex,hyperindex,
      pdftitle={The Incomplete Scheme 48 Reference Manual},
@@ -57,11 +57,19 @@
 A line may take us hours, yet if it does not seem a moment's thought \\
 All our stitching and unstitching has been as nought.
 \end{verse}
+\texonly
 \begin{tabbing}
 A line may take us hours, yet if it does not seem\= \kill
 \> Yeats \\
 \> {\em Adam's Curse}
 \end{tabbing}
+\endtexonly
+\htmlonly
+\begin{tabular}{ll}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ & Yeats \\
+& {\em Adam's Curse}
+\end{tabular}
+\endhtmlonly
 
 \chapter*{Acknowledgements}
 

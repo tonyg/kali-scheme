@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The value of $NOTE-FILE-PACKAGE is called whenever a file is loaded into
 ; a package.  env/debug.scm uses this to associate packages with files so
@@ -17,7 +17,7 @@
     (dynamic-wind
      (lambda ()
        (if (not port)
-	   (error "attempt to throw back into READ-FORMS")))
+	   (assertion-violation 'read-forms "attempt to throw back into READ-FORMS")))
      (lambda ()
        ((fluid-cell-ref $note-file-package) filename package)
        (let ((o-port (current-noise-port)))

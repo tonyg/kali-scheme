@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 (define-interface posix-files-interface
   (export directory-stream?
@@ -67,19 +67,11 @@
 	  user-id->integer integer->user-id
 	  user-id=?
 
-	  user-name?
-	  thing->user-name
-	  user-name->string user-name->byte-vector user-name->byte-string
-
 	  user-info?
 	  user-info-name user-info-id user-info-group
 	  user-info-home-directory user-info-shell
 	  user-id->user-info
 	  name->user-info
-
-	  group-name?
-	  thing->group-name
-	  group-name->string group-name->byte-vector group-name->byte-string
 
 	  group-id?
 	  group-id->integer integer->group-id
@@ -95,15 +87,13 @@
 		    (posix-time  posix-time-interface)
 		    (posix-users posix-users-interface))
   (open scheme define-record-types finite-types
-	external-calls
+	external-calls load-dynamic-externals
 	bitwise			;for manipulating protection masks
-	signals			;call-error
+	exceptions
 	posix-file-options
 	channel-i/o
 	channel-ports
-	file-names
-	string/bytes-types
-	default-string-encodings)
+	os-strings)
   (for-syntax (open scheme bitwise))
   (files dir))
 
@@ -113,7 +103,7 @@
 					     file-options-on?
 					     file-options-union)
   (open scheme define-record-types finite-types enum-sets
-	external-calls
+	external-calls load-dynamic-externals
 	bitwise)
   (files file-options))
 
@@ -127,12 +117,6 @@
 	  get-groups
 	  get-login-name
 
-	  environment-variable?
-	  thing->environment-variable
-	  environment-variable->string
-	  environment-variable->byte-vector
-	  environment-variable->byte-string
-
 	  lookup-environment-variable  lookup-environment-variable->string
 	  environment-alist environment-alist-as-strings
 	  ))
@@ -143,8 +127,9 @@
 
 (define-structures ((posix-process-data posix-process-data-interface)
 		    (posix-platform-names posix-platform-names-interface))
-  (open scheme define-record-types external-calls
-	default-string-encodings string/bytes-types
+  (open scheme define-record-types
+	external-calls load-dynamic-externals
+	os-strings
 	interrupts
 	posix-processes posix-users posix-time) ; we need these to be loaded
   (files proc-env))
@@ -194,20 +179,19 @@
   (open scheme
 	define-record-types finite-types
 	reinitializers
-	external-calls
+	external-calls load-dynamic-externals
 	interrupts
 	placeholders
 	weak
 	value-pipes
 	debug-messages
 	session-data
-	signals			;call-error
+	exceptions
 	root-scheduler		;scheme-exit-now
 	channel-ports		;force-channel-output-ports!
 	interrupts		;set-interrupt-handler!
 	architecture		;interrupts enum
-	string/bytes-types
-	default-string-encodings)
+	os-strings)
   (files proc
 	 signal))
 
@@ -235,15 +219,16 @@
 
 (define-structure posix-i/o posix-i/o-interface
   (open scheme
-	external-calls
+	external-calls load-dynamic-externals
 	i/o			;read-block
 	channels
 	channel-i/o
 	channel-ports
-	signals			;call-error
+	exceptions
 	util
 	posix-file-options
 	ports			;port?
+	os-strings
 	architecture
 	enum-case)
   (files io))
@@ -262,10 +247,11 @@
 
 (define-structures ((posix-regexps posix-regexps-interface)
 		    (posix-regexps-internal (export make-match)))
-  (open scheme define-record-types finite-types external-calls
+  (open scheme define-record-types finite-types
+	external-calls load-dynamic-externals
 	(subset big-util (string->immutable-string))
-	default-string-encodings
-	signals)
+	exceptions
+	os-strings text-codecs)
   (files regexp))
 
 (define-interface regexps-interface
@@ -310,7 +296,7 @@
 
 (define-structures ((regexps regexps-interface)
 		    (regexps-internal regexps-internal-interface))
-  (open scheme define-record-types mvlet ascii unicode signals
+  (open scheme define-record-types mvlet ascii unicode exceptions
 	bitwise bigbit
 	reduce
 	(modify posix-regexps (rename (make-regexp make-posix-regexp)))

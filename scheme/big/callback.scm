@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; This code, along with C code in c/external.c, handles the interaction between
@@ -93,8 +93,10 @@
 			  (dynamic-wind
 			   (lambda ()
 			     (if done?
-				 (error "attempt to throw into a callback"
-					(cons proc args))))
+				 (apply
+				  assertion-violation 'callback
+				  "attempt to throw into a callback"
+				  (cons proc args))))
 			   (lambda ()
 			     (let ((result (apply proc args)))
 			       (disable-interrupts!)
@@ -168,25 +170,55 @@
 
 (define uncovered-return-handler
   (lambda (opcode reason . args)
-    (if (= reason (enum exception callback-return-uncovered))
-	(call-with-values
-	 (lambda ()
-	   (if (= 2 (length args))
-	       (values (car args)
-		       (cadr args)
-		       #f)
-	       (let ((args (reverse args)))
-		 (values (car args)
-			 (cadr args)
-			 (reverse (cddr args))))))
-	 (lambda (block return-value exception-args)
-	   (let ((placeholder (stack-block-placeholder block)))
-	     (set-stack-block-placeholder! block #f)
-	     (placeholder-set! placeholder #t)
-	     (if exception-args
-		 (apply signal-vm-exception opcode return-value exception-args)
-		 return-value))))
-	(apply signal-vm-exception opcode reason args))))
+
+    (define (blow-up con extract-message)
+      ;; look at external.c why this is all so strangely reversed
+      (let ((rev (reverse args)))
+	(raise
+	 (condition
+	 con
+	 (make-external-exception)
+	 (make-who-condition (cadr rev))
+	 (make-message-condition
+	  (os-string->string (byte-vector->os-string (extract-message (car rev)))))
+	 (make-irritants-condition (reverse (cddr rev)))))))
+
+    (enum-case exception reason
+	       ((external-error)
+		(blow-up (make-error) values))
+	       ((external-assertion-violation)
+		(blow-up (make-assertion-violation) values))
+	       ((external-os-error)
+		(blow-up (make-error) os-error-message))
+	       ((out-of-memory)
+		(raise
+		 (condition
+		  (make-implementation-restriction-violation)
+		  (make-who-condition 'call-external-value)
+		  (make-message-condition "out of memory"))))
+	       ((callback-return-uncovered)
+		(call-with-values
+		    (lambda ()
+		      (if (= 2 (length args))
+			  (values (car args)
+				  (cadr args)
+				  #f)
+			  (let ((args (reverse args)))
+			    (values (car args)
+				    (cadr args)
+				    (reverse (cddr args))))))
+		  (lambda (block return-value exception-args)
+		    (let ((placeholder (stack-block-placeholder block)))
+		      (set-stack-block-placeholder! block #f)
+		      (placeholder-set! placeholder #t)
+		      (if exception-args
+			  (apply signal-vm-exception opcode return-value exception-args)
+			  return-value)))))
+	       (else
+		(apply signal-vm-exception opcode reason args)))))
+
+(define-condition-type &external-exception &serious
+  make-external-exception external-exception?)
 
 (define (block-depth block)
   (if block
@@ -210,8 +242,10 @@
 		   value
 		   (shared-binding-name proc)
 		   args)
-	    (apply call-error "bad procedure" call-imported-binding proc args)))
-      (apply call-error "bad procedure" call-imported-binding proc args)))
+	    (apply assertion-violation 'call-imported-binding "bad procedure"
+		   proc args)))
+      (apply assertion-violation 'call-imported-binding "bad procedure"
+	     proc args)))
 
 ;----------------
 ; We export the record-type type so that external code can check to see if

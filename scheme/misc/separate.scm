@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ;  packages packages-internal scan compiler table
@@ -119,7 +119,7 @@
 	      (let ((templates (restore)))
 		(for-each (lambda (template)
 			    (if (not (template? template))
-				(error "lossage" template))
+				(assertion-violation 'fasload "lossage" template))
 			    (invoke-closure (make-closure template
 							  (package-uid p))))
 			  templates))))

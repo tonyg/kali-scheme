@@ -97,7 +97,8 @@
 		  (or (maybe-commit-and-make-ready thread-queue)
 		      (lose)))))
 	  (else #f))))
-       (error "placeholder is already assigned" placeholder value)))
+       (assertion-violation 'placeholder-set! "placeholder is already assigned"
+			    placeholder value)))
 
 (define (placeholder-value placeholder)
   (sync (placeholder-value-rv placeholder)))

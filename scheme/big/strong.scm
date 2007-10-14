@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Code to find the strongly connected components of a graph.
@@ -48,7 +48,9 @@
 		      (let ((s (slot n)))
 			(if (vertex? s)
 			    s
-			    (error "graph edge points to non-vertex" n))))))
+			    (assertion-violation 'make-vertices
+						 "graph edge points to non-vertex"
+						 n))))))
     (for-each (lambda (n)
 		(set-slot! n (make-vertex n)))
 	      vertices)

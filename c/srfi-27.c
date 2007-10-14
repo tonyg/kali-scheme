@@ -34,7 +34,12 @@
 */
 
 #include "scheme48.h" /* $SCHEME48/c/scheme48.h */
+
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/time.h>
+#endif
 
 #ifndef NULL
   #define NULL 0
@@ -187,7 +192,7 @@ s48_value mrg32k3a_random_integer(s48_value state, s48_value range) {
   s = S48_EXTRACT_VALUE(state, state_t);
   n = s48_extract_integer(range);
   if (!( ((long)1 <= n) && (n <= m_max) ))
-    s48_raise_range_error(n, (long)1, m_max);
+    s48_assertion_violation("mrg32k3a_random_integer", "invalid range", 1, state);
 
   /* generate result in {0..n-1} using the rejection method */
   q  = (double)( (unsigned long)(m1 / (double)n) );
@@ -199,7 +204,7 @@ s48_value mrg32k3a_random_integer(s48_value state, s48_value range) {
 
   /* check the range */
   if (!( (0.0 <= xq) && (xq < (double)m_max) ))
-    s48_raise_range_error((long)xq, (long)0, m_max);
+    s48_assertion_violation("mrg32k3a_random_integer", "invalid xq", 1, s48_enter_integer((long)xq));
 
   /* return result */
   result = (long)xq;
@@ -217,12 +222,19 @@ s48_value mrg32k3a_random_real(s48_value state) {
   return s48_enter_double(x);
 }
 
-/* Kludge for scsh */
+#ifdef _WIN32
+static s48_value current_time(void){
+  SYSTEMTIME systemTime;
+  GetSystemTime(&systemTime);
+  return s48_enter_unsigned_integer((unsigned long) systemTime.wSecond);
+}
+#else
 static s48_value current_time(void){
   struct timeval tv;
   gettimeofday(&tv, NULL);
   return s48_enter_integer(tv.tv_sec);
 }
+#endif
 
 
 /* Exporting the C values to Scheme

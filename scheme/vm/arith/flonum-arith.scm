@@ -11,12 +11,7 @@
 (define flonum-add      (binary-flonum-op fl+))
 (define flonum-subtract (binary-flonum-op fl-))
 (define flonum-multiply (binary-flonum-op fl*))
-
-(define (flonum-divide x y)
-  (if (fl= (extract-double y)
-	   0.0)
-      false
-      ((binary-flonum-op fl/) x y)))
+(define flonum-divide   (binary-flonum-op fl/))
 
 (define (flonum-comparison proc)
   (lambda (x y)

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 ; C variable declarations.
 ; 
@@ -136,6 +136,7 @@
 	  '((boolean "char")
 	    (char    "char")
 	    (integer "long")
+	    (unsigned-integer "unsigned long")
 	    (float   "double")
 	    (address "char *")
 	    (input-port "FILE *")

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Nondeterminism, Prolog, or whatever you want to call it.  This is
 ; depth-first search implemented using call/cc.
@@ -8,12 +8,14 @@
 (define $fail
   (make-fluid (make-cell
 	       (lambda ()
-		 (error "call to FAIL outside WITH-NONDETERMINISM")))))
+		 (assertion-violation 'fail
+				      "call to FAIL outside WITH-NONDETERMINISM")))))
 
 (define (with-nondeterminism thunk)
   (let-fluid $fail
 	     (make-cell (lambda ()
-			  (error "nondeterminism ran out of choices")))
+			  (assertion-violation 'with-nondeterminism
+					       "nondeterminism ran out of choices")))
 	     thunk))
 
 ; Call the current failure function.

@@ -1,7 +1,9 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; 3.3 Signals
-;
+
+(import-dynamic-externals "=scheme48external/posix")
+
 ; int kill(pid_t pid, int sig)
 ;
 ; Also signal sets, sigaction(), blocked and waiting signals,
@@ -97,7 +99,7 @@
 
 (define (name->signal name)
   (if (not (symbol? name))
-      (call-error "argument not a symbol" name->signal name)
+      (assertion-violation 'name->signal "argument not a symbol" name)
       (let loop ((i 0))
 	(cond ((= i (vector-length named-signals))
 	       #f)
@@ -168,7 +170,7 @@
 	((unnamed-signal? x)
 	 #f)
 	(else
-	 (call-error "argument not a signal" signal-name x))))
+	 (assertion-violation 'signal-name "argument not a signal" x))))
 
 (define (signal-os-number x)
   (cond ((named-signal? x)
@@ -176,7 +178,7 @@
 	((unnamed-signal? x)
 	 (unnamed-signal-os-number x))
 	(else
-	 (call-error "argument not a signal" signal-os-number x))))
+	 (assertion-violation 'signal-os-number "argument not a signal" x))))
 
 (define (signal-queues x)
   (cond ((named-signal? x)
@@ -184,7 +186,7 @@
 	((unnamed-signal? x)
 	 (unnamed-signal-queues x))
 	(else
-	 (call-error "argument not a signal" signal-queues x))))
+	 (assertion-violation 'signal-queues "argument not a signal" x))))
 
 (define (set-signal-queues! x qs)
   (cond ((named-signal? x)
@@ -192,7 +194,7 @@
 	((unnamed-signal? x)
 	 (set-unnamed-signal-queues! x qs))
 	(else
-	 (call-error "argument not a signal" set-signal-queues! x qs))))
+	 (assertion-violation 'set-signal-queues! "argument not a signal" x qs))))
 
 (define (clean-signal-queues x)
   (let* ((old (signal-queues x))

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; The DEFINE-INTERFACE and DEFINE-STRUCTURE macros.
@@ -199,15 +199,6 @@
 		       (,%quote ,others)
 		       (,%quote ,names))))))))
   (cons lambda list make-a-package quote make-reflective-tower %file-name%))
-
-(define-syntax receive
-  (syntax-rules ()
-    ((receive (?var ...) ?producer . ?body)
-     (call-with-values (lambda () ?producer)
-       (lambda (?var ...)
-	 (note-name! ?var '?var) ...
-	 (let () . ?body))))))
-
 
 ; (DEFINE-REFLECTIVE-TOWER-MAKER <proc>)
 ;   <proc> should be an expression that evaluates to a procedure of

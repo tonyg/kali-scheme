@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Packages involved in building the initial system.
@@ -11,7 +11,7 @@
 	packages bindings meta-types 
 	fluids cells
 	locations	; contents location-assigned?
-	simple-signals)	; error
+	exceptions)	; error
   (files (rts env)))
 
 ; EVAL and LOAD
@@ -27,7 +27,7 @@
 	closures		;make-closure
 	vm-exposure		;invoke-closure
 	features		;current-noise-port force-output
-	simple-signals fluids)
+	exceptions fluids)
   (files (rts eval)))
 
 ; Scheme = scheme-level-2 plus EVAL and friends
@@ -46,8 +46,9 @@
 
   (define-structure mini-command (export command-processor)
     (open scheme
+	  ascii byte-vectors os-strings
 	  writing methods
-	  simple-signals simple-conditions handle
+	  conditions exceptions handle
 	  i/o)                 ;current-error-port
     (files (debug mini-command)
 	   (env dispcond))) ; avoid having to include this generally
@@ -63,9 +64,7 @@
 	  interfaces		;make-simple-interface
 	  packages		;make-simple-package
 	  environments		;with-interaction-environment, etc.
-	  usual-resumer
-	  simple-conditions handle	;error? with-handler
-	  simple-signals)	;error
+	  usual-resumer)
     (files (env start)))
 
   initial-system)
@@ -93,7 +92,7 @@
 (define-structure for-reification for-reification-interface
   (open scheme-level-1
 	packages packages-internal
-	simple-signals
+	exceptions
 	meta-types			;sexp->type structure-type
 	interfaces			;make-simple-interface
 	bindings

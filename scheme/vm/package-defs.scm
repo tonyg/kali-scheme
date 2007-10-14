@@ -7,13 +7,15 @@
 	bignum-low
 	integer-arithmetic
 	flonum-arithmetic
-	data struct
+	data struct stob
 	text-encodings
 	interpreter interpreter-internal
 	stack gc interpreter-gc gc-util
 	vmio
 	arithmetic-opcodes
 	external-opcodes
+	external-events
+	shared-bindings
 	symbols
 	io-opcodes
 	external-gc-roots
@@ -31,7 +33,7 @@
 ; Byte code architecture.
 
 (define-structure vm-architecture vm-architecture-interface
-  (open prescheme)
+  (open prescheme ps-platform)
   (files (interp arch)))
 
 ;----------------------------------------------------------------
@@ -46,8 +48,7 @@
 	text-encodings
 	return-codes
 	gc-roots gc gc-util
-	heap stack external
-	encode/decode)
+	heap stack external external-events encode/decode)
   (for-syntax (open scheme destructuring signals))
   (files (interp interp)
 	 (interp call)
@@ -110,8 +111,23 @@
 	gc gc-roots gc-util
 	heap ; S48-GATHER-OBJECTS
 	string-tables
-	external)
+	external
+	shared-bindings)
   (files (interp external-call)))
+
+(define-structure external-events external-events-interface
+  (open prescheme ps-record-types ps-memory
+	data struct
+	vm-utilities
+	shared-bindings)
+  (files (interp external-event)))
+
+(define-structure shared-bindings shared-bindings-interface
+  (open prescheme
+	vm-architecture data struct
+	string-tables
+	gc gc-roots gc-util)
+  (files (interp shared-binding)))
 
 (define-structure io-opcodes (export)
   (open prescheme vm-utilities vm-architecture ps-receive enum-case
@@ -305,8 +321,8 @@
 ; Data structures
 
 (define-structure data vm-data-interface
-  (open prescheme vm-utilities
-	system-spec vm-architecture)
+  (open prescheme ps-unsigned-integers vm-utilities
+	ps-platform vm-architecture)
   ;(optimize auto-integrate)
   (files (data data)))
 
@@ -416,6 +432,7 @@
   (open prescheme ps-receive enum-case
 	vm-utilities vm-architecture
 	memory data struct
+	ps-platform
 	heap
 	image-table
 	image-util
@@ -439,6 +456,7 @@
 
 (define-structure read-image-util read-image-util-interface
   (open prescheme ps-receive
+	data
 	memory
 	(subset ps-memory (read-block address+ address<))
 	(subset data (bytes->a-units b-vector-header? header-length-in-a-units stob?))
@@ -469,6 +487,7 @@
   (open prescheme 
 	vm-utilities
 	stob
+	ps-platform
 	gc
 	struct memory
 	vm-architecture
@@ -485,13 +504,12 @@
 	ps-receive
 	interpreter-internal
 	data
-	system-spec
 	gc-util
 	bignum-low)
   (files (arith bignum-arith)))
 
 (define-structure integer-arithmetic integer-arithmetic-interface
-  (open prescheme 
+  (open prescheme ps-unsigned-integers
 	fixnum-arithmetic
 	bignum-arithmetic
 	external

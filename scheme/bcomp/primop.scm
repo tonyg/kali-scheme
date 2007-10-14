@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Primops.
 
@@ -30,4 +30,4 @@
 
 (define (get-primop name)
   (or (table-ref primop-table name)
-      (error "unknown compiler primitive" name)))
+      (assertion-violation 'get-primop "unknown compiler primitive" name)))

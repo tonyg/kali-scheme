@@ -1,14 +1,15 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Writing out a Scheme 48 image
 
 (define (write-image file start-proc id-string)
   (if (not (= 0 (remainder bits-per-cell bits-per-io-byte)))
-      (error "io-bytes to not fit evenly into cells"))
+      (assertion-violation 'write-image "io-bytes to not fit evenly into cells"))
   (initialize-memory)
   (call-with-output-file file
     (lambda (port)
+      (set-port-crlf?! port #f)
       (let ((start (transport start-proc)) ; transport the start-proc
 	    (false (transport #f)))
 	(display id-string port)

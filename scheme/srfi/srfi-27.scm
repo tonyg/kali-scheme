@@ -51,15 +51,16 @@
 
 
 (define (:random-source-current-time)
-  (time-seconds (current-time)))
+  (current-time))
 
-					; interface to core generator
+;; interface to core generator
 
 (import-lambda-definition mrg32k3a-pack-state1 (state))
 (import-lambda-definition mrg32k3a-unpack-state1 (state))
 (import-lambda-definition mrg32k3a-random-range ())
 (import-lambda-definition mrg32k3a-random-integer (state range))
 (import-lambda-definition mrg32k3a-random-real (state))
+(import-lambda-definition current-time ())
 
 (define (mrg32k3a-pack-state state)
   (mrg32k3a-pack-state1

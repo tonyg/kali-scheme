@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; For DEFINE-STRUCTURE macro
@@ -14,7 +14,7 @@
 		name))
 
 (define (loser . rest)
-  (error "init-defpackage! neglected"))
+  (assertion-violation 'init-defpackage! "init-defpackage! neglected"))
 
 (define interface-of structure-interface)
 

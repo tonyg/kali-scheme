@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; The syntax-rules macro (new in R5RS)
 
@@ -26,7 +26,9 @@
 	   exp))
    exp))
   '(append and car cdr cond cons else eq? equal? lambda let let* map
-	   pair? quote code-quote values))
+	   pair? quote code-quote values
+	   vector->list list->vector vector?
+	   =))
 
 
 (define (process-rules rules subkeywords r c)
@@ -53,6 +55,10 @@
   (define %rename (r 'rename))
   (define %tail (r 'tail))
   (define %temp (r 'temp))
+  (define %= (r '=))
+  (define %vector->list (r 'vector->list))
+  (define %list->vector (r 'list->vector))
+  (define %vector? (r 'vector?))
 
   (define (make-transformer rules)
     `(,%lambda (,%input ,%rename ,%compare)
@@ -73,7 +79,7 @@
 		    ,(process-template template
 				       0
 				       (meta-variables pattern 0 '())))))
-	(syntax-error "ill-formed syntax rule" rule)))
+	(syntax-violation 'syntax-rule "ill-formed syntax rule" rule)))
 
   ; Generate code to test whether input expression matches pattern
 
@@ -89,6 +95,9 @@
 	       (,%and (,%pair? ,%temp)
 		    ,@(process-match `(,%car ,%temp) (car pattern))
 		    ,@(process-match `(,%cdr ,%temp) (cdr pattern))))))
+	  ((vector? pattern)
+	   `((,%vector? ,input)
+	     ,@(process-match `(,%vector->list ,input) (vector->list pattern))))
 	  ((or (null? pattern) (boolean? pattern) (char? pattern))
 	   `((,%eq? ,input ',pattern)))
 	  (else
@@ -106,7 +115,7 @@
 
   ; Generate code to take apart the input expression
   ; This is pretty bad, but it seems to work (can't say why).
-
+  ; returns a list of let bindings
   (define (process-pattern pattern path mapit)
     (cond ((name? pattern)
 	   (if (memq pattern subkeywords)
@@ -123,6 +132,10 @@
 	  ((pair? pattern)
 	   (append (process-pattern (car pattern) `(,%car ,path) mapit)
 		   (process-pattern (cdr pattern) `(,%cdr ,path) mapit)))
+	  ((vector? pattern)
+	   (process-pattern (vector->list pattern) 
+			    `(,%vector->list ,path)
+			    mapit))
 	  (else '())))
 
   ; Generate code to compose the output expression according to template
@@ -133,8 +146,9 @@
 	     (if probe
 		 (if (<= (cdr probe) dim)
 		     template
-		     (syntax-error "template dimension error (too few ...'s?)"
-				   template))
+		     (syntax-violation 'syntax-rules
+				       "template dimension error (too few ...'s?)"
+				       template))
 		 `(,%rename (,%code-quote ,template)))))
 	  ((segment-template? template)
 	   (let* ((depth (segment-depth template))
@@ -142,7 +156,7 @@
 		  (vars
 		   (free-meta-variables (car template) seg-dim env '())))
 	     (if (null? vars)
-		 (syntax-error "too many ...'s" template)
+		 (syntax-violation 'syntax-rules "too many ...'s" template)
 		 (let* ((x (process-template (car template)
 					     seg-dim
 					     env))
@@ -161,6 +175,9 @@
 	  ((pair? template)
 	   `(,%cons ,(process-template (car template) dim env)
 		    ,(process-template (cdr template) dim env)))
+	  ((vector? template)
+	   `(,%list->vector
+	     ,(process-template (vector->list template) dim env)))
 	  (else
 	   `(,%quote ,template))))
 
@@ -176,6 +193,8 @@
 	  ((pair? pattern)
 	   (meta-variables (car pattern) dim
 			   (meta-variables (cdr pattern) dim vars)))
+	  ((vector? pattern)
+	   (meta-variables (vector->list pattern) dim vars))
 	  (else vars)))
 
   ; Return a list of meta-variables of given higher dim
@@ -197,6 +216,8 @@
 				dim env
 				(free-meta-variables (cdr template)
 						     dim env free)))
+	  ((vector? template)
+	   (free-meta-variables (vector->list template) dim env free))
 	  (else free)))
 
   (make-transformer rules))
@@ -204,7 +225,7 @@
 (define (segment-pattern? pattern)
   (and (segment-template? pattern)
        (or (null? (cddr pattern))
-	   (syntax-error "segment matching not implemented" pattern))))
+	   (syntax-violation 'syntax-rules "segment matching not implemented" pattern))))
 
 (define (segment-template? pattern)
   (and (pair? pattern)
@@ -253,6 +274,8 @@
 	  ((pair? pattern)
 	   (meta-variables (car pattern)
 			   (meta-variables (cdr pattern) vars)))
+	  ((vector? pattern)
+	   (meta-variables (vector->list pattern) vars))
 	  (else vars)))
 
   (define (free-names template vars names)
@@ -269,6 +292,8 @@
 	   (free-names (car template)
 		       vars
 		       (free-names (cdr template) vars names)))
+	  ((vector? template)
+	   (free-names (vector->list template) vars names))
 	  (else names)))
 
   (do ((rules rules (cdr rules))

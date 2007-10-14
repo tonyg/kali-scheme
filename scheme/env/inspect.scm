@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; A dirty little inspector.
 ; Look and feel shamelessly plagiarized from the Lucid Lisp inspector.
@@ -104,7 +104,8 @@
 		     "Not a procedure or a continuation.")
 		 (command-output)))))
 	(else
-	 (error "bad selection command" name)))))
+	 (assertion-violation 'execute-selection-command
+			      "bad selection command" name)))))
 
 (define (coerce-to-template obj)
   (cond ((template? obj)

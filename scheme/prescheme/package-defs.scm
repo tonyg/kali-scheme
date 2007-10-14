@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 (define-structures ((prescheme prescheme-interface)
 		    (ps-memory ps-memory-interface)
@@ -16,13 +16,17 @@
 			       (read-char         scheme:read-char)
 			       (peek-char         scheme:peek-char)))
 	(subset i/o (byte-ready? read-byte peek-byte write-byte))
-	code-vectors bitwise ascii primitives signals enumerated
+	code-vectors bitwise ascii primitives enumerated
+	platform
+	signals ; #### replace by EXCEPTIONS at some point in the future
 	define-record-types
 	bigbit)   ; make sure that bignum bitwise operations are loaded
   (optimize auto-integrate)
   (begin
-    ; What we will get in C on many machines
-    (define pre-scheme-integer-size 32))
+    ;; #### ditch when switching to EXCEPTIONS
+    (define (assertion-violation who message . irritants)
+      (apply error message irritants))
+    )
   (files ps-defenum prescheme memory))
 
 (define-structure ps-record-types (export define-record-type)
@@ -46,6 +50,20 @@
     (define fl< <) (define fl> >)
     (define fl<= <=) (define fl>= >=)))
 
+(define-structure ps-unsigned-integers ps-unsigned-integers-interface
+  (open scheme)
+  (optimize auto-integrate)
+  (begin
+    (define un+ +) (define un- -) (define un* *)
+    (define unquotient quotient)
+    (define unremainder remainder)
+    (define un= =)
+    (define un< <) (define un> >)
+    (define un<= <=) (define un>= >=)
+    (define (unsigned->integer x) x)
+    (define (integer->unsigned x) x)
+    ))
+
 ;(define-structure byte-vectors byte-vector-interface
 ;  (open scheme code-vectors)
 ;  (optimize auto-integrate)
@@ -60,5 +78,5 @@
 ;          signed-byte-vector-ref32 signed-byte-vector-set32!))
 ;
 ;(define-structure xmemory ps-memory-interface
-;  (open scheme byte-vectors signals enumerated bitwise)
+;  (open scheme byte-vectors exceptions enumerated bitwise)
 ;  (files simple-memory))

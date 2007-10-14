@@ -1,11 +1,11 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Generic procedure package
 
 ; This is written in fairly portable Scheme.  It needs:
 ;   Scheme 48 low-level macros (explicit renaming), in one small place.
-;   (CALL-ERROR message proc arg ...)  - signal an error.
+;   (ASSERTION-VIOLATION who message arg ...)  - signal an error.
 ;   Record package and DEFINE-RECORD-TYPES macro.
 ;   An object :RECORD-TYPE which is the record type descriptor for
 ;     record type descriptors (record types are assumed to be records).
@@ -246,7 +246,7 @@
     (set-final-method!
          mtable
 	 (lambda (next-method . args)
-	   (apply call-error "invalid or unimplemented operation"
+	   (apply assertion-violation '<method> "invalid or unimplemented operation"
 		  id args)))
     mtable))
 

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 
@@ -21,7 +21,8 @@
 	      (ensure-loaded (thunk))
 	      (thunk)))
 	   (else
-	    (error "unrecognized interface identifier" interface-id)))))
+	    (assertion-violation
+	     'require "unrecognized interface identifier" interface-id)))))
     (package-open! (interaction-environment)
 		   (let loop ((names (cdr interface-id))
 			      (thunk start-thunk))

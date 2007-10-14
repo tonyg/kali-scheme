@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ;; Packages for BIBOP GC
 ;----------------------------------------------------------------
@@ -7,6 +7,7 @@
 (define-interface heap-bibop-interface
   (export s48-set-max-heap-size!
 	  s48-max-heap-size
+	  s48-min-heap-size
 
 	  s48-set-new-small-start-addr!
 	  s48-get-new-small-start-addr

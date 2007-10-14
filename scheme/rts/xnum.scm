@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file xnum.scm.
 
@@ -86,7 +86,8 @@
 				 (extended-number-set! n i ?arg))
 			  ...
 			  n)))
-		    (error "ill-formed DEFINE-EXTENDED-NUMBER-TYPE" '?type))))
+		    (assertion-violation 'define-extended-number-type
+					 "ill-formed DEFINE-EXTENDED-NUMBER-TYPE" '?type))))
 	    (define (?predicate x)
 	      (and (extended-number? x)
 		   (eq? (extended-number-type x) ?type)))
@@ -118,7 +119,7 @@
 		    (lambda (lose)
 		      (set-final-method! mtable
 					 (lambda (next-method . args)
-					   (apply lose args)))
+					   (apply lose (enum exception wrong-type-argument) args)))
 		      (lambda args
 			((perform) args))))))
 		      
@@ -209,7 +210,7 @@
 	0
 	(exact->inexact 0)))
    ((negative? x) (force pi))
-   ((exact? x)    (call-error "invalid argument to angle" angle x))
+   ((exact? x)    (assertion-violation 'angle "invalid argument to angle" x))
    (else x)))
 
 (define-method &floor ((n :integer)) n)

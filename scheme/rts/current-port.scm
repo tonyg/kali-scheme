@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Current input, output, error, and noise ports.
 
@@ -63,10 +63,14 @@
 (define (output-port-option port-option)
   (cond ((null? port-option) (current-output-port))
 	((null? (cdr port-option)) (car port-option))
-	(else (error "write-mumble: too many arguments" port-option))))
+	(else
+	 (assertion-violation 'write-mumble
+			      "too many arguments" port-option))))
 
 (define (input-port-option port-option)
   (cond ((null? port-option) (current-input-port))
 	((null? (cdr port-option)) (car port-option))
-	(else (error "read-mumble: too many arguments" port-option))))
+	(else
+	 (assertion-violation 'read-mumble
+			      "read-mumble: too many arguments" port-option))))
 

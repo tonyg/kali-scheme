@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 (define-interface vm-utilities-interface
   (export adjoin-bits low-bits high-bits unsigned-high-bits
@@ -139,21 +139,33 @@
 	  s48-extant?
 
 	  s48-gc-count
+          s48-gc-run-time
 	  ))
 
 (define external-opcodes-interface
-  (export ; called from outside
+  (export s48-setup-external-exception
+	  s48-resetup-external-exception))
+
+(define shared-bindings-interface
+  (export ;; called from outside	
           s48-define-exported-binding
 	  s48-get-imported-binding
-	  s48-setup-external-exception
-	  s48-resetup-external-exception
 
-	  ; called on startup
+	  ;; called on startup
 	  install-shared-bindings!+gc
 	  
-	  ; for writing images
+	  ;; for writing images
 	  s48-imported-bindings
 	  s48-exported-bindings
+
+	  ;; for external events
+	  get-imported-binding
+
+	  ;; for the primitives
+	  undefine-shared-binding!
+	  lookup-imported-binding lookup-exported-binding
+	  shared-binding-undefined? for-each-imported-binding
+	  shared-binding-size
 	  ))
 
 (define-interface external-gc-roots-interface
@@ -396,6 +408,11 @@
 	  cheap-time
 	  schedule-interrupt
 
+	  dequeue-external-event!
+
+	  get-os-string-encoding
+	  host-architecture
+
  	  external-bignum-make-cached-constants
  	  external-bignum-add
  	  external-bignum-subtract
@@ -414,11 +431,13 @@
  	  external-bignum-bitwise-ior
  	  external-bignum-bitwise-xor
  	  external-bignum-from-long
+	  external-bignum-from-unsigned-long
  	  external-bignum->long
  	  external-bignum-fits-in-word?
 
 	  s48-call-native-procedure
 	  s48-invoke-native-continuation
+          s48-jump-native
 	  s48-native-return
 
 	  get-proposal-lock!
@@ -427,8 +446,8 @@
 	  shared-ref
 	  (shared-set! :syntax)
 
-	  raise-argument-type-error
-	  raise-range-error
+	  argument-type-violation
+	  range-violation
 	  ))
 
 (define-interface event-interface
@@ -474,6 +493,13 @@
 	  s48-exported-bindings
 	  ))
 
+(define external-events-interface
+  (export initialize-external-events
+	  s48-external-event-uid s48-unregister-external-event-uid
+	  s48-external-event-ready?/unsafe s48-external-event-pending?/unsafe
+	  s48-note-external-event!/unsafe
+	  s48-dequeue-external-event!/unsafe))
+
 (define-interface bignum-low-interface
   (export initialize-bignums
 
@@ -511,7 +537,7 @@
 	  bignum-bitwise-and
 	  bignum-bitwise-ior
 	  bignum-bitwise-xor
-	  long->bignum
+	  long->bignum unsigned-long->bignum
 	  bignum-bits-to-size))
 
 (define-interface integer-arithmetic-interface
@@ -534,6 +560,7 @@
 	  integer-bitwise-ior
 	  integer-bitwise-xor
 	  enter-integer
+	  enter-unsigned-integer
 	  long-as-integer-size))
 
 (define-interface interpreter-internal-interface
@@ -615,6 +642,11 @@
 	  s48-add-os-signal
           s48-os-signal-pending
 	  s48-reset-interrupts!
+
+	  s48-external-event-uid s48-permanent-external-event-uid s48-unregister-external-event-uid
+	  s48-external-event-pending?/unsafe s48-external-event-ready?/unsafe
+	  s48-note-external-event!/unsafe
+	  s48-dequeue-external-event!/unsafe
 	  
           s48-define-exported-binding
 	  s48-get-imported-binding
@@ -643,6 +675,7 @@
 	  s48-allocate-bignum
  	  s48-shorten-bignum
  	  s48-enter-integer
+	  s48-enter-unsigned-integer
 
 	  ; for initializing additional processes
 	  s48-reset-external-roots!

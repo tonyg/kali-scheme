@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; fixnum-as-bignum-length - the maximum bignum digits required to hold a fixnum
 ; From struct.scm:
@@ -17,7 +17,7 @@
 (define (bignum-digits->size n)
   (bignum-size (cells->bytes (+ n 1))))
 
-(define bignum-digit-bits 30)		; BIGNUM_DIGIT_LENGTH in bignumint.h
+(define bignum-digit-bits s48-useful-bits-per-word) ; BIGNUM_DIGIT_LENGTH in bignumint.h
 
 (define (bignum-bits-to-digits n)
   (quotient (+ n (- bignum-digit-bits 1))

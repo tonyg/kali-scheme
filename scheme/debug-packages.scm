@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Handy things for debugging the run-time system, byte code compiler,
@@ -9,11 +9,12 @@
 
 (define (make-mini-command scheme)
   (define-structure mini-command (export command-processor)
-    (open scheme
-	  simple-signals simple-conditions handle
-	  display-conditions
+    (open scheme-level-2
+	  ascii byte-vectors os-strings
+	  exceptions conditions handle
 	  i/o)   ; current-error-port
-    (files (debug mini-command)))
+    (files (debug mini-command)
+	   (env dispcond)))
   mini-command)
 
 ; Miniature EVAL, for debugging runtime system sans package system.
@@ -25,7 +26,7 @@
 			     set-interaction-environment!
 			     set-scheme-report-environment!)))
   (open scheme-level-2
-	simple-signals)		;error
+	exceptions)		;error
   (files (debug mini-eval)))
 
 (define (make-scheme environments evaluation) ;cf. initial-packages.scm
@@ -65,7 +66,7 @@
   (open scheme-level-2
 	features		;contents
 	locations
-	simple-signals)		;error
+	exceptions)		;error
   (files (debug mini-package)))
 
 (define-structure mini-system (export start)
@@ -74,9 +75,7 @@
 	mini-for-reification
 	mini-packages
 	mini-environments		;set-interaction-environment!
-        usual-resumer
-	simple-conditions handle	;error? with-handler
-	simple-signals)			;error
+        usual-resumer)
   (files (debug mini-start)))
 
 (define (link-mini-system)
@@ -106,7 +105,7 @@
 	bindings
 	meta-types
 	mini-environments
-	simple-signals
+	exceptions
 	fluids)
   (files (debug run)))
 

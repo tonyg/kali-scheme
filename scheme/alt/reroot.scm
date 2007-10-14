@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; A state space is a tree with the state at the root.  Each node other
@@ -49,6 +49,6 @@
 ;
 ;(define (check)                         ;Algorithm invariants
 ;  (if (not (null? (cdr *here*)))
-;      (error "confusion #1"))
+;      (assertion-violation 'check "confusion #1"))
 ;  (if (car *here*)
-;      (error "confusion #2")))
+;      (assertion-violation 'check "confusion #2")))

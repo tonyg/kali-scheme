@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Inexact rational arithmetic using hacked-in floating point numbers.
 
@@ -51,7 +51,9 @@
 (define (string->float string)
   (let ((res (make-double)))
     (or (floperate (enum flop string->float) string res)
-	(error "not enough memory for STRING->FLOAT string buffer" string))))
+	(implementation-restriction-violation
+	 'string->float
+	 "not enough memory for STRING->FLOAT string buffer" string))))
 
 ; Call the VM to get a string
 
@@ -80,7 +82,7 @@
 	 ;; but x doesn't.
 	 (float/ (numerator x) (denominator x)))
 	(else
-	 (error "cannot coerce to a float" x))))
+	 (assertion-violation 'x->float "cannot coerce to a float" x))))
 
 ; Conversion to/from exact integer
 
@@ -146,7 +148,7 @@
 ; 	  ((null? (cdr maybe-b))
 ; 	   (float-atan2 a (car maybe-b)))
 ; 	  (else
-; 	   (error "too many arguments to ATAN" (cons a maybe-b)))))
+; 	   (apply assertion-violation 'atan "too many arguments to ATAN" a maybe-b))))
 ;   (define sqrt float-sqrt))
 
 (define (float-fraction-length x)
@@ -154,7 +156,7 @@
     (do ((x x (float* x two))
 	 (i 0 (+ i 1)))
 	((integral-floatnum? x) i)
-      (if (> i 3000) (error "I'm bored." x)))))
+      (if (> i 3000) (assertion-violation 'float-fraction-length "I'm bored." x)))))
 
 (define (float-denominator x)
   (expt (exact-integer->float 2) (float-fraction-length x)))
@@ -172,8 +174,9 @@
 
 (define (float->exact x)
   (define (lose)
-    (call-error "no exact representation"
-		inexact->exact x))
+    (implementation-restriction-violation 'inexact->exact
+					  "no exact representation"
+					  x))
 
   (cond
    ((integral-floatnum? x)
@@ -253,7 +256,7 @@
     (float-log x))
    ((= x (exact->inexact 0))
     (if (exact? x)
-	(call-error "log of exact 0 is undefined" log x)
+	(assertion-violation 'log "log of exact 0 is undefined" x)
 	(float-log x)))
    (else
     (next-method))))
@@ -274,6 +277,13 @@
     (float->string n))
    ((zero? n)
     (string-copy "#i0"))
+   ((not (= n n))
+    (string-copy "+nan.0"))
+   ;; awkward, so we don't get IEEE representations into the image
+   ((= n (/ 1 (exact->inexact 0)))
+    (string-copy "+inf.0"))
+   ((= n (/ -1 (exact->inexact 0)))
+    (string-copy "-inf.0"))
    (else
     (let* ((p (abs (inexact->exact (numerator n))))
 	   (q (inexact->exact (denominator n))))
@@ -297,8 +307,12 @@
 		 (digits 1 #f #f)
 		 (case first
 		   ((#\+ #\-)
-		    (and (char-numeric? second)
-			 (digits 2 #f #f)))
+		    (or (and (char-numeric? second)
+			     (digits 2 #f #f))
+			(string=? s "+nan.0")
+			(string=? s "-nan.0")
+			(string=? s "+inf.0")
+			(string=? s "-inf.0")))
 		   ((#\.)
 		    (and (char-numeric? second)
 			 (digits 2 #t #f)))

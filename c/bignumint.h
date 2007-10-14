@@ -52,13 +52,12 @@ typedef long bignum_length_type;
    `bignum_digit_type'; deallocation is the responsibility of the
    user (in Scheme, the garbage collector handles this). */
 #define BIGNUM_ALLOCATE_TAGGED(length_in_digits)		\
-    ((long *) s48_allocate_bignum((length_in_digits + 1) *	\
-                                  sizeof(bignum_digit_type)))
+    (s48_allocate_bignum((length_in_digits + 1) *		\
+                         sizeof(bignum_digit_type)))
 #define BIGNUM_ALLOCATE(length_in_digits)			\
-    (S48_ADDRESS_AFTER_HEADER(((char *)				\
-			       BIGNUM_ALLOCATE_TAGGED((length_in_digits))), \
+    (S48_ADDRESS_AFTER_HEADER((BIGNUM_ALLOCATE_TAGGED((length_in_digits))), \
 			       long))
-extern char *	s48_allocate_bignum(long size);
+extern s48_value	s48_allocate_bignum(long size);
 
 /* BIGNUM_TO_POINTER casts a bignum object to a digit array pointer. */
 #define BIGNUM_TO_POINTER(bignum) ((bignum_digit_type *) (bignum))

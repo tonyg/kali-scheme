@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ;; Packages for two-space copier GC
 ;----------------------------------------------------------------
@@ -17,10 +17,15 @@
 
 	  in-trouble?))
 
+; for the native-code compiler
+(define-interface heap-two-space-native-code-interface
+  (export s48-*hp* s48-*limit*))
+
 (define-structures ((heap heap-interface)
 		    (heap-gc-util heap-gc-util-interface)
 		    (heap-init heap-init-interface)
-		    (heap-two-space heap-two-space-interface))
+		    (heap-two-space heap-two-space-interface)
+		    (heap-two-space-native-code heap-two-space-native-code-interface))
   (open prescheme ps-receive vm-utilities vm-architecture memory data
 	ps-memory
 	debugging)
@@ -28,6 +33,7 @@
 
 (define-structure gc gc-interface
   (open prescheme ps-receive vm-utilities vm-architecture
+        external
 	memory data
 	heap heap-gc-util
 	heap-two-space

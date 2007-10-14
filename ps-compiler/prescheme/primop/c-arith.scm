@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 (define-local-syntax (define-c-arith-binop-generator id c-op)
   `(define-c-generator ,id #t
@@ -9,6 +9,11 @@
 (define-c-arith-binop-generator - "-")
 (define-c-arith-binop-generator * "*")
 (define-c-arith-binop-generator quotient  "/")
+
+(define-c-arith-binop-generator un+ "+")
+(define-c-arith-binop-generator un- "-")
+(define-c-arith-binop-generator un* "*")
+(define-c-arith-binop-generator unquotient  "/")
 
 (define-c-arith-binop-generator fl+ "+")
 (define-c-arith-binop-generator fl- "-")
@@ -24,6 +29,7 @@
     (format port ")")))
 
 (define-c-arith-binop-generator remainder "%")
+(define-c-arith-binop-generator unremainder "%")
 (define-c-arith-binop-generator bitwise-and "&")
 (define-c-arith-binop-generator bitwise-ior "|")
 (define-c-arith-binop-generator bitwise-xor "^")
@@ -53,7 +59,7 @@
 	 (c-variable (car (lambda-variables (call-arg call 0))) port)
 	 (format port ")"))
 	((and (literal-node? (call-arg call 1))
-	      (>= (literal-value (call-arg call 1)) prescheme-integer-size))
+	      (>= (literal-value (call-arg call 1)) pre-scheme-integer-size))
 	 (format port "0L"))
 	(else
 	 (if logical?
@@ -77,6 +83,8 @@
 (define-c-comp-binop-generator <      "<" )
 (define-c-comp-binop-generator fl=    "==")
 (define-c-comp-binop-generator fl<    "<" )
+(define-c-comp-binop-generator un=    "==")
+(define-c-comp-binop-generator un<    "<" )
 (define-c-comp-binop-generator char=? "==")
 (define-c-comp-binop-generator char<? "<" )
 
@@ -89,6 +97,18 @@
 (define-c-generator char->ascii #t
   (lambda (call port indent)
     (display "((unsigned char) " port)
+    (c-value (call-arg call 0) port)
+    (display ")" port)))
+
+(define-c-generator unsigned->integer #t
+  (lambda (call port indent)
+    (display "((long) " port)
+    (c-value (call-arg call 0) port)
+    (display ")" port)))
+
+(define-c-generator integer->unsigned #t
+  (lambda (call port indent)
+    (display "((unsigned long) " port)
     (c-value (call-arg call 0) port)
     (display ")" port)))
     

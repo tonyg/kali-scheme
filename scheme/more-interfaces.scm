@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Interfaces for packages that can get loaded after the initial.image
@@ -62,7 +62,7 @@
 	  proceed-with-command-level
 	  kill-paused-thread!
 
-	  reset-command-input?  ; condition predicate 
+	  reset-command-input-condition?
 
 	  terminate-command-processor!
 	  command-level
@@ -93,6 +93,9 @@
 	  inspector-menu-limit set-inspector-menu-limit!
 	  inspector-writing-depth set-inspector-writing-depth!
 	  inspector-writing-length set-inspector-writing-length!
+	  condition-writing-depth set-condition-writing-depth!
+	  condition-writing-length set-condition-writing-length!
+	  translations set-translations!
 
 	  maybe-menu
 	  set-menu!
@@ -212,10 +215,7 @@
 
 (define-interface display-conditions-interface
   (export display-condition		;command.scm
-	  &disclose-condition      	;env/disclosers.scm
-	  limited-write
-	  condition-display-depth set-condition-display-depth!
-	  condition-display-length set-condition-display-length!))
+	  limited-write))
 
 (define-interface debuginfo-interface
   (export read-debug-info
@@ -228,12 +228,12 @@
 	  error-form
 	  location-info
 	  location-name
+	  location-package-name
 	  template-debug-data
 	  template-id
 	  template-name
 	  template-names
-	  debug-data-names
-	  disclose-vm-condition))
+	  debug-data-names))
 
 (define-interface package-mutation-interface
   (export package-system-sentinel	;env/command.scm
@@ -318,6 +318,7 @@
 	  (general-category :syntax)
 	  general-category?
 	  general-category-id
+	  general-category-symbol
 	  general-category-primary-category
 
 	  char-general-category
@@ -328,58 +329,6 @@
 	  string-upcase string-downcase
 	  string-foldcase
 	  string-titlecase))
-
-(define-interface conditions-interface
-  (export make-condition-type
-	  condition-type?
-	  make-condition
-	  condition?
-	  condition-has-type?
-	  condition-ref
-	  make-compound-condition
-	  extract-condition
-
-	  (define-condition-type :syntax)
-	  (condition :syntax)
-
-	  &condition
-	  &message message-condition? condition-message
-	  &serious serious-condition?
-	  &error error?
-	  &bug bug?
-	  &irritants irritants?
-	  condition-irritants
-	  &call-error call-error?
-	  call-error-proc call-error-args
-	  &vm-exception vm-exception?
-	  vm-exception-opcode vm-exception-reason vm-exception-arguments
-	  &warning warning?
-	  &note note?
-	  &syntax-error syntax-error?
-	  &interrupt interrupt?
-	  interrupt-type
-	  &simple-condition simple-condition?
-	  simple-condition-type simple-condition-stuff))
-
-(define-interface i/o-conditions-interface
-  (export &i/o-error i/o-error?
-	  &i/o-port-error i/o-port-error?
-	  i/o-error-port
-	  &i/o-read-error i/o-read-error?
-	  &i/o-write-error i/o-write-error?
-	  &i/o-closed-error i/o-closed-error?
-	  &i/o-filename-error i/o-filename-error?
-	  i/o-error-filename
-	  &i/o-malformed-filename-error i/o-malformed-filename-error?
-	  &i/o-file-protection-error i/o-file-protection-error?
-	  &i/o-file-is-read-only-error i/o-file-is-read-only-error?
-	  &i/o-file-already-exists-error i/o-file-already-exists-error?
-	  &i/o-no-such-file-error i/o-no-such-file-error?
-	  &read-error read-error?
-	  read-error-line read-error-column read-error-position read-error-span
-
-	  &primitive-i/o-error primitive-i/o-error?
-	  i/o-error-status i/o-error-operation i/o-error-arguments))
 
 (define-interface signals-internal-interface
   (export simple-condition->condition
@@ -393,38 +342,8 @@
   (export (define-record-type :syntax)
 	  define-record-discloser))
 
-; Character sets
-; --------------------
-
-(define-interface encodings-interface
-  (export char-encoding-length
-	  string-encoding-length
-	  encode-char
-	  encode-string
-	  string->bytes-n
-	  string->bytes
-	  bytes-string-size
-	  decode-char
-	  decode-string
-	  bytes->string bytes->string-n
-	  
-	  char-encoding-length/utf-8
-	  string-encoding-length/utf-8
-	  encode-char/utf-8
-	  encode-string/utf-8
-	  string->utf-8-n
-	  string->utf-8
-	  bytes-string-size/utf-8
-	  decode-char/utf-8
-	  decode-string/utf-8
-	  utf-8->string utf-8->string-n
-
-	  (encoding-status :syntax)
-	  encoding-status?
-
-	  (decoding-status :syntax)
-	  decoding-status?
-	  &decoding-error decoding-error? decoding-error-encoding-name))
+; Unicode
+; -------
 
 (define-interface text-codec-utils-interface
   (export guess-port-text-codec-according-to-bom
@@ -457,7 +376,7 @@
 	  close-shared-object
 	  shared-object?
 	  shared-object-name
-	  shared-object-address
+	  shared-object-address shared-object-address-or-false
 	  shared-object-address?
 	  shared-object-address-value
 	  call-shared-object-address))
@@ -476,8 +395,8 @@
 	  $restore-index))
 
 (define-interface extended-ports-interface
-  (export byte-source->input-port
-	  byte-sink->output-port
+  (export byte-source->input-port char-source->input-port
+	  byte-sink->output-port char-sink->output-port
 	  make-tracking-input-port make-tracking-output-port
 	  make-byte-vector-input-port make-string-input-port
 	  make-byte-vector-output-port make-string-output-port
@@ -525,6 +444,10 @@
 	  inversion-list-cursor inversion-list-cursor-at-end?
 	  inversion-list-cursor-next inversion-list-cursor-ref))
 
+(define-interface constant-tables-interface
+  (export make-constant-table
+	  constant-table-lookup))
+
 (define-interface mask-types-interface
   (export make-mask-type
 	  mask-type?
@@ -550,8 +473,10 @@
 	  enum-set->list
 	  enum-set-member?
 	  enum-set=?
+	  enum-set-subset?
 	  enum-set-union
 	  enum-set-intersection
+	  enum-set-difference
 	  enum-set-negation))
 
 (define-interface enum-sets-internal-interface
@@ -559,7 +484,16 @@
 	  enum-set?
 	  enum-set-type
 	  enum-set->integer
-	  integer->enum-set))
+	  integer->enum-set
+
+	  ;; for r6rs-enums
+	  make-enum-set-type
+	  enum-set-type-values
+	  enum-set-type-member?
+	  elements->enum-set
+	  (define-enum-set-maker :syntax)
+	  enum-set-type-element-index
+	  ))
 
 (define-interface search-trees-interface
   (export make-search-tree
@@ -616,6 +550,24 @@
   (export (define-record-type :syntax)
 	  define-record-discloser))
 
+(define-interface parse-bytecode-interface
+  (export byte-code?
+          parse-template
+          parse-template-code
+          parse-instruction
+          parse-protocol
+          with-template
+          make-attribution
+          make-opcode-table
+          opcode-table-set! opcode-table-ref
+          protocol-protocol protocol-nargs n-ary-protocol? 
+          protocol-cwv-tailcall? call-with-values-protocol-target
+          env-data? env-data-total-count env-data-frame-offsets
+          env-data-maybe-template-index env-data-closure-offsets 
+          env-data-env-offsets
+          cont-data? cont-data-length cont-data-mask-bytes cont-data-live-offsets cont-data-pc
+          cont-data-template cont-data-gc-mask-size cont-data-depth))
+
 (define-interface reinitializers-interface
   (export (define-reinitializer :syntax)))
 
@@ -625,6 +577,7 @@
 	  obtain-lock
 	  maybe-obtain-lock
 	  release-lock
+	  with-lock
 	  lock-owner))		;really should be internal
 
 (define-interface value-pipes-interface
@@ -644,3 +597,16 @@
 	  placeholder-value
 	  placeholder-set!))
 
+(define-interface test-suites-interface 
+  (export ((define-test-suite define-test-case define-test-cases) :syntax)
+	  ((check check-exception) :syntax)
+	  run-test-suite
+	  =within
+	  zap-test-suite!))
+
+; Backwards compatibility
+
+(define-interface signals-interface
+  (export error warn syntax-error call-error note
+	  signal signal-condition
+	  make-condition))

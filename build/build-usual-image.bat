@@ -3,12 +3,14 @@
 set srcdir=%1
 set srcdir_cooked=%~f1
 set srcdir_cooked=%srcdir_cooked:\=\\%
-set lib=%~f2
+set share=%~f2
+set share=%share:\=\\%
+set lib=%~f3
 set lib=%lib:\=\\%
-set image=%~3
-set vm=%4
-set initial=%5
-set builddate=%~t5
+set image=%~4
+set vm=%5
+set initial=%6
+set builddate=%~t7
 
 echo ,load "%srcdir_cooked%scheme/env/init-defpackage.scm" > %srcdir%\build\build-usual-image.input
 echo ((*structure-ref filenames 'set-translation!) >> %srcdir%\build\build-usual-image.input
@@ -20,6 +22,8 @@ echo ,load =scheme48/env-packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/sort/interfaces.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/sort/packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/more-packages.scm >> %srcdir%\build\build-usual-image.input
+echo ,load =scheme48/r6rs/packages.scm >> %srcdir%\build\build-usual-image.input
+echo ,load =scheme48/net/packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/posix/packages.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/cml/interfaces.scm >> %srcdir%\build\build-usual-image.input
 echo ,load =scheme48/cml/packages.scm >> %srcdir%\build\build-usual-image.input
@@ -28,12 +32,16 @@ echo (ensure-loaded command-processor) >> %srcdir%\build\build-usual-image.input
 echo (ensure-loaded usual-commands) >> %srcdir%\build\build-usual-image.input
 echo ,go ((*structure-ref command 'command-processor) >> %srcdir%\build\build-usual-image.input
 echo      (structure-package usual-commands) >> %srcdir%\build\build-usual-image.input
-echo      (list "batch")) >> %srcdir%\build\build-usual-image.input
+echo      (list ((*structure-ref os-strings 'string-^>os-string) "batch"))) >> %srcdir%\build\build-usual-image.input
 echo (ensure-loaded usual-features) >> %srcdir%\build\build-usual-image.input
 echo ,structure more-structures more-structures-interface >> %srcdir%\build\build-usual-image.input
 echo ,in debuginfo (read-debug-info "%srcdir_cooked%build/initial.debug") >> %srcdir%\build\build-usual-image.input
 echo ,keep maps source files >> %srcdir%\build\build-usual-image.input
-echo ,translate =scheme48/ "%lib%/" >> %srcdir%\build\build-usual-image.input
+echo ,new-package >> %srcdir%\build\build-usual-image.input
+echo ,open scheme filenames >> %srcdir%\build\build-usual-image.input
+echo (set-global-translation! "=scheme48/" "%share%/") >> %srcdir%\build\build-usual-image.input
+echo (set-global-translation! "=scheme48external/" "%lib%/") >> %srcdir%\build\build-usual-image.input
+echo ,user >> %srcdir%\build\build-usual-image.input
 echo ,build ((*structure-ref package-commands-internal >> %srcdir%\build\build-usual-image.input
 echo                         'new-command-processor) >> %srcdir%\build\build-usual-image.input
 echo         "(made by %USERNAME% on %builddate%)" >> %srcdir%\build\build-usual-image.input

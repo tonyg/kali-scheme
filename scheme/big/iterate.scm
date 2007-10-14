@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This builds the macro call to make the folder and constructs the arguments
 ; for the resulting fold procedure.  The first three clauses add a loop variable
@@ -225,7 +225,8 @@
      (folder-loop (more ...)
 		  (type step (vars ...) fold-vars value-var
 			loop-body
-			(begin (error "synchronized sequence ended early")
+			(begin (assertion-violation 'folder
+						    "synchronized sequence ended early")
 			       (values)))
 		  (vars ... . args)
 		  fold-var-inits end-tests state-vars
@@ -240,7 +241,8 @@
 		  (type step (vars ...) fold-vars value-var
 			loop-body (if (and . end-tests)
 				      (final . state-vars)
-				      (begin (error "synchronized sequence ended early")
+				      (begin (assertion-violation 'folder
+								  "synchronized sequence ended early")
 					     (values))))
 		  (vars ... . args)
 		  fold-var-inits end-stests state-vars

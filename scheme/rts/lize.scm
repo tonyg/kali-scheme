@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Simplest rational within an interval.  Copied from IEEE P1178/D4 nimpl.tex.
@@ -23,7 +23,9 @@
              (+ 1 fx)))))
   ;; Do some juggling to satisfy preconditions of simplest-rational-internal.
   (cond ((not (< x y))
-         (if (rational? x) x (error "(rationalize <irrational> 0)" x)))
+         (if (rational? x)
+	     x 
+	     (assertion-violation 'rationalize "(rationalize <irrational> 0)" x)))
         ((positive? x)
          (simplest-rational-internal x y))
         ((negative? y)

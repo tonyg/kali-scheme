@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Some interfaces.  Order of presentation is a bit random.
@@ -102,6 +102,7 @@
 	  set-interrupt-handlers!	;interrupts
 	  set-session-data!		;channels
 	  string-hash
+	  system-parameter
 	  template-length
 	  template-ref
 	  template-set!
@@ -196,28 +197,6 @@
 	  channel-abort
 
 	  open-channels-list))
-
-(define-interface default-string-encodings-interface
-  (export string-encoding-length encode-string
-	  string-decoding-length decode-string
-
-	  string->byte-string
-	  byte-vector->string
-	  string->byte-vector
-
-	  set-string-encoding-procedures!))
-
-(define-interface string/bytes-types-interface
-  (export (define-string/bytes-type :syntax)))
-
-(define-interface file-names-interface
-  (export file-name?
-	  thing->file-name
-	  string->file-name byte-vector->file-name
-	  file-name->string
-	  file-name->byte-vector
-	  file-name->byte-string
-	  thing->file-name-byte-string))
 
 (define-interface ports-interface
   (export port?
@@ -410,11 +389,12 @@
 	  last
 	  posq
 	  posv
-	  position
+	  posqual
 	  reduce
 	  sublist
 	  insert
 	  unspecific
+	  symbol-append
 
 	  (mvlet :syntax)))
 
@@ -522,35 +502,82 @@
 
 (define :enumeration :syntax)
 
-(define-interface signals-interface
-  (export error warn syntax-error call-error note
-	  signal signal-condition
-	  make-condition))
+(define-interface low-exceptions-interface
+  (export ((error
+	    assertion-violation
+	    implementation-restriction-violation
+	    warning note
+	    syntax-violation)
+	   (proc (:value :string &rest :value) :values))
+
+	  initialize-low-exception-procedures!))
 
 (define-interface handle-interface
   (export ignore-errors report-errors-as-warnings with-handler))
 
-(define-interface simple-conditions-interface
-  (export define-condition-type
+(define-interface conditions-interface
+  (export condition
+	  condition?
+	  simple-conditions
 	  condition-predicate
-	  decode-condition condition-stuff condition-type
-	  define-condition-decoder
-	  error? warning? note? syntax-error? call-error? read-error?
-	  interrupt?
+	  condition-accessor
+	  define-condition-type
+	  &condition
+	  &message
+	  make-message-condition
+	  message-condition?
+	  condition-message
+	  &warning
+	  make-warning
+	  warning?
+	  &serious
+	  make-serious-condition
+	  serious-condition?
+	  &error
+	  make-error
+	  error?
+	  &violation
+	  make-violation
+	  violation?
+	  &non-continuable
+	  make-noncontinuable-violation
+	  non-continuable-violation?
+	  &implementation-restriction
+	  make-implementation-restriction-violation
+	  implementation-restriction-violation?
+	  &lexical
+	  make-lexical-violation
+	  lexical-violation?
+	  &syntax
+	  make-syntax-violation
+	  syntax-violation?
+	  &undefined
+	  make-undefined-violation
+	  undefined-violation?
+	  &assertion
+	  make-assertion-violation
+	  assertion-violation?
+	  &irritants
+	  make-irritants-condition
+	  irritants-condition?
+	  condition-irritants
+	  &who
+	  make-who-condition
+	  who-condition?
+	  condition-who
 
-	  ;; Do these belong here?... not really.
-	  vm-exception-arguments
-	  vm-exception-reason
-	  vm-exception-opcode
-	  vm-exception?
-	  make-vm-exception
-
-	  i/o-error?
-	  i/o-error-status
-	  i/o-error-message
-	  i/o-error-operation
-	  i/o-error-arguments
-	  make-i/o-error))
+	  &vm-exception make-vm-exception vm-exception?
+	  vm-exception-opcode vm-exception-reason
+	  &i/o-error make-i/o-error i/o-error?
+	  &i/o-port-error make-i/o-port-error i/o-port-error? i/o-error-port
+	  &decoding-error make-decoding-error decoding-error?
+	  decoding-error-encoding-name
+	  decoding-error-bytes decoding-error-start
+	  &note make-note note?
+	  &interrupt make-interrupt-condition interrupt-condition?
+	  interrupt-source
+	  decode-condition
+	  ))
 
 (define-interface wind-interface
   (export call-with-current-continuation
@@ -594,6 +621,39 @@
 	  utf-8-codec
 	  utf-16le-codec utf-16be-codec
 	  utf-32le-codec utf-32be-codec))
+
+(define-interface encodings-interface
+  (export char-encoding-length
+	  string-encoding-length
+	  encode-char
+	  encode-string
+	  string->bytes-n
+	  string->bytes
+	  bytes-string-size
+	  decode-char
+	  decode-string
+	  bytes->string bytes->string-n
+	  
+	  char-encoding-length/utf-8
+	  string-encoding-length/utf-8
+	  encode-char/utf-8
+	  encode-string/utf-8
+	  string->utf-8-n
+	  string->utf-8
+	  bytes-string-size/utf-8
+	  decode-char/utf-8
+	  decode-string/utf-8
+	  utf-8->string utf-8->string-n
+
+	  (encoding-status :enumeration)
+	  (decoding-status :enumeration)))
+
+(define-interface os-strings-interface
+  (export os-string?
+	  string->os-string byte-vector->os-string x->os-string
+	  os-string->string os-string->byte-vector
+	  call-with-os-string-text-codec
+	  current-os-string-text-codec))
 
 (define-interface i/o-internal-interface
   (export input-port-option		;read.scm
@@ -704,6 +764,7 @@
 	  interrupt-thread
 	  kill-thread!
 	  terminate-thread!
+	  make-deadlock-condition deadlock-condition?
 
 	  thread-queue-empty?
 	  maybe-dequeue-thread!
@@ -721,7 +782,7 @@
 	  round-robin-event-handler
 
 	  make-counter            ; for thread counts
-	  counter-value
+	  counter-value set-counter!
           increment-counter!
           decrement-counter!))
 
@@ -731,19 +792,25 @@
 	  delete-from-queue! on-queue?))
 
 (define-interface exceptions-interface
-  (export with-exception-handler
-	  raise
-	  (guard :syntax)))
+  (compound-interface (export with-exception-handler
+			      raise
+			      (guard :syntax)
+			      syntax-violation)
+		      low-exceptions-interface))
 
 (define-interface exceptions-internal-interface
   (export initialize-exceptions!
 	  really-signal-condition))
 
+(define-interface signal-conditions-interface
+  (export signal-condition))
+
 (define-interface vm-exceptions-interface
   (export define-vm-exception-handler
 	  initialize-vm-exceptions!
 	  extend-opcode!
-	  signal-vm-exception))
+	  signal-vm-exception
+	  vm-exception-reason->message))
 
 (define-interface interrupts-interface
   (export initialize-interrupts!	;init.scm
@@ -751,7 +818,8 @@
 	  no-interrupts
 	  ;reset-timer-interrupts!
 	  set-interrupt-handler!
-	  interrupt?
+	  get-interrupt-handler
+	  interrupt-condition?
 	  ;set-timer-interrupt!
 	  schedule-interrupt
 	  set-enabled-interrupts!	;command.scm
@@ -763,6 +831,11 @@
 	  call-after-gc!
 	  call-before-heap-overflow!
 	  (interrupt :syntax)))
+
+(define-interface external-events-interface
+  (export initialize-external-events!	;init.scm
+	  waiting-for-external-events?  ;root-scheduler.scm
+	  wait-for-external-event))
 
 (define-interface writing-interface
   (export write
@@ -855,7 +928,9 @@
 	  file-name-directory
 	  file-name-nondirectory
 	  translate
+	  set-global-translation!
 	  set-translation!
+	  make-translations with-translations
 	  translations))
 
 ;; kali - begin
@@ -912,7 +987,7 @@
 	  table-walk
 	  make-table-immutable!
 
-	  string-hash
+	  string-hash symbol-hash
 	  default-hash-function))
 
 ;----------------
@@ -1003,11 +1078,11 @@
 
 	  make-name-table
 
+	  make-qualified
 	  qualified?
 	  qualified-parent-name
 	  qualified-symbol
 	  qualified-uid
-	  name->qualified
 
           desyntaxify
 	  ))
@@ -1064,6 +1139,7 @@
 	  scan-forms
 	  expand-scanned-form
 	  syntax?
+	  static-value
 	  make-compiler-env
 	  bind-source-file-name))
 
@@ -1082,6 +1158,8 @@
 	  force-node
 	  schemify
 
+	  name->qualified
+
 	  get-operator
 	  make-operator-table
 	  operator-name
@@ -1093,6 +1171,32 @@
 	  operator-uid
 	  operator?
 	  operators-table		;config.scm comp-package.scm
+
+	  lambda-node?
+	  flat-lambda-node?
+	  name-node?
+	  call-node?
+	  literal-node?
+	  quote-node?
+	  define-node?
+	  loophole-node?
+
+	  operator/flat-lambda
+	  operator/lambda
+	  operator/set!
+	  operator/call
+	  operator/begin
+	  operator/name
+	  operator/letrec
+	  operator/pure-letrec
+	  operator/literal
+	  operator/quote
+	  operator/unassigned
+	  operator/unspecific
+	  operator/define
+	  operator/define-syntax
+	  operator/primitive-procedure
+	  operator/structure-ref
 	  ))
 
 ;----------------
@@ -1148,6 +1252,7 @@
 	  template-offset
 	  environment-offset
 	  depth-check!
+	  index->offset
 	  literal->index
 	  binding->index))
 
@@ -1231,8 +1336,7 @@
 	  make-new-location		;ctop.scm
 	  structure-package
 	  note-structure-name!
-	  (:package :type)
-	  (:structure :type)))		;for (define-method ...)'s
+	  (:package :type)))
 
 (define-interface packages-internal-interface
   (export package-loaded?		;env/load-package.scm
@@ -1243,6 +1347,7 @@
 	  location-info-table		;debuginfo, disclosers
 	  package-definition
 	  package-unstable?		;env/pacman.scm
+	  environment-stable?           ;comp/schemify.scm
 	  package-integrate?		;env/debug.scm
 	  package-add-static!		;opt/analyze.scm
 	  package-refine-type!		;opt/usage.scm

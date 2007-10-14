@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Miniature package system.  This links mini-eval up to the output of
@@ -8,7 +8,7 @@
   (lambda (name)
     (let loop ((i (- (vector-length names) 1)))
       (if (< i 0)
-	  (error "unbound" name)
+	  (assertion-violation 'package "unbound" name)
 	  (if (eq? name (vector-ref names i))
 	      (contents (get-location (vector-ref locs i)))
 	      (loop (- i 1)))))))
@@ -26,7 +26,7 @@
 	  (cdr probe)
 	  (let loop ((opens opens))
 	    (if (null? opens)
-		(error "unbound" name)
+		(assertion-violation 'make-simple-package "unbound" name)
 		(if (memq name (structure-interface (car opens)))
 		    ((structure-package (car opens)) name)
 		    (loop (cdr opens)))))))))

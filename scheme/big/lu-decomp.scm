@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; LU Decomposition (a rewriting of a Pascal program from `Numerical Recipes
 ; in Pascal'; look there for a detailed description of what is going on).
@@ -20,7 +20,7 @@
 	   (big 0.0 (max big (abs (array-ref a i j)))))
 	  ((>= j n)
 	   (if (= big 0.0)
-	       (error "lu-decomposition matrix has a zero row" a i))
+	       (assertion-violation 'lu-decomposition "matrix has a zero row" a i))
 	   (vector-set! vv i (/ big)))))
 
     (do ((j 0 (+ j 1)))

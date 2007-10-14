@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #ifndef __S48_GC_CONFIG
@@ -32,7 +32,7 @@
 
 
 
-/* BIBOP *
+/* BIBOP */
 
 /* 1. Areas */
 

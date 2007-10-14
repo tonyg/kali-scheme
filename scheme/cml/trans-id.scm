@@ -23,11 +23,14 @@
 
 (define (trans-id-set-value! trans-id value)
   (cond
-   ((not value) (error "trans-id value can't be #f" trans-id value))
+   ((not value)
+    (assertion-violation 'trans-id-set-value! "trans-id value can't be #f"
+			 trans-id value))
    ((trans-id-value trans-id)
-    (error "trans-id is already assigned"))
+    (assertion-violation 'trans-id-set-value! "trans-id is already assigned"
+			 trans-id value))
    (else
-    (set-trans-id-value! trans-id value))))
+    (set-trans-id-value! trans-id value)) ))
 
 (define (trans-id-cancelled? trans-id)
   (and (trans-id-value trans-id) #t))

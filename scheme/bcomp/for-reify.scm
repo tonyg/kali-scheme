@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Things used by the expression returned by REIFY-STRUCTURES.
 ; Cf. link/reify.scm.
@@ -50,6 +50,7 @@
 			 ((structure? static)
 			  structure-type)
 			 (else
-			  (error "unknown kind of static value" static)))
+			  (assertion-violation 'package-define-static!
+					       "unknown kind of static value" static)))
 		   #f
 		   static))

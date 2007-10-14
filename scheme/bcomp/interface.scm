@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Interfaces
 ;
@@ -159,13 +159,12 @@
 	         (process-commands commands)))
 	(lambda (interface)
 	  (let ((lookup (make-lookup alist hidden default interface))
-		(walker (if default
-			    (make-default-walker alist hidden default interface)
-			    (make-alist-walker alist interface))))
+		(walker (make-interface-walker alist hidden default interface)))
 	    (let ((int (make-interface lookup walker #f)))
 	      (note-reference-to-interface! interface int)
 	      int))))
-      (error "badly-formed structure modifiers" commands)))
+      (assertion-violation 'make-modified-interface-maker
+			   "badly-formed structure modifiers" commands)))
 
 ; We process COMMANDS and compute three values:
 ;   - an alist mapping visible names to their real names in the package
@@ -282,7 +281,7 @@
 (define (process-alias args alist hidden default)
   (values (append (map (lambda (spec)
 			 (cons (cadr spec)
-			       (car spec)))
+			       (interface-lookup (car spec) alist hidden default)))
 		       args)
 		  alist)
 	  hidden
@@ -293,7 +292,7 @@
 (define (process-rename args alist hidden default)
   (values (append (map (lambda (spec)
 			 (cons (cadr spec)
-			       (car spec)))
+			       (interface-lookup (car spec) alist hidden default)))
 		       args)
 		  alist)
 	  (append (map car args) hidden)
@@ -357,54 +356,40 @@
 
 ;----------------
 ; Return a procedure for walking over the declarations in a modified interface.
-; There are two versions, depending on whether names are passed on by default.
+; There are two helpers, depending on whether names are passed on by default.
+
+(define (make-interface-walker alist hidden default interface)
+  (lambda (proc)
+    (if default
+	(walk-default proc alist hidden default interface))
+    (walk-alist proc alist hidden interface)))
+
 ; If there is a default we need to walk over the declarations in the base
 ; interface and pass on the ones that are not hidden.
 
-(define (make-default-walker alist hidden default interface)
-  (lambda (proc)
-    (for-each-declaration
-      (lambda (name base-name type)
-	(if (not (memq name hidden))
-	    (proc (cond ((cdr-assq name alist)
-			 => car)
-			((symbol? default)
-			 (symbol-append default name))
-			(else
-			 name))
-		  base-name
-		  type)))
-      interface)))
-
-; Same as ASSQ except we look for THING as the cdr instead of the car.
-
-(define (cdr-assq thing alist)
-  (let loop ((alist alist))
-    (cond ((null? alist)
-	   #f)
-	  ((eq? thing (cdar alist))
-	   (car alist))
-	  (else
-	   (loop (cdr alist))))))
-
+(define (walk-default proc alist hidden default interface)
+  (for-each-declaration
+   (lambda (name base-name type)
+     (let ((new-name
+	    (cond ((symbol? default)
+		   (symbol-append default name))
+		  (else name))))
+       (if (not (memq new-name hidden))
+	   (proc new-name
+		 base-name
+		 type))))
+   interface))
+	 
 ; With no default, all of the names are in the ALIST and we do not need to
 ; walk over the declarations in the base interface.
 
-(define (make-alist-walker alist interface)
-  (lambda (proc)
-    (for-each (lambda (pair)
-		(mvlet (((base-name type)
-			  (interface-ref interface (cdr pair))))
-		  (if base-name
-		      (proc (car pair)
+(define (walk-alist proc alist hidden interface)
+  (for-each (lambda (pair)
+	      (mvlet (((base-name type)
+		       (interface-ref interface (cdr pair))))
+		(let ((new-name (car pair)))
+		  (if (and base-name (not (memq new-name hidden)))
+		      (proc new-name
 			    base-name
-			    type))))
-	      alist)))
-	 
-;----------------
-; Random utility.
-			  
-(define (symbol-append a b)
-  (string->symbol (string-append (symbol->string a)
-				 (symbol->string b))))
-
+			    type)))))
+	    alist))

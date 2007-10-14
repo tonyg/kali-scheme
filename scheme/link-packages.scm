@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Static linker.  Doesn't work very well this way (debug info is
@@ -8,6 +8,7 @@
 (define-structure linker linker-interface
   (open scheme-level-2
 	compiler write-images
+	platform
 	debuginfo
 	segments		;with-fresh-compiler-state
 	packages
@@ -20,7 +21,7 @@
 	filenames
 	debug-data		;with-fresh-compiler-state
 	locations
-	tables fluids simple-signals util)
+	tables fluids low-exceptions util)
   (files (link link)))
 
 (define-structure reification (export reify-structures)
@@ -33,7 +34,7 @@
 	locations
 	primops
 	tables records
-	simple-signals		;error
+	low-exceptions		;error
 	features		;force-output
 	util			;filter
 	inline)			;name->extrinsic
@@ -81,6 +82,6 @@
 	loadc
 	flatloading
 	interfaces
-	simple-signals)    ;warn
+	low-exceptions)    ;warning
   ;; (files (alt init-defpackage.scm))  -- or (env ...), depending
   )

@@ -2,7 +2,6 @@
 ; Does not include hacks to the reader (intentionally).
 
 (define (sub1 i) (- i 1))
-(define (id x) x)
 
 (define-syntax define-vector-types
   (syntax-rules ()
@@ -66,45 +65,46 @@
   (1 :s8vector 
      s8vector? make-s8vector s8vector s8vector-length
      s8vector-ref s8vector-set! s8vector->list list->s8vector
-     blob-s8-ref blob-s8-set! id id)
-  
-  (1 :u8vector
-     u8vector? make-u8vector u8vector u8vector-length
-     u8vector-ref u8vector-set! u8vector->list list->u8vector
-     blob-u8-ref blob-u8-set! id id)
+     blob-s8-ref blob-s8-set! no-op no-op)
+
+;; u8vector is provided by SRFI 66.
+;;(1 :u8vector
+;;   u8vector? make-u8vector u8vector u8vector-length
+;;   u8vector-ref u8vector-set! u8vector->list list->u8vector
+;;   blob-u8-ref blob-u8-set! no-op no-op)
  
   (2 :s16vector
      s16vector? make-s16vector s16vector s16vector-length
      s16vector-ref s16vector-set! s16vector->list list->s16vector
-     blob-s16-native-ref blob-s16-native-set! id id)
+     blob-s16-native-ref blob-s16-native-set! no-op no-op)
   
   (2 :u16vector
      u16vector? make-u16vector u16vector u16vector-length
      u16vector-ref u16vector-set! u16vector->list list->u16vector
-     blob-u16-native-ref blob-u16-native-set! id id)
+     blob-u16-native-ref blob-u16-native-set! no-op no-op)
 
   (4 :s32vector
      s32vector? make-s32vector s32vector s32vector-length
      s32vector-ref s32vector-set! s32vector->list list->s32vector
-     blob-s32-native-ref blob-s32-native-set! id id)
+     blob-s32-native-ref blob-s32-native-set! no-op no-op)
   
   (4 :u32vector
      u32vector? make-u32vector u32vector u32vector-length
      u32vector-ref u32vector-set! u32vector->list list->u32vector
-     blob-u32-native-ref blob-u32-native-set! id id)  
+     blob-u32-native-ref blob-u32-native-set! no-op no-op)  
   
   (8 :s64vector
      s64vector? make-s64vector s64vector s64vector-length
      s64vector-ref s64vector-set! s64vector->list list->s64vector
-     blob-s64-native-ref blob-s64-native-set! id id)  
+     blob-s64-native-ref blob-s64-native-set! no-op no-op)  
   
   (8 :u64vector
      u64vector? make-u64vector u64vector u64vector-length u64vector-ref
      u64vector-set! u64vector->list list->u64vector
-     blob-u64-native-ref blob-u64-native-set! id id)
+     blob-u64-native-ref blob-u64-native-set! no-op no-op)
 
   (4 :f32vector
-     f32vector? make-u32vector f32vector f32vector-length f32vector-ref
+     f32vector? make-f32vector f32vector f32vector-length f32vector-ref
      f32vector-set! f32vector->list list->f32vector
      blob-u32-native-ref blob-u32-native-set! fl->u32 u32->fl)
 
@@ -112,6 +112,13 @@
      f64vector? make-f64vector f64vector f64vector-length f64vector-ref
      f64vector-set! f64vector->list list->f64vector
      blob-u64-native-ref blob-u64-native-set! fl->u64 u64->fl))
+
+(define make-u8vector
+  (case-lambda
+   ((n)
+    (srfi-66:make-u8vector n 0))
+   ((n x)
+    (srfi-66:make-u8vector n x))))
 
 
 ;; --
@@ -132,9 +139,10 @@
   
   (define (mantissa expn b2 b3 b4)
     (case expn   ; recognize special literal exponents
-      ((255) #f)
+      ((255) #f) ; won't handle NaN and +/- Inf
       ((0)       ; denormalized
-       (exact->inexact (* (expt 2 (- 1 (+ 127 23))) (combine b2 b3 b4))))
+       (exact->inexact (* (expt 2 (- 1 (+ 127 23)))
+                          (combine b2 b3 b4))))
       (else
        (exact->inexact
         (* (expt 2 (- expn (+ 127 23)))
@@ -147,15 +155,15 @@
   
   (define (sign b1 b2 b3 b4)
     (if (> b1 127)  ; 1st bit of b1 is sign
-        (cond ((exponent (- b1 128) b2 b3 b4) => -) (else #f))
+        (cond ((exponent (- b1 128) b2 b3 b4) => -)
+              (else #f))
         (exponent b1 b2 b3 b4)))
   
   (let* ((b  (uint-list->blob 4 (endianness big) (list n)))
          (b1 (blob-u8-ref b 0))  
          (b2 (blob-u8-ref b 1))
          (b3 (blob-u8-ref b 2))  
-         (b4 (blob-u8-ref b 3)))
-    
+         (b4 (blob-u8-ref b 3)))    
     (sign b1 b2 b3 b4)))
 
 ;; Takes an unsigned 64 bit integer to the flonum it represents.
@@ -165,21 +173,24 @@
     (case expn   ; recognize special literal exponents
       ((255) #f) ; won't handle NaN and +/- Inf
       ((0)       ; denormalized
-       (exact->inexact (* (expt 2.0 (- 1 (+ 1023 52)))
+       (exact->inexact (* (expt 2 (- 1 (+ 1023 52)))
                           (combine b2 b3 b4 b5 b6 b7 b8))))
       (else
        (exact->inexact
-        (* (expt 2.0 (- expn (+ 1023 52)))
+        (* (expt 2 (- expn (+ 1023 52)))
            (combine (+ b2 16) b3 b4 b5 b6 b7 b8)))))) ; hidden bit
+
   (define (exponent b1 b2 b3 b4 b5 b6 b7 b8)
     (mantissa (bitwise-ior (arithmetic-shift b1 4)          ; 7 bits
                            (extract-bit-field 4 4 b2))      ; + 4 bits
               (extract-bit-field 4 0 b2) b3 b4 b5 b6 b7 b8))
+
   (define (sign b1 b2 b3 b4 b5 b6 b7 b8)
     (if (> b1 127)  ; 1st bit of b1 is sign
         (cond ((exponent (- b1 128) b2 b3 b4 b5 b6 b7 b8) => -)
               (else #f))
         (exponent b1 b2 b3 b4 b5 b6 b7 b8)))
+
   (let* ((b  (uint-list->blob 8 (endianness big) (list n)))
          (b1 (blob-u8-ref b 0))  (b2 (blob-u8-ref b 1))
          (b3 (blob-u8-ref b 2))  (b4 (blob-u8-ref b 3))

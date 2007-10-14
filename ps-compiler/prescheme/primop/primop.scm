@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey.  See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey.  See file COPYING.
 
 
 (define prescheme-primop-table (make-symbol-table))
@@ -154,9 +154,7 @@
 ; Randomness needed by both arith.scm and c-arith.scm.
 
 ; What we will get in C.
-(define prescheme-integer-size 32)
-
-(define int-mask (- (arithmetic-shift 1 prescheme-integer-size) 1))
+(define int-mask (- (arithmetic-shift 1 pre-scheme-integer-size) 1))
 
 (define (lshr i n)
   (arithmetic-shift (bitwise-and i int-mask) (- 0 n)))

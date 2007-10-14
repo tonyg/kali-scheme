@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Channel interrupt stuff.
 
@@ -25,9 +25,9 @@
 	 (add-channel-condvar! channel condvar))
 	((cell? got)
 	 (note-channel-result! condvar
-			       (make-i/o-error (cell-ref got)
-					       channel-maybe-read
-					       (list channel buffer start count wait?))))
+			       (make-read/write-i/o-error 'channel-maybe-read
+							  (cell-ref got)
+							  channel buffer start count wait?)))
 	(else
 	 (note-channel-result! condvar got)))))))
 
@@ -42,12 +42,22 @@
 	     (with-new-proposal (lose)
 	       (maybe-commit-and-wait-for-condvar condvar))))
 	((cell? got)
-	 (note-channel-result! condvar
-			       (make-i/o-error (cell-ref got)
-					       channel-maybe-write
-					       (list channel buffer start count))))
+	 (note-channel-result! condvar 
+			       (make-read/write-i/o-error 'channel-maybe-write
+							  (cell-ref got)
+							  channel buffer start count wait?)))
 	(else
 	 (note-channel-result! condvar got)))))))
+
+(define (make-read/write-i/o-error who status channel buffer start count wait?)
+  (condition
+   (make-i/o-error status)
+   (make-who-condition who)
+   (make-message-condition
+    (os-string->string
+     (byte-vector->os-string
+      (os-error-message status))))
+   (make-irritants-condition (list channel buffer start count wait?))))
 
 ; Set CONDVAR's value to be RESULT.
 
@@ -114,9 +124,11 @@
     (if condvar
 	(note-channel-result! condvar
 			      (if error?
-				  (make-i/o-error status
-						  i/o-completion-handler
-						  (list channel error? status enabled-interrupts))
+				  (condition
+				   (make-i/o-error)
+				   (make-who-condition 'i/o-completion-handler)
+				   (make-message-condition (os-error-message status))
+				   (make-irritants-condition (list channel enabled-interrupts)))
 				  status)))))
 				  
 

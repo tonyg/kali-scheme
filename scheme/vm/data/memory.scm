@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; Syntax: Scheme; Package: Scheme; -*-
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 (define (address1+ x)
   (address+ x addressing-units-per-cell))
@@ -29,7 +29,7 @@
 	   (if (not (= *memory-end* 0))
 	       (deallocate-memory *memory*))
            (set! *memory* (allocate-memory size))
-	   (if (= -1 *memory*)
+	   (if (null-address? *memory*)
 	       (error "out of memory, unable to continue"))
 	   (set! *memory-begin* *memory*)
            (set! *memory-end* (+ *memory* size))))))

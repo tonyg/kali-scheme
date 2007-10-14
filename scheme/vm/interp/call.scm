@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Code to handle the calling and return protocols.
 
@@ -17,7 +17,29 @@
 (define-opcode tail-call
   (let ((stack-arg-count (code-byte 0)))
     (move-args-above-cont! stack-arg-count)
-    (goto do-call (code-byte 0))))
+    (goto do-call stack-arg-count)))
+
+(define-opcode known-call
+  (let ((stack-arg-count (code-byte 2)))
+    (make-continuation-on-stack (address+ *code-pointer* (code-offset 0))
+				stack-arg-count)
+    (goto do-known-call stack-arg-count)))
+
+(define-opcode known-tail-call
+  (let ((stack-arg-count (code-byte 0)))
+    (move-args-above-cont! stack-arg-count)
+    (goto do-known-call stack-arg-count)))
+
+; questionable
+(define-opcode big-known-call
+  (let ((stack-arg-count (code-offset 2)))
+    (maybe-make-continuation stack-arg-count)
+    (goto do-known-call stack-arg-count)))
+
+(define (do-known-call stack-arg-count)
+  (let* ((template (closure-template *val*))
+	 (code (template-code template)))
+    (goto run-body-with-default-space code 2 template)))
 
 (define (do-call stack-arg-count)
   (if (closure? *val*)
@@ -71,6 +93,8 @@
   (set! s48-*native-protocol* protocol))
 
 (define (post-native-dispatch tag)
+;  (write-string "P" (current-error-port))
+;  (write-integer tag (current-error-port))
   (let loop ((tag tag))
     (case tag
       ((0)
@@ -78,15 +102,16 @@
       ((1)
        (goto perform-application s48-*native-protocol*))
       ((2)
-       (cond ((pending-interrupt?)
-              (push-poll-interrupt-continuation)
-              (goto find-and-call-interrupt-handler))
-             (else
-              (loop (s48-invoke-native-continuation
-                     (address->integer (pop-continuation-from-stack))
-                     -2)))))
+       (let* ((template (pop))
+              (return-address (pop)))
+         (cond ((pending-interrupt?)
+                ;(write-string "interrupt is pending" (current-error-port))
+                (goto handle-native-poll template return-address))
+               (else
+                ;(write-string "no interrupt is pending" (current-error-port))
+                (loop (s48-jump-native return-address template))))))
       ((3)
-       (goto return-values s48-*native-protocol* null 0))
+       (error "unexpected native return value" tag))
       ((4)
        (goto interpret *code-pointer*))
       ((5)
@@ -499,13 +524,28 @@
       (goto handle-interrupt)
       (goto interpret *code-pointer*)))
 
-(define (env-and-template-setup env/template template)
-  (cond ((= #b11 env/template)
+(define (env-and-template-setup spec template)
+  (cond ((= #b011 spec)
 	 (push (closure-env *val*))
 	 (push template))
-	((= #b01 env/template)
+	((= #b001 spec)
+	 (push template))
+	((= #b010 spec)
 	 (push (closure-env *val*)))
-	((= #b10 env/template)
+	;; the next two are for the output of the optimizer,
+	;; for closures that have the environment merged in
+	((= #b100 spec)
+	 (push *val*))  ; closure
+	((= #b110 spec)
+	 (push *val*)
+	 (push (closure-env *val*)))
+	;; the following probably won't occur in the wild
+	((= #b101 spec)
+	 (push *val*)
+	 (push template))
+	((= #b111 spec)
+	 (push *val*)
+	 (push (closure-env *val*))
 	 (push template))))
 
 ;----------------------------------------------------------------

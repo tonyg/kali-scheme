@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; This is file ratnum.scm.
 
@@ -18,7 +18,7 @@
   (cond ((< n 0)
 	 (integer/ (- 0 m) (- 0 n)))
 	((= n 0)
-	  (error "rational division by zero" m))
+	  (assertion-violation '/ "rational division by zero" m))
 	((and (exact? m) (exact? n))
 	 (let ((g (gcd m n)))
 	   (let ((m (quotient m g))

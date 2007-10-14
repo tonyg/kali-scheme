@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; define-enumeration macro
@@ -33,7 +33,7 @@
                                                (if (c which (vector-ref components i))
                                                    i
                                                    (loop (+ i 1)))
-                                               ;; (syntax-error "unknown enumerand name"
+                                               ;; (syntax-violation 'enum "unknown enumerand name"
                                                ;;               `(,(cadr e) ,(car e) ,(caddr e)))
                                                e))))
                                       (else e)))))
@@ -48,7 +48,10 @@
         '()))
 
 (define-syntax enum
-  (cons (lambda (e r c) `(,(cadr e) enum ,(caddr e)))
+  (cons (lambda (e r c) 
+          (if (not (= (length e) 3))
+              '(syntax-violation 'enum "wrong number of arguments for enum" e)
+              `(,(cadr e) enum ,(caddr e))))
         '()))
 
 

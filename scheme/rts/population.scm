@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 
@@ -7,7 +7,7 @@
   (list '<population>))
 
 (define (add-to-population! x pop)
-  (if (not x) (error "can't put #f in a population"))
+  (if (not x) (assertion-violation 'add-to-population! "can't put #f in a population"))
   (if (not (weak-memq x (cdr pop)))
       (set-cdr! pop (cons (make-weak-pointer x) (cdr pop)))))
 

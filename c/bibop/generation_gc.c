@@ -1,4 +1,4 @@
-/* Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees.
+/* Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees.
    See file COPYING. */
 
 #include "generation_gc.h"
@@ -20,6 +20,8 @@
 #include "gc_config.h"
 #include "measure.h"
 #include "remset.h"
+
+#include <event.h>   // s48_run_time
 
 #define FOR_ALL_AREAS(areas, command) \
 do { \
@@ -92,7 +94,8 @@ static unsigned long rdm_threshold = S48_RDM_INITIAL_THRESHOLD;
 static char heap_is_initialized = 0;
 static char gc_forbid_count = 0;
 static unsigned long gc_count = 0;
-
+static long gc_seconds = 0;
+static long gc_mseconds = 0;
 
 static void recreate_creation_space() {
   unsigned int s_below;
@@ -187,6 +190,9 @@ void s48_integrate_area(Area* area) {
   *a = area;
 }
 
+#if (S48_ADJUST_WATER_MARK)
+
+static unsigned long aging_space_survival;
 static float last_aging_space_survival = 0; /* initial value does not
 					       matter */
 
@@ -208,6 +214,7 @@ static void adjust_water_mark(float aging_space_survival) {
   if (current_water_mark == S48_CREATION_SPACE_SIZE)
     current_water_mark--;
 }
+#endif
 
 /********************************************************************
  Starting a Collection
@@ -410,7 +417,6 @@ inline static void init_areas(int count) {
   }
 #endif
 
-  /* 
   /* FPage 6 */
   /* initialize the creation_space */
   /* the objects of the small_below area that will survive the
@@ -632,7 +638,10 @@ long s48_gc_count() {
   return gc_count;
 }
 
-static unsigned long aging_space_survival;
+long s48_gc_run_time(long* mseconds) {
+  *mseconds = gc_mseconds;
+  return gc_seconds;
+}
 
 /* collect the first COUNT generations */
 /* FPage 5 ... */
@@ -784,7 +793,7 @@ void s48_collect(psbool force_major) {
 
     -h <heap_size> : means <heap_size> cells (0 means no size limit).
 
-    Without the -h flag, the heap size is 3000000 cells per default
+    Without the -h flag, the heap size gets a default value
     (init.c).  We have to calculate a minimal heap size, set by the
     special configuration of BIBOP (gc_config.h), to decide during the
     initialization (s48_initialize_bibop_heap()) if the given
@@ -803,6 +812,9 @@ void s48_collect(psbool force_major) {
 */
   unsigned long user_defined_hsize, heap_live_size;
   psbool was_major;
+  long start_seconds, start_mseconds, end_seconds, end_mseconds;
+
+  start_seconds = s48_run_time(&start_mseconds);
 
   was_major = do_collect(force_major, FALSE);
 
@@ -820,6 +832,15 @@ void s48_collect(psbool force_major) {
     if (heap_live_size > user_defined_hsize)
       s48_gc_error("Scheme 48 heap overflow (max heap size %i cells)\n",
 		   user_defined_hsize);
+  }
+  end_seconds = s48_run_time(&end_mseconds);
+  if (end_mseconds >= start_mseconds) {
+    gc_seconds = gc_seconds + (end_seconds - start_seconds);
+    gc_mseconds = gc_mseconds + (end_mseconds - start_mseconds);
+  }
+  else {
+    gc_seconds = gc_seconds + ((end_seconds - start_seconds) - 1); 
+    gc_mseconds = gc_mseconds + ((1000 + end_mseconds) - start_mseconds);
   }
 }
 
@@ -1766,23 +1787,16 @@ void s48_initialize_image_areas(long small_bytes, long small_hp_d,
  void s48_check_heap_sizeB() {
 /*********************************************************************/
 
-   unsigned long tmp_hsize; /* cells */
-   unsigned long tmp_ahsize; /* cells */
+   unsigned long max_size = s48_max_heap_size(); /* cells */
+   extern long s48_min_heap_size(void);
+   unsigned long min_size = s48_min_heap_size(); /* cells */
    
-   
-   /*Check the given heap size (flag -h) and the actual one */
-   
-   tmp_hsize = s48_max_heap_size();
-   tmp_ahsize = S48_BYTES_TO_CELLS(s48_heap_size());
-   
-   if (tmp_hsize == 0) {
-     printf("Warning: Without a maximum heap size, infinite recursions can cause the system to run out of memory.\n");
-   } else if ((tmp_hsize > 0) && (tmp_ahsize > tmp_hsize)) {
-     s48_set_max_heap_sizeB( 2 * tmp_ahsize );
-     printf("Maximum heap size %i is too small, using %i cells instead.\n", tmp_hsize,
-	    s48_max_heap_size());
+   /* Check the given heap size (flag -h) and the actual one */
+   if ((max_size != 0) && (min_size > max_size)) {
+     s48_set_max_heap_sizeB( min_size );
+     fprintf(stderr,
+	     "Maximum heap size %ld is too small, using %ld cells instead.\n", max_size,
+	     s48_max_heap_size());
    }
-
-   return;
  }
 

@@ -1,5 +1,5 @@
 ; -*- Mode: Scheme; -*-
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ;  ,exec ,load misc/load-static.scm
 ;  (do-it 100000 "debug/little.image" "debug/little-heap.c")

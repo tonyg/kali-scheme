@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Miniature evaluator.
@@ -45,7 +45,7 @@
 
 (define (initial-package name)
   (let ((probe (assq name *initial-bindings*)))
-    (if probe (cdr probe) (error "unbound" name))))
+    (if probe (cdr probe) (assertion-violation 'initial-package "unbound" name))))
 
 (define (define-initial name val)
   (let ((probe (assq name *initial-bindings*)))

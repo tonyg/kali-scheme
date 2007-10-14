@@ -23,6 +23,7 @@
 	  (port-status-options :syntax)
 	  (current-port-marker :syntax)
 	  (text-encoding-option :syntax)
+	  (system-parameter-option :syntax)
 	  
 	  proxy-base-count  ;; kali
 	  max-proxy-debit   ;; kali
@@ -84,8 +85,8 @@
 	  make-tag&immediate-type
 
 	  enter-fixnum extract-fixnum
-	  bits-per-fixnum greatest-fixnum-value
-	  too-small-for-fixnum? too-big-for-fixnum?
+	  bits-per-fixnum greatest-fixnum-value least-fixnum-value
+	  too-small-for-fixnum? too-big-for-fixnum? unsigned-too-big-for-fixnum?
 	  descriptor->fixnum fixnum->stob
 	  fixnum= fixnum< fixnum> fixnum<= fixnum>=
 	  fixnum-bitwise-not fixnum-bitwise-and
@@ -109,6 +110,8 @@
 	  immutable-header? make-header-immutable make-header-mutable
 	  d-vector-header? b-vector-header?
 	  max-stob-contents-size-in-cells
+
+	  make-descriptor make-immediate
 
 	  make-element  ;; kali
 	  element-type  ;; kali

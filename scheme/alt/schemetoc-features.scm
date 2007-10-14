@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; BUG: (+ (expt 2 28) (expt 2 28)), (* (expt 2 28) 2)
@@ -12,7 +12,7 @@
 
 ; SIGNALS
 
-(define (error message . irritants)
+(define (error who message . irritants)
   (if (symbol? message)
       (apply schemetoc-error message irritants)
       (apply schemetoc-error
@@ -23,8 +23,17 @@
 			 irritants))
 	     irritants)))
 
-(define (warn message . irritants)
+(define (assertion-violation who message . irritants)
+  (apply error who message irritants))
+
+(define (implementation-restriction-violation who message . irritants)
+  (apply error who message irritants))
+
+(define (warning  who message . irritants)
   (display-error-message "Warning: " message irritants))
+
+(define (note who message . irritants)
+  (display-error-message "Note: " message irritants))
 
 (define (display-error-message heading message irritants)
   (display heading)
@@ -38,16 +47,9 @@
 		(newline))
 	      irritants)))
 
-(define (signal type . stuff)
-  (apply warn "condition signalled" type stuff))
-
-(define (syntax-error . rest)		; Must return a valid expression.
-  (apply warn rest)
+(define (syntax-violation who message . irritants)
+  (apply warning who message irritants)
   ''syntax-error)
-
-(define (call-error message proc . args)
-  (error message (cons proc args)))
-
 
 ; FEATURES
 
@@ -61,7 +63,6 @@
 
 (define (make-immutable! thing) thing)
 (define (immutable? thing) #f)
-(define (unspecific) (if #f #f))
 
 
 ; BITWISE
@@ -119,3 +120,8 @@
 (define (code-vector-length t) (- (vector-length t) 1))
 (define (code-vector-ref t i) (vector-ref t (+ i 1)))
 (define (code-vector-set! t i x) (vector-set! t (+ i 1) x))
+
+(define (write-byte byte port)
+  (write-char (ascii->char byte) port))
+  
+

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="windows-1252"?>
 
-<!-- Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING. -->
+<!-- Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING. -->
 
 <!-- WiX source file for building a Windows .msi installer for Scheme 48 -->
 
 <!-- To build, fire up Cygwin, cd to the source directory, and do:
-     build/generate-scheme48-files-wxi.sh "./scheme48vm -i scheme48.image"
+     build/generate-scheme48-files-wxi.sh ./scheme48vm -i scheme48.image
      candle build/scheme48.wxs
      light scheme48.wixobj
 -->
@@ -18,8 +18,8 @@
        
   <Product 
     Id="5dc91c36-df2e-11d9-817f-00111175eb9e"
-    Name="Scheme 48 1.4T"
-    Version="1.4"
+    Name="Scheme 48 1.8T"
+    Version="1.8"
     Manufacturer="The Scheme 48 Maintainers, s48-info@s48.org"
     Codepage="1252"
     Language="1033">
@@ -43,7 +43,7 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFilesFolder" Name="PFiles">
         <Directory Id="Scheme48" Name="Scheme48" LongName="Scheme 48">
-          <Directory Id="INSTALLDIR" Name="s48_1-4t" LongName="Scheme 48 1.4T">
+          <Directory Id="INSTALLDIR" Name="s48_1-7t" LongName="Scheme 48 1.8T">
 
             <Component Id="Main" Guid="74a1362f-df2e-11d9-817f-00111175eb9e">
 
@@ -55,8 +55,8 @@
 
               <Shortcut Id="start_menu_entry" Directory="ProgramMenuDir"
                 Description="Scheme 48 Console"
-                Name="s48_1-4" 
-                LongName="Scheme 48 1.4T"
+                Name="s48_1-7" 
+                LongName="Scheme 48 1.8T"
                 Target="[INSTALLDIR]scheme48"
                 WorkingDirectory="INSTALLDIR"
                 Icon="scheme48.ico" IconIndex="0"
@@ -64,15 +64,15 @@
 
               <Shortcut Id="doc_html_menu_entry" Directory="ProgramMenuDir"
                 Description="Scheme 48 HTML Documentation"
-                Name="s48h_1-4" 
-                LongName="Scheme 48 1.4T HTML Documentation"
+                Name="s48h_1-7" 
+                LongName="Scheme 48 1.8T HTML Documentation"
                 Target="[#doc_html_manual.html]"
                 Show="normal" />
 
               <Shortcut Id="doc_pdf_menu_entry" Directory="ProgramMenuDir"
                 Description="Scheme 48 PDF Documentation"
-                Name="s48p_1-4" 
-                LongName="Scheme 48 1.4T PDF Documentation"
+                Name="s48p_1-7" 
+                LongName="Scheme 48 1.8T PDF Documentation"
                 Target="[#doc_manual.pdf]"
                 Show="normal" />
 
@@ -96,13 +96,13 @@
             <Directory Id="include" Name="INCLUDE" LongName="include" >
               <Component Id="include_component" Guid="78c33182-df2e-11d9-817f-00111175eb9e">
                 <File Id="include_scheme48.h"
-                      Name="SCHEME48.H" LongName="scheme48.h"
+                      Name="S48.H" LongName="scheme48.h"
                       src="c/scheme48.h"
                       DiskId="1" Vital="yes" />
 
-                <File Id="include_scheme48write-barrier.h"
-                      Name="SCHEME~1.H" LongName="scheme48write-barrier.h"
-                      src="c/scheme48write-barrier.h"
+                <File Id="include_scheme48write.barrier.h"
+                      Name="S48-WB.H" LongName="scheme48write-barrier.h"
+                      src="c/win32/scheme48write-barrier.h"
                       DiskId="1" Vital="yes" />
               </Component>
             </Directory>
@@ -118,18 +118,18 @@
                       src="build/initial.scm" Vital="yes" />
 
                 <File Id="build_build_usual_image.bat"
-                      Name="BUILD-~1.BAT" LongName="build-usual-image.bat"
+                      Name="BUILD-UI.BAT" LongName="build-usual-image.bat"
                       src="build/build-usual-image.bat"
                       DiskId="1" Vital="yes" />
 
                 <!--- install a null file so it will be deleted again by rollback and uninstall -->
                 <File Id="build_usual_image.input"
-                      Name="BUILD-~1.INP" LongName="build-usual-image.input"
+                      Name="BUILD-UI.INP" LongName="build-usual-image.input"
                       src="build/dummy"
                       DiskId="1" Vital="yes" />
 
                 <File Id="generate_go.bat"
-                      Name="GENERA~1.BAT" LongName="generate-go.bat"
+                      Name="GENERAGO.BAT" LongName="generate-go.bat"
                       src="build/generate-go.bat"
                       DiskId="1" Vital="yes" />
               </Component>
@@ -148,22 +148,25 @@
     </Directory>
 
     <!-- declare building of scheme48.image -->
+    <!-- /v:off needed to avoid mangling !s on some systems -->
     <CustomAction Id="build_usual_image"
-                  FileKey="build_build_usual_image.bat"
-                  ExeCommand='"[INSTALLDIR]" "[INSTALLDIR]scheme" "[INSTALLDIR]scheme48.image" "[INSTALLDIR]scheme48vm.exe" "[INSTALLDIR]build\initial.image"'
+                  Directory="INSTALLDIR"
+                  ExeCommand='[SystemFolder]cmd.exe /v:off /c build\build-usual-image.bat "[INSTALLDIR]" "[INSTALLDIR]scheme" "[INSTALLDIR]external" "[INSTALLDIR]scheme48.image" "[INSTALLDIR]scheme48vm.exe" "[INSTALLDIR]build\initial.image"'
+		  Execute="deferred" Impersonate="no"
                   Return="check" />
 
     <!-- declare generation of front end -->
     <CustomAction Id="generate_go"
                   FileKey="generate_go.bat"
                   ExeCommand='"[INSTALLDIR]scheme48.bat" "[INSTALLDIR]scheme48vm.exe" "[INSTALLDIR]scheme48.image"'
+		  Execute="deferred" Impersonate="no"
                   Return="check" />
-    
+
     <Icon Id="scheme48.ico" src="build/scheme48.ico" />
 
     <Feature Id="Complete" Level="1"
-             Title="Scheme 48 1.4T"
-             Description="Scheme 48 1.4T main installation"
+             Title="Scheme 48 1.8T"
+             Description="Scheme 48 1.8T main installation"
              ConfigurableDirectory="INSTALLDIR">
       <ComponentRef Id="Main" />
       <ComponentRef Id="include_component" />
@@ -185,10 +188,10 @@
 
     <!-- schedule the building of scheme48.image -->
     <InstallExecuteSequence>
-      <Custom Action="build_usual_image" After="InstallFinalize">
+      <Custom Action="build_usual_image" Before="InstallFinalize">
         <![CDATA[(NOT Installed) OR (INSTALLMODE = "Repair")]]>
        </Custom>
-      <Custom Action="generate_go" After="InstallFinalize">
+      <Custom Action="generate_go" Before="InstallFinalize">
         <![CDATA[(NOT Installed) OR (INSTALLMODE = "Repair")]]>
       </Custom>
     </InstallExecuteSequence>

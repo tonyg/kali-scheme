@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; Hash table package that allows for different hash and comparison functions.
@@ -242,7 +242,8 @@
 	((eq? obj #f) 3001)
 	((eq? obj #t) 3003)
 	((null? obj) 3005)
-	(else (error "value cannot be used as a table key" obj))))
+	(else (assertion-violation 'default-hash-function
+				   "value cannot be used as a table key" obj))))
 
 (define eqv?-assoc (make-assoc eqv?))
 

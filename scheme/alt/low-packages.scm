@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; Alternate implementations of the low-structures.
 ; Cf. low-structures-interface in ../packages.scm and ../alt-structures.scm.
@@ -8,7 +8,7 @@
 ; structures that export privileged operations.
 
 (define-structure escapes escapes-interface
-  (open scheme-level-2 define-record-types simple-signals)
+  (open scheme-level-2 define-record-types low-exceptions)
   (files escape))
 
 (define-structures ((primitives primitives-interface)
@@ -20,7 +20,7 @@
 	define-record-types
 	bitwise	    ;Only for re-export
 	features    ;Only for re-export
-	simple-signals
+	low-exceptions
 	;; templates -- unneeded now?
 	)
   (files primitives

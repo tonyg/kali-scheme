@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 ; Locks (= semaphores)
 
 ; Each lock has:
@@ -59,6 +59,9 @@
 	     (or (maybe-commit)
 		 (lose)))))))
 
-
-
+(define (with-lock lock thunk)
+  (dynamic-wind
+      (lambda () (obtain-lock lock))
+      thunk
+      (lambda () (release-lock lock))))
 

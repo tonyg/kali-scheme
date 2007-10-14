@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; The user's state is in two parts:
@@ -93,6 +93,17 @@
 (define inspector-writing-length (user-context-accessor 'inspector-writing-length
 							(lambda () 5)))
 (define set-inspector-writing-length! (user-context-modifier 'inspector-writing-length))
+
+(define condition-writing-depth (user-context-accessor 'condition-writing-depth
+						       (lambda () 5)))
+(define set-condition-writing-depth! (user-context-modifier 'condition-writing-depth))
+
+(define condition-writing-length (user-context-accessor 'condition-writing-length
+							(lambda () 6)))
+(define set-condition-writing-length! (user-context-modifier 'condition-writing-length))
+
+(define translations (user-context-accessor 'translations make-translations))
+(define set-translations! (user-context-modifier 'translations))
   
 ;----------------
 ; User session state.

@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 ; These are used to compile the VM separately from the GC.  It has new
 ; definitions of the heap and GC structures with all of the values defined
@@ -66,5 +66,7 @@
       (external "s48_extantP" (=> (integer) boolean)))
     (define s48-gc-count
       (external "s48_gc_count" (=> () integer)))
+    (define s48-gc-run-time
+      (external "s48_gc_run_time" (=> () integer integer)))
     ))
 

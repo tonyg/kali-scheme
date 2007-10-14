@@ -1,4 +1,4 @@
-; Copyright (c) 1993-2006 by Richard Kelsey and Jonathan Rees. See file COPYING.
+; Copyright (c) 1993-2007 by Richard Kelsey and Jonathan Rees. See file COPYING.
 
 
 ; More and more packages.  Some of these get loaded into the initial
@@ -10,6 +10,7 @@
 (define-structure usual-features (export )  ;No exports
   (open analysis		;auto-integration
 	disclosers
+	more-vm-exceptions
         command-processor
         debuginfo
         ;; Choose any combination of bignums, ratnums, recnums
@@ -33,7 +34,7 @@
         define-record-types
         primitives
         architecture
-        simple-signals
+	exceptions
 	(subset vm-exceptions (extend-opcode!))
 	util
         number-i/o
@@ -43,21 +44,21 @@
 (define-structure innums (export )    ;inexact numbers
   (open scheme-level-2
         extended-numbers
-        methods simple-signals
+        methods exceptions
         number-i/o)             ;string->integer
   (files (rts innum)))
 
 (define-structure ratnums (export )    ;No exports
   (open scheme-level-2
         extended-numbers
-        methods simple-signals
+        methods exceptions
         number-i/o)             ;string->integer
   (files (rts ratnum)))
 
 (define-structure recnums (export )    ;No exports
   (open scheme-level-2
         extended-numbers
-        methods simple-signals
+        methods exceptions
         number-i/o)             ;really-number->string
   (files (rts recnum)))
 
@@ -66,7 +67,7 @@
   (open scheme-level-2
         extended-numbers
         code-vectors
-        methods simple-signals
+        methods exceptions
 	enumerated
 	loopholes
 	more-types		;:double
@@ -100,37 +101,20 @@
 	(subset util (unspecific))
 	threads threads-internal
 	interrupts
-	simple-signals)
+	exceptions)
   (files (big placeholder))
   (optimize auto-integrate))
 
 (define-structure locks locks-interface
-  (open scheme-level-1 queues
+  (open scheme-level-2 queues
 	threads threads-internal
 	interrupts
 	proposals)
   (optimize auto-integrate)
   (files (big lock)))
 
-;----------------
-; Character sets
-
-(define-structure encodings encodings-interface
-  (open scheme-level-2
-	unicode
-	byte-vectors
-	(modify primitives 
-		(prefix primitive-)
-		(expose encode-char decode-char))
-	(subset architecture (text-encoding-option))
-	text-codecs
-	enumerated
-	conditions exceptions
-	finite-types
-	proposals
-	(subset silly (reverse-list->string)))
-  (optimize auto-integrate)
-  (files (big encoding)))
+;--------
+; Unicode
 
 (define-structure text-codec-utils text-codec-utils-interface
   (open scheme-level-2
@@ -151,7 +135,7 @@
 
 (define-structure random (export make-random)
   (open scheme-level-2 bitwise
-	signals)		;call-error
+	exceptions)
   (files (big random)))
 
 (define-structure sort (export sort-list sort-list!)
@@ -172,7 +156,7 @@
   (files (big pp)))
 
 (define-structure formats (export format)
-  (open scheme-level-2 ascii signals
+  (open scheme-level-2 ascii exceptions
 	extended-ports)
   (files (big format)))
 
@@ -182,7 +166,7 @@
 	i/o i/o-internal
 	proposals
 	util				; unspecific
-	signals
+	exceptions
 	(subset primitives      (copy-bytes! write-byte encode-char decode-char))
 	(subset architecture    (text-encoding-option))
 	enumerated
@@ -211,15 +195,15 @@
 				  :syntax))
   (open scheme-level-2
 	bitwise
-	signals)
+	exceptions)
   (files (big iterate)))
 
 (define-structure arrays arrays-interface
-  (open scheme-level-2 define-record-types signals)
+  (open scheme-level-2 define-record-types exceptions)
   (files (big array)))
 
 (define-structure lu-decompositions lu-decompositions-interface
-  (open scheme receiving arrays floatnums signals)
+  (open scheme receiving arrays floatnums exceptions)
   (files (big lu-decomp)))
 
 (define-structure compact-tables compact-tables-interface
@@ -230,8 +214,14 @@
   (open scheme
 	bitwise
 	define-record-types
-	signals)
+	exceptions)
   (files (big inversion-list)))
+
+(define-structure constant-tables constant-tables-interface
+  (open scheme
+	bitwise
+	define-record-types)
+  (files (big constant-table)))
 
 (define-structure receiving (export (receive :syntax))
   (open scheme-level-2)
@@ -248,7 +238,7 @@
 	bitwise
 	util			; every
 	number-i/o		; number->string
-	signals)		; call-error
+	exceptions)		; assertion-violation
   (files (big mask)))
 
 (define-structures ((enum-sets enum-sets-interface)
@@ -257,7 +247,7 @@
 	finite-types
 	bitwise 
 	util
-	signals
+	exceptions
 	external-calls)
   (optimize auto-integrate)
   (files (big enum-set)))
@@ -268,9 +258,9 @@
   (open scheme-level-2
 	formats
 	features		; immutable? make-immutable!
-	(modify signals
+	(modify exceptions
 		(rename (error rts-error))
-		(expose error))
+		(expose error assertion-violation))
 	(modify debugging	(rename (breakpoint rts-breakpoint))
 		                (expose breakpoint))
 	(subset primitives	(copy-bytes!)))
@@ -304,8 +294,10 @@
 					 call-external-value)
   (open scheme-level-2 define-record-types
 	primitives
-        architecture
-	vm-exceptions interrupts signals
+	os-strings
+        architecture ; includes ENUM
+	enum-case
+	vm-exceptions interrupts exceptions conditions
 	placeholders
 	shared-bindings
 	byte-vectors
@@ -315,21 +307,12 @@
   (files (big import-def)
 	 (big callback)))
 
-(define-structure dynamic-externals dynamic-externals-interface
-  (open scheme-level-2 define-record-types tables
-        signals          	;warn
-	primitives		;find-all-records
-	i/o			;current-error-port
-        code-vectors
-	file-names string/bytes-types default-string-encodings
-	external-calls)
-  (files (big external)))
-
 (define-structure shared-objects shared-objects-interface
   (open scheme-level-2
 	define-record-types
+	exceptions
 	external-calls
-	file-names string/bytes-types default-string-encodings)
+	os-strings text-codecs)
   (files (big shared-object)))
 
 (define-structure load-dynamic-externals load-dynamic-externals-interface
@@ -338,11 +321,12 @@
 	shared-objects
 	(subset usual-resumer (add-initialization-thunk!))
 	(subset big-util (delq delete any))
-	(subset signals (error)))
+	filenames
+	(subset exceptions (assertion-violation)))
   (files (big dynamic-external)))
 
 (define-structure c-system-function (export have-system? system)
-  (open scheme-level-2 byte-vectors default-string-encodings external-calls signals)
+  (open scheme-level-2 byte-vectors os-strings external-calls exceptions)
   (begin
     (import-lambda-definition s48-system (string))
 
@@ -351,13 +335,7 @@
 
     ;; Kludge
     (define (system cmd-line)
-      (cond
-       ((byte-vector? cmd-line)
-	(s48-system cmd-line))
-       ((string? cmd-line)
-	(s48-system (string->byte-string cmd-line)))
-       (else
-	(call-error "not a string" system string))))))
+      (s48-system (os-string->byte-vector (x->os-string cmd-line))))))
     
 ; Rudimentary object dump and restore
 
@@ -366,7 +344,7 @@
         number-i/o
         tables
         records record-types
-        signals          	;error
+        exceptions          	;error
         locations               ;make-undefined-location
         closures
         code-vectors            ;code vectors
@@ -383,50 +361,9 @@
   (open scheme queues
         proposals
         threads-internal
-	signals)		;call-error
+	exceptions)		;assertion-violation
   (optimize auto-integrate)
   (files (big value-pipe)))
-
-; Unix Sockets
-
-(define-structures ((sockets (export open-socket
-				     close-socket
-				     socket-accept
-				     socket-port-number
-				     socket-client
-				     get-host-name
-				     get-host-by-name ;; kali
-                                     set-tcp-nodelay! ;; kali
-                                     
-				     ; From the old interface
-				     ; I would like to get rid of these.
-				     socket-listen
-				     socket-listen-channels
-				     socket-client-channels))
-		    (udp-sockets (export get-host-name
-					 get-host-by-name ;; kali
-					 close-socket
-					 open-udp-socket
-					 udp-send
-					 udp-receive
-					 lookup-udp-address
-					 socket-port-number
-					 udp-address?
-					 udp-address-address
-					 udp-address-hostname
-					 udp-address-port)))
-  (open scheme define-record-types
-	external-calls
-	channels		; channel? close-channel
-	signals			; error call-error
-	proposals		; atomically!
-	interrupts		; enable-interrupts! disable-interrupts!
-	channel-ports		; {in|out}put-channel->port
-	channel-i/o		; wait-for-channel
-	condvars		; for wait-for-channel
-	string/bytes-types
-	default-string-encodings)
-  (files (big socket)))
 
 ; Heap traverser
 
@@ -501,8 +438,23 @@
 					 fail)
   (open scheme-level-2
 	fluids cells
-	(subset signals (error)))
+	exceptions
+	(subset exceptions (error)))
   (files (big either)))
+
+; test suites
+
+(define-structure test-suites test-suites-interface
+  (open scheme
+	cells
+	big-util
+	exceptions
+	define-record-types
+	exceptions conditions
+	display-conditions
+	(subset i/o (current-error-port))
+	fluids)
+  (files (big test-suite)))
 
 (define-structure libscheme48 (export dump-libscheme48-image)
   (open scheme
@@ -523,31 +475,14 @@
 (define-structure bigbit (export)
   (open scheme-level-2))
 
-; Externals - this is obsolete; use external-calls and dynamic-externals
-; instead.
+; The old signals
 
-(define-structure externals (compound-interface
-			       dynamic-externals-interface
-			       (export external-call
-				       null-terminate))
-  (open scheme-level-2 dynamic-externals
-	(subset external-calls (import-lambda-definition)))
-  (begin
-   ; We fake the old external-call primitive using the new one and a
-   ; a C helper procedure from c/unix/dynamo.c.
+(define-structure signals signals-interface
+  (open scheme-level-2
+	signal-conditions
+	conditions)
+  (files (big signal)))
 
-    (define (external-call proc . args)
-      (let ((args (apply vector args)))
-	(old-external-call (external-value proc) args)))
-    
-    (import-lambda-definition old-external-call
-			      (proc args)
-			      "s48_old_external_call")
-
-    ; All strings are now null terminated.
-    (define (null-terminate string) string)))
-
-;----------------
 ; ... end of package definitions.
 
 ; Temporary compatibility stuff
@@ -557,3 +492,4 @@
   (syntax-rules () ((define-package . ?rest) (define-structures . ?rest))))
 (define table tables)
 (define record records)
+

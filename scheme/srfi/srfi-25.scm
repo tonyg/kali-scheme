@@ -65,7 +65,7 @@
 
 (define (array-ref a . xs)
   (or (array:array? a)
-      (error "not an array"))
+      (assertion-violation 'array-ref "not an array" a))
   (let ((shape (array:shape a)))
     (if (null? xs)
         (array:check-indices "array-ref" xs shape)
@@ -76,7 +76,7 @@
                   (array:check-indices "array-ref" xs shape)
                   (if (array:array? x)
                       (array:check-index-actor "array-ref" x shape)
-                      (error "not an index object"))))))
+                      (assertion-violation 'array-ref "not an index object" x))))))
     (vector-ref
      (array:vector a)
      (if (null? xs)
@@ -95,11 +95,11 @@
                         (array:index a)
                         (array:vector x)
                         (array:index x))
-                       (error "array-ref: bad index object")))))))))
+                       (assertion-violation 'array-ref "bad index object" x)))))))))
 
 (define (array-set! a x . xs)
   (or (array:array? a)
-      (error "array-set!: not an array"))
+      (assertion-violation 'array-set! "not an array"))
   (let ((shape (array:shape a)))
     (if (null? xs)
         (array:check-indices "array-set!" '() shape)
@@ -109,7 +109,7 @@
                 (array:check-indices.o "array-set!" (cons x xs) shape)
                 (if (array:array? x)
                     (array:check-index-actor "array-set!" x shape)
-                    (error "not an index object")))))
+                    (assertion-violation 'array-set! "not an index object" x)))))
     (if (null? xs)
         (vector-set! (array:vector a) (vector-ref (array:index a) 0) x)
         (if (vector? x)
@@ -137,9 +137,9 @@
                                   (array:vector x)
                                   (array:index x))
                                  (car xs))
-                    (error (string-append
-                            "array-set!: bad index object: "
-                            (array:thing->string x)))))))))
+                    (assertion-violation 'array-set!
+					 "bad index object"
+					 x)))))))
 
 ;; Contents of op-ctor.scm
 
@@ -805,7 +805,7 @@
 
 (define (make-array shape . rest)
   (or (array:good-shape? shape)
-      (error "make-array: shape is not a shape"))
+      (assertion-violation 'make-array "shape is not a shape" shape))
   (apply array:make-array shape rest))
 
 (define (array:make-array shape . rest)
@@ -829,8 +829,9 @@
 (define (shape . bounds)
   (let ((v (list->vector bounds)))
     (or (even? (vector-length v))
-        (error (string-append "shape: uneven number of bounds: "
-                              (array:list->string bounds))))
+        (assertion-violation
+	 'shape "uneven number of bounds: "
+	 (array:list->string bounds)))
     (let ((shp (array:make
                 v
                 (if (pair? bounds)
@@ -839,9 +840,9 @@
                 (vector 0 (quotient (vector-length v) 2)
                         0 2))))
       (or (array:good-shape? shp)
-          (error (string-append "shape: bounds are not pairwise "
-                                "non-decreasing exact integers: "
-                                (array:list->string bounds))))
+          (assertion-violation 'shape
+			       "bounds are not pairwise non-decreasing exact integers"
+			       bounds))
       shp)))
 
 ;;; (array shape obj ...)
@@ -849,20 +850,17 @@
 
 (define (array shape . elts)
   (or (array:good-shape? shape)
-      (error (string-append "array: shape " (array:thing->string shape)
-                            " is not a shape")))
+      (assertion-violation 'array "shape is not a shape" shape))
   (let ((size (array:size shape)))
     (let ((vector (list->vector elts)))
       (or (= (vector-length vector) size)
-          (error (string-append "array: an array of shape "
-                                (array:shape-vector->string
-                                 (array:vector shape))
-                                " has "
-                                (number->string size)
-                                " elements but got "
-                                (number->string (vector-length vector))
-                                " values: "
-                                (array:list->string elts))))
+          (assertion-violation
+	   'array
+	   "mismatch between elements cound and values count"
+	   shape
+	   size
+	   (vector-length vector)
+	   elts))
       (array:make
        vector
        (if (= size 0)
@@ -904,21 +902,15 @@
 
 (define (share-array array subshape f)
   (or (array:good-shape? subshape)
-      (error (string-append "share-array: shape "
-                            (array:thing->string subshape)
-                            " is not a shape")))
+      (assertion-violation 'share-array
+			   "shape is not a shape" subshape))
   (let ((subsize (array:size subshape)))
     (or (array:good-share? subshape subsize f (array:shape array))
-        (error (string-append "share-array: subshape "
-                              (array:shape-vector->string
-                               (array:vector subshape))
-                              " does not map into supershape "
-                              (array:shape-vector->string
-                               (array:shape array))
-                              " under mapping "
-                              (array:map->string
-                               f
-                               (vector-ref (array:shape subshape) 1)))))    
+        (assertion-violation 'share-array 
+			     "subshape does not map into supershape under mapping"
+			     subshape
+			     (array:shape array)
+			     f))
     (let ((g (array:index array)))
       (array:make
        (array:vector array)
@@ -1160,21 +1152,21 @@
 
 (define (array:check-indices who ks shv)
   (or (array:good-indices? ks shv)
-      (error (array:not-in who ks shv))))
+      (array:not-in who ks shv)))
 
 (define (array:check-indices.o who ks shv)
   (or (array:good-indices.o? ks shv)
-      (error (array:not-in who (reverse (cdr (reverse ks))) shv))))
+      (array:not-in who (reverse (cdr (reverse ks))) shv)))
 
 (define (array:check-index-vector who ks shv)
   (or (array:good-index-vector? ks shv)
-      (error (array:not-in who (vector->list ks) shv))))
+      (array:not-in who (vector->list ks) shv)))
 
 (define (array:check-index-actor who ks shv)
   (let ((shape (array:shape ks)))
     (or (and (= (vector-length shape) 2)
              (= (vector-ref shape 0) 0))
-        (error "not an actor"))
+        (assertion-violation who "not an actor" shape))
     (or (array:good-index-actor?
          (vector-ref shape 1)
          (array:vector ks)
@@ -1243,9 +1235,8 @@
 (define (array:not-in who ks shv)
   (let ((index (array:list->string ks))
         (bounds (array:shape-vector->string shv)))
-    (error (string-append who
-                          ": index " index
-                          " not in bounds " bounds))))
+    (assertion-violation who
+			 "index not in bounds" index bounds)))
 
 (define (array:list->string ks)
   (do ((index "" (string-append index (array:thing->string (car ks)) " "))
