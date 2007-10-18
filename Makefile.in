@@ -294,10 +294,11 @@ c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
 		$(CPPFLAGS) $(DEFS) $(srcdir)/c/main.c
 
 c/scheme48vm.o: c/prescheme.h c/scheme48vm.h \
-		c/scheme48write-barrier.h c/scheme48heap.h \
+		c/scheme48heap.h \
 		c/scheme48image.h c/bignum.h c/event.h \
 		c/io.h c/fd-io.h \
-		c/scheme48vm-prelude.h c/c-mods.h
+		c/scheme48vm-prelude.h c/c-mods.h \
+		$(SCHEME48HS)
 
 c/bignum.o: c/bignum.h c/bignumint.h $(SCHEME48HS)
 c/extension.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS) c/scheme48vm.h
