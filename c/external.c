@@ -844,6 +844,62 @@ s48_extract_unsigned_integer(s48_value value)
 }
 
 /*
+ * Strings from and to encodings
+ */
+
+/*
+ * These are just wrappers to ensure the right types.
+ */
+
+s48_value
+s48_enter_string_utf_16be(const uint16_t *s)
+{
+  return s48_enter_string_utf_16beU((char*) s);
+}
+
+s48_value
+s48_enter_string_utf_16be_n(const uint16_t * s, long l)
+{
+  return s48_enter_string_utf_16be_nU((char*) s, l);
+}
+
+long
+s48_copy_string_to_utf_16be(s48_value sch_s, uint16_t * s)
+{
+  return s48_copy_string_to_utf_16beU(sch_s, (char*) s);
+}
+
+long
+s48_copy_string_to_utf_16be_n(s48_value sch_s, long start, long count, uint16_t *s)
+{
+  return s48_copy_string_to_utf_16be_nU(sch_s, start, count, (char*) s);
+}
+
+s48_value
+s48_enter_string_utf_16le(const uint16_t *s)
+{ 
+  return s48_enter_string_utf_16leU((char *) s);
+}
+
+s48_value
+s48_enter_string_utf_16le_n(const uint16_t *s, long l)
+{
+  return s48_enter_string_utf_16le_nU((char *) s,l);
+}
+
+long
+s48_copy_string_to_utf_16le(s48_value sch_s, uint16_t *s)
+{
+  return s48_copy_string_to_utf_16leU(sch_s, (char *) s);
+}
+
+long
+s48_copy_string_to_utf_16le_n(s48_value sch_s, long start, long count, uint16_t *s)
+{
+  return s48_copy_string_to_utf_16le_nU(sch_s, start, count, (char *) s);
+}
+
+/*
  * Doubles and characters are straightforward.
  */
 

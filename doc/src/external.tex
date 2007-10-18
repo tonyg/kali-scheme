@@ -441,8 +441,20 @@ These have the disadvantage of only having a limited range, but
 \cgcproto{s48\_value s48\_enter\_string\_utf\_8\_n(char*, long);}
 \cproto{long\ \ \ \ \ \ s48\_string\_utf\_8\_length(s48\_value);}
 \cproto{long\ \ \ \ \ \ s48\_string\_utf\_8\_length\_n(s48\_value, long, long);}
-\cproto{void\ \ \ \ \ \ s48\_copy\_string\_to\_utf\_8(s48\_value, char*);}
-\cproto{void\ \ \ \ \ \ s48\_copy\_string\_to\_utf\_8\_n(s48\_value, long, long, char*);}
+\cproto{long\ \ \ \ \ \ s48\_copy\_string\_to\_utf\_8(s48\_value, char*);}
+\cproto{long\ \ \ \ \ \ s48\_copy\_string\_to\_utf\_8\_n(s48\_value, long, long, char*);}
+\cgcproto{s48\_value s48\_enter\_string\_utf\_16be(char*);}
+\cgcproto{s48\_value s48\_enter\_string\_utf\_16be\_n(char*, long);}
+\cproto{long\ \ \ \ \ \ s48\_string\_utf\_16be\_length(s48\_value);}
+\cproto{long\ \ \ \ \ \ s48\_string\_utf\_16be\_length\_n(s48\_value, long, long);}
+\cproto{long\ \ \ \ \ \ s48\_copy\_string\_to\_utf\_16be(s48\_value, char*);}
+\cproto{long\ \ \ \ \ \ s48\_copy\_string\_to\_utf\_16be\_n(s48\_value, long, long, char*);}
+\cgcproto{s48\_value s48\_enter\_string\_utf\_16le(char*);}
+\cgcproto{s48\_value s48\_enter\_string\_utf\_16le\_n(char*, long);}
+\cproto{long\ \ \ \ \ \ s48\_string\_utf\_16le\_length(s48\_value);}
+\cproto{long\ \ \ \ \ \ s48\_string\_utf\_16le\_length\_n(s48\_value, long, long);}
+\cproto{long\ \ \ \ \ \ s48\_copy\_string\_to\_utf\_16le(s48\_value, char*);}
+\cproto{long\ \ \ \ \ \ s48\_copy\_string\_to\_utf\_16le\_n(s48\_value, long, long, char*);}
 \end{protos}
 %
 The \code{s48\_enter\_string\_latin\_1} function creates a Scheme
@@ -482,7 +494,13 @@ UTF-8 and writes them into the string specified as the second
 argument.  (Note that it does not NUL-terminate the result.)  The
 \code{s48\_copy\_string\_to\_utf\_8\_n} function does the same, but
 allows specifying a starting index and a character count into the
-source string.
+source string.  Both return the length of the written encodings in
+bytes.
+
+The functions with \code{utf\_16} in their names work analogously to
+their \code{utf\_8} counterparts, but implement the UTF-16 encodings.
+The lengths returned be the \code{\_length} and
+\code{copy\_string\_to} functions are in terms of UTF-16 code units.
 
 \subsection{C versions of Scheme procedures}
 

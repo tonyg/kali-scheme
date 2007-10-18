@@ -49,6 +49,16 @@ extern void		s48_stack_setB(long offset, s48_value value);
 
 S48_EXTERN s48_value	s48_allocate_string(long l);
 
+extern s48_value s48_enter_string_utf_16beU(char *);
+extern s48_value s48_enter_string_utf_16be_nU(char *, long);
+extern long s48_copy_string_to_utf_16beU(s48_value, char *);
+extern long s48_copy_string_to_utf_16be_nU(s48_value, long, long, char *);
+
+extern s48_value s48_enter_string_utf_16leU(char *);
+extern s48_value s48_enter_string_utf_16le_nU(char *, long);
+extern long s48_copy_string_to_utf_16leU(s48_value, char *);
+extern long s48_copy_string_to_utf_16le_nU(s48_value, long, long, char *);
+
 /* called when writing an image */
 extern s48_value	s48_symbol_table(void);
 extern s48_value	*s48_channels(void);

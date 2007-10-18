@@ -17,7 +17,8 @@
 	   "../scheme/vm/scheme48vm.c"
 	   '(header "#include \"scheme48vm-prelude.h\"")
 	   '(copy (interpreter pop-continuation-from-stack
-			       env-and-template-setup))
+			       env-and-template-setup)
+		  (text-encodings encode-scalar-value decode-scalar-value))
 	   '(no-copy (interpreter interpret
 				  application-exception
 				  handle-interrupt

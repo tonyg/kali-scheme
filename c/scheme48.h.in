@@ -25,6 +25,8 @@
 
 #define S48_EXTERN extern S48_EXTERN_ADD_ONS
 
+#include <stdint.h> /* uintXX_t */
+
 typedef long	s48_value;
 
 #define NO_ERRORS 0    /* errno value */
@@ -65,8 +67,20 @@ S48_EXTERN s48_value	s48_enter_string_utf_8(char* s);
 S48_EXTERN s48_value	s48_enter_string_utf_8_n(char* s, long count);
 S48_EXTERN long		s48_string_utf_8_length(s48_value s);
 S48_EXTERN long		s48_string_utf_8_length_n(s48_value s, long start, long count);
-S48_EXTERN void		s48_copy_string_to_utf_8(s48_value sch_s, char* s);
-S48_EXTERN void		s48_copy_string_to_utf_8_n(s48_value sch_s, long start, long count, char* s);
+S48_EXTERN long		s48_copy_string_to_utf_8(s48_value sch_s, char* s);
+S48_EXTERN long		s48_copy_string_to_utf_8_n(s48_value sch_s, long start, long count, char* s);
+S48_EXTERN s48_value	s48_enter_string_utf_16be(const uint16_t *);
+S48_EXTERN s48_value	s48_enter_string_utf_16be_n(const uint16_t *, long);
+S48_EXTERN long		s48_string_utf_16be_length(s48_value);
+S48_EXTERN long		s48_string_utf_16be_length_n(s48_value, long, long);
+S48_EXTERN long		s48_copy_string_to_utf_16be(s48_value, uint16_t *);
+S48_EXTERN long		s48_copy_string_to_utf_16be_n(s48_value, long, long, uint16_t *);
+S48_EXTERN s48_value	s48_enter_string_utf_16le(const uint16_t *);
+S48_EXTERN s48_value	s48_enter_string_utf_16le_n(const uint16_t *, long);
+S48_EXTERN long		s48_string_utf_16le_length(s48_value);
+S48_EXTERN long		s48_string_utf_16le_length_n(s48_value, long, long);
+S48_EXTERN long		s48_copy_string_to_utf_16le(s48_value, uint16_t *);
+S48_EXTERN long		s48_copy_string_to_utf_16le_n(s48_value, long, long, uint16_t *);
 
 S48_EXTERN s48_value	s48_enter_char(long);
 S48_EXTERN long 	s48_extract_char(s48_value);
