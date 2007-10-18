@@ -142,7 +142,7 @@
     (c-define "S48_STOB_HEADER(x) (S48_STOB_REF((x),-1))")
     (c-define "S48_STOB_ADDRESS(x) (&(S48_STOB_HEADER(x)))")
     (c-define "S48_STOB_BYTE_LENGTH(x) (S48_STOB_HEADER(x) >> 8)")
-    (c-define "S48_STOB_DESCRIPTOR_LENGTH(x) (S48_STOB_HEADER(x) >> 10)")
+    (c-define "S48_STOB_DESCRIPTOR_LENGTH(x) (S48_STOB_BYTE_LENGTH(x) >> S48_LOG_BYTES_PER_CELL)")
     (c-define "S48_STOB_IMMUTABLEP(x) ((S48_STOB_HEADER(x)>>7) & 1)")
     (c-define "S48_STOB_MAKE_IMMUTABLE(x) ((S48_STOB_HEADER(x)) |= (1<<7))")
     (newline)

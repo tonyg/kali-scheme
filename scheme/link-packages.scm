@@ -8,6 +8,7 @@
 (define-structure linker linker-interface
   (open scheme-level-2
 	compiler write-images
+	platform
 	debuginfo
 	segments		;with-fresh-compiler-state
 	packages

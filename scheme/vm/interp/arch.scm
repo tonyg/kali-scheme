@@ -9,7 +9,7 @@
 
 ; Things that the VM and the runtime system both need to know.
 
-(define bits-used-per-byte 8)
+(define bits-used-per-byte bits-per-byte)
 
 (define byte-limit (expt 2 bits-used-per-byte))
 (define two-byte-limit (* byte-limit byte-limit))

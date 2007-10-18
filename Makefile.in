@@ -19,6 +19,7 @@ INSTALL_DATA = @INSTALL_DATA@
 LDFLAGS = @LDFLAGS@
 LDFLAGS_VM = @LDFLAGS_VM@
 LIBOBJS = @LIBOBJS@
+MACOS_X86_64_LIBS = @MACOS_X86_64_LIBS@
 
 GC_OBJS = @GC_OBJS@
 
@@ -26,6 +27,7 @@ ASM_OBJECTS = @ASM_OBJECTS@
 ASM_STYLE = @ASM_STYLE@
 
 HOST_ARCHITECTURE = @host@
+BIT_SUFFIX = @BIT_SUFFIX@
 
 prefix = @prefix@
 exec_prefix = @exec_prefix@
@@ -101,15 +103,32 @@ BIG_HEAP = -h 8000000
 LINKER_VM = $(RUNNABLE) $(BIG_HEAP)
 LINKER_RUNNABLE = $(LINKER_VM)
 LINKER_WRITEBYTE = ,open (subset i/o (write-byte)) (subset ports (set-port-crlf?!))
-START_LINKER = echo ',batch';					\
+START_LINKER_HEAD = echo ',batch';				\
 	       echo ',bench on';				\
 	       echo ',open signals handle features';		\
 	       echo ',open bitwise ascii code-vectors';		\
 	       echo '$(LINKER_WRITEBYTE)';			\
+	       echo ',config ,load scheme/platform-interfaces.scm'
+
+START_LINKER_TAIL = echo ',open platform';			\
+	       echo ',config ,load scheme/prescheme/interface.scm'; \
+	       echo ',config ,load scheme/prescheme/package-defs.scm'; \
+	       echo ',config ,load scheme/vm/interfaces.scm'; 	\
+	       echo ',config ,load scheme/vm/shared-interfaces.scm'; \
+	       echo ',config ,load scheme/link/vm-packages.scm'; \
+	       echo ',open vm-data vm-utilities';		\
 	       echo ',open cells record-types';			\
 	       echo ',load scheme/alt/low-exception.scm';	\
 	       echo ',load $(linker-files)';			\
 	       echo ',load scheme/alt/init-defpackage.scm'
+
+START_LINKER-32 = $(START_LINKER_HEAD);				\
+	       echo ',config ,load scheme/rts-packages-32.scm'; \
+	       $(START_LINKER_TAIL)
+
+START_LINKER-64 = $(START_LINKER_HEAD);				\
+	       echo ',config ,load scheme/rts-packages-64.scm'; \
+	       $(START_LINKER_TAIL)
 
 # --------------------
 # You shouldn't have to change anything below this point.
@@ -122,7 +141,7 @@ VM = scheme48vm
 LIBSCHEME48 = c/libscheme48.a
 POSIX_EXTERNAL = c/posix.so
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
-OBJS =	c/scheme48vm.o \
+OBJS =	c/scheme48vm-$(BIT_SUFFIX).o \
 	c/extension.o c/free.o c/double_to_string.o c/bignum.o \
 	c/external.o c/external-lib.o c/external-init.o c/init.o
 
@@ -194,7 +213,7 @@ POSIX_OBJECTS = $(posix_dir)/user.o     $(posix_dir)/regexp.o	\
 		$(posix_dir)/posix.o
 
 $(POSIX_EXTERNAL) : $(POSIX_OBJECTS)
-	$(LD) -o $@ $(DYNAMIC_EXTERNALS_LDFLAGS) $(POSIX_OBJECTS)
+	$(LD) -o $@ $(DYNAMIC_EXTERNALS_LDFLAGS) $(POSIX_OBJECTS) $(MACOS_X86_64_LIBS)
 
 
 # End of POSIX rules
@@ -225,21 +244,21 @@ c/glue_$(ASM_STYLE).s: s48-compiler/assembler/x86/x86-glue.scm
 
 # Two-space copier objects
 
-GC_TWOSPACE_OBJS = c/scheme48-twospace-heap.o
+GC_TWOSPACE_OBJS = c/scheme48-twospace-heap-$(BIT_SUFFIX).o
 
-c/scheme48-twospace-heap.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
+c/scheme48-twospace-heap-$(BIT_SUFFIX).o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
 			c/scheme48vm-prelude.h c/c-mods.h \
 			c/event.h c/io.h c/fd-io.h
 
 # The BIBOP Garbage Collector
-GC_BIBOP_OBJS =  c/scheme48-bibop-heap.o \
+GC_BIBOP_OBJS =  c/scheme48-bibop-heap-$(BIT_SUFFIX).o \
 	c/bibop/page_alloc.o c/bibop/memory_map.o c/bibop/areas.o \
 	c/bibop/generation_gc.o c/bibop/find_all.o c/bibop/check_heap.o \
 	c/bibop/utils.o c/bibop/area_roots.o c/bibop/remset.o
 
 bibop: $(GC_BIBOP_OBJS)
 
-c/scheme48-bibop-heap.o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
+c/scheme48-bibop-heap-$(BIT_SUFFIX).o: c/prescheme.h c/scheme48vm.h c/scheme48heap.h \
 			c/scheme48vm-prelude.h c/scheme48write-barrier.h \
 			c/bibop/bibop.h \
 			c/c-mods.h c/event.h c/io.h c/fd-io.h
@@ -293,7 +312,7 @@ c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
 		-DDEFAULT_IMAGE_NAME=\"$(LIB)/$(IMAGE)\" \
 		$(CPPFLAGS) $(DEFS) $(srcdir)/c/main.c
 
-c/scheme48vm.o: c/prescheme.h c/scheme48vm.h \
+c/scheme48vm-$(BIT_SUFFIX).o: c/prescheme.h c/scheme48vm.h \
 		c/scheme48heap.h \
 		c/scheme48image.h c/bignum.h c/event.h \
 		c/io.h c/fd-io.h \
@@ -348,7 +367,7 @@ $(IMAGE): $(VM) scheme/env/init-defpackage.scm scheme/more-interfaces.scm \
 		$(usual-files) build/initial.debug build/build-usual-image
 	$(srcdir)/build/build-usual-image $(srcdir) \
 		"`(cd $(srcdir) && pwd)`/scheme" "`pwd`/c" '$(IMAGE)' './$(VM)' \
-		'$(INITIAL)'
+		'$(INITIAL)-$(BIT_SUFFIX)'
 
 ### Fake targets:  all clean install man dist
 
@@ -361,8 +380,8 @@ inst-vm:
 
 inst-image:
 	rm -f '/tmp/$(IMAGE)' &&					\
-	$(srcdir)/build/build-usual-image $(srcdir) "$(SHARE)"          \
-	         "$(LIB)" "/tmp/$(IMAGE)" "./$(VM)" "$(INITIAL)" &&	\
+	$(srcdir)/build/build-usual-image $(srcdir) "$(SHARE)" "$(LIB)" \
+		"/tmp/$(IMAGE)" "./$(VM)" "$(INITIAL)-$(BIT_SUFFIX)" && \
 	$(INSTALL_DATA) /tmp/$(IMAGE) $(DESTDIR)$(LIB) &&		\
 	rm /tmp/$(IMAGE)
 
@@ -453,14 +472,15 @@ configure: configure.in
 clean:
 	-rm -f $(VM) script-interpreter					\
 		*.o c/unix/*.o c/posix/*.o c/net/*.o c/*.o 		\
+		$(POSIX_EXTERNAL)					\
 		c/fake/*.o c/bibop/*.o					\
 		c/*.a c/glue_gnu.s c/glue_darwin.s c/scheme48.exp 	\
 		TAGS $(IMAGE)						\
 		$(srcdir)/build/*.tmp $(srcdir)/$(MANPAGE) 		\
 		$(srcdir)/scheme/debug/*.image 				\
 		$(srcdir)/scheme/debug/*.debug 				\
-		$(srcdir)/scheme/vm/scheme48vm.c 			\
-		$(srcdir)/scheme/vm/scheme48*heap.c			\
+		$(srcdir)/scheme/vm/scheme48vm-??.c 			\
+		$(srcdir)/scheme/vm/scheme48*heap-??.c			\
 		go $(distname)
 
 distclean: clean
@@ -497,7 +517,7 @@ check:	$(VM) $(IMAGE) scheme/debug/check.scm
 all: vm image $(LIBSCHEME48) script-interpreter go
 libscheme48: $(LIBSCHEME48)
 vm: $(VM)
-image: $(INITIAL)
+image: $(INITIAL)-$(BIT_SUFFIX)
 	$(MAKE) $(IMAGE)
 test: check
 
@@ -519,7 +539,8 @@ DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
 		emacs/README 						\
 		build/*.scm build/*-version-number build/*.exec		\
 		build/*.lisp build/build-usual-image build/filenames.make \
-		build/initial.debug build/initial.image			\
+		build/initial.debug 					\
+		build/initial.image-32 build/initial.image-64		\
 		build/*.bat build/*.sh build/*.rc			\
 		build/dummy build/*.wxs 				\
 		build/*.bmp build/*.ico					\
@@ -536,7 +557,7 @@ DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
 
 distname = scheme48-$(VERSION)
 
-dist: build/initial.image c/scheme48.h
+dist: build/initial.image-32 build/initial.image-64 c/scheme48.h
 	distname=$(distname) &&						\
 	distfile=$(distdir)/$$distname.tgz &&				\
 	if [ -d $(distdir) ] &&						\
@@ -601,7 +622,7 @@ $(srcdir)/build/filenames.make: $(PACKAGES)
 #	$(MAKE) $(VM) PACKAGES=
 	cd $(srcdir) && \
 	$(RUNNABLE) -a batch <build/filenames.scm
-# or:	./$(VM) -i $(srcdir)/$(INITIAL) -a batch <build/filenames.scm
+# or:	./$(VM) -i $(srcdir)/$(INITIAL)-$(BIT_SUFFIX) -a batch <build/filenames.scm
 
 
 # --------------------
@@ -630,22 +651,39 @@ link/linker-in-lucid: build/lucid-script.lisp $(linker-files) \
 # Scheme, the byte-code compiler, and a minimal command processor, but
 # no debugging environment to speak of.
 
-$(INITIAL): $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files)
+$(INITIAL)-32: $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files)
 	cd $(srcdir) &&							\
-	($(START_LINKER);						\
+	($(START_LINKER-32);						\
+		echo '(load-configuration "scheme/platform-interfaces.scm")'; \
+		echo '(load-configuration "scheme/rts-packages-32.scm")'; \
 		echo '(load-configuration "scheme/interfaces.scm")';	\
 		echo '(load-configuration "scheme/vm/shared-interfaces.scm")'; \
 		echo '(load-configuration "scheme/packages.scm")';	\
 		echo '(flatload initial-structures)';			\
 		echo '(load "build/initial.scm")';			\
 		echo '(link-initial-system)'				\
-	) | $(LINKER_RUNNABLE)
+	) | $(LINKER_RUNNABLE) && 					\
+		mv $(INITIAL) $(INITIAL)-32
+
+$(INITIAL)-64: $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files)
+	cd $(srcdir) &&							\
+	($(START_LINKER-64);						\
+		echo '(load-configuration "scheme/platform-interfaces.scm")'; \
+		echo '(load-configuration "scheme/rts-packages-64.scm")'; \
+		echo '(load-configuration "scheme/interfaces.scm")';	\
+		echo '(load-configuration "scheme/vm/shared-interfaces.scm")'; \
+		echo '(load-configuration "scheme/packages.scm")';	\
+		echo '(flatload initial-structures)';			\
+		echo '(load "build/initial.scm")';			\
+		echo '(link-initial-system)'				\
+	) | $(LINKER_RUNNABLE) && 					\
+		mv $(INITIAL) $(INITIAL)-64
 
 # --------------------
 # Various small images for debugging low-level changes
 
 LOAD_DEBUG = \
-	 $(START_LINKER); \
+	 $(START_LINKER-32); \
 	 echo \(load-configuration \"scheme/interfaces.scm\"\); \
 	 echo \(load-configuration \"scheme/packages.scm\"\); \
 	 echo \(load-configuration \"scheme/vm/shared-interfaces.scm\"\); \
@@ -654,7 +692,7 @@ LOAD_DEBUG = \
 scheme/debug/tiny.image: scheme/debug/tiny-packages.scm \
 		  scheme/debug/tiny.scm
 	cd $(srcdir) && \
-	($(START_LINKER); \
+	($(START_LINKER-32); \
 	 echo \(load-configuration \"scheme/debug/tiny-packages.scm\"\); \
 	 echo \(link-simple-system \'\(scheme/debug tiny\) \'start tiny-system\)) \
 	| $(LINKER_RUNNABLE)
@@ -662,7 +700,7 @@ scheme/debug/tiny.image: scheme/debug/tiny-packages.scm \
 scheme/debug/low-test.image: scheme/debug/low-test-packages.scm \
 		  scheme/debug/low-test.scm
 	cd $(srcdir) && \
-	($(START_LINKER); \
+	($(START_LINKER-32); \
 	 echo \(load-configuration \"scheme/debug/low-test-packages.scm\"\); \
 	 echo \(link-simple-system \'\(scheme/debug low-test\) \'start low-test-system\)) \
 	| $(LINKER_RUNNABLE)
@@ -763,45 +801,90 @@ c/old-scheme48.h: scheme/vm/interp/arch.scm scheme/vm/data/data.scm \
 # know what you are doing.
 # Afterwards, you should probably make c/scheme48.h.
 
-i-know-what-i-am-doing: compile-vm compile-twospace-gc compile-bibop-gc
+i-know-what-i-am-doing: \
+	compile-vm-32 compile-twospace-gc-32 compile-bibop-gc-32 \
+	compile-vm-64 compile-twospace-gc-64 compile-bibop-gc-64
 
 # compiles VM without GC
 
-compile-vm:
+compile-vm-32:
 	cd $(srcdir)/ps-compiler &&					     \
 	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/rts-packages-32.scm';          \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
 		echo ',exec ,load load-ps-compiler.scm';		     \
-		echo ',exec ,load compile-vm-no-gc.scm';		     \
+		echo ',exec ,load compile-vm-no-gc-32.scm';		     \
 		echo ',exit'						     \
 	) | $(RUNNABLE) -h 12000000 &&					     \
-		mv ../scheme/vm/scheme48vm.c ../c
+		mv ../scheme/vm/scheme48vm-32.c ../c
 
+compile-vm-64:
+	cd $(srcdir)/ps-compiler &&					     \
+	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/rts-packages-64.scm';          \
+		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
+		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
+		echo ',exec ,load load-ps-compiler.scm';		     \
+		echo ',exec ,load compile-vm-no-gc-64.scm';		     \
+		echo ',exit'						     \
+	) | $(RUNNABLE) -h 12000000 &&					     \
+		mv ../scheme/vm/scheme48vm-64.c ../c
 
 # compiles the two-space copier GC
 
-compile-twospace-gc:
+compile-twospace-gc-32:
 	cd $(srcdir)/ps-compiler &&					     \
 	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/rts-packages-32.scm';          \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
 		echo ',exec ,load load-ps-compiler.scm';		     \
-		echo ',exec ,load compile-twospace-gc.scm';		     \
+		echo ',exec ,load compile-twospace-gc-32.scm';		     \
 		echo ',exit'						     \
 	) | $(RUNNABLE) -h 8000000 &&					     \
-		mv ../scheme/vm/scheme48-twospace-heap.c ../c
+		mv ../scheme/vm/scheme48-twospace-heap-32.c ../c
+
+compile-twospace-gc-64:
+	cd $(srcdir)/ps-compiler &&					     \
+	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/rts-packages-64.scm';          \
+		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
+		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
+		echo ',exec ,load load-ps-compiler.scm';		     \
+		echo ',exec ,load compile-twospace-gc-64.scm';		     \
+		echo ',exit'						     \
+	) | $(RUNNABLE) -h 8000000 &&					     \
+		mv ../scheme/vm/scheme48-twospace-heap-64.c ../c
 
 # compiles the BIBOP GC
 
-compile-bibop-gc:
+compile-bibop-gc-32:
 	cd $(srcdir)/ps-compiler &&					     \
 	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/rts-packages-32.scm';          \
 		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
 		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
 		echo ',exec ,load load-ps-compiler.scm';		     \
-		echo ',exec ,load compile-bibop-gc.scm';		     \
+		echo ',exec ,load compile-bibop-gc-32.scm';		     \
 		echo ',exit'						     \
 	) | $(RUNNABLE) -h 8000000 &&					     \
-		mv ../scheme/vm/scheme48-bibop-heap.c ../c
+		mv ../scheme/vm/scheme48-bibop-heap-32.c ../c
 
+compile-bibop-gc-64:
+	cd $(srcdir)/ps-compiler &&					     \
+	(echo ',batch';							     \
+		echo ',config ,load ../scheme/platform-interfaces.scm';	     \
+		echo ',config ,load ../scheme/rts-packages-64.scm';          \
+		echo ',config ,load ../scheme/prescheme/interface.scm';	     \
+		echo ',config ,load ../scheme/prescheme/package-defs.scm';   \
+		echo ',exec ,load load-ps-compiler.scm';		     \
+		echo ',exec ,load compile-bibop-gc-64.scm';		     \
+		echo ',exit'						     \
+	) | $(RUNNABLE) -h 8000000 &&					     \
+		mv ../scheme/vm/scheme48-bibop-heap-64.c ../c

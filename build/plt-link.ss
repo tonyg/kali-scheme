@@ -12,6 +12,8 @@
   (include "../scheme/rts/util.scm")
   (include "../scheme/rts/defenum.scm")
   (include "../scheme/vm/interp/arch.scm")
+  (include "../scheme/vm/util/vm-utilities.scm")
+  (include "../scheme/vm/data/data.scm")
   (include "../scheme/alt/jar-defrecord.scm")
   (include "../scheme/big/general-table.scm")
   (include "../scheme/bcomp/mtype.scm")
@@ -71,14 +73,19 @@
   (include "../scheme/alt/environments.scm")
   (include "../scheme/link/loadc.scm")
   (include "../scheme/env/flatload.scm")
+  (inlcude "../scheme/prescheme/prescheme.scm")
 
   (include "../scheme/alt/init-defpackage.scm")
 
   #| 
   ; do this via plt-script.ss
+  (load-configuration "scheme/prescheme/interface.scm")
+  (load-configuration "scheme/prescheme/package-defs.scm")
+  (load-configuration "scheme/vm-interfaces.scm")
   (load-configuration "scheme/interfaces.scm")
   (load-configuration "scheme/vm/shared-interfaces.scm")
   (load-configuration "scheme/packages.scm")
+  (load-configuration "scheme/link/vm-packages.scm")
   (flatload initial-structures)
   (load "build/initial.scm")
   (link-initial-system)

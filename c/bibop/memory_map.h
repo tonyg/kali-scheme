@@ -6,82 +6,174 @@
 
 #include "memory.h"
 #include "areas.h"
+#include "page_constants.h"
 
-/* The middle 10 bits of an address represent the page-index in a
-   metapage */
-#define LOG_PAGES_PER_METAPAGE 10
-
-/* The upper 10 bits of an address represent the metapage-index in the
-   table */
-#define LOG_TABLE_SIZE 10
-
-/* With a word-length of 32 bits, and LOG_TABLE_SIZE == 10, there is
-   no need to use hashing */
-#undef USE_METAPAGE_HASHING
-
-
-#define PAGES_PER_METAPAGE (1L << LOG_PAGES_PER_METAPAGE)
-
-#define METAPAGE_INDEX_MASK ((1L << LOG_PAGES_PER_METAPAGE) - 1)
-
-#define PAGE_INDEX_IN_METAPAGE(address) ((((unsigned long)address) >> \
-					  LOG_BYTES_PER_PAGE) & \
-					 METAPAGE_INDEX_MASK)
-
-typedef struct _Metapage {
-  s48_address start_address;
-  Area* contents[PAGES_PER_METAPAGE];
-#ifdef USE_METAPAGE_HASHING
-  struct _Metapage* next;
-#endif
-} Metapage;
-
-/* only extern for use in the inlined s48_memory_map_ref - not
-   modified or directly accessed elsewhere */
-extern Metapage* s48_memory_table[];
-
+/* When a new page is allocated: */
 extern void s48_memory_map_setB(s48_address address, Area* value);
 
-/* s48_memory_map_ref */
+/* When the Area structure of a page is needed: */
+/* extern Area* s48_memory_map_ref(s48_address address);
+   - defined inline below */
 
-#define DIRECT_TABLE_INDEX(address) (((unsigned long)address) >> \
-				     (LOG_BYTES_PER_PAGE + \
-				      LOG_PAGES_PER_METAPAGE))
-#ifdef USE_METAPAGE_HASHING
+/* The following is only defined here to allow the inlining of
+   s48_memory_map_ref, and not used elsewhere: */
 
-#define HASH_TABLE_INDEX(address) \
-  (DIRECT_TABLE_INDEX(address) ^ \
-   (DIRECT_TABLE_INDEX(address) >> LOG_TABLE_SIZE))
+#include <assert.h>
 
-inline static Metapage* hashed_find_metapage(s48_address start_address) {
-  Metapage* bucket = s48_memory_table[HASHED_TABLE_INDEX(start_address)];
-  while ((bucket != NULL) && (start_address != bucket->start_address)) {
-    bucket = bucket->next;
-  }
-  return bucket;
-}
+/* We need an integer type of the same size as pointers, and the bit
+   length of addresses: */
+#ifdef WIN32
 
-#define TABLE_INDEX HASH_TABLE_INDEX
-#define find_metapage hashed_find_metapage
+#define uintptr_t (unsigned long int)
+#define ADDRESS_LENGTH 32
+
+#elif WIN64
+
+#define uintptr_t (unsigned long long int)
+#define ADDRESS_LENGTH 64
+
+#else
+
+#include <stdint.h>
+#include <limits.h>
+#define ADDRESS_LENGTH __WORDSIZE
 
 #endif
-#ifndef USE_METAPAGE_HASHING
 
-#define TABLE_INDEX DIRECT_TABLE_INDEX
-#define direct_find_metapage(start_address) \
-  s48_memory_table[TABLE_INDEX(start_address)]
-#define find_metapage direct_find_metapage
+/*** CONFIGURATION ***/
+
+/* The memory_map provides a way to store and find an Area structure
+   for every memory page we have allocated for the heap. It must be
+   very fast, without consuming too much memory at the same time.
+
+   For 32bit systems, this is quite easy, but to achieve this for
+   64bit systems, a sort of hashing is implemented. It is
+   automatically activated if the defined page size and a given size
+   for a statically allocated array are too small to cover all
+   potential addresses.
+
+   The first relevant size is defined in page_constants.h:
+
+   LOG_BYTES_PER_PAGE
+
+   The next one defines the size of a statically allocated global
+   array, which stores pointers to Metapage structures; it's
+   logarithmic size is:
+*/
+
+#define LOG_TABLE_SIZE 10
+
+/* Metapage structures are allocated by need, and each consists of
+   another array of pointers to Area structures. It's logarithmic size
+   is:
+*/
+
+#define LOG_PAGES_PER_METAPAGE 10
+
+/*** END OF CONFIGURATION ***/
+
+/* Now with the usual sizes on a 32bit system these sizes sum up to 32
+   bits and we don't need the hashing algorithm. Let's see if we do
+   need it:
+ */
+
+#define USED_ADDRESS_BITS \
+  (LOG_BYTES_PER_PAGE + LOG_TABLE_SIZE + LOG_PAGES_PER_METAPAGE)
+
+#define REMAINING_ADDRESS_BITS \
+  (ADDRESS_LENGTH - USED_ADDRESS_BITS)
+
+#if REMAINING_ADDRESS_BITS > 0
+#define NEED_METAPAGE_HASHING
+#elif REMAINING_ADDRESS_BITS == 0
+#undef NEED_METAPAGE_HASHING
+#else
+#error "Misconfigured memory map."##REMAINING_ADDRESS_BITS
+#endif
+
+/* For both direct access and hashed access, we split an address into
+   the following fields:
+
+   high                                                             low
+   |   Rest   |  Metapage in Table  | Page in Metapage | Byte in Page |
+
+   If the Rest has 0-length we don't need hashing.
+
+ */
+
+/* Some sizes: */
+#define METAPAGES (((uintptr_t)1) << LOG_TABLE_SIZE)
+#define PAGES_PER_METAPAGE (((uintptr_t)1) << LOG_PAGES_PER_METAPAGE)
+
+/* Some accessors for the fields : */
+
+#define ADDR_METAPAGE_INDEX(address) \
+  ( ( ((uintptr_t)address) >> (LOG_BYTES_PER_PAGE + LOG_PAGES_PER_METAPAGE) ) \
+    & (METAPAGES - 1) )
+
+#define ADDR_PAGE_INDEX(address) \
+  ( ( ((uintptr_t)address) >> LOG_BYTES_PER_PAGE ) \
+    & (PAGES_PER_METAPAGE - 1) )
+
+#ifdef NEED_METAPAGE_HASHING
+
+#define ADDR_REST(address) \
+  ( ((uintptr_t)address) >> USED_ADDRESS_BITS )
+
+/* To identify the correct hash bucket, we need store the start
+   address of all pages of a metapage. We use this macro to compare
+   them: */
+#define ADDR_REST_MASK \
+  ( ((uintptr_t)-1) << USED_ADDRESS_BITS )
+#define ADDR_REST_MASKED(address) ((void*)(ADDR_REST_MASK & ((uintptr_t)address)))
+#define IS_CORRECT_METAPAGE(metapage, address) \
+  ( ADDR_REST_MASKED(metapage->start_address) == ADDR_REST_MASKED(address) )
+
+#endif
+
+/* And now the structure we use; for hashing, we use a linked list of
+   Metapages for pages which have the same ADDR_METAPAGE_INDEX, but
+   different ADDR_REST parts:
+*/
+
+typedef struct _Metapage {
+#ifdef NEED_METAPAGE_HASHING
+  s48_address start_address;
+  struct _Metapage* next;
+#endif
+  Area* contents[PAGES_PER_METAPAGE];
+} Metapage;
+
+#define TABLE_SIZE (1L << LOG_TABLE_SIZE)
+
+/* static Metapage* s48_memory_table[TABLE_SIZE]; */
+extern Metapage* s48_memory_table[TABLE_SIZE];
+
+#ifdef NEED_METAPAGE_HASHING
+
+/* returns the place of the found pointer to the metapage, resp. the
+   place where a newly allocated metepage should be stored: */
+inline static Metapage** find_metapagep(s48_address address) {
+  Metapage** bucketp = &s48_memory_table[ADDR_METAPAGE_INDEX(address)];
+  while ((*bucketp != NULL) && (!IS_CORRECT_METAPAGE((*bucketp), address))) {
+    bucketp = &(*bucketp)->next;
+  }
+  assert(bucketp != NULL);
+  return bucketp;
+}
+
+#else
+
+#define find_metapagep(address) (&s48_memory_table[ADDR_METAPAGE_INDEX(address)])
 
 #endif
 
 inline static Area* s48_memory_map_ref(s48_address address) {
-  /*s48_address start_address = PAGE_START_ADDRESS(address);*/
-  Metapage* metapage = find_metapage(address);
+  Metapage* metapage = *find_metapagep(address);
   if (metapage == NULL)
     return NULL;
   else
-    return metapage->contents[PAGE_INDEX_IN_METAPAGE(address)];
+    return metapage->contents[ADDR_PAGE_INDEX(address)];
 };
-
 
 #endif

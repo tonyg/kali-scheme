@@ -107,6 +107,8 @@
 	  d-vector-header? b-vector-header?
 	  max-stob-contents-size-in-cells
 
+	  make-descriptor make-immediate
+
 	  add-stob-tag remove-stob-tag
 	  ))
 

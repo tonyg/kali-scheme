@@ -26,7 +26,7 @@
 	   (if (not (= *memory-end* 0))
 	       (deallocate-memory *memory*))
            (set! *memory* (allocate-memory size))
-	   (if (= -1 *memory*)
+	   (if (null-address? *memory*)
 	       (error "out of memory, unable to continue"))
 	   (set! *memory-begin* *memory*)
            (set! *memory-end* (+ *memory* size))))))
