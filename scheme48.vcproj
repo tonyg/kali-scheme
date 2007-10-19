@@ -768,30 +768,8 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="c\scheme48-bibop-heap.c"
+				RelativePath=".\c\scheme48-bibop-heap-32.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="build\scheme48.rc"
@@ -816,30 +794,8 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="c\scheme48vm.c"
+				RelativePath=".\c\scheme48vm-32.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\c\net\socket.c"
@@ -982,6 +938,10 @@
 			</File>
 			<File
 				RelativePath="c\scheme48.h"
+				>
+			</File>
+			<File
+				RelativePath=".\c\win32\scheme48arch.h"
 				>
 			</File>
 			<File
