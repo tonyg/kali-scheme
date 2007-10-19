@@ -19,7 +19,6 @@ INSTALL_DATA = @INSTALL_DATA@
 LDFLAGS = @LDFLAGS@
 LDFLAGS_VM = @LDFLAGS_VM@
 LIBOBJS = @LIBOBJS@
-MACOS_X86_64_LIBS = @MACOS_X86_64_LIBS@
 
 GC_OBJS = @GC_OBJS@
 
@@ -213,7 +212,7 @@ POSIX_OBJECTS = $(posix_dir)/user.o     $(posix_dir)/regexp.o	\
 		$(posix_dir)/posix.o
 
 $(POSIX_EXTERNAL) : $(POSIX_OBJECTS)
-	$(LD) -o $@ $(DYNAMIC_EXTERNALS_LDFLAGS) $(POSIX_OBJECTS) $(MACOS_X86_64_LIBS)
+	$(LD) -o $@ $(DYNAMIC_EXTERNALS_LDFLAGS) $(POSIX_OBJECTS)
 
 
 # End of POSIX rules
@@ -222,7 +221,7 @@ c/srfi-27.o: c/srfi-27.c $(SCHEM48HS)
 	$(CC) -c $(CPPFLAGS) $(DEFS) -I ./c -I$(srcdir)/c -I$(srcdir)/c/bibop $(CFLAGS) $(DYNAMIC_EXTERNALS_CFLAGS) -o $@ $<
 
 $(SRFI_27_EXTERNAL) : c/srfi-27.o
-	$(LD) -o $@ $(DYNAMIC_EXTERNALS_LDFLAGS) $^ $(MACOS_X86_64_LIBS)
+	$(LD) -o $@ $(DYNAMIC_EXTERNALS_LDFLAGS) $^
 
 # Native-code glue rules
 
