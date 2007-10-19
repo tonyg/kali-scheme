@@ -33,6 +33,8 @@
 ;   MG, September 2002: merged in mrg32k2a.scm, move package definitons to
 ;                       more-packages.scm, renamed from srfi-27-b.scm to srfi-27.scm
 
+(import-dynamic-externals "=scheme48external/srfi-27")
+
 (define-record-type :random-source
   (:random-source-make
    state-ref

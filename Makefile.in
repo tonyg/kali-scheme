@@ -140,6 +140,7 @@ INITIAL = $(srcdir)/build/initial.image
 VM = scheme48vm
 LIBSCHEME48 = c/libscheme48.a
 POSIX_EXTERNAL = c/posix.so
+SRFI_27_EXTERNAL = c/srfi-27.so
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
 OBJS =	c/scheme48vm-$(BIT_SUFFIX).o \
 	c/extension.o c/free.o c/double_to_string.o c/bignum.o \
@@ -161,7 +162,7 @@ CONFIG_FILES = scheme/interfaces.scm scheme/packages.scm \
 
 # The following is the first rule and therefore the "make" command's
 # default target.
-enough: vm $(POSIX_EXTERNAL) $(LIBSCHEME48) $(IMAGE) script-interpreter go
+enough: vm $(POSIX_EXTERNAL) $(SRFI_27_EXTERNAL) $(LIBSCHEME48) $(IMAGE) script-interpreter go
 
 # --------------------
 # External code to include in the VM
@@ -169,8 +170,7 @@ enough: vm $(POSIX_EXTERNAL) $(LIBSCHEME48) $(IMAGE) script-interpreter go
 
 EXTERNAL_OBJECTS = c/net/socket.o c/net/address.o c/net/net.o c/unix/socket.o \
 		   c/unix/dynlink.o \
-		   c/unix/sysexits.o $(ASM_OBJECTS) \
-		   c/srfi-27.o
+		   c/unix/sysexits.o $(ASM_OBJECTS)
 
 # POSIX rules; this could have its own Makefile, but I don't want to bother.
 
@@ -217,6 +217,12 @@ $(POSIX_EXTERNAL) : $(POSIX_OBJECTS)
 
 
 # End of POSIX rules
+
+c/srfi-27.o: c/srfi-27.c $(SCHEM48HS)
+	$(CC) -c $(CPPFLAGS) $(DEFS) -I ./c -I$(srcdir)/c -I$(srcdir)/c/bibop $(CFLAGS) $(DYNAMIC_EXTERNALS_CFLAGS) -o $@ $<
+
+$(SRFI_27_EXTERNAL) : c/srfi-27.o
+	$(LD) -o $@ $(DYNAMIC_EXTERNALS_LDFLAGS) $^ $(MACOS_X86_64_LIBS)
 
 # Native-code glue rules
 
@@ -339,7 +345,6 @@ c/net/socket.o: $(SCHEME48HS) c/net/address.h c/net/socket.h
 c/unix/socket.o: $(SCHEME48HS) c/net/address.h c/net/socket.h c/fd-io.h c/event.h
 c/net/net.o: $(SCHEME48HS)
 c/unix/dynlink.o: $(SCHEME48HS)
-c/unix/srfi-27.o: $(SCHEME48HS)
 
 c/script-interpreter.o: c/sysdep.h $(FAKEHS) c/script-interpreter.c
 	$(CC) -c $(CFLAGS) -o $@ \
@@ -441,7 +446,7 @@ inst-config-script:
 	chmod +x $$config_script
 
 inst-externals:
-	$(INSTALL_PROGRAM) $(POSIX_EXTERNAL) $(DESTDIR)$(LIB)/
+	$(INSTALL_PROGRAM) $(POSIX_EXTERNAL) $(SRFI_27_EXTERNAL) $(DESTDIR)$(LIB)/
 
 # Script to run scheme48 in this directory.
 go:
@@ -473,7 +478,7 @@ configure: configure.in
 clean:
 	-rm -f $(VM) script-interpreter					\
 		*.o c/unix/*.o c/posix/*.o c/net/*.o c/*.o 		\
-		$(POSIX_EXTERNAL)					\
+		$(POSIX_EXTERNAL) $(SRFI_27_EXTERNAL)			\
 		c/fake/*.o c/bibop/*.o					\
 		c/*.a c/glue_gnu.s c/glue_darwin.s c/scheme48.exp 	\
 		TAGS $(IMAGE)						\
