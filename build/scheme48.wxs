@@ -112,6 +112,15 @@
               </Component>
             </Directory>
 
+            <Directory Id="external" Name="external" LongName="external" >
+              <Component Id="external_component" Guid="CAAA27A9-D56B-4EE3-AF02-02227F020C75">
+                <File Id="external_srfi-27.dll"
+                      Name="srfi-27.dll" LongName="srfi-27.dll"
+                      src="srfi-27.dll"
+                      DiskId="1" Vital="yes" />
+              </Component>
+            </Directory>
+
             <Directory Id="build" Name="BUILD" LongName="build" >
               <Component Id="build_component" Guid="7d78a564-df2e-11d9-817f-00111175eb9e">
 

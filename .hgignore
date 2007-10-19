@@ -43,6 +43,8 @@ syntax: regexp
 ^ps-compiler/.*\.input$
 ^go\.bat$
 ^scheme48\.(ncb|res|suo|vcproj\..*)$
+^srfi-27\.(exp|ilk|lib|pdb|vcproj\..*)$
+srfi-27.dll
 ^scheme48vm\.(exe|exp|lib)$
 ^scheme48-files\.input$
 ^scheme48\.(msi|wixobj)$

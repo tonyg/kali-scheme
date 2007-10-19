@@ -802,10 +802,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\c\srfi-27.c"
-				>
-			</File>
-			<File
 				RelativePath=".\c\win32\sysexits.c"
 				>
 			</File>
