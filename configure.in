@@ -434,6 +434,7 @@ dnl
 AC_INIT(c/prescheme.h)
      AC_CONFIG_HEADER(c/sysdep.h)
      AC_CONFIG_HEADER(c/scheme48write-barrier.h)
+     AC_CONFIG_HEADER(c/scheme48arch.h)
      AC_CANONICAL_HOST
      dnl set the cross-compile flag before we try anything.
      AC_TRY_RUN([int main() { return 0;}], [], [], [true])

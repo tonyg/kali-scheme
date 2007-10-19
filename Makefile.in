@@ -148,7 +148,7 @@ OBJS =	c/scheme48vm-$(BIT_SUFFIX).o \
 FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
 		c/fake/sys-select.h c/fake/langinfo.h
 
-SCHEME48HS = c/scheme48.h c/scheme48write-barrier.h
+SCHEME48HS = c/scheme48.h c/scheme48write-barrier.h c/scheme48arch.h
 
 # Sources:
 
@@ -396,6 +396,7 @@ inst-man:
 inst-inc: c/scheme48.exp
 	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(DESTDIR)$(incdir)
 	$(INSTALL_DATA) c/scheme48write-barrier.h $(DESTDIR)$(incdir)
+	$(INSTALL_DATA) c/scheme48arch.h $(DESTDIR)$(incdir)
 	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier-twospace.h $(DESTDIR)$(incdir)
 	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier-bibop.h $(DESTDIR)$(incdir)
 	$(INSTALL_DATA) $(srcdir)/c/scheme48.exp $(DESTDIR)$(incdir)
@@ -485,7 +486,7 @@ clean:
 
 distclean: clean
 	rm -f Makefile config.log config.status config-cache \
-		c/sysdep.h c/scheme48write-barrier.h
+		c/sysdep.h c/scheme48write-barrier.h c/scheme48arch.h
 
 check:	$(VM) $(IMAGE) scheme/debug/check.scm
 	(								\
@@ -545,7 +546,8 @@ DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
 		build/dummy build/*.wxs 				\
 		build/*.bmp build/*.ico					\
 		c/*.[ch] c/*/*.[ch] c/*/*.ci				\
-		c/scheme48.h.in	c/scheme48write-barrier.h.in		\
+		c/scheme48.h.in						\
+		c/scheme48write-barrier.h.in c/scheme48arch.h		\
 		emacs/*.el gdbinit					\
 		scheme/*.scm scheme/*/*.scm scheme/vm/*/*.scm		\
 		ps-compiler/minor-version-number			\

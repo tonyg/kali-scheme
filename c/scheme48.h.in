@@ -37,8 +37,6 @@ typedef long	s48_value;
 /* Superceded name for the above definition, retained for compatibility. */
 #define S48_EQ(v1, v2) ((v1) == (v2)) 
 
-#include "sysdep.h"
-
 #if SIZEOF_VOID_P == 4
 #define S48_MAX_FIXNUM_VALUE ((1 << 29) - 1)
 #define S48_MIN_FIXNUM_VALUE (-1 << 29)
