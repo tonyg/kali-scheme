@@ -104,6 +104,20 @@
                       Name="S48-WB.H" LongName="scheme48write-barrier.h"
                       src="c/win32/scheme48write-barrier.h"
                       DiskId="1" Vital="yes" />
+
+                <File Id="include_scheme48arch.h"
+                      Name="S48-ARCH.H" LongName="scheme48arch.h"
+                      src="c/win32/scheme48arch.h"
+                      DiskId="1" Vital="yes" />
+              </Component>
+            </Directory>
+
+            <Directory Id="external" Name="external" LongName="external" >
+              <Component Id="external_component" Guid="CAAA27A9-D56B-4EE3-AF02-02227F020C75">
+                <File Id="external_srfi-27.dll"
+                      Name="srfi-27.dll" LongName="srfi-27.dll"
+                      src="srfi-27.dll"
+                      DiskId="1" Vital="yes" />
               </Component>
             </Directory>
 

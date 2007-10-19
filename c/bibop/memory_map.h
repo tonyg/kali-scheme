@@ -22,16 +22,10 @@ extern void s48_memory_map_setB(s48_address address, Area* value);
 
 /* We need an integer type of the same size as pointers, and the bit
    length of addresses: */
-#ifdef WIN32
-
-#define uintptr_t (unsigned long int)
+#ifdef _WIN32
 #define ADDRESS_LENGTH 32
-
-#elif WIN64
-
-#define uintptr_t (unsigned long long int)
+#elif _WIN64
 #define ADDRESS_LENGTH 64
-
 #else
 
 #include <stdint.h>

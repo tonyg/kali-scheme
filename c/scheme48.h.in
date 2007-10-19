@@ -25,7 +25,11 @@
 
 #define S48_EXTERN extern S48_EXTERN_ADD_ONS
 
-#include <stdint.h> /* uintXX_t */
+#ifdef _WIN32
+typedef unsigned _int16 uint16_t;
+#else
+#include <stdint.h> /* uintXX_t, C99 */
+#endif
 
 typedef long	s48_value;
 

@@ -10,6 +10,8 @@
 
 #ifndef _WIN32
 #include "sysdep.h"
+#else
+#include "scheme48arch.h"
 #endif
 
 /* inline isn't in ANSI C */
