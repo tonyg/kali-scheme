@@ -241,7 +241,8 @@ static s48_value current_time(void){
    ================================
 */
 
-void s48_init_srfi_27(void) {
+void
+s48_on_load(void) {
   S48_EXPORT_FUNCTION(mrg32k3a_pack_state1);
   S48_EXPORT_FUNCTION(mrg32k3a_unpack_state1);
   S48_EXPORT_FUNCTION(mrg32k3a_random_range);
