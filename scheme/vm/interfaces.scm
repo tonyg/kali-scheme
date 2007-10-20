@@ -706,14 +706,14 @@
 	  s48-copy-string-to-utf-8
 	  s48-copy-string-to-utf-8-n
 
-	  s48-string-utf-16be-length/
-	  s48-string-utf-16be-length-n/
+	  s48-string-utf-16be-length
+	  s48-string-utf-16be-length-n
 	  s48-enter-string-utf-16be/
 	  s48-enter-string-utf-16be-n/
 	  s48-copy-string-to-utf-16be/
 	  s48-copy-string-to-utf-16be-n/
-	  s48-string-utf-16le-length/
-	  s48-string-utf-16le-length-n/
+	  s48-string-utf-16le-length
+	  s48-string-utf-16le-length-n
 	  s48-enter-string-utf-16le/
 	  s48-enter-string-utf-16le-n/
 	  s48-copy-string-to-utf-16le/
