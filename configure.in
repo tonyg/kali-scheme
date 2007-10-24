@@ -29,8 +29,6 @@ AC_TRY_COMPILE([],[],compiles=1, compiles=0)
 AC_TRY_LINK([],[],links=1, links=0)
 if test "$links"="1" -a "$compiles"="1"; then
   AC_MSG_RESULT([OK])
-  GCC_LDFLAGS="$GCC_LDFLAGS -arch $1"
-  LD_LDFLAGS="$LD_LDFLAGS -arch $1"
 else
   CFLAGS="$save_CFLAGS"
   LDFLAGS="$save_LDFLAGS"
@@ -366,11 +364,9 @@ define(S48_DYNAMIC_EXTERNALS, [dnl
 		;;
 		darwin*|macosx* )
 			DYNAMIC_EXTERNALS_CFLAGS='-fPIC -fno-common'
-			DYNAMIC_EXTERNALS_LDFLAGS='-bundle -flat_namespace -undefined suppress'
-			dnl linker workaround for MacOSX 10.4 x86_64
-	      		if test "`echo \"$LDFLAGS\" | grep \"x86_64\"`"; then
-			        DYNAMIC_EXTERNALS_LDFLAGS="$DYNAMIC_EXTERNALS_LDFLAGS /usr/lib/dylib1.o"
-		        fi
+			DYNAMIC_EXTERNALS_LDFLAGS="$CFLAGS $LDFLAGS -bundle -flat_namespace -undefined suppress"
+			dnl linker workaround for MacOSX
+			LD="$CC"
 		;;
 		solaris* )
 			DYNAMIC_EXTERNALS_CFLAGS='-fPIC'
