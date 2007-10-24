@@ -30,7 +30,7 @@ extern void s48_memory_map_setB(s48_address address, Area* value);
 
 #include <stdint.h>
 #include <limits.h>
-#define ADDRESS_LENGTH __WORDSIZE
+#define ADDRESS_LENGTH WORDSIZE
 
 #endif
 
