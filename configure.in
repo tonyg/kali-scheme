@@ -27,7 +27,7 @@ compiles=0
 links=0
 AC_TRY_COMPILE([],[],compiles=1, compiles=0)
 AC_TRY_LINK([],[],links=1, links=0)
-if test "$links"="1" -a "$compiles"="1"; then
+if test "$links" = "1" -a "$compiles" = "1"; then
   AC_MSG_RESULT([OK])
 else
   CFLAGS="$save_CFLAGS"
@@ -283,8 +283,9 @@ inline void f(void)
 ])
 dnl
 define(S48_IEEE_ENDIANNESS, [dnl
+build_universal="$1"
 AC_MSG_CHECKING([IEEE floating-point endianness])
-if test "$S48_BUILD_UNIVERSAL_P"="1";
+if test "$build_universal" = "1";
 then 
   AC_MSG_RESULT([building Universal Binary; using compiler defined macros instead])
 else
@@ -574,7 +575,7 @@ fail
 		AC_DEFINE(HAVE_SIGACTION)
 		AC_MSG_RESULT([yes]),
 		AC_MSG_RESULT([no]))
-     S48_IEEE_ENDIANNESS
+     S48_IEEE_ENDIANNESS($S48_BUILD_UNIVERSAL_P)
      S48_NATIVE_CODE
      S48_DYNAMIC_EXTERNALS
      S48_PTHREADS
