@@ -401,7 +401,8 @@ define(S48_DYNAMIC_EXTERNALS, [dnl
 		solaris* )
 			DYNAMIC_EXTERNALS_CFLAGS="$PIC"
 			dnl -G means shared object
-			DYNAMIC_EXTERNALS_LDFLAGS='-G'
+			DYNAMIC_EXTERNALS_LDFLAGS="$LDFLAGS -G"
+			LD="$CC"
 		;;
 		linux* )
 			DYNAMIC_EXTERNALS_CFLAGS="$PIC"
