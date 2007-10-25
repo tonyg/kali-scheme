@@ -213,6 +213,35 @@ fi
 ])dnl
 dnl
 dnl
+dnl Determine the name of compiler option for generating position
+dnl independent code.
+define(S48_PIC_OPTION_NAME, [dnl
+	AC_MSG_CHECKING([how to compile position independent code])
+	case "$host_os" in
+		solaris* )
+		   if test "$GCC" = "yes"; then
+			PIC="-fPIC"
+		   else
+			# for SUN's compiler
+			PIC="-KPIC"
+		   fi
+		;;
+		darwin*|macosx* )
+		   # Code on this platform is PIC by default
+		   PIC=""
+		;;
+		*)
+ 	           PIC="-fPIC"
+		;;
+	esac
+	if test "$PIC" = ""; then
+	   AC_MSG_RESULT(no extra option necessary)
+  	else
+	   AC_MSG_RESULT($PIC)
+	fi
+])dnl
+dnl
+dnl
 dnl
 dnl -rdynamic is needed for loading external code
 define(S48_LDFLAGS, [dnl
@@ -363,18 +392,18 @@ define(S48_DYNAMIC_EXTERNALS, [dnl
 			DYNAMIC_EXTERNALS_LDFLAGS='-bM:SRE -brtl -bI:\$(incdir)/scheme48.exp -bnoentry -bE:\$(incdir)/scheme48-external.exp -lc'
 		;;
 		darwin*|macosx* )
-			DYNAMIC_EXTERNALS_CFLAGS='-fPIC -fno-common'
+			DYNAMIC_EXTERNALS_CFLAGS='-fno-common'
 			DYNAMIC_EXTERNALS_LDFLAGS="$CFLAGS $LDFLAGS -bundle -flat_namespace -undefined suppress"
 			dnl linker workaround for MacOSX
 			LD="$CC"
 		;;
 		solaris* )
-			DYNAMIC_EXTERNALS_CFLAGS='-fPIC'
+			DYNAMIC_EXTERNALS_CFLAGS="$PIC"
 			dnl -G means shared object
 			DYNAMIC_EXTERNALS_LDFLAGS='-G'
 		;;
 		linux* )
-			DYNAMIC_EXTERNALS_CFLAGS='-fPIC'
+			DYNAMIC_EXTERNALS_CFLAGS="$PIC"
 			if test "$LD" = "ld"; then
 				DYNAMIC_EXTERNALS_LDFLAGS="-shared $LD_LDFLAGS"
 			else
@@ -382,7 +411,7 @@ define(S48_DYNAMIC_EXTERNALS, [dnl
 			fi
 		;;
 		* )
-			DYNAMIC_EXTERNALS_CFLAGS='-fPIC'
+			DYNAMIC_EXTERNALS_CFLAGS="$PIC"
 			DYNAMIC_EXTERNALS_LDFLAGS='-shared'
 		;;
 	esac
@@ -463,6 +492,7 @@ AC_INIT(c/prescheme.h)
      S48_DETERMINE_BIT_SUFFIX
      S48_ENABLE_UNIVERSAL_BINARY
      S48_OSX_ARCH_FLAGS($S48_BUILD_UNIVERSAL_P,$S48_FORCE_32_P)
+     S48_PIC_OPTION_NAME
      S48_CREATE_BUILD_DIRS
      S48_LDFLAGS
      AC_ISC_POSIX
