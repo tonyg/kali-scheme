@@ -668,7 +668,7 @@ void measure_after_collection(int c) {
     first_time_flag = 1;
     display_vm_options();
     newline();
-    dis_string("gc_nr gen_nr gc_time gc_runtime gc_durchschnitt");
+    dis_string("gc_nr gen_nr gc_time gc_runtime gc_average");
     dis_string_x("-", 40);
   }
   
