@@ -383,19 +383,19 @@ inst-vm:
 	$(INSTALL_PROGRAM) $(VM) $(DESTDIR)$(LIB)
 
 inst-image:
-	rm -f '/tmp/$(IMAGE)' &&					\
+	rm -f '/tmp/$(IMAGE)'
 	$(srcdir)/build/build-usual-image $(srcdir) "$(SHARE)" "$(LIB)" \
-		"/tmp/$(IMAGE)" "./$(VM)" "$(INITIAL)-$(BIT_SUFFIX)" && \
-	$(INSTALL_DATA) /tmp/$(IMAGE) $(DESTDIR)$(LIB) &&		\
+		"/tmp/$(IMAGE)" "./$(VM)" "$(INITIAL)-$(BIT_SUFFIX)"
+	$(INSTALL_DATA) /tmp/$(IMAGE) $(DESTDIR)$(LIB)
 	rm /tmp/$(IMAGE)
 
 inst-man:
 	$(srcdir)/mkinstalldirs $(DESTDIR)$(mandir)
 	sed 's=LBIN=$(bindir)=g' $(srcdir)/doc/scheme48.man |	   \
 		sed "s=LLIB=$(LIB)=g" |				   \
-		sed "s=LS48=$(RUNNABLE)=g" >$(MANPAGE) &&	   \
-	$(INSTALL_DATA) $(MANPAGE) $(DESTDIR)$(mandir) &&	   \
-	rm $(MANPAGE);						   \
+		sed "s=LS48=$(RUNNABLE)=g" >$(MANPAGE)
+	$(INSTALL_DATA) $(MANPAGE) $(DESTDIR)$(mandir)
+	rm $(MANPAGE)
 
 inst-inc: c/scheme48.exp
 	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(DESTDIR)$(incdir)
@@ -411,7 +411,7 @@ inst-misc:
 		for f in $(srcdir)/scheme/$$stub/*.scm; do		\
 			$(INSTALL_DATA) $$f $(DESTDIR)$(SHARE)/$$stub || exit 1;	\
 		done;							\
-	done &&								\
+	done
 	for f in $(srcdir)/scheme/rts/*num.scm 				\
 		 $(srcdir)/scheme/rts/jar-defrecord.scm; do		\
 		$(INSTALL_DATA) $$f $(DESTDIR)$(SHARE)/rts || exit 1;	\
