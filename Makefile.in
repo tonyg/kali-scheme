@@ -668,8 +668,8 @@ $(INITIAL)-32: $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files
 		echo '(flatload initial-structures)';			\
 		echo '(load "build/initial.scm")';			\
 		echo '(link-initial-system)'				\
-	) | $(LINKER_RUNNABLE) && 					\
-		mv $(INITIAL) $(INITIAL)-32
+	) | $(LINKER_RUNNABLE)
+	mv $(INITIAL) $@
 
 $(INITIAL)-64: $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files)
 	cd $(srcdir) &&							\
@@ -682,8 +682,8 @@ $(INITIAL)-64: $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files
 		echo '(flatload initial-structures)';			\
 		echo '(load "build/initial.scm")';			\
 		echo '(link-initial-system)'				\
-	) | $(LINKER_RUNNABLE) && 					\
-		mv $(INITIAL) $(INITIAL)-64
+	) | $(LINKER_RUNNABLE)
+	mv $(INITIAL) $@
 
 # --------------------
 # Various small images for debugging low-level changes
