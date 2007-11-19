@@ -287,6 +287,7 @@
 #error "Static Space option needs at least 3 generations!"
 #endif
 
-
+/* Transport Link Cells - Ghuloum, Dybvig 2007 */
+#define S48_HAVE_TRANSPORT_LINK_CELLS TRUE
 
 #endif /* #ifndef __S48_GC_CONFIG */

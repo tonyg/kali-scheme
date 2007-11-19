@@ -1012,7 +1012,82 @@ inline static void call_internal_write_barrier2(Area* maybe_area, s48_address ad
 			       s48_memory_map_ref((s48_address)stob));
   }
 }
-  
+
+#if (S48_HAVE_TRANSPORT_LINK_CELLS)
+
+static void append_tconc(s48_value tconc, s48_value value) {
+  /* a tconc is a pair, whose cdr points the the last pair of a list */
+
+  if (S48_PAIR_P(tconc) && (S48_PAIR_P(S48_UNSAFE_CDR(tconc)))) {
+    /* We have to use the usual allocation functions, cause we might
+       need a new area, but another gc must not be triggered of
+       course, as we are just doing one right now. */
+    s48_forbid_gcB();
+
+    /* create the new pair */
+    /* No other way to know the size of a pair? This is not nice. */
+    s48_value newpair = s48_allocate_stob(S48_STOBTYPE_PAIR, S48_CELLS_TO_BYTES(2));
+    S48_UNSAFE_SET_CAR(newpair, value);
+    S48_UNSAFE_SET_CDR(newpair, S48_NULL);
+
+    /* append it */
+    S48_UNSAFE_SET_CDR(S48_UNSAFE_CDR(tconc), newpair);
+    S48_UNSAFE_SET_CDR(tconc, newpair);
+
+    s48_allow_gcB();
+  }
+  else {
+    /* invalid tconc - do something more severe than a printf? */
+    assert(S48_PAIR_P(tconc));
+    assert(S48_PAIR_P(S48_CDR(tconc)));
+    printf("ignoring invalid tconc\n");
+  }
+}
+
+static void forwarding_transport_link_cell(s48_value tlc) {
+  assert(S48_TRANSPORT_LINK_CELL_P(tlc));
+
+  /* if the tconc field is non-null (false) */
+  s48_value tconc = S48_UNSAFE_TRANSPORT_LINK_CELL_TCONC(tlc);
+  if (S48_FALSE_P(tconc)) {
+    /* tlc aready seen */
+  }
+  else if (S48_PAIR_P(tconc)) {
+    /* and the key has moved */
+    s48_value key = S48_UNSAFE_TRANSPORT_LINK_CELL_KEY(tlc);
+    if (S48_STOB_P(key) && (BROKEN_HEART_P(S48_STOB_HEADER(key)))) {
+
+      /* then add the tlc to the end of the tconc... */
+      /* this allocates a new pair, which will contain the address of
+	 the old tlc, but it will be traced and updated later. */
+      append_tconc(tconc, tlc);
+
+      /* and set the tconc field to null (false) */
+      S48_UNSAFE_TRANSPORT_LINK_CELL_TCONC(tlc) = S48_FALSE;
+    }
+    /* else: key not moved - safe because the key object must always
+       be younger than the tlc */
+  }
+  else {
+    /* invalid tconc field - do something more severe than a printf? */
+    assert(0);
+    printf("ignoring invalid tlc tconc field\n");
+  }
+}
+
+#endif // S48_HAVE_TRANSPORT_LINK_CELLS
+
+/* called when stob is about to be forwarded (also called for large
+ objects which are never really copied) */
+inline static void forwarding_object_hook(s48_value stob) {
+
+#if (S48_HAVE_TRANSPORT_LINK_CELLS)
+   if (S48_TRANSPORT_LINK_CELL_P(stob)) {
+     forwarding_transport_link_cell(stob);
+   }
+#endif
+
+}
 
 /* EKG checks for broken hearts - only used internally in
    s48_trace_locationsB */
@@ -1026,6 +1101,7 @@ inline static void call_internal_write_barrier2(Area* maybe_area, s48_address ad
       addr = next;\
       goto loop;\
     } else {\
+      forwarding_object_hook(trace_stob_stob); \
       copy_header = header;\
       copy_thing = trace_stob_stob;\
       goto label;\
@@ -1107,6 +1183,8 @@ void s48_internal_trace_locationsB(Area* maybe_area, s48_address start,
        goto loop;
      } break;
      case GC_ACTION_MARK_LARGE: {
+       forwarding_object_hook(trace_stob_stob);
+
        copy_to_space = from_area->target_space;
        mark_large(from_area, copy_to_space);
        /* a large object has been "copied" */

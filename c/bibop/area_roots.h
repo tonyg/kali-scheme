@@ -132,6 +132,10 @@ inline static void s48_internal_write_barrier(Area* area, s48_address addr,
      collected (other-space). */
   if (area->action != GC_ACTION_IGNORE)
     return;
+#if (S48_HAVE_TRANSPORT_LINK_CELLS)
+  /* We could ignore the key field here for optimization, but maybe
+     it's not worth the test. */
+#endif
   /* We're only interested in pointers from old to young */
   if (area->generation_index > to_area->generation_index) {
 #if (MEASURE_GC)
