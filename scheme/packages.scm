@@ -416,6 +416,7 @@
 	    callback
 	    command-levels
 	    command-processor
+	    command-state
 	    compact-tables
 	    constant-tables
 	    conditions
