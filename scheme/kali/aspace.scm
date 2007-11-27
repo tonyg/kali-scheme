@@ -177,13 +177,12 @@
 
 ; Returns the ip address of MACHINE-NAME as a string, for example "12.14.15.16".
 
-(define machine-name->ip-address
-  (lambda (name)
-    (let* ((ai (car (get-address-info name #f (address-info-flags)
-                                      (address-family unspec)
-                                      (socket-type stream))))
-           (sa (socket-address-ipv4-address (address-info-socket-address ai))))
-      (address->string sa))))
+(define (machine-name->ip-address name)
+  (let* ((ai (car (get-address-info name #f (address-info-flags)
+                                    (address-family unspec)
+                                    (socket-type stream))))
+         (sa (socket-address-ipv4-address (address-info-socket-address ai))))
+    (address->string sa)))
 
 ;----------------
 ; A common, pseudo address space (it has no socket) whose uids can be shared
