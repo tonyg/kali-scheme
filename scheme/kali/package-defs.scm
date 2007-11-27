@@ -36,6 +36,7 @@
 	locations
 	(subset interrupts (with-interrupts-inhibited))
 	proxy-internals
+	net-addresses
 	(subset locks (make-lock))
 	(subset sockets (get-host-name))
 	(subset posix-time (time->string current-time))
