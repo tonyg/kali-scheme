@@ -37,7 +37,7 @@
 	(subset interrupts (with-interrupts-inhibited))
 	proxy-internals
 	(subset locks (make-lock))
-	(subset sockets (get-host-name get-host-by-name))
+	(subset sockets (get-host-name))
 	(subset posix-time (time->string current-time))
 	(subset primitives (encode collect find-all)))
   (files aspace))
