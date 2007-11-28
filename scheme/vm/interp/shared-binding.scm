@@ -43,7 +43,7 @@
 ; Imported bindings.
 
 (define lookup-imported-binding
-  (let* ((maker (lambda (string next key)
+  (let* ((maker (lambda (ignore string next key) ; kali-change
 		  (make-shared-binding string true unspecific-value next key)))
 	 (lookup (table-searcher shared-binding-name
 				 shared-binding-next
@@ -54,7 +54,7 @@
 ; Exporting bindings.
 
 (define lookup-exported-binding
-  (let* ((maker (lambda (string next key)
+  (let* ((maker (lambda (ignore string next key) ; kali-change
 		  (make-shared-binding string false unspecific-value next key)))
 	 (lookup (table-searcher shared-binding-name
 				 shared-binding-next

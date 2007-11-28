@@ -60,13 +60,15 @@
 ; Return a function for looking up strings in a Foo table.  A new Foo is
 ; made if none is found.
 
+; kali-change: Add false as the first argument for make-foo.
+
 (define (table-searcher foo-string foo-next make-foo)
   (lambda (table string key)
     (let* ((index (hash-table-index string))
            (bucket (hash-table-ref table index)))
       (let loop ((foo bucket))
         (cond ((vm-eq? foo false)
-               (let ((new (make-foo false string (value->link bucket) key)))  ;; kali - added false as first argument for make-foo
+               (let ((new (make-foo false string (value->link bucket) key)))
                  (vm-vector-set! table index (value->link new))
                  new))
               ((vm-string=? string (foo-string foo))
