@@ -152,22 +152,23 @@
 (define (server-running?)
   (if *local-address-space* #t #f))
 
+(define *local-machine-name* "localhost")
+
 ; Initialize the server, using SOCKET-NUMBER as our socket.
 
 (define (initialize-local-address-space! socket-number)
   (if (server-running?)
       (raise (make-condition &kali-server-already-started-error)))
-  (let ((my-machine (get-host-name)))
-    (set! *address-space-table* (make-address-space-table))
-    (if *shared-address-space*
-	(add-to-address-space-table! *shared-address-space*))
-    (let ((local (get-address-space my-machine socket-number #t)))
-      (set! *local-address-space* local)
-      (set-address-space-decode-vector! local
-					(vector 3
-						local
-						*shared-address-space*))
-      (set-address-space-pending-vector! local (vector #f #f #f)))))
+  (set! *address-space-table* (make-address-space-table))
+  (if *shared-address-space*
+      (add-to-address-space-table! *shared-address-space*))
+  (let ((local (get-address-space *local-machine-name* socket-number #t)))
+    (set! *local-address-space* local)
+    (set-address-space-decode-vector! local
+                                      (vector 3
+                                              local
+                                              *shared-address-space*))
+    (set-address-space-pending-vector! local (vector #f #f #f))))
 
 
 ;; get date and time
@@ -197,7 +198,7 @@
   (collect)
   (let ((aspace (make-template&location-address-space
 		 (string-append "system:"
-				(machine-name->ip-address (get-host-name))
+				(machine-name->ip-address *local-machine-name*)
 				":"
 				(time-and-date-string))
 		 shared-address-space-uid)))
