@@ -26,4 +26,5 @@
 				  real-protocol-match
 				  raise
 				  uuo)
+		     (encode/decode scan-location)
 		     (vm s48-restart)))))
