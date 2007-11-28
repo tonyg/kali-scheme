@@ -10,7 +10,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include <netinet/tcp.h>                /* Kali only: for TCP_NODELAY */
 
 
 #include <scheme48.h>
@@ -24,7 +23,6 @@
 
 #include "socket.h"
 #include "address.h"
-
 
 static s48_value
 s48_socket(s48_value sch_af, s48_value sch_type, s48_value sch_protocol)
@@ -358,31 +356,4 @@ s48_init_os_sockets(void)
   S48_EXPORT_FUNCTION(s48_connect);
   S48_EXPORT_FUNCTION(s48_recvfrom);
   S48_EXPORT_FUNCTION(s48_sendto);
-}
-
-
-/* Given a channel associated to a file descriptor which is a TCP/IP
- * socket, set the TCP_NODELAY appropriately.
- * Note, file descriptors which share an origin (e.g., dup'd file
- * descriptors) share a TCP_NODELAY mode, and thus setting one will
- * set the other. 
- */
-
-
-s48_value
-s48_socket_nodelay(s48_value channel, s48_value nodelay_p)
-{
-        int     stat;
-        int socket_fd;
-
-        S48_CHECK_CHANNEL(channel);
-        socket_fd = S48_UNSAFE_EXTRACT_FIXNUM(S48_UNSAFE_CHANNEL_OS_INDEX(channel));
-
-
-        nodelay_p = nodelay_p != 0;         /* just to be safe */
-        stat = setsockopt(socket_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay_p,
-                sizeof(nodelay_p));
-        if (stat != 0)
-          s48_raise_os_error(errno);
-        return S48_UNSPECIFIC;
 }
