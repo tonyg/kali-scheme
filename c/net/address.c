@@ -104,7 +104,7 @@ s48_extract_af(s48_value sch_af_val)
 s48_value
 s48_enter_af(sa_family_t af)
 {
-  switch( af)
+  switch(af)
     {
     case AF_INET:
       return s48_enter_fixnum(0);
@@ -474,6 +474,8 @@ s48_enter_socket_type(int socktype)
       return s48_enter_fixnum(0);
     case SOCK_DGRAM:
       return s48_enter_fixnum(1);
+    default: 
+      return s48_enter_fixnum((int) socktype + 100); 
     }
 }
 
@@ -498,20 +500,24 @@ enter_ai_flags(int flags)
 static int
 extract_ip_protocol(s48_value sch_protocol)
 {
-  switch (s48_extract_fixnum(sch_protocol))
-    {
-    case 0:
-      return IPPROTO_IP;
-    case 1:
-      return IPPROTO_IPV6;
-    case 2:
-      return IPPROTO_ICMP;
-    case 3:
-      return IPPROTO_RAW;
-    case 4:
-      return IPPROTO_TCP;
-    case 5:
-      return IPPROTO_UDP;
+  long ip = s48_extract_fixnum(sch_protocol);
+  if (ip > 100)
+    return ip - 100;
+  else
+    switch (ip)
+      {
+      case 0:
+	return IPPROTO_IP;
+      case 1:
+	return IPPROTO_IPV6;
+      case 2:
+	return IPPROTO_ICMP;
+      case 3:
+	return IPPROTO_RAW;
+      case 4:
+	return IPPROTO_TCP;
+      case 5:
+	return IPPROTO_UDP;
     }
 }
 
@@ -532,6 +538,8 @@ enter_ip_protocol(int protocol)
       return s48_enter_fixnum(4);
     case IPPROTO_UDP:
       return s48_enter_fixnum(5);
+    default:
+      return s48_enter_fixnum(protocol + 100);
     }
 }
 
