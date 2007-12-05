@@ -129,10 +129,6 @@
     (obtain-lock (address-space-lock aspace))
     (make-connection! aspace)))
 
-; Should we set the TCP_NODELAY mode?
-
-(define tcp-nodelay? #f)
-
 ;----------------
 ; Handling errors in the dispatcher.  We print warnings and continue.  Errors
 ; kill us.
