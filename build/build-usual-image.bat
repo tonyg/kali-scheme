@@ -10,7 +10,7 @@ set lib=%lib:\=\\%
 set image=%~4
 set vm=%5
 set initial=%6
-set builddate=%~t7
+set builddate=%~t6
 
 echo ,load "%srcdir_cooked%scheme/env/init-defpackage.scm" > %srcdir%\build\build-usual-image.input
 echo ((*structure-ref filenames 'set-translation!) >> %srcdir%\build\build-usual-image.input

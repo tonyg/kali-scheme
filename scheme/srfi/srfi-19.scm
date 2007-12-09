@@ -1093,7 +1093,7 @@
 	       (newline port)))
    (cons #\N (lambda (date pad-with port)
 	       (display (tm:padding (date-nanosecond date)
-				    pad-with 7)
+				    pad-with 9)
 			port)))
    (cons #\p (lambda (date pad-with port)
 	       (display (tm:locale-am/pm (date-hour date)) port)))
@@ -1257,6 +1257,25 @@
   (lambda (port)
     (tm:integer-reader upto port)))
 
+;; read an fractional integer upto n characters long on port; upto -> #f if any length
+;;
+;; The return value is normalized to upto decimal places. For example, if upto is 9 and 
+;; the string read is "123", the return value is 123000000.
+(define (tm:fractional-integer-reader upto port)
+  (define (accum-int port accum nchars)
+    (let ((ch (peek-char port)))
+     (if (or (eof-object? ch)
+     	(not (char-numeric? ch))
+     	(and upto (>= nchars  upto )))
+         (* accum (expt 10 (- upto nchars)))
+         (accum-int port (+ (* accum 10) (tm:char->int (read-char port))) (+ nchars 1)))))
+  (accum-int port 0 0))
+
+(define (tm:make-fractional-integer-reader upto)
+  (lambda (port)
+    (tm:fractional-integer-reader upto port)))
+
+
 ;; read *exactly* n characters and convert to integer; could be padded
 (define (tm:integer-reader-exact n port)
   (let ( (padding-ok #t) )
@@ -1369,6 +1388,7 @@
 (define tm:read-directives 
   (let ( (ireader4 (tm:make-integer-reader 4))
 	 (ireader2 (tm:make-integer-reader 2))
+	 (fireader9 (tm:make-fractional-integer-reader 9))
 	 (ireaderf (tm:make-integer-reader #f))
 	 (eireader2 (tm:make-integer-exact-reader 2))
 	 (eireader4 (tm:make-integer-exact-reader 4))
@@ -1411,6 +1431,8 @@
      (list #\M char-numeric? ireader2 (lambda (val object)
                                         (tm:set-date-minute!
                                          object val)))
+     (list #\N char-numeric? fireader9 (lambda (val object)
+					 (tm:set-date-nanosecond! object val)))
      (list #\S char-numeric? ireader2 (lambda (val object)
                                         (tm:set-date-second! object val)))
      (list #\y char-fail eireader2 

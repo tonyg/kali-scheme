@@ -566,26 +566,27 @@
 
 (define-enumeration stob
   (;; D-vector types (traced by GC)
-   pair               ;;  0
-   symbol             ;;  1
-   vector             ;;  2
-   closure            ;;  3
-   location           ;;  4
-   cell               ;;  5
-   channel            ;;  6
-   port               ;;  7
-   ratnum             ;;  8
-   record             ;;  9
-   continuation       ;; 10
-   extended-number    ;; 11
-   template           ;; 12
-   weak-pointer       ;; 13
-   shared-binding     ;; 14
-   unused-d-header1   ;; 15
+   pair
+   symbol
+   vector
+   closure
+   location
+   cell
+   channel
+   port
+   ratnum
+   record
+   continuation
+   extended-number
+   template
+   weak-pointer
+   shared-binding
+   unused-d-header1
+   transport-link-cell
 
-   proxy          ;; kali ;; 16
-   proxy-data     ;; kali ;; 17
-   address-space  ;; kali ;; 18
+   proxy          ;; kali
+   proxy-data     ;; kali
+   address-space  ;; kali
 
    ;; B-vector types (not traced by GC)
    string        ; = least b-vector type           ;; 19
@@ -642,6 +643,11 @@
       (channel-id)
       (channel-os-index)
       (channel-close-silently?))
+    (transport-link-cell transport-link-cell? make-transport-link-cell
+      (transport-link-cell-key) ; must always be younger, hence no mutator
+      (transport-link-cell-value set-transport-link-cell-value!)
+      (transport-link-cell-tconc set-transport-link-cell-tconc!)
+      (transport-link-cell-next set-transport-link-cell-next!))
     ;; kali - begin
     (proxy proxy? really-make-proxy
       (proxy-data))

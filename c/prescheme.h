@@ -1,6 +1,6 @@
 #include <errno.h>
 #include "io.h"
-#include "sysdep.h"
+#include "scheme48arch.h"
 
 #if SIZEOF_VOID_P == 4
 #define BITS_PER_CELL 32

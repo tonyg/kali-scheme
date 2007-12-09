@@ -50,6 +50,8 @@
 	    (format #t "#ifndef _H_SCHEME48~%")
 	    (format #t "#define _H_SCHEME48~%")
 	    (newline)
+	    (format #t "#include \"scheme48arch.h\"~%")
+	    (newline)
 	    (format #t "#ifdef __cplusplus~%")
 	    (format #t "extern \"C\"~%")
 	    (format #t "{~%")

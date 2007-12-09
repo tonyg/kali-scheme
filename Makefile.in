@@ -19,7 +19,6 @@ INSTALL_DATA = @INSTALL_DATA@
 LDFLAGS = @LDFLAGS@
 LDFLAGS_VM = @LDFLAGS_VM@
 LIBOBJS = @LIBOBJS@
-MACOS_X86_64_LIBS = @MACOS_X86_64_LIBS@
 
 GC_OBJS = @GC_OBJS@
 
@@ -140,6 +139,7 @@ INITIAL = $(srcdir)/build/initial.image
 VM = scheme48vm
 LIBSCHEME48 = c/libscheme48.a
 POSIX_EXTERNAL = c/posix.so
+SRFI_27_EXTERNAL = c/srfi-27.so
 UNIX_OBJS = c/unix/misc.o c/unix/io.o c/unix/fd-io.o c/unix/event.o
 OBJS =	c/scheme48vm-$(BIT_SUFFIX).o \
 	c/extension.o c/free.o c/double_to_string.o c/bignum.o \
@@ -148,7 +148,7 @@ OBJS =	c/scheme48vm-$(BIT_SUFFIX).o \
 FAKEHS	= c/fake/dlfcn.h c/fake/sigact.h c/fake/strerror.h \
 		c/fake/sys-select.h c/fake/langinfo.h
 
-SCHEME48HS = c/scheme48.h c/scheme48write-barrier.h
+SCHEME48HS = c/scheme48.h c/scheme48write-barrier.h c/scheme48arch.h
 
 # Sources:
 
@@ -161,7 +161,7 @@ CONFIG_FILES = scheme/interfaces.scm scheme/packages.scm \
 
 # The following is the first rule and therefore the "make" command's
 # default target.
-enough: vm $(POSIX_EXTERNAL) $(LIBSCHEME48) $(IMAGE) script-interpreter go
+enough: vm $(POSIX_EXTERNAL) $(SRFI_27_EXTERNAL) $(LIBSCHEME48) $(IMAGE) script-interpreter go
 
 # --------------------
 # External code to include in the VM
@@ -169,8 +169,7 @@ enough: vm $(POSIX_EXTERNAL) $(LIBSCHEME48) $(IMAGE) script-interpreter go
 
 EXTERNAL_OBJECTS = c/net/socket.o c/net/address.o c/net/net.o c/unix/socket.o \
 		   c/unix/dynlink.o \
-		   c/unix/sysexits.o $(ASM_OBJECTS) \
-		   c/srfi-27.o
+		   c/unix/sysexits.o $(ASM_OBJECTS)
 
 # POSIX rules; this could have its own Makefile, but I don't want to bother.
 
@@ -213,10 +212,16 @@ POSIX_OBJECTS = $(posix_dir)/user.o     $(posix_dir)/regexp.o	\
 		$(posix_dir)/posix.o
 
 $(POSIX_EXTERNAL) : $(POSIX_OBJECTS)
-	$(LD) -o $@ $(DYNAMIC_EXTERNALS_LDFLAGS) $(POSIX_OBJECTS) $(MACOS_X86_64_LIBS)
+	$(LD) -o $@ $(DYNAMIC_EXTERNALS_LDFLAGS) $(POSIX_OBJECTS)
 
 
 # End of POSIX rules
+
+c/srfi-27.o: c/srfi-27.c $(SCHEM48HS)
+	$(CC) -c $(CPPFLAGS) $(DEFS) -I ./c -I$(srcdir)/c -I$(srcdir)/c/bibop $(CFLAGS) $(DYNAMIC_EXTERNALS_CFLAGS) -o $@ $<
+
+$(SRFI_27_EXTERNAL) : c/srfi-27.o
+	$(LD) -o $@ $(DYNAMIC_EXTERNALS_LDFLAGS) $^
 
 # Native-code glue rules
 
@@ -313,10 +318,11 @@ c/main.o: c/main.c c/scheme48vm.h c/scheme48heap.h
 		$(CPPFLAGS) $(DEFS) $(srcdir)/c/main.c
 
 c/scheme48vm-$(BIT_SUFFIX).o: c/prescheme.h c/scheme48vm.h \
-		c/scheme48write-barrier.h c/scheme48heap.h \
+		c/scheme48heap.h \
 		c/scheme48image.h c/bignum.h c/event.h \
 		c/io.h c/fd-io.h \
-		c/scheme48vm-prelude.h c/c-mods.h
+		c/scheme48vm-prelude.h c/c-mods.h \
+		$(SCHEME48HS)
 
 c/bignum.o: c/bignum.h c/bignumint.h $(SCHEME48HS)
 c/extension.o: c/sysdep.h $(FAKEHS) $(SCHEME48HS) c/scheme48vm.h
@@ -338,7 +344,6 @@ c/net/socket.o: $(SCHEME48HS) c/net/address.h c/net/socket.h
 c/unix/socket.o: $(SCHEME48HS) c/net/address.h c/net/socket.h c/fd-io.h c/event.h
 c/net/net.o: $(SCHEME48HS)
 c/unix/dynlink.o: $(SCHEME48HS)
-c/unix/srfi-27.o: $(SCHEME48HS)
 
 c/script-interpreter.o: c/sysdep.h $(FAKEHS) c/script-interpreter.c
 	$(CC) -c $(CFLAGS) -o $@ \
@@ -379,23 +384,24 @@ inst-vm:
 	$(INSTALL_PROGRAM) $(VM) $(DESTDIR)$(LIB)
 
 inst-image:
-	rm -f '/tmp/$(IMAGE)' &&					\
+	rm -f '/tmp/$(IMAGE)'
 	$(srcdir)/build/build-usual-image $(srcdir) "$(SHARE)" "$(LIB)" \
-		"/tmp/$(IMAGE)" "./$(VM)" "$(INITIAL)-$(BIT_SUFFIX)" && \
-	$(INSTALL_DATA) /tmp/$(IMAGE) $(DESTDIR)$(LIB) &&		\
+		"/tmp/$(IMAGE)" "./$(VM)" "$(INITIAL)-$(BIT_SUFFIX)"
+	$(INSTALL_DATA) /tmp/$(IMAGE) $(DESTDIR)$(LIB)
 	rm /tmp/$(IMAGE)
 
 inst-man:
 	$(srcdir)/mkinstalldirs $(DESTDIR)$(mandir)
 	sed 's=LBIN=$(bindir)=g' $(srcdir)/doc/scheme48.man |	   \
 		sed "s=LLIB=$(LIB)=g" |				   \
-		sed "s=LS48=$(RUNNABLE)=g" >$(MANPAGE) &&	   \
-	$(INSTALL_DATA) $(MANPAGE) $(DESTDIR)$(mandir) &&	   \
-	rm $(MANPAGE);						   \
+		sed "s=LS48=$(RUNNABLE)=g" >$(MANPAGE)
+	$(INSTALL_DATA) $(MANPAGE) $(DESTDIR)$(mandir)
+	rm $(MANPAGE)
 
 inst-inc: c/scheme48.exp
 	$(INSTALL_DATA) $(srcdir)/c/scheme48.h $(DESTDIR)$(incdir)
 	$(INSTALL_DATA) c/scheme48write-barrier.h $(DESTDIR)$(incdir)
+	$(INSTALL_DATA) c/scheme48arch.h $(DESTDIR)$(incdir)
 	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier-twospace.h $(DESTDIR)$(incdir)
 	$(INSTALL_DATA) $(srcdir)/c/scheme48write-barrier-bibop.h $(DESTDIR)$(incdir)
 	$(INSTALL_DATA) $(srcdir)/c/scheme48.exp $(DESTDIR)$(incdir)
@@ -406,7 +412,7 @@ inst-misc:
 		for f in $(srcdir)/scheme/$$stub/*.scm; do		\
 			$(INSTALL_DATA) $$f $(DESTDIR)$(SHARE)/$$stub || exit 1;	\
 		done;							\
-	done &&								\
+	done
 	for f in $(srcdir)/scheme/rts/*num.scm 				\
 		 $(srcdir)/scheme/rts/jar-defrecord.scm; do		\
 		$(INSTALL_DATA) $$f $(DESTDIR)$(SHARE)/rts || exit 1;	\
@@ -440,7 +446,7 @@ inst-config-script:
 	chmod +x $$config_script
 
 inst-externals:
-	$(INSTALL_PROGRAM) $(POSIX_EXTERNAL) $(DESTDIR)$(LIB)/
+	$(INSTALL_PROGRAM) $(POSIX_EXTERNAL) $(SRFI_27_EXTERNAL) $(DESTDIR)$(LIB)/
 
 # Script to run scheme48 in this directory.
 go:
@@ -472,7 +478,7 @@ configure: configure.in
 clean:
 	-rm -f $(VM) script-interpreter					\
 		*.o c/unix/*.o c/posix/*.o c/net/*.o c/*.o 		\
-		$(POSIX_EXTERNAL)					\
+		$(POSIX_EXTERNAL) $(SRFI_27_EXTERNAL)			\
 		c/fake/*.o c/bibop/*.o					\
 		c/*.a c/glue_gnu.s c/glue_darwin.s c/scheme48.exp 	\
 		TAGS $(IMAGE)						\
@@ -485,7 +491,7 @@ clean:
 
 distclean: clean
 	rm -f Makefile config.log config.status config-cache \
-		c/sysdep.h c/scheme48write-barrier.h
+		c/sysdep.h c/scheme48write-barrier.h c/scheme48arch.h
 
 check:	$(VM) $(IMAGE) scheme/debug/check.scm
 	(								\
@@ -545,7 +551,8 @@ DISTFILES = README COPYING.rtf COPYING INSTALL WINDOWS.txt		\
 		build/dummy build/*.wxs 				\
 		build/*.bmp build/*.ico					\
 		c/*.[ch] c/*/*.[ch] c/*/*.ci				\
-		c/scheme48.h.in	c/scheme48write-barrier.h.in		\
+		c/scheme48.h.in						\
+		c/scheme48write-barrier.h.in c/scheme48arch.h		\
 		emacs/*.el gdbinit					\
 		scheme/*.scm scheme/*/*.scm scheme/vm/*/*.scm		\
 		ps-compiler/minor-version-number			\
@@ -662,8 +669,8 @@ $(INITIAL)-32: $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files
 		echo '(flatload initial-structures)';			\
 		echo '(load "build/initial.scm")';			\
 		echo '(link-initial-system)'				\
-	) | $(LINKER_RUNNABLE) && 					\
-		mv $(INITIAL) $(INITIAL)-32
+	) | $(LINKER_RUNNABLE)
+	mv $(INITIAL) $@
 
 $(INITIAL)-64: $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files)
 	cd $(srcdir) &&							\
@@ -676,8 +683,8 @@ $(INITIAL)-64: $(CONFIG_FILES) build/initial.scm $(initial-files) $(linker-files
 		echo '(flatload initial-structures)';			\
 		echo '(load "build/initial.scm")';			\
 		echo '(link-initial-system)'				\
-	) | $(LINKER_RUNNABLE) && 					\
-		mv $(INITIAL) $(INITIAL)-64
+	) | $(LINKER_RUNNABLE)
+	mv $(INITIAL) $@
 
 # --------------------
 # Various small images for debugging low-level changes

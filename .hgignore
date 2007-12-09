@@ -28,6 +28,7 @@ syntax: regexp
 ^scheme/big/unicode-normalization-info\.scm$
 ^scheme/srfi/srfi-14-base-char-sets\.scm$
 ^c/scheme48\.h$
+^c/scheme48arch\.h$
 ^c/scheme48vm-32\.c$
 ^c/scheme48vm-64\.c$
 ^c/scheme48.*heap-32\.c$
@@ -43,6 +44,8 @@ syntax: regexp
 ^ps-compiler/.*\.input$
 ^go\.bat$
 ^scheme48\.(ncb|res|suo|vcproj\..*)$
+^srfi-27\.(exp|ilk|lib|pdb|vcproj\..*)$
+srfi-27.dll
 ^scheme48vm\.(exe|exp|lib)$
 ^scheme48-files\.input$
 ^scheme48\.(msi|wixobj)$
