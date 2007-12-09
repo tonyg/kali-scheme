@@ -181,7 +181,7 @@
 (define (machine-name->ip-address name)
   (let* ((ai (car (get-address-info name #f (address-info-flags)
                                     (address-family unspec)
-                                    (socket-type stream))))
+                                    (socket-socket-type stream))))
          (sa (socket-address-ipv4-address (address-info-socket-address ai))))
     (address->string sa)))
 
