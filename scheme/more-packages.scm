@@ -38,7 +38,7 @@
 	(subset vm-exceptions (extend-opcode!))
 	util
         number-i/o
-	proxy-internals)
+	proxy-internals)                ; kali
   (files (rts xnum)))
 
 (define-structure innums (export )    ;inexact numbers
