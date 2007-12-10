@@ -1927,25 +1927,3 @@ s48_init_os_sockets(void)
   S48_EXPORT_FUNCTION(s48_recvfrom);
   S48_EXPORT_FUNCTION(s48_sendto);
 }
-
-/* begin kali code */
-
-static s48_value
-s48_get_host_by_name(s48_value name, s48_value buffer)
-{
-  int i;
-  //char * mbuf = s48_extract_byte_vector(buffer);
-  struct hostent * host = gethostbyname(s48_extract_byte_vector(name));
-  
-  if (host == NULL ||
-      host->h_addrtype != AF_INET ||	/* could happen, I suppose */
-      host->h_addr_list[0] == NULL)
-    s48_raise_os_error(errno);
-
-  for(i = 0; i < host->h_length; i++)
-    s48_string_set(buffer, i, host->h_addr_list[0][i]);
-
-  return s48_enter_fixnum(host->h_length);
-}
-
-/* end kali code */

@@ -1075,7 +1075,6 @@ s48_make_record(s48_value type_shared_binding)
     int i, number_of_fields;
     s48_value record = S48_FALSE;
     s48_value record_type = S48_FALSE;
-
     S48_DECLARE_GC_PROTECT(1);
 
     S48_GC_PROTECT_1(record_type);
