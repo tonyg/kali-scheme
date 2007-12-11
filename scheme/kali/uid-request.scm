@@ -644,9 +644,9 @@
 		   (set-contents! location data)
 		   (set-location-uid! location (cons aspace-uid uid))))))
       (else
-       (raise (make-condition &kali-bad-stob-type-error
-			      'type (uid-reply-type reply)))))))
-  
+       (raise (make-kali-bad-stob-type-error
+               'type (uid-reply-type reply)))))))
+
 ;----------------
 ; Make ASPACE's decode and pending vectors large enough to hold UID.  The decode
 ; vector may be larger than the pending vector.
@@ -713,8 +713,7 @@
 	 (values (enum stob template)
 		 (template->vector thing)))
 	(else
-	 (raise (make-condition &kali-bad-object-error
-				'object thing)))))
+	 (raise (make-kali-bad-object-error 'object thing)))))
 
 ; Make a vector copy of a template.  We have to hack around the id which may
 ; be an inconveniently large record.

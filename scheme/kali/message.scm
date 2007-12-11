@@ -70,11 +70,11 @@
 		     (send-admin-message (enum message-type remote-return)
 					 (cons proxy
 					       (cons #f 
-						     (make-condition &kali-remote-error
-								     'aspace aspace
-								     'procedure proc
-								     'arguments args
-								     'condition c)))
+						     (make-kali-remote-error
+                                                      'aspace aspace
+                                                      'procedure proc
+                                                      'arguments args
+                                                      'condition c)))
 					 other-aspace))
 		   (lambda ()
 		     (send-admin-message (enum message-type remote-return)
@@ -122,11 +122,11 @@
 
 (define (remote-run-handler placeholder aspace proc args c)
   (placeholder-set! placeholder
-		    (cons #f (make-condition &kali-remote-error
-					     'aspace aspace
-					     'procedure proc
-					     'arguments args
-					     'condition c))))
+		    (cons #f (make-kali-remote-error
+                              'aspace aspace
+                              'procedure proc
+                              'arguments args
+                              'condition c))))
 
 (define (remote-run! aspace proc . args)
   (if (eq? aspace (local-address-space))

@@ -94,8 +94,7 @@
 		  aspace))
 	(lambda (bytes need-counts)
 	  (if (not (null? need-counts))
-	      (raise (make-condition &kali-connect-error
-				     'need-counts need-counts)))
+	      (raise (make-kali-connect-error 'need-counts need-counts)))
 	  (let ((n (code-vector-length bytes)))
 	    (really-port-write! bytes n to-port))
 	  (if (= 0 (port-read-byte from-port))
@@ -248,9 +247,9 @@
 		 (vector->list alien-vector))
 	 #t)
 	(else
-	 (raise (make-condition &kali-memory-layout-error
-				'alien-vector alien-vector
-				'local-vector local-vector)))))
+	 (raise (make-kali-memory-layout-error
+                 'alien-vector alien-vector
+                 'local-vector local-vector)))))
 
 ;----------------
 ; Actually sending messages.
@@ -268,9 +267,9 @@
 
 (define (send-message type message aspace)
   (if (eq? aspace (local-address-space))
-      (raise (make-condition &kali-send-message-to-self-error
-			     'type type
-			     'message message)))
+      (raise (make-kali-send-message-to-self-error
+              'type type
+              'message message)))
   (call-with-values
    (lambda ()
      (encode (cons type message)
@@ -364,13 +363,12 @@
 (define (really-port-read! port buffer length)
   (let ((got (read-block buffer 0 length port)))
     (cond ((eof-object? got)
-	   (raise (make-condition &kali-reader-eof-error
-				  'port port)))
+	   (raise (make-kali-reader-eof-error 'port port)))
 	  ((< got length)
-	   (raise (make-condition &kali-reader-insufficient-error
-				  'port port
-				  'got got 
-				  'length length))))))
+	   (raise (make-kali-reader-insufficient-error
+                   'port port
+                   'got got 
+                   'length length))))))
 
 (define (really-port-write! buffer length port)
   (write-block buffer 0 length port))

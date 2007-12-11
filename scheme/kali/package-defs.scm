@@ -210,44 +210,55 @@
 (define-interface kali-conditions-interface  
   (export (with-continuation-handler :syntax)
 	  (with-except-handler :syntax)
-	  &kali-error			      kali-error?
+	  &kali-error  make-kali-error  kali-error?
 
-	  &kali-reader-error		      kali-reader-error?
+	  &kali-reader-error  make-kali-reader-error  kali-reader-error?
 	  kali-reader-error-channel
 
-	  &kali-reader-eof-error	      kali-reader-eof-error?
+	  &kali-reader-eof-error  make-kali-reader-eof-error
+          kali-reader-eof-error?
 
-	  &kali-reader-insufficient-error     kali-reader-insufficient-error?
+	  &kali-reader-insufficient-error  make-kali-reader-insufficient-error
+          kali-reader-insufficient-error?
 	  kali-reader-insufficient-error-got
 	  kali-reader-insufficient-error-length
 
-	  &kali-reader-condvar-error	      kali-reader-condvar-error?
+	  &kali-reader-condvar-error  make-kali-reader-condvar-error
+          kali-reader-condvar-error?
 
-	  &kali-remote-error		      kali-remote-error?
+	  &kali-remote-error  make-kali-remote-error  kali-remote-error?
 	  kali-remote-error-aspace
 	  kali-remote-error-procedure
 	  kali-remote-error-arguments
 	  kali-remote-error-condition
 	  
-	  &kali-send-message-to-self-error    kali-send-message-to-self-error?
+	  &kali-send-message-to-self-error
+          make-kali-send-message-to-self-error
+          kali-send-message-to-self-error?
 	  kali-send-message-to-self-error-type
 	  kali-send-message-to-self-error-message
 
-	  &kali-connect-error		      kali-connect-error?
+	  &kali-connect-error  make-kali-connect-error  kali-connect-error?
 	  kali-connect-error-need-counts
 
-	  &kali-memory-layout-error	      kali-memory-layout-error?
+	  &kali-memory-layout-error  make-kali-memory-layout-error
+          kali-memory-layout-error?
 	  kali-memory-layout-error-alien-vector
 	  kali-memory-layout-error-local-vector
 
-	  &kali-no-server-started-error	      kali-no-server-started-error?
+	  &kali-no-server-started-error  make-kali-no-server-started-error
+          kali-no-server-started-error?
 	  
-	  &kali-server-already-started-error  kali-server-already-started-error?
+	  &kali-server-already-started-error
+          make-kali-server-already-started-error
+          kali-server-already-started-error?
 
-	  &kali-bad-stob-type-error	      kali-bad-stob-type-error?
+	  &kali-bad-stob-type-error  make-kali-bad-stob-type-error
+          kali-bad-stob-type-error?
 	  kali-bad-stob-type-error-type
 
-	  &kali-bad-object-error	      kali-bad-object-error?
+	  &kali-bad-object-error  make-kali-bad-object-error
+          kali-bad-object-error?
 	  kali-bad-object-error-object))
 
 (define-structure kali-conditions kali-conditions-interface

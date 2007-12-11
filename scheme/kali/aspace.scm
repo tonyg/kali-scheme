@@ -147,7 +147,7 @@
 
 (define (local-address-space)
   (or *local-address-space*
-      (raise (make-condition &kali-no-server-started-error))))
+      (raise (make-kali-no-server-started-error))))
 
 (define (server-running?)
   (if *local-address-space* #t #f))
@@ -158,7 +158,7 @@
 
 (define (initialize-local-address-space! socket-number)
   (if (server-running?)
-      (raise (make-condition &kali-server-already-started-error)))
+      (raise (make-kali-server-already-started-error)))
   (set! *address-space-table* (make-address-space-table))
   (if *shared-address-space*
       (add-to-address-space-table! *shared-address-space*))
