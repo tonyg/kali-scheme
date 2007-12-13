@@ -103,6 +103,7 @@
 	(subset conditions (warning?))
 	srfi-66
 	address-spaces
+	net-addresses
 	net-sockets 
 	channels
 	channel-i/o

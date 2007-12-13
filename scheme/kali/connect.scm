@@ -9,6 +9,15 @@
 ;; connection-port-buffer-size
 (define kali-port-buffer-size 4096) ;; 16384 the default is 4096
 
+; Open a socket.  Copied from big-socket.scm.
+
+(define (open-socket port)
+  (let ((sock (make-socket (address-family inet) (socket-type stream))))
+    (set-socket-reuse-address?! sock #t)
+    (bind-socket sock (make-ipv4-socket-address (ipv4-address-any) port))
+    (socket-listen sock)
+    sock))
+
 ; Every address space runs a connection-server listening on a socket.  The
 ; machine name and that socket's number are used to identify the address space.
 ;
@@ -19,14 +28,17 @@
 
 (define (connection-server dispatcher report-proc)
   (set! *dispatch-procedure* dispatcher)
-  (let ((socket (open-socket 0)))
-    (report-proc (socket-port-number socket))
-    (initialize-local-address-space! (socket-port-number socket))
+  (let* ((socket (open-socket 0))
+         (port (socket-address-ipv4-port (socket-address socket))))
+    (report-proc port)
+    (initialize-local-address-space! port)
     (call-after-gc! gc-proxies)
     (let loop ()
       (call-with-values
        (lambda ()
-	 (socket-listen socket kali-port-buffer-size))
+	 (socket-listen socket kali-port-buffer-size)
+	 (let ((incoming (socket-accept socket)))
+	   (values port incoming)))
        (lambda (from-port to-port)
 	 (server-make-connection! from-port to-port)
 	 (loop))))))
@@ -69,6 +81,25 @@
 		 (if (not (address-space-out-port aspace))
 		     (make-connection! aspace))
 		 (release-lock lock)))))))))
+
+; Copied from big-socket.scm.  Added the buffer-size argument, which
+; determines the size of both the send and receive buffers.
+
+(define (socket-client host-name port buffer-size)
+  (let* ((ai (car
+              (get-address-info host-name #f
+                                (address-info-flags) (address-family inet)
+                                (socket-type stream))))
+	 (sa (address-info-socket-address ai))
+	 (address (socket-address-ipv4-address sa))
+	 (socket (make-socket (address-family inet)
+			      (socket-type stream))))
+    (set-socket-send-buffer-size! socket buffer-size)
+    (set-socket-receive-buffer-size! socket buffer-size)
+    (socket-connect socket
+		    (make-ipv4-socket-address address port))
+    (values (socket-input-port socket)
+	    (socket-output-port socket))))
 
 ; Brings up the connection with ASPACE.
 ;
