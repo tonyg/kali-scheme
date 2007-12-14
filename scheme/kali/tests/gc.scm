@@ -1,5 +1,5 @@
 ;; ,open kali threads address-spaces primitives
-;; (spawn start-server)
+;; (spawn-server)
 
 
 (define (gc-test machine-name port)

@@ -1,7 +1,6 @@
 ; ,config ,load scheme/misc/packages.scm
 ; ,open i/o primitives kali address-spaces proxy-count-requests messages threads signals srfi-42 srfi-66 srfi-78 srfi-9 reset/shift
-;(spawn start-server)
-;(sleep 1000)
+;(spawn-server)
 ;(define local-aspace (local-address-space))
 ;(load "scheme/kali/tests/encode-decode.scm")
 
