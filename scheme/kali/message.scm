@@ -5,18 +5,26 @@
 
 ; Dispatcher is passed avoid module circularities.
 
-(define (start-server . maybe-report-proc)
+(define (real-start-server placeholder maybe-report-proc)
   (connection-server dispatcher
 		     (if (null? maybe-report-proc)
 			 (lambda (port-number)
 			   (display "Waiting for connection on port ")
 			   (display port-number)
-			   (newline))
-			 (car maybe-report-proc))))
+			   (newline)
+			   (placeholder-set! placeholder port-number))
+                         (lambda (port-number)
+                           ((car maybe-report-proc) port-number)
+                           (placeholder-set! placeholder port-number)))))
+
+(define (start-server . maybe-report-proc)
+  (real-start-server (make-placeholder) maybe-report-proc))
 
 (define (spawn-server . maybe-report-proc)
-  (spawn (lambda ()
-	   (apply start-server maybe-report-proc))))
+  (let ((placeholder (make-placeholder)))
+    (spawn (lambda ()
+             (real-start-server placeholder maybe-report-proc)))
+    (placeholder-value placeholder)))
 
 ; Repeatedly reads and process messages sent by OTHER-ASPACE.  READER is
 ; called to read messages.  We check for proxies with too-low or too-high

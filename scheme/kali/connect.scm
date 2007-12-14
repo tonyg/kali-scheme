@@ -30,9 +30,9 @@
   (set! *dispatch-procedure* dispatcher)
   (let* ((socket (open-socket 0))
          (port (socket-address-ipv4-port (socket-address socket))))
-    (report-proc port)
     (initialize-local-address-space! port)
     (call-after-gc! gc-proxies)
+    (report-proc port)
     (let loop ()
       (call-with-values
        (lambda ()
