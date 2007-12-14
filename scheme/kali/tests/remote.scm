@@ -27,8 +27,7 @@
       (begin 
 	(display "starting server now...")
 	(newline)
-	(spawn start-server 'test-server)
-	(sleep 2000)))
+	(spawn-server)))
   (let ((local-aspace (local-address-space))
 	(other-aspace (socket-id->address-space machine-name
 						port)))
