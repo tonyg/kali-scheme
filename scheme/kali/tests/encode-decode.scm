@@ -19,7 +19,7 @@
 	      (let loop ((treated-bad-count-proxies #f))
 		(cond ((and (not treated-bad-count-proxies)
 			    (not (null? bad-count-proxies)))
-		       (display "goign to return counts" (current-error-port))
+		       (display "going to return counts" (current-error-port))
 		       (newline (current-error-port))		       
 		       (for-each return-counts (adjust-proxy-counts! bad-count-proxies))
 		       (loop #t))
@@ -112,8 +112,7 @@
       (begin 
 	(display "starting server now...")
 	(newline)
-	(spawn start-server 'test-server)
-	(sleep 2000)))
+	(spawn-server)))
   (let ((local-aspace (local-address-space)))
 
     (report)
