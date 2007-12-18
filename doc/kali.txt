@@ -113,7 +113,7 @@ to the remote address space.
 Going Further
 -------------
 
-If you wish to share and set data between different instances, then
+If you wish to share mutable data between different instances, then
 you will want to look into handles and proxies.
 
 Test cases are available in the scheme/kali/tests/ directory.
