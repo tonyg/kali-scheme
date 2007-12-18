@@ -1,0 +1,131 @@
+
+This file describes how to use Kali Scheme.
+
+What is Kali Scheme?
+--------------------
+
+Kali Scheme is an extension to Scheme 48 which facilitates distributed
+and efficient transmission of higher-order objects such as closures
+and continuations.
+
+The integration of distributed communication facilities within a
+higher-order programming language engenders a number of new
+abstractions and paradigms for distributed computing.  Among these are
+user-specified load-balancing and migration policies for threads,
+incrementally-linked distributed computations, and parametrized
+client-server applications.  Kali Scheme supports concurrency and
+communication using first-class procedures and continuations.  It
+integrates procedures and continuations into a message-based
+distributed framework that allows any Scheme object (including code
+vectors) to be sent and received in a message.
+
+Some of the applications and implementation techniques we have looked
+at using Kali Scheme include:
+
+ - User-level load balancing and migration. 
+ - Incremental distributed linking of code objects. 
+ - Parametrized client-server applications. 
+ - Long-lived parallel computations. 
+ - Distributed data mining. 
+ - Executable content in messages over wide-area networks (e.g. the
+   World-Wide Web).
+
+Starting a Kali Server
+----------------------
+
+First, be sure to load the Kali extension.
+
+    ,load kali
+
+A Kali server may be launched by means of the `spawn-server' function,
+as follows.
+
+    (spawn-server)
+
+This function starts the server, waits until is has initialized its
+variables, and then returns the name of the port that it is listening
+to.
+
+A single optional argument may be passed to `spawn-server', which must
+be a function that takes a single argument.  It will be called when
+the server connection has been established, and will receive as its
+argument the number of the port that the server is listening on.
+
+The server will have an associated address space, which may be
+retrieved using the `local-address-space' function.
+
+    (local-address-space)
+
+Running Code on Another Server
+------------------------------
+
+In order to run code on another instance of Kali, servers must first
+be started on each instance.  The next step is to specify the code
+that will be executed by means of a request.  We will refer to the
+instance that is to send the request as "local" and the instance that
+is to act on the request as "remote".
+
+On the local instance, determine the address space of the remote
+instance by using the `socket-id->address-space' function.  This
+function takes two arguments: the hostname of the machine which the
+server is running on and the port number that the remote server is
+listening to.  In the case where the remote server is being run on the
+same machine, use "localhost" for the hostname.  An example of
+assigning the identifier associated with the remote address space to
+the variable "my-remote-aspace" follows.
+
+    (define my-remote-aspace (socket-id->address-space "localhost" 32833))
+
+To run a procedure asynchronously, optionally with arguments, use the
+`remote-run!' function.  A trivial example follows.
+
+    (remote-run! my-remote-aspace
+      (lambda ()
+        (display "Hello from the local address space,")
+        (newline)))
+
+If you wish to run a procedure synchronously, optionally with
+arguments, and have the results returned, use the `remote-apply!'
+function, as depicted in the following example.
+
+    (remote-apply my-remote-aspace (lambda () (list 'some 'value)))
+    => '(some value)
+
+Immutable copies of lexically-bound variables will be made available
+to the remote address space.
+
+    (let ((var (list 'local 1)))
+      (remote-apply my-remote-aspace
+        (lambda ()
+          (set-car! var 'remote)
+          (set-car! (cdr var) 2)))
+      var)
+    => '(local 1)
+
+    (let ((var (list 'local 1)))
+      (remote-apply my-remote-aspace
+        (lambda ()
+          (set-car! var 'remote)
+          (set-car! (cdr var) 2)
+          var)))
+    => '(remote 2)
+
+Going Further
+-------------
+
+If you wish to share and set data between different instances, then
+you will want to look into handles and proxies.
+
+Test cases are available in the scheme/kali/tests/ directory.
+
+Resources
+---------
+
+Developer access to the Kali Scheme sources is available at:
+    ssh://mercurial@deinprogramm.de/kali
+
+Anonymous access to the Kali Scheme sources is not yet available.
+
+The original paper on Kali Scheme, entitled "Higher-Order Distributed
+Objects", may be found at:
+    <http://citeseer.ist.psu.edu/cejtin95higherorder.html>
