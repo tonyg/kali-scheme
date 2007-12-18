@@ -121,6 +121,8 @@ Test cases are available in the scheme/kali/tests/ directory.
 Resources
 ---------
 
+Kali Scheme is developed using the Mercurial revision control system.
+
 Developer access to the Kali Scheme sources is available at:
     ssh://mercurial@deinprogramm.de/kali
 
