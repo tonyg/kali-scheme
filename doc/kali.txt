@@ -123,10 +123,11 @@ Resources
 
 Kali Scheme is developed using the Mercurial revision control system.
 
+Anonymous access to the Kali Scheme sources is available at:
+    http://www.deinprogramm.de/cgi-bin/hgkali.cgi
+
 Developer access to the Kali Scheme sources is available at:
     ssh://mercurial@deinprogramm.de/kali
-
-Anonymous access to the Kali Scheme sources is not yet available.
 
 The original paper on Kali Scheme, entitled "Higher-Order Distributed
 Objects", may be found at:
