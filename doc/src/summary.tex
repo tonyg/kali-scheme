@@ -1,0 +1,83 @@
+\documentstyle[11pt]{article}
+
+\pagestyle{empty}
+\setlength{\textheight}{9in}
+\setlength{\footheight}{0.0in}
+\setlength{\topmargin}{0in}
+
+%Defaults from art10.sty:
+%\textwidth 345pt \columnsep 10pt \columnseprule 0pt 
+%\oddsidemargin 63pt
+
+\advance\textwidth by 0.5in
+\advance\oddsidemargin by -0.25in
+
+
+\begin{document}
+
+\vspace*{-0.3in}
+
+\begin{center}
+{\large\bf Scheme 48} \\
+\vspace{1ex}
+Richard Kelsey ({\tt kelsey@corwin.ccs.northeastern.edu}) \\
+Jonathan Rees ({\tt jar@cs.cornell.edu}) \\
+June 1992
+\end{center}
+
+\vspace{1ex}
+
+Scheme 48 is an implementation of the Scheme programming language based
+on a virtual machine architecture.  The following is an overview of
+the project.
+
+\paragraph{Goals}
+
+\begin{itemize}
+\setlength{\itemsep}{0pt}
+\item Straightforward, minimal implementation.
+\item Flexible experimental apparatus for research in programming
+      language design and implementation.
+\item Easy to make changes to internal data representations, memory
+      management, and compilation strategy.
+\item High reliability.
+\item Fast and complete enough to be a good
+      development environment for Scheme programs.
+\end{itemize}
+
+
+\paragraph{Virtual machine}
+
+The virtual machine executes a simple byte-code instruction set
+similar to the target of the Scheme 311 compiler [Clinger, LFP 1984].
+The interpreter for the virtual instruction set is itself written in
+PreScheme, a systems programming dialect of Scheme.  A PreScheme
+compiler applies intensive source-to-source rewrites to the
+interpreter source code and emits low-level C code.  When the output
+is then compiled by an optimizing C compiler such as gcc, the result
+is a very efficient and portable emulator.
+
+\paragraph{Run-time system}
+
+The virtual machine is initialized from a specified memory image
+containing byte-compiled Scheme code and data.  Images (including
+small stand-alone applications) are built either by a linker or by
+writing out the state of an executing program.  A standard memory
+image contains a Scheme run-time library ({\tt append}, {\tt read},
+{\tt write}, etc.), a compiler from Scheme to the virtual instruction
+set, and a command processor and debugger.  In this way Scheme 48 can
+be configured to look like a conventional Lisp interpreter.
+
+In addition to the Scheme run-time library and development
+environment, library software includes support for multitasking,
+modules (packages), hygienic macros (as described in the Revised$^4$
+Scheme report), records, and exception handling.
+
+\paragraph{Applications}
+
+The Scheme 48 system is being used at several sites for research in
+memory management, embedded systems, multiprocessing, and computer
+system verification.  Scheme 48 was chosen as the platform for these
+projects because of its internal tractability and flexibility.
+
+\end{document}

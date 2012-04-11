@@ -1,0 +1,240 @@
+
+			   The Type System
+
+
+Scheme 48 has a rudimentary type system.  Its main purpose is to
+generate helpful compile-time diagnostics.
+
+Currently you don't get much checking beyond wrong number of arguments
+warnings unless you're compiling a package that has an (OPTIMIZE ...)
+clause in its definition (e.g. (OPTIMIZE EXPAND) or (OPTIMIZE
+AUTO-INTEGRATE)).  The reason that type checking is disabled most of
+the time is that it increases compilation time by about 33%.
+
+A design goal is to assign types to all valid Scheme programs.  That
+is, type warnings should not be generated for programs that could work
+according to Scheme's dynamic semantics.  For example, no warning
+should be produced for
+
+    (define (foo x y) (if x (+ y 1) (car y)))
+
+Warnings could in principle be produced for particular calls to FOO
+that would definitely go wrong, such as (foo #t 'a).
+
+The type system assumes that all code is potentially reachable.  This
+means that there will be some warnings for programs that cannot go
+wrong, e.g. (if #t 3 (car 7)).
+
+Additionally, it's assumed that in a (BEGIN ...) or combination, every
+argument or command will always be executed.  This won't be the case
+if there can be a throw out of the middle.  For example, in
+
+    (call-with-current-continuation
+      (lambda (k)
+        (if (not (number? x))
+	    (k #f))
+        (+ x 1)))
+
+the type system might deduce that X must be a number (which is false).
+
+The type reconstruction algorithm (such as it is) is in
+bcomp/recon.scm.  The implementation finds some specific procedure
+types for LAMBDA expressions, but generally gives up pretty quickly.
+
+Notation
+--------
+
+F : T means that form F has static type T.  T1 <= T2, or T1 is under
+T2, means that T1 is a subtype of T2; that is, if a form of type T2 is
+acceptable in some context, then so is a form of type T1.
+
+Non-expressions
+---------------
+
+Not every valid Scheme form is an expression.  Forms that are not
+expressions are syntactic keywords, definitions, types, and structure
+names.
+
+If a name is bound to a macro or special operator, then an occurrence
+of that name has type :SYNTAX.  E.g.
+
+    cond : :syntax
+
+Definitions have type :DEFINITION.  E.g.
+
+    (begin (define x 1) (define y 2)) : :definition
+
+Thus type checking subsumes syntax checking.
+
+Types (other than :TYPE itself?) have type :TYPE.
+
+The type of a structure is its interface.  E.g.
+
+    (define-structure foo (export a b) ...)
+    foo : (export a b)
+
+Values
+------
+
+All expressions have type :VALUES.  They may have more specific
+types as well.
+
+If E1 ... En have types T1 ... Tn with Ti <= :VALUE, then
+the expression (VALUES E1 ... En) has type (SOME-VALUES T1 ... Tn).
+
+If T <= :VALUE then (SOME-VALUES T) is equivalent to T.
+
+Procedure types
+---------------
+
+Procedure types have the form (PROCEDURE T1 T2), where T1 and T2 are
+under :VALUES.  Examples:
+
+    (lambda (x) (values x 1)) :
+       (procedure (some-values :value) (some-values :value :number))
+
+    cons : (procedure (some-values :value :value) :pair)
+
+Fixed-arity procedure types (PROCEDURE (SOME-VALUES T1 ... TN) T) are
+so common that the abbreviated syntax (PROC (T1 ... Tn) T) is
+defined to mean the same thing.  E.g.
+
+    cons : (proc (:value :value) :pair)
+
+E : (PROCEDURE T1 T2) means that in a call to a value of E, if the
+argument sequence has any type other than T1, then the call can be
+expected to "go wrong" (provoke a type error) at run time.  This is
+not to say it will definitely go wrong, but that it is just a matter
+of luck if it doesn't.  If the argument sequence does have type T1,
+then the call might or might not go wrong, and any return value(s)
+will have type T2.
+
+For example,
+
+    (lambda (x) (+ (begin (set! x '(3)) 5) (car x))) :
+       (proc (:pair) :value),
+
+because if the arguments to + are evaluated from right to left, and X
+is not a pair, then there will be a run time type error.
+
+Some primitive procedures have their own special typing rules.
+Examples include VALUES, CALL-WITH-VALUES, and PRIMITIVE-CATCH.
+
+Variable types
+--------------
+
+Assignable variables have type (VARIABLE T), where T for now will
+always be :VALUE.  In (SET! V E), V must have type (VARIABLE T) for
+some T.
+
+Loopholes
+---------
+
+The construct (loophole T E) is considered to have type T no matter
+what type E has.  Among other things, this allows a rudimentary static
+abstract data type facility.  For example, record types defined using
+DEFINE-RECORD-TYPE (rts/bummed-jar-defrecord.scm) are established as
+new base types.
+
+Type lattice
+------------
+
+The subtype relation is implemented by the procedure COMPATIBLE-TYPES?
+(in bcomp/mtypes.scm).  If (COMPATIBLE-TYPES? T1 T2) is 'definitely,
+then T1 <= T2.  If it's #T, then T1 and T2 intersect.
+
+The type lattice has no bottom or top elements.
+
+The types :SYNTAX, :VALUES, :DEFINITION, :STRUCTURE, and :TYPE are
+incomparable and maximal.
+
+The following are a comprehensive set of subtyping rules for the type
+system as it stands.  Additional rules may be added in the future.
+
+   - (SOME-VALUES T1 ... Tn) <= :VALUES.
+
+   - If T1 <= T1', ..., Tn <= Tn' then (SOME-VALUES T1 ... Tn) <=
+     (SOME-VALUES T1' ... Tn').
+
+   - T <= (SOME-VALUES T).
+
+   - Basic value types, which include :NUMBER, :CHAR, :BOOLEAN, :PAIR,
+     :STRING, and :UNSPECIFIC, are all under :VALUE.
+
+   - If T1' <= T1 and T2 <= T2', then (PROCEDURE T1 T2) <= (PROCEDURE
+     T1' T2').
+
+   - (VARIABLE T) <= T.
+
+   - :ZERO, the result type of infinite loops and calls to
+     continuations, is under :VALUE, but perhaps shouldn't be.  (E.g.
+     maybe it should be just under :VALUES instead.)
+
+   - (EXPORT (<name> T) ...) is under :STRUCTURE.
+     [Not yet implemented.]
+
+Type well-formedness
+--------------------
+
+In (SOME-VALUES T1 ... Tn), T1 ... Tn must be under :VALUE.
+
+In (PROCEDURE T1 T2), T1 and T2 must be under :VALUES.
+
+In (VARIABLE T), T must be under :VALUE.
+
+Module system
+-------------
+
+The rules for interfaces and structures are not yet very well worked
+out.
+
+Interfaces are types.  The type of a structure is its interface.
+(Compare with Pebble's "bindings" and "declarations".)
+
+An interface has the basic form (EXPORT (<name> <type>) ...).
+There are two kinds of abbreviations:
+  - (EXPORT ... <name> ...) means the same as
+    (EXPORT ... (<name> :VALUE) ...)
+  - (EXPORT ... ((<name1> <name2> ...) <type>) ...) means the same as
+    (EXPORT ... (<name1> <type>) (<name2> <type>) etc. ...)
+
+Distinct interfaces are not comparable.
+
+If a form S has type (EXPORT ... (name T) ...), then the form
+(STRUCTURE-REF S name) has type T.  Note that T needn't be a :VALUE
+type; e.g.
+
+    (structure-ref scheme cond) : :syntax
+
+When a package is loaded or otherwise compiled, the type that is
+reconstructed or inherited for each exported name is checked against
+the type specified in the signature.  (Cf. procedure SCAN-STRUCTURES
+in bcomp/scan.scm.)
+
+<explain the role of the expander in type checking... compile-call
+doesn't do much checking if the arguments aren't expanded...>
+
+Future work
+-----------
+
+There probably ought to be dependent sums and products and/or
+universal and existential types.  In particular, it would be nice to
+be able to get static checking for abstract types, even if they're not
+implemented using records.
+
+Type constructors (like STREAM-OF or COMPUTATION-OF) would be nice.
+
+There are many loose ends in the implementation.  For example, type
+and type constructor names aren't always lexically scoped; sometimes
+their scope is global.  Packages that open the LOOPHOLES structure
+(which exports LOOPHOLE) don't always open TYPES (which would be a bad
+idea given the way TYPES is currently defined); LOOPHOLE works in
+spite of that.
+
+Figure out whether :TYPE : :TYPE.
+
+
+-----
+
+Original by JAR, 20 July 93.
+Updated by JAR, 5 December 93.

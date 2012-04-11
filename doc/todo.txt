@@ -1,0 +1,243 @@
+--*- Mode: Indented-text; -*-
+
+Scheme 48: list of bugs and things to do.
+Last update by RAK on 28 April 1998.
+
+Run-time system bugs:
+    Shadowing can fail sometimes for macro-referenced variables.  E.g.
+      the following sequence will lose if entered interactively as
+      three separate forms:
+        (define (foo x) `(a ,x))
+	(define cons list)
+	(foo 1) => (a (1 ()))
+
+Programming environment:
+    Fuller on-line documentation.
+    Error recovery.  Can do better than ,proceed.  LOAD should set up
+      restart continuations.
+    Types in scheme-interface (and elsewhere) aren't as tight as they
+      could be.
+    LET continuation "pessimization" to retain the environment longer.
+    Have the disassembler display local variable names.
+    This ought to be recoverable, but isn't always:
+	> (let loop ((x '())) (loop (cons 3 x)))
+	not enough room in heap for stack
+    The get-cont-from-heap instruction should have an exception
+      discloser that indicates the actual error (returning a
+      non-fixnum from application top level).
+    Separate compilation (compile a module, writing object code to a
+      file).  (Rudiments in misc/separate.scm)
+    Semicolon comments don't quite work after commands (extra newline
+      required).
+    Command (and procedure) to change current directory.
+    Some procedure in EXEC to take the place of ## in moving values from
+      one package to another: (transport <from-package> <exp> <to-package>
+      [<id>]), and/or have eval etc. commands return the value
+    Batch mode should write error messages to (error-output).
+
+Performance:
+    Generational GC.
+    More compact representation for debugging data?
+    Leaf procedure compilation (RK's rts/no-leaf-env.scm): if no
+      continuations or lambdas, skip the make-env and access locals
+      using stack-ref.  Expected to gain about 6% in speed.
+    Optimize loops somehow (maybe using call-template opcode and/or
+      opportunistic compilation).
+    The CAML light implementation has good documentation and patches
+      for optimizing the interpreter's switch (*pc++); perhaps we
+      could lift some of it.  (Range check isn't necessary.)
+    Floating point support in VM.
+    Bignum support in VM: use MIT Scheme bignums or GNU Multiple
+      Precision Arithmetic Library (Torbjorn Granlund <tege@sics.se>).
+    Faster bignum printer (e.g. the one Richard wrote - but it would be
+      nice if it were an option tied to bignums, not built in to the
+      initial image).
+    Ratnum multiplication and division might be made more efficient by
+      taking cross-GCD's.
+    Native code compiler...
+
+Big Scheme bugs / features:
+    It would be nice to be able to simulate control-C interrupts on
+      a port other than the initial input port - e.g., on a socket.
+      This would require creating a new thread to act as a front end.
+      The new thread would read characters eagerly, buffering
+      everything except control-C's for the thread that is doing the
+      real work, and converting control-C's into interrupts.
+    How about deleting entries from tables?
+    RPC.
+    Add call/gcc (invokes the Gnu C compiler).
+
+Module system bugs:
+    ,untrace should undefine as well if the variable wasn't bound
+      before.
+    Compound signatures don't get updated when a component signature
+      changes.  They contain a list of signatures with no reinitialization
+      thunk a la structures and packages.
+
+Module system features:
+    Check for name conflicts between opened structures.
+    Implement interface subtraction as a way of dealing with such
+      conflicts: (WITHOUT (<name> ...) <interface>)
+    Check for cycles in structure inheritance.
+    An ,access command, similar to ,open.
+    Deal with package system state better (for linker).  Maybe each
+      package should point to a data structure containing
+      *location-uid*, location-name-table, *package-uid*,
+      package-name-table, and perhaps the compiler-state as well (see
+      segment.scm).
+
+VM:
+    Heaps that can grow larger.
+    Add a test to configure.in that can determine whether ld -A works.
+      If both it and dlopen() work, then both kinds of dynamic loading
+      should be made available.
+    Merge in Olin's changes and extensions (command line processing,
+      the #! syntax for scripts, external function call, etc.).
+    Interrupt while writing out image causes an exit.  [Fixed?]
+    A jump-back instruction?  Might be easier to use than call-template.
+    Scrutinize all VM fatal errors to see if any can be recovered
+      from.  E.g. "out of ports" shouldn't cause a VM halt, it should
+      just cause open-port to return #f or an error code.  [Fixed?]
+    Get VM interp.scm-without-gc.scm working again.
+
+Documentation:
+    Describe (optimize auto-integrate).
+    How to use the static linker.
+    How initial.image and scheme48.image get built, really.
+    Techniques for debugging the runtime system (debug/for-debugging.scm).
+
+Cleanup:
+  VM:
+    Rename "unassigned" to "uninitialized"?  Or phase it out entirely.
+    In unix.c, use getrusage(), when available, to get run time.
+  Run-time / features / development environment:
+    A DIVIDE procedure (maybe an instruction as well) that returns two
+      values.
+    Figure out how to merge the two type systems (META-METHODS and
+      META-TYPES).  The generic function system could make use of the
+      SUBTYPE? and INTERSECT? predicates.
+    Correct floating point, esp. reading and printing.  And
+      (= 1/3 (/ 1. 3.)) returns #t, but ought to return #f.
+    Parameterize over file name syntax somehow.  Currently
+      big/filename.scm assumes Unix (cf. DIRECTORY-COMPONENT-SEPARATOR,
+      FILE-NAME-PREFERRED-CASE).  Perhaps there should be VM support for
+      this.
+    Make sure that the disassembler and assembler are inverses of one
+      another.
+    Disassembler should generate S-expression first, and then print
+      it independently.
+    Combine conditions, signals, and handle into a single structure?
+    Figure out a better way to implement ##.
+    Be consistent about "filename" versus "file-name".
+  Compiler / linker / module system:
+    The "reflective tower" isn't really a reflective tower, it's a
+      syntactic tower.  Rename it.
+    The scanner (file loader) should operate on streams, not lists.
+      This would result in more uniform and flexible internal
+      protocols for reading files, scanning for DEFINEs, compiling,
+      and running - passes could be interleaved or separated easily.
+    Flush link/data.scm.  Linker should instead open the VM module
+      that includes vm/data.scm.
+    Flush (optimize ...) clause in DEFINE-STRUCTURE in favor of
+      optimizer argument to SCAN-STRUCTURES.
+    Vector patterns and templates ought to be supported in
+      SYNTAX-RULES.
+    The DEFINE-INTERFACE forms should contain types for every exported
+      variable; the code in cprim.scm (and recon.scm?) shouldn't have
+      to worry about setting up types.
+    Add ENVIRONMENT-DEFINED? ?
+    Make USUAL-TRANSFORM return a transform?
+    Add enough to the node signature to make it usable on its own?
+    make-c-header-file should put definitions for the interrupt
+      enumeration into scheme48.h, and unix.c et al should use them.
+    Flatloading and loading are very different operations, so FLATLOAD
+      shouldn't do SET-PACKAGE-LOADED?!; instead it should maintain its
+      own list of flatloaded packages (in a global variable, say).
+  Etc:
+    Start using a source control system (like rcs).
+    There ought to be a sanity check to ensure that the size of the
+      area as computed by static.scm agrees with the size as computed
+      by C's sizeof() operator.
+
+What should (syntax-rules (x) ((foo ?body) (let ((x 1)) ?body))) do?
+
+
+To: jar@cs.cornell.edu
+Subject: Not a bug this time. :-)
+Date: Tue, 22 Feb 94 19:13:37 -0500
+From: Paul Stodghill <stodghil@cs.cornell.edu>
+
+The result of ,expand can be confusing. In particular, it doesn't
+distinguish between different identifiers that have the same name.
+
+For instance, in the example below, it would be more useful if the result
+of the ,expand was something like,
+
+	'((lambda (.x.1) (set! x (- .x.1))) x)
+
+Welcome to Scheme 48 0.31 (made by jar on Sun Feb 13 18:33:57 EST 1994).
+Copyright (c) 1993, 1994 by Richard Kelsey and Jonathan Rees.
+Please report bugs to scheme-48-bugs@altdorf.ai.mit.edu.
+Type ,? (comma question-mark) for help.
+> (define-syntax foo
+    (syntax-rules ()
+      ((foo var) ((lambda (x) (set! var (- x))) var))))
+> (define x 1)
+> ,expand (foo x)
+'((lambda (x) (set! x (- x))) x)
+> 
+
+
+
+Date: Mon, 14 Jun 93 18:33:30 HKT
+From: shivers@csd.hku.hk
+To: kelsey@flora.ccs.neu.edu
+Cc: jar@cs.cornell.edu
+Subject: Scheme 48
+
+...
+All true.  My major motivation was portability. I also found the module system
+to be a big win. Other things that influenced me were (1) elegance and
+modularity -- I felt I could comprehend and mung the system as needed (2)
+reasonable efficiency and small size and (3) real, full R4RS+ support (most
+small systems do it partly).
+
+Actually, I wouldn't say the programming environment is particularly
+exceptional, unless you count the module system.
+
+A small thing lacking in other Schemes that really reduced my debug times: the
+loader would complain about undefined free var refs in my code. This
+frequently picked out variable spelling errors, inconsistent name linkages,
+and forgotten procedure defs. Not a big thing, but really effective.
+
+Another win was simply having the implementors around for detailed
+explanations and support.
+
+Problems I had with S48: 
+- Inability to mess with the VM, as it is written in a language that can
+  be compiled by only 1 person in the world.
+
+- The foreign-function support was quite limited, and the foreign-data support
+  was basically non-existent. Exporting gc'd data to C, gc'ing data allocated
+  in C, hooks into the GC, importing C data into Scheme -- no support.  Elk
+  handles this better, as that is critical to the type of applications at
+  which elk is targeted.
+
+  I fixed some of this myself -- helped by your general, portable low-level ff
+  interface, which was well-designed in terms of those goals -- but I couldn't
+  do much about foreign-data support.
+
+- No support currently for linking static heap data into a text-pages
+  area to reduce gc copying and shrink the dynamic heap.
+
+- The module system was frequently frustrating. The non-uniform , command 
+  language, bugs, the restrictions of living with a module system,
+  being blocked from accessing primitives whose bindings had been
+  gc'd away at link time, and awkwardnesses in the user interface really
+  slowed me down.
+
+  The module system was also a great help; these are simply the problems
+  of life with an experimental system, as opposed to a polished final
+  product.
+
+[But] all in all, S48 was the best choice I could have made.  

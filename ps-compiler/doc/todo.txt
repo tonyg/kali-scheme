@@ -1,0 +1,15 @@
+There is a question about the simplifier for -.
+Also, should (- x x) be checked for?
+
+Join substitute is not quite right: might have (some-test cont1 cont2 V <huge>)
+where V is being tested.  As it stands we'll duplicate <huge>.  Should check
+that it is either small or contains no references to V (in which case we lift
+it with the conts).
+
+Need to come up with good numbers for the maximum size of procs and jumps
+that should be duplicated.
+
+Can join-substitute move stuff above a test?
+
+Pre-Scheme type checker dies on (car '()) if a LET has more variables
+than values.
